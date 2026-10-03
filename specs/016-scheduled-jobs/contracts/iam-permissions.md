@@ -91,10 +91,10 @@ Condiciones de `ses:SendEmail` (questions §1.1, verificadas contra la API v2):
 | Acción | Recurso | Para qué |
 |---|---|---|
 | `s3:GetObject`, `s3:PutObject` | `B/access/last-web-sign-in.json` | avanzar la fecha del último inicio de sesión web (Q3; §8.1 P6) |
-| `s3:ListBucket` | `B`, con `s3:prefix` en `access/` | `404` en vez de `403` en el primer inicio de sesión web de un entorno nuevo (nota del 2026-09-28) |
-| `logs:CreateLogStream`, `logs:PutLogEvents` | su propio grupo, `/aws/lambda/atlas-<entorno>-api` | sus registros (nota del 2026-09-28) |
+| `s3:ListBucket` | `B`, con `s3:prefix` en `access/` | `404` en vez de `403` en el primer inicio de sesión web de un entorno nuevo (nota del 2026-10-03) |
+| `logs:CreateLogStream`, `logs:PutLogEvents` | su propio grupo, `/aws/lambda/atlas-<entorno>-api` | sus registros (nota del 2026-10-03) |
 
-**Nota del 2026-09-28 (revisión de la PR #110, ronda 1; decisión de la dirección, `docs/prompts/017-infrastructure-as-code.md` §12.2 B5 y N6).**
+**Nota del 2026-10-03 (revisión de la PR #110, ronda 1; decisión del usuario, `docs/prompts/017-infrastructure-as-code.md` §12.2 B5 y N6).**
 - **B5.** El rol de la API gana **`access/`** en los prefijos de su `s3:ListBucket`. Hasta hoy los cubría `ledger/`, `sync/devices/`, `reference/ecb/` y `prices/` (`specs/015-api-access/plan.md` §10 y hoja de ruta, «Lo que la 015 le deja a la 017»). **Sin `access/`**, el primer inicio de sesión web de un entorno nuevo hace `get` de `access/last-web-sign-in.json` y recibe `403` en lugar de `404` (`packages/adapters/src/aws/web-sign-in.ts`). Entonces `signInDate` (`apps/api/src/handler.ts`) registra `sign_in_date_unavailable`, **el objeto no se crea nunca** y el correo mensual pierde para siempre los días desde el último inicio de sesión web.
 - **N6.** **`logs:CreateLogStream` y `logs:PutLogEvents` sobre su propio grupo** entran en el contrato de la API, que no los tenía. **Para las cinco tareas ya estaban en §7** («Comunes a las cinco funciones de tareas»): cada una, sobre su propio grupo `/aws/lambda/atlas-<entorno>-job-<familia>`, y sobre ningún otro. La política de la 017 concede exactamente eso.
 
