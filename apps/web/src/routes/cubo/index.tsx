@@ -189,7 +189,7 @@ export default function CuboRoute(): JSX.Element {
                   )}
                 </For>
 
-                <StatsCard view={report().stats} plot={series()} />
+                <StatsCard view={report().stats} plot={series()} asOf={date()} />
                 <PositionsCard view={positions()} />
                 <BudgetCard
                   notices={noticesOf(report().controls.warnings)}

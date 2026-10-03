@@ -200,6 +200,7 @@ export default function ResumenRoute(): JSX.Element {
           evolution: () => (
             <SeriesCard
               title="Evolución del patrimonio"
+              asOf={date}
               class="span-12 summary-evolution"
               labels={["Cartera principal", "Cubo", "Efectivo"]}
               colours={["--c-series-core", "--c-series-bucket", "--c-series-cash"]}

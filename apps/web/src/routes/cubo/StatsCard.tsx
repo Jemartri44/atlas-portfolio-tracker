@@ -127,9 +127,10 @@ const Stats = (props: { view: StatsView }): JSX.Element => (
   </>
 );
 
-export const StatsCard = (props: { view: StatsView; plot: Plot }): JSX.Element => (
+export const StatsCard = (props: { view: StatsView; plot: Plot; asOf: string }): JSX.Element => (
   <SeriesCard
     title="Frente al índice"
+    asOf={props.asOf}
     class="span-12"
     labels={["Resultado del cubo", "Equivalente en el índice"]}
     colours={["--c-series-bucket", "--c-series-index"]}

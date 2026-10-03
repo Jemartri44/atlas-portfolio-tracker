@@ -17,6 +17,8 @@ import { type RangeKey, rangeCounts, rangeIndices } from "./ranges.js";
 
 export interface SeriesCardProps {
   title: string;
+  /** The date asked about: «Este año» runs from 1 January of its year to it. */
+  asOf: string;
   /** Its place in the grid of the screen. */
   class?: string | undefined;
   /** Names of the series, in the order of `values`. */
@@ -40,8 +42,8 @@ export interface SeriesCardProps {
 export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
   const [range, setRange] = createSignal<RangeKey>("TODO");
 
-  const indices = createMemo<number[]>(() => rangeIndices(props.x, range()));
-  const options = createMemo<RangeOption[]>(() => rangeCounts(props.x, props.values));
+  const indices = createMemo<number[]>(() => rangeIndices(props.x, range(), props.asOf));
+  const options = createMemo<RangeOption[]>(() => rangeCounts(props.x, props.values, props.asOf));
 
   const series = (): ChartSeries[] =>
     props.labels.map((label, index) => ({
