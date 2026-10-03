@@ -493,6 +493,13 @@ const dist = join(webRoot, "dist");
  * The share of each part and of each asset of the monthly split, in decimal,
  * rounded when shown. The trend: 75.482 → 75.580 → 75.620.
  */
+/*
+ * **Feature 020, E3, M5 and the chunk of the charts (2026-10-03): measured
+ * 75.593, ceiling unchanged at 75.640.** The strip of each class costs boot
+ * (+100), and the group `domain` of `vite.config.ts` stops swallowing the
+ * door `@atlas/domain/charts`, which `check-bundle.mjs` had found in the boot
+ * chunk (−208 net). The trend: 75.620 → 75.701 → 75.593.
+ */
 const BOOT_BUDGET_GZIP_BYTES = 75_640;
 
 /**
@@ -1060,7 +1067,12 @@ const BOOT_BUDGET_GZIP_BYTES = 75_640;
  * (312.000). Of those, +40 are the boot (above). The trend: 306.434 → 306.952
  * → 307.271.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 307_527;
+/*
+ * **Feature 020, E3, M5 and the chunk of the charts (2026-10-03): measured
+ * 307.720 (+449 over the 307.271 of the shares), ceiling 307.976 — measured +
+ * 256**, inside the authorisation (312.000). The trend: 307.271 → 307.720.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 307_976;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
