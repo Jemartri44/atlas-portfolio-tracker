@@ -2,7 +2,7 @@
 // TEST ONLY: a fake `aws` for the rehearsals of the scripts of infra/ (feature 017, E4;
 // plan.md (h)). It never reaches a network: it answers from the JSON file FAKE_AWS_STATE
 // and records every call (its arguments, one line each) in FAKE_AWS_LOG.
-import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, cpSync, readFileSync, writeFileSync } from "node:fs";
 
 const args = process.argv.slice(2);
 appendFileSync(process.env.FAKE_AWS_LOG, `${args.join(" ")}\n`);
@@ -43,6 +43,15 @@ if (service === "cloudfront" && operation === "list-tags-for-resource") {
   found.scheduledChange = { type: "CANCELLATION" };
   save();
   say({ subscription: found });
+} else if (service === "s3" && operation === "cp") {
+  // `s3 cp s3://bucket/<prefix> <dir> --recursive`: copies FAKE_S3_DIR/<prefix> to <dir>.
+  const [, , source, target] = args;
+  const prefix = source.replace(/^s3:\/\/[^/]+\//, "");
+  try {
+    cpSync(`${process.env.FAKE_S3_DIR}/${prefix}`, target, { recursive: true });
+  } catch {
+    process.exit(1);
+  }
 } else {
   process.stderr.write("fake aws: unknown order\n");
   process.exit(2);

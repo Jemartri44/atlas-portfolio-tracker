@@ -1,0 +1,59 @@
+name: Deploy dev
+
+# Feature 017, E4 (prompt 017, section 5, flow 3). PREPARED AND INERT until the 018: needs the
+# repository variable ATLAS_DEPLOY_ENABLED = true. Builds ONCE, writes the set to the
+# artifacts bucket (only this job may) under the SHA of the source tree, applies `dev`, and
+# uploads the SPA without `.vite/` nor `*.map`. What terraform and aws print goes to files that
+# are never uploaded.
+on:
+  push:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: ${{ vars.ATLAS_DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+      - run: npm ci
+      - run: npm run build
+      - name: Package the set that is promoted
+        run: |
+          infra/scripts/ci/package.sh "$RUNNER_TEMP/artifact"
+          echo "TREE=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_ENV"
+      - name: Assume the deploy role of dev
+        run: infra/scripts/ci/assume-role.sh "$ROLE_ARN"
+        env:
+          ROLE_ARN: ${{ secrets.ATLAS_DEV_DEPLOY_ROLE_ARN }}
+      - name: Write the set to the artifacts bucket
+        run: aws s3 cp "$RUNNER_TEMP/artifact/" "s3://$ARTIFACT_BUCKET/builds/$TREE/" --recursive --only-show-errors > "$RUNNER_TEMP/aws.log" 2>&1
+        env:
+          ARTIFACT_BUCKET: ${{ secrets.ATLAS_ARTIFACT_BUCKET }}
+      - name: Apply dev
+        run: |
+          infra/scripts/ci/artifact-env.sh "$RUNNER_TEMP/artifact" "$TREE" >> "$GITHUB_ENV"
+          set -a; . <(infra/scripts/ci/artifact-env.sh "$RUNNER_TEMP/artifact" "$TREE"); set +a
+          infra/scripts/ci/terraform-run.sh dev apply
+        env:
+          ATLAS_TFVARS_B64: ${{ secrets.ATLAS_DEV_TFVARS_B64 }}
+          ATLAS_BACKEND_B64: ${{ secrets.ATLAS_DEV_BACKEND_B64 }}
+      - name: Upload the SPA
+        run: |
+          mkdir "$RUNNER_TEMP/spa" && tar -xzf "$RUNNER_TEMP/artifact/spa.tgz" -C "$RUNNER_TEMP/spa"
+          aws s3 sync "$RUNNER_TEMP/spa/" "s3://$SPA_BUCKET/" --delete --exclude '.vite/*' --exclude '*.map' --only-show-errors > "$RUNNER_TEMP/aws-spa.log" 2>&1
+        env:
+          SPA_BUCKET: ${{ secrets.ATLAS_DEV_SPA_BUCKET }}

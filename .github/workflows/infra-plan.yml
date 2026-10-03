@@ -1,0 +1,41 @@
+name: Infra plan
+
+# Feature 017, E4 (prompt 017, section 5, flow 2). PREPARED AND INERT until the 018: it
+# needs the repository variable ATLAS_INFRA_PLAN_ENABLED = true, which does not exist, and
+# the role it assumes does not exist until the bootstrap is applied. Runs on a pull request
+# of THIS repository only (forks get no OIDC token nor secrets). No `environment:` (the
+# `sub` of the role of plan is `...:pull_request`), no npm, no third-party code with the
+# token in hand, `-lock=false`, and the log carries addresses and actions, never a value.
+on:
+  pull_request:
+    paths: [infra/**, .github/workflows/infra-plan.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    if: ${{ vars.ATLAS_INFRA_PLAN_ENABLED == 'true' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [dev, prod]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+      - name: Assume the role of plan
+        run: infra/scripts/ci/assume-role.sh "$ROLE_ARN"
+        env:
+          ROLE_ARN: ${{ matrix.env == 'dev' && secrets.ATLAS_PLAN_DEV_ROLE_ARN || secrets.ATLAS_PLAN_PROD_ROLE_ARN }}
+      - name: Plan (addresses and actions only)
+        run: infra/scripts/ci/terraform-run.sh "${{ matrix.env }}" plan
+        env:
+          ATLAS_TFVARS_B64: ${{ matrix.env == 'dev' && secrets.ATLAS_PLAN_DEV_TFVARS_B64 || secrets.ATLAS_PLAN_PROD_TFVARS_B64 }}
+          ATLAS_BACKEND_B64: ${{ matrix.env == 'dev' && secrets.ATLAS_PLAN_DEV_BACKEND_B64 || secrets.ATLAS_PLAN_PROD_BACKEND_B64 }}
