@@ -39,6 +39,7 @@ export default defineConfig({
       "@atlas/domain/ecb": local("./packages/domain/src/ecb.ts"),
       "@atlas/domain/fiscal": local("./packages/domain/src/fiscal.ts"),
       "@atlas/domain/tools": local("./packages/domain/src/tools.ts"),
+      "@atlas/domain/charts": local("./packages/domain/src/charts.ts"),
       "@atlas/domain/quotes": local("./packages/domain/src/quotes.ts"),
       "@atlas/domain/sync": local("./packages/domain/src/sync.ts"),
       "@atlas/domain/remote-answers": local("./packages/domain/src/remote-answers.ts"),

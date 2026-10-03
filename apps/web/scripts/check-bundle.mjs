@@ -1260,6 +1260,10 @@ const LAZY_ONLY = [
     path: "/packages/domain/src/projections/simulate-transfer.ts",
     what: "la simulación de un traspaso",
   },
+  // Feature 020, E3: the gauges and the percentages of the Cubo, behind
+  // `@atlas/domain/charts` from their first commit.
+  { path: "/packages/domain/src/charts.ts", what: "la puerta de los indicadores de las pantallas" },
+  { path: "/packages/domain/src/charts/", what: "los indicadores y las series de las pantallas" },
   // Feature 015: **nothing of the access on the boot path**, from its first
   // commit. The rules of the access are the API's and never the web's (the
   // architecture test keeps the web from reaching them at all); the session,
