@@ -14,7 +14,7 @@
 // `style-src 'self'`.
 
 import { type JSX, Show } from "solid-js";
-import { Figure, Icon } from "../../components/index.js";
+import { Figure } from "../../components/index.js";
 import { type GaugesView, type MeterKey, meterOf } from "../../view-models/bucket/index.js";
 
 /** Where the words of a mark hang: centred, unless they would leave the bar. */
@@ -54,12 +54,6 @@ export const Meter = (props: { gauges: GaugesView; which: MeterKey }): JSX.Eleme
             )}
           </Show>
         </svg>
-        <Show when={meter().both}>
-          <p class="meter-note">
-            <Icon name="info" class="icon-sm" />
-            <span>La única cifra que junta el cubo y la cartera principal.</span>
-          </p>
-        </Show>
       </div>
     )}
   </Show>

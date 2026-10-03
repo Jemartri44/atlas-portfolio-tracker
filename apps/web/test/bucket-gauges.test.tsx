@@ -170,13 +170,11 @@ describe("the gauges of the bucket on the screen, with the privacy mode on", () 
     }
   });
 
-  it("marks the weight as the one figure that adds both books, with its accent rule and its phrase", async () => {
+  it("marks the weight as the one figure that adds both books, with its accent rule", async () => {
     const host = await show("/cubo?fecha=2027-01-10", Cubo);
     const weight = host.querySelector(".meter.both");
     expect(weight).not.toBeNull();
-    expect(text(weight?.querySelector(".meter-note"))).toBe(
-      "La única cifra que junta el cubo y la cartera principal.",
-    );
+    expect(text(host)).toContain("Es la única cifra que suma el cubo y la cartera principal");
     expect(host.querySelectorAll(".meter.both")).toHaveLength(1);
   });
 

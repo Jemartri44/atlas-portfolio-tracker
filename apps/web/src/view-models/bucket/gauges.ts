@@ -78,7 +78,7 @@ export const resultShape = (pct: string, stop: string | undefined): MeterShape =
 export const weightShape = (pct: string, max: string | undefined): MeterShape => {
   const value = Number.parseFloat(pct);
   const limit = max === undefined ? undefined : Number.parseFloat(max);
-  const high = Math.max(limit === undefined ? 10 : limit * 1.5, value * 1.1);
+  const high = Math.max(limit === undefined ? 10 : limit * 1.5, value * 1.1, 1);
   return {
     from: 0,
     to: at(value, 0, high),
