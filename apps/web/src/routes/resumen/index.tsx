@@ -27,6 +27,7 @@ import {
   settingsAt,
   transferWatch,
 } from "@atlas/domain";
+import { contributedSeries } from "@atlas/domain/charts";
 import { A } from "@solidjs/router";
 import { createMemo, createResource, For, type JSX, Show } from "solid-js";
 import { SeriesCard } from "../../components/chart/index.js";
@@ -48,7 +49,7 @@ import {
   netWorthView,
   onboardingOf,
 } from "../../view-models/index.js";
-import { netWorthPlot } from "../../view-models/series.js";
+import { netWorthPlot, withContributed } from "../../view-models/series.js";
 import { type SummaryCard, summaryOrder } from "../../view-models/summary-order.js";
 import { RequireLedger } from "../guard.jsx";
 import { EntryLine } from "../movimientos/MovementList.jsx";
@@ -159,9 +160,11 @@ export default function ResumenRoute(): JSX.Element {
         const onboarding = onboardingOf(dated, entries, settings);
         const moved = entries.some(isMovement);
         const monitor = mediaQuery(MONITOR);
-        const series = netWorthPlot(
-          netWorthSeries(snapshot.events, { to: date, max_points: MAX_POINTS }),
-          names,
+        const range = { to: date, max_points: MAX_POINTS };
+        const contributed = contributedSeries(snapshot.events, range);
+        const series = withContributed(
+          netWorthPlot(netWorthSeries(snapshot.events, range), names),
+          contributed,
         );
 
         // The cards, each once; `summaryOrder` says in which order they go.
@@ -202,9 +205,28 @@ export default function ResumenRoute(): JSX.Element {
               title="Evolución del patrimonio"
               asOf={date}
               class="span-12 summary-evolution"
-              labels={["Cartera principal", "Cubo", "Efectivo"]}
-              colours={["--c-series-core", "--c-series-bucket", "--c-series-cash"]}
-              dashes={[undefined, [6, 4], [1, 5]]}
+              labels={["Cartera principal", "Cubo", "Efectivo", "Aportado"]}
+              colours={[
+                "--c-series-core",
+                "--c-series-bucket",
+                "--c-series-cash",
+                "--c-series-contrib",
+              ]}
+              dashes={[undefined, undefined, undefined, [6, 4]]}
+              stepped={[3]}
+              panels={[
+                { series: [0, 3] },
+                { series: [1], name: "Cubo" },
+                { series: [2], name: "Efectivo" },
+              ]}
+              foot={
+                <Show when={contributed.uncovered_buys}>
+                  <p class="card-note">
+                    Lo aportado solo cuenta los ingresos registrados, y hay compras anteriores al
+                    primero.
+                  </p>
+                </Show>
+              }
               x={series.x}
               values={series.values}
               rows={series.rows}

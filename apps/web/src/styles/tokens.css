@@ -90,6 +90,8 @@
   --meter-h: 2.75rem; /* a gauge of the bucket, with the label of its mark */
   --chart-h: 11.5rem;
   --chart-h-wide: 15rem;
+  --panel-h: 8.25rem; /* the main panel of a stack of charts, and its strips */
+  --panel-strip-h: 2.75rem;
   --lead-size: 2.25rem; /* the round icon that opens a row */
   --glyph-size: 2.75rem; /* the round glyph of an empty state */
   --mark-size: 1.75rem; /* the number of a first step */
@@ -201,6 +203,8 @@
     --gutter: var(--space-7);
     --grid-gap: var(--space-5);
     --chart-h: var(--chart-h-wide);
+    --panel-h: 15rem;
+    --panel-strip-h: 3.5rem;
   }
 }
 
@@ -214,6 +218,8 @@
     --text-xl: 1.75rem; /* 28 */
     --text-display: 3rem; /* 48 */
     --chart-h: clamp(15rem, 28vh, 22rem);
+    --panel-h: var(--chart-h);
+    --panel-strip-h: 4rem;
     --gutter: var(--space-8); /* 40 */
     --grid-gap: var(--space-6); /* 24 */
     --content-max: 115rem; /* 1840 */

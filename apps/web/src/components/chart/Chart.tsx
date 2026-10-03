@@ -34,9 +34,18 @@ export interface ChartSeries {
   colour: string;
   /** Dash pattern, so the series is told apart without colour. */
   dash?: readonly number[];
+  /**
+   * Drawn as a step, holding its value until the next date (what was
+   * contributed: a deposit moves it on its day and not before). A series of
+   * this kind has no holes by construction, so it takes no part in where the
+   * bands of the holes go (feature 020, E4, M3).
+   */
+  step?: boolean | undefined;
 }
 
 const DEFAULT_HEIGHT = 184;
+
+type SteppedFactory = (options: { align: 1 | -1 }) => uPlot.Series.PathBuilder;
 
 /** Above this many points the dots crowd the line and are hidden. */
 const DOTS_UP_TO = 40;
@@ -67,6 +76,12 @@ interface ChartProps {
   label: string;
   height?: number;
   unit?: "eur" | "pct" | undefined;
+  /** The class of the frame: a panel and a strip of a stack have their own height. */
+  panel?: "main" | "strip" | undefined;
+  sync?: string | undefined;
+  dates?: boolean | undefined;
+  /** The series whose holes are shaded, when they are not the ones drawn. */
+  bands?: readonly ChartSeries[] | undefined;
 }
 
 const cssValue = (name: string): string =>
@@ -82,6 +97,12 @@ export interface ChartSpec {
   height: number;
   /** What the Y axis measures; euros by default. A share is not withheld with the privacy on. */
   unit?: "eur" | "pct";
+  /** Charts of the same key move their cursor together: the panels of an evolution. */
+  sync?: string;
+  /** The axis of the dates; only the last of a stack of panels needs it. */
+  dates?: boolean;
+  /** The series whose holes are shaded, when they are not the ones drawn. */
+  bands?: readonly ChartSeries[];
 }
 
 /**
@@ -115,11 +136,15 @@ export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options =
     // tick: at the edge of a phone «dic 2028» was cut to «dic 20».
     padding: [8, SPACE[span] / 2 - 16, 0, 0],
     legend: { show: false },
-    cursor: { drag: { x: false, y: false } },
+    cursor: {
+      drag: { x: false, y: false },
+      ...(spec.sync === undefined ? {} : { sync: { key: spec.sync } }),
+    },
     scales: { x: { time: true } },
-    hooks: { drawClear: [drawGaps(gapsOf(spec.x, spec.series))] },
+    hooks: { drawClear: [drawGaps(gapsOf(spec.x, spec.bands ?? spec.series))] },
     axes: [
       {
+        show: spec.dates !== false,
         stroke: cssValue("--c-text-3"),
         font: axisFont(),
         grid: { show: false },
@@ -151,6 +176,9 @@ export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options =
         width: 2,
         cap: "round" as CanvasLineCap,
         spanGaps: false,
+        ...(series.step === true
+          ? { paths: (uPlot.paths.stepped as SteppedFactory)({ align: 1 }) }
+          : {}),
         // uPlot draws on a canvas of device pixels and does not scale a dash:
         // at 3x a dotted line came out solid on the phone.
         ...(series.dash === undefined
@@ -213,6 +241,9 @@ export const Chart = (props: ChartProps): JSX.Element => {
           width: host.clientWidth || 320,
           height: props.height ?? (host.clientHeight || DEFAULT_HEIGHT),
           ...(props.unit === undefined ? {} : { unit: props.unit }),
+          ...(props.sync === undefined ? {} : { sync: props.sync }),
+          ...(props.dates === undefined ? {} : { dates: props.dates }),
+          ...(props.bands === undefined ? {} : { bands: props.bands }),
         },
         privacy(),
       ),
@@ -254,5 +285,12 @@ export const Chart = (props: ChartProps): JSX.Element => {
     plot = undefined;
   });
 
-  return <div class="chart-plot" ref={host} role="img" aria-label={props.label} />;
+  return (
+    <div
+      class={props.panel === undefined ? "chart-plot" : `chart-plot is-${props.panel}`}
+      ref={host}
+      role="img"
+      aria-label={props.label}
+    />
+  );
 };

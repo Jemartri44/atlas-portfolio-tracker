@@ -24,6 +24,26 @@
   position: relative;
 }
 
+/* The panels of a stack share the dates and each one has its own scale: the
+   main one is tall, the strips of the bucket and the cash are low. */
+.chart-plot.is-main {
+  height: var(--panel-h);
+}
+
+.chart-plot.is-strip {
+  height: var(--panel-strip-h);
+}
+
+.panel-name {
+  color: var(--c-text-2);
+  font-size: var(--text-sm);
+  margin: var(--space-2) 0 0;
+}
+
+.panel-name > span {
+  color: var(--c-text-3);
+}
+
 /* The keys and their names, in one wrapping line under the plot. */
 .chart-legend {
   color: var(--c-text-2);
@@ -66,6 +86,10 @@
 
 .key.is-index > line {
   stroke: var(--c-series-index);
+}
+
+.key.is-contrib > line {
+  stroke: var(--c-series-contrib);
 }
 
 /* What a hole is, said once, with the swatch of the band it draws. */

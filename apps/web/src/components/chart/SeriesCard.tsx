@@ -5,7 +5,7 @@
 // It is one component and not three copies because both charts of feature 007
 // need exactly this, and the next one will too.
 
-import { createMemo, createSignal, type JSX, Show } from "solid-js";
+import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
 import { formatDate } from "../../format/date.js";
 import { gapRule, type MissingNote } from "../../view-models/series.js";
 import { Section } from "../Section.jsx";
@@ -38,6 +38,14 @@ export interface SeriesCardProps {
   foot?: JSX.Element | undefined;
   /** The last rows of the card, drawn or not: a disclosure with the detail. */
   tail?: JSX.Element | undefined;
+  /**
+   * The series that are drawn as steps, by index (what was contributed), and
+   * the panels of a stack: each with the series it draws and, for a strip, its
+   * name. Each panel has its own scale and they share the dates and the cursor
+   * (feature 020, E4, M3). Without panels, one chart with everything.
+   */
+  stepped?: readonly number[] | undefined;
+  panels?: readonly { series: readonly number[]; name?: string }[] | undefined;
   /** What the values are: euros, or a percentage (axis and table without a mask). */
   unit?: "eur" | "pct" | undefined;
   /** Past half a range of holes, jump to the last stretch with data and say so (M7). */
@@ -72,6 +80,7 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
       values: indices().map((at) => props.values[index]?.[at] ?? null),
       colour: props.colours[index] ?? "--c-series-index",
       ...(props.dashes[index] === undefined ? {} : { dash: props.dashes[index] as number[] }),
+      ...(props.stepped?.includes(index) === true ? { step: true } : {}),
     }));
 
   const shown = (): number[] => indices().map((at) => props.x[at] as number);
@@ -93,7 +102,33 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
           <div class="chart-range">{buttons()}</div>
         </Show>
         <figure class="chart">
-          <Chart x={shown()} series={series()} label={props.title} unit={props.unit} />
+          <Show
+            when={props.panels}
+            fallback={<Chart x={shown()} series={series()} label={props.title} unit={props.unit} />}
+          >
+            {(panels) => (
+              <For each={panels()}>
+                {(panel, at) => (
+                  <>
+                    <Show when={panel.name}>
+                      <p class="panel-name">
+                        {panel.name} <span>escala propia</span>
+                      </p>
+                    </Show>
+                    <Chart
+                      x={shown()}
+                      series={panel.series.map((index) => series()[index] as ChartSeries)}
+                      bands={series()}
+                      label={`${props.title}: ${panel.name ?? "cartera principal y lo aportado"}`}
+                      panel={at() === 0 ? "main" : "strip"}
+                      sync="evolution"
+                      dates={at() === panels().length - 1}
+                    />
+                  </>
+                )}
+              </For>
+            )}
+          </Show>
           <figcaption>
             <ChartLegend series={series()} />
           </figcaption>

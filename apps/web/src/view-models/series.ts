@@ -8,7 +8,7 @@
 // `spanGaps` off.
 
 import type { NetWorthSeries } from "@atlas/domain";
-import type { BucketIndexPctSeries } from "@atlas/domain/charts";
+import type { BucketIndexPctSeries, ContributedSeries } from "@atlas/domain/charts";
 import { gapsOf } from "../components/chart/gaps.js";
 import { displayName, type NameIndex, NO_NAMES } from "../format/names.js";
 
@@ -110,6 +110,20 @@ export const netWorthPlot = (
       : { missing: reasonOf(drawn, series.points.length, subjects) as MissingNote }),
   };
 };
+
+/**
+ * What was contributed, as one more series of the net worth plot, on **the
+ * same dates** (the domain guarantees it): it is never absent, so it adds no
+ * hole. The amounts of the table stay strings.
+ */
+export const withContributed = (plot: PlottedSeries, series: ContributedSeries): PlottedSeries => ({
+  ...plot,
+  values: [...plot.values, series.points.map((point) => numberOrNull(point.contributed_eur))],
+  rows: plot.rows.map((row, index) => ({
+    ...row,
+    values: [...row.values, stringOrUndefined(series.points[index]?.contributed_eur)],
+  })),
+});
 
 /**
  * The bucket against the index **in percent** of what was contributed (feature
