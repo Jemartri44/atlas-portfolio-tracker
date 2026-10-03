@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { crossEnvironment, outputsSensitive, policiesOf, principalStars } from "./lib/guardians.js";
 import { type Context, decide, type Statement } from "./lib/iam.js";
 import { changes, only, type Plan } from "./lib/plan.js";
