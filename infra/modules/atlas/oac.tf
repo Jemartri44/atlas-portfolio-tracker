@@ -3,10 +3,20 @@
 # their identifiers.
 variable "oac_spa_id" {
   type = string
+
+  validation {
+    condition     = can(regex("^[A-Z0-9]{10,20}$", var.oac_spa_id))
+    error_message = "oac_spa_id must be a CloudFront identifier."
+  }
 }
 
 variable "oac_api_id" {
   type = string
+
+  validation {
+    condition     = can(regex("^[A-Z0-9]{10,20}$", var.oac_api_id))
+    error_message = "oac_api_id must be a CloudFront identifier."
+  }
 }
 
 locals {

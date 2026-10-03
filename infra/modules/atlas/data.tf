@@ -71,15 +71,7 @@ locals {
         Sid       = "DenyObjectActionsOutsideTheEnvironment"
         Effect    = "Deny"
         Principal = "*"
-        Action = [
-          "s3:AbortMultipartUpload",
-          "s3:DeleteObject",
-          "s3:DeleteObjectVersion",
-          "s3:GetObject",
-          "s3:GetObjectVersion",
-          "s3:ListMultipartUploadParts",
-          "s3:PutObject",
-        ]
+        Action    = ["s3:*"]
         Resource  = "${local.data_arn}/*"
         Condition = { ArnNotLike = { "aws:PrincipalArn" = local.data_object_roles } }
       },
@@ -103,15 +95,10 @@ locals {
         Sid       = "DenyConfigurationChangesExceptDeployAndAdmin"
         Effect    = "Deny"
         Principal = "*"
-        Action = [
-          "s3:DeleteBucketPolicy",
-          "s3:PutBucketOwnershipControls",
-          "s3:PutBucketPolicy",
-          "s3:PutBucketPublicAccessBlock",
-          "s3:PutBucketVersioning",
-          "s3:PutEncryptionConfiguration",
-          "s3:PutLifecycleConfiguration",
-        ]
+        # Every write of the configuration of the bucket, not a list: inventory, logging,
+        # notification and replication would let another project's role take the key
+        # names or the contents out (review of PR 115, B1).
+        Action    = ["s3:DeleteBucket*", "s3:Put*Configuration", "s3:PutBucket*"]
         Resource  = local.data_arn
         Condition = { ArnNotLike = { "aws:PrincipalArn" = local.data_config_roles } }
       },

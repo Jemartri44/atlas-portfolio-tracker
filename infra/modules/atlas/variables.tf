@@ -34,6 +34,11 @@ variable "bucket_suffix" {
 variable "data_bucket_name" {
   description = "Name of the data bucket, created by the module the root chose."
   type        = string
+
+  validation {
+    condition     = startswith(var.data_bucket_name, "atlas-${var.env}-data-") && can(regex("^[a-z0-9-]{3,63}$", var.data_bucket_name))
+    error_message = "data_bucket_name must be atlas-<env>-data-<suffix>."
+  }
 }
 
 variable "domain" {
@@ -97,21 +102,32 @@ variable "log_retention_days" {
 }
 
 variable "api_reserved_concurrency" {
-  description = "C12. A number of at least 1, or null to leave the function unreserved."
+  description = "C12. Reserved concurrency of the API: a whole number of at least 1, or null to leave it unreserved (the root decides; no default here)."
   type        = number
-  default     = null
+  nullable    = true
+
   validation {
-    condition     = var.api_reserved_concurrency == null || try(var.api_reserved_concurrency >= 1, false)
-    error_message = "api_reserved_concurrency must be at least 1 or null."
+    condition     = var.api_reserved_concurrency == null || try(var.api_reserved_concurrency >= 1 && var.api_reserved_concurrency == floor(var.api_reserved_concurrency), false)
+    error_message = "api_reserved_concurrency must be a whole number of at least 1, or null."
   }
 }
 
 variable "artifact_key" {
   description = "Key of lambda.zip in the artifacts bucket (built once and promoted)."
   type        = string
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9][A-Za-z0-9._/-]{0,500}$", var.artifact_key)) && !strcontains(var.artifact_key, "..")
+    error_message = "artifact_key must be a relative key with no .. segment."
+  }
 }
 
 variable "artifact_sha256_base64" {
   description = "Base64 SHA-256 of lambda.zip."
   type        = string
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9+/]{43}=$", var.artifact_sha256_base64))
+    error_message = "artifact_sha256_base64 must be the base64 of a SHA-256 digest (44 characters)."
+  }
 }

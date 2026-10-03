@@ -14,7 +14,8 @@ resource "aws_s3_bucket" "this" {
 }
 
 output "name" {
-  value = var.name
+  # From the resource, so what is configured on the bucket waits for it.
+  value = aws_s3_bucket.this.bucket
 }
 
 output "arn" {
