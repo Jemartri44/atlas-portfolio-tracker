@@ -132,6 +132,9 @@ export default defineConfig({
           name: "infra",
           root: "infra/test",
           setupFiles: ["./setup/no-credentials.ts"],
+          // Rendering a plan loads the whole AWS provider: tens of seconds each.
+          testTimeout: 600_000,
+          hookTimeout: 600_000,
         },
       },
     ],

@@ -69,6 +69,13 @@ const deepTrue = (value: unknown): boolean => {
   return value !== null && typeof value === "object" && Object.values(value).some(deepTrue);
 };
 
+/**
+ * The only policy an attachment may name: a customer managed policy of Atlas
+ * (`atlas-<env>-…`), written with a constructed ARN. Anything else is a policy
+ * AWS or somebody else manages, and a wide one at that.
+ */
+export const OWN_POLICY = /^arn:aws:iam::[0-9]{12}:policy\/atlas-(dev|prod)-[a-z0-9-]+$/;
+
 export interface StarAllowance {
   action: string;
   /** Where AWS says the action takes no resource (Service Authorization Reference). */
@@ -82,7 +89,11 @@ export interface StarAllowance {
  * Key policies write `Resource: "*"` by definition (it means "this key") and
  * are exempt from that last part only.
  */
-export const wildcards = (plan: Plan, allowed: StarAllowance[]): Violation[] => {
+export const wildcards = (
+  plan: Plan,
+  allowed: StarAllowance[],
+  customerPolicy: RegExp = OWN_POLICY,
+): Violation[] => {
   const violations: Violation[] = [];
   const closed = new Set(allowed.map((entry) => entry.action.toLowerCase()));
   for (const policy of policiesOf(plan)) {
@@ -119,14 +130,17 @@ export const wildcards = (plan: Plan, allowed: StarAllowance[]): Violation[] => 
     }
   }
   for (const change of changes(plan)) {
+    const arn = String(change.change.after?.policy_arn);
     if (
-      change.type === "aws_iam_role_policy_attachment" ||
-      change.type === "aws_iam_policy_attachment"
+      change.type === "aws_iam_policy_attachment" ||
+      (change.type === "aws_iam_role_policy_attachment" && !customerPolicy.test(arn)) ||
+      change.type === "aws_iam_user_policy_attachment" ||
+      change.type === "aws_iam_group_policy_attachment"
     ) {
       violations.push({
         rule: "wildcard",
         address: change.address,
-        detail: `managed policy ${String(change.change.after?.policy_arn)}`,
+        detail: `managed policy ${arn}`,
       });
     }
     const managed = change.change.after?.managed_policy_arns;
@@ -355,6 +369,45 @@ export const outputsSensitive = (plan: Plan, tokens: string[]): Violation[] =>
       address: `output.${name}`,
       detail: "carries a personal value and is not sensitive",
     }));
+
+const strings = (value: unknown): string[] =>
+  typeof value === "string"
+    ? [value]
+    : Array.isArray(value)
+      ? value.flatMap(strings)
+      : value !== null && typeof value === "object"
+        ? Object.values(value).flatMap(strings)
+        : [];
+
+/**
+ * Family 16 and mutant 49: an identity policy of an environment names nothing of
+ * the other one, and no pattern that covers both (`atlas-*`). Resources and
+ * conditions are read; the action names are not.
+ */
+export const crossEnvironment = (
+  statements: Statement[],
+  address: string,
+  env: "dev" | "prod",
+): Violation[] => {
+  const other = env === "dev" ? "prod" : "dev";
+  const otherWord = new RegExp(`(^|[^a-z0-9])${other}([^a-z0-9]|$)`);
+  const bothEnvironments = /atlas-[*?]|:role\/[*?]|:policy\/[*?]|atlas\/[*?]|\/atlas-\*$/;
+  return statements.flatMap((statement) =>
+    strings([statement.Resource, statement.NotResource, statement.Condition]).flatMap(
+      (text): Violation[] => {
+        if (otherWord.test(text)) {
+          return [{ rule: "cross-environment", address, detail: `names ${other}: ${text}` }];
+        }
+        if (bothEnvironments.test(text)) {
+          return [
+            { rule: "cross-environment", address, detail: `covers both environments: ${text}` },
+          ];
+        }
+        return [];
+      },
+    ),
+  );
+};
 
 export const addresses = (violations: Violation[]): string[] =>
   violations.map((violation) => violation.address).sort();
