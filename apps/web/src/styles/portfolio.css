@@ -119,59 +119,6 @@
   fill: var(--c-caution-icon);
 }
 
-/* ---- The strip of an asset class: the deviation, in ink (feature 020, M5) -- */
-
-.strip {
-  flex: none;
-  height: var(--strip-h);
-  width: var(--strip-w);
-}
-
-.class-row > .strip {
-  grid-column: 1 / -1;
-  width: 100%;
-}
-
-.strip-scale {
-  color: var(--c-text-3);
-  display: flex;
-  font-size: var(--text-xs);
-  justify-content: space-between;
-  margin: 0;
-}
-
-/*
- * What the strips, the gauges of the bucket and the dumbbells share: a track
- * in the colour of a well, a thin line for the zero or the target, a stem and a
- * dot in ink (`bucket.css` draws the rest of the gauges and the dumbbells).
- */
-.strip .track,
-.meter-bar .track {
-  fill: var(--c-fill);
-}
-
-.strip .zero,
-.meter-bar .zero {
-  stroke: var(--c-text-3);
-  stroke-width: 1.5;
-}
-
-.strip .stem,
-.meter-bar .stem,
-.dumb-bar .stem {
-  stroke: var(--c-text-2);
-  stroke-linecap: round;
-  stroke-width: 3;
-}
-
-.strip .dot,
-.meter-bar .dot,
-.dumb-bar .dot {
-  fill: var(--c-text);
-  stroke: var(--c-surface);
-  stroke-width: 2;
-}
-
 /* ---- The strip of figures that belong together ------------------------- */
 
 .kpis {

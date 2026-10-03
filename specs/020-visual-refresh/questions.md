@@ -4,6 +4,7 @@ Fechas en Europe/Madrid. Aquí van las preguntas a la dirección, lo que se resp
 
 ## 1. Estado
 
+- **2026-10-03**: **E3 en curso** (§12): guardián de privacidad, `NEAR_LIMIT_PCT`, la puerta `@atlas/domain/charts`, M1, M9, M5 y M10 hechos; capturas y tubería final en §12.
 - **2026-09-28**: **E2 terminada y congelada** (§11). El código congelado es `9f2ddcc`.
 - **2026-09-27, tarde**: **E1 terminada y congelada** (§9). El código congelado es `ded43d6`.
 - **2026-09-27**: alto del plan. Rama `feature/020-visual-refresh` desde `origin/develop` (`ae66814`), worktree `.claude/worktrees/020-visual-refresh`, `core.hooksPath` a `.githooks`, `npm ci`. `git log origin/develop..origin/feature/015-api-access` sale vacío (la 015 entera está en `develop`).
@@ -686,3 +687,52 @@ Los demás, muertos a la primera:
 
 - **Código congelado: `9f2ddcc`**. El commit que añade esta sección solo toca `specs/`; su SHA va en la PR. Desde aquí no empujo nada mientras dura la revisión.
 - **Para los revisores**: `git worktree add --detach .claude/worktrees/020-rev-E2-<revisor> <sha>`.
+
+## 12. E3 — La privacidad que informa
+
+Rama `feature/020-visual-refresh`, ya fusionada con `origin/develop` (`9f6956d1`, que trae la 016 y la 017). Todo lo que sigue es sobre ese punto de partida.
+
+### 12.1 Decisiones de la persona (03/10)
+
+- **El color para daltónicos no es prioridad.** Los tests de color existentes siguen pasando y no se tocó ningún umbral: no hizo falta relajar nada en E3. Si hiciera falta, se relaja y se apunta aquí como «decisión de la persona, 03/10». Hoy: nada relajado.
+
+### 12.2 Los commits de E3
+
+Dominio, cada uno en commits propios y señalados para la PR:
+
+| Commit | Qué |
+|---|---|
+| `75df869c` | `NEAR_LIMIT_PCT` exportado por el barril (mismo valor, 80) |
+| `4b5859a7` | la puerta `@atlas/domain/charts` (alias, `package.json`, `LAZY_ONLY`, reglas de arquitectura) con `bucketGauges` y su propiedad «relleno > marca ⇔ aviso del tope» |
+| `03862328` | `thesisVsIndexPct` |
+
+Web: `046f61d0` (guardián), `9ab69fbc`/`33e2665a` (M9), `c87c672c`/`f2d1210f` (M1 aportación), `c3511ff7` (arreglo del trozo), `267f8ba6`/`84052e58` (M5), `f0613742`/`7b16d546` (M10 y M1 del cubo). Cada subida de techo va en un `build(web)` delante.
+
+### 12.3 Lo que encontré
+
+- **Dos commits no construían** (`33e2665a`, `f2d1210f`): `check-bundle.mjs` encontró `charts/gauges.ts` y `theses.ts` en el trozo de arranque `domain`, porque el grupo de `vite.config.ts` los absorbía. Lo arregla `c3511ff7` (`charts/` y `charts.ts` fuera del grupo; el arranque baja 108 bytes). Ya estaban empujados: no reescribo la historia. Lo vi tarde por leer solo las cifras y no el fallo del `build`.
+- **El guardián de privacidad** (`apps/web/test/privacy-attributes.test.tsx` y `helpers/exposures.ts`) pasa sobre el código de partida y falla (8 casos) si `Amount` pone la cifra en el `title`. Recorre texto y todos los atributos (menos geometría SVG) buscando las cifras del libro sintético en su forma española y la forma de un importe; prueba su propia red.
+- **El 1,005**: el redondeo es el de siempre (cadena decimal, una vez al mostrar); un mutante con `Number` sobrevive a 1,005 pero muere con 0,07 de 1 (exactamente 7).
+- **SC-008 no cierra en E3 en la página del Cubo**: con la privacidad puesta quedan 26 máscaras y 22 porcentajes (vista de móvil, 10/01/2027). Siete máscaras son la tabla equivalente de «Frente al índice» (serie en euros), que es M7 de E4. Las tarjetas de E3 sí: *Tesis* tiene más porcentajes que máscaras y *Presupuesto y control* tantos como máscaras (8 y 8). El test lo dice así.
+- Un aviso de lint previo (`infra/test/scripts/ci.test.ts:91`) no es mío.
+
+### 12.4 El paquete, mejora a mejora
+
+Partida (`9f6956d1`): arranque **75.482**, total **306.434**.
+
+| Mejora | Arranque | Δ | Total | Δ | Estimado |
+|---|---:|---:|---:|---:|---|
+| M9 (columnas fundidas) | 75.580 | +98 | 306.952 | +518 | +100 / +350 |
+| M1 aportación | 75.620 | +40 | 307.271 | +319 | +100 / +800 (con el cubo) |
+| M5 + trozo de `charts` | 75.593 | −27 | 307.720 | +449 | +60 / +300 |
+| M10 + M1 del cubo (final) | **75.835** | +242 | **309.810** | +2.090 | +50 / +700 |
+| **E3** | **75.835** | **+353** | **309.810** | **+3.376** | **+325 / +2.865** |
+
+Techos: arranque **75.855**, total **310.066**. Margen hasta la autorización: **234** (arranque) y **2.190** (total). **Aviso: E4, estimada en +3.150 de total, no cabe tal como está** (312.000); el orden de recortes está en el plan §6.3. Todo el aumento del arranque es hoja de estilos (`bucket.css`); M14 es la palanca.
+
+### 12.5 Documentos que la dirección tendrá que actualizar por E3
+
+- `system.md` §5.14/§5.15: la tira de desviación por tipo de activo (sin banda, en tinta; «N activos fuera de umbral» sale de los avisos por activo), los tres medidores del cubo y las mancuernas.
+- `system.md` §5.2: con la privacidad puesta, un porcentaje junto a cada importe oculto; las tablas funden sus columnas de importes en «Importes ocultos» (*Costes*, *Posiciones abiertas*, *Tesis*).
+- `data-model.md` §3 y `contracts/domain-doors.md`: `bucketGauges` y `thesisVsIndexPct` tal como se implementaron (`thesis_pct`, `index_pct`, `vs_index_pp` ausentes si falta la comparación; `result_pct` con signo).
+- `business-rules.md`: nada cambia; `NEAR_LIMIT_PCT` sigue sin ser configurable.

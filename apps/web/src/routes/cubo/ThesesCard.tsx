@@ -94,7 +94,7 @@ const COLUMNS: readonly DataColumn<ThesisRow>[] = [
     numeric: true,
     card: "figure",
     whenMasked: true,
-    cell: (row) => <Figure value={row.vsIndexPp} unit="points" coloured />,
+    cell: (row) => <Figure value={row.vsIndexPp} unit="points" />,
   },
 ];
 
