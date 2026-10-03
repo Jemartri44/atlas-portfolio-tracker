@@ -12,33 +12,12 @@
 // live in `@atlas/domain`, so what is left here is markup.
 
 import { A } from "@solidjs/router";
-import { For, type JSX, Show } from "solid-js";
+import { createMemo, For, type JSX, Show } from "solid-js";
+import { usePrivacy } from "../ledger/state.js";
+import { type CardSlot, type DataColumn, rowColumns, tableColumns } from "./columns.js";
 import { Icon, type IconName } from "./Icon.jsx";
 
-/**
- * Where a column goes on a phone:
- *
- * - `title`     — first line, the thing the row is about;
- * - `sub`       — second line, what kind of thing and where;
- * - `meta`      — second line too, after `sub`: a tag, a state;
- * - `figure`    — first line on the right, the number that matters;
- * - `figureSub` — second line on the right: a date, a second figure;
- * - omitted     — the column exists only in the table.
- */
-export type CardSlot = "title" | "meta" | "figure" | "figureSub" | "sub";
-
-export interface DataColumn<R> {
-  key: string;
-  header: string;
-  /** Right-aligned and tabular: a column of figures reads down, not across. */
-  numeric?: boolean;
-  cell: (row: R) => JSX.Element;
-  /** The same value on a phone row, when it needs less chrome than in the table. */
-  cardCell?: (row: R) => JSX.Element;
-  card?: CardSlot;
-  /** Text for the `title` attribute of the cell, when it can be truncated. */
-  hint?: (row: R) => string | undefined;
-}
+export type { CardSlot, DataColumn };
 
 interface DataTableProps<R> {
   /** Accessible name of the table and of the list: they are the same data. */
@@ -71,6 +50,12 @@ interface DataTableProps<R> {
    * the thesis of a position. On the table it goes in a row of its own.
    */
   detail?: (row: R) => JSX.Element;
+  /**
+   * With the privacy mode on, the columns marked `amount` fuse into one with
+   * this header, and the ones marked `whenMasked` go in front of it
+   * (`components/columns.ts`). Absent: the table is the same in both modes.
+   */
+  maskedMerge?: string | undefined;
 }
 
 const slot = <R,>(columns: readonly DataColumn<R>[], which: CardSlot): DataColumn<R>[] =>
@@ -132,6 +117,16 @@ const RowBody = <R,>(props: {
 );
 
 export const DataTable = <R,>(props: DataTableProps<R>): JSX.Element => {
+  const privacy = usePrivacy();
+  const merging = (): boolean => props.maskedMerge !== undefined && privacy();
+  const wide = createMemo(() =>
+    props.maskedMerge === undefined
+      ? props.columns
+      : tableColumns(props.columns, merging(), props.maskedMerge),
+  );
+  const narrow = createMemo(() =>
+    props.maskedMerge === undefined ? props.columns : rowColumns(props.columns, merging()),
+  );
   /** The classes of a row: its own, the one for a leading icon, and the caller's. */
   const classOf = (row: R, base: string, withLead: string): string =>
     [base, props.lead?.(row) === undefined ? undefined : withLead, props.rowClass?.(row)]
@@ -165,7 +160,7 @@ export const DataTable = <R,>(props: DataTableProps<R>): JSX.Element => {
                   fallback={
                     <div class={classOf(row, "row", "has-lead")}>
                       <RowBody
-                        columns={props.columns}
+                        columns={narrow()}
                         row={row}
                         lead={props.lead?.(row)}
                         detail={props.detail}
@@ -178,7 +173,7 @@ export const DataTable = <R,>(props: DataTableProps<R>): JSX.Element => {
                     class={classOf(row, "row", "has-lead")}
                   >
                     <RowBody
-                      columns={props.columns}
+                      columns={narrow()}
                       row={row}
                       lead={props.lead?.(row)}
                       detail={props.detail}
@@ -204,7 +199,7 @@ export const DataTable = <R,>(props: DataTableProps<R>): JSX.Element => {
       >
         <thead>
           <tr>
-            <For each={props.columns}>
+            <For each={wide()}>
               {(column) => (
                 <th scope="col" class={column.numeric === true ? "num" : undefined}>
                   {column.header}
@@ -218,7 +213,7 @@ export const DataTable = <R,>(props: DataTableProps<R>): JSX.Element => {
             {(row) => (
               <>
                 <tr class={props.rowClass?.(row)}>
-                  <For each={props.columns}>
+                  <For each={wide()}>
                     {(column) => (
                       <td class={column.numeric === true ? "num" : undefined}>
                         <Show when={column.hint?.(row) !== undefined} fallback={column.cell(row)}>
@@ -232,7 +227,7 @@ export const DataTable = <R,>(props: DataTableProps<R>): JSX.Element => {
                 </tr>
                 <Show when={props.detail !== undefined}>
                   <tr class="extra-row">
-                    <td colSpan={props.columns.length}>
+                    <td colSpan={wide().length}>
                       {(props.detail as (row: R) => JSX.Element)(row)}
                     </td>
                   </tr>

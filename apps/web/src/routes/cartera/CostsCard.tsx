@@ -40,6 +40,7 @@ const CORE_COLUMNS: readonly DataColumn<CoreCostRowView>[] = [
     header: "Comisiones pagadas",
     numeric: true,
     card: "sub",
+    amount: true,
     cell: (row) => <Amount value={row.fees} />,
     cardCell: (row) => (
       <span>
@@ -64,6 +65,7 @@ const CORE_COLUMNS: readonly DataColumn<CoreCostRowView>[] = [
     header: "Coste anual",
     numeric: true,
     card: "figure",
+    amount: "lead",
     cell: (row) => <Amount value={row.annualCost} missingReason="sin precio" />,
   },
 ];
@@ -80,6 +82,7 @@ export const CostsCard = (props: { view: CostsView }): JSX.Element => (
             label="Costes de la cartera principal"
             columns={CORE_COLUMNS}
             rows={props.view.core.rows}
+            maskedMerge="Importes ocultos"
           />
           <TotalLine
             label={

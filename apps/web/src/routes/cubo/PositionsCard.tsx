@@ -33,12 +33,14 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
     key: "quantity",
     header: "Cantidad",
     numeric: true,
+    amount: true,
     cell: (row) => <Amount quantity={row.quantity} of={row.units} />,
   },
   {
     key: "cost",
     header: "Coste medio",
     numeric: true,
+    amount: true,
     cell: (row) => <Amount value={row.unitCost} unit />,
   },
   {
@@ -59,6 +61,7 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
     header: "Valor",
     numeric: true,
     card: "figure",
+    amount: "lead",
     cell: (row) => <Amount value={row.value} missingReason="sin precio a esa fecha" />,
   },
   {
@@ -66,6 +69,7 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
     header: "Resultado latente",
     numeric: true,
     card: "meta",
+    amount: true,
     cell: (row) => <Amount value={row.unrealized} signed coloured />,
     // Said once: with no price the line above already reads «sin precio» and
     // the figure «sin dato»; a third one here read «sin precio sin dato».
@@ -83,6 +87,14 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
     header: "Peso en el cubo",
     numeric: true,
     cell: (row) => <Figure value={row.weightPct} unit="percent" />,
+  },
+  // With the amounts hidden, the latent result as a percentage of the cost.
+  {
+    key: "pl-pct",
+    header: "Latente s/ coste",
+    numeric: true,
+    whenMasked: true,
+    cell: (row) => <Figure value={row.unrealizedPct} unit="percent" decimals={1} signed coloured />,
   },
 ];
 
@@ -124,6 +136,7 @@ export const PositionsCard = (props: { view: BucketPositionsView }): JSX.Element
         size="lg"
         columns={COLUMNS}
         rows={props.view.rows}
+        maskedMerge="Importes ocultos"
         detail={(row) => <ThesisNote row={row} />}
       />
       <TotalLine

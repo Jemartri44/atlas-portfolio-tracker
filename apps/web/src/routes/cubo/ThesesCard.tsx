@@ -11,6 +11,7 @@ import {
   type DataColumn,
   DataTable,
   Disclosure,
+  Figure,
   type NoticeItem,
   NoticeList,
   Section,
@@ -18,6 +19,8 @@ import {
 } from "../../components/index.js";
 import { countOf } from "../../format/number.js";
 import type { ThesesView, ThesisRow } from "../../view-models/bucket/index.js";
+
+const HIDDEN = "Importes ocultos";
 
 const COLUMNS: readonly DataColumn<ThesisRow>[] = [
   {
@@ -48,18 +51,21 @@ const COLUMNS: readonly DataColumn<ThesisRow>[] = [
     key: "invested",
     header: "Invertido",
     numeric: true,
+    amount: "lead",
     cell: (row) => <Amount value={row.invested} />,
   },
   {
     key: "result",
     header: "Resultado",
     numeric: true,
+    amount: true,
     cell: (row) => <Amount value={row.result} signed coloured />,
   },
   {
     key: "latent",
     header: "Latente",
     numeric: true,
+    amount: true,
     cell: (row) => (
       <Amount value={row.unrealized} signed coloured missingReason="falta el precio del activo" />
     ),
@@ -69,7 +75,25 @@ const COLUMNS: readonly DataColumn<ThesisRow>[] = [
     header: "Frente al índice",
     numeric: true,
     card: "figure",
+    amount: true,
     cell: (row) => <Amount value={row.vsIndex} signed coloured missingReason={row.gap} />,
+  },
+  // With the amounts hidden, what stands for them: the same two results in
+  // percent over what was invested, and the difference in points.
+  {
+    key: "thesis-pct",
+    header: "Resultado s/ invertido",
+    numeric: true,
+    whenMasked: true,
+    cell: (row) => <Figure value={row.thesisPct} unit="percent" decimals={1} signed coloured />,
+  },
+  {
+    key: "vs-pp",
+    header: "Frente al índice (pp)",
+    numeric: true,
+    card: "figure",
+    whenMasked: true,
+    cell: (row) => <Figure value={row.vsIndexPp} unit="points" coloured />,
   },
 ];
 
@@ -105,12 +129,30 @@ export const ThesesCard = (props: {
         <Show
           when={open().length > 0 && closed().length > 0}
           fallback={
-            <DataTable label="Tesis del cubo" columns={COLUMNS} rows={props.view.rows} size="lg" />
+            <DataTable
+              label="Tesis del cubo"
+              columns={COLUMNS}
+              rows={props.view.rows}
+              size="lg"
+              maskedMerge={HIDDEN}
+            />
           }
         >
-          <DataTable label="Tesis abiertas" columns={COLUMNS} rows={open()} size="lg" />
+          <DataTable
+            label="Tesis abiertas"
+            columns={COLUMNS}
+            rows={open()}
+            size="lg"
+            maskedMerge={HIDDEN}
+          />
           <Disclosure label={countOf(closed().length, "tesis cerrada", "tesis cerradas")}>
-            <DataTable label="Tesis cerradas" columns={COLUMNS} rows={closed()} size="lg" />
+            <DataTable
+              label="Tesis cerradas"
+              columns={COLUMNS}
+              rows={closed()}
+              size="lg"
+              maskedMerge={HIDDEN}
+            />
           </Disclosure>
         </Show>
         <Show when={props.view.withoutIndex > 0}>

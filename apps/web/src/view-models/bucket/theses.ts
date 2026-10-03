@@ -7,6 +7,7 @@
 // and has the tests.
 
 import type { BucketThesisView, Money, Warning } from "@atlas/domain";
+import { thesisVsIndexPct } from "@atlas/domain/charts";
 import { formatDate } from "../../format/date.js";
 import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
 
@@ -34,6 +35,15 @@ export interface ThesisRow {
   vsIndex?: Money;
   /** Why there is no comparison, in the thesis's own words. */
   gap?: string;
+  /**
+   * What the thesis did over what it invested, what the same money did in the
+   * index, and the difference in points: the domain's (`thesisVsIndexPct`),
+   * absent where there is no comparison. They stay in sight with the privacy
+   * mode on, which is why they exist.
+   */
+  thesisPct?: string;
+  indexPct?: string;
+  vsIndexPp?: string;
 }
 
 export interface ThesesView {
@@ -56,11 +66,23 @@ const gapOf = (thesis: BucketThesisView): string | undefined => {
   return first === undefined ? undefined : (GAPS[first.reason] ?? first.reason);
 };
 
+const percentagesOf = (
+  thesis: BucketThesisView,
+): Pick<ThesisRow, "thesisPct" | "indexPct" | "vsIndexPp"> => {
+  const pct = thesisVsIndexPct(thesis);
+  return {
+    ...(pct.thesis_pct === undefined ? {} : { thesisPct: pct.thesis_pct.toString() }),
+    ...(pct.index_pct === undefined ? {} : { indexPct: pct.index_pct.toString() }),
+    ...(pct.vs_index_pp === undefined ? {} : { vsIndexPp: pct.vs_index_pp.toString() }),
+  };
+};
+
 export const thesesView = (
   view: { rows: readonly BucketThesisView[]; warnings: readonly Warning[] },
   names: NameIndex = NO_NAMES,
 ): ThesesView => ({
   rows: view.rows.map((thesis) => ({
+    ...percentagesOf(thesis),
     thesisId: thesis.thesis_id,
     period:
       thesis.closed_at === undefined
