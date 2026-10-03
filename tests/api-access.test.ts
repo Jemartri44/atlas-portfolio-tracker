@@ -629,6 +629,8 @@ describe("architecture (015): the thin adapters of the SDK send only what they a
         "PutParameterCommand",
         "GetParametersByPathCommand",
         "GetParametersByPathCommandOutput",
+        // Feature 017, E4: tags a parameter after a rotation (`SdkSecretStore`, administration only).
+        "AddTagsToResourceCommand",
       ],
       // Feature 016 (§8.1 P8): one command, to send a mail, and its client.
       "@aws-sdk/client-sesv2": ["SESv2Client", "SendEmailCommand"],
@@ -728,9 +730,12 @@ describe("architecture (015): the administration is out of reach of the API (E5)
    */
   it("uses no token of a device: it imports neither the credentials nor the client of the API", () => {
     const roots = cliSources().filter((file) =>
-      /[/\\](admin[/\\][^/\\]+|commands[/\\](admin|backup|backup-copies))\.ts$/.test(file),
+      /[/\\](admin[/\\][^/\\]+|commands[/\\](admin|admin-secrets|backup|backup-copies))\.ts$/.test(
+        file,
+      ),
     );
-    expect(roots.length).toBe(4);
+    // Feature 017, E4: `admin/secrets.ts` and `commands/admin-secrets.ts` join the four.
+    expect(roots.length).toBe(6);
     // What they import, by name: never the credentials or the client of the
     // console, and from the barrel of the adapters only the folder's own.
     const imported = roots.flatMap((file) =>
