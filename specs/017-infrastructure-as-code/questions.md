@@ -83,3 +83,52 @@ Fuentes: **AWS Service Reference** (`servicereference.us-east-1.amazonaws.com`, 
 9. **Backend S3 sin `workspace_key_prefix`** (b0.9): el listado de espacios de trabajo con el prefijo por defecto tolera el `AccessDenied`.
 
 **Pregunta abierta nueva (Q-E1-1)**: el trabajo `infra` de la CI y `test:others`. Añadir el proyecto `infra` a `vitest.config.ts` hace que `npm run test:others` lo ejecute en el trabajo `verify`, **que no tiene Terraform**. Hoy solo corren los tests que no lo necesitan (guardián y `.gitignore`); en cuanto entren los que llaman a `terraform` hará falta o un trabajo propio con `setup-terraform` (propuesta, con `test:others` excluyendo `infra`, lo que obliga a cambiar la expectativa exacta de `tests/test-outputs.test.ts`) o Terraform en `verify`. *Recomendación: trabajo propio.*
+
+## E1 — Cierre (2026-10-03, segundo implementador)
+
+**Hecho**: `infra/bootstrap/account` y `infra/bootstrap/env` (HCL, proveedor `hashicorp/aws = 6.67.0`, `.terraform.lock.hcl` versionado en cada raíz y en `infra/test/fixtures/`), `infra/test/contract/permissions.json` (contrato de todos los roles; los de E2/E3 solo alimentan el cruce con el límite), `cost.md` (lista cerrada, con test), la casilla de la plantilla de PR con su test, el trabajo `infra` de la CI (decisión sobre Q-E1-1: trabajo propio; `test:others` excluye `infra`; `tests/test-outputs.test.ts` actualizado), fixtures de violación y de cumplimiento con la batería de elusiones de la familia 1 (variable, `concat`, `for_each`, `templatefile`, `dynamic`, `inline_policy`, gestionada ajena, `NotAction`, sensible, `SecureString`, región, tipo fuera de `cost.md`, `output` sin `sensitive`), `.tftest.hcl` con `mock_provider` por raíz (un `run` por salida de C2, C3, C5, C9, C13, C19 y SES) y los tests de Z1 (`env-identity`, `env-isolation`) y Z2 (`account`).
+
+### Decisiones nuevas (a confirmar)
+
+1. **`mail_sender` NO es sensible** (corrige la decisión 1 del primer implementador): ADR-0034, fila 1, dice «solo el dominio y el destinatario»; el límite de permisos nombra `identity/<remitente>` y una variable sensible convertiría el documento entero en `(sensitive value)`. Sus `output` sí lo serían (B3); hoy ninguno lo lleva.
+2. **El despliegue lleva cuatro políticas gestionadas por el cliente** (`atlas-<env>-deploy-{read,workload,edge,iam}`), no una en línea: una política en línea de un rol admite 10.240 caracteres en total y el contrato daba 13.103; cada gestionada admite 6.144. Se adjuntan con ARN construido y `depends_on`. El guardián de comodines admite una adjunta solo si es `atlas-<env>-*` (regex `OWN_POLICY`); cualquier otra, `ReadOnlyAccess` incluida, falla. El rol de `plan` mantiene una política en línea (4,5 k).
+3. **El límite mide 5.4 k de 6.144**: se escribió con comodines de prefijo (`lambda:Get*`, nunca `*` ni `servicio:*`) y las declaraciones del mismo servicio y región agrupadas. Deja ~700 caracteres a E2 (si no caben, partir el límite no es posible: es un rol, un límite; **pregunta para la dirección en E2**).
+4. **El bucket de la SPA es `atlas-<env>-spa-<sufijo>`** (el prompt no fija el nombre).
+5. **Artefactos: caducidad a 90 días** (versiones no vigentes, 30; multiparte, 7). Elegido sin fuente; se ajusta si la promoción tarda más.
+6. **`Deny` del bucket del estado**: además de `envs/prod/*` y `envs/dev/*` (solo `atlas-<env>-deploy`, `-plan` y el administrador), se niega todo el bucket a cualquier otro principal, el listado fuera del prefijo propio y los cambios de configuración a todos salvo el administrador.
+7. **El límite deja pasar los buckets de la cuenta por prefijo (`atlas-account-*`)** y por tanto *no separa* `dev` de `prod` en el estado: las separan las dos cerraduras (identidad de cada rol, política del bucket), cada una con su test. El test de cruce lo declara como única excepción.
+8. **KMS sobre `aws/ssm` y la identidad SES del destinatario no entran** en el límite (decisión 7 del primer implementador y E3): están en `permissions.json` como `pending` (`api/KmsSsm`) y un test lista los pendientes. El SES del remitente y del dominio, sí.
+9. **`ssm:DescribeParameters`** (sin recurso) **no está en la lista cerrada**: el `plan` quizá no pueda refrescar los parámetros `String` sin él. Es una pregunta para E2 b0 (con la fuente del proveedor), no un ensanche.
+10. **`acm:RequestCertificate`** se escribe sobre `certificate/*` con `aws:RequestTag/env`; si SAR dice que no admite recurso, pasaría a la lista cerrada con su fuente: **SIN VERIFICAR para E2/018**.
+11. Las acciones de refresco de Lambda, CloudFront, ACM, WAF y Scheduler del `plan` son las de lectura de SAR por tipo; **E2 y E3 las contrastan con el código del proveedor** (por ejemplo `GetFunctionRecursionConfig` de Lambda no está: si el proveedor la pide, es una pregunta).
+12. **`aws:PrincipalArn` de una sesión de Identity Center** (rol con ruta `aws-reserved/sso.amazonaws.com/...`): si el ARN de la sesión no lleva la ruta, la condición `ArnNotLike` de los buckets de la cuenta dejaría fuera al administrador. **SIN VERIFICAR para la 018** (C5), con el test de «el administrador nunca queda fuera» hecho con el ARN tal cual se escribe.
+13. `aws:RequestedRegion` de las llamadas de IAM: el límite admite `eu-west-1` y `us-east-1` en IAM por si el *endpoint* global responde desde `us-east-1`. **SIN VERIFICAR para la 018**.
+
+### Autocomprobación de las 17 familias (E1)
+
+| Familia | Qué miré, con qué | Salió |
+|---|---|---|
+| 1 Guardianes eludibles | `guardians.test.ts` sobre el `plan` renderizado de `fixtures/violations`: variable, `concat`, servicio `:*`, `for_each`, `templatefile`, `dynamic`, `inline_policy`, gestionada ajena y propia, `NotAction`, `Resource "*"` | cada una la ve su regla; el cumplimiento no da nada |
+| 2 Valor exacto | `permissions.json` contra la política renderizada, línea a línea (`env-identity`) | conjunto igual, ni una más ni una menos |
+| 4 Documentos alineados | `cost.md`, `permissions.json` y plan; los nombres de variable de la 016 (`mail_*`) | alineados; `ATLAS_*` y `Input` son de E2/E3 |
+| 6 Registros | ningún guion en E1; el trabajo de CI no imprime nada del `plan` (solo `npm run test:infra`) | n/a, con motivo |
+| 7 Entradas | cada variable con `validation` (`terraform test` rechaza cuenta de 4 cifras y `env = staging`) | hecho |
+| 9, 10 Procedimientos, `--yes` | ninguno en E1 (E4) | n/a, con motivo |
+| 11 Comodines | `wildcards()` sobre ambas raíces; lista cerrada = `logs:DescribeLogGroups` | sin comodín |
+| 12 Etiquetas | `tags()` con `UNTAGGABLE` (cada tipo con su motivo) | completas |
+| 13 Secretos | `secrets()` en `plan` de cada raíz; ninguna variable sensible dentro de una política | limpio |
+| 14 `prevent_destroy` | lectura del HCL (el `plan` no lo muestra, b0.10) en el estado y en los tres compartidos; versionado `Enabled` sobre el `plan`; el bucket de datos de `prod` es de E2 | hecho para E1 |
+| 15 Deriva | no hay `ignore_changes` en E1 | n/a |
+| 16 Cruce | `crossEnvironment()` sobre toda política de identidad; las dos cerraduras por separado (`env-isolation`, `account`) | limpio |
+| 17 Datos personales | `.gitignore` con su test; `static.test.ts` (correos, cuentas, claves en ficheros versionados) | limpio |
+| 18 Registros de la CI | `ci.test.ts` (permisos, SHA, sin `id-token` ni `environment:`); el flujo de `plan` y los despliegues son de E4 | hecho para el trabajo de E1 |
+| 19 Región | `regions()` (Budgets y etiqueta en `us-east-1`; OAC en `us-east-1`; IAM global) | limpio |
+| 20 Autobloqueo | el administrador nunca queda fuera del estado ni de los artefactos (`account.test.ts`); el límite de datos y de roles son de E2 | hecho para E1 |
+
+### Qué NO está hecho de E1 y qué queda SIN VERIFICAR
+
+- **Mutantes**: ver el resultado de la ejecución al final de esta sección; los que no figuren como «muertos» **no se han visto morir**.
+- **Mutante 40, parte «flujo de `plan` sin `-lock=false`»**, y 41, 45, 46, 50 y 54: son de E4/E2/E3 (el flujo, los despliegues, la Function URL, la distribución, los roles de servicio).
+- Los tests de **rojo primero**: los guardianes y los tests de los `.tf` se escribieron *después* del HCL (el arnés exigía raíces reales); su valor lo da la ejecución de mutantes, no el orden.
+- **SIN VERIFICAR para la 018** (sin cambio): lo de la tabla de §6 del prompt, el simulador de IAM, la unicidad del proveedor OIDC por URL, `immutable subject claims`, `ListTagsForResource` de S3 (el proveedor cae a `GetBucketTagging`), `HeadBucket` con solo las acciones de B1, y los puntos 12 y 13 de arriba.
+- **Documentos que tendrá que actualizar la dirección** (E1): ADR-0034 (excepciones del límite que salen del cruce: `atlas-account-*` solo por prefijo; las cuatro políticas del despliegue por el límite de 10.240), ADR-0028 (sin cambio nuevo), `docs/dependencies.md` (hecho por el primer implementador), `docs/prompts/README.md`, `CLAUDE.md` (*Where things live*: `terraform.tfvars` de `bootstrap/account`, `bootstrap/dev`, `bootstrap/prod`).
