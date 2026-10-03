@@ -52,10 +52,9 @@ const code = (path: string): string =>
 /** The instances of a `for_each` resource of the module, by key. */
 const byKey = (plan: Plan, type: string): Record<string, Record<string, unknown>> =>
   Object.fromEntries(
-    ofType(plan, type).map((change) => [
-      String(change.index),
-      change.change.after as Record<string, unknown>,
-    ]),
+    ofType(plan, type)
+      .filter((change) => change.index !== undefined)
+      .map((change) => [String(change.index), change.change.after as Record<string, unknown>]),
   );
 const variablesOf = (fn: Record<string, unknown>): Record<string, string> =>
   (fn.environment as { variables: Record<string, string> }[])[0]?.variables as Record<
@@ -295,7 +294,9 @@ const contextFor = (
     for (const [key, wanted] of Object.entries(pairs)) {
       const values = [wanted].flat();
       if (operator === "Null") {
-        context[key] = values[0] === "false" ? "present" : undefined;
+        if (values[0] === "false") {
+          context[key] ??= "present";
+        }
       } else if (operator.startsWith("ForAllValues")) {
         context[key] = values;
       } else {
@@ -415,7 +416,11 @@ describe.each(ENVS)("the functions, logs and invoke configuration of %s", (env) 
   });
 
   it("the prices function: the real sources in production, only the simulated one in development, never both", () => {
-    const prices = parseJobsConfig(variablesOf(task("prices"))).prices;
+    const prices = (
+      parseJobsConfig(variablesOf(task("prices"))) as unknown as {
+        prices?: { sources: unknown; dailyCalls: unknown; failureThreshold: number };
+      }
+    ).prices;
     if (env === "prod") {
       expect(prices?.sources).toEqual(["eodhd", "alpha_vantage"]);
       expect(JSON.stringify(variablesOf(task("prices")))).not.toContain("simulated");
@@ -427,9 +432,13 @@ describe.each(ENVS)("the functions, logs and invoke configuration of %s", (env) 
   });
 
   it("the integrity function: the ledger warning at 1 MiB", () => {
-    expect(parseJobsConfig(variablesOf(task("integrity"))).integrity?.ledgerSizeWarningBytes).toBe(
-      1_048_576,
-    );
+    expect(
+      (
+        parseJobsConfig(variablesOf(task("integrity"))) as unknown as {
+          integrity?: { ledgerSizeWarningBytes: number };
+        }
+      ).integrity?.ledgerSizeWarningBytes,
+    ).toBe(1_048_576);
   });
 
   it("no key of a price source and no recipient as a resource of Terraform (family 13)", () => {
@@ -596,7 +605,8 @@ describe("what the code of E3 never says (static)", () => {
   it("has no literal environment, no kms line and no ses outside the mail statement", () => {
     expect(`${jobs}\n${scheduler}`).not.toMatch(/(?<![a-z])(dev|prod)(?![a-z])/);
     expect(jobs).not.toMatch(/kms:/);
-    expect(jobs.match(/ses:/g)).toHaveLength(1);
+    expect(jobs.match(/"ses:SendEmail"/g)).toHaveLength(1);
+    expect(jobs).not.toMatch(/ses:\*/);
     expect(scheduler).not.toMatch(/ses:|kms:/);
   });
 

@@ -70,3 +70,34 @@ run "c12_zero_is_refused" {
   }
   expect_failures = [var.api_reserved_concurrency]
 }
+
+run "jobs_schedules_enabled" {
+  command = plan
+  variables {
+    edge_mode = "free_plan"
+  }
+  assert {
+    condition     = alltrue([for state in values(module.atlas.schedule_states) : state == "ENABLED"])
+    error_message = "every schedule of prod is ENABLED"
+  }
+}
+
+run "prices_never_simulated_in_prod" {
+  command = plan
+  variables {
+    edge_mode      = "free_plan"
+    prices_sources = ["simulated"]
+  }
+  expect_failures = [var.prices_sources]
+}
+
+run "c12_jobs_reserved_by_default" {
+  command = plan
+  variables {
+    edge_mode = "free_plan"
+  }
+  assert {
+    condition     = alltrue([for value in values(module.atlas.jobs_reserved_concurrency) : value == 1])
+    error_message = "each task reserves 1 execution"
+  }
+}
