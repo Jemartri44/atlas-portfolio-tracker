@@ -798,3 +798,11 @@ Con los tres recortes el total queda en ~312.300: **todavía ~300 por encima**, 
 - La tira de la cartera y la del efectivo: el último panel lleva el eje de fechas y por eso es más alto (+2 rem). Visto en captura a 400 px.
 - Color para daltónicos: no se relajó ningún umbral.
 - Capturas (scratchpad `020-e4-shots/`: `antes`, `despues`, `antes-mayo`, `despues-mayo`; 90 + 58 cada una; Resumen, Cubo y Declaración a 400×890×3 y 2045×1141, claro y oscuro, importes ocultos y visibles; reloj 20/01/2029 y 15/05/2029): sin desplazamiento lateral a 360, 400, 1.440 y 2045; ningún texto bajo 13 px; ningún objetivo táctil bajo 44 px.
+
+### 13.5 Ronda de revisión de #120 (sin bloqueantes; para la dirección)
+
+1. **Lo aportado frente a la cartera sin su efectivo** (`EvolutionCard.tsx`, `business-rules.md`): el panel principal enfrenta los activos del núcleo con los ingresos netos; el efectivo va al panel «Efectivo». El código cumple FR-041, pero el texto de `business-rules.md` dice «frente a lo que vale lo que tiene». Decidir cuál se corrige.
+2. **Tesis abierta sin movimiento**: la serie en % y `bucketStats` discrepan (ya recogido arriba); el test solo cubre el caso sin tesis ociosas.
+3. **`FILING_DEADLINES` pone el 31/03 todos los años**: 2017, 2018 y 2023 caen en fin de semana; plazos y fuentes sin verificar con el asesor (fiscal: no se adivina).
+4. **Años sin cubo** se pintan como hueco con la banda «sin precios», y un cubo con compras pero sin ingresos sale siempre como pendiente, con un motivo que no es el real.
+5. Menores: el calendario aún no tiene dibujo (~200 B en el trozo fiscal); `netWorthDates` repite proyecciones con el tope de puntos; `uncovered_buys` compara la fecha fiscal con la `value_date`.
