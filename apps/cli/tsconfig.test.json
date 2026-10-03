@@ -11,6 +11,7 @@
     "../api/test/harness.ts",
     "../api/src",
     "../../packages/adapters/test/aws/test-only-fake-s3.ts",
+    "../../packages/adapters/test/aws/test-only-fake-secrets.ts",
     "../../packages/adapters/test/aws/test-only-fake-ssm.ts",
     "../../packages/adapters/test/identity/test-only-fake-google.ts"
   ],

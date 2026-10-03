@@ -409,6 +409,10 @@ export const describeError = (error: DomainError): string => {
       return "AWS no responde ahora (el bucket de datos o SSM): no se ha escrito nada que no se diga. Repite dentro de un rato.";
     case "admin_aws_refused":
       return `AWS ha rechazado la orden (${text(d.name)}): la consola usa una sesión ya abierta del rol de administración del entorno, con MFA («aws sso login», o «aws configure export-credentials» tras el código), como dice el procedimiento «Revocar todos los tokens».`;
+    case "admin_secret_invalid":
+      return `El valor de ${text(d.parameter)} no vale (${text(d.reason)}): no se ha escrito. No se enseña el valor.`;
+    case "admin_secret_write_failed":
+      return `No se ha podido escribir ${text(d.parameter)}. Comprueba qué parámetros quedaron con «atlas admin secrets» otra vez: salta los que ya están si no se escribe nada.`;
     case "symbols_push_missing":
       return "No hay prices/symbols.json en la carpeta: declara antes los símbolos con «atlas prices symbols set».";
     case "symbols_push_misstored":

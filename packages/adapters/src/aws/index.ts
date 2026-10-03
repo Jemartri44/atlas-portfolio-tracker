@@ -24,6 +24,7 @@ export {
   LEDGER_KEY,
   S3LedgerBlob,
 } from "./s3-ledger.js";
+export type { SecretKind, SecretStore } from "./secret-store.js";
 export { AccessSecrets, parameterNames, type SecretsOptions } from "./secrets.js";
 export { TokenRegistry } from "./token-registry.js";
 export { readWebSignIn, recordWebSignIn, type WebSignInWrite } from "./web-sign-in.js";

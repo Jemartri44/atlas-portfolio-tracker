@@ -62,6 +62,7 @@ import { describeLock, LOCK_LOST, remedyFor } from "./output/lock.js";
 import { describeDependants, describeDuplicate, describeError } from "./output/messages.js";
 import { describeSecretsError } from "./output/prices.js";
 import { describeCredentialsError } from "./output/remote.js";
+import { askWithoutEcho } from "./output/secret-prompt.js";
 import type { PriceEnvironment } from "./prices/load.js";
 import { CredentialsError } from "./remote/credentials-file.js";
 import type { RemoteEnvironment } from "./remote/environment.js";
@@ -223,7 +224,7 @@ comandos:
   sync join --from-remote|--with-own-lines [--origin <https://…>] [--device <id>]   se une a una nube con libro
   sync redownload                vuelve a descargar la nube tras una reescritura (solo si lo pides)
   sync deactivate                desactiva la sincronización; lo retenido se queda
-  admin devices|revoke-all-tokens|forget-device [--] <id>|--device <id> [--force]|compact|restore --from <copia>|prices push --env <entorno>
+  admin devices|revoke-all-tokens|forget-device [--] <id>|--device <id> [--force]|compact|restore --from <copia>|prices push|secrets --env <entorno>
                                  la administración de la nube, con el rol de administración y nunca por la API
   --                             termina las opciones: lo que va detrás es posicional (un id que empiece por guion)`;
 
@@ -259,6 +260,8 @@ export const terminalIo = (): Io => ({
       rl.close();
     }
   },
+  askSecret: (question) =>
+    askWithoutEcho(question, { input: process.stdin, output: process.stdout }),
 });
 
 /** Runs one invocation and returns the exit code. `compose` is replaced in tests. */
