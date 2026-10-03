@@ -44,6 +44,7 @@ export {
   type ControlGap,
   type DrawdownPoint,
   type ExcludedThesis,
+  NEAR_LIMIT_PCT,
 } from "./projections/bucket-stats.js";
 export * from "./projections/cash.js";
 export { accounts, assets } from "./projections/catalogue.js";
