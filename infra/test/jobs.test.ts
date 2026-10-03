@@ -394,7 +394,7 @@ describe.each(ENVS)("the functions, logs and invoke configuration of %s", (env) 
           ...(JOBS_CONFIG_VARIABLES[family as (typeof JOB_FAMILIES)[number]] ?? []),
         ].sort(),
       );
-      expect(() => parseJobsConfig({ ...variables, ATLAS_EXTRA: "1" })).toThrow();
+      expect(() => parseJobsConfig({ ...variables, ATLAS_EXTRA: "1" })).toThrow(/ATLAS_EXTRA/);
       expect(
         Object.keys(variables).filter(
           (k) => /KEY|SECRET|PASSWORD|TOKEN/.test(k) && !/_(SECONDS|DAYS|BYTES|CALLS)$/.test(k),
@@ -451,7 +451,9 @@ describe.each(ENVS)("the functions, logs and invoke configuration of %s", (env) 
 
 describe("the prices function of production refuses the simulated source", () => {
   it("a production plan with it does not even validate", () => {
-    expect(() => renderStack("prod", { prices_sources: ["simulated"] })).toThrow();
+    expect(() => renderStack("prod", { prices_sources: ["simulated"] })).toThrow(
+      /prices_sources is eodhd and\/or alpha_vantage, without repeats/,
+    );
   });
 });
 
