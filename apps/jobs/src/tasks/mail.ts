@@ -8,7 +8,8 @@
 //
 // - `monthly_reminder` — always, at least once: a refusal or an unknown fate
 //   of SES leaves the period open, and the next run sends it again with the
-//   period in its subject.
+//   period in its subject. So does a reference (closes, ECB) that cannot be
+//   read now: not sent, sent by the first run that can read it.
 // - `dispatch_findings` — the warnings the other jobs left in their records,
 //   once per streak, at most once each: a streak is marked `sending` before
 //   its mail goes, and a cut after that never sends it again.
@@ -47,7 +48,7 @@ import {
   weeklyReviewMail,
   weeklyReviewUnavailableMail,
 } from "@atlas/domain/jobs";
-import { readReference } from "../reference.js";
+import { type ReferenceRead, readReference } from "../reference.js";
 import type { TaskContext, TaskResult, TaskRunner } from "../run.js";
 import { notifierOf, originOf, sendOnce } from "./send.js";
 
@@ -64,15 +65,22 @@ const amountsOf = async (context: TaskContext): Promise<AmountsSwitch> => {
 
 const origin = originOf;
 
-/** The contribution of the month, or the code of why it could not be computed. */
+/**
+ * The contribution of the month, or the code of why it could not be computed;
+ * `undefined` when the closes or the history of the ECB could not be read now
+ * (a passing failure, as in the weekly review: never a reminder valued with less).
+ */
 const planOf = async (context: TaskContext) => {
   const ledger = await context.ledger();
   if (!ledger.ok) {
     return { plan: { failure: ledger.code }, counts: {} };
   }
-  const reference = await readReference(context.deps.objects, ledger.state).catch(() => ({
-    counts: { price_files: 0, ecb_history: 0 },
-  }));
+  let reference: ReferenceRead;
+  try {
+    reference = await readReference(context.deps.objects, ledger.state);
+  } catch {
+    return undefined;
+  }
   try {
     const plan = contributionPlan(ledger.state, {
       date: context.today,
@@ -97,7 +105,7 @@ const planOf = async (context: TaskContext) => {
 
 export const monthlyReminder: TaskRunner = async (context): Promise<TaskResult> => {
   const { deps } = context;
-  const [{ plan, counts }, webSignIn, tokens, amounts] = await Promise.all([
+  const [planned, webSignIn, tokens, amounts] = await Promise.all([
     planOf(context),
     readWebSignIn(deps.objects)
       .then((read) => read.date)
@@ -108,6 +116,12 @@ export const monthlyReminder: TaskRunner = async (context): Promise<TaskResult> 
       .catch(() => "unavailable" as const),
     amountsOf(context),
   ]);
+  if (planned === undefined) {
+    // Not sent: the period stays open and the next run tries again, so the
+    // reminder goes (at least once) as soon as it can be read (§8.1 P10).
+    return { state: "failed", outcome: { code: "reference_unavailable" } };
+  }
+  const { plan, counts } = planned;
   const now = deps.now();
   const facts = reminderFacts({
     period: context.period,

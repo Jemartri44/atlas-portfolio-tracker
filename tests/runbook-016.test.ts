@@ -28,14 +28,9 @@ import { describe, expect, it } from "vitest";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-/** A runbook of the 016: in `docs/runbooks/` once the direction moves it, until then in the spec. */
-const runbook = (name: string): string => {
-  const moved = join(repoRoot, "docs", "runbooks", name);
-  return readFileSync(
-    existsSync(moved) ? moved : join(repoRoot, "specs", "016-scheduled-jobs", "runbooks", name),
-    "utf8",
-  );
-};
+/** A runbook of the 016, in `docs/runbooks/`. */
+const runbook = (name: string): string =>
+  readFileSync(join(repoRoot, "docs", "runbooks", name), "utf8");
 
 /** The fenced block right after `<!-- ensayo: <name> -->`. */
 const block = (text: string, name: string): string => {

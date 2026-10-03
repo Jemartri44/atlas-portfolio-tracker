@@ -170,6 +170,37 @@ describe("the monthly reminder, end to end", () => {
     });
   });
 
+  it("never sends a reminder valued with less when the closes cannot be read, and sends it once they can", async () => {
+    const jobs = setupJobs();
+    const get = jobs.s3.get.bind(jobs.s3);
+    let down = true;
+    jobs.s3.get = async (key) => {
+      if (down && key.startsWith("prices/")) {
+        throw Object.assign(new Error("down"), { name: "ServiceUnavailable" });
+      }
+      return get(key);
+    };
+    await jobs.run(["monthly_reminder"]);
+    expect(jobs.ses.attempts).toEqual([]);
+    expect(
+      JSON.parse(jobs.s3.text("jobs/mail/monthly_reminder/2026-10.json") as string),
+    ).toMatchObject({ state: "failed", outcome: { code: "reference_unavailable" } });
+    expect(lastLog(jobs.logs)).toMatchObject({ level: "ERROR", code: "reference_unavailable" });
+    // Still down the next day: still not sent, still open.
+    jobs.setNow("2026-10-02T06:00:00Z");
+    await jobs.run(["monthly_reminder"], "req-2");
+    expect(jobs.ses.attempts).toEqual([]);
+    down = false;
+    jobs.setNow("2026-10-03T06:00:00Z");
+    await jobs.run(["monthly_reminder"], "req-3");
+    expect(jobs.ses.sent.map((mail) => mail.subject)).toEqual([
+      "[Atlas] Recordatorio mensual 2026-10",
+    ]);
+    expect(
+      JSON.parse(jobs.s3.text("jobs/mail/monthly_reminder/2026-10.json") as string),
+    ).toMatchObject({ state: "done", attempts: 3, outcome: { code: "mail_sent" } });
+  });
+
   it("finishes the reminder of the month before, left open, before the new one (Q6)", async () => {
     const jobs = setupJobs();
     jobs.ses.refuseNext();

@@ -1,6 +1,6 @@
 # La correspondencia de símbolos y los presupuestos de la nube
 
-> Borrador de la feature 016 (E4). La dirección lo pasará a `docs/runbooks/` al cerrar la feature.
+> Feature 016. Lo que necesita AWS real está sin probar hasta la feature 018: lo dice el final de este procedimiento.
 
 **Cuándo usarlo.**
 - Cuando cambias la correspondencia de símbolos en la consola: un activo nuevo, otro símbolo o una fuente contrastada.
@@ -23,7 +23,7 @@ Y siempre que llegue el correo de correspondencias sin contrastar.
 
 ## 2. Subirla
 
-Desde la carpeta del libro, con el rol de administración (`docs/runbooks/` de la 015, ADR-0034):
+Desde la carpeta del libro, con el rol de administración (ADR-0034, fila 16; como en [restore-the-ledger.md](restore-the-ledger.md)):
 
 ```sh
 atlas admin prices push --env prod

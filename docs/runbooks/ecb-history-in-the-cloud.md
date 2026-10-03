@@ -1,6 +1,6 @@
 # Restaurar o retirar una generación del histórico del BCE en la nube
 
-> Borrador de la feature 016 (E3). La dirección lo pasará a `docs/runbooks/` al cerrar la feature.
+> Feature 016. Lo que necesita AWS real está sin probar hasta la feature 018: lo dice el final de este procedimiento.
 
 **Cuándo usarlo.** Cuando el histórico del BCE de la nube (`reference/ecb/` del bucket de datos) dice algo que no es verdad, en cualquiera de estos casos:
 
@@ -8,7 +8,7 @@
 - **El correo `[Atlas] Aviso: historico del BCE sin comparar`.** Se reconstruyó sin nada con qué compararlo y quieres comprobar esa versión.
 - **Sabes que una generación en vigor está mal**, por ejemplo porque `atlas check --deep` da `fx_rate_mismatch` en operaciones que cuadraban antes.
 
-**Qué es.** Una operación de **administración**, con las credenciales de vida corta y MFA del rol `atlas-<entorno>-admin` (ADR-0034, fila 16). Los permisos que usa, uno por paso, están en `specs/016-scheduled-jobs/contracts/iam-permissions.md` §8. **Nunca pasa por la API**, que solo lee `reference/ecb/`. **Nada se borra para siempre**: el bucket está versionado, y cada paso de abajo crea una versión nueva o una marca de borrado, nunca destruye una anterior.
+**Qué es.** Una operación de **administración**, con las credenciales de vida corta y MFA del rol `atlas-<entorno>-admin` (ADR-0034, fila 16). Los permisos que usa, uno por paso, están en [`specs/016-scheduled-jobs/contracts/iam-permissions.md`](../../specs/016-scheduled-jobs/contracts/iam-permissions.md) §8. **Nunca pasa por la API**, que solo lee `reference/ecb/`. **Nada se borra para siempre**: el bucket está versionado, y cada paso de abajo crea una versión nueva o una marca de borrado, nunca destruye una anterior.
 
 **Una generación** son tres objetos que van juntos:
 
@@ -26,7 +26,7 @@ Un fichero que no cuadra con el SHA-256 de su manifiesto **no lo usa nadie**: ni
 
 Así ninguna ejecución escribe mientras trabajas:
 
-> **SIN VERIFICAR contra AWS**: las órdenes de este paso y del paso 5 salen de la documentación de EventBridge Scheduler y de la CLI. Se comprueban en la 018, en `dev`, antes de pasar el procedimiento a `docs/runbooks/`.
+> **SIN VERIFICAR contra AWS**: las órdenes de este paso y del paso 5 salen de la documentación de EventBridge Scheduler y de la CLI. Se comprueban en la 018, en `dev`.
 
 `update-schedule` **sustituye la programación entera**: un campo opcional que no se le pase vuelve a su valor por defecto (por ejemplo, `ScheduleExpressionTimezone` pasaría a UTC). Por eso la orden se construye con la salida de `get-schedule`, quitando solo los tres campos que devuelve y que no se pueden escribir (`Arn`, `CreationDate` y `LastModificationDate`), y cambiando solo `State`:
 

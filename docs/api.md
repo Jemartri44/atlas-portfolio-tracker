@@ -90,6 +90,8 @@ La **vía c**: la Lambda es el cliente OAuth y el token de Google nunca toca la 
 
 **La cookie de sesión** es `__Host-atlas_session`, con `Path=/`, `Secure`, `HttpOnly`, `SameSite=Strict` y sin `Domain`, firmada con HMAC-SHA256 y la subclave HKDF de `info` `atlas session v1`, con `typ: "atlas.session"`. Lleva **solo** `sub`, un identificador de sesión, el `device_id` de la web, la emisión y la caducidad: **ninguna cookie lleva el correo**. La transitoria, `__Host-atlas_login`, con su propia subclave (`atlas login v1`, `typ: "atlas.login"`). Formato exacto: `specs/015-api-access/data-model.md` §1.
 
+**El último inicio de sesión web** *(016)*. Tras emitir la cookie de una sesión web, la API avanza `access/last-web-sign-in.json` (formato en `docs/data-schema.md` §1) a la fecha de hoy en Madrid, **solo si es posterior** a la guardada, con `If-Match` sobre lo leído o `If-None-Match: *` si no existía. Lo lee el recordatorio mensual, para avisar antes de que Google borre un cliente OAuth sin uso (ADR-0027). **El inicio de sesión nunca falla por ello**: lo que pasó es el `reason` de su línea de registro (`signed_in` o `signed_in_new_device`), uno de `sign_in_date_written`, `sign_in_date_unchanged`, `sign_in_date_conflict` (otra escritura ganó) y `sign_in_date_unavailable` (S3 no respondió). Un inicio de sesión de la consola no lo toca: los de la consola los cuenta el correo por sus tokens.
+
 ### 3.1 Las páginas propias de la Lambda
 
 Todas `text/html; charset=utf-8`, **sin *script* y sin nada externo**, con `Cache-Control: no-store`, `Referrer-Policy: no-referrer` y CSP `default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'` (las de la consola, además, `sandbox`, §4.2).
@@ -366,15 +368,21 @@ Al volver a descargar un remoto reescrito o al unirse desde el remoto se retiene
 
 ## 6. Datos de referencia
 
-Decidido el 2026-09-25 (feature 015; **solo las rutas y sus clientes**: que la web del móvil descargue de aquí el histórico del BCE es de la 016). Leen con la sesión o el token (ADR-0033, punto 6), **no escriben nada** y no alcanzan nada fuera de `reference/ecb/` y `prices/`:
+Decidido el 2026-09-25 (feature 015) y ampliado por la 016 (2026-09-28): la regla de los nombres de `prices/`, el `symbols.json` que no se sirve y los clientes de la consola y de la web. Leen con la sesión o el token (ADR-0033, punto 6), **no escriben nada** y no alcanzan nada fuera de `reference/ecb/` y `prices/`:
 
 | Ruta | Respuesta |
 |---|---|
-| `GET /api/reference/index` | `200 { "ecb": [ { "name", "version", "size" } ], "prices": [ … ] }`. `version` es una etiqueta opaca (el ETag del objeto en S3): sirve para saber qué ha cambiado sin descargarlo. Solo el primer nivel de cada prefijo (`previous/` y `rejected/` no se listan) |
+| `GET /api/reference/index` | `200 { "ecb": [ { "name", "version", "size" } ], "prices": [ … ] }`. `version` es una etiqueta opaca (el ETag del objeto en S3): sirve para saber qué ha cambiado sin descargarlo. Solo el primer nivel de cada prefijo (`previous/` y `rejected/` no se listan), y **solo lo que se serviría** con la regla de abajo *(016)* |
 | `GET /api/reference/ecb/<name>` | Los bytes de `reference/ecb/<name>`, con `ETag: "<version>"`; con `If-None-Match` igual, `304`. *(015)* Vale también en su forma débil, `W/"<version>"`, porque CloudFront debilita el ETag al comprimir (`text/csv` y `application/json` sí están en su lista), y `*` |
-| `GET /api/reference/prices/<name>` | Lo mismo sobre `prices/<name>` |
+| `GET /api/reference/prices/<name>` | Lo mismo sobre `prices/<name>`. *(016)* Un `symbols.json` con una clave repetida, o con una clave de primer nivel que no sea `symbols_format` ni `assets`, **no se sirve**: `404 not_found` con `details.reason` `repeated_key` o `unknown_key` (no pasó por la diferencia de `atlas admin prices push`) |
 
-`<name>` cumple `^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$` y no contiene `..`; si no, `400 reference_name_invalid` **antes de tocar S3**. Si no existe, `404 not_found`. `Content-Type` por la extensión: `.csv` → `text/csv; charset=utf-8`, `.jsonl` → `application/x-ndjson; charset=utf-8`, `.json` → `application/json`; cualquier otra, `404`. `documents/` e `imports/` se suben con la regla de añadir y nunca sobrescribir (ADR-0026, Consecuencias), con su detalle en la feature que los use (la subida no es de la 015).
+**El nombre se comprueba antes de tocar S3**, y si no cumple la regla de su prefijo, `400 reference_name_invalid`:
+- en `reference/ecb/`, `<name>` cumple `^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$` y no contiene `..`;
+- en `prices/` *(016)*, `symbols.json` por su nombre, o un nombre que es **exactamente el que escribe `priceFileName`** para algún `asset_id` no vacío: termina en `.jsonl`, tiene como mucho 255 caracteres y `priceFileName(decodeURIComponent(<base>))` lo devuelve igual (una secuencia `%` rota se niega). Así nada sale de `prices/` y cualquier `asset_id` del libro tiene su fichero. **`_status.json`, `config.json` y `_cloud.json` no se sirven.**
+
+Si no existe, `404 not_found` (`details.reason: "missing"`). `Content-Type` por la extensión: `.csv` → `text/csv; charset=utf-8`, `.jsonl` → `application/x-ndjson; charset=utf-8`, `.json` → `application/json`; cualquier otra, `404`. **Los clientes** *(016)*: uno solo, `@atlas/adapters/reference-http`, con la credencial inyectada (el token de la carpeta en la consola, la cookie en la web) y `redirect: "error"`. Pide cada fichero con `If-None-Match` sobre la versión que ya tiene, y no acepta una respuesta de más de 20 MB (64 MB para `eurofxref-hist.csv` y `api-exr.csv`). La consola lo usa en `atlas prices update` de una carpeta sincronizada, que baja los cierres en lugar de llamar a las fuentes (ADR-0031, nota del 2026-09-28); la web, para el histórico del BCE con la sesión iniciada, también en el móvil (ADR-0029, nota del 2026-09-28). Qué guarda cada uno en local: `docs/data-schema.md` §1 (`prices/_cloud.json`, `reference/ecb/`).
+
+`documents/` e `imports/` se suben con la regla de añadir y nunca sobrescribir (ADR-0026, Consecuencias), con su detalle en la feature que los use (la subida no es de la 015).
 
 ## 7. Errores
 
@@ -431,7 +439,7 @@ Fuera de la Lambda: `transport_rejected` es el nombre que da **el cliente** a un
 | El caso de uso puro que reaplica y acepta líneas (el mismo para el cliente y para la Lambda), las operaciones de líneas crudas del puerto, el marcador, lo retenido y lo descartado, y un **remoto simulado** que cumple §5 sin HTTP | **014**, fusionada (PR #83, 2026-09-25) |
 | Las órdenes de administración de la consola contra el almacén remoto: `compact` del remoto, restaurar y olvidar un dispositivo, **fuera de la API** (ADR-0026, Parte A) | **015** |
 | La Lambda: §1 a §7 sobre HTTP, `LedgerStore` sobre S3 con `If-Match`, el registro en SSM, los clientes HTTP de la web y de la consola, `atlas remote login` y `logout`, la pantalla de dispositivos de la web | **015** |
-| El correo mensual con los inicios de sesión de la consola y los tokens vivos y emitidos | **016** |
+| El correo mensual con los inicios de sesión de la web y de la consola y los tokens vivos y emitidos; `access/last-web-sign-in.json` (§3); la regla de nombres de `prices/` y los clientes de §6 | **016**, fusionada (PR #104, #106, #108 y #109, 2026-09-28) |
 | El prefijo de SSM y sus permisos, la política de origen que reenvía a `/api/*` `x-atlas-device-token`, **`x-atlas-expected-device`** (sin ella, toda petición con cookie de una ruta de §5 que actúa como dispositivo se rechaza con `400 expected_device_required`, §5.4 y §7; revisión de la PR #97, B1), **`Sec-Fetch-Site` y `Origin`** (sin las dos últimas, la Lambda nunca sabe que un inicio de sesión viene del propio sitio: ignora siempre el `device_id` de §3 y cada inicio de sesión de la web crea un dispositivo nuevo, sin avisar; y sin `Origin`, toda escritura con cookie se rechaza con `origin_rejected`, §2; revisión de la PR #90, ronda 2), la CSP que respeta la `sandbox` de §4.2 | **017** |
 
 ## 9. Parámetros de SSM y configuración de la Lambda
@@ -447,3 +455,24 @@ Decidido el 2026-09-25 (feature 015). **Los valores los crea y los rota el guion
 | `/atlas/<entorno>/device-tokens/<token_id>` | `SecureString` | el registro del token (formato en `specs/015-api-access/data-model.md` §2) | **ninguna** (§2.2) |
 
 **Configuración que no es secreta**, en variables de entorno de la Lambda (**ningún secreto en una variable de entorno**): `ATLAS_ENV`, `ATLAS_ORIGIN`, `ATLAS_DATA_BUCKET`, `ATLAS_SESSION_TTL_SECONDS` (28.800), `ATLAS_LOGIN_TTL_SECONDS` (600), `ATLAS_CONSOLE_CODE_TTL_SECONDS` (300), `ATLAS_TOKEN_LIFETIME_DAYS` (90; más de 120 impide arrancar), `ATLAS_RECENT_ISSUE_DAYS` (7), `ATLAS_CLOCK_TOLERANCE_SECONDS` (600), `ATLAS_ALLOW_LIST_CACHE_SECONDS` (120) y `ATLAS_SECRETS_CACHE_SECONDS` (300). Una variable `ATLAS_*` desconocida, o un valor que no se entiende, impide arrancar. **Techos fijos en el código** (revisión de seguridad de la PR #90, S4): la sesión, como mucho 24 h (86.400); la cookie transitoria, 30 min (1.800); el código de la consola, 15 min (900); las dos cachés, 1 h (3.600); la tolerancia del reloj, 1 h (3.600); la ventana de las emisiones «recientes», 90 días; la caducidad del token, 120 días. Por encima, la configuración se rechaza y la Lambda no arranca.
+
+### 9.1 Las tareas programadas *(016)*
+
+Las cinco funciones de `apps/jobs` (`docs/specification.md` §9.5) siguen las mismas reglas que la API: **ningún secreto en una variable de entorno**, y una variable `ATLAS_*` desconocida o un valor que no se entiende impiden arrancar (`jobs_config_invalid`, con `details.variable` y `details.reason`). Cada variable es obligatoria en la función que la usa y desconocida en las demás. Los valores los escribe Terraform (017), salvo las claves de las fuentes, que crea y rota el guion de secretos (ADR-0034, fila 21). Contrato completo, con cada regla: `specs/016-scheduled-jobs/contracts/ssm-and-config.md`.
+
+| Parámetro | Tipo | Quién lo escribe | Quién lo lee |
+|---|---|---|---|
+| `/atlas/<entorno>/mail/recipient` | `String` | Terraform, desde `terraform.tfvars`, que escribe también la condición `ses:Recipients` (ADR-0034, fila 12); nunca a mano | solo el adaptador de SES, en cada envío |
+| `/atlas/<entorno>/mail/amounts` | `String` | Terraform, `off` por defecto (ADR-0028, fila 18) | solo la función de correo: **solo `on` enciende los importes**; cualquier otra cosa, o nada, los deja apagados |
+| `/atlas/<entorno>/prices/eodhd-key`, `…/prices/alpha-vantage-key` | `SecureString` | el guion de secretos; **`dev` no las lleva** (ADR-0034, fila 2) | solo la función de precios, en cada ejecución |
+
+Cambiar el destinatario o el interruptor: [`docs/runbooks/mail-recipient-and-amounts.md`](runbooks/mail-recipient-and-amounts.md).
+
+| Variable | Funciones | Valor y techo fijo en el código |
+|---|---|---|
+| `ATLAS_ENV`, `ATLAS_DATA_BUCKET` | todas | como en la API; el bucket, además, **empieza por `atlas-<ATLAS_ENV>-`** |
+| `ATLAS_JOBS` | todas | las tareas de la función, **de una sola familia** y sin repetir |
+| `ATLAS_JOB_MAX_RUN_SECONDS` | todas | de 1 a 900, el mismo valor que el `timeout` de la Lambda: un registro reclamado hace menos no se retoma |
+| `ATLAS_MAIL_FROM`, `ATLAS_ORIGIN`, `ATLAS_OAUTH_IDLE_WARNING_DAYS` | correo | el remitente verificado; el origen, lo único que un correo enlaza; los días sin iniciar sesión a partir de los que avisa (150, de 1 a 179) |
+| `ATLAS_PRICE_SOURCES`, `ATLAS_PRICES_EODHD_DAILY_CALLS`, `ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS`, `ATLAS_PRICES_FAILURE_THRESHOLD` | precios | el orden de la cascada (`eodhd,alpha_vantage`; `simulated` solo en `dev`); los presupuestos de la nube, 18 (como mucho 20) y 23 (como mucho 25); el umbral de fallos seguidos, 3 (de 1 a 30) (ADR-0031, nota del 2026-09-28; [`docs/runbooks/cloud-symbols-and-budgets.md`](runbooks/cloud-symbols-and-budgets.md)) |
+| `ATLAS_LEDGER_SIZE_WARNING_BYTES` | integridad | 1.048.576, de 1.024 a 104.857.600: avisa el libro **por encima**, nunca en el umbral (ADR-0028, nota del 2026-09-28) |

@@ -1,10 +1,10 @@
 # Qué hacer con cada correo de Atlas
 
-> Borrador de la feature 016 (E4). La dirección lo pasará a `docs/runbooks/` al cerrar la feature.
+> Feature 016. Lo que necesita AWS real está sin probar hasta la feature 018: lo dice el final de este procedimiento.
 
 **Cuándo usarlo.** Cuando llega un correo de Atlas que no es el recordatorio mensual. Cada aviso llega **una vez por racha**: si la causa sigue ahí, no vuelve a llegar al día siguiente; si desaparece y reaparece, llega otra vez. Los avisos periódicos (revisión semanal, Renta, modelos 720 y 721) llegan **como mucho una vez** en su periodo, y solo cuando hay algo que hacer.
 
-**Lo que un correo nunca trae**, salvo que actives los importes (procedimiento `mail-recipient-and-amounts.md`): euros, cantidades, precios, posiciones, nombres de activos, ISIN, símbolos ni cuentas. **La Renta y los modelos 720 y 721 no llevan ninguna cifra**, estén como estén los importes. Para ver qué hay detrás, abre la aplicación o la consola.
+**Lo que un correo nunca trae**, salvo que actives los importes (procedimiento [mail-recipient-and-amounts.md](mail-recipient-and-amounts.md)): euros, cantidades, precios, posiciones, nombres de activos, ISIN, símbolos ni cuentas. **La Renta y los modelos 720 y 721 no llevan ninguna cifra**, estén como estén los importes. Para ver qué hay detrás, abre la aplicación o la consola.
 
 **Dónde mira cada paso.** Los registros de las tareas viven en el bucket de datos, bajo `jobs/<familia>/<tarea>/<periodo>.json`, con el código de lo que pasó y sus recuentos, nunca un importe. Para leerlos hace falta el rol de administración, con credenciales de vida corta y MFA (ADR-0034, fila 16). **Trabaja en una carpeta fuera del repositorio** (por ejemplo `~/personal/atlas/privado/`), nunca en la del libro.
 
@@ -27,9 +27,11 @@
 
 Llega siempre, una vez al mes. Si llega dos veces con el mismo mes en el asunto, es un reintento (el recordatorio se envía **al menos una vez**): ignora el segundo.
 
+Si los cierres o el histórico del BCE de la nube no se han podido leer, el recordatorio **no sale ese día**: su registro queda `failed` con el código `reference_unavailable`, y sale en la primera ejecución que pueda leerlos. Nunca sale valorado con menos de lo que hay.
+
 - **La aportación del mes**: el reparto por clase. Si dice que no se pudo calcular, el código dice por qué (por ejemplo `missing_manual_prices`): abre la aplicación.
 - **El último inicio de sesión**: si avisa del cliente OAuth, inicia sesión en la web o con `atlas remote login` antes de la fecha que dice. Google borra un cliente sin uso a los seis meses (ADR-0027).
-- **Los tokens de la consola**: si no reconoces una emisión, sigue `docs/runbooks/stolen-google-account.md`.
+- **Los tokens de la consola**: si no reconoces una emisión, sigue [stolen-google-account.md](stolen-google-account.md).
 - **La copia fuera de AWS**: haz la copia a tu disco con la orden del correo.
 
 ## Una fuente de precios falla
@@ -37,11 +39,11 @@ Llega siempre, una vez al mes. Si llega dos veces con el mismo mes en el asunto,
 `source_failing`: la fuente lleva los fallos seguidos que dice el correo, contados solo por `unavailable`, `rate_limited`, `blocked` e `invalid_response` (ADR-0031, tercera enmienda). Mientras tanto, los precios conservan su último valor con su antigüedad.
 
 1. Si es un día aislado, espera: el correo no vuelve mientras dure la racha, y la siguiente ejecución lo intenta otra vez.
-2. Si pasa de unos días, comprueba en la web de la fuente si ha cambiado sus condiciones o si la clave sigue valiendo. Para cambiar la clave, sigue `docs/runbooks/price-api-keys.md`.
+2. Si pasa de unos días, comprueba en la web de la fuente si ha cambiado sus condiciones o si la clave sigue valiendo. Para cambiar la clave, sigue [price-api-keys.md](price-api-keys.md).
 
 ## Correspondencias sin contrastar
 
-`currency_unchecked`: la nube no descarga una correspondencia que nadie contrastó (la nube nunca contrasta, Q1). Contrástala en la consola y súbela: procedimiento `cloud-symbols-and-budgets.md`.
+`currency_unchecked`: la nube no descarga una correspondencia que nadie contrastó (la nube nunca contrasta, Q1). Contrástala en la consola y súbela: procedimiento [cloud-symbols-and-budgets.md](cloud-symbols-and-budgets.md).
 
 ## Tesis del cubo
 
@@ -53,7 +55,7 @@ Llega siempre, una vez al mes. Si llega dos veces con el mismo mes en el asunto,
 
 ## Histórico del BCE
 
-`ecb_update_rejected`, `ecb_calendar_mismatch`, `ecb_history_damaged`, `ecb_history_rebuilt` y `ecb_rebuilt_unverified`: sigue `ecb-history-in-the-cloud.md`, que dice qué hacer con cada uno. Un calendario que no cuadra es un aviso, no un bloqueo.
+`ecb_update_rejected`, `ecb_calendar_mismatch`, `ecb_history_damaged`, `ecb_history_rebuilt` y `ecb_rebuilt_unverified`: sigue [ecb-history-in-the-cloud.md](ecb-history-in-the-cloud.md), que dice qué hacer con cada uno. Un calendario que no cuadra es un aviso, no un bloqueo.
 
 `ecb_update_undone`: una actualización se cortó entre el fichero y su manifiesto, y la ejecución siguiente la ha deshecho y ha vuelto a descargar. No hay nada que hacer salvo que se repita. Si se repite, mira `reference/ecb/` con el mismo procedimiento.
 
@@ -91,7 +93,7 @@ rm -f objeto.tmp registro.json
 
 - **`backup_object_differs`**: la tarea encontró en el volcado un objeto con otros bytes que no dejó ella, y no escribió nada más. Solo la función del volcado escribe `backups/`, así que **alguien más escribió ahí**. Trátalo como un incidente de seguridad: mira quién lo escribió en el historial de eventos de CloudTrail (90 días) y las versiones del objeto (`aws s3api list-object-versions --prefix backups/AAAA-MM/`). **No lo borres**: ningún rol de Atlas puede, y es la prueba. El volcado de ese mes queda incompleto; el del mes siguiente se hace con normalidad.
 - **`backup_ecb_inconsistent`**: el volcado no guardó el manifiesto del BCE porque el fichero que ya tenía, de un intento anterior del mes, es de otra generación que la del manifiesto en vigor. El resto del volcado está completo. El histórico del BCE se puede volver a bajar del BCE cuando haga falta, así que no hay nada que recuperar.
-- **`backup_ecb_missing`**: el volcado no lleva el histórico del BCE, porque no había ninguno en vigor que cuadrara con su manifiesto: ni manifiesto, o un fichero que no es el que nombra (por ejemplo, entre los pasos 3b y 4 del procedimiento del BCE). El resto del volcado está completo. Mira `reference/ecb/` con `ecb-history-in-the-cloud.md`. El hueco de ese mes se queda: el volcado no se rehace, y el histórico se puede volver a bajar del BCE.
+- **`backup_ecb_missing`**: el volcado no lleva el histórico del BCE, porque no había ninguno en vigor que cuadrara con su manifiesto: ni manifiesto, o un fichero que no es el que nombra (por ejemplo, entre los pasos 3b y 4 del procedimiento del BCE). El resto del volcado está completo. Mira `reference/ecb/` con [ecb-history-in-the-cloud.md](ecb-history-in-the-cloud.md). El hueco de ese mes se queda: el volcado no se rehace, y el histórico se puede volver a bajar del BCE.
 - **`backup_positions_missing`**: el libro del volcado no se proyecta sin errores, así que el volcado no lleva `positions.json`. El libro y los precios sí están, y el BCE si lo había. Mira el libro con `atlas check --deep` en la consola y rectifica lo que diga. Es el mismo libro que dice el correo de integridad.
 - **`task_failed` del volcado** con el código `ledger_absent`: no hay libro en el bucket. En `prod` no debería pasar nunca: mira `ledger/ledger.jsonl` y sus versiones.
 
