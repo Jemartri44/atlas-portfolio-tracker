@@ -53,7 +53,7 @@ describe("no personal data in a versioned file of infra/ or of the spec", () => 
 describe("no literal environment in infra/modules/", () => {
   it("names neither dev nor prod: the environment arrives as a variable", () => {
     const found = tracked("infra/modules").filter((file) =>
-      /(?<![a-z-])(dev|prod)(?![a-z])/.test(readFileSync(join(repoRoot, file), "utf8")),
+      /(?<![a-z])(dev|prod)(?![a-z])/.test(readFileSync(join(repoRoot, file), "utf8")),
     );
     expect(found).toEqual([]);
   });

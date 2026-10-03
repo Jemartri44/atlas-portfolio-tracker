@@ -109,7 +109,7 @@ describe.each(ENVS)(
           "aws:ResourceTag/env": other,
           "aws:ResourceTag/project": "atlas",
           "aws:RequestTag/env": env,
-          "aws:TagKeys": ["env"],
+          "aws:TagKeys": ["managed_by"],
         };
         expect(verdict(env, "deploy", action, resource, context), `${action} ${resource}`).toBe(
           "deny",

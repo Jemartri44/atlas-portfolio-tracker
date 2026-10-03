@@ -255,7 +255,10 @@ describe.each(ENVS)("the permissions boundary of %s", (env) => {
       "budgets:ModifyBudget",
       "aws-portal:ViewBilling",
     ]) {
-      expect(decide(boundary, { action }), action).toBe("deny");
+      expect(
+        decide(boundary, { action, context: { "aws:RequestedRegion": "us-east-1" } }),
+        action,
+      ).toBe("deny");
     }
   });
 
