@@ -487,7 +487,13 @@ const dist = join(webRoot, "dist");
  * learns the privacy mode (`components/columns.ts`: the amounts fused into one
  * column); `DataTable` is on the boot path. The trend: 75.482 → 75.580.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_600;
+/*
+ * **Feature 020, E3, M1 of the contribution (2026-10-03): measured 75.620
+ * (+40), ceiling 75.640 — measured + 20**, inside the authorisation (76.069).
+ * The share of each part and of each asset of the monthly split, in decimal,
+ * rounded when shown. The trend: 75.482 → 75.580 → 75.620.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 75_640;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -1048,7 +1054,13 @@ const BOOT_BUDGET_GZIP_BYTES = 75_600;
  * theses, the positions and the costs, and their percentages. The trend:
  * 306.434 → 306.952.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 307_208;
+/*
+ * **Feature 020, E3, M1 of the contribution (2026-10-03): measured 307.271
+ * (+319), ceiling 307.527 — measured + 256**, inside the authorisation
+ * (312.000). Of those, +40 are the boot (above). The trend: 306.434 → 306.952
+ * → 307.271.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 307_527;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
