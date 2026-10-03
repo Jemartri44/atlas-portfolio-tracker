@@ -509,7 +509,13 @@ const dist = join(webRoot, "dist");
  * shared rules of strips, gauges and dumbbells are written once. M14 (styles
  * per screen) is the lever if E4 needs more. The trend: 75.593 → 75.835.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_855;
+/*
+ * **Feature 020, E4, M3 (2026-10-03): measured 75.919 (+97 over the 75.822 of
+ * the bucket in percent), ceiling 75.939 — measured + 20**, inside the
+ * authorisation (76.069). The stylesheet only: the tokens of the heights of
+ * the panels and the rules of the stack. The trend: 75.822 → 75.919.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 75_939;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -1105,7 +1111,16 @@ const BOOT_BUDGET_GZIP_BYTES = 75_855;
  * cuts of plan §6.3 come first). The boot is −4 (above). The trend: 310.152 →
  * 310.725.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 310_981;
+/*
+ * **Feature 020, E4, M3 (2026-10-03): measured 311.983 (+1.258 over the
+ * 310.725 of the bucket in percent), ceiling 312.000 — the authorisation, not
+ * measured + 256**: there are 17 bytes left, and M12 does not fit in them
+ * (the cuts of plan §6.3 come before it). Of those, the stack of three charts
+ * and its step (`Chart`, `SeriesCard`), the contributions of the domain in a
+ * chunk of the charts that the summary and the bucket share, and the column of
+ * the table. The trend: 310.725 → 311.983.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 312_000;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
