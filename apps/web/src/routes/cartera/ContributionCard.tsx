@@ -113,13 +113,19 @@ const Split = (props: { view: ContributionView }): JSX.Element => {
         <div class="kpi">
           <dt>Al cubo</dt>
           <dd>
-            <Amount value={props.view.bucketBudget} />
+            <Show when={props.view.bucketPct}>
+              <Figure value={props.view.bucketPct} unit="percent" decimals="auto" class="share" />
+            </Show>
+            <Amount value={props.view.bucketBudget} class="kpi-amount" />
           </dd>
         </div>
         <div class="kpi">
           <dt>A la cartera</dt>
           <dd>
-            <Amount value={props.view.coreAmount} />
+            <Show when={props.view.corePct}>
+              <Figure value={props.view.corePct} unit="percent" decimals="auto" class="share" />
+            </Show>
+            <Amount value={props.view.coreAmount} class="kpi-amount" />
           </dd>
         </div>
       </dl>
@@ -146,7 +152,12 @@ const Split = (props: { view: ContributionView }): JSX.Element => {
                   </span>
                 </span>
                 <span class="figs">
-                  <span class="fig">
+                  <Show when={row.sharePct}>
+                    <span class="fig">
+                      <Figure value={row.sharePct} unit="percent" decimals={1} />
+                    </span>
+                  </Show>
+                  <span class={row.sharePct === undefined ? "fig" : "fig-sub"}>
                     <Amount value={row.allocation} />
                   </span>
                 </span>

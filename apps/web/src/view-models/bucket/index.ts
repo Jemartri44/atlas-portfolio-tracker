@@ -1,4 +1,18 @@
 export {
+  capShape,
+  type DumbbellRow,
+  type Dumbbells,
+  dumbbells,
+  type GaugesView,
+  gaugesView,
+  type MeterKey,
+  type MeterShape,
+  type MeterView,
+  meterOf,
+  resultShape,
+  weightShape,
+} from "./gauges.js";
+export {
   type BucketPositionRow,
   type BucketPositionsView,
   bucketPositionsView,

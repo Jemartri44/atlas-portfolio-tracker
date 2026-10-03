@@ -1385,6 +1385,47 @@ describe("architecture: the tools of the screens on demand are not in the barrel
   });
 });
 
+describe("architecture: the charts of the screens on demand are not in the barrel", () => {
+  /**
+   * Feature 020, E3 (contracts/domain-doors.md): the gauges of the bucket and
+   * the percentages of its theses live behind `@atlas/domain/charts`, from
+   * their first commit. The barrel never exports them, no other module of the
+   * domain imports them, and `check-bundle.mjs` keeps the door and its folder
+   * off the boot path (LAZY_ONLY).
+   */
+  const CHARTS = /(?:^|\/)charts(?:\.js|\/)/;
+
+  it("keeps them out of index.ts, and behind their door", () => {
+    const barrel = readFileSync(join(domainSrc, "index.ts"), "utf8");
+    expect(specifiersOf(barrel).filter((specifier) => CHARTS.test(specifier))).toEqual([]);
+    const door = specifiersOf(readFileSync(join(domainSrc, "charts.ts"), "utf8"));
+    expect(door.some((specifier) => specifier.includes("./charts/"))).toBe(true);
+  });
+
+  it("is imported by no other module of the domain", () => {
+    const own = new Set(
+      listTsFiles(join(domainSrc, "charts")).concat(join(domainSrc, "charts.ts")),
+    );
+    const offenders = listTsFiles(domainSrc)
+      .filter((file) => !own.has(file))
+      .filter((file) =>
+        specifiersOf(readFileSync(file, "utf8")).some((specifier) => CHARTS.test(specifier)),
+      )
+      .map((file) => relative(repoRoot, file));
+    expect(offenders).toEqual([]);
+  });
+
+  it("is in LAZY_ONLY of the check of the bundle, door and folder", () => {
+    const script = readFileSync(
+      join(repoRoot, "apps", "web", "scripts", "check-bundle.mjs"),
+      "utf8",
+    );
+    for (const path of ["/packages/domain/src/charts.ts", "/packages/domain/src/charts/"]) {
+      expect(script).toContain(`path: "${path}"`);
+    }
+  });
+});
+
 describe("architecture: the automatic prices are not in the barrel", () => {
   /**
    * Feature 013: nothing of the automatic prices on the boot path of the web.

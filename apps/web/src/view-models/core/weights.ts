@@ -61,6 +61,11 @@ export interface WeightClassRow {
   deviationPp?: string;
   /** The domain raised `satellite_below_minimum` for this class. */
   belowMinimum: boolean;
+  /**
+   * How many of its assets the domain warned about (`deviation_above_threshold`):
+   * the warnings grouped by class, which is not a comparison of figures.
+   */
+  offTargetCount: number;
   rows: WeightRow[];
 }
 
@@ -122,6 +127,8 @@ const classOf = (
   targetPct: subtotal.target_pct.toString(),
   ...(subtotal.deviation_pp === undefined ? {} : { deviationPp: subtotal.deviation_pp.toString() }),
   belowMinimum: belowMinimum.has(subtotal.asset_class),
+  offTargetCount: rows.filter((row) => row.assetClass === subtotal.asset_class && row.offTarget)
+    .length,
   rows: rows.filter((row) => row.assetClass === subtotal.asset_class),
 });
 

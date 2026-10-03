@@ -34,8 +34,13 @@ const EUR = "EUR";
 const HUNDRED = Decimal.parse("100");
 /** Below this many closed theses, the sample says nothing (specification §6.2). */
 const SIGNIFICANT_SAMPLE = 100;
-/** Fixed relative threshold of rule 17's "warn when getting close"; not configurable on purpose. */
-const NEAR_LIMIT_PCT = Decimal.parse("80");
+/**
+ * Fixed relative threshold of rule 17's "warn when getting close"; not
+ * configurable on purpose. Exported so that the screens draw the mark of the
+ * warning from the very constant the warning uses (feature 020, E3), never from
+ * a copy of the number.
+ */
+export const NEAR_LIMIT_PCT = Decimal.parse("80");
 
 export interface DrawdownPoint {
   date: CivilDate;

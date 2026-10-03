@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Quantity } from "../../src/money/quantity.js";
-import { bucketStats } from "../../src/projections/bucket-stats.js";
+import { bucketStats, NEAR_LIMIT_PCT } from "../../src/projections/bucket-stats.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { DEFAULT_SETTINGS, mergeSettings, type Settings } from "../../src/settings/settings.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
@@ -374,6 +374,17 @@ describe("bucket control rules (17 and 18)", () => {
     expect(codes("5000")).toContain("bucket_contribution_near_limit");
     // Far from the cap, nothing at all.
     expect(codes("20000")).toEqual([]);
+  });
+
+  it("exports the mark of the near-limit warning, and the warning fires just above it", () => {
+    expect(NEAR_LIMIT_PCT.toString()).toBe("80");
+    // 5.000 € contributed: a cap of 5.000 / 0,8 = 6.250 € puts it exactly on the mark.
+    const cap = (limit: string) =>
+      traded({ bucket_max_cumulative_contribution: limit }).warnings.map((w) => w.code);
+    expect(cap("6250")).not.toContain("bucket_contribution_near_limit");
+    expect(cap("6249")).toContain("bucket_contribution_near_limit");
+    const message = traded({ bucket_max_cumulative_contribution: "6249" }).warnings[0]?.message;
+    expect(message).toContain(`${NEAR_LIMIT_PCT.toString()} %`);
   });
 
   it("warns about nothing when the thresholds are not configured", () => {

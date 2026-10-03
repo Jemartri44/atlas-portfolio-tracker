@@ -6,6 +6,7 @@
 import { For, type JSX, Show } from "solid-js";
 import { Amount, Figure, Tag } from "../../components/index.js";
 import type { WeightClassRow, WeightsView } from "../../view-models/core/index.js";
+import { Strip } from "./Strip.jsx";
 
 /** What a class row says besides its figures: below the minimum, partial. */
 const ClassTags = (props: { row: WeightClassRow }): JSX.Element => (
@@ -17,6 +18,13 @@ const ClassTags = (props: { row: WeightClassRow }): JSX.Element => (
     </Show>
     <Show when={props.row.partial}>
       <Tag icon="half">parcial</Tag>
+    </Show>
+    <Show when={props.row.offTargetCount > 0}>
+      <Tag tone="caution" icon="caution">
+        {props.row.offTargetCount === 1
+          ? "1 activo fuera de umbral"
+          : `${props.row.offTargetCount} activos fuera de umbral`}
+      </Tag>
     </Show>
   </>
 );
@@ -35,6 +43,19 @@ const ClassName = (props: { row: WeightClassRow }): JSX.Element => (
  * these rows are the answer at every width: a table of «sin dato» says less.
  */
 export const ClassRows = (props: { view: WeightsView }): JSX.Element => (
+  <>
+    <Show when={!props.view.partial}>
+      <p class="strip-scale only-narrow" aria-hidden="true">
+        <span>−5 pp</span>
+        <span>objetivo</span>
+        <span>+5 pp</span>
+      </p>
+    </Show>
+    <ClassList view={props.view} />
+  </>
+);
+
+const ClassList = (props: { view: WeightsView }): JSX.Element => (
   <ul
     class={props.view.partial ? "classes" : "classes only-narrow is-sm"}
     aria-label="Pesos por tipo de activo"
@@ -51,6 +72,7 @@ export const ClassRows = (props: { view: WeightsView }): JSX.Element => (
           </span>
           <Show when={!props.view.partial}>
             <Figure value={row.deviationPp} unit="points" class="dev" />
+            <Strip deviation={row.deviationPp} />
           </Show>
         </li>
       )}
@@ -95,7 +117,10 @@ export const ClassTable = (props: { view: WeightsView }): JSX.Element => (
               <Figure value={row.targetPct} unit="percent" decimals="auto" />
             </td>
             <td class="num">
-              <Figure value={row.deviationPp} unit="points" />
+              <span class="dev-cell">
+                <Strip deviation={row.deviationPp} />
+                <Figure value={row.deviationPp} unit="points" />
+              </span>
             </td>
           </tr>
         )}

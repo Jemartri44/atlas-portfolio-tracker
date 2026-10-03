@@ -480,7 +480,36 @@ const dist = join(webRoot, "dist");
  * 75.482, ceiling 75.502 — measured + 20**, inside the authorisation (76.069).
  * The two lines of work raised the boot in parallel; this is their sum.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_502;
+/*
+ * **Feature 020, E3, M9 (2026-10-03): measured 75.580 (+98 over the 75.482 of
+ * the start of E3), ceiling 75.600 — measured + 20**, raised before the commit
+ * that needs it, inside the authorisation (76.069). The table of the screens
+ * learns the privacy mode (`components/columns.ts`: the amounts fused into one
+ * column); `DataTable` is on the boot path. The trend: 75.482 → 75.580.
+ */
+/*
+ * **Feature 020, E3, M1 of the contribution (2026-10-03): measured 75.620
+ * (+40), ceiling 75.640 — measured + 20**, inside the authorisation (76.069).
+ * The share of each part and of each asset of the monthly split, in decimal,
+ * rounded when shown. The trend: 75.482 → 75.580 → 75.620.
+ */
+/*
+ * **Feature 020, E3, M5 and the chunk of the charts (2026-10-03): measured
+ * 75.593, ceiling unchanged at 75.640.** The strip of each class costs boot
+ * (+100), and the group `domain` of `vite.config.ts` stops swallowing the
+ * door `@atlas/domain/charts`, which `check-bundle.mjs` had found in the boot
+ * chunk (−208 net). The trend: 75.620 → 75.701 → 75.593.
+ */
+/*
+ * **Feature 020, E3, M10 (2026-10-03): measured 75.835 (+242 over the 75.593
+ * of the strips), ceiling 75.855 — measured + 20**, inside the authorisation
+ * (76.069), which leaves 234 bytes for E4 (estimated at +60). All of it is the
+ * stylesheet: the three gauges of the bucket and the dumbbells of its theses
+ * (`bucket.css`) are on the boot path with the rest of the styles, and the
+ * shared rules of strips, gauges and dumbbells are written once. M14 (styles
+ * per screen) is the lever if E4 needs more. The trend: 75.593 → 75.835.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 75_855;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -1033,7 +1062,35 @@ const BOOT_BUDGET_GZIP_BYTES = 75_502;
  * (312.000). The two lines of work raised the total in parallel; this is
  * their sum.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 306_690;
+/*
+ * **Feature 020, E3, M9 (2026-10-03): measured 306.952 (+518 over the 306.434
+ * of the start of E3), ceiling 307.208 — measured + 256**, inside the
+ * authorisation (312.000). Of those, +98 are the boot (above); the rest is the
+ * door `@atlas/domain/charts` with its two functions, the columns of the
+ * theses, the positions and the costs, and their percentages. The trend:
+ * 306.434 → 306.952.
+ */
+/*
+ * **Feature 020, E3, M1 of the contribution (2026-10-03): measured 307.271
+ * (+319), ceiling 307.527 — measured + 256**, inside the authorisation
+ * (312.000). Of those, +40 are the boot (above). The trend: 306.434 → 306.952
+ * → 307.271.
+ */
+/*
+ * **Feature 020, E3, M5 and the chunk of the charts (2026-10-03): measured
+ * 307.720 (+449 over the 307.271 of the shares), ceiling 307.976 — measured +
+ * 256**, inside the authorisation (312.000). The trend: 307.271 → 307.720.
+ */
+/*
+ * **Feature 020, E3, M10 (2026-10-03): measured 309.810 (+2.090 over the
+ * 307.720 of the strips), ceiling 310.066 — measured + 256**, inside the
+ * authorisation (312.000), which leaves 2.190 bytes for E4 (estimated at
+ * +3.150: **it does not fit as estimated**, plan §6.3 has the order of cuts).
+ * Of those, +242 are the boot (above); the lazy chunk of the Cubo carries the
+ * gauges, the dumbbells and their view-model (+1,8 KB gzip). The trend:
+ * 307.720 → 309.810.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 310_066;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
@@ -1260,6 +1317,10 @@ const LAZY_ONLY = [
     path: "/packages/domain/src/projections/simulate-transfer.ts",
     what: "la simulación de un traspaso",
   },
+  // Feature 020, E3: the gauges and the percentages of the Cubo, behind
+  // `@atlas/domain/charts` from their first commit.
+  { path: "/packages/domain/src/charts.ts", what: "la puerta de los indicadores de las pantallas" },
+  { path: "/packages/domain/src/charts/", what: "los indicadores y las series de las pantallas" },
   // Feature 015: **nothing of the access on the boot path**, from its first
   // commit. The rules of the access are the API's and never the web's (the
   // architecture test keeps the web from reaching them at all); the session,

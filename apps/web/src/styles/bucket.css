@@ -52,3 +52,94 @@
 .card > .hero-figure + .card-note {
   margin: 0 0 var(--space-3);
 }
+
+/* ---- The three gauges of the bucket (feature 020, M10) ------------------ */
+
+.meter {
+  margin: var(--space-3) 0 var(--space-4);
+}
+
+.meter-label {
+  display: flex;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  justify-content: space-between;
+  margin: 0;
+}
+
+.meter-bar {
+  display: block;
+  height: var(--meter-h);
+  overflow: visible;
+  width: 100%;
+}
+
+.meter-bar .fill {
+  fill: var(--c-accent);
+}
+
+.meter-bar .warn {
+  stroke: var(--c-caution-icon);
+  stroke-width: 2;
+}
+
+.meter-bar text {
+  fill: var(--c-text-3);
+  font-size: var(--text-xs);
+}
+
+/* The weight over the net worth adds the two books: its accent rule says so. */
+.meter.both {
+  border-left: var(--space-1) solid var(--c-accent);
+  padding-left: var(--space-3);
+}
+
+/* ---- Each thesis against the index (feature 020, M10) ------------------- */
+
+.dumb {
+  list-style: none;
+  margin: 0 0 var(--space-2);
+  padding: 0;
+}
+
+.dumb > li {
+  border-top: var(--border) solid var(--c-border);
+  display: grid;
+  gap: var(--space-1) var(--space-3);
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding-block: var(--space-2);
+}
+
+.dumb-name {
+  display: grid;
+  min-width: 0;
+}
+
+.dumb .vs {
+  font-weight: var(--fw-semibold);
+  text-align: right;
+}
+
+.dumb-bar {
+  display: block;
+  grid-column: 1 / -1;
+  height: var(--strip-h);
+  overflow: visible;
+  width: 100%;
+}
+
+.dumb-bar .grid {
+  stroke: var(--c-chart-grid);
+}
+
+.dumb-bar .ring {
+  fill: var(--c-surface);
+  stroke: var(--c-series-index);
+  stroke-width: 2;
+}
+
+.dumb-legend {
+  color: var(--c-text-2);
+  font-size: var(--text-sm);
+  margin: 0 0 var(--space-3);
+}

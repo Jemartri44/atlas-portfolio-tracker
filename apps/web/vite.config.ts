@@ -214,6 +214,7 @@ export default defineConfig(({ command }) => ({
       "@atlas/domain/ecb": repo("../../packages/domain/src/ecb.ts"),
       "@atlas/domain/fiscal": repo("../../packages/domain/src/fiscal.ts"),
       "@atlas/domain/tools": repo("../../packages/domain/src/tools.ts"),
+      "@atlas/domain/charts": repo("../../packages/domain/src/charts.ts"),
       "@atlas/domain/quotes": repo("../../packages/domain/src/quotes.ts"),
       "@atlas/domain/sync": repo("../../packages/domain/src/sync.ts"),
       "@atlas/domain/remote-answers": repo("../../packages/domain/src/remote-answers.ts"),
@@ -284,7 +285,8 @@ export default defineConfig(({ command }) => ({
          * either (decision (r) of its prompt); and, since feature 013, the
          * automatic daily closes (`quotes/` and the `quotes.ts` door), and since
          * feature 014 the sync of the ledger (`sync/`, the `sync.ts` door and
-         * its two ports), lazy by construction. **The store of the browser rides
+         * its two ports), lazy by construction, and since feature 020 the
+         * indicators of the Cubo (`charts/` and the `charts.ts` door). **The store of the browser rides
          * in the same chunk** (`blob.ts`, and `idb.ts`, `indexeddb.ts`,
          * `folder.ts` and the `index.ts` of `browser/`): it is boot too —
          * opening the ledger is the boot. Once the lazy screens of the ECB
@@ -299,7 +301,7 @@ export default defineConfig(({ command }) => ({
           groups: [
             {
               name: "domain",
-              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|quotes[\\/]|quotes\.ts|sync[\\/]|sync\.ts|remote[\\/]|remote-answers\.ts|tools\.ts|projections[\\/](?:corporate-action-draft|deep-check|simulate-transfer)\.ts|ports[\\/](?:remote-ledger|sync-state-store)\.ts|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/](?:idb|indexeddb|picker|index)\.ts))/,
+              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|quotes[\\/]|quotes\.ts|charts[\\/]|charts\.ts|sync[\\/]|sync\.ts|remote[\\/]|remote-answers\.ts|tools\.ts|projections[\\/](?:corporate-action-draft|deep-check|simulate-transfer)\.ts|ports[\\/](?:remote-ledger|sync-state-store)\.ts|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/](?:idb|indexeddb|picker|index)\.ts))/,
             },
           ],
         },
