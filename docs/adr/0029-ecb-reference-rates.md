@@ -116,3 +116,11 @@ Ese histórico **no se usa**: `EcbHistoryDamaged`, como ya decía el punto 2. Pe
 - Lo que había sigue en las versiones anteriores del bucket.
 
 La consola no tiene este caso: su carpeta se escribe bajo cerrojo.
+
+## Nota del 2026-09-28 (cierre de la feature 016): `previous/` y el móvil
+
+Decidida por la dirección en la revisión de las PR #106 a #109 (`specs/016-scheduled-jobs/questions.md` §15, §18, §20 y §22).
+
+- **`previous/` solo vale si cuadra con su manifiesto** (N3). Un corte entre los dos primeros pasos de una activación deja en `previous/` otros bytes que los que dice el manifiesto. Quien lo use lo comprueba antes: la reconstrucción de la nota anterior compara con `previous/` **solo si sus bytes tienen el SHA-256 que dice `manifest.previous`**, y toma su nombre de ahí; el procedimiento [`docs/runbooks/ecb-history-in-the-cloud.md`](../runbooks/ecb-history-in-the-cloud.md) manda lo mismo. Sin manifiesto legible no hay con qué comprobarlo: eso solo puede hacer que la reconstrucción rechace un ZIP, nunca que lo acepte. El volcado mensual no copia `previous/`.
+- **Una actualización cortada que se deshace se dice.** Si el fichero en vigor no cuadra con su manifiesto y `previous/` lo deshace, la ejecución siguiente vuelve al anterior y deja el hallazgo **`ecb_update_undone`**, con su aviso. Para la Renta de enero, un histórico dañado o recién deshecho es un fallo pasajero (`ecb_unavailable`): se reintenta al día siguiente, y solo la ausencia real de histórico cuenta como «sin histórico».
+- **El punto 3, «en el móvil, cuando exista la nube»: construido** (E3). La web baja el histórico del BCE de la nube por la API, con la sesión iniciada y `If-None-Match` sobre su versión (`docs/api.md` §6), en cualquier dispositivo: es su **tercera procedencia**, con `origin: "cloud"` en la copia del navegador, junto a la carpeta del escritorio y la copia importada a mano. Comprueba el SHA-256 del manifiesto antes de usarlo, y la regla del punto 2 se aplica igual: una web que ya guardó una generación rechaza otra que cambia o quita tipos. La consola no cambia: sigue bajando del propio BCE.

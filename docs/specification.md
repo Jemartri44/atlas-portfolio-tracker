@@ -172,7 +172,7 @@ Proyectos de código abierto que ya han resuelto partes de esto:
 
 **La lista normativa de parámetros es `business-rules.md` §7**, con el valor inicial y la regla asociada de cada uno. Manda ella, y esta especificación **no la repite**: la tabla que había aquí se quedó desfasada durante meses —le faltaban los criterios fiscales que el motor ya usaba y le sobraba alguno que nunca existió en el código—, que es lo que pasa siempre con una lista duplicada. Cualquier parámetro nuevo se añade en §7 y solo en §7.
 
-**Previsión, todavía fuera de la lista normativa:** `alert_channels{}` —qué avisa por correo y qué se queda solo en la interfaz— es una previsión de la **Fase 4 (automatización)**, coherente con la columna «Notifica» y el principio de notificación de §9.5, pero **no existe en el código ni en §7**. Se anota aquí para no perderla; entra en §7 el día que la Fase 4 la implemente, no antes.
+**`alert_channels{}` no existe y no entra en §7.** Qué avisa por correo y qué se queda solo en la interfaz lo decide hoy el código de las tareas (feature 016): cada aviso tiene su canal fijo (§9.5). Si algún día se configura, **vive fuera del libro, junto al destinatario del correo**, en SSM (ADR-0028, ADR-0034): es configuración operativa que ninguna cifra del libro lee (constitución, principio IV, enmienda 1.6.0), y en `Settings`, que es una foto completa, un cliente antiguo la borraría al escribir la foto siguiente. **Nunca en `docs/business-rules.md` §7.**
 
 ### 5.2 Requisitos
 
@@ -357,7 +357,14 @@ Navegador (PC / móvil)      Consola (`atlas`; token de dispositivo
                              consola y, en el acceso,
                              el ID token de Google)
 
-EventBridge Scheduler ─── Lambdas programadas ─── SES (correo)
+EventBridge Scheduler ─── Lambdas programadas ──────── SES (correo; solo la
+                          (cinco, un solo artefacto        función de correo)
+                           `jobs.zip`, una por familia
+                           de permisos: BCE, precios,
+                           correo, volcado, integridad;
+                           las que no envían dejan sus
+                           hallazgos en `jobs/` del
+                           bucket de datos)
                                 │
                                 └── SSM Parameter Store (token IBKR, secreto de
                                     cliente de Google, clave de sesión, claves
@@ -403,25 +410,29 @@ AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **
 
 ### 9.5 Lambdas programadas
 
-> **Actualizada desde ADR-0029, ADR-0031 y ADR-0032 (2026-09-24, Ronda 8).** La importación diaria de IBKR y la conciliación semanal siguen **bloqueadas por la Ronda 6** (los importadores): entran cuando la Fase 0 los desbloquee. Las tareas de BCE, precios, integridad y volcado sí están diseñadas en esta ronda (feature `016`, sin desplegar todavía).
+> **Construida en la feature 016 (fusionada el 2026-09-28), sin desplegar todavía**: la infraestructura es de la 017 y la prueba contra AWS real, de la 018 (`docs/decision-roadmap.md`). La importación diaria de IBKR y la conciliación semanal siguen **bloqueadas por la Ronda 6** (los importadores).
 
-| Frecuencia | Función | Notifica |
-|---|---|---|
-| Diaria | Actualizar precios de cierre: EODHD, respaldo Alpha Vantage; cripto por EODHD si su plan gratuito la cubre (ADR-0031, tercera enmienda) | Solo si una tesis se acerca a su condición de invalidación |
-| Diaria | Actualizar el histórico del BCE, byte a byte, con el calendario TARGET como comprobación cruzada (ADR-0029) | No, salvo hallazgo de integridad |
-| Diaria *(bloqueada, Ronda 6)* | Importar operaciones nuevas de IBKR vía Flex Query | Solo si hay operaciones nuevas o discrepancias |
-| Semanal | Comprobar desviaciones de pesos y reglas del cubo | Sí, si se supera algún umbral |
-| Semanal *(bloqueada, Ronda 6)* | Conciliar posiciones del libro contra extracto de IBKR | Sí, si divergen |
-| Mensual | Recordatorio de aportación con el reparto calculado, **sin importes salvo que se active** (ADR-0028); con los días desde el último inicio de sesión, **contando también los de la consola**, cuántos tokens de consola siguen vivos y cuántos se emitieron en el mes, sin nombres ni importes (ADR-0027, ADR-0033), y el recordatorio de la copia fuera de AWS (ADR-0032) | Sí, siempre |
-| Mensual | Volcado del libro mayor, el histórico del BCE, los precios y `positions.json` a `backups/<YYYY-MM>/`, para siempre (ADR-0032) | Solo si falla |
-| Trimestral | Verificación de integridad: recalcular todo desde cero y comparar, **más el ensayo automático de restauración** (carga el último volcado en memoria y compara la proyección con la del libro vivo, ADR-0032) | Sí, si hay discrepancia |
-| Anual (enero) | Preparar datos de la Renta del ejercicio anterior | Sí |
-| Anual | Comprobar umbrales de los Modelos 720 y 721 | Sí, si se acerca a 50.000€ |
-| Anual | Ensayo manual de restauración desde el último volcado, en máquina del usuario (constitución VI, ADR-0032) | — (procedimiento manual) |
+EventBridge Scheduler despierta **una vez al día** a cada una de las cinco funciones (`apps/jobs`, un solo artefacto `jobs.zip`), con la hora de Madrid, y el dominio decide qué tarea toca según su periodo y `job_frequencies`. Cada tarea deja un registro por periodo en `jobs/<familia>/<tarea>/<periodo>.json` (`docs/data-schema.md` §1). **Solo la función de correo envía**: las demás dejan sus hallazgos en su registro, y la tarea `dispatch_findings` de la función de correo los avisa **una vez por racha**, no una vez al día. El evento de cada programación, las variables de cada función y los permisos están en `specs/016-scheduled-jobs/contracts/` (`scheduler-event.md`, `ssm-and-config.md`, `iam-permissions.md`); los textos de cada correo, en `contracts/mail.md`; qué hacer con cada uno, en [`docs/runbooks/scheduled-warnings.md`](runbooks/scheduled-warnings.md).
 
-**Todas las frecuencias y umbrales son configurables** (`job_frequencies`, ver §5).
+| Función (hora de Madrid) | Tarea | Clave de `job_frequencies` (por defecto, primero) | Notifica |
+|---|---|---|---|
+| `job-ecb` (17:15) | Actualizar el histórico del BCE, byte a byte, con el calendario TARGET como comprobación cruzada (ADR-0029) | `ecb`: `daily`, `weekly` | Solo con un hallazgo: descarga rechazada, calendario que no cuadra, histórico dañado, reconstruido o sin comparar, y actualización cortada que se ha deshecho (`ecb_update_undone`) |
+| `job-prices` (07:00) | Actualizar los precios de cierre: EODHD, respaldo Alpha Vantage (ADR-0031). **Nunca contrasta** una correspondencia ni escribe `prices/symbols.json` | `prices`: `daily`, `weekly` | Solo con un hallazgo: una fuente que falla en el umbral de fallos seguidos, correspondencias sin contrastar, tesis del cubo con el horizonte vencido y ficheros de cierres ilegibles. La condición de invalidación de una tesis es texto libre y **no avisa** |
+| `job-backup` (03:15) | Volcado mensual a `backups/<YYYY-MM>/`, para siempre (ADR-0032) | `backup`: `monthly` (fijo) | Solo si falla o queda incompleto: `backup_object_differs`, `backup_ecb_inconsistent`, `backup_ecb_missing`, `backup_positions_missing` y `task_failed` |
+| `job-integrity` (04:15) | Integridad: los **errores** de `atlas check --deep` sobre el libro vivo, el ensayo de restauración con el último volcado **en memoria**, y el tamaño del libro (ADR-0032) | `integrity`: `quarterly`, `monthly` | Solo con errores, con un ensayo que no reproduce el libro o con el libro por encima de `ATLAS_LEDGER_SIZE_WARNING_BYTES` |
+| `job-mail` (08:00) | Recordatorio mensual: el reparto de la aportación, **sin importes salvo que se active** (ADR-0028); los días desde el último inicio de sesión, web o consola, los tokens de consola vivos y emitidos en el mes, sin nombres (ADR-0027, ADR-0033); y la copia fuera de AWS (ADR-0032) | `reminder`: `monthly` (fijo) | **Siempre, al menos una vez**. Si no puede leer los cierres o el histórico del BCE, no sale ese día y sale en cuanto pueda leerlos |
+| `job-mail` | Revisión: desviaciones de los pesos del núcleo sobre `deviation_threshold_pp`, por **clase**, nunca por activo, y reglas 17 y 18 del cubo; informativa, con los cierres de la nube | `review`: `weekly`, `monthly` | Solo si se pasa un umbral; como mucho una vez por periodo |
+| `job-mail` | Datos de la Renta del ejercicio anterior (enero) | `tax_return`: `yearly` (fijo) | Sí, en enero, como mucho una vez: cuántas notas y cuántos criterios en disputa; **nunca la base ni ninguna cifra, ni con los importes encendidos** |
+| `job-mail` | Modelos 720 y 721 del año que acaba (enero) | `informative_thresholds`: `yearly` (fijo) | Solo si hay algo que hacer, lo mismo que la tarjeta fiscal de la web, con **valoraciones manuales** y los umbrales de aviso de `Settings`, nunca con precios automáticos. Texto neutro: sin cifras y sin decir si se pasa un umbral |
+| *(bloqueada, Ronda 6)* | Importar operaciones nuevas de IBKR vía Flex Query (diaria) | — | Solo si hay operaciones nuevas o discrepancias |
+| *(bloqueada, Ronda 6)* | Conciliar posiciones del libro contra el extracto de IBKR | `reconciliation`: **reservada**; hoy se ignora y se dice (`job_not_available`) | Sí, si divergen |
+| — (manual, anual) | Ensayo manual de restauración desde el último volcado, en la máquina del usuario (constitución VI, ADR-0032; [`docs/runbooks/restore-the-ledger.md`](runbooks/restore-the-ledger.md)) | — | — |
 
-**Principio de notificación:** el correo mensual siempre llega. Los demás solo cuando hay algo que hacer. Un sistema que envía correos rutinarios acaba filtrado a los seis meses. El destinatario del correo tiene **una sola fuente, `terraform.tfvars`**, fuera del repositorio, de la que Terraform escribe el parámetro de SSM que lee la Lambda y la condición de IAM del envío; nunca va en `Settings` ni en el repositorio (ADR-0028, ADR-0034).
+**`job_frequencies` es un conjunto cerrado de claves y valores, sin `off`** (`docs/business-rules.md` §7): apagar un aviso es silenciar una alarma (constitución IV), y el recordatorio mensual llega siempre (constitución V). Se lee **con tolerancia**: una clave desconocida, un valor que no se admite o `reconciliation` no invalidan el libro; se usa el valor por defecto y se dice con su código en el registro. Las horas son la propuesta de la 016, que la 017 escribe en Terraform; ninguna cae entre las 02:00 y las 03:00, donde el cambio de hora salta o repite.
+
+**Cómo se reintenta.** Una tarea que falla se reintenta en la ejecución siguiente de su periodo. El recordatorio mensual se envía **al menos una vez**; los demás avisos, **como mucho una vez**: un aviso que pudo salir y no se sabe se cierra sin volver a enviarlo, y un periodo que ya pasó (la semana anterior, un enero pasado) se cierra `expired` sin enviar. Un fallo pasajero al leer el libro o lo que se valora no gasta un aviso periódico: se reintenta al día siguiente y, si el último día del periodo (el domingo, o el 31 de enero) sigue sin poderse, se dice con su código.
+
+**Principio de notificación:** el correo mensual siempre llega. Los demás solo cuando hay algo que hacer. Un sistema que envía correos rutinarios acaba filtrado a los seis meses. El destinatario del correo tiene **una sola fuente, `terraform.tfvars`**, fuera del repositorio, de la que Terraform escribe el parámetro de SSM que lee la Lambda y la condición de IAM del envío; nunca va en `Settings` ni en el repositorio (ADR-0028, ADR-0034; [`docs/runbooks/mail-recipient-and-amounts.md`](runbooks/mail-recipient-and-amounts.md)). Ningún correo lleva euros, cantidades, precios, posiciones, nombres de activos, ISIN, símbolos ni cuentas; con el interruptor de importes encendido, solo los euros del reparto mensual y de la regla 17.
 
 ### 9.6 Frontend
 
@@ -585,8 +596,8 @@ GitHub Actions:
 - **SSM Parameter Store** (nivel estándar, gratuito) con parámetros cifrados de tipo `SecureString`.
 - Token Flex de IBKR: **solo lectura**, rotado anualmente, jamás en el frontend ni en el repositorio.
 - **Secreto del cliente OAuth de Google y clave de firma de la sesión** (ADR-0027), uno por entorno: `dev` nunca acepta la cuenta de Google que da acceso a `prod`.
-- **Claves de las fuentes de precios** EODHD y Alpha Vantage (ADR-0031; CoinGecko, retirada en su tercera enmienda): en local, en `~/.config/atlas/secrets.json`, **fuera del repositorio y de la carpeta del libro**, con permisos `600` (con otros permisos, la consola no las usa); en la nube, SSM. ~~Con ellas van el orden de las fuentes y su presupuesto: configuración operativa de la máquina que descarga, que ninguna cifra del libro lee.~~ El orden de las fuentes y su presupuesto **no** van con ellas, porque no son secretos: viven en `prices/config.json`, junto al libro (`docs/data-schema.md` §1).
-- **Lista permitida** de `{sub, email}` de Google (ADR-0027) y **destinatario del correo** (ADR-0028): en SSM. La lista la crea y la rota el guion de secretos con el rol de administración, nunca Terraform; el destinatario sale de `terraform.tfvars`, de donde Terraform escribe también la condición de IAM de SES (ADR-0034, filas 12 y 21). No van en el repositorio porque son datos personales y el repositorio es público; y no van en `Settings` porque **ninguna cifra del libro los lee** y quien los usa es la Lambda (la API, que comprueba la lista; la que envía el correo, el destinatario): un dato personal que solo usa el servidor vive donde lo lee el servidor (principio IV). El campo `notification_email` de `Settings` se sigue aceptando al cargar (ADR-0018), pero deja de leerse; la web todavía lo ofrece en Ajustes y **se retira con la feature 016** (tareas y correo).
+- **Claves de las fuentes de precios** EODHD y Alpha Vantage (ADR-0031; CoinGecko, retirada en su tercera enmienda): en local, en `~/.config/atlas/secrets.json`, **fuera del repositorio y de la carpeta del libro**, con permisos `600` (con otros permisos, la consola no las usa); en la nube, SSM. ~~Con ellas van el orden de las fuentes y su presupuesto: configuración operativa de la máquina que descarga, que ninguna cifra del libro lee.~~ El orden de las fuentes y su presupuesto **no** van con ellas, porque no son secretos: en local viven en `prices/config.json`, junto al libro (`docs/data-schema.md` §1); en la nube, en las variables de la función de precios, que escribe Terraform (ADR-0031, nota del 2026-09-28; `docs/api.md` §9).
+- **Lista permitida** de `{sub, email}` de Google (ADR-0027) y **destinatario del correo** (ADR-0028): en SSM. La lista la crea y la rota el guion de secretos con el rol de administración, nunca Terraform; el destinatario sale de `terraform.tfvars`, de donde Terraform escribe también la condición de IAM de SES (ADR-0034, filas 12 y 21). No van en el repositorio porque son datos personales y el repositorio es público; y no van en `Settings` porque **ninguna cifra del libro los lee** y quien los usa es la Lambda (la API, que comprueba la lista; la que envía el correo, el destinatario): un dato personal que solo usa el servidor vive donde lo lee el servidor (principio IV). El campo `notification_email` de `Settings` **está retirado** desde la feature 016: la web ya no lo ofrece en Ajustes y ninguna foto nueva de `settings_changed` lo lleva, la escriba la web o la consola (`mergeSettings` lo quita). El cargador lo sigue aceptando en las líneas ya escritas (ADR-0018), y nadie lo lee.
 - **Interruptor de importes del correo** (ADR-0028, fila 18): también en SSM, junto al destinatario. No es dato personal ni secreto: es configuración operativa que ninguna cifra lee, y además un campo nuevo, que en `Settings` —una foto completa— un cliente antiguo borraría sin avisar al escribir la foto siguiente (ADR-0026, caso 6; enmienda de ADR-0018).
 - **Tokens de dispositivo de la consola** (ADR-0033): en la nube, un parámetro `SecureString` estándar por token bajo `/atlas/<entorno>/device-tokens/<id>`, con **solo el hash** del secreto, el par `{sub, email}`, el nombre, el dispositivo, la emisión, la caducidad y la revocación; se escribe solo al crearlo y al revocarlo, y la API nunca lo borra. **No va en el bucket de datos**, que se copia y se restaura: una restauración podría reactivar tokens revocados. En local, el token vive en `~/.config/atlas/credentials.json` (o `$XDG_CONFIG_HOME/atlas/`), hermano de `secrets.json` y con sus mismas reglas (`600`, fuera de la carpeta del libro, nunca en una copia, exportación ni sincronización), pero **lo escribe la consola**. En WSL, el `600` no protege frente a un proceso de Windows del mismo usuario; es el mismo límite que ya tienen `secrets.json` y la réplica del libro.
 - Sin secretos en variables de entorno de la Lambda visibles en la consola.
@@ -638,6 +649,8 @@ Registro de tesis, posiciones abiertas, métricas frente al índice, gráficas y
 
 **Fase 4 — Automatización**
 Lambdas programadas, correos, precios automáticos.
+
+**En código, sin desplegar** (feature 016, fusionada el 2026-09-28): las cinco funciones programadas, el correo y los precios y el histórico del BCE de la nube (§9.5). La infraestructura es de la 017 y la prueba contra AWS real, de la 018 (`docs/decision-roadmap.md`).
 
 **Fase 5 — Motor fiscal**
 FIFO consolidado, conversión de divisa por fecha valor, regla de los dos meses, dividendos y doble imposición, salida agregada por casilla.
