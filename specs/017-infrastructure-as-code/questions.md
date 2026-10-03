@@ -332,3 +332,8 @@ Vistos morir por `jobs.test.ts`: **23** (`ses:SendEmail` en el rol del BCE: 7 fa
 ### Documentos que tendrá que actualizar la dirección (E3)
 
 ADR-0034 (fila 29: cerrada con fuente, el grupo; la política del rol de correo `sensitive`; las acciones de `EventInvokeConfig`), `specs/016-scheduled-jobs/questions.md` §1.1 (identidades de SES, sin fuente nueva) y `contracts/iam-permissions.md` (el ARN de `aws:SourceArn` de Scheduler), `docs/decision-roadmap.md` (la 018 recibe lo SIN VERIFICAR de arriba), `contracts/variables.md` (nombres nuevos: `reserve_jobs_concurrency`, `dev_active_jobs`, `prices_sources`).
+
+### Notas para la dirección, sin decidir (revisión de la PR #116, ronda 1)
+
+- **N2 — identidad SES del destinatario.** Si la cuenta sigue en el *sandbox*, SES puede exigir permiso también sobre la identidad del destinatario; ninguna fuente consultada lo dice, así que no entra en el rol ni en el límite y queda `pending` (`job-mail/SendRecipientIdentity`). Decide la dirección si se concede cuando C9 diga que la cuenta está en el *sandbox*, o si lo resuelve la 018 con el primer envío.
+- **N3 — política del rol de correo oculta en el plan.** Lleva el destinatario (sensible, ADR-0034, filas 1 y 12), así que el `plan` de la CI la muestra como `(sensitive value)`: un cambio de esa política no se ve al revisar. Nota pendiente de ADR-0034: aceptar la consecuencia o separar la sentencia de envío en una política propia para que el resto del rol siga visible.
