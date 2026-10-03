@@ -1,0 +1,13 @@
+# Placeholders only. The real file lives outside the repository:
+# ~/personal/atlas/privado/terraform/bootstrap/account/terraform.tfvars
+account_id                    = "000000000000"
+bucket_suffix                 = "example000"
+admin_principal_arn           = "arn:aws:iam::000000000000:user/example-admin"
+mail_sender                   = "atlas@example.invalid"
+budget_alert_email            = "alerts@example.invalid"
+use_customer_managed_key      = false
+cost_tag_activation           = "off"
+github_oidc_provider_mode     = "use_existing"
+access_analyzer_mode          = "use_existing"
+ses_create_sender_identity    = true
+ses_verify_recipient_identity = false
