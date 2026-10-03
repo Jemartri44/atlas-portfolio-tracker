@@ -4,6 +4,7 @@ Fechas en Europe/Madrid. Aquí van las preguntas a la dirección, lo que se resp
 
 ## 1. Estado
 
+- **2026-10-03**: **E4 PARADA** (§13): M12 no cabe en 312.000 ni con los recortes de §6.3; esperando a la dirección.
 - **2026-10-03**: **E3 en curso** (§12): guardián de privacidad, `NEAR_LIMIT_PCT`, la puerta `@atlas/domain/charts`, M1, M9, M5 y M10 hechos; capturas y tubería final en §12.
 - **2026-09-28**: **E2 terminada y congelada** (§11). El código congelado es `9f2ddcc`.
 - **2026-09-27, tarde**: **E1 terminada y congelada** (§9). El código congelado es `ded43d6`.
@@ -757,3 +758,43 @@ E4 añade en el dominio, **solo funciones nuevas y detrás de puertas perezosas*
 Ninguna orden de la consola llama a nada de esto (`grep` en `apps/cli/src`, `apps/api/src`, `apps/jobs/src` y `packages/adapters/src`).
 
 **Predicción**: `tax <año>` (con `--lots`, con `--boxes` y con `--json`), `gains`, `income`, `m720`, `m721` y `filed` (renta, 720 y 721), sobre `synthetic-v1`, para los años 2024 a 2029, dan **los mismos bytes** que en `develop`; `git diff origin/develop -- tests/fixtures` sale vacío. Salida de `develop` guardada antes de tocar nada (66 ficheros, script `020-e4-fiscal.sh` del *scratchpad*).
+
+### 13.2 Los commits de E4
+
+Dominio (señalados para la PR): `9ea1c656` (exporta `cashEurOf`, `cashFlowsOf`, `netWorthDates`, solo del módulo), `a5838aad` (`contributedSeries` y la definición de lo aportado en `business-rules.md`, §1), `ed8b9604` (`bucketIndexPctSeries`), `9bc6a09a` (`fiscalCalendar` y `FILING_DEADLINES`, una fila por ejercicio verificado, Q4). Web: «Este año» (`dfb56d3e`), el cubo en % con la regla del hueco (`d75bff3b`), la evolución en paneles con lo aportado (`e7c47a4b`) y su arreglo del último panel. Cada subida de techo va en un `build(web)` delante.
+
+La salida fiscal **no se movió**: `020-e4-fiscal.sh` (66 ficheros: `tax` con `--lots`, `--boxes` y `--json`, `gains`, `income`, `m720`, `m721` y `filed`, 2024-2029) da los mismos bytes que antes; `git diff origin/develop -- tests/fixtures` vacío.
+
+### 13.3 PARADA: M12 (la tira y la lista del calendario) no cabe
+
+El dominio del calendario está hecho y probado al 100 %; **falta su dibujo** (`CalendarCard`: tira SVG con campaña, hoy y marcas de forma distinta; lista debajo; ejercicios sin plazo verificado; fechas posteriores al borde con «2030 ›»). Está prototipado, medido y **no commiteado**: `020-e4-m12-ui/` del *scratchpad* (`CalendarCard.tsx` y `fiscal.patch`).
+
+| Paso | Arranque | Total |
+|---|---:|---:|
+| Partida de E4 (`develop`) | 75.830 | 309.831 |
+| + «Este año» (incluye ya ~200 del dominio del calendario, que el trozo fiscal arrastra) | 75.826 | 310.152 |
+| + cubo en % y regla del hueco (M7) | 75.822 | 310.725 |
+| + evolución en paneles (M3) | 75.919 | 311.983 |
+| **Estado commiteado** (con el arreglo del último panel) | **75.935** | **311.947** |
+| + M12 (tira y lista, compactada una vez) | 76.002 | **313.523** |
+
+Autorizaciones: 76.069 y 312.000 (no se tocan). Faltan **1.523** bytes. Recortes de §6.3 medidos con prototipo (deshechos):
+
+| Recorte | Total | Arranque |
+|---|---:|---:|
+| 1. Versión corta en *Declaración* | no construida | — |
+| 2. Mancuernas de M10 (componente y CSS) | −771 | −104 |
+| 4. M9 (columnas fundidas) | −291 | −4 |
+| 3. Fila entera de Movimientos y tablas de las dos tiras (M13) | ~−150, **sin medir** | |
+
+Con los tres recortes el total queda en ~312.300: **todavía ~300 por encima**, y se habrían quitado dos mejoras ya fusionadas (#119 y E1). No lo hice sin su palabra. Opciones: (a) subir la autorización del total a ~314.000 (decisión suya); (b) hacer los tres recortes y adelgazar M12/M3 a ciegas ~300 bytes (el coste de M12 es sobre todo el trozo fiscal: +1,1 KB gzip por unas 90 líneas de JSX); (c) M14 (estilos por pantalla, ADR propuesta), que libera arranque pero no total; (d) dejar M12 para otra entrega con el presupuesto revisado. Mi recomendación: (a) o (d).
+
+### 13.4 Otros hallazgos y decisiones
+
+- **La definición de lo aportado** no estaba escrita en `business-rules.md`; la escribí tal como la propuso el plan §5 con las dos decisiones aceptadas (se dibuja la espina con la frase cuando hay compras sin ingreso previo; vale el libro actual de la cuenta), en el commit de dominio. Revísela.
+- El calendario solo da las fechas del 720/721 (plazo del ejercicio anterior y valoración de fin de año) si hay cuentas en el extranjero ese día (`hasForeignAccountsAt`), y los plazos solo existen hasta el ejercicio 2026: de 2027 en adelante sale «plazo sin verificar» hasta que alguien añada la fila.
+- `bucketIndexPctSeries` coincide con `vs_index_pct` de `bucketStats` en la última fecha cuando no hay tesis sin movimiento; con una tesis ociosa, `bucketStats` no da porcentaje (compara todas) y la serie sí (las salta y las cuenta en `idle`).
+- «Este año» usa el año UTC de cada punto (son fechas a medianoche UTC): no depende de la zona. Tests con el borde 31/12-01/01.
+- La tira de la cartera y la del efectivo: el último panel lleva el eje de fechas y por eso es más alto (+2 rem). Visto en captura a 400 px.
+- Color para daltónicos: no se relajó ningún umbral.
+- Capturas (scratchpad `020-e4-shots/`: `antes`, `despues`, `antes-mayo`, `despues-mayo`; 90 + 58 cada una; Resumen, Cubo y Declaración a 400×890×3 y 2045×1141, claro y oscuro, importes ocultos y visibles; reloj 20/01/2029 y 15/05/2029): sin desplazamiento lateral a 360, 400, 1.440 y 2045; ningún texto bajo 13 px; ningún objetivo táctil bajo 44 px.
