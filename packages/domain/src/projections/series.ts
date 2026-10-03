@@ -158,7 +158,7 @@ const resolveDates = (
   return sorted.filter((date) => kept.has(date));
 };
 
-interface Resolved {
+export interface Resolved {
   dates: CivilDate[];
   from: CivilDate;
   to: CivilDate;
@@ -183,16 +183,23 @@ const at = (events: readonly LedgerEvent[], date: CivilDate) => {
   return { state, settings: settingsAt(state, date).settings };
 };
 
+/**
+ * The dates of a net worth series, as `netWorthSeries` draws them. Exported
+ * from the module, never from the barrel, so that a series drawn beside it
+ * (the contributions, feature 020, E4) shares its axis point by point.
+ */
+export const netWorthDates = (events: readonly LedgerEvent[], options: SeriesOptions): Resolved =>
+  rangeOf(projectLedger(events, { collectErrors: true }), options, (date) => {
+    const { state, settings } = at(events, date);
+    return netWorth(state, date, settings).partial;
+  });
+
 /** Evolution of the net worth, one point per date, broken down by book. */
 export const netWorthSeries = (
   events: readonly LedgerEvent[],
   options: SeriesOptions,
 ): NetWorthSeries => {
-  const base = projectLedger(events, { collectErrors: true });
-  const { dates, from, to } = rangeOf(base, options, (date) => {
-    const { state, settings } = at(events, date);
-    return netWorth(state, date, settings).partial;
-  });
+  const { dates, from, to } = netWorthDates(events, options);
   let complete = 0;
   const points = dates.map((date): NetWorthPoint => {
     const { state, settings } = at(events, date);
