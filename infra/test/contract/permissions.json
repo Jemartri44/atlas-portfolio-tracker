@@ -377,6 +377,13 @@
           "contract": "P-5 (closed list; SAR: no resource type)"
         },
         {
+          "sid": "SsmDescribe",
+          "effect": "Allow",
+          "actions": ["ssm:DescribeParameters"],
+          "resources": ["*"],
+          "contract": "P12-B1; Q-E2-1 (answered yes); SAR no resource type; provider parameter.go L317"
+        },
+        {
           "sid": "SsmStringsRead",
           "effect": "Allow",
           "actions": ["ssm:GetParameter", "ssm:ListTagsForResource"],
@@ -724,6 +731,13 @@
           "actions": ["logs:DescribeLogGroups"],
           "resources": ["*"],
           "contract": "P-5 (closed list; SAR: no resource type)"
+        },
+        {
+          "sid": "SsmDescribe",
+          "effect": "Allow",
+          "actions": ["ssm:DescribeParameters"],
+          "resources": ["*"],
+          "contract": "P12-B1; Q-E2-1 (answered yes); SAR no resource type; provider parameter.go L317"
         },
         {
           "sid": "SsmStringsRead",

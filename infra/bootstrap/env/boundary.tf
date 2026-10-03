@@ -73,9 +73,9 @@ locals {
       condition = local.boundary_home
     },
     {
-      sid       = "LogsDescribe"
+      sid       = "NoResourceReads"
       effect    = "Allow"
-      actions   = ["logs:DescribeLogGroups"]
+      actions   = ["logs:DescribeLogGroups", "ssm:DescribeParameters"]
       resources = ["*"]
       condition = local.boundary_home
     },

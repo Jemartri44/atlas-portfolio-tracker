@@ -6,7 +6,15 @@ import { UNTAGGABLE } from "./lib/exempt.js";
 import { costTypes as costTypesGuardian, tags, wildcards } from "./lib/guardians.js";
 import { decide, flatten, type Statement } from "./lib/iam.js";
 import { changes, only, type Plan } from "./lib/plan.js";
-import { ACCOUNT, ADMIN, REPOSITORY, renderEnv, SENDER, SUFFIX } from "./lib/renders.js";
+import {
+  ACCOUNT,
+  ADMIN,
+  REPOSITORY,
+  renderEnv,
+  renderStack,
+  SENDER,
+  SUFFIX,
+} from "./lib/renders.js";
 import {
   boundaryOf,
   type Contract,
@@ -27,6 +35,7 @@ const contract = JSON.parse(
 ) as Contract;
 
 const ENVS = ["dev", "prod"] as const;
+const stack = (env: "dev" | "prod"): Plan => renderStack(env);
 
 // Family 11, the closed list of `Resource: "*"`, each with its source: the Service
 // Authorization Reference (SAR) lists no resource type for these actions. The three
@@ -38,6 +47,10 @@ const CLOSED_STAR_LIST = [
   { action: "cloudfront:CreateDistribution", source: "Service Authorization Reference" },
   { action: "cloudfront:CreateFunction", source: "Service Authorization Reference" },
   { action: "acm:RequestCertificate", source: "Service Authorization Reference" },
+  {
+    action: "ssm:DescribeParameters",
+    source: "Service Authorization Reference; provider v6.67.0 parameter.go L317",
+  },
 ];
 const plans: Record<string, Plan> = {
   get dev() {
@@ -304,6 +317,30 @@ describe.each(ENVS)("the creations that take no resource type, in %s", (env) => 
         action,
       ).not.toBe("allow");
     }
+  });
+});
+
+describe.each(ENVS)("ssm:DescribeParameters in %s (Q-E2-1)", (env) => {
+  it("is held only by deploy and plan, on `*`, and by no other role of the contract", () => {
+    const plan = plans[env] as Plan;
+    for (const role of ["deploy", "plan"]) {
+      const lines = flatten(roleStatements(plan, `atlas-${env}-${role}`)).filter(
+        (line) => line.action === "ssm:DescribeParameters",
+      );
+      expect(
+        lines.map((line) => [line.effect, line.resource]),
+        role,
+      ).toEqual([["Allow", "*"]]);
+    }
+    for (const role of ["admin"]) {
+      expect(
+        flatten(roleStatements(plan, `atlas-${env}-${role}`)).map((line) => line.action),
+        role,
+      ).not.toContain("ssm:DescribeParameters");
+    }
+    expect(JSON.stringify(roleStatements(stack(env), `atlas-${env}-api`))).not.toContain(
+      "DescribeParameters",
+    );
   });
 });
 

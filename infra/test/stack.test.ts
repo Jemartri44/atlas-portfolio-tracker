@@ -31,6 +31,10 @@ const STAR = [
   { action: "cloudfront:CreateDistribution", source: "Service Authorization Reference" },
   { action: "cloudfront:CreateFunction", source: "Service Authorization Reference" },
   { action: "acm:RequestCertificate", source: "Service Authorization Reference" },
+  {
+    action: "ssm:DescribeParameters",
+    source: "Service Authorization Reference; provider v6.67.0 parameter.go L317",
+  },
 ];
 
 describe.each(ENVS)("the API role of %s", (env) => {
