@@ -13,4 +13,5 @@
 - [ ] **Tests**: `packages/domain` keeps 100% line and branch coverage; parsers have contract fixtures; tax edge cases covered.
 - [ ] **Privacy**: no real amounts, account identifiers, domain or personal data in code, fixtures, logs or this PR.
 - [ ] **Docs**: `docs/specification.md`, `docs/data-schema.md`, `docs/business-rules.md` or an ADR updated if behaviour or decisions changed.
+- [ ] **Bootstrap**: if this PR touches `infra/bootstrap/`, say here which parts were applied by hand and when (the account part if it changed, then `dev` first), and when `prod` will be applied, only once `dev` works. If it does not touch it, write "n/a".
 - [ ] **Commits**: Conventional Commits, English, atomic, no AI attribution.

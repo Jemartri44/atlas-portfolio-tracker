@@ -36,3 +36,25 @@ jobs:
       - run: npm run test:others
       - run: npm audit --audit-level=high
       - run: npm run build
+
+  # Feature 017, E1: the verification of infra/ with no AWS account and no credentials
+  # (prompt 017, section 5, flow 1): fmt, validate and terraform test with a simulated
+  # provider, and the static analysis of the rendered plans. No `id-token`, no
+  # `environment:`, and every action pinned by SHA. The only network is the HashiCorp
+  # registry, in `terraform init`.
+  infra:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+      - run: npm ci
+      - run: npm run test:infra
