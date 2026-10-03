@@ -186,6 +186,7 @@ describe("flat-rate-plan.sh", () => {
     const s = setup({ subscriptions: [], fail: ["create-subscription"] });
     const result = run("subscribe", s.env);
     expect(result.status).not.toBe(0);
-    expect(result.stdout).not.toContain("SECRET-IN-MESSAGE");
+    expect(`${result.stdout}${result.stderr}`).not.toContain("SECRET-IN-MESSAGE");
+    expect(result.stderr).toContain("una orden de aws ha fallado");
   });
 });

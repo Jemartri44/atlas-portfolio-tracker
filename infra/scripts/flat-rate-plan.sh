@@ -11,9 +11,11 @@
 # Idempotent: `subscribe` twice leaves one plan and says so. It refuses with three Free
 # plans already in the account (ADR-0034, F9). `cancel` schedules the cancellation (it takes
 # effect at the end of the billing period) and only with the environment typed on a
-# terminal; there is no --yes. It prints no ARN, no identifier of an account.
+# terminal; there is no --yes. It prints no ARN, no identifier of an account, and it
+# discards the stderr of every `aws` call (an error message may copy what was sent).
 set -euo pipefail
 
+aws() { command aws "$@" 2>/dev/null || { printf '%s\n' "una orden de aws ha fallado (su salida no se publica)" >&2; return 1; }; }
 die() { printf '%s\n' "$1" >&2; exit "${2:-1}"; }
 
 order="${1:-}"
