@@ -30,7 +30,7 @@ import type { AdminObjectStore, ListedObject, StoredObject } from "./object-stor
 import { factsOf, transient } from "./sdk-errors.js";
 import { rethrow, type S3Sender, SdkObjectStore } from "./sdk-s3.js";
 import { SdkParameterStore } from "./sdk-ssm.js";
-import type { SecretKind, SecretStore } from "./secret-store.js";
+import { type SecretKind, type SecretStore, SecretTagsFailed } from "./secret-store.js";
 
 export class SdkAdminObjectStore extends SdkObjectStore implements AdminObjectStore {
   constructor(
@@ -154,6 +154,11 @@ export class SdkSecretStore implements SecretStore {
       await this.client.send(
         new PutParameterCommand({ Name: name, Value: value, Type: kind, Overwrite: true }),
       );
+    } catch (error) {
+      return rethrowSecret(error);
+    }
+    // The value is already in: a failure from here on is "rotated, not tagged", never "not rotated".
+    try {
       await this.client.send(
         new AddTagsToResourceCommand({
           ResourceType: "Parameter",
@@ -161,8 +166,8 @@ export class SdkSecretStore implements SecretStore {
           Tags: tagList(tags),
         }),
       );
-    } catch (error) {
-      rethrowSecret(error);
+    } catch {
+      throw new SecretTagsFailed(name);
     }
   }
 }

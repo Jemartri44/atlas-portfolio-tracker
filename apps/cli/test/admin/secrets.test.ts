@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import { TestOnlyFakeSecrets } from "../../../../packages/adapters/test/aws/test-only-fake-secrets.js";
 import type { AdminAccess } from "../../src/admin/environment.js";
 import { EXIT } from "../../src/context.js";
+import { run as runCli, terminalIo } from "../../src/main.js";
 import { askWithoutEcho } from "../../src/output/secret-prompt.js";
 import { harness, seed } from "../harness.js";
 
@@ -127,7 +128,7 @@ describe("atlas admin secrets", () => {
 
   it("refuses an invalid value naming the parameter and never the value", async () => {
     const secrets = new TestOnlyFakeSecrets();
-    const c = consoleWith(secrets, ["1081", "not an address", "x"]);
+    const c = consoleWith(secrets, ["1081", "not an address", ""]);
     expect(await c.exec(run)).toBe(EXIT.domain);
     expect(c.text()).toContain("auth/allow-list");
     expect(c.text()).not.toContain("not an address");
@@ -142,6 +143,42 @@ describe("atlas admin secrets", () => {
     secrets.failWith = new Error(`rejected ${SENTINEL}`);
     const c = consoleWith(secrets, ["", "", SENTINEL]);
     expect(await c.exec(run)).toBe(EXIT.domain);
+    expect(c.text()).toContain("auth/google-client-secret");
+    expect(c.text()).not.toContain(SENTINEL);
+  });
+});
+
+describe("atlas admin secrets with the real io and no terminal", () => {
+  it("leaves with the no-terminal exit and writes nothing", async () => {
+    if (process.stdin.isTTY === true) {
+      return; // a developer's terminal would be asked for real values
+    }
+    const secrets = new TestOnlyFakeSecrets();
+    const err: string[] = [];
+    const io = { ...terminalIo(), out: () => undefined, err: (t: string) => err.push(t) };
+    const code = await runCli(
+      ["admin", "secrets", "--env", "prod"],
+      io,
+      () => harness().store as never,
+      undefined,
+      undefined,
+      undefined,
+      adminOf(secrets),
+    );
+    expect(code).toBe(EXIT.noTty);
+    expect(secrets.calls.filter((call) => call.operation !== "exists")).toEqual([]);
+    expect(err.join("\n")).toContain("no hay terminal");
+  });
+});
+
+describe("a rotation whose tags fail", () => {
+  it("says the value DID change and which parameter lacks tags", async () => {
+    const secrets = new TestOnlyFakeSecrets();
+    secrets.preset(`${PREFIX}auth/google-client-secret`, "OLD");
+    secrets.tagsFail = true;
+    const c = consoleWith(secrets, ["", "", SENTINEL], "prod");
+    expect(await c.exec(run)).toBe(EXIT.domain);
+    expect(c.text()).toContain("SÍ se ha cambiado");
     expect(c.text()).toContain("auth/google-client-secret");
     expect(c.text()).not.toContain(SENTINEL);
   });

@@ -13,6 +13,7 @@
 // - it never takes `--yes`, and overwriting asks to type the name of the environment;
 // - with no terminal it leaves **before touching anything**.
 
+import { SecretTagsFailed } from "@atlas/adapters/aws";
 import { DomainError } from "@atlas/domain";
 import type { AdminClients } from "../admin/environment.js";
 import {
@@ -72,6 +73,15 @@ export const secretsOrder = async (
    * AWS answered may copy the value that was sent.
    */
   const failedWrite = (path: string, error: unknown): DomainError => {
+    if (error instanceof SecretTagsFailed) {
+      return new DomainError(
+        "admin_secret_tags_missing",
+        "the value changed but the tags did not",
+        {
+          parameter: path,
+        },
+      );
+    }
     const said = helpers.translate(error);
     return said instanceof DomainError
       ? said
@@ -86,6 +96,16 @@ export const secretsOrder = async (
       "«atlas admin secrets» pide cada valor sin eco y no hay terminal interactiva: no se ha tocado nada",
     );
   }
+  // A prompt that gets no answer (stdin is not a terminal after all, or it closed) is not
+  // "leave it as it is": it leaves with the exit of "no terminal", before writing anything more.
+  const noTerminal = () =>
+    new ConfirmationRequired(
+      "«atlas admin secrets» pide cada valor sin eco y no hay terminal interactiva: no se ha escrito nada más",
+    );
+  const line = async (question: string): Promise<string> =>
+    (await ask(question)) ?? Promise.reject(noTerminal());
+  const secretLine = async (question: string): Promise<string> =>
+    (await askSecret(question)) ?? Promise.reject(noTerminal());
   const tags = tagsOf(environment);
   const results: { parameter: string; outcome: Outcome }[] = [];
 
@@ -98,7 +118,7 @@ export const secretsOrder = async (
         const verb = exists
           ? "Rotarla cierra todas las sesiones abiertas"
           : "Se genera aquí, nunca se muestra";
-        const typed = await ask(
+        const typed = await line(
           `${spec.path}: ${here}. ${verb}. Escribe «${environment}» para ${exists ? "rotarla" : "crearla"}, o Enter para dejarla: `,
         );
         return typed === environment ? sessionKeyOf(ctx.deps.random) : undefined;
@@ -109,22 +129,22 @@ export const secretsOrder = async (
         );
         const entries: { sub: string; email: string }[] = [];
         for (;;) {
-          const sub = await askSecret(
+          const sub = await secretLine(
             `  sub de la entrada ${entries.length + 1} (Enter para terminar): `,
           );
-          if (sub === undefined || sub === "") {
+          if (sub === "") {
             break;
           }
-          const email = await askSecret(`  correo de la entrada ${entries.length + 1}: `);
-          entries.push({ sub, email: email ?? "" });
+          const email = await secretLine(`  correo de la entrada ${entries.length + 1}: `);
+          entries.push({ sub, email: email });
         }
         return entries.length === 0 ? undefined : allowListOf(spec.path, entries);
       }
       default: {
-        const typed = await askSecret(
+        const typed = await secretLine(
           `${spec.path}: ${here}. Valor de ${spec.label} (Enter para dejarlo): `,
         );
-        return typed === undefined || typed === "" ? undefined : checkedToken(spec.path, typed);
+        return typed === "" ? undefined : checkedToken(spec.path, typed);
       }
     }
   };

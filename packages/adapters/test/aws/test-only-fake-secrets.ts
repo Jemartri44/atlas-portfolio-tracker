@@ -2,7 +2,7 @@
 // reachable from the product. It keeps what was written (so a test can see
 // that a value went in and nowhere else) and the tags each write carried.
 
-import type { SecretKind, SecretStore } from "@atlas/adapters/aws";
+import { type SecretKind, type SecretStore, SecretTagsFailed } from "@atlas/adapters/aws";
 
 export interface FakeSecretCall {
   readonly operation: "exists" | "create" | "rotate";
@@ -15,6 +15,8 @@ export class TestOnlyFakeSecrets implements SecretStore {
   private readonly tagsOf = new Map<string, Readonly<Record<string, string>>>();
   /** What the next write throws, if anything: to see the failure path say nothing. */
   failWith: Error | undefined;
+  /** `rotate` writes the value and then fails to tag it. */
+  tagsFail = false;
 
   preset(name: string, value: string, kind: SecretKind = "SecureString"): void {
     this.values.set(name, { value, kind });
@@ -66,6 +68,9 @@ export class TestOnlyFakeSecrets implements SecretStore {
     this.calls.push({ operation: "rotate", name });
     this.throwIfAsked();
     this.values.set(name, { value, kind });
+    if (this.tagsFail) {
+      throw new SecretTagsFailed(name);
+    }
     this.tagsOf.set(name, { ...(this.tagsOf.get(name) ?? {}), ...tags });
   }
 

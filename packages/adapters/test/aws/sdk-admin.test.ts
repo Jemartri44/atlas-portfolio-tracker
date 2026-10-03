@@ -239,6 +239,18 @@ describe("SdkSecretStore (feature 017, E4)", () => {
     });
   });
 
+  it("says rotated-but-not-tagged when only the tagging fails, never copying what AWS said", async () => {
+    let calls = 0;
+    const { client } = ssm(() => (++calls === 2 ? ssmFailure("AccessDeniedException", 400) : {}));
+    await expect(
+      new SdkSecretStore(client).rotate("n", "v", "SecureString", TAGS),
+    ).rejects.toMatchObject({
+      name: "SecretTagsFailed",
+      parameter: "n",
+      message: "the value was rotated but the tags were not written",
+    });
+  });
+
   it("does not tag a parameter whose rotation failed, and throws the failure as it came", async () => {
     const { client, sent } = ssm(() => ssmFailure("ThrottlingException", 400));
     await expect(

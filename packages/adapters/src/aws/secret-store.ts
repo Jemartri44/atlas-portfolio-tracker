@@ -33,3 +33,14 @@ export interface SecretStore {
     tags: Readonly<Record<string, string>>,
   ): Promise<void>;
 }
+
+/**
+ * `rotate` wrote the new value and then failed to tag the parameter: the value **did**
+ * change. Carries the name of the parameter and never what AWS answered.
+ */
+export class SecretTagsFailed extends Error {
+  override readonly name = "SecretTagsFailed";
+  constructor(readonly parameter: string) {
+    super("the value was rotated but the tags were not written");
+  }
+}
