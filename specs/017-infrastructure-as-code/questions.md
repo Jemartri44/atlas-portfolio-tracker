@@ -286,3 +286,49 @@ Fuentes: documentación pública de AWS (`docs.aws.amazon.com`, `aws.amazon.com/
 | **b0.5** Coste | `aws.amazon.com/eventbridge/pricing`: «You can make 14,000,000 invocations per month for free» (Scheduler); solo se facturan invocaciones | Unas 300 invocaciones al mes entre los dos entornos: 0. `cost.md` actualizada con los tipos nuevos (`aws_lambda_function_event_invoke_config`) |
 | **(d)** arquitectura | `node apps/jobs/scripts/build-lambda.mjs` (esbuild): `jobs.zip` = **un solo `index.mjs`** (1,8 MB), sin ningún `.node` | **`arm64`** (P-7) |
 | **kms** sobre `aws/ssm` | Sin cambio respecto de E2 b0.4: la misma página dice que hace falta `kms:Decrypt` y que no se pueden establecer políticas de acceso sobre `aws/ssm`. **Sin fuente que desempate** | No se concede `kms` por identidad a la función de precios (claves) ni a la de correo (`device-tokens`): quedan `pending` en `permissions.json` (`job-prices/KmsSsm`, `job-mail/KmsSsm`), con la misma salida que E2 (una declaración con `kms:ViaService`) si la 018 ve `AccessDenied` |
+
+## E3 — Estado y cierre (2026-10-03)
+
+**Hecho**: `infra/modules/atlas/jobs.tf` (cinco funciones `arm64`, un solo `jobs.zip`, cada una con su rol, su política exacta del contrato 016 §1 a §5, su grupo de registros con 30 o 7 días, concurrencia reservada 1 y la invocación asíncrona con 0 reintentos y 3.600 s) y `scheduler.tf` (grupo `atlas-<entorno>-jobs` etiquetado, rol de Scheduler con `lambda:InvokeFunction` sobre las cinco y su confianza, cinco programaciones diarias en `Europe/Madrid` con `FlexibleTimeWindow = OFF`, reintentos 2 y 3.600 s y el `Input` del contrato). Raíces `envs/{dev,prod}` con las variables nuevas (`mail_sender`, `jobs_artifact_*`, `reserve_jobs_concurrency`, los presupuestos de precios, `oauth_idle_warning_days`, `ledger_size_warning_bytes`, `dev_active_jobs` en `dev`, `prices_sources` en `prod`). `permissions.json` pone al día los roles de las tareas con las tablas del contrato 016 (**faltaban** los `s3:ListBucket` de precios, correo, volcado e integridad y `GetObject` sobre `jobs/prices/*`: E1 las había dejado sin escribir). `terraform test`: `dev` 13 `run`, `prod` 8, en verde. `infra/test/jobs.test.ts` (Z5 y Z6).
+
+### Decisiones mías fuera del encargo (a confirmar)
+
+1. **HALLAZGO 4** (b0.4): acciones `lambda:*FunctionEventInvokeConfig` que E1 no concedía; arreglado en `statements-deploy.tf`, `statements-read.tf` y el contrato. **Reaplicar el *bootstrap* (`dev` primero)**: la casilla sigue pendiente de la persona, para la 018.
+2. **La confianza de Scheduler es el ARN exacto del grupo con `StringEquals` y `aws:SourceAccount`** (b0.3, con fuente): sustituye a la salida «las dos formas con `ArnLike`» del prompt, que la fuente desaconseja.
+3. **La política del rol de correo sale `sensitive` en el `plan`** (lleva el destinatario en `ses:Recipients`, ADR-0034, filas 1 y 12): `sensitiveInPolicies` gana una lista de excepciones **cerrada** (`allowed`) y el test fija que es la única. Consecuencia aceptada por la fila 1: un cambio de esa política no se ve en el `plan` revisado. El contenido sí está en el JSON del `plan` local (`after`), por lo que la suite lo compara línea a línea con el contrato.
+4. **Concurrencia de las tareas**: la variable `jobs_reserved_concurrency` de `contracts/variables.md` (entero ≥ 1 o `null`) queda como **`reserve_jobs_concurrency`** (booleano, por defecto `true`; el valor es siempre 1, como pide el contrato 016 y el mutante 27). Igual que C12 para la API.
+5. **`prices_sources`**: `dev` lo lleva fijo (`["simulated"]`, sin variable) y `prod` como variable que **rechaza** `simulated`; el módulo lo rechaza también fuera de `dev` con la validación `d[e]v` (el módulo no nombra entornos).
+6. **Palanca de las programaciones de `dev`**: `dev_active_jobs` (conjunto de familias, por defecto vacío) en lugar de un booleano: la 018 activa **una**, una vez, desde la tubería. `prod` activa las cinco, fijas.
+7. **`aws_scheduler_schedule` y `aws_lambda_function_event_invoke_config` en `UNTAGGABLE`**, con motivo, y en `cost.md`.
+8. **`ATLAS_ORIGIN` de la función de correo** lleva el dominio (sensible): mismo riesgo aceptado que el de la API (P-4).
+
+### SIN VERIFICAR (018)
+
+Qué ARN evalúa SES con dominio y dirección verificados a la vez y si el *sandbox* pide la identidad del destinatario (b0.1); que Scheduler asuma el rol con la condición del grupo (b0.3); `kms:Decrypt` sobre `aws/ssm` para las claves de precios y los tokens (b0.4 de E2); que la cuenta tenga margen para reservar 1 + 1 + 5 + 10 ejecuciones (cuota reducida en cuentas nuevas, C12); el `timeout` y la memoria (§9 del contrato: «sin medir»); que `s3:ListBucket` por prefijo dé 404 y no 403 a las tareas.
+
+### Autocomprobación de las 17 familias (E3)
+
+| Familia | Qué miré, con qué | Salió |
+|---|---|---|
+| 1 Guardianes eludibles | `wildcards`, `secrets`, `tags`, `costTypes` y `sensitiveInPolicies` sobre el `plan` de `envs/dev` y `envs/prod` | sin violaciones; una excepción nueva y cerrada (decisión 3) |
+| 2 Valor exacto | los cinco roles y el de Scheduler contra `permissions.json` línea a línea; horas, `timeout` y memoria **leídos de los documentos** (`specification.md` §9.5, `iam-permissions.md` §9, `scheduler-event.md`) | igual |
+| 4 Documentos alineados | variables `ATLAS_*` contra `parseJobsConfig` y `JOBS_CONFIG_VARIABLES` importados; `Input` contra `parseJobEvent` | alineados |
+| 6 Registros | ningún guion en E3 | n/a |
+| 7 Entradas | `validation` en cada variable nueva; `terraform test` rechaza una familia desconocida y `simulated` en `prod` | hecho |
+| 9, 10 Procedimientos, `--yes` | ninguno en E3 | n/a |
+| 11 Comodines | ninguno nuevo | limpio |
+| 12 Etiquetas | solo el grupo; `UNTAGGABLE` con motivo | completas |
+| 13 Secretos | ninguna clave de precios ni `SecureString` en Terraform | limpio |
+| 14 `prevent_destroy` | sin cambios | n/a |
+| 15 Deriva | `enabled_jobs` es la única palanca del estado | hecho |
+| 16 Cruce | `crossEnvironment` sobre las seis políticas nuevas; sin literal de entorno en `jobs.tf` ni `scheduler.tf` | limpio |
+| 17 Datos personales | `static.test.ts` (placeholders `example.invalid`) | limpio |
+| 18, 19, 20 | sin cambios | n/a |
+
+### Mutantes de E3: **no ejecutados**
+
+Me quedé sin turnos antes de ejecutarlos. Los tests existen para cada uno y son los que deben verlos morir: 23 (`ses:` en otro rol; correo sobre `prices/`), 24 (condición sin `Null`, otro destinatario), 25 (sin la denegación de `symbols.json`/`config.json`), 26 (`ENABLED` en `dev`, otro `Input`, otra zona), 27 (concurrencia distinta de 1, reintentos distintos), 28 (`ATLAS_JOB_MAX_RUN_SECONDS` distinto del `timeout`, variable de más), 29 (`simulated` o claves en `prod`), 50 (confianza de Scheduler sin `aws:SourceArn` o con otra) y 55 (sin `logs:` sobre su grupo). **Ninguno se ha visto morir.**
+
+### Documentos que tendrá que actualizar la dirección (E3)
+
+ADR-0034 (fila 29: cerrada con fuente, el grupo; la política del rol de correo `sensitive`; las acciones de `EventInvokeConfig`), `specs/016-scheduled-jobs/questions.md` §1.1 (identidades de SES, sin fuente nueva) y `contracts/iam-permissions.md` (el ARN de `aws:SourceArn` de Scheduler), `docs/decision-roadmap.md` (la 018 recibe lo SIN VERIFICAR de arriba), `contracts/variables.md` (nombres nuevos: `reserve_jobs_concurrency`, `dev_active_jobs`, `prices_sources`).
