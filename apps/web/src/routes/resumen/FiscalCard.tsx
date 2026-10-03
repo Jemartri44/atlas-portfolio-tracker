@@ -33,7 +33,7 @@ export default function FiscalCard(props: {
   season: boolean;
   /** The tax side of the summary, once the engine has answered. */
   status: () => FiscalStatus | undefined;
-  /** The year whose return comes next: the one before the date read. */
+  /** The year whose return comes next (`nextReturnYear` of the domain). */
   year: number;
 }): JSX.Element {
   return (

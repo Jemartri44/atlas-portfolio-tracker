@@ -22,6 +22,7 @@ import {
   ledgerEntries,
   netWorth,
   netWorthSeries,
+  nextReturnYear,
   pendingOrders,
   settingsAt,
   transferWatch,
@@ -194,7 +195,7 @@ export default function ResumenRoute(): JSX.Element {
             </Section>
           ),
           fiscal: () => (
-            <FiscalCard season={season} status={fiscal} year={Number(date.slice(0, 4)) - 1} />
+            <FiscalCard season={season} status={fiscal} year={nextReturnYear(settings, date)} />
           ),
           evolution: () => (
             <SeriesCard

@@ -7,7 +7,7 @@
 // Whether it is the season is the domain's (`inRentaSeason`); where the card
 // goes is the order of the summary (`summary-first-screen.test.tsx`).
 
-import type { LedgerEvent } from "@atlas/domain";
+import { type LedgerEvent, nextReturnYear } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import FiscalCard from "../src/routes/resumen/FiscalCard.jsx";
 import { fiscalStatus } from "../src/routes/resumen/fiscal-status.js";
@@ -84,7 +84,7 @@ const quiet = (): LedgerEvent[] => {
 const card = (season: boolean, date: string, ledger: LedgerEvent[] = events) => {
   const status = fiscalStatus(ledger, date);
   return show("/", () => (
-    <FiscalCard season={season} status={() => status} year={Number(date.slice(0, 4)) - 1} />
+    <FiscalCard season={season} status={() => status} year={nextReturnYear({}, date)} />
   ));
 };
 
@@ -121,7 +121,7 @@ describe("the fiscal card of the summary", () => {
   it("says nothing it does not know in the row of a quiet ledger", async () => {
     const host = await card(false, "2028-09-01", quiet());
     expect(text(host.querySelector(".summary-fiscal"))).toContain(
-      "Declaración 2027 · fuera de campaña",
+      "Declaración 2028 · fuera de campaña",
     );
   });
 });

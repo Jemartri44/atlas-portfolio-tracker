@@ -314,6 +314,20 @@ export const inRentaSeason = (
   return day >= season.start && day <= season.end;
 };
 
+/**
+ * The fiscal year whose return comes next at a date: the previous year until
+ * the season ends, and the current one once it has (the return of the year
+ * just closed is the next one due, not the one already filed). The end of the
+ * season comes from the settings, never from a constant.
+ */
+export const nextReturnYear = (
+  settings: Pick<Settings, "renta_season_start" | "renta_season_end">,
+  date: CivilDate,
+): number => {
+  const year = Number(date.slice(0, 4));
+  return date.slice(5) > rentaSeasonOf(settings).end ? year : year - 1;
+};
+
 /** The treaty rate for a country, or nothing when the settings do not know it (#16). */
 export const treatyWithholdingPctOf = (
   settings: Settings,
