@@ -23,6 +23,7 @@ import {
   settingsAt,
   type Warning,
 } from "@atlas/domain";
+import { bucketGauges } from "@atlas/domain/charts";
 import { A } from "@solidjs/router";
 import { createMemo, For, type JSX, Show } from "solid-js";
 import {
@@ -42,6 +43,7 @@ import { PageHeader } from "../../shell/PageHeader.jsx";
 import {
   bucketPositionsView,
   bucketReportView,
+  gaugesView,
   thesesView,
 } from "../../view-models/bucket/index.js";
 import { costsView } from "../../view-models/core/index.js";
@@ -94,12 +96,12 @@ export default function CuboRoute(): JSX.Element {
         const theses = createMemo(() =>
           thesesView(bucketTheses(dated(), date(), settings(), external()), names),
         );
-        const report = createMemo(() =>
-          bucketReportView(
-            bucketStats(dated(), snapshot.events, date(), settings(), date(), external()),
-            names,
-          ),
+        const stats = createMemo(() =>
+          bucketStats(dated(), snapshot.events, date(), settings(), date(), external()),
         );
+        const report = createMemo(() => bucketReportView(stats(), names));
+        // The gauges are the domain's too: the figures and the marks of its rules.
+        const gauges = createMemo(() => gaugesView(bucketGauges(stats().controls, settings())));
         const worth = createMemo(() =>
           netWorthView(netWorth(dated(), date(), settings(), external()), names),
         );
@@ -192,6 +194,7 @@ export default function CuboRoute(): JSX.Element {
                 <BudgetCard
                   notices={noticesOf(report().controls.warnings)}
                   view={report().controls}
+                  gauges={gauges()}
                   worth={worth()}
                   limits={{
                     stopLossPct: settings().bucket_stop_loss_pct,

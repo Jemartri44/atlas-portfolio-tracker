@@ -13,7 +13,6 @@
 import { For, type JSX, Show } from "solid-js";
 import {
   Amount,
-  Figure,
   Icon,
   type NoticeItem,
   NoticeList,
@@ -23,8 +22,9 @@ import {
   TotalLine,
 } from "../../components/index.js";
 import { formatPercent, meaningfulDecimals } from "../../format/number.js";
-import type { ControlsView } from "../../view-models/bucket/index.js";
+import type { ControlsView, GaugesView } from "../../view-models/bucket/index.js";
 import type { NetWorthView } from "../../view-models/index.js";
+import { Meter } from "./Meters.jsx";
 
 /** The thresholds of the two rules, as configured; absent when not set. */
 export interface BucketLimits {
@@ -48,6 +48,8 @@ const Rule = (props: { title: string; ask: string; limit: string | undefined }):
 
 export const BudgetCard = (props: {
   view: ControlsView;
+  /** The three gauges, from the domain: the figures and the marks of its rules. */
+  gauges: GaugesView;
   worth: NetWorthView;
   limits: BucketLimits;
   /** What the budget warns of that no line of the card already says: a cap passed. */
@@ -69,6 +71,7 @@ export const BudgetCard = (props: {
         </span>
       </Show>
     </StatLine>
+    <Meter gauges={props.gauges} which="cap" />
     <StatLine label="Resultado realizado">
       <Amount value={props.view.realized} signed coloured />
     </StatLine>
@@ -95,9 +98,7 @@ export const BudgetCard = (props: {
         </p>
       }
     >
-      <StatLine label="Pérdida acumulada sobre el aporte">
-        <Figure value={props.view.lossPct} unit="percent" />
-      </StatLine>
+      <Meter gauges={props.gauges} which="result" />
     </Show>
 
     <Rule
@@ -121,9 +122,7 @@ export const BudgetCard = (props: {
         </p>
       }
     >
-      <StatLine label="Peso del cubo sobre el patrimonio total">
-        <Figure value={props.view.weightPct} unit="percent" />
-      </StatLine>
+      <Meter gauges={props.gauges} which="weight" />
     </Show>
 
     <For each={props.worth.blocks}>
