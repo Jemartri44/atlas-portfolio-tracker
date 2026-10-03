@@ -25,3 +25,15 @@ output "distribution_enabled" {
 output "api_reserved_concurrency" {
   value = aws_lambda_function.api.reserved_concurrent_executions
 }
+
+output "job_function_names" {
+  value = [for job in local.job_names : aws_lambda_function.job[job].function_name]
+}
+
+output "schedule_states" {
+  value = { for job in local.job_names : job => aws_scheduler_schedule.job[job].state }
+}
+
+output "jobs_reserved_concurrency" {
+  value = { for job in local.job_names : job => aws_lambda_function.job[job].reserved_concurrent_executions }
+}

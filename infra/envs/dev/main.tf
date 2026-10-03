@@ -34,4 +34,16 @@ module "atlas" {
   oac_api_id               = var.oac_api_id
   artifact_key             = var.artifact_key
   artifact_sha256_base64   = var.artifact_sha256_base64
+
+  mail_sender                      = var.mail_sender
+  jobs_artifact_key                = var.jobs_artifact_key
+  jobs_artifact_sha256_base64      = var.jobs_artifact_sha256_base64
+  reserve_jobs_concurrency         = var.reserve_jobs_concurrency
+  prices_eodhd_daily_calls         = var.prices_eodhd_daily_calls
+  prices_alpha_vantage_daily_calls = var.prices_alpha_vantage_daily_calls
+  prices_failure_threshold         = var.prices_failure_threshold
+  oauth_idle_warning_days          = var.oauth_idle_warning_days
+  ledger_size_warning_bytes        = var.ledger_size_warning_bytes
+  enabled_jobs                     = var.dev_active_jobs
+  price_sources                    = ["simulated"]
 }

@@ -131,3 +131,108 @@ variable "artifact_sha256_base64" {
     error_message = "artifact_sha256_base64 must be the base64 of a SHA-256 digest (44 characters)."
   }
 }
+
+variable "mail_sender" {
+  description = "The verified sender of the mail (the identity is created by the bootstrap of the account); goes to ATLAS_MAIL_FROM and to the SES condition of the mail role."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[!-~]{1,64}@[!-~]{1,189}$", var.mail_sender)) && !can(regex("[,<>]|@.*@", var.mail_sender))
+    error_message = "mail_sender must be one plain address: ASCII, one @, no spaces, commas, < or >."
+  }
+}
+
+variable "jobs_artifact_key" {
+  description = "Key of jobs.zip in the artifacts bucket (built once and promoted)."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9][A-Za-z0-9._/-]{0,500}$", var.jobs_artifact_key)) && !strcontains(var.jobs_artifact_key, "..")
+    error_message = "jobs_artifact_key must be a relative key with no .. segment."
+  }
+}
+
+variable "jobs_artifact_sha256_base64" {
+  description = "Base64 SHA-256 of jobs.zip."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9+/]{43}=$", var.jobs_artifact_sha256_base64))
+    error_message = "jobs_artifact_sha256_base64 must be the base64 of a SHA-256 digest (44 characters)."
+  }
+}
+
+variable "enabled_jobs" {
+  description = "The schedules that are ENABLED: the families named here. The root of the development environment passes its lever (default none); the production one passes all five (ADR-0034, row 2)."
+  type        = set(string)
+
+  validation {
+    condition     = alltrue([for job in var.enabled_jobs : contains(["ecb", "prices", "mail", "backup", "integrity"], job)])
+    error_message = "enabled_jobs may only name ecb, prices, mail, backup or integrity."
+  }
+}
+
+variable "reserve_jobs_concurrency" {
+  description = "C12. Each task reserves 1 execution (ADR-0029); false leaves them unreserved, when the account has no margin."
+  type        = bool
+}
+
+variable "price_sources" {
+  description = "ATLAS_PRICE_SOURCES of the prices function, in the order of the cascade. `simulated` stands alone and only in the development environment (ssm-and-config.md section 2)."
+  type        = list(string)
+
+  validation {
+    condition     = length(var.price_sources) >= 1 && length(distinct(var.price_sources)) == length(var.price_sources) && ((length(var.price_sources) == 1 && contains(var.price_sources, "simulated")) || alltrue([for s in var.price_sources : contains(["eodhd", "alpha_vantage"], s)]))
+    error_message = "price_sources is eodhd and/or alpha_vantage without repeats, or [\"simulated\"] alone."
+  }
+
+  validation {
+    condition     = !contains(var.price_sources, "simulated") || can(regex("^d[e]v$", var.env))
+    error_message = "the simulated source is only for the development environment."
+  }
+}
+
+variable "prices_eodhd_daily_calls" {
+  type = number
+
+  validation {
+    condition     = var.prices_eodhd_daily_calls >= 0 && var.prices_eodhd_daily_calls <= 20 && var.prices_eodhd_daily_calls == floor(var.prices_eodhd_daily_calls)
+    error_message = "prices_eodhd_daily_calls is a whole number from 0 to 20."
+  }
+}
+
+variable "prices_alpha_vantage_daily_calls" {
+  type = number
+
+  validation {
+    condition     = var.prices_alpha_vantage_daily_calls >= 0 && var.prices_alpha_vantage_daily_calls <= 25 && var.prices_alpha_vantage_daily_calls == floor(var.prices_alpha_vantage_daily_calls)
+    error_message = "prices_alpha_vantage_daily_calls is a whole number from 0 to 25."
+  }
+}
+
+variable "prices_failure_threshold" {
+  type = number
+
+  validation {
+    condition     = var.prices_failure_threshold >= 1 && var.prices_failure_threshold <= 30 && var.prices_failure_threshold == floor(var.prices_failure_threshold)
+    error_message = "prices_failure_threshold is a whole number from 1 to 30."
+  }
+}
+
+variable "oauth_idle_warning_days" {
+  type = number
+
+  validation {
+    condition     = var.oauth_idle_warning_days >= 1 && var.oauth_idle_warning_days <= 179 && var.oauth_idle_warning_days == floor(var.oauth_idle_warning_days)
+    error_message = "oauth_idle_warning_days is a whole number from 1 to 179 (Google deletes an idle client at six months)."
+  }
+}
+
+variable "ledger_size_warning_bytes" {
+  type = number
+
+  validation {
+    condition     = var.ledger_size_warning_bytes >= 1024 && var.ledger_size_warning_bytes <= 104857600 && var.ledger_size_warning_bytes == floor(var.ledger_size_warning_bytes)
+    error_message = "ledger_size_warning_bytes is a whole number from 1,024 to 104,857,600."
+  }
+}

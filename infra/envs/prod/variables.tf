@@ -75,3 +75,87 @@ variable "artifact_key" {
 variable "artifact_sha256_base64" {
   type = string
 }
+
+variable "mail_sender" {
+  description = "The verified sender of the mail (ATLAS_MAIL_FROM and the SES condition of the mail role)."
+  type        = string
+}
+
+variable "jobs_artifact_key" {
+  type = string
+}
+
+variable "jobs_artifact_sha256_base64" {
+  type = string
+}
+
+# C12. Each task reserves 1 execution (ADR-0029); false leaves them unreserved, when the
+# account has no margin to reserve (Lambda: the unreserved quota minus 100).
+variable "reserve_jobs_concurrency" {
+  type    = bool
+  default = true
+}
+
+# The budgets of the prices function (ssm-and-config.md, section 2; ADR-0031): the free
+# quotas of the sources are 20 and 25 calls a day. Changing one is changing terraform.tfvars.
+variable "prices_eodhd_daily_calls" {
+  type    = number
+  default = 18
+
+  validation {
+    condition     = var.prices_eodhd_daily_calls >= 0 && var.prices_eodhd_daily_calls <= 20 && var.prices_eodhd_daily_calls == floor(var.prices_eodhd_daily_calls)
+    error_message = "prices_eodhd_daily_calls is a whole number from 0 to 20."
+  }
+}
+
+variable "prices_alpha_vantage_daily_calls" {
+  type    = number
+  default = 23
+
+  validation {
+    condition     = var.prices_alpha_vantage_daily_calls >= 0 && var.prices_alpha_vantage_daily_calls <= 25 && var.prices_alpha_vantage_daily_calls == floor(var.prices_alpha_vantage_daily_calls)
+    error_message = "prices_alpha_vantage_daily_calls is a whole number from 0 to 25."
+  }
+}
+
+variable "prices_failure_threshold" {
+  type    = number
+  default = 3
+
+  validation {
+    condition     = var.prices_failure_threshold >= 1 && var.prices_failure_threshold <= 30 && var.prices_failure_threshold == floor(var.prices_failure_threshold)
+    error_message = "prices_failure_threshold is a whole number from 1 to 30."
+  }
+}
+
+variable "oauth_idle_warning_days" {
+  type    = number
+  default = 150
+
+  validation {
+    condition     = var.oauth_idle_warning_days >= 1 && var.oauth_idle_warning_days <= 179 && var.oauth_idle_warning_days == floor(var.oauth_idle_warning_days)
+    error_message = "oauth_idle_warning_days is a whole number from 1 to 179."
+  }
+}
+
+variable "ledger_size_warning_bytes" {
+  type    = number
+  default = 1048576
+
+  validation {
+    condition     = var.ledger_size_warning_bytes >= 1024 && var.ledger_size_warning_bytes <= 104857600 && var.ledger_size_warning_bytes == floor(var.ledger_size_warning_bytes)
+    error_message = "ledger_size_warning_bytes is a whole number from 1,024 to 104,857,600."
+  }
+}
+
+# The order of the cascade of sources. The simulated one is of the development
+# environment only (ssm-and-config.md, section 2).
+variable "prices_sources" {
+  type    = list(string)
+  default = ["eodhd", "alpha_vantage"]
+
+  validation {
+    condition     = length(var.prices_sources) >= 1 && length(distinct(var.prices_sources)) == length(var.prices_sources) && alltrue([for s in var.prices_sources : contains(["eodhd", "alpha_vantage"], s)])
+    error_message = "prices_sources is eodhd and/or alpha_vantage, without repeats."
+  }
+}

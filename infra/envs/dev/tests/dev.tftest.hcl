@@ -7,14 +7,17 @@ mock_provider "aws" {
 }
 
 variables {
-  account_id             = "111122223333"
-  bucket_suffix          = "abc123def456"
-  domain                 = "atlas.example.invalid"
-  mail_recipient         = "user@example.invalid"
-  oac_spa_id             = "E2EXAMPLESPA000"
-  oac_api_id             = "E2EXAMPLEAPI000"
-  artifact_key           = "builds/0000/lambda.zip"
-  artifact_sha256_base64 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  account_id                  = "111122223333"
+  bucket_suffix               = "abc123def456"
+  domain                      = "atlas.example.invalid"
+  mail_recipient              = "user@example.invalid"
+  oac_spa_id                  = "E2EXAMPLESPA000"
+  oac_api_id                  = "E2EXAMPLEAPI000"
+  artifact_key                = "builds/0000/lambda.zip"
+  artifact_sha256_base64      = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  mail_sender                 = "atlas@example.invalid"
+  jobs_artifact_key           = "builds/0000/jobs.zip"
+  jobs_artifact_sha256_base64 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 }
 
 run "c11_free_plan_dev" {
