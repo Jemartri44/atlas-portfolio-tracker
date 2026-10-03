@@ -8,3 +8,4 @@
 // other module of the domain imports them.
 
 export { type BucketGauges, bucketGauges } from "./charts/gauges.js";
+export { type ThesisPct, thesisVsIndexPct } from "./charts/theses.js";
