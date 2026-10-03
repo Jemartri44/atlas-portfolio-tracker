@@ -34,6 +34,11 @@
   height: var(--panel-strip-h);
 }
 
+/* The last strip also carries the axis of the dates. */
+.chart-plot.is-end {
+  height: calc(var(--panel-strip-h) + 2rem);
+}
+
 .panel-name {
   color: var(--c-text-2);
   font-size: var(--text-sm);

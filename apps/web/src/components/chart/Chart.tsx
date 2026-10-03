@@ -77,7 +77,7 @@ interface ChartProps {
   height?: number;
   unit?: "eur" | "pct" | undefined;
   /** The class of the frame: a panel and a strip of a stack have their own height. */
-  panel?: "main" | "strip" | undefined;
+  panel?: "main" | "strip" | "end" | undefined;
   sync?: string | undefined;
   dates?: boolean | undefined;
   /** The series whose holes are shaded, when they are not the ones drawn. */

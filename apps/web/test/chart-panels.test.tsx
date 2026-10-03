@@ -117,7 +117,7 @@ describe("the evolution of the summary", () => {
     expect(charts.map((chart) => chart.className)).toEqual([
       "chart-plot is-main",
       "chart-plot is-strip",
-      "chart-plot is-strip",
+      "chart-plot is-end",
     ]);
     const names = [...(card?.querySelectorAll(".panel-name") ?? [])].map(text);
     expect(names).toEqual(["Cubo escala propia", "Efectivo escala propia"]);
