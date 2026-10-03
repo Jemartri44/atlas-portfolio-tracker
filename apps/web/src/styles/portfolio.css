@@ -119,6 +119,48 @@
   fill: var(--c-caution-icon);
 }
 
+/* ---- The strip of an asset class: the deviation, in ink (feature 020, M5) -- */
+
+.strip {
+  flex: none;
+  height: var(--strip-h);
+  width: var(--strip-w);
+}
+
+.class-row > .strip {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.strip-scale {
+  color: var(--c-text-3);
+  display: flex;
+  font-size: var(--text-xs);
+  justify-content: space-between;
+  margin: 0;
+}
+
+.strip .track {
+  fill: var(--c-fill);
+}
+
+.strip .zero {
+  stroke: var(--c-text-3);
+  stroke-width: 1.5;
+}
+
+.strip .stem {
+  stroke: var(--c-text-2);
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
+.strip .dot {
+  fill: var(--c-text);
+  stroke: var(--c-surface);
+  stroke-width: 2;
+}
+
 /* ---- The strip of figures that belong together ------------------------- */
 
 .kpis {
