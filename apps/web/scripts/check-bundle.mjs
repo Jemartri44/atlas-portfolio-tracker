@@ -480,7 +480,14 @@ const dist = join(webRoot, "dist");
  * 75.482, ceiling 75.502 — measured + 20**, inside the authorisation (76.069).
  * The two lines of work raised the boot in parallel; this is their sum.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_502;
+/*
+ * **Feature 020, E3, M9 (2026-10-03): measured 75.580 (+98 over the 75.482 of
+ * the start of E3), ceiling 75.600 — measured + 20**, raised before the commit
+ * that needs it, inside the authorisation (76.069). The table of the screens
+ * learns the privacy mode (`components/columns.ts`: the amounts fused into one
+ * column); `DataTable` is on the boot path. The trend: 75.482 → 75.580.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 75_600;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -1033,7 +1040,15 @@ const BOOT_BUDGET_GZIP_BYTES = 75_502;
  * (312.000). The two lines of work raised the total in parallel; this is
  * their sum.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 306_690;
+/*
+ * **Feature 020, E3, M9 (2026-10-03): measured 306.952 (+518 over the 306.434
+ * of the start of E3), ceiling 307.208 — measured + 256**, inside the
+ * authorisation (312.000). Of those, +98 are the boot (above); the rest is the
+ * door `@atlas/domain/charts` with its two functions, the columns of the
+ * theses, the positions and the costs, and their percentages. The trend:
+ * 306.434 → 306.952.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 307_208;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
