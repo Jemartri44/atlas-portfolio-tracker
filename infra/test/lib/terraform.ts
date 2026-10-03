@@ -134,6 +134,23 @@ export interface PlanRequest {
 
 const cacheDir = join(tmpdir(), "atlas-infra-plan-cache");
 
+/** Scratch folders already initialised in this process, by root. */
+const prepared = new Map<string, { scratch: string; rootDir: string }>();
+
+/** Writes the current files of a root (and of `modules/`) into its scratch folder. */
+const refresh = (absolute: string, rootDir: string, fixture: boolean, scratch: string): void => {
+  if (fixture) {
+    cpSync(absolute, rootDir, { recursive: true, filter: (source) => !skipEntry(source) });
+    writeFileSync(join(rootDir, ".terraform.lock.hcl"), readFileSync(lockFile));
+  } else {
+    cpSync(infraRoot, scratch, {
+      recursive: true,
+      filter: (source) => !skipEntry(source) && source !== join(infraRoot, "test"),
+    });
+  }
+  writeFileSync(join(rootDir, "zz_offline_override.tf"), OFFLINE_OVERRIDE);
+};
+
 /**
  * The rendered `plan` of a root, as `terraform show -json` prints it, with no
  * AWS: the provider gets fake credentials, `-refresh=false`, no state and a
@@ -160,22 +177,28 @@ export const renderPlan = (request: PlanRequest): Plan => {
     return JSON.parse(readFileSync(cached, "utf8")) as Plan;
   }
   assertEnoughMemory();
-  const scratch = fixture ? mkdtempSync(join(tmpdir(), "atlas-infra-fixture-")) : scratchCopy();
-  const rootDir = fixture ? scratch : join(scratch, relative(infraRoot, absolute));
-  if (fixture) {
-    cpSync(absolute, scratch, { recursive: true, filter: (source) => !skipEntry(source) });
-    writeFileSync(join(rootDir, ".terraform.lock.hcl"), readFileSync(lockFile));
+  // `init` verifies the whole provider against the lock file: 15 seconds. A root is
+  // initialised once per process, and later renders (other variables, a mutant of a
+  // `.tf` file) only refresh its files in the same scratch folder.
+  let entry = prepared.get(absolute);
+  if (entry === undefined) {
+    const scratch = mkdtempSync(join(tmpdir(), "atlas-infra-run-"));
+    entry = { scratch, rootDir: fixture ? scratch : join(scratch, relative(infraRoot, absolute)) };
+    refresh(absolute, entry.rootDir, fixture, scratch);
+    const init = terraform(
+      entry.rootDir,
+      ["init", "-backend=false", "-input=false", "-no-color", "-lockfile=readonly"],
+      { network: true },
+    );
+    if (init.status !== 0) {
+      throw new Error(`terraform init failed in ${request.root}:\n${init.stderr}${init.stdout}`);
+    }
+    prepared.set(absolute, entry);
+  } else {
+    refresh(absolute, entry.rootDir, fixture, entry.scratch);
   }
-  writeFileSync(join(rootDir, "zz_offline_override.tf"), OFFLINE_OVERRIDE);
+  const rootDir = entry.rootDir;
   writeFileSync(join(rootDir, "render.tfvars"), request.vars);
-  const init = terraform(
-    rootDir,
-    ["init", "-backend=false", "-input=false", "-no-color", "-lockfile=readonly"],
-    { network: true },
-  );
-  if (init.status !== 0) {
-    throw new Error(`terraform init failed in ${request.root}:\n${init.stderr}${init.stdout}`);
-  }
   const plan = terraform(rootDir, [
     "plan",
     "-refresh=false",

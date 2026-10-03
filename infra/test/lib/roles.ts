@@ -1,4 +1,14 @@
-import { type Context, flatten, type Line, lineKey, parsePolicy, type Statement } from "./iam.js";
+import {
+  type Context,
+  type Decision,
+  decide,
+  flatten,
+  type Line,
+  lineKey,
+  parsePolicy,
+  type Request,
+  type Statement,
+} from "./iam.js";
 import { changes, type Plan } from "./plan.js";
 import { ACCOUNT, RECIPIENT, SENDER, SUFFIX } from "./renders.js";
 
@@ -126,9 +136,45 @@ export const contextOf = (statement: Statement, action: string, extra: Context =
       }
     }
   }
-  const service = action.split(":")[0] ?? "";
-  context["aws:RequestedRegion"] ??= ["acm", "cloudfront", "wafv2", "iam"].includes(service)
+  context["aws:RequestedRegion"] ??= regionFor(action);
+  return context;
+};
+
+/** Where a request for this action is made: the global services answer in us-east-1. */
+export const regionFor = (action: string): string =>
+  ["acm", "cloudfront", "wafv2", "iam"].includes(action.split(":")[0] ?? "")
     ? "us-east-1"
     : "eu-west-1";
-  return context;
+
+/**
+ * What a role may do: its identity policies and its permissions boundary both have
+ * to allow it, and an explicit deny in either wins.
+ */
+export const effective = (
+  identity: Statement[],
+  boundary: Statement[],
+  request: Request,
+): Decision => {
+  const withRegion: Request = {
+    ...request,
+    context: { "aws:RequestedRegion": regionFor(request.action), ...request.context },
+  };
+  const inner = decide(identity, withRegion);
+  const outer = decide(boundary, withRegion);
+  if (inner === "deny" || outer === "deny") {
+    return "deny";
+  }
+  return inner === "allow" && outer === "allow" ? "allow" : "implicit-deny";
+};
+
+/** The boundary of the plan, parsed. */
+export const boundaryOf = (plan: Plan): Statement[] => {
+  const found = changes(plan).filter(
+    (change) =>
+      change.type === "aws_iam_policy" && String(change.change.after?.name).endsWith("-boundary"),
+  );
+  if (found.length !== 1) {
+    throw new Error(`expected one boundary, found ${found.length}`);
+  }
+  return parsePolicy(found[0]?.change.after?.policy);
 };
