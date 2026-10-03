@@ -30,8 +30,7 @@ import {
 import { contributedSeries } from "@atlas/domain/charts";
 import { A } from "@solidjs/router";
 import { createMemo, createResource, For, type JSX, Show } from "solid-js";
-import { SeriesCard } from "../../components/chart/index.js";
-import { Icon, Notice, type NoticeItem, NoticeLink, Section } from "../../components/index.js";
+import { Icon, type NoticeItem, NoticeLink, Section } from "../../components/index.js";
 import { formatLongDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
@@ -54,6 +53,7 @@ import { type SummaryCard, summaryOrder } from "../../view-models/summary-order.
 import { RequireLedger } from "../guard.jsx";
 import { EntryLine } from "../movimientos/MovementList.jsx";
 import { AttentionBlock, noticeOf } from "./AttentionBlock.jsx";
+import { EvolutionCard } from "./EvolutionCard.jsx";
 import { FirstSteps } from "./FirstSteps.jsx";
 // The card that leads to the fiscal screen only draws, so it is on the boot
 // path and in its place on the first paint (feature 020, E2): what asks the
@@ -201,43 +201,7 @@ export default function ResumenRoute(): JSX.Element {
             <FiscalCard season={season} status={fiscal} year={nextReturnYear(settings, date)} />
           ),
           evolution: () => (
-            <SeriesCard
-              title="Evolución del patrimonio"
-              asOf={date}
-              class="span-12 summary-evolution"
-              labels={["Cartera principal", "Cubo", "Efectivo", "Aportado"]}
-              colours={[
-                "--c-series-core",
-                "--c-series-bucket",
-                "--c-series-cash",
-                "--c-series-contrib",
-              ]}
-              dashes={[undefined, undefined, undefined, [6, 4]]}
-              stepped={[3]}
-              panels={[
-                { series: [0, 3] },
-                { series: [1], name: "Cubo" },
-                { series: [2], name: "Efectivo" },
-              ]}
-              foot={
-                <Show when={contributed.uncovered_buys}>
-                  <p class="card-note">
-                    Lo aportado solo cuenta los ingresos registrados, y hay compras anteriores al
-                    primero.
-                  </p>
-                </Show>
-              }
-              x={series.x}
-              values={series.values}
-              rows={series.rows}
-              missing={series.missing}
-              empty={
-                <Notice severity="info" title="Todavía no hay nada que dibujar">
-                  La evolución se dibuja sobre las fechas que tienen precio. Registra una valoración
-                  y aparecerá el primer punto.
-                </Notice>
-              }
-            />
+            <EvolutionCard asOf={date} series={series} uncoveredBuys={contributed.uncovered_buys} />
           ),
         };
 

@@ -45,10 +45,6 @@
   margin: var(--space-2) 0 0;
 }
 
-.panel-name > span {
-  color: var(--c-text-3);
-}
-
 /* The keys and their names, in one wrapping line under the plot. */
 .chart-legend {
   color: var(--c-text-2);

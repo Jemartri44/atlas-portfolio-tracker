@@ -5,7 +5,7 @@
 // function of the data, so it can be asserted without a canvas.
 
 import type uPlot from "../../../vendor/uplot/uPlot.js";
-import type { ChartSeries } from "./Chart.jsx";
+import type { ChartSeries } from "./options.js";
 
 /** Room on each side of the label, so the dashed edges never touch it. */
 const LABEL_MARGIN = 6;
