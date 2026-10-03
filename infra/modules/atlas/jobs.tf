@@ -160,7 +160,7 @@ resource "aws_lambda_function" "job" {
 
   function_name = local.job_function_name[each.key]
   description   = "Scheduled ${each.key} tasks of Atlas (${var.env})."
-  role          = aws_iam_role.job[each.key].arn
+  role          = "${local.iam}:role/${local.job_function_name[each.key]}" # constructed: known at plan time
   runtime       = "nodejs22.x"
   handler       = "index.handler"
   architectures = ["arm64"] # jobs.zip is one index.mjs with no native binary (questions.md, E3 b0)
@@ -177,7 +177,7 @@ resource "aws_lambda_function" "job" {
     variables = merge(local.job_env_common[each.key], local.job_env_family[each.key])
   }
 
-  depends_on = [aws_cloudwatch_log_group.job, aws_iam_role_policy.job]
+  depends_on = [aws_cloudwatch_log_group.job, aws_iam_role.job, aws_iam_role_policy.job]
 }
 
 # Scheduler invokes asynchronously: no retry of Lambda's own (Scheduler retries twice) and
