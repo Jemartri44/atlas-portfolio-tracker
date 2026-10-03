@@ -98,7 +98,7 @@ locals {
         # Every write of the configuration of the bucket, not a list: inventory, logging,
         # notification and replication would let another project's role take the key
         # names or the contents out (review of PR 115, B1).
-        Action    = ["s3:DeleteBucket*", "s3:Put*Configuration", "s3:PutBucket*"]
+        Action    = ["s3:CreateBucketMetadata*", "s3:DeleteBucket*", "s3:Put*Configuration", "s3:PutBucket*", "s3:UpdateBucketMetadata*"]
         Resource  = local.data_arn
         Condition = { ArnNotLike = { "aws:PrincipalArn" = local.data_config_roles } }
       },

@@ -158,9 +158,11 @@ describe.each(ENVS)("the data bucket of %s", (env) => {
       Resource: `arn:aws:s3:::${bucket}`,
     });
     expect([statement?.Action].flat().sort()).toEqual([
+      "s3:CreateBucketMetadata*",
       "s3:DeleteBucket*",
       "s3:Put*Configuration",
       "s3:PutBucket*",
+      "s3:UpdateBucketMetadata*",
     ]);
     expect(principals(statement)).toEqual([role("deploy"), role("admin")]);
     // The three patterns cover what a stranger could use to take names or contents out.
@@ -181,6 +183,10 @@ describe.each(ENVS)("the data bucket of %s", (env) => {
       "s3:PutEncryptionConfiguration",
       "s3:PutLifecycleConfiguration",
       "s3:PutBucketVersioning",
+      "s3:CreateBucketMetadataConfiguration",
+      "s3:CreateBucketMetadataTableConfiguration",
+      "s3:UpdateBucketMetadataInventoryTableConfiguration",
+      "s3:UpdateBucketMetadataJournalTableConfiguration",
     ]) {
       expect(covers(action), action).toBe(true);
     }
