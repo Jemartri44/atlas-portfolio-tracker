@@ -515,7 +515,18 @@ const dist = join(webRoot, "dist");
  * authorisation (76.069). The stylesheet only: the tokens of the heights of
  * the panels and the rules of the stack. The trend: 75.822 → 75.919.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_939;
+/*
+ * **Feature 020, E4, M12 (2026-10-04): measured 76.019 (+84 over the 75.935 of
+ * the committed E4), ceiling 76.044 — measured + 20**, inside the
+ * authorisation (76.069), which leaves 45 bytes. The first drawing of the
+ * calendar took the boot to 76.636, **over** the authorisation, because the
+ * card of the summary carried the list, the notes and the strip; what the
+ * season says once the engine has answered now lives in a lazy chunk
+ * (`SeasonBody`) and the boot keeps the shell that holds its place, so the
+ * boot grows only by the stylesheet of the strip and the wiring (+84). The
+ * trend: 75.919 → 75.935 → 76.019.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 76_044;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -1120,7 +1131,16 @@ const BOOT_BUDGET_GZIP_BYTES = 75_939;
  * chunk of the charts that the summary and the bucket share, and the column of
  * the table. The trend: 310.725 → 311.983.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 312_000;
+/*
+ * **Feature 020, E4, M12 (2026-10-04): measured 314.661 (+2.714 over the
+ * 311.947 of the committed E4), ceiling 314.951 — measured + 256**, inside the
+ * authorisation (500.000, «decisión de la persona, 04/10»). Chunk by chunk,
+ * gzip: the strip and its short version (1.340, lazy, shared by `/fiscal` and
+ * the summary), the card of the list with the route (+0,6 KB), the lazy body
+ * of the season card (+0,9 KB) and the boot (+84). The trend: 311.947 →
+ * 314.661.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 314_951;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,

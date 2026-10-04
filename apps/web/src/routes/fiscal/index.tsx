@@ -12,7 +12,7 @@
 // was filed.
 
 import { yearOf } from "@atlas/domain";
-import { informativeReturn, taxBoxes, taxYear } from "@atlas/domain/fiscal";
+import { fiscalCalendar, informativeReturn, taxBoxes, taxYear } from "@atlas/domain/fiscal";
 import { A } from "@solidjs/router";
 import { createMemo, createResource, type JSX, Show } from "solid-js";
 import { EmptyState, Notice, Section } from "../../components/index.js";
@@ -24,6 +24,7 @@ import { boxesView, informativeView, yearView } from "../../view-models/fiscal/i
 import { RequireLedger } from "../guard.jsx";
 import { BaseCard } from "./BaseCard.jsx";
 import { BoxesCard } from "./BoxesCard.jsx";
+import { CalendarCard } from "./CalendarCard.jsx";
 import { DoubtfulCard, SettledCard } from "./CriteriaCards.jsx";
 import { FilingCard } from "./FilingCard.jsx";
 import { InformativeCard } from "./InformativeCard.jsx";
@@ -191,6 +192,11 @@ export default function FiscalRoute(): JSX.Element {
               }
             >
               <div class="grid">
+                <CalendarCard
+                  calendar={fiscalCalendar(snapshot.events, today())}
+                  today={today()}
+                  names={names}
+                />
                 <RateNotes
                   notes={((computed) => (computed.ok ? computed.value.notes : []))(report())}
                   events={snapshot.events}

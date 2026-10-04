@@ -265,7 +265,10 @@ describe("the fiscal screen", () => {
     // user's own amount said another way (decision (k)).
     expect(text(host)).toContain("Modelo 720");
     expect(text(host)).not.toContain("Del umbral");
-    expect(host.innerHTML).not.toMatch(/\d,\d\s?%|\d+\s?%/);
+    // Without the strip of the calendar, whose coordinates are written in
+    // percent and say where a date falls in the year, not an amount.
+    const html = host.innerHTML.replace(/<svg class="calendar-strip".*?<\/svg><ul/s, "<ul");
+    expect(html).not.toMatch(/\d,\d\s?%|\d+\s?%/);
   });
 
   it("shows how much of the threshold with privacy off", async () => {

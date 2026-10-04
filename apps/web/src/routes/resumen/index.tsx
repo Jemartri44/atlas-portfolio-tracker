@@ -198,7 +198,13 @@ export default function ResumenRoute(): JSX.Element {
             </Section>
           ),
           fiscal: () => (
-            <FiscalCard season={season} status={fiscal} year={nextReturnYear(settings, date)} />
+            <FiscalCard
+              season={season}
+              status={fiscal}
+              year={nextReturnYear(settings, date)}
+              today={date}
+              names={names}
+            />
           ),
           evolution: () => (
             <EvolutionCard asOf={date} series={series} uncoveredBuys={contributed.uncovered_buys} />

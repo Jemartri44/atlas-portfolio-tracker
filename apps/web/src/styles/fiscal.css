@@ -295,3 +295,30 @@
   border-top: var(--border) solid var(--c-border);
   padding-top: var(--space-4);
 }
+
+/* The fiscal calendar: the season as a band, today as an accent line. */
+.calendar-strip {
+  color: var(--c-text-3);
+  display: block;
+  fill: currentcolor;
+  font-size: var(--text-sm);
+}
+
+.calendar-strip rect {
+  fill: var(--c-accent-soft);
+}
+
+.calendar-strip line {
+  stroke: var(--c-accent);
+  stroke-width: 2;
+}
+
+.calendar-strip path {
+  fill: var(--c-text);
+}
+
+.calendar-list {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+}
