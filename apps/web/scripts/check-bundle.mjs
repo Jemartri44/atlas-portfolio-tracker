@@ -1140,7 +1140,15 @@ const BOOT_BUDGET_GZIP_BYTES = 76_044;
  * of the season card (+0,9 KB) and the boot (+84). The trend: 311.947 →
  * 314.661.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 314_951;
+/*
+ * **Feature 020, E4, deadlines (2026-10-04): measured 314.917 (+256 over the
+ * 314.661 of the calendar), ceiling 315.173 — measured + 256**, inside the
+ * authorisation (500.000). All of it is the lazy chunk of the fiscal screen:
+ * the table of deadlines with its `verified` mark and the notes that say why
+ * three years are not (domain commit before) and the «sin verificar» of the
+ * row. The boot is +2 (76.021). The trend: 314.661 → 314.917.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 315_173;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
