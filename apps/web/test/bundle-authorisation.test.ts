@@ -27,8 +27,9 @@ const constant = (name: string): number => {
 describe("the ceilings of the bundle and what the direction authorised", () => {
   it("names the two authorisations of the direction, and nothing else moves them", () => {
     expect(constant("BOOT_AUTHORISED_GZIP_BYTES")).toBe(76_069);
-    // 312.000 since 2026-09-28 (feature 016, questions §18, Q19).
-    expect(constant("TOTAL_AUTHORISED_GZIP_BYTES")).toBe(312_000);
+    // 500.000 since 2026-10-04 (decisión de la persona, 04/10; before, 312.000
+    // since 2026-09-28, feature 016, questions §18, Q19).
+    expect(constant("TOTAL_AUTHORISED_GZIP_BYTES")).toBe(500_000);
   });
 
   it("keeps each ceiling at or under its authorisation", () => {

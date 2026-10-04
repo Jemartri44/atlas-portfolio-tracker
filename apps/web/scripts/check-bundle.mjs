@@ -1131,14 +1131,21 @@ const TOTAL_BUDGET_GZIP_BYTES = 312_000;
  * over its authorisation does not build green.
  *
  *   - Boot: 76.069, prompt 015 §7 P13, still standing (prompt 020 §5).
- *   - Total: 312.000, raised by the direction on 2026-09-28 for the whole web,
+ *   - Total: 500.000, raised by the person on 2026-10-04 («decisión de la
+ *     persona, 04/10»): feature 020 E4 stopped at 313.523 against 312.000
+ *     (`specs/020-visual-refresh/questions.md` §13.3) and the person chose to
+ *     give the web room instead of cutting merged improvements. It replaces
+ *     the 312.000 below. The discipline of the ceilings does not change: each
+ *     one stays at what is measured plus a small margin (plan §6.4), and this
+ *     is a wall, not a target.
+ *   - Before: 312.000, raised by the direction on 2026-09-28 for the whole web,
  *     because features 016 and 020 grow at the same time
  *     (`specs/016-scheduled-jobs/questions.md` §18, Q19); before, 310.500,
  *     raised on 2026-09-27 over the 309.500 of prompt 020 §8 P1, for the
  *     prices of PR #102 (`specs/020-visual-refresh/questions.md` §4.1).
  */
 const BOOT_AUTHORISED_GZIP_BYTES = 76_069;
-const TOTAL_AUTHORISED_GZIP_BYTES = 312_000;
+const TOTAL_AUTHORISED_GZIP_BYTES = 500_000;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None

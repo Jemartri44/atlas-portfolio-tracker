@@ -4,6 +4,7 @@ Fechas en Europe/Madrid. Aquí van las preguntas a la dirección, lo que se resp
 
 ## 1. Estado
 
+- **2026-10-04**: la persona decide (§14): total del paquete a 500.000 y se acaba E4; ver §14.
 - **2026-10-03**: **E4 PARADA** (§13): M12 no cabe en 312.000 ni con los recortes de §6.3; esperando a la dirección.
 - **2026-10-03**: **E3 en curso** (§12): guardián de privacidad, `NEAR_LIMIT_PCT`, la puerta `@atlas/domain/charts`, M1, M9, M5 y M10 hechos; capturas y tubería final en §12.
 - **2026-09-28**: **E2 terminada y congelada** (§11). El código congelado es `9f2ddcc`.
@@ -806,3 +807,9 @@ Con los tres recortes el total queda en ~312.300: **todavía ~300 por encima**, 
 3. **`FILING_DEADLINES` pone el 31/03 todos los años**: 2017, 2018 y 2023 caen en fin de semana; plazos y fuentes sin verificar con el asesor (fiscal: no se adivina).
 4. **Años sin cubo** se pintan como hueco con la banda «sin precios», y un cubo con compras pero sin ingresos sale siempre como pendiente, con un motivo que no es el real.
 5. Menores: el calendario aún no tiene dibujo (~200 B en el trozo fiscal); `netWorthDates` repite proyecciones con el tope de puntos; `uncovered_buys` compara la fecha fiscal con la `value_date`.
+
+## 14. E4, segunda parte — decisión de la persona (04/10)
+
+### 14.1 El paquete
+
+**Decisión de la persona, 04/10**: la autorización del total sube de 312.000 a **500.000** bytes gzip. Sustituye a la parada de §13.3 (opciones a-d): no se recorta nada de lo fusionado y se termina M12 entera, con la versión corta dentro de *Declaración*. El arranque sigue en 76.069. Cambia `TOTAL_AUTHORISED_GZIP_BYTES` en `apps/web/scripts/check-bundle.mjs` y su test; la disciplina del plan §6.4 no cambia: cada techo sigue en lo medido más un margen pequeño, en su commit y delante del que lo necesita. 500.000 es un muro, no un objetivo.

@@ -39,7 +39,7 @@ Seis reglas atraviesan la feature (§0 del encargo):
 3. **Ninguna regla de dominio en la web.** Qué es lo aportado, cuándo es la campaña, cuándo termina una ventana, cuándo sube *Declaración*, qué activo está fuera de umbral: lo decide `packages/domain`. La web traduce, coloca y dibuja.
 4. **Ningún porcentaje que se lee se calcula con `number`**, y se redondea una sola vez, al mostrarlo.
 5. **Ni una dependencia nueva, ni un valor fuera de `tokens.css`, ni un estilo en línea**, con la CSP estricta sin tocar.
-6. **El paquete se mide mejora a mejora**; cada techo sube en su propio commit y antes del que lo necesita, y **si no cabe en la autorización (arranque 76.069, total 310.500, subida por la dirección el 2026-09-27), se para**.
+6. **El paquete se mide mejora a mejora**; cada techo sube en su propio commit y antes del que lo necesita, y **si no cabe en la autorización (arranque 76.069, total 500.000, subida por «decisión de la persona, 04/10»; antes 310.500 y 312.000), se para**.
 
 ## Escenarios de usuario y pruebas
 
@@ -158,7 +158,7 @@ La evolución es una pila de paneles que comparten las fechas: arriba la cartera
 - **FR-006**: El color NUNCA DEBE ir solo: signo en cada resultado, forma distinta en cada marca, trazo distinto en cada serie, y renta variable y cripto nunca juntas sin etiqueta directa.
 - **FR-007**: Cada SVG nuevo DEBE ser una imagen con etiqueta accesible en porcentajes y fechas (nunca importes, con la privacidad puesta o quitada) o estar oculto con su equivalente en texto al lado; cada gráfica DEBE conservar su tabla equivalente plegada.
 - **FR-008**: Ningún objetivo táctil por debajo de 44 px, ningún texto que se lee por debajo de 13 px, ningún desplazamiento lateral de 360 a 2045 px, el orden de tabulación igual al visual y nada nuevo animado.
-- **FR-009**: El paquete DEBE medirse mejora a mejora; ningún techo DEBE superar su autorización (arranque 76.069 bytes gzip, total 310.500), y la comprobación del paquete DEBE fallar si un techo la supera.
+- **FR-009**: El paquete DEBE medirse mejora a mejora; ningún techo DEBE superar su autorización (arranque 76.069 bytes gzip, total 500.000 desde «decisión de la persona, 04/10»), y la comprobación del paquete DEBE fallar si un techo la supera.
 
 **E1 — El marco y el color**
 
@@ -218,7 +218,7 @@ La evolución es una pila de paneles que comparten las fechas: arriba la cartera
 - **SC-007**: Registrar a 400×890: las siete baldosas y «Otros registros» **en el primer pantallazo**.
 - **SC-008**: Cada pantalla tocada tiene **al menos un porcentaje visible** junto a cada grupo de máscaras con la privacidad puesta; el Cubo pasa de 20 máscaras y 7 porcentajes a más porcentajes que máscaras.
 - **SC-009**: Sin desplazamiento lateral a 360, 400, 1.440 y 2045 px; **ningún** objetivo táctil nuevo por debajo de 44 px ni texto que se lee por debajo de 13 px.
-- **SC-010**: El arranque cabe en **76.069** bytes gzip y el total en **310.500**, con cada techo subido en su commit y antes del que lo necesita.
+- **SC-010**: El arranque cabe en **76.069** bytes gzip y el total en **500.000** («decisión de la persona, 04/10»), con cada techo subido en su commit y antes del que lo necesita.
 - **SC-011**: `packages/domain` al **100 %** de líneas, ramas, funciones y sentencias; cada regla de la tabla del plan con su test visto en rojo y su mutante muerto.
 
 ## Supuestos
