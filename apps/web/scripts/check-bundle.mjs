@@ -526,7 +526,16 @@ const dist = join(webRoot, "dist");
  * boot grows only by the stylesheet of the strip and the wiring (+84). The
  * trend: 75.919 → 75.935 → 76.019.
  */
-const BOOT_BUDGET_GZIP_BYTES = 76_044;
+/*
+ * **Feature 020, E4, evolution with the cash (2026-10-04): measured 76.035
+ * (+14 over the 76.021 of the deadline marks), ceiling 76.055 — measured +
+ * 20**, inside the authorisation (76.069), which leaves 14 bytes. The net
+ * worth is the core, the bucket and the cash of the investment accounts
+ * (ADR-0004), so the summary draws each book with its own cash instead of a
+ * panel of cash that counted it twice: the wiring of the view-model and the
+ * card (two labels fewer, one panel fewer). The trend: 76.021 → 76.035.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 76_055;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -1148,7 +1157,15 @@ const BOOT_BUDGET_GZIP_BYTES = 76_044;
  * three years are not (domain commit before) and the «sin verificar» of the
  * row. The boot is +2 (76.021). The trend: 314.661 → 314.917.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 315_173;
+/*
+ * **Feature 020, E4, evolution with the cash (2026-10-04): measured 315.154
+ * (+237 over the 314.917 of the deadline marks), ceiling 315.410 — measured +
+ * 256**, inside the authorisation (500.000). The book value with its own cash
+ * (`bookCashSeries`, lazy, in the chunk of the charts) and the view-model that
+ * puts it in place of the three blocks; the boot is +14 (above). The trend:
+ * 314.917 → 315.154.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 315_410;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
