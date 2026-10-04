@@ -117,6 +117,123 @@ describe("bucketIndexPctSeries", () => {
     expect(pct(series.points.at(-1)?.vs_index_pct)).toBe("6");
   });
 
+  it("says why a point has no percentage when it is not a missing price", () => {
+    // The thesis buys on 01/02 and the first deposit is on 01/03; prices on 15/02 for both.
+    const b = bucketLedger([{ date: "2027-03-01", amount: "5000" }]);
+    b.valuation({
+      account_id: "acc_bucket",
+      asset_id: "ast_spec",
+      date: "2027-02-15",
+      quantity: "10",
+      unit_value: "100",
+      currency: "USD",
+      fx_rate: "1",
+    });
+    b.valuation({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      date: "2027-02-15",
+      quantity: "1",
+      unit_value: "100",
+    });
+    const points = bucketIndexPctSeries(b.build(), { to: "2027-06-30" }).points;
+    const reason = (date: string) => points.find((point) => point.date === date);
+    expect(reason("2027-01-01")?.reason).toBe("no_investments");
+    expect(reason("2027-02-15")?.reason).toBe("no_contributions");
+    // 01/02 lacks the price of the thesis: that is a missing price, with no reason of its own.
+    expect(reason("2027-02-01")?.reason).toBeUndefined();
+    expect(reason("2027-02-01")?.missing.length).toBeGreaterThan(0);
+    expect(reason("2027-06-30")?.reason).toBeUndefined();
+    expect(reason("2027-06-30")?.vs_index_pct).toBeDefined();
+  });
+
+  it("is all no_investments for a bucket that never bought, and a core purchase is not the bucket's", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.deposit({ account_id: "acc_bucket", value_date: "2027-01-02", amount: "0" });
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      trade_date: "2027-01-05",
+      value_date: "2027-01-05",
+      quantity: "1",
+      unit_price: "100",
+      fee: "0",
+    });
+    b.valuation({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      date: "2027-01-31",
+      quantity: "1",
+      unit_value: "100",
+    });
+    const points = bucketIndexPctSeries(b.build(), { to: "2027-01-31" }).points;
+    expect(points.length).toBeGreaterThan(0);
+    expect(points.map((point) => point.reason)).toEqual(points.map(() => "no_investments"));
+  });
+
+  it("ignores a purchase that was reversed and looks for the earliest one", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.settings(settingsOf({ bucket_benchmark_asset_id: "ast_world", stale_price_days: 400 }));
+    b.thesisOpened({
+      thesis_id: "t1",
+      account_id: "acc_bucket",
+      asset_id: "ast_spec",
+      hypothesis: "h",
+      expected_horizon_days: 365,
+      invalidation: "i",
+      planned_size_eur: "1000",
+    });
+    const buy = (date: string) =>
+      b.buy({
+        account_id: "acc_bucket",
+        asset_id: "ast_spec",
+        thesis_id: "t1",
+        trade_date: date,
+        value_date: date,
+        quantity: "1",
+        unit_price: "10",
+        fee: "0",
+        currency: "USD",
+        fx_rate: "1",
+        fx_rate_date: date,
+      });
+    const undone = buy("2027-01-05");
+    b.reversal(undone.id);
+    buy("2027-02-10");
+    buy("2027-02-01");
+    b.valuation({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      date: "2027-01-31",
+      quantity: "1",
+      unit_value: "100",
+    });
+    b.valuation({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      date: "2027-02-05",
+      quantity: "1",
+      unit_value: "100",
+    });
+    b.valuation({
+      account_id: "acc_bucket",
+      asset_id: "ast_spec",
+      date: "2027-02-05",
+      quantity: "2",
+      unit_value: "10",
+      currency: "USD",
+      fx_rate: "1",
+    });
+    const points = bucketIndexPctSeries(b.build(), { to: "2027-02-05" }).points;
+    const reasons = Object.fromEntries(points.map((point) => [point.date, point]));
+    // The reversed purchase of 05/01 does not count; the earliest real one is 01/02.
+    expect(reasons["2027-01-31"]?.reason).toBe("no_investments");
+    // On 05/02 the bucket has bought (01/02) and nothing was deposited.
+    expect(reasons["2027-02-05"]?.reason).toBe("no_contributions");
+  });
+
   it("has no percentage at a point with a missing comparison, and keeps why", () => {
     const b = bucketLedger([{ date: "2027-01-01", amount: "5000" }]);
     b.settings(settingsOf({ bucket_benchmark_asset_id: "ast_nope", stale_price_days: 400 }));

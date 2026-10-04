@@ -13,6 +13,7 @@ export {
   type BucketIndexPctPoint,
   type BucketIndexPctSeries,
   bucketIndexPctSeries,
+  type NoPercentageReason,
 } from "./charts/bucket-pct.js";
 export {
   type ContributedPoint,
