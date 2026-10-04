@@ -73,7 +73,7 @@ export const CalendarStrip = (props: {
       <line x1={`${now}%`} x2={`${now}%`} y1="2" y2="42" />
       <For each={props.calendar.dates.filter((one) => SHAPE[one.kind] !== undefined)}>
         {(one) => (
-          <svg x={`${at(one.date, year)}%`} y="22" overflow="visible">
+          <svg x={`${at(one.date, year)}%`} y="22" overflow="visible" aria-hidden="true">
             <path d={SHAPE[one.kind]} opacity={one.date < props.today ? 0.4 : 1} />
             <Show when={Number(one.date.slice(0, 4)) > year}>
               <text x="-8" y="-8" text-anchor="end">{`${one.date.slice(0, 4)} ›`}</text>
