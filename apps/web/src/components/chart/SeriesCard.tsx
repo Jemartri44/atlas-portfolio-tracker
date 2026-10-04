@@ -119,7 +119,7 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
                       x={shown()}
                       series={panel.series.map((index) => series()[index] as ChartSeries)}
                       bands={series()}
-                      label={`${props.title}: ${panel.name ?? "cartera principal y lo aportado"}`}
+                      label={`${props.title}: ${panel.name ?? "cartera principal con su efectivo y lo aportado"}`}
                       panel={at() === 0 ? "main" : at() === panels().length - 1 ? "end" : "strip"}
                       sync="evolution"
                       dates={at() === panels().length - 1}

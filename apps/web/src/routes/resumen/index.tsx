@@ -27,7 +27,7 @@ import {
   settingsAt,
   transferWatch,
 } from "@atlas/domain";
-import { contributedSeries } from "@atlas/domain/charts";
+import { bookCashSeries, contributedSeries } from "@atlas/domain/charts";
 import { A } from "@solidjs/router";
 import { createMemo, createResource, For, type JSX, Show } from "solid-js";
 import { Icon, type NoticeItem, NoticeLink, Section } from "../../components/index.js";
@@ -48,7 +48,7 @@ import {
   netWorthView,
   onboardingOf,
 } from "../../view-models/index.js";
-import { netWorthPlot, withContributed } from "../../view-models/series.js";
+import { netWorthPlot, withBookCash, withContributed } from "../../view-models/series.js";
 import { type SummaryCard, summaryOrder } from "../../view-models/summary-order.js";
 import { RequireLedger } from "../guard.jsx";
 import { EntryLine } from "../movimientos/MovementList.jsx";
@@ -163,7 +163,10 @@ export default function ResumenRoute(): JSX.Element {
         const range = { to: date, max_points: MAX_POINTS };
         const contributed = contributedSeries(snapshot.events, range);
         const series = withContributed(
-          netWorthPlot(netWorthSeries(snapshot.events, range), names),
+          withBookCash(
+            netWorthPlot(netWorthSeries(snapshot.events, range), names),
+            bookCashSeries(snapshot.events, range),
+          ),
           contributed,
         );
 

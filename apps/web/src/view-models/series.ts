@@ -8,7 +8,7 @@
 // `spanGaps` off.
 
 import type { NetWorthSeries } from "@atlas/domain";
-import type { BucketIndexPctSeries, ContributedSeries } from "@atlas/domain/charts";
+import type { BookCashSeries, BucketIndexPctSeries, ContributedSeries } from "@atlas/domain/charts";
 import { gapsOf } from "../components/chart/gaps.js";
 import { displayName, type NameIndex, NO_NAMES } from "../format/names.js";
 
@@ -110,6 +110,30 @@ export const netWorthPlot = (
       : { missing: reasonOf(drawn, series.points.length, subjects) as MissingNote }),
   };
 };
+
+/**
+ * The two books **with the cash of their own accounts**, in place of the three
+ * blocks of the net worth (ADR-0004: net worth is the core, the bucket and the
+ * cash of the investment accounts). A portfolio funded with 10.000 that bought
+ * 2.000 stands at 10.000 against what was put in, not at 2.000, and the cash is
+ * not a third line that would count it again. The dates, the holes and the
+ * sentence about what is missing are those of `netWorthPlot`: a book is absent
+ * on the same dates that the three blocks were, so only the values change.
+ */
+export const withBookCash = (plot: PlottedSeries, series: BookCashSeries): PlottedSeries => ({
+  ...plot,
+  values: [
+    series.points.map((point) => numberOrNull(point.core_eur)),
+    series.points.map((point) => numberOrNull(point.bucket_eur)),
+  ],
+  rows: plot.rows.map((row, index) => ({
+    ...row,
+    values: [
+      stringOrUndefined(series.points[index]?.core_eur),
+      stringOrUndefined(series.points[index]?.bucket_eur),
+    ],
+  })),
+});
 
 /**
  * What was contributed, as one more series of the net worth plot, on **the
