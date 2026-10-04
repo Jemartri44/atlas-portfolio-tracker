@@ -515,7 +515,27 @@ const dist = join(webRoot, "dist");
  * authorisation (76.069). The stylesheet only: the tokens of the heights of
  * the panels and the rules of the stack. The trend: 75.822 → 75.919.
  */
-const BOOT_BUDGET_GZIP_BYTES = 75_939;
+/*
+ * **Feature 020, E4, M12 (2026-10-04): measured 76.019 (+84 over the 75.935 of
+ * the committed E4), ceiling 76.044 — measured + 25**, inside the
+ * authorisation (76.069), which leaves 45 bytes. The first drawing of the
+ * calendar took the boot to 76.636, **over** the authorisation, because the
+ * card of the summary carried the list, the notes and the strip; what the
+ * season says once the engine has answered now lives in a lazy chunk
+ * (`SeasonBody`) and the boot keeps the shell that holds its place, so the
+ * boot grows only by the stylesheet of the strip and the wiring (+84). The
+ * trend: 75.919 → 75.935 → 76.019.
+ */
+/*
+ * **Feature 020, E4, evolution with the cash (2026-10-04): measured 76.035
+ * (+14 over the 76.021 of the deadline marks), ceiling 76.055 — measured +
+ * 20**, inside the authorisation (76.069), which leaves 14 bytes. The net
+ * worth is the core, the bucket and the cash of the investment accounts
+ * (ADR-0004), so the summary draws each book with its own cash instead of a
+ * panel of cash that counted it twice: the wiring of the view-model and the
+ * card (two labels fewer, one panel fewer). The trend: 76.021 → 76.035.
+ */
+const BOOT_BUDGET_GZIP_BYTES = 76_055;
 
 /**
  * Everything it may download across the whole application: JS + CSS, gzip.
@@ -1120,7 +1140,40 @@ const BOOT_BUDGET_GZIP_BYTES = 75_939;
  * chunk of the charts that the summary and the bucket share, and the column of
  * the table. The trend: 310.725 → 311.983.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 312_000;
+/*
+ * **Feature 020, E4, M12 (2026-10-04): measured 314.661 (+2.714 over the
+ * 311.947 of the committed E4), ceiling 314.951 — measured + 256**, inside the
+ * authorisation (500.000, «decisión de la persona, 04/10»). Chunk by chunk,
+ * gzip: the strip and its short version (1.340, lazy, shared by `/fiscal` and
+ * the summary), the card of the list with the route (+0,6 KB), the lazy body
+ * of the season card (+0,9 KB) and the boot (+84). The trend: 311.947 →
+ * 314.661.
+ */
+/*
+ * **Feature 020, E4, deadlines (2026-10-04): measured 314.917 (+256 over the
+ * 314.661 of the calendar), ceiling 315.173 — measured + 256**, inside the
+ * authorisation (500.000). All of it is the lazy chunk of the fiscal screen:
+ * the table of deadlines with its `verified` mark and the notes that say why
+ * three years are not (domain commit before) and the «sin verificar» of the
+ * row. The boot is +2 (76.021). The trend: 314.661 → 314.917.
+ */
+/*
+ * **Feature 020, E4, evolution with the cash (2026-10-04): measured 315.154
+ * (+237 over the 314.917 of the deadline marks), ceiling 315.410 — measured +
+ * 256**, inside the authorisation (500.000). The book value with its own cash
+ * (`bookCashSeries`, lazy, in the chunk of the charts) and the view-model that
+ * puts it in place of the three blocks; the boot is +14 (above). The trend:
+ * 314.917 → 315.154.
+ */
+/*
+ * **Feature 020, E4, the bucket with nothing to compare (2026-10-04): measured
+ * 315.489 (+335 over the 315.154 of the evolution), ceiling 315.745 — measured
+ * + 256**, inside the authorisation (500.000). The reason a point has no
+ * percentage (domain commit before) and the card of the bucket that says it
+ * instead of a band of «sin precios»: all lazy, in the chunk of the Cubo. The
+ * boot is −11 (76.024, ceiling unchanged). The trend: 315.154 → 315.489.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 315_745;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
@@ -1131,14 +1184,21 @@ const TOTAL_BUDGET_GZIP_BYTES = 312_000;
  * over its authorisation does not build green.
  *
  *   - Boot: 76.069, prompt 015 §7 P13, still standing (prompt 020 §5).
- *   - Total: 312.000, raised by the direction on 2026-09-28 for the whole web,
+ *   - Total: 500.000, raised by the person on 2026-10-04 («decisión de la
+ *     persona, 04/10»): feature 020 E4 stopped at 313.523 against 312.000
+ *     (`specs/020-visual-refresh/questions.md` §13.3) and the person chose to
+ *     give the web room instead of cutting merged improvements. It replaces
+ *     the 312.000 below. The discipline of the ceilings does not change: each
+ *     one stays at what is measured plus a small margin (plan §6.4), and this
+ *     is a wall, not a target.
+ *   - Before: 312.000, raised by the direction on 2026-09-28 for the whole web,
  *     because features 016 and 020 grow at the same time
  *     (`specs/016-scheduled-jobs/questions.md` §18, Q19); before, 310.500,
  *     raised on 2026-09-27 over the 309.500 of prompt 020 §8 P1, for the
  *     prices of PR #102 (`specs/020-visual-refresh/questions.md` §4.1).
  */
 const BOOT_AUTHORISED_GZIP_BYTES = 76_069;
-const TOTAL_AUTHORISED_GZIP_BYTES = 312_000;
+const TOTAL_AUTHORISED_GZIP_BYTES = 500_000;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None

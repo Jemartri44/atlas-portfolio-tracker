@@ -17,7 +17,7 @@ Trece mejoras de la propuesta (M1-M13) y el ancla de `#sincronizacion`, en cuatr
 **Pruebas**: Vitest 4 con `happy-dom`, `fast-check` (ya es dependencia de desarrollo), `@vitest/coverage-v8`; siempre `--pool=forks --maxWorkers=1`, y las dos pasadas (`test:coverage:domain`, `test:others`) por separado con las opciones.
 **Plataforma**: el navegador del móvil (400×890, DPR 3) y del monitor (2045×1141); PWA estática con CSP `style-src 'self'`.
 **Tipo de proyecto**: monorepo; se tocan `apps/web` y `packages/domain`, y `tests/architecture.test.ts`.
-**Objetivos**: arranque ≤ 76.069 bytes gzip, total ≤ 310.500 (§6; la dirección la subió de 309.500 el 2026-09-27, `questions.md` §4.1).
+**Objetivos**: arranque ≤ 76.069 bytes gzip, total ≤ 500.000 (§6; la dirección la subió de 309.500 a 310.500 el 2026-09-27, `questions.md` §4.1, a 312.000 el 2026-09-28 y a 500.000 por «decisión de la persona, 04/10», `questions.md` §14).
 **Restricciones**: sin dependencias, sin estilos en línea, ningún valor fuera de `tokens.css`, ningún porcentaje con `number`, ninguna regla de dominio en la web, memoria disponible ≥ 1.500 MB antes de cada paso pesado.
 **Escala**: 13 mejoras, 4 entregas, 5 cambios de dominio.
 

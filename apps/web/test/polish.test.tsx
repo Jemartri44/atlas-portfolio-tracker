@@ -79,7 +79,7 @@ describe("the list of the tax card", () => {
     // In the season, where the card has its list (feature 020, E2).
     const status = fiscalStatus(events, "2029-05-10");
     const host = await show("/", () => (
-      <FiscalCard season={true} status={() => status} year={2028} />
+      <FiscalCard season={true} status={() => status} year={2028} today="2029-05-10" names={{}} />
     ));
     await settle(10);
     expect(applied(host.querySelector(".fiscal-todo"), "padding-left")).toMatch(/^0(px)?$/);

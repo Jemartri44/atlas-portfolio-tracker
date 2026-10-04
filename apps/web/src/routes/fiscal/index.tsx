@@ -24,6 +24,7 @@ import { boxesView, informativeView, yearView } from "../../view-models/fiscal/i
 import { RequireLedger } from "../guard.jsx";
 import { BaseCard } from "./BaseCard.jsx";
 import { BoxesCard } from "./BoxesCard.jsx";
+import { LedgerCalendar } from "./CalendarCard.jsx";
 import { DoubtfulCard, SettledCard } from "./CriteriaCards.jsx";
 import { FilingCard } from "./FilingCard.jsx";
 import { InformativeCard } from "./InformativeCard.jsx";
@@ -191,6 +192,7 @@ export default function FiscalRoute(): JSX.Element {
               }
             >
               <div class="grid">
+                <LedgerCalendar events={snapshot.events} today={today()} names={names} />
                 <RateNotes
                   notes={((computed) => (computed.ok ? computed.value.notes : []))(report())}
                   events={snapshot.events}

@@ -12,7 +12,12 @@
 // web. What is added here is the Spanish.
 
 import type { LedgerEvent } from "@atlas/domain";
-import { fiscalAttention, type InformativeTodo } from "@atlas/domain/fiscal";
+import {
+  type FiscalCalendar,
+  fiscalAttention,
+  fiscalCalendar,
+  type InformativeTodo,
+} from "@atlas/domain/fiscal";
 
 export interface FiscalStatus {
   season: boolean;
@@ -21,6 +26,8 @@ export interface FiscalStatus {
   /** Past years with figures and no income tax return recorded. */
   unfiled: number[];
   invalid: number;
+  /** The dates of the year, for the strip of the card in the season. */
+  calendar: FiscalCalendar;
 }
 
 const MODEL_NAMES: Record<string, string> = { "720": "Modelo 720", "721": "Modelo 721" };
@@ -50,5 +57,6 @@ export const fiscalStatus = (events: readonly LedgerEvent[], today: string): Fis
     lines: attention.todo.map(todoText),
     unfiled: attention.unfiled_years,
     invalid: attention.invalid_events,
+    calendar: fiscalCalendar(events, today),
   };
 };

@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 import FiscalCard from "../src/routes/resumen/FiscalCard.jsx";
 import { fiscalStatus } from "../src/routes/resumen/fiscal-status.js";
 import { goldenEvents } from "./helpers/golden.js";
-import { show, text, withGoldenLedger } from "./helpers/render.jsx";
+import { show, text, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -84,14 +84,26 @@ const quiet = (): LedgerEvent[] => {
 const card = (season: boolean, date: string, ledger: LedgerEvent[] = events) => {
   const status = fiscalStatus(ledger, date);
   return show("/", () => (
-    <FiscalCard season={season} status={() => status} year={nextReturnYear({}, date)} />
+    <FiscalCard
+      season={season}
+      status={() => status}
+      year={nextReturnYear({}, date)}
+      today={date}
+      names={{}}
+    />
   ));
 };
 
 describe("the fiscal card of the summary", () => {
   it("keeps its place with a skeleton until the engine answers, in the season", async () => {
     const host = await show("/", () => (
-      <FiscalCard season={true} status={() => undefined} year={2028} />
+      <FiscalCard
+        season={true}
+        status={() => undefined}
+        year={2028}
+        today="2029-05-10"
+        names={{}}
+      />
     ));
     expect(text(host)).toContain("Declaración");
     expect(host.querySelector(".skel")).not.toBeNull();
@@ -102,6 +114,7 @@ describe("the fiscal card of the summary", () => {
     // May 2029: the 720 of 2028 has its securities abroad and no return recorded.
     const host = await card(true, "2029-05-10");
     expect(text(host)).toContain("Campaña de la Renta");
+    await until(() => host.querySelector(".fiscal-todo") !== null, "the list, which is lazy");
     expect(host.querySelector(".fiscal-todo")).not.toBeNull();
     expect(text(host)).toMatch(/tiene cifras y no consta|tienen cifras y no constan/);
   });

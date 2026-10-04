@@ -5,12 +5,18 @@
 // their own; all of them share the dates and the cursor. The privacy mode
 // takes the figures off the axes and the table, never the shape.
 
-import { contributedSeries } from "@atlas/domain/charts";
+import { type LedgerEvent, netWorthSeries } from "@atlas/domain";
+import { bookCashSeries, contributedSeries } from "@atlas/domain/charts";
 import { describe, expect, it } from "vitest";
 import { type ChartSeries, chartOptions, gapsOf } from "../src/components/chart/Chart.jsx";
 import { store } from "../src/ledger/state.js";
 import Resumen from "../src/routes/resumen/index.jsx";
-import { netWorthPlot, secondsOf, withContributed } from "../src/view-models/series.js";
+import {
+  netWorthPlot,
+  secondsOf,
+  withBookCash,
+  withContributed,
+} from "../src/view-models/series.js";
 import { goldenEvents } from "./helpers/golden.js";
 import { show, text, today, withGoldenLedger } from "./helpers/render.jsx";
 
@@ -108,19 +114,100 @@ describe("what was contributed as one more series of the plot", () => {
   });
 });
 
+describe("the books with their cash against what was contributed", () => {
+  it("draws 10.000 against 10.000 for a deposit of 10.000 and a purchase of 2.000", () => {
+    let n = 0;
+    const envelope = (type: string): Record<string, unknown> => ({
+      schema_version: 1,
+      id: `01ARYZ6S41TSV4RRFFQ6900${String(n++).padStart(3, "0")}`,
+      recorded_at: "2027-01-05T18:00:00.000Z",
+      type,
+      fingerprint: `sha256:${type}${n}`,
+    });
+    const money = { currency: "EUR", fx_rate: "1" };
+    const events = [
+      {
+        ...envelope("account_created"),
+        account_id: "acc_es",
+        name: "Cuenta",
+        platform: "test",
+        book: "core",
+        base_currency: "EUR",
+        country: "ES",
+        active: true,
+      },
+      {
+        ...envelope("asset_created"),
+        asset_id: "ast_f",
+        asset_type: "fund",
+        book: "core",
+        asset_class: "equity",
+        name: "Fondo",
+        currency: "EUR",
+        transferable: true,
+        active: true,
+      },
+      {
+        ...envelope("cash_deposit"),
+        account_id: "acc_es",
+        value_date: "2027-01-04",
+        amount: "10000",
+        fx_rate_date: "2027-01-04",
+        ...money,
+      },
+      {
+        ...envelope("buy"),
+        account_id: "acc_es",
+        asset_id: "ast_f",
+        trade_date: "2027-01-05",
+        value_date: "2027-01-05",
+        quantity: "10",
+        unit_price: "200",
+        fx_rate_date: "2027-01-05",
+        fee: "0",
+        source: "manual",
+        ...money,
+      },
+      {
+        ...envelope("valuation"),
+        account_id: "acc_es",
+        asset_id: "ast_f",
+        date: "2027-01-31",
+        quantity: "10",
+        unit_value: "200",
+        fx_rate_date: "2027-01-31",
+        source: "manual",
+        ...money,
+      },
+    ] as unknown as LedgerEvent[];
+    const options = { to: "2027-01-31" };
+    const plot = withContributed(
+      withBookCash(netWorthPlot(netWorthSeries(events, options)), bookCashSeries(events, options)),
+      contributedSeries(events, options),
+    );
+    // Not 2.000 (the assets alone) against 10.000: the cash is in the portfolio.
+    expect(plot.values[0]).toEqual([10000]);
+    expect(plot.values[2]).toEqual([10000]);
+    expect(plot.rows[0]?.values).toEqual(["10000", "0", "10000"]);
+    // Two books and what was contributed: no third line repeats the cash.
+    expect(plot.values).toHaveLength(3);
+  });
+});
+
 describe("the evolution of the summary", () => {
-  it("is a stack of three charts, the bucket and the cash on their own scale", async () => {
+  it("is a stack of two charts, the bucket with its cash on its own scale", async () => {
     today("2027-01-10");
     const host = await show("/", Resumen);
     const card = host.querySelector(".summary-evolution");
     const charts = [...(card?.querySelectorAll(".chart-plot") ?? [])];
     expect(charts.map((chart) => chart.className)).toEqual([
       "chart-plot is-main",
-      "chart-plot is-strip",
       "chart-plot is-end",
     ]);
     const names = [...(card?.querySelectorAll(".panel-name") ?? [])].map(text);
-    expect(names).toEqual(["Cubo escala propia", "Efectivo escala propia"]);
+    expect(names).toEqual(["Cubo escala propia"]);
+    // The cash is no panel of its own: it goes with its book (ADR-0004).
+    expect(text(card?.querySelector(".chart-legend"))).not.toMatch(/^Efectivo|· Efectivo/);
     expect(text(card?.querySelector(".chart-legend"))).toContain("Aportado");
   });
 
@@ -142,9 +229,8 @@ describe("the evolution of the summary", () => {
       chart.getAttribute("aria-label"),
     );
     expect(labels).toEqual([
-      "Evolución del patrimonio: cartera principal y lo aportado",
+      "Evolución del patrimonio: cartera principal con su efectivo y lo aportado",
       "Evolución del patrimonio: Cubo",
-      "Evolución del patrimonio: Efectivo",
     ]);
   });
 });

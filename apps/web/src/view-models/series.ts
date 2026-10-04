@@ -8,7 +8,12 @@
 // `spanGaps` off.
 
 import type { NetWorthSeries } from "@atlas/domain";
-import type { BucketIndexPctSeries, ContributedSeries } from "@atlas/domain/charts";
+import type {
+  BookCashSeries,
+  BucketIndexPctSeries,
+  ContributedSeries,
+  NoPercentageReason,
+} from "@atlas/domain/charts";
 import { gapsOf } from "../components/chart/gaps.js";
 import { displayName, type NameIndex, NO_NAMES } from "../format/names.js";
 
@@ -24,6 +29,12 @@ export interface PlottedSeries {
   drawn: number;
   total: number;
   missing?: MissingNote;
+  /**
+   * Why nothing is drawn when it is not a hole in the prices (the bucket has
+   * no investments, or no deposits to divide by): said apart, never as «sin
+   * precios» nor as pending prices.
+   */
+  idle?: NoPercentageReason;
 }
 
 /**
@@ -112,6 +123,30 @@ export const netWorthPlot = (
 };
 
 /**
+ * The two books **with the cash of their own accounts**, in place of the three
+ * blocks of the net worth (ADR-0004: net worth is the core, the bucket and the
+ * cash of the investment accounts). A portfolio funded with 10.000 that bought
+ * 2.000 stands at 10.000 against what was put in, not at 2.000, and the cash is
+ * not a third line that would count it again. The dates, the holes and the
+ * sentence about what is missing are those of `netWorthPlot`: a book is absent
+ * on the same dates that the three blocks were, so only the values change.
+ */
+export const withBookCash = (plot: PlottedSeries, series: BookCashSeries): PlottedSeries => ({
+  ...plot,
+  values: [
+    series.points.map((point) => numberOrNull(point.core_eur)),
+    series.points.map((point) => numberOrNull(point.bucket_eur)),
+  ],
+  rows: plot.rows.map((row, index) => ({
+    ...row,
+    values: [
+      stringOrUndefined(series.points[index]?.core_eur),
+      stringOrUndefined(series.points[index]?.bucket_eur),
+    ],
+  })),
+});
+
+/**
  * What was contributed, as one more series of the net worth plot, on **the
  * same dates** (the domain guarantees it): it is never absent, so it adds no
  * hole. The amounts of the table stay strings.
@@ -130,8 +165,16 @@ export const withContributed = (plot: PlottedSeries, series: ContributedSeries):
  * 020, E4, M7). The values are numbers only to place the line: what is shown
  * is the decimal string of the domain, formatted once.
  */
-export const bucketIndexPlot = (series: BucketIndexPctSeries): PlottedSeries => {
+export const bucketIndexPlot = (full: BucketIndexPctSeries): PlottedSeries => {
+  // A date with a reason (nothing invested yet, or nothing contributed) is not a
+  // hole: it is left out wherever it falls, so no band says «sin precios» over it
+  // and the rule of the holes does not count it. If nothing is drawn, the card
+  // says the reason of the last one, if the series ends there.
+  const points = full.points.filter((point) => point.reason === undefined);
+  const series = { ...full, points };
   const drawn = series.points.filter((point) => point.vs_index_pct !== undefined).length;
+  // Only when the series ENDS quiet: a hole after the quiet dates is a missing price, not a reason.
+  const lastReason: NoPercentageReason | undefined = full.points.at(-1)?.reason;
   const share = (value: { toString: () => string } | undefined): number | null =>
     value === undefined ? null : Number.parseFloat(value.toString());
   const text = (value: { toString: () => string } | undefined): string | undefined =>
@@ -148,11 +191,12 @@ export const bucketIndexPlot = (series: BucketIndexPctSeries): PlottedSeries => 
     })),
     drawn,
     total: series.points.length,
+    ...(drawn === 0 && lastReason !== undefined ? { idle: lastReason } : {}),
     ...(drawn === series.points.length
       ? {}
       : {
           missing: {
-            line: `En ${series.points.length - drawn} de ${series.points.length} fechas falta el precio del índice o de algún activo del cubo, o aún no había aportado nada: la comparación se corta ahí.`,
+            line: `En ${series.points.length - drawn} de ${series.points.length} fechas falta el precio del índice o de algún activo del cubo: la comparación se corta ahí.`,
             from: [],
           },
         }),

@@ -1,6 +1,10 @@
 // The evolution of the net worth of the summary (feature 020, E4, M3): the
-// main panel with the core and what was contributed (a step), and a strip for
-// the bucket and another for the cash, each on its own scale.
+// main panel with the core **and the cash of its accounts** against what was
+// contributed (a step), and a strip for the bucket with the cash of its own,
+// on its own scale. Net worth is the core, the bucket and the cash of the
+// investment accounts (ADR-0004): each cash goes with its book, so nothing is
+// counted twice, no third panel repeats it, and the breakdown stays in the
+// block of the net worth above.
 
 import { type JSX, Show } from "solid-js";
 import { SeriesCard } from "../../components/chart/index.js";
@@ -17,11 +21,11 @@ export const EvolutionCard = (props: {
     title="Evolución del patrimonio"
     asOf={props.asOf}
     class="span-12 summary-evolution"
-    labels={["Cartera principal", "Cubo", "Efectivo", "Aportado"]}
-    colours={["--c-series-core", "--c-series-bucket", "--c-series-cash", "--c-series-contrib"]}
-    dashes={[undefined, undefined, undefined, [6, 4]]}
-    stepped={[3]}
-    panels={[{ series: [0, 3] }, { series: [1], name: "Cubo" }, { series: [2], name: "Efectivo" }]}
+    labels={["Cartera principal con su efectivo", "Cubo con su efectivo", "Aportado"]}
+    colours={["--c-series-core", "--c-series-bucket", "--c-series-contrib"]}
+    dashes={[undefined, undefined, [6, 4]]}
+    stepped={[2]}
+    panels={[{ series: [0, 2] }, { series: [1], name: "Cubo" }]}
     foot={
       <Show when={props.uncoveredBuys}>
         <p class="card-note">

@@ -18,13 +18,22 @@
 // arrives the card keeps its place with a skeleton, and the row says its
 // neutral state already.
 
+import type { CivilDate } from "@atlas/domain";
 import { A } from "@solidjs/router";
-import { For, type JSX, Show } from "solid-js";
+import { type JSX, lazy, Show } from "solid-js";
 import { Icon, Section, Skeleton } from "../../components/index.js";
+import type { NameIndex } from "../../format/names.js";
 import type { FiscalStatus } from "./fiscal-status.js";
 
+/**
+ * What the card says in the season, once the engine has answered (list, short
+ * calendar, notes): lazy, so none of it weighs on the boot, which keeps the
+ * title, the skeleton and the link in their place from the first paint.
+ */
+const SeasonBody = lazy(() => import("./SeasonBody.jsx"));
+
 /** «2026, 2027 y 2028», in Spanish. */
-const yearsList = (years: readonly number[]): string =>
+export const yearsList = (years: readonly number[]): string =>
   years.length <= 1
     ? years.join("")
     : `${years.slice(0, -1).join(", ")} y ${years[years.length - 1]}`;
@@ -35,6 +44,8 @@ export default function FiscalCard(props: {
   status: () => FiscalStatus | undefined;
   /** The year whose return comes next (`nextReturnYear` of the domain). */
   year: number;
+  today: CivilDate;
+  names: NameIndex;
 }): JSX.Element {
   return (
     <Show
@@ -63,35 +74,7 @@ export default function FiscalCard(props: {
         aside={<span class="scope">Campaña de la Renta</span>}
       >
         <Show when={props.status()} fallback={<Skeleton lines={2} />}>
-          {(current) => (
-            <>
-              <Show
-                when={current().lines.length > 0 || current().unfiled.length > 0}
-                fallback={
-                  <p class="card-note">
-                    La base del ahorro del ejercicio, las casillas del Modelo 100 y si te toca el
-                    Modelo 720.
-                  </p>
-                }
-              >
-                <ul class="fiscal-todo">
-                  <For each={current().lines}>{(line) => <li>{line}</li>}</For>
-                  <Show when={current().unfiled.length > 0}>
-                    <li>
-                      {current().unfiled.length === 1
-                        ? `El ejercicio ${current().unfiled[0]} tiene cifras y no consta como declarado.`
-                        : `Los ejercicios ${yearsList(current().unfiled)} tienen cifras y no constan como declarados.`}
-                    </li>
-                  </Show>
-                </ul>
-              </Show>
-              <Show when={current().invalid > 0}>
-                <p class="card-note">
-                  Con movimientos inválidos no se calcula nada fiscal: repáralos primero.
-                </p>
-              </Show>
-            </>
-          )}
+          {(current) => <SeasonBody status={current()} today={props.today} names={props.names} />}
         </Show>
         <A href="/fiscal" class="card-foot">
           <span>Ver la declaración</span>
