@@ -813,3 +813,48 @@ Con los tres recortes el total queda en ~312.300: **todavía ~300 por encima**, 
 ### 14.1 El paquete
 
 **Decisión de la persona, 04/10**: la autorización del total sube de 312.000 a **500.000** bytes gzip. Sustituye a la parada de §13.3 (opciones a-d): no se recorta nada de lo fusionado y se termina M12 entera, con la versión corta dentro de *Declaración*. El arranque sigue en 76.069. Cambia `TOTAL_AUTHORISED_GZIP_BYTES` en `apps/web/scripts/check-bundle.mjs` y su test; la disciplina del plan §6.4 no cambia: cada techo sigue en lo medido más un margen pequeño, en su commit y delante del que lo necesita. 500.000 es un muro, no un objetivo.
+
+### 14.2 Lo aportado frente a la cartera con su efectivo (revisión 13.5 punto 1)
+
+**Decisión de la persona, 04/10**: el panel principal enfrenta lo aportado con el valor de la cartera **más el efectivo de las cuentas de inversión** (ADR-0004: patrimonio = núcleo + cubo + efectivo de las cuentas de inversión; FR-041). Antes enfrentaba solo los activos y dejaba el efectivo en un tercer panel: con un ingreso de 10.000 y una compra de 2.000, 2.000 contra 10.000.
+
+- **Dominio** (`bookCashSeries`, en `@atlas/domain/charts`, perezoso): cada punto da el núcleo con el efectivo de sus cuentas y el cubo con el de las suyas, sumando lo que ya da `netWorth` (activos y filas de efectivo ya convertidas), con el libro actual de cada cuenta. Un libro sin valor donde le falta un precio o el tipo de su efectivo. Las dos líneas suman el patrimonio sin contar nada dos veces ni mezclar libros. Prueba con el ejemplo: 10.000 contra 10.000 (dominio y `chart-panels.test.tsx`).
+- **Web**: dos paneles (cartera con su efectivo y lo aportado; cubo con su efectivo, «escala propia»); desaparece el panel «Efectivo». El desglose del patrimonio en núcleo, cubo y efectivo sigue visible en el bloque del patrimonio de arriba. El texto de `business-rules.md` (§ «Lo aportado») se corrige para decir lo mismo que el código.
+
+### 14.3 Plazos del 720 y el 721 verificados contra fuentes primarias
+
+Leído el 2026-10-04, solo fuentes públicas:
+
+| Fuente | Qué dice |
+|---|---|
+| BOE, texto consolidado de la Orden HAP/72/2013 (<https://www.boe.es/buscar/act.php?id=BOE-A-2013-954>) | Art. 7: «entre el 1 de enero y el 31 de marzo del año siguiente a aquel al que se refiera la información». Transitoria única: el ejercicio 2012 fue del 1 de febrero al 30 de abril de 2013. Última actualización publicada 31/10/2023 (Orden HFP/1180/2023, arts. 2.1 y 2.2, que no tocan el art. 7; se aplica desde el ejercicio 2023). |
+| BOE, texto consolidado de la Orden HFP/886/2023 (<https://www.boe.es/buscar/act.php?id=BOE-A-2023-17429>) | Art. 4: el mismo plazo para el 721; primer ejercicio 2023. Solo se sustituye su anexo (Orden HAC/1504/2024). No dice nada de días inhábiles. |
+| AEAT, plazos de presentación del 720 y del 721 | «del 1 de enero al 31 de marzo de 2026» (ejercicio 2025), más los cuatro días naturales siguientes si hay imposibilidad técnica. No habla de días inhábiles. |
+| BOE, Ley 39/2015, art. 30.5 (<https://www.boe.es/buscar/act.php?id=BOE-A-2015-10565>) | «Cuando el último día del plazo sea inhábil, se entenderá prorrogado al primer día hábil siguiente»; los sábados, domingos y festivos son inhábiles (art. 30.2). |
+
+**Resultado**: el 31/03 es el plazo escrito para todos los ejercicios de la tabla (2013-2026 el 720; 2023-2026 el 721). Los **ejercicios con 31 de marzo en día hábil** (todos menos 2017, 2018 y 2023) quedan **verificados** y pierden la marca «sin verificar». **No pude verificar** los de 31 de marzo en fin de semana: 2017 (sábado 31/03/2018), 2018 (domingo 31/03/2019) y 2023 (domingo 31/03/2024, también el 721): la regla general los llevaría a 02/04/2018, 01/04/2019 y 01/04/2024 y la prensa de la época dijo eso, pero **ninguna fuente primaria** (AEAT o BOE) lo fija para estos modelos, ni encontré el calendario del contribuyente legible de esos años (PDF sin texto extraíble). La tabla deja el 31/03 y los marca «sin verificar», con la nota. Es una duda para el asesor (`docs/fiscal-questions.md` #10).
+
+**Discrepancia con lo supuesto antes**: la revisión 13.5.3 decía que «2017, 2018 y 2023 caen en fin de semana»: se confirma, y es lo único que había que marcar; el resto de años quedan como estaban en fecha y pasan a verificados. Los plazos de los ejercicios 2027 en adelante siguen sin fila («sin verificar»).
+
+### 14.4 Años sin cubo (revisión 13.5 punto 4)
+
+La frase elegida es **«Sin inversiones en el cubo»** (en la tarjeta *Frente al índice*, con «Abrir una tesis»). Cuando hay compras y ningún ingreso registrado en la cuenta del cubo, el motivo real es **«El cubo tiene compras y ningún ingreso registrado en su cuenta: sin lo aportado no hay porcentaje que dibujar»**, con «Registrar un ingreso».
+
+- **Dominio**: `bucketIndexPctSeries` pone un `reason` (`no_investments`, `no_contributions`) en los puntos sin porcentaje que no son un precio que falta.
+- **Web**: las fechas anteriores a que el cubo tenga algo que comparar **no se dibujan como hueco** (ni banda «sin precios») ni cuentan para la regla del hueco; si no queda ninguna, la tarjeta dice el motivo en vez de «pendiente de precios». Un precio que de verdad falta sigue siendo un hueco, como antes.
+
+### 14.5 Paquete (medidas)
+
+| Paso | Arranque | Total |
+|---|---:|---:|
+| Estado de E4 al empezar esta parte | 75.935 | 311.947 |
+| Calendario (tira, lista, versión corta; el cuerpo de la campaña perezoso) | 76.019 | 314.661 |
+| Plazos con su marca | 76.021 | 314.917 |
+| Evolución con el efectivo de cada libro | 76.035 | 315.154 |
+| Cubo sin nada que comparar | 76.024 | 315.489 |
+
+La primera versión del calendario dejaba el arranque en **76.636**, por encima de su autorización (76.069, que **no** se ha tocado): lo que la tarjeta de *Declaración* dice en campaña (lista, calendario corto, notas) pasó a un trozo perezoso (`SeasonBody`) y el arranque conserva solo el cascarón. Techos: arranque 76.055, total 315.745. Margen de arranque hasta la autorización: 45 bytes; la próxima cosa que quiera sitio en el arranque necesita M14 (estilos por pantalla).
+
+### 14.6 Salida fiscal
+
+Nada de esta parte toca el motor fiscal (`tax`, `gains`, `income`, `m720`, `m721`, `filed`): `fiscalCalendar` y `FILING_DEADLINES` no los llaman (ver §13.1). Comprobado con el mismo `020-e4-fiscal.sh` (66 ficheros) contra la salida de `develop`.
