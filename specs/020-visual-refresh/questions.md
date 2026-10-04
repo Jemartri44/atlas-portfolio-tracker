@@ -859,3 +859,9 @@ La primera versión del calendario dejaba el arranque en **76.636**, por encima 
 ### 14.6 Salida fiscal
 
 Nada de esta parte toca el motor fiscal (`tax`, `gains`, `income`, `m720`, `m721`, `filed`): `fiscalCalendar` y `FILING_DEADLINES` no los llaman (ver §13.1). Comprobado con el mismo `020-e4-fiscal.sh` (66 ficheros) contra la salida de `develop`: **los mismos bytes**, salvo la fecha de consulta que imprimen (la salida de partida se guardó el 03/10 y esta es del 04/10; con la fecha normalizada, idénticos); `git diff origin/develop -- tests/fixtures` vacío.
+
+## 15. Fuga de directorios temporales de los tests (04/10)
+
+Medido en `/tmp`: 129.397 carpetas `atlas-*` desde el 26/09 (≈ 5,3 GB y 0,9 M de inodos). Por prefijo: `atlas-sync-014-` 79.940 (`packages/adapters/test/sync/devices.ts`, `consoleDevice`, que además usan los tests de propiedad), `atlas-ledger-` 11.371 (`packages/adapters/test/file.test.ts`), `atlas-prices-013-` 9.103 (`apps/cli/test/prices/folder.ts`), `atlas-remote-015-` 7.463 (`apps/cli/test/support/console.ts`), `atlas-admin-` 4.450 y otros (`atlas-walk-014-`, `atlas-rates-`, `atlas-012-draft*`, `atlas-push-`, `atlas-lock-`, `atlas-ecb-`). Causa: `mkdtemp(join(tmpdir(), "atlas-…"))` sin `rm` al terminar. Además, las capturas de la 020 dejan perfiles de Chromium `atlas-020-*`.
+
+Arreglo propuesto, **no hecho** (toca la configuración común de los siete proyectos de Vitest): un `globalSetup` que fije `TMPDIR` a un directorio por ejecución y lo borre al terminar; o un `rm` en cada `afterEach`/`afterAll` de los ayudantes de arriba. Decide la dirección. Mientras tanto, limpieza manual: `find /tmp -maxdepth 1 -type d -name 'atlas-*' -user ubuntu -mmin +120 -exec rm -rf -- {} +`.
