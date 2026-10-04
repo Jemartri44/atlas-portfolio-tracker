@@ -302,6 +302,7 @@
   display: block;
   fill: currentcolor;
   font-size: var(--text-sm);
+  overflow: visible;
 }
 
 .calendar-strip rect {
