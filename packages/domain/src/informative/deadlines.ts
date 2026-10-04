@@ -49,8 +49,6 @@ export interface FilingDeadline {
    * calendar says it, the interface marks it. Never supposed.
    */
   verified: boolean;
-  /** Why a row is not verified, in Spanish: what is known and what is missing. */
-  note?: string;
   source: {
     norm: string;
     article: string;
@@ -70,19 +68,15 @@ const ORDER_720 = {
 const ORDER_721 = {
   norm: "Orden HFP/886/2023, de 26 de julio",
   article: "art. 4",
-  url: "https://www.boe.es/buscar/doc.php?id=BOE-A-2023-17429",
+  url: "https://www.boe.es/buscar/act.php?id=BOE-A-2023-17429",
   checked: "2026-10-04",
 } as const;
 
-/** The years whose 31 March is a Saturday or a Sunday, with the day the general rule would give. */
-const WEEKEND_NEXT: Readonly<Record<number, string>> = {
-  2017: "2018-04-02",
-  2018: "2019-04-01",
-  2023: "2024-04-01",
-};
-
-const weekendNote = (year: number): string =>
-  `El 31/03/${year + 1} cae en fin de semana. El art. 30.5 de la Ley 39/2015 lo llevaría al primer día hábil (${WEEKEND_NEXT[year]}), y lo contó la prensa de la época, pero no hay una fuente primaria (AEAT o BOE) que fije ese día para este modelo: no se supone.`;
+/**
+ * The years whose 31 March is a Saturday or a Sunday: nobody has verified what
+ * the day becomes (the question for the advisor is in `fiscal-questions.md`).
+ */
+const WEEKEND_YEARS: readonly number[] = [2017, 2018, 2023];
 
 /** One row per year, `first` to `last`: from 1 January to 31 March of the next year. */
 const rows = (
@@ -93,13 +87,11 @@ const rows = (
 ): FilingDeadline[] =>
   Array.from({ length: last - first + 1 }, (_, index) => {
     const year = first + index;
-    const weekend = WEEKEND_NEXT[year] !== undefined;
     return {
       model,
       year,
       deadline: `${year + 1}-03-31`,
-      verified: !weekend,
-      ...(weekend ? { note: weekendNote(year) } : {}),
+      verified: !WEEKEND_YEARS.includes(year),
       source,
     };
   });

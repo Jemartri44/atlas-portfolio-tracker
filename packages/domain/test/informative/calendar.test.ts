@@ -201,15 +201,10 @@ describe("FILING_DEADLINES", () => {
       [0, 6].includes(new Date(`${deadline}T00:00:00Z`).getUTCDay());
     for (const row of FILING_DEADLINES) {
       expect(row.verified, `${row.model} ${row.year}`).toBe(!weekend(row.deadline));
-      // An unverified row says why, with the day the general rule would give; a verified one says nothing.
-      expect(row.note !== undefined).toBe(!row.verified);
     }
     expect(
       FILING_DEADLINES.filter((row) => !row.verified).map((row) => `${row.model}-${row.year}`),
     ).toEqual(["720-2017", "720-2018", "720-2023", "721-2023"]);
-    const note = FILING_DEADLINES.find((row) => row.model === "720" && row.year === 2017)?.note;
-    expect(note).toContain("2018-04-02");
-    expect(note).toContain("Ley 39/2015");
   });
 });
 
