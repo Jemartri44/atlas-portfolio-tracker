@@ -42,7 +42,7 @@ const at = (date: CivilDate, year: number): number =>
 /** The sentence of one date, without its day. */
 export const calendarPhrase = (one: CalendarDate, names: NameIndex): string =>
   one.kind === "filing_deadline"
-    ? `${SAYS[one.kind]} ${one.model} de ${one.year}`
+    ? `${SAYS[one.kind]} ${one.model} de ${one.year}${one.verified === false ? ` · ${UNVERIFIED}` : ""}`
     : one.kind === "wash_sale_end"
       ? `${SAYS[one.kind]}: ${displayName(names, one.sources[1])}`
       : SAYS[one.kind];

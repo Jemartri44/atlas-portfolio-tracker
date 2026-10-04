@@ -48,6 +48,30 @@ describe("the fiscal calendar of /fiscal", () => {
     expect(text(host)).toMatch(/Plazo del Modelo 72[01] de 2030: sin verificar/);
   });
 
+  it("marks a deadline nobody verified, and no other", async () => {
+    const calendar = fiscalCalendar(events, MAY);
+    const deadline = (verified: boolean) =>
+      ({
+        date: "2029-03-31",
+        kind: "filing_deadline",
+        model: "720",
+        year: 2028,
+        verified,
+        sources: [],
+      }) as ReturnType<typeof fiscalCalendar>["dates"][number];
+    const host = await show("/", () => (
+      <CalendarCard
+        calendar={{ ...calendar, dates: [deadline(false), { ...deadline(true), model: "721" }] }}
+        today={MAY}
+        names={{}}
+      />
+    ));
+    const rows = [...host.querySelectorAll(".calendar-list li")].map((row) => text(row));
+    expect(rows[0]).toContain("Plazo del Modelo 720 de 2028 · sin verificar");
+    expect(rows[1]).toContain("Plazo del Modelo 721 de 2028");
+    expect(rows[1]).not.toContain("sin verificar");
+  });
+
   it("puts a date after the year at the right edge with its year and an arrow", async () => {
     const calendar = {
       ...fiscalCalendar(events, MAY),
