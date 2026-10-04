@@ -17,7 +17,7 @@ export const CalendarCard = (props: {
   names: NameIndex;
 }): JSX.Element => (
   <Section title="Calendario fiscal" class="span-12" label="Calendario fiscal">
-    <CalendarStrip calendar={props.calendar} today={props.today} />
+    <CalendarStrip calendar={props.calendar} today={props.today} names={props.names} />
     <ul class="calendar-list">
       <For each={props.calendar.dates}>
         {(one) => (

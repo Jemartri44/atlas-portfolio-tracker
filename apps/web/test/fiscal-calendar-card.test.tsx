@@ -23,9 +23,11 @@ describe("the fiscal calendar of /fiscal", () => {
     const calendar = fiscalCalendar(events, MAY);
     const host = await show("/", () => <CalendarCard calendar={calendar} today={MAY} names={{}} />);
     const strip = host.querySelector("svg.calendar-strip");
-    expect(strip?.getAttribute("aria-label")).toBe(
-      `Calendario fiscal de 2029: ${calendar.dates.length} fechas`,
-    );
+    // The label says every date, for a screen reader.
+    const label = strip?.getAttribute("aria-label") ?? "";
+    expect(label).toContain("Calendario fiscal de 2029: ");
+    expect(label.split("; ").length).toBe(calendar.dates.length);
+    expect(label).toContain("Termina la campaña de la Renta");
     const rows = [...host.querySelectorAll(".calendar-list li")];
     expect(rows.length).toBe(calendar.dates.length + calendar.unknown_deadlines.length);
     expect(text(host)).toContain("Termina la campaña de la Renta");
@@ -70,6 +72,33 @@ describe("the fiscal calendar of /fiscal", () => {
     expect(rows[0]).toContain("Plazo del Modelo 720 de 2028 · sin verificar");
     expect(rows[1]).toContain("Plazo del Modelo 721 de 2028");
     expect(rows[1]).not.toContain("sin verificar");
+    // The strip marks the unverified deadline and says so to a screen reader.
+    const strip = host.querySelector("svg.calendar-strip");
+    expect(strip?.querySelectorAll(":scope > svg text").length).toBe(1);
+    expect(strip?.getAttribute("aria-label")).toContain("2028 · sin verificar");
+  });
+
+  it("names every asset whose window ends the same day", async () => {
+    const calendar = {
+      ...fiscalCalendar(events, MAY),
+      dates: [
+        {
+          date: "2029-06-10",
+          kind: "wash_sale_end",
+          year: 2029,
+          sources: ["e1", "ast_a", "e2", "ast_b", "e3", "ast_a"],
+        },
+      ] as ReturnType<typeof fiscalCalendar>["dates"],
+      unknown_deadlines: [],
+    };
+    const names = { ast_a: "Fondo A", ast_b: "Fondo B" };
+    const host = await show("/", () => (
+      <CalendarCard calendar={calendar} today={MAY} names={names} />
+    ));
+    expect(text(host.querySelector(".calendar-list"))).toContain("recompra: Fondo A, Fondo B");
+    expect(host.querySelector("svg.calendar-strip")?.getAttribute("aria-label")).toContain(
+      "Fondo B",
+    );
   });
 
   it("puts a date after the year at the right edge with its year and an arrow", async () => {

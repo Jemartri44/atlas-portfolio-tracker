@@ -44,12 +44,15 @@ export const calendarPhrase = (one: CalendarDate, names: NameIndex): string =>
   one.kind === "filing_deadline"
     ? `${SAYS[one.kind]} ${one.model} de ${one.year}${one.verified === false ? ` · ${UNVERIFIED}` : ""}`
     : one.kind === "wash_sale_end"
-      ? `${SAYS[one.kind]}: ${displayName(names, one.sources[1])}`
+      ? `${SAYS[one.kind]}: ${[...new Set(one.sources.filter((_, index) => index % 2 === 1))]
+          .map((id) => displayName(names, id))
+          .join(", ")}`
       : SAYS[one.kind];
 
 export const CalendarStrip = (props: {
   calendar: FiscalCalendar;
   today: CivilDate;
+  names: NameIndex;
 }): JSX.Element => {
   const { year, season } = props.calendar;
   const now = at(props.today, year);
@@ -60,7 +63,9 @@ export const CalendarStrip = (props: {
       height="56"
       width="100%"
       role="img"
-      aria-label={`Calendario fiscal de ${year}: ${props.calendar.dates.length} fechas`}
+      aria-label={`Calendario fiscal de ${year}: ${props.calendar.dates
+        .map((one) => `${formatDate(one.date)} ${calendarPhrase(one, props.names)}`)
+        .join("; ")}`}
     >
       <rect x={`${start}%`} width={`${at(season.end, year) - start}%`} y="8" height="28" />
       <For each={"EFMAMJJASOND".split("")}>
@@ -75,6 +80,11 @@ export const CalendarStrip = (props: {
         {(one) => (
           <svg x={`${at(one.date, year)}%`} y="22" overflow="visible" aria-hidden="true">
             <path d={SHAPE[one.kind]} opacity={one.date < props.today ? 0.4 : 1} />
+            <Show when={one.verified === false}>
+              <text x="8" y="-8">
+                ?
+              </text>
+            </Show>
             <Show when={Number(one.date.slice(0, 4)) > year}>
               <text x="-8" y="-8" text-anchor="end">{`${one.date.slice(0, 4)} ›`}</text>
             </Show>
@@ -95,7 +105,7 @@ export default function CalendarShort(props: {
     props.calendar.dates.find((one) => one.kind !== "season_start" && one.date >= props.today);
   return (
     <div class="calendar-short">
-      <CalendarStrip calendar={props.calendar} today={props.today} />
+      <CalendarStrip calendar={props.calendar} today={props.today} names={props.names} />
       <Show when={next()}>
         {(one) => (
           <p class="card-note">
