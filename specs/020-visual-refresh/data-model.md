@@ -101,7 +101,6 @@ FiscalCalendar { year: number; season: { start: CivilDate; end: CivilDate };
 ```
 FilingDeadline { model: "720" | "721"; year: number; deadline: CivilDate;
                  verified: boolean;          // false si el 31/03 cae en fin de semana: sin fuente primaria para el día efectivo
-                 note?: string;              // por qué no está verificado
                  source: { norm: string; article: string; url: string; checked: CivilDate } }
 ```
 

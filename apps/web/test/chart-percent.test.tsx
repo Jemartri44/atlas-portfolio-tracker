@@ -171,6 +171,21 @@ describe("the bucket against the index, in percent", () => {
     expect(bucketIndexPlot({ ...series, points: [] }).idle).toBeUndefined();
   });
 
+  it("says no reason when the quiet dates are followed by a missing price", () => {
+    const quiet = {
+      date: "2027-01-01",
+      reason: "no_investments" as const,
+      missing: [],
+      idle: 0,
+    };
+    const plot = bucketIndexPlot({
+      ...series,
+      points: [quiet, point("2027-02-01"), point("2027-06-30")],
+    });
+    expect(plot.idle).toBeUndefined();
+    expect(plot.missing?.line).toContain("En 2 de 2 fechas");
+  });
+
   it("leaves out a date with a reason after a missing price too, and keeps the reason", () => {
     const quiet = (date: string) => ({
       date,

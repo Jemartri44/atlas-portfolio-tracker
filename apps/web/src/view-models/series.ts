@@ -169,10 +169,12 @@ export const bucketIndexPlot = (full: BucketIndexPctSeries): PlottedSeries => {
   // A date with a reason (nothing invested yet, or nothing contributed) is not a
   // hole: it is left out wherever it falls, so no band says «sin precios» over it
   // and the rule of the holes does not count it. If nothing is drawn, the card
-  // says the reason of the last one.
+  // says the reason of the last one, if the series ends there.
   const points = full.points.filter((point) => point.reason === undefined);
   const series = { ...full, points };
   const drawn = series.points.filter((point) => point.vs_index_pct !== undefined).length;
+  // Only when the series ENDS quiet: a hole after the quiet dates is a missing price, not a reason.
+  const lastReason: NoPercentageReason | undefined = full.points.at(-1)?.reason;
   const share = (value: { toString: () => string } | undefined): number | null =>
     value === undefined ? null : Number.parseFloat(value.toString());
   const text = (value: { toString: () => string } | undefined): string | undefined =>
@@ -189,12 +191,7 @@ export const bucketIndexPlot = (full: BucketIndexPctSeries): PlottedSeries => {
     })),
     drawn,
     total: series.points.length,
-    ...(drawn === 0 && points.length < full.points.length
-      ? {
-          idle: full.points.findLast((point) => point.reason !== undefined)
-            ?.reason as NoPercentageReason,
-        }
-      : {}),
+    ...(drawn === 0 && lastReason !== undefined ? { idle: lastReason } : {}),
     ...(drawn === series.points.length
       ? {}
       : {
