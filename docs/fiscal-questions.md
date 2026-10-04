@@ -172,6 +172,7 @@ Por probabilidad de aparecer en esta cartera:
 8. **Pérdida por quiebra de un emisor o de un *exchange***: créditos vencidos y no cobrados, con el régimen y los plazos del art. 14.2.k).
 9. **Impuesto sobre el Patrimonio**: obligación de declarar por encima de 2.000.000 € de bienes y derechos aunque no salga cuota. Con horizonte de veinte años, llega.
 10. **Quedan excluidos explícitamente**, para que nadie los reproponga: los coeficientes de abatimiento (DT 9ª, solo para adquisiciones anteriores a 1995) y el oro físico en lingote, que sí es ganancia patrimonial a diferencia del ETC.
+11. **Plazo del 720 y del 721 cuando el 31 de marzo cae en sábado o domingo** (ejercicios 2017, 2018 y 2023 del 720 y 2023 del 721; `business-rules.md` §5.8). ¿Se prorroga al primer día hábil (art. 30.5 Ley 39/2015)? No hay fuente primaria que lo diga para estos modelos, y la tabla `FILING_DEADLINES` los deja «sin verificar». Además, **si el primer día hábil es el lunes de Pascua** (02/04/2018 y 01/04/2024), depende de que sea festivo en la comunidad del contribuyente (art. 30.6 de la misma ley: festivo autonómico en varias comunidades), así que la fecha final **depende de dónde resida**.
 
 ---
 
@@ -194,8 +195,6 @@ Son de la clase "barata ahora, carísima después". **Ninguno exige decidir hoy 
 | 7 | **Permuta cripto-cripto** | Regla de valoración del art. 37.1.h | Falta 3 |
 | 8 | **Si una acción corporativa se acoge al régimen de neutralidad** | Decide si un `merger` es `convert` (sin tributación) o permuta sujeta | #7, #13 |
 | 9 | **Lotes de divisa** con su tipo de adquisición | El FIFO por divisa no es computable sobre saldos | #4 |
-
-| 10 | **Plazo del 720 y del 721 cuando el 31 de marzo cae en sábado o domingo** | Ejercicios 2017, 2018 y 2023 (720) y 2023 (721): ¿se prorroga al primer día hábil (art. 30.5 Ley 39/2015)? Sin fuente primaria que lo diga para estos modelos; la tabla `FILING_DEADLINES` los deja «sin verificar» | `business-rules.md` §5.8 |
 
 ---
 

@@ -832,7 +832,7 @@ Leído el 2026-10-04, solo fuentes públicas:
 | AEAT, plazos de presentación del 720 y del 721 | «del 1 de enero al 31 de marzo de 2026» (ejercicio 2025), más los cuatro días naturales siguientes si hay imposibilidad técnica. No habla de días inhábiles. |
 | BOE, Ley 39/2015, art. 30.5 (<https://www.boe.es/buscar/act.php?id=BOE-A-2015-10565>) | «Cuando el último día del plazo sea inhábil, se entenderá prorrogado al primer día hábil siguiente»; los sábados, domingos y festivos son inhábiles (art. 30.2). |
 
-**Resultado**: el 31/03 es el plazo escrito para todos los ejercicios de la tabla (2013-2026 el 720; 2023-2026 el 721). Los **ejercicios con 31 de marzo en día hábil** (todos menos 2017, 2018 y 2023) quedan **verificados** y pierden la marca «sin verificar». **No pude verificar** los de 31 de marzo en fin de semana: 2017 (sábado 31/03/2018), 2018 (domingo 31/03/2019) y 2023 (domingo 31/03/2024, también el 721): la regla general los llevaría a 02/04/2018, 01/04/2019 y 01/04/2024 y la prensa de la época dijo eso, pero **ninguna fuente primaria** (AEAT o BOE) lo fija para estos modelos, ni encontré el calendario del contribuyente legible de esos años (PDF sin texto extraíble). La tabla deja el 31/03 y los marca «sin verificar», con la nota. Es una duda para el asesor (`docs/fiscal-questions.md` #10).
+**Resultado**: el 31/03 es el plazo escrito para todos los ejercicios de la tabla (2013-2026 el 720; 2023-2026 el 721). Los **ejercicios con 31 de marzo en día hábil** (todos menos 2017, 2018 y 2023) quedan **verificados** y pierden la marca «sin verificar». **No pude verificar** los de 31 de marzo en fin de semana: 2017 (sábado 31/03/2018), 2018 (domingo 31/03/2019) y 2023 (domingo 31/03/2024, también el 721): la regla general los llevaría a 02/04/2018, 01/04/2019 y 01/04/2024 y la prensa de la época dijo eso, pero **ninguna fuente primaria** (AEAT o BOE) lo fija para estos modelos, ni encontré el calendario del contribuyente legible de esos años (PDF sin texto extraíble). La tabla deja el 31/03 y los marca «sin verificar» (la pantalla lo dice; el porqué vive aquí y en `docs/fiscal-questions.md`, no en el dato). Es una duda para el asesor (`docs/fiscal-questions.md`, «Lo que falta y ningún criterio cubre», punto 11), que además depende del festivo autonómico si el día hábil es el lunes de Pascua (02/04/2018 y 01/04/2024; art. 30.6 de la Ley 39/2015).
 
 **Discrepancia con lo supuesto antes**: la revisión 13.5.3 decía que «2017, 2018 y 2023 caen en fin de semana»: se confirma, y es lo único que había que marcar; el resto de años quedan como estaban en fecha y pasan a verificados. Los plazos de los ejercicios 2027 en adelante siguen sin fila («sin verificar»).
 
@@ -851,7 +851,8 @@ La frase elegida es **«Sin inversiones en el cubo»** (en la tarjeta *Frente al
 | Calendario (tira, lista, versión corta; el cuerpo de la campaña perezoso) | 76.019 | 314.661 |
 | Plazos con su marca | 76.021 | 314.917 |
 | Evolución con el efectivo de cada libro | 76.035 | 315.154 |
-| Cubo sin nada que comparar | 76.024 | 315.489 |
+| Cubo sin nada que comparar | 76.036 | 315.544 |
+| Ronda 1 de la revisión (sin la nota del plazo, con la marca y el texto de la tira) | 76.028 | 315.302 |
 
 La primera versión del calendario dejaba el arranque en **76.636**, por encima de su autorización (76.069, que **no** se ha tocado): lo que la tarjeta de *Declaración* dice en campaña (lista, calendario corto, notas) pasó a un trozo perezoso (`SeasonBody`) y el arranque conserva solo el cascarón. Techos: arranque 76.055, total 315.745. Margen de arranque hasta la autorización: 45 bytes; la próxima cosa que quiera sitio en el arranque necesita M14 (estilos por pantalla).
 

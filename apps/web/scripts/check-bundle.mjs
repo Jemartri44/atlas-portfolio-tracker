@@ -517,7 +517,7 @@ const dist = join(webRoot, "dist");
  */
 /*
  * **Feature 020, E4, M12 (2026-10-04): measured 76.019 (+84 over the 75.935 of
- * the committed E4), ceiling 76.044 — measured + 20**, inside the
+ * the committed E4), ceiling 76.044 — measured + 25**, inside the
  * authorisation (76.069), which leaves 45 bytes. The first drawing of the
  * calendar took the boot to 76.636, **over** the authorisation, because the
  * card of the summary carried the list, the notes and the strip; what the
