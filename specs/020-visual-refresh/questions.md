@@ -857,4 +857,4 @@ La primera versión del calendario dejaba el arranque en **76.636**, por encima 
 
 ### 14.6 Salida fiscal
 
-Nada de esta parte toca el motor fiscal (`tax`, `gains`, `income`, `m720`, `m721`, `filed`): `fiscalCalendar` y `FILING_DEADLINES` no los llaman (ver §13.1). Comprobado con el mismo `020-e4-fiscal.sh` (66 ficheros) contra la salida de `develop`.
+Nada de esta parte toca el motor fiscal (`tax`, `gains`, `income`, `m720`, `m721`, `filed`): `fiscalCalendar` y `FILING_DEADLINES` no los llaman (ver §13.1). Comprobado con el mismo `020-e4-fiscal.sh` (66 ficheros) contra la salida de `develop`: **los mismos bytes**, salvo la fecha de consulta que imprimen (la salida de partida se guardó el 03/10 y esta es del 04/10; con la fecha normalizada, idénticos); `git diff origin/develop -- tests/fixtures` vacío.
