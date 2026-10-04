@@ -1165,7 +1165,15 @@ const BOOT_BUDGET_GZIP_BYTES = 76_055;
  * puts it in place of the three blocks; the boot is +14 (above). The trend:
  * 314.917 → 315.154.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 315_410;
+/*
+ * **Feature 020, E4, the bucket with nothing to compare (2026-10-04): measured
+ * 315.489 (+335 over the 315.154 of the evolution), ceiling 315.745 — measured
+ * + 256**, inside the authorisation (500.000). The reason a point has no
+ * percentage (domain commit before) and the card of the bucket that says it
+ * instead of a band of «sin precios»: all lazy, in the chunk of the Cubo. The
+ * boot is −11 (76.024, ceiling unchanged). The trend: 315.154 → 315.489.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 315_745;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
