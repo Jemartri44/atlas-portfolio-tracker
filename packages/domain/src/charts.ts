@@ -8,6 +8,7 @@
 // them; the barrel never exports them (`tests/architecture.test.ts`) and no
 // other module of the domain imports them.
 
+export { type BookCashPoint, type BookCashSeries, bookCashSeries } from "./charts/book-cash.js";
 export {
   type BucketIndexPctPoint,
   type BucketIndexPctSeries,
