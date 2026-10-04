@@ -203,6 +203,20 @@ describe("bucketIndexPctSeries", () => {
     b.reversal(undone.id);
     buy("2027-02-10");
     buy("2027-02-01");
+    buy("2027-02-20");
+    // A bucket purchase with no thesis is invalid, and an invalid event counts for nothing.
+    b.buy({
+      account_id: "acc_bucket",
+      asset_id: "ast_spec",
+      trade_date: "2027-01-10",
+      value_date: "2027-01-10",
+      quantity: "1",
+      unit_price: "10",
+      fee: "0",
+      currency: "USD",
+      fx_rate: "1",
+      fx_rate_date: "2027-01-10",
+    });
     b.valuation({
       account_id: "acc_fund",
       asset_id: "ast_world",
