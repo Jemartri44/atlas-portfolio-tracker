@@ -171,6 +171,32 @@ describe("the bucket against the index, in percent", () => {
     expect(bucketIndexPlot({ ...series, points: [] }).idle).toBeUndefined();
   });
 
+  it("leaves out a date with a reason after a missing price too, and keeps the reason", () => {
+    const quiet = (date: string) => ({
+      date,
+      reason: "no_contributions" as const,
+      missing: [],
+      idle: 0,
+    });
+    // Purchases and no deposit, and the price of one date is missing: the hole is
+    // a hole, and the dates after it are no hole, they have a reason.
+    const plot = bucketIndexPlot({
+      ...series,
+      points: [point("2027-02-01"), quiet("2027-02-15"), quiet("2027-03-01")],
+    });
+    expect([plot.drawn, plot.total]).toEqual([0, 1]);
+    expect(plot.x).toEqual([secondsOf("2027-02-01")]);
+    expect(plot.missing?.line).toContain("En 1 de 1 fechas");
+    expect(plot.idle).toBe("no_contributions");
+    // With a percentage drawn later, the quiet dates in between are not counted.
+    const later = bucketIndexPlot({
+      ...series,
+      points: [point("2027-02-01"), quiet("2027-02-15"), series.points[2] as never],
+    });
+    expect([later.drawn, later.total]).toEqual([1, 2]);
+    expect(later.idle).toBeUndefined();
+  });
+
   it("says nothing is missing when every point has its percentage", () => {
     expect(
       bucketIndexPlot({ ...series, points: [series.points[0], series.points[2]] as never }).missing,
