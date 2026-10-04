@@ -37,6 +37,8 @@ export interface CalendarDate {
   /** The fiscal year it refers to, when it refers to one. */
   year?: number;
   model?: "720" | "721";
+  /** Only on a filing deadline: `false` when its day was never verified against a primary source. */
+  verified?: boolean;
   /** Ids of what originates it (a sale, an asset): never an amount. */
   sources: string[];
 }
@@ -109,7 +111,14 @@ export const fiscalCalendar = (
       if (row === undefined) {
         unknown.push({ model, year: year - 1 });
       } else {
-        add({ date: row.deadline, kind: "filing_deadline", year: row.year, model, sources: [] });
+        add({
+          date: row.deadline,
+          kind: "filing_deadline",
+          year: row.year,
+          model,
+          verified: row.verified,
+          sources: [],
+        });
       }
     }
   }

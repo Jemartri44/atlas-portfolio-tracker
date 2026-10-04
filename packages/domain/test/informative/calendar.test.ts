@@ -140,6 +140,21 @@ describe("fiscalCalendar: the informative returns", () => {
       ].sort((a, b) => String(a[1]).localeCompare(String(b[1]))),
     );
     expect(calendar.unknown_deadlines).toEqual([]);
+    // 31/03/2027 is a Wednesday: the order says it and nothing shifts it.
+    expect(of(calendar, "filing_deadline").map((entry) => entry.verified)).toEqual([true, true]);
+  });
+
+  it("carries the mark of a deadline that nobody verified", () => {
+    // 31/03/2024 was a Sunday: the row of 2023 stays at the literal day, unverified.
+    const b = new LedgerBuilder();
+    b.recordedAt("2023-06-01");
+    catalogue(b);
+    const calendar = fiscalCalendar(b.build(), "2024-01-20");
+    const deadlines = of(calendar, "filing_deadline");
+    expect(deadlines.map((entry) => [entry.model, entry.date, entry.verified])).toEqual([
+      ["720", "2024-03-31", false],
+      ["721", "2024-03-31", false],
+    ]);
   });
 
   it("has none of them without an account abroad", () => {
@@ -177,8 +192,24 @@ describe("FILING_DEADLINES", () => {
     for (const row of FILING_DEADLINES) {
       expect(row.deadline).toBe(`${row.year + 1}-03-31`);
       expect(row.source.url.startsWith("https://www.boe.es/")).toBe(true);
-      expect(row.source.checked).toBe("2026-09-27");
+      expect(row.source.checked).toBe("2026-10-04");
     }
+  });
+
+  it("verifies the years whose 31 March is a working day and only those", () => {
+    const weekend = (deadline: string): boolean =>
+      [0, 6].includes(new Date(`${deadline}T00:00:00Z`).getUTCDay());
+    for (const row of FILING_DEADLINES) {
+      expect(row.verified, `${row.model} ${row.year}`).toBe(!weekend(row.deadline));
+      // An unverified row says why, with the day the general rule would give; a verified one says nothing.
+      expect(row.note !== undefined).toBe(!row.verified);
+    }
+    expect(
+      FILING_DEADLINES.filter((row) => !row.verified).map((row) => `${row.model}-${row.year}`),
+    ).toEqual(["720-2017", "720-2018", "720-2023", "721-2023"]);
+    const note = FILING_DEADLINES.find((row) => row.model === "720" && row.year === 2017)?.note;
+    expect(note).toContain("2018-04-02");
+    expect(note).toContain("Ley 39/2015");
   });
 });
 
