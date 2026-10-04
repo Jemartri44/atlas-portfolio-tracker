@@ -25,17 +25,46 @@ import {
 } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import type { StatsView } from "../../view-models/bucket/index.js";
-import type { MissingNote } from "../../view-models/series.js";
+import type { MissingNote, PlottedSeries } from "../../view-models/series.js";
 
 interface Plot {
   x: readonly number[];
   values: readonly (number | null)[][];
   rows: readonly { date: string; values: readonly (string | undefined)[] }[];
   missing?: MissingNote | undefined;
+  idle?: PlottedSeries["idle"] | undefined;
 }
 
+/** The real reason there is nothing to compare, when it is not a missing price. */
+const IDLE: Record<
+  NonNullable<PlottedSeries["idle"]>,
+  { text: string; action: { label: string; to: string } }
+> = {
+  no_investments: {
+    text: "Sin inversiones en el cubo. La comparación con el índice empieza con la primera compra.",
+    action: { label: "Abrir una tesis", to: "/registrar/tesis" },
+  },
+  no_contributions: {
+    text: "El cubo tiene compras y ningún ingreso registrado en su cuenta: sin lo aportado no hay porcentaje que dibujar.",
+    action: { label: "Registrar un ingreso", to: "/registrar/cash-in" },
+  },
+};
+
 /** Why there is no percentage yet, said once, with the way to get it. */
-const NotYet = (props: { view: StatsView }): JSX.Element => (
+const NotYet = (props: { view: StatsView; idle: Plot["idle"] }): JSX.Element => (
+  <Show
+    when={props.idle === undefined}
+    fallback={
+      <Pending action={IDLE[props.idle as NonNullable<Plot["idle"]>].action}>
+        {IDLE[props.idle as NonNullable<Plot["idle"]>].text}
+      </Pending>
+    }
+  >
+    <NotYetPrices view={props.view} />
+  </Show>
+);
+
+const NotYetPrices = (props: { view: StatsView }): JSX.Element => (
   <Show
     when={props.view.vsIndexMissing > 0}
     fallback={
@@ -58,9 +87,12 @@ const NotYet = (props: { view: StatsView }): JSX.Element => (
   </Show>
 );
 
-const Lead = (props: { view: StatsView }): JSX.Element => (
+const Lead = (props: { view: StatsView; idle: Plot["idle"] }): JSX.Element => (
   <>
-    <Show when={props.view.vsIndexPct !== undefined} fallback={<NotYet view={props.view} />}>
+    <Show
+      when={props.view.vsIndexPct !== undefined}
+      fallback={<NotYet view={props.view} idle={props.idle} />}
+    >
       <p class="hero-figure">
         <Figure value={props.view.vsIndexPct} unit="percent" decimals={1} signed coloured />
       </p>
@@ -141,12 +173,15 @@ export const StatsCard = (props: { view: StatsView; plot: Plot; asOf: string }):
     values={props.plot.values}
     rows={props.plot.rows}
     missing={props.plot.missing}
-    lead={<Lead view={props.view} />}
+    lead={<Lead view={props.view} idle={props.plot.idle} />}
     empty={
-      <Notice severity="info" title="Todavía no hay nada que dibujar">
-        La comparación se dibuja sobre las fechas que tienen precio del índice y de los activos del
-        cubo.
-      </Notice>
+      // With a reason of its own the lead already says it: not twice.
+      <Show when={props.plot.idle === undefined}>
+        <Notice severity="info" title="Todavía no hay nada que dibujar">
+          La comparación se dibuja sobre las fechas que tienen precio del índice y de los activos
+          del cubo.
+        </Notice>
+      </Show>
     }
     tail={
       <Disclosure label="Ver todas las estadísticas">

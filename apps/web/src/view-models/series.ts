@@ -8,7 +8,12 @@
 // `spanGaps` off.
 
 import type { NetWorthSeries } from "@atlas/domain";
-import type { BookCashSeries, BucketIndexPctSeries, ContributedSeries } from "@atlas/domain/charts";
+import type {
+  BookCashSeries,
+  BucketIndexPctSeries,
+  ContributedSeries,
+  NoPercentageReason,
+} from "@atlas/domain/charts";
 import { gapsOf } from "../components/chart/gaps.js";
 import { displayName, type NameIndex, NO_NAMES } from "../format/names.js";
 
@@ -24,6 +29,12 @@ export interface PlottedSeries {
   drawn: number;
   total: number;
   missing?: MissingNote;
+  /**
+   * Why nothing is drawn when it is not a hole in the prices (the bucket has
+   * no investments, or no deposits to divide by): said apart, never as «sin
+   * precios» nor as pending prices.
+   */
+  idle?: NoPercentageReason;
 }
 
 /**
@@ -154,7 +165,12 @@ export const withContributed = (plot: PlottedSeries, series: ContributedSeries):
  * 020, E4, M7). The values are numbers only to place the line: what is shown
  * is the decimal string of the domain, formatted once.
  */
-export const bucketIndexPlot = (series: BucketIndexPctSeries): PlottedSeries => {
+export const bucketIndexPlot = (full: BucketIndexPctSeries): PlottedSeries => {
+  // The dates before the bucket has anything to compare are not holes: they are
+  // left out, so no band says «sin precios» over them and the rule of the holes
+  // does not count them. If there is nothing else, the card says the reason.
+  const start = full.points.findIndex((point) => point.reason === undefined);
+  const series = { ...full, points: start === -1 ? [] : full.points.slice(start) };
   const drawn = series.points.filter((point) => point.vs_index_pct !== undefined).length;
   const share = (value: { toString: () => string } | undefined): number | null =>
     value === undefined ? null : Number.parseFloat(value.toString());
@@ -172,11 +188,14 @@ export const bucketIndexPlot = (series: BucketIndexPctSeries): PlottedSeries => 
     })),
     drawn,
     total: series.points.length,
+    ...(start === -1 && full.points.length > 0
+      ? { idle: (full.points.at(-1) as { reason: NoPercentageReason }).reason }
+      : {}),
     ...(drawn === series.points.length
       ? {}
       : {
           missing: {
-            line: `En ${series.points.length - drawn} de ${series.points.length} fechas falta el precio del índice o de algún activo del cubo, o aún no había aportado nada: la comparación se corta ahí.`,
+            line: `En ${series.points.length - drawn} de ${series.points.length} fechas falta el precio del índice o de algún activo del cubo: la comparación se corta ahí.`,
             from: [],
           },
         }),
