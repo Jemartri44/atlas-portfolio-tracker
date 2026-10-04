@@ -3,8 +3,8 @@
 // equivalent. A past date says so, and a year with no verified deadline is
 // said, never supposed.
 
-import type { CivilDate } from "@atlas/domain";
-import type { FiscalCalendar } from "@atlas/domain/fiscal";
+import type { CivilDate, LedgerEvent } from "@atlas/domain";
+import { type FiscalCalendar, fiscalCalendar } from "@atlas/domain/fiscal";
 import { For, type JSX, Show } from "solid-js";
 import { Section } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
@@ -36,4 +36,17 @@ export const CalendarCard = (props: {
       </For>
     </ul>
   </Section>
+);
+
+/** The calendar of the ledger read at a date: what the screen puts in its grid. */
+export const LedgerCalendar = (props: {
+  events: readonly LedgerEvent[];
+  today: CivilDate;
+  names: NameIndex;
+}): JSX.Element => (
+  <CalendarCard
+    calendar={fiscalCalendar(props.events, props.today)}
+    today={props.today}
+    names={props.names}
+  />
 );

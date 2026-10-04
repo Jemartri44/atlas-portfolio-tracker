@@ -7,7 +7,7 @@
 
 import { fiscalCalendar } from "@atlas/domain/fiscal";
 import { describe, expect, it } from "vitest";
-import { CalendarCard } from "../src/routes/fiscal/CalendarCard.jsx";
+import { CalendarCard, LedgerCalendar } from "../src/routes/fiscal/CalendarCard.jsx";
 import FiscalCard from "../src/routes/resumen/FiscalCard.jsx";
 import { fiscalStatus } from "../src/routes/resumen/fiscal-status.js";
 import { goldenEvents } from "./helpers/golden.js";
@@ -83,6 +83,17 @@ describe("the fiscal calendar of /fiscal", () => {
     const host = await show("/", () => <CalendarCard calendar={calendar} today={MAY} names={{}} />);
     expect(text(host.querySelector("svg.calendar-strip"))).toContain("2030 ›");
     expect(host.querySelector("svg.calendar-strip svg")?.getAttribute("x")).toBe("100%");
+  });
+});
+
+describe("the calendar of the ledger", () => {
+  it("is the calendar of the domain at the date, placed in the grid", async () => {
+    const host = await show("/", () => <LedgerCalendar events={events} today={MAY} names={{}} />);
+    expect(text(host)).toContain("Calendario fiscal");
+    const calendar = fiscalCalendar(events, MAY);
+    expect(host.querySelectorAll(".calendar-list li").length).toBe(
+      calendar.dates.length + calendar.unknown_deadlines.length,
+    );
   });
 });
 

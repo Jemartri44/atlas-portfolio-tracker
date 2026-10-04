@@ -317,6 +317,10 @@
   fill: var(--c-text);
 }
 
+.calendar-short .card-note {
+  margin: var(--space-2) 0 0;
+}
+
 .calendar-list {
   list-style: none;
   margin: var(--space-3) 0 0;
