@@ -1204,7 +1204,13 @@ const BOOT_BUDGET_GZIP_BYTES = 76_055;
  * boot is not touched. The web client of the drafts (T4) is not in yet and will
  * need its own figure.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 295_800;
+/*
+ * **Feature 027, E6 (2026-10-06): the cloud drafts come back to the web (list,
+ * counter, save, confirm, discard) over `ApiDraftStore`; measured ≈ 302.9 KB
+ * (the script prints KiB, so ±50 bytes), ceiling 303.300.** The boot ceiling is
+ * not touched. The way down is E5-like clean-up of the unused browser stores.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 303_300;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
