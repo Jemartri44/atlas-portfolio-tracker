@@ -56,6 +56,39 @@ export class ConflictError extends DomainError {
   }
 }
 
+/**
+ * The API answered a write with `200` but refused a line (ADR-0035, §2): the
+ * client and the API disagree (a version, the clock, a seal). `remoteCode` is
+ * the API's own code; `accepted` counts the entries written before the
+ * refusal (0 means nothing was written). Never held back, never retried alone.
+ */
+export class RemoteRejectedError extends DomainError {
+  constructor(
+    readonly remoteCode: string,
+    readonly accepted: number,
+    details: Record<string, unknown> = {},
+  ) {
+    super("remote_rejected", `the API rejected the write: ${remoteCode}`, {
+      remote_code: remoteCode,
+      accepted,
+      ...details,
+    });
+  }
+}
+
+/**
+ * A write was sent and the answer never arrived whole (ADR-0035, §2): it may or
+ * may not be in the ledger. `ids` are the ids of its events, fixed before
+ * sending, so the caller can look for them in the reloaded ledger.
+ */
+export class WriteOutcomeUnknownError extends DomainError {
+  constructor(readonly ids: readonly string[]) {
+    super("write_outcome_unknown", "the write was sent but its outcome is not known", {
+      count: ids.length,
+    });
+  }
+}
+
 /** `replace` would overwrite an existing archive; archives are never overwritten. */
 export class ArchiveExistsError extends DomainError {
   constructor(archiveName: string) {

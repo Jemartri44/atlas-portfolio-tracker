@@ -9,9 +9,11 @@ import {
   DuplicateFingerprintError,
   NotFoundError,
   ProjectionError,
+  RemoteRejectedError,
   SchemaTooNewError,
   UnsupportedEventError,
   ValidationError,
+  WriteOutcomeUnknownError,
 } from "../src/errors.js";
 
 describe("domain errors", () => {
@@ -37,6 +39,14 @@ describe("domain errors", () => {
     expect(projection.details).toEqual({ asset: "a", event_id: "01A" });
     expect(new SchemaTooNewError(2, 1).details).toEqual({ found: 2, supported: 1 });
     expect(new ConflictError().code).toBe("conflict");
+    const rejected = new RemoteRejectedError("pair_rejected", 0, { index: 2 });
+    expect(rejected.code).toBe("remote_rejected");
+    expect(rejected.remoteCode).toBe("pair_rejected");
+    expect(rejected.details).toEqual({ remote_code: "pair_rejected", accepted: 0, index: 2 });
+    const unknown = new WriteOutcomeUnknownError(["01A", "01B"]);
+    expect(unknown.code).toBe("write_outcome_unknown");
+    expect(unknown.ids).toEqual(["01A", "01B"]);
+    expect(unknown.details).toEqual({ count: 2 });
     expect(new CompactRejectedError("invalid_events", { affected: [] }).message).toMatch(/rectify/);
     expect(new CompactRejectedError("projection_changed", { keys: ["lots"] }).details).toEqual({
       keys: ["lots"],
