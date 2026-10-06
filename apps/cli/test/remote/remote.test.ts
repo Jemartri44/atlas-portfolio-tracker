@@ -11,9 +11,42 @@ import { SELF, setup } from "../../../api/test/harness.js";
 import { folderTree, setupConsole, writeRemoteJson } from "../support/console.js";
 import { dashRandom } from "../support/dash-ids.js";
 
+/** A folder with a local ledger: signing in leaves it as it is (ADR-0035, §4). */
+const localFolder = async () => {
+  const c = await setupConsole();
+  await writeFile(join(c.ledger, "ledger.jsonl"), "");
+  return c;
+};
+
 describe("atlas remote login (T27 to T29, T33)", () => {
-  it("signs in by loopback, keeps the token in a 600 file, and writes nothing in the folder of the ledger", async () => {
+  it("makes a folder with no ledger a cloud folder: sync/remote.json, never a copy of the ledger (ADR-0035)", async () => {
     const c = await setupConsole();
+    expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
+    expect(await folderTree(c.ledger)).toEqual(["sync", "sync/remote.json"]);
+    const [entry] = Object.values((await c.readCredentialsFile()).entries) as Record<
+      string,
+      string
+    >[];
+    expect(await readFile(join(c.ledger, "sync", "remote.json"), "utf8")).toBe(
+      `{"format":1,"origin":"${SELF}","device_id":"${entry?.device_id}"}\n`,
+    );
+    expect(c.out.join("\n")).toContain("es ahora de nube");
+    // A second sign-in renews the entry the folder names, and links nothing again.
+    c.out.length = 0;
+    expect(await c.exec(["remote", "login"])).toBe(0);
+    expect(c.out.join("\n")).not.toContain("es ahora de nube");
+    expect(Object.keys((await c.readCredentialsFile()).entries)).toEqual([entry?.device_id]);
+  });
+
+  it("leaves a folder with a local ledger as it is, and says so", async () => {
+    const c = await localFolder();
+    expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
+    expect(await folderTree(c.ledger)).toEqual(["ledger.jsonl"]);
+    expect(c.out.join("\n")).toContain("sigue siendo local");
+  });
+
+  it("signs in by loopback, keeps the token in a 600 file, and writes nothing in a folder with a local ledger", async () => {
+    const c = await localFolder();
     const before = await folderTree(c.ledger);
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     expect(await folderTree(c.ledger)).toEqual(before);
@@ -59,7 +92,7 @@ describe("atlas remote login (T27 to T29, T33)", () => {
   });
 
   it("renews only with the entry the folder's sync/remote.json names, never another of the same origin (B2)", async () => {
-    const c = await setupConsole();
+    const c = await localFolder();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     const [first] = Object.values((await c.readCredentialsFile()).entries) as Record<
       string,
@@ -197,7 +230,7 @@ describe("what the review of PR #95 found in the console", () => {
   });
 
   it("keeps an entry another console wrote meanwhile: it reads the file again before writing (N2)", async () => {
-    const c = await setupConsole();
+    const c = await localFolder();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     const first = await entryOf(c);
     // While this sign-in waits for the browser, another terminal signs in.
@@ -256,7 +289,7 @@ describe("what the review of PR #95 found in the console", () => {
   });
 
   it("refuses a new token whose device already has an entry of another origin (round 2, N5)", async () => {
-    const c = await setupConsole();
+    const c = await localFolder();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     const entry = await entryOf(c);
     // The entry of that device now says another origin, as if it came from it.

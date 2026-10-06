@@ -1,4 +1,4 @@
-// The console of a synced folder takes the prices from the cloud (feature
+// The console of a cloud folder takes the prices from the cloud (feature
 // 016, E3, block 1; ADR-0031, «Una sola clave, un solo presupuesto diario»;
 // §8.1 P7 and P11): the API's index, and each file of closes whose version the
 // folder does not hold yet, with the token of the folder — **all of it before
@@ -6,10 +6,10 @@
 // the 013 and `prices/_cloud.json` written. No source is called: the cloud
 // already spent the day's calls of the plans the console shares with it.
 
-import { FilePriceStore, folderSyncPresence } from "@atlas/adapters";
+import { FilePriceStore } from "@atlas/adapters";
 import { httpReference } from "@atlas/adapters/reference-http";
 import { type AssetId, todayInMadrid } from "@atlas/domain";
-import { entryToSync, folderSyncState } from "@atlas/domain/access";
+import { entryForRemote } from "@atlas/domain/access";
 import {
   assetOfPriceFile,
   changedPriceFiles,
@@ -22,39 +22,37 @@ import {
   serializeCloudPull,
 } from "@atlas/domain/quotes";
 import type { Context } from "../context.js";
-import { describeEntryRefusal } from "../output/sync.js";
 import { systemRemote } from "../remote/environment.js";
 import { where } from "../remote/where.js";
 import { folderOf } from "./load.js";
 
 /** Where the prices of a folder come from. */
 export type PriceOrigin =
-  /** Never synced: the sources, with the whole plans. */
+  /** A local folder: the sources, with the whole plans. */
   | { readonly kind: "unsynced" }
-  /** Synced once, not now (half started, deactivated, with no remote.json): the sources, sharing the plans. */
-  | { readonly kind: "shared" }
   | { readonly kind: "cloud"; readonly origin: string; readonly token: string }
-  /** Synced, and its session cannot be used: said, never falling to the sources. */
+  /** A cloud folder whose session cannot be used: said, never falling to the sources. */
   | { readonly kind: "refused"; readonly message: string };
 
 export const priceOriginOf = async (ctx: Context): Promise<PriceOrigin> => {
-  const { presence } = await folderSyncPresence(folderOf(ctx));
-  if (!presence.present) {
+  if (ctx.mode.kind !== "cloud") {
     return { kind: "unsynced" };
   }
   const at = await where(ctx, ctx.remote ?? systemRemote());
-  const state = folderSyncState(presence, at.remote);
-  if (state.state !== "synced" || !state.enabled) {
-    return { kind: "shared" };
-  }
-  const choice = entryToSync(state, at.credentials);
-  if ("refused" in choice) {
+  const entry = entryForRemote(at.credentials, ctx.mode.remote);
+  if (entry === undefined) {
     return {
       kind: "refused",
-      message: `(${choice.refused}) ${describeEntryRefusal(choice, at.remote ?? {})}`,
+      message: `(session_missing) no hay sesión guardada del dispositivo de esta carpeta (${ctx.mode.remote.device_id} en ${ctx.mode.remote.origin}): «atlas remote login» se la vuelve a dar.`,
     };
   }
-  return { kind: "cloud", origin: choice.entry.origin, token: choice.entry.token };
+  if (Date.parse(entry.expires_at) <= ctx.deps.clock.now().getTime()) {
+    return {
+      kind: "refused",
+      message: `(session_expired) el token de esta carpeta caducó el ${entry.expires_at.slice(0, 10)}: renuévalo con «atlas remote login».`,
+    };
+  }
+  return { kind: "cloud", origin: entry.origin, token: entry.token };
 };
 
 export interface PulledFile {

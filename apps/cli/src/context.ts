@@ -2,6 +2,7 @@ import type { LedgerEvent, UseCaseDeps, Warning } from "@atlas/domain";
 import type { FxRateSource } from "@atlas/domain/ecb";
 import type { AdminAccess } from "./admin/environment.js";
 import type { Flags } from "./args.js";
+import type { FolderMode } from "./folder-mode.js";
 import { describeWarning } from "./output/messages.js";
 import type { PriceEnvironment } from "./prices/load.js";
 import type { RemoteEnvironment } from "./remote/environment.js";
@@ -28,6 +29,8 @@ export interface Context {
   deps: UseCaseDeps;
   io: Io;
   ledgerPath: string;
+  /** Cloud folder or local folder (ADR-0035, §4): decided once, before the order runs. */
+  mode: FolderMode;
   yes: boolean;
   confirmDuplicate: boolean;
   acceptInvalid: boolean;
@@ -70,6 +73,12 @@ export const EXIT = {
   locked: 6,
   /** `atlas prices update`: a source reached the threshold of consecutive failures (ADR-0031). */
   sourcesFailing: 7,
+  /** A cloud folder and no answer from the cloud: nothing was read or recorded (ADR-0035, §4). */
+  offline: 8,
+  /** A write was sent and the connection broke: it is not known whether it was recorded. */
+  outcomeUnknown: 9,
+  /** The session of a cloud folder is missing, expired or refused: `atlas remote login`. */
+  session: 10,
   usage: 64,
 } as const;
 

@@ -193,6 +193,8 @@ Va **antes de la 018**, para que el protocolo de la cola no llegue nunca a una n
 | **E5 — Código muerto** | Borrar el motor de la cola del cliente (`packages/adapters/src/sync/` salvo `http-remote` y `api-ledger-store` (E1), y en el dominio sobreviven `unitsOf` y `entriesOf`, de los que depende este último; el almacén de sincronización del navegador y la descarga de lo retenido), los módulos del dominio que solo usa la cola, `atlas sync` y la interfaz de sincronización. **Se conserva lo que importa la API** (`acceptAppend` y sus dependencias), y el grafo lo decide. El dominio, al 100 % | Medio: borrar algo que aún usa la API | M · 0,5-0,9 M |
 | **E6 — Borradores** (pregunta 1) | Borradores en la nube por la API, como objetos que nunca se borran y se marcan confirmados o descartados. **Hasta que llegue E6, los clientes de nube no tienen borradores** | Medio | M · 0,6-1,0 M |
 
+**E3 entregada (feature 024, rama `feature/024-console-cloud`):** modo de nube y local, `folder_mode_ambiguous`, códigos de salida 8, 9 y 10, `backup` y `export` por la API, `remote login` que vincula la carpeta y `remote upload` (la subida inicial). `atlas sync` se retiró de la consola (comando y sus tests); el motor queda para E5.
+
 **Total orientativo: ≈ 4,3-7,4 M de tokens.** Si el presupuesto aprieta, E5 puede esperar: el código muerto no cambia lo que se ve. Y E4 se puede reducir a lo mínimo, porque `pending` siempre será cero. **La 018 y la 019 cambian sus pruebas:** «dos dispositivos sincronizando» pasa a ser «dos dispositivos escribiendo contra la nube, con un `412` y su reintento guiado».
 
 ## Consecuencias

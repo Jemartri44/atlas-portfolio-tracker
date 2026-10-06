@@ -1,9 +1,12 @@
 // atlas export --format jsonl|csv [--out <ruta>]: the whole ledger, reversed events included.
 
 import { readFile, writeFile } from "node:fs/promises";
-import { encodeLine } from "@atlas/domain";
+import { decodeLines, encodeLine, type LedgerEvent, projectLedger } from "@atlas/domain";
+import { linesOfText } from "@atlas/domain/sync";
 import { assertKnownFlags, type Flags, stringFlag, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
+import { cloudStoreOf } from "../folder-mode.js";
+import { assertNoLedgerInCloudFolder } from "../remote/credentials-file.js";
 import { confirmOutsideRepository, degradedHeader, loadForQuery } from "./shared.js";
 
 const csvCell = (value: unknown): string => {
@@ -29,6 +32,11 @@ export const toCsv = (rows: readonly Record<string, unknown>[]): string => {
   ].join("\n");
 };
 
+const cloudProjection = (events: LedgerEvent[]) => ({
+  events,
+  state: projectLedger(events, { collectErrors: true }),
+});
+
 export const exportCommand = async (
   ctx: Context,
   _positionals: string[],
@@ -40,12 +48,20 @@ export const exportCommand = async (
   if (format !== "jsonl" && format !== "csv") {
     throw new UsageError("uso: atlas export --format jsonl|csv [--out <ruta>]");
   }
-  const { events, state } = await loadForQuery(ctx);
+  // In a cloud folder the ledger is the cloud's, once and with its own bytes.
+  const cloud = cloudStoreOf(ctx);
+  const snapshot = cloud === undefined ? undefined : await (await cloud.remote()).read();
+  const { events, state } =
+    snapshot === undefined
+      ? await loadForQuery(ctx)
+      : cloudProjection(decodeLines(linesOfText(snapshot.text), ctx.deps.store.schema));
   let content: string;
   if (format === "jsonl") {
-    content = await readFile(ctx.ledgerPath, "utf8").catch(
-      () => `${events.map((event) => encodeLine(event)).join("\n")}\n`,
-    );
+    content =
+      snapshot?.text ??
+      (await readFile(ctx.ledgerPath, "utf8").catch(
+        () => `${events.map((event) => encodeLine(event)).join("\n")}\n`,
+      ));
   } else {
     content = `${toCsv(events as unknown as Record<string, unknown>[])}\n`;
   }
@@ -53,6 +69,9 @@ export const exportCommand = async (
   const header = degradedHeader(state);
   if (header !== undefined) {
     ctx.io.err(header);
+  }
+  if (out !== undefined) {
+    await assertNoLedgerInCloudFolder(out);
   }
   if (out === undefined) {
     ctx.io.out(content.endsWith("\n") ? content.slice(0, -1) : content);

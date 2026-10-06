@@ -6,7 +6,9 @@
 // It never writes in the ledger. Without keys it calls nobody and says so:
 // that is not an error, and everything else works the same.
 
-import { FilePriceStore, folderSyncPresence } from "@atlas/adapters";
+import { readdir } from "node:fs/promises";
+import { join } from "node:path";
+import { FilePriceStore, PRICES_DIR } from "@atlas/adapters";
 import { type AssetId, settingsAt, todayInMadrid } from "@atlas/domain";
 import {
   type AssetOutcome,
@@ -33,6 +35,7 @@ import {
 import { RemoteError } from "@atlas/domain/remote-answers";
 import { assertKnownFlags, booleanFlag, type Flags, stringFlag, UsageError } from "../args.js";
 import { type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
+import { OFFLINE_CODES, SESSION_CODES } from "../output/cloud.js";
 import { FAILURE_TEXT, mismatchedNotes, SOURCE_NAMES, unservedNotes } from "../output/prices.js";
 import { table } from "../output/table.js";
 import { type PullOutcome, priceOriginOf, pullFromCloud } from "../prices/cloud.js";
@@ -84,7 +87,7 @@ const updateText = (report: UpdateReport, failing: readonly QuoteSource[]): stri
   ].join("\n");
 };
 
-/** Said when a synced folder calls the sources: they spend the plans it shares with the cloud. */
+/** Said when a cloud folder calls the sources: they spend the plans it shares with the cloud. */
 const SHARED_QUOTA =
   "la consola llama a las fuentes y gasta el cupo que comparte con la nube: por defecto, 2 llamadas de EODHD y 2 de Alpha Vantage al día, salvo que prices/config.json diga otra cosa.";
 
@@ -114,13 +117,13 @@ const pulledText = (outcome: Extract<PullOutcome, { kind: "pulled" }>, origin: s
 };
 
 const update = async (ctx: Context, flags: Flags): Promise<number> => {
-  // Feature 016, E3, block 1: a synced folder takes its prices from the cloud,
+  // Feature 016, E3, block 1: a cloud folder takes its prices from the cloud,
   // and calls the sources only when asked (mutant 22), sharing the plans (N2).
   const fromSources = booleanFlag(flags, "from-sources");
   const origin = await priceOriginOf(ctx);
   if (origin.kind === "refused" && !fromSources) {
     ctx.io.err(`Error: no se pueden bajar los precios de la nube: ${origin.message}`);
-    return EXIT.domain;
+    return EXIT.session;
   }
   if (origin.kind === "cloud" && !fromSources) {
     let outcome: PullOutcome;
@@ -131,7 +134,11 @@ const update = async (ctx: Context, flags: Flags): Promise<number> => {
         ctx.io.err(
           `Error (${error.code}): no se han podido bajar los precios de la nube. No se ha llamado a ninguna fuente ni se ha tocado nada; vuelve a intentarlo más tarde.`,
         );
-        return EXIT.domain;
+        return SESSION_CODES.has(error.code)
+          ? EXIT.session
+          : OFFLINE_CODES.has(error.code)
+            ? EXIT.offline
+            : EXIT.domain;
       }
       throw error;
     }
@@ -141,7 +148,7 @@ const update = async (ctx: Context, flags: Flags): Promise<number> => {
     }
     ctx.io.err(`La nube todavía no tiene precios: esta vez ${SHARED_QUOTA}`);
   } else if (origin.kind !== "unsynced") {
-    ctx.io.err(`Con --from-sources en una carpeta sincronizada, ${SHARED_QUOTA}`);
+    ctx.io.err(`Con --from-sources en una carpeta de nube, ${SHARED_QUOTA}`);
   }
   const { keys, note } = await keysFor(ctx);
   if (note !== undefined) {
@@ -169,16 +176,30 @@ const update = async (ctx: Context, flags: Flags): Promise<number> => {
 const statusOf = async (store: PriceStore): Promise<PriceStatus> =>
   parseStatus(await store.status());
 
+/** The assets with a `prices/<id>.jsonl` in the folder: the inverse of `priceFileName`. */
+const assetsWithPriceFiles = async (ctx: Context): Promise<AssetId[]> => {
+  const names = await readdir(join(folderOf(ctx), PRICES_DIR)).catch(() => []);
+  return names
+    .filter((name) => name.endsWith(".jsonl"))
+    .map((name) => decodeURIComponent(name.slice(0, -".jsonl".length)) as AssetId);
+};
+
 const status = async (ctx: Context): Promise<number> => {
   const store = new FilePriceStore(folderOf(ctx));
   const today = todayInMadrid(ctx.deps.clock);
-  const { state } = await loadForQuery(ctx, today);
-  // A folder that was ever synced shares the plans with the cloud (N2 of §15).
-  const { presence } = await folderSyncPresence(folderOf(ctx));
-  const config = parsePriceConfig(await store.config(), { sharedWithCloud: presence.present });
+  // A cloud folder reads no ledger here (FR-002: no session, no network): its
+  // assets are those the folder holds prices or symbols for.
+  const ledgerAssets: readonly AssetId[] =
+    ctx.mode.kind === "cloud"
+      ? await assetsWithPriceFiles(ctx)
+      : [...(await loadForQuery(ctx, today)).state.assets.keys()];
+  // A cloud folder shares the plans with the cloud (N2 of §15).
+  const config = parsePriceConfig(await store.config(), {
+    sharedWithCloud: ctx.mode.kind === "cloud",
+  });
   const pull = parseCloudPull(await store.cloudPull());
   const symbols = parseSymbols(await store.symbols());
-  const ids = [...new Set([...state.assets.keys(), ...Object.keys(symbols.assets)])].sort();
+  const ids = [...new Set([...ledgerAssets, ...Object.keys(symbols.assets)])].sort();
   const files = new Map<AssetId, string>();
   for (const id of ids) {
     const text = await store.closes(id);

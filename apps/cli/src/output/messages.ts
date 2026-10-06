@@ -478,7 +478,23 @@ export const describeError = (error: DomainError): string => {
     case "join_required":
       return `Esta carpeta tiene la sincronización sin su marcador, y el libro tiene ${typeof d.own_lines === "number" ? d.own_lines : 0} líneas que la nube no tiene. Reconstruir el marcador no basta para mezclarlas: la única salida es unirse, de forma explícita, empezando desde la nube («atlas sync join --from-remote») o subiendo tus líneas como pendientes («atlas sync join --with-own-lines»). No se ha tocado nada.`;
     case "accept_invalid_while_synced":
-      return `Esta carpeta se sincroniza, y ese cambio de configuración dejaría inválidos ${Array.isArray(d.affected) ? d.affected.length : 0} eventos: el libro quedaría inválido, no se podría sincronizar y la sincronización se pararía. Repara antes esos eventos (atlas check te los enseña), o desactiva la sincronización de forma explícita; --accept-invalid no vale con la sincronización configurada.`;
+      return `Ese cambio de configuración dejaría inválidos ${Array.isArray(d.affected) ? d.affected.length : 0} eventos, y --accept-invalid solo vale en una carpeta local sin nube ni sincronización (ADR-0035): la nube rechaza siempre un libro inválido. Repara antes esos eventos (atlas check te los enseña).`;
+    case "folder_mode_ambiguous":
+      return `Esta carpeta tiene a la vez un libro local (${text(d.ledger)}) y la identidad de una nube (sync/remote.json, ${text(d.origin)}): no se sabe cuál es la verdad y no se ha leído ni escrito nada. Una carpeta es de nube (sync/remote.json y sin ledger.jsonl) o local (ledger.jsonl y sin sync/remote.json), nunca las dos. Si su libro es el de la nube: guarda una copia de ledger.jsonl fuera de la carpeta, comprueba con «atlas backup --to <directorio>» que la nube la tiene, y quita ledger.jsonl de aquí. Si es local: quita sync/remote.json (y el resto de sync/). Nada se sincroniza entre los dos.`;
+    case "compact_cloud_folder":
+      return "Esta carpeta es de nube: no tiene libro que compactar aquí. Compactar el libro de la nube es «atlas admin compact --env <entorno>», con el rol de administración (ADR-0032).";
+    case "drafts_not_in_cloud":
+      return "En una carpeta de nube no hay borradores: llegan con la entrega E6 de ADR-0035. Registra la operación cuando el BCE publique su tipo, o tecléalo (--fx-rate y --fx-rate-date).";
+    case "ledger_in_cloud_folder":
+      return `No se escribe un ledger.jsonl en una carpeta de nube (${text(d.path)}, nube ${text(d.origin)}): sería la carpeta ambigua de ADR-0035, que la consola se niega a abrir. Escríbelo en otra carpeta o con otro nombre.`;
+    case "upload_needs_cloud_folder":
+      return "La subida inicial se hace desde una carpeta de nube: inicia sesión en una carpeta sin libro con «atlas remote login --origin <https://…>» y repite «atlas remote upload --from <ledger.jsonl>» desde ella.";
+    case "upload_cloud_not_empty":
+      return `La nube ya tiene un libro (${typeof d.cloud_lines === "number" ? d.cloud_lines : 0} líneas) que no es este: la subida inicial nunca escribe encima. Para sustituirlo está «atlas admin restore --from <copia> --env <entorno>» (ADR-0032), que compara por identificador y pide confirmar.`;
+    case "upload_source_missing":
+      return `No existe el fichero ${text(d.path)}.`;
+    case "upload_source_not_utf8":
+      return `El fichero ${text(d.path)} no es UTF-8: no es un libro de Atlas.`;
     case "held_unit_unknown":
       return "No hay nada retenido con ese identificador: puede que ya se haya resuelto.";
     case "redo_not_recorded":
@@ -790,13 +806,19 @@ const PARTIAL_BOX: Record<string, string> = {
 export const describeDuplicate = (error: DuplicateFingerprintError): string =>
   `Ya existe un evento con la misma huella (${error.existing.join(", ")}). Si es una repetición legítima, añade --confirm-duplicate.`;
 
-export const describeDependants = (error: DependentEventsError): string => {
+export const describeDependants = (
+  error: DependentEventsError,
+  /** False in a cloud folder: the cloud never accepts an invalid ledger (ADR-0035). */
+  canAcceptInvalid = true,
+): string => {
   const isSettings = error.code === "newly_invalid_events";
   const heading = isSettings
     ? "Eventos que pasan a ser inválidos con la configuración nueva:"
     : "Eventos que dejarían de ser válidos (rectifícalos primero):";
   const footer = isSettings
-    ? "\nLos hechos no cambian, cambia su interpretación (ADR-0015). Repite con --accept-invalid si es lo que quieres."
+    ? canAcceptInvalid
+      ? "\nLos hechos no cambian, cambia su interpretación (ADR-0015). Repite con --accept-invalid si es lo que quieres."
+      : "\nLos hechos no cambian, cambia su interpretación (ADR-0015). En una carpeta de nube no se puede aceptar un libro inválido: repara antes esos eventos."
     : "";
   return `${describeError(error)}\n${heading}\n${table(
     ["id", "tipo", "motivo"],

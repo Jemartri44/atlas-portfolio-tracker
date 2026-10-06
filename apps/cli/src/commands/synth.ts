@@ -16,6 +16,7 @@ import { deepCheck } from "@atlas/domain/tools";
 import { assertKnownFlags, type Flags, requireFlag, stringFlag, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
+import { assertNoLedgerInCloudFolder } from "../remote/credentials-file.js";
 import { render } from "./shared.js";
 
 export const pathExists = async (path: string): Promise<boolean> => {
@@ -48,6 +49,7 @@ export const synthCommand = async (
     throw new UsageError("--seed debe ser un entero no negativo");
   }
   const seed = Number(seedText);
+  await assertNoLedgerInCloudFolder(out);
   if (await pathExists(out)) {
     throw new DomainError("path_exists", `${out} already exists`, { path: out });
   }
