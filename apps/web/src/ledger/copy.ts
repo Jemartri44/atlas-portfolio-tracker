@@ -35,6 +35,10 @@ export const toCsv = (rows: readonly Record<string, unknown>[]): string => {
 /** Reads the ledger from the cloud now (never from the screen's copy) and returns the file's text. */
 export const copyText = async (format: CopyFormat): Promise<string> => {
   const { events, lines } = await requireDeps().store.load();
+  // An empty ledger is an empty file, as it is in the cloud: no invented newline.
+  if (lines.length === 0) {
+    return "";
+  }
   return format === "jsonl"
     ? `${lines.join("\n")}\n`
     : `${toCsv(events as unknown as Record<string, unknown>[])}\n`;
