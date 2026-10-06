@@ -78,6 +78,9 @@ export const REMOTE_FAILURES: Readonly<Record<string, string>> = {
   device_forgotten:
     "este navegador fue olvidado como dispositivo: vuelve a iniciar sesión y recibirá uno nuevo.",
   remote_unavailable: "la nube no está disponible ahora mismo: inténtalo de nuevo en unos minutos.",
+  draft_changed:
+    "el borrador ya no está como se leyó (se cerró o se está confirmando en otro sitio); no se ha escrito nada.",
+  draft_exists: "ya hay un borrador con ese identificador en la nube; no se ha guardado nada.",
   body_too_large: "la petición era demasiado grande para la nube; no se ha escrito nada.",
   transport_rejected: "la red ha rechazado la petición antes de llegar a la nube.",
   network_failed: "no hay conexión con la nube.",

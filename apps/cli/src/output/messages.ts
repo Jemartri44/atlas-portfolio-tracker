@@ -77,6 +77,10 @@ export const describeRemoteFailure = (code: unknown): string => {
       return "este dispositivo fue olvidado en la nube: vuelve a iniciar sesión con «atlas remote login».";
     case "remote_unavailable":
       return "la nube no está disponible ahora mismo (un fallo pasajero): inténtalo de nuevo en unos minutos.";
+    case "draft_changed":
+      return "el borrador ya no está como se leyó (se cerró o se está confirmando en otro sitio); no se ha escrito nada.";
+    case "draft_exists":
+      return "ya hay un borrador con ese identificador en la nube; no se ha guardado nada.";
     case "body_too_large":
       return "la petición era demasiado grande para la nube; no se ha escrito nada.";
     case "transport_rejected":
