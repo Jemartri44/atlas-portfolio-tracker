@@ -488,7 +488,7 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   conflict: () =>
     "Tus datos han cambiado desde que se cargaron (la CLI u otra pestaña han escrito): se recargan y se vuelve a intentar.",
   remote_rejected: (d) =>
-    `La API ha rechazado la operación (${text(d.remote_code)}): ${
+    `La operación se ha rechazado: ${
       d.accepted === 0
         ? "no se ha guardado nada"
         : "solo se ha guardado una parte; se recarga el libro"
