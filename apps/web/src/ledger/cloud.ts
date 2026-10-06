@@ -79,8 +79,16 @@ const ofReadFailure = async (error: unknown): Promise<LoadPhase> => {
 /** The device is offline (as far as the browser knows): nothing may be shown. */
 const isOffline = (): boolean => typeof navigator !== "undefined" && navigator.onLine === false;
 
+/**
+ * The number of the boot that may publish. A boot that started earlier never
+ * overwrites a later one, whether it ends offline, failed or ready; going
+ * offline is itself a later event, so it takes a number too.
+ */
+let generation = 0;
+
 /** Leaves the screen without any data: the snapshot goes with the phase. */
 const showOffline = (): void => {
+  generation += 1;
   store.setDeps(undefined);
   store.clearCache();
   store.setLoad({ phase: "offline" });
@@ -91,10 +99,16 @@ const showOffline = (): void => {
  * so what comes back after an outage is never what was on the screen before.
  */
 export const bootCloud = async (request: Fetch = pageFetch): Promise<void> => {
+  generation += 1;
+  const mine = generation;
+  const current = (): boolean => generation === mine;
   store.setDeps(undefined);
   store.clearCache();
   store.setLoad({ phase: "loading" });
   const session = await readSession(request);
+  if (!current()) {
+    return;
+  }
   if (session.kind !== "signed_in") {
     store.setLoad(ofStopped(session));
     return;
@@ -112,9 +126,10 @@ export const bootCloud = async (request: Fetch = pageFetch): Promise<void> => {
       source: { kind: "cloud", expiresAt: session.expiresAt },
     },
     ofReadFailure,
+    current,
   );
   // The connection went while the ledger was coming: whatever arrived is not shown.
-  if (isOffline()) {
+  if (current() && isOffline()) {
     showOffline();
   }
 };
@@ -123,9 +138,14 @@ export const bootCloud = async (request: Fetch = pageFetch): Promise<void> => {
  * Hides the data the moment the connection is lost, and reads everything again
  * when it returns. Called once, by the boot.
  */
-export const watchConnection = (request: Fetch = pageFetch): void => {
-  window.addEventListener("offline", showOffline);
-  window.addEventListener("online", () => {
+export const watchConnection = (request: Fetch = pageFetch): (() => void) => {
+  const back = (): void => {
     void bootCloud(request);
-  });
+  };
+  window.addEventListener("offline", showOffline);
+  window.addEventListener("online", back);
+  return () => {
+    window.removeEventListener("offline", showOffline);
+    window.removeEventListener("online", back);
+  };
 };

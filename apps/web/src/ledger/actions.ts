@@ -30,12 +30,17 @@ const explained = async (error: unknown) => (await import("./errors.js")).toAppE
 export const loadInto = async (
   opened: OpenedLedger,
   classify?: (error: unknown) => Promise<LoadPhase | undefined>,
+  /** False once a newer boot started: whatever this load found is then dropped. */
+  current: () => boolean = () => true,
 ): Promise<void> => {
   store.setLoad({ phase: "loading", source: opened.source });
   store.setDeps(opened.deps);
   store.clearCache();
   try {
     const { events, lines, etag } = await opened.deps.store.load();
+    if (!current()) {
+      return;
+    }
     const state = projectLedger(events, { collectErrors: true });
     store.setLoad({
       phase: "ready",
@@ -43,8 +48,12 @@ export const loadInto = async (
       snapshot: { events, lines, etag, state, loadedAt: new Date().toISOString() },
     });
   } catch (error) {
+    const verdict = await classify?.(error);
+    if (!current()) {
+      return;
+    }
     store.setLoad(
-      (await classify?.(error)) ?? {
+      verdict ?? {
         phase: "failed",
         source: opened.source,
         error: await explained(error),

@@ -22,6 +22,8 @@ interface Net {
   down: boolean;
   /** The cookie the browser holds, if any. */
   cookie: string | undefined;
+  /** The next read of the ledger waits for this, then answers as `ledgerStatus` says. */
+  hold?: Promise<void> | undefined;
   /** Answers the ledger with this status instead of serving it. */
   ledgerStatus?: number | undefined;
 }
@@ -37,7 +39,21 @@ const rig = async (ledger: string = goldenText(), signed = true) => {
     if (net.down) {
       throw new TypeError("network down");
     }
-    if (net.ledgerStatus !== undefined && String(input) === "/api/ledger") {
+    if (net.hold !== undefined && String(input) === "/api/ledger") {
+      const wait = net.hold;
+      net.hold = undefined;
+      const status = net.ledgerStatus;
+      net.ledgerStatus = undefined;
+      await wait;
+      if (status !== undefined) {
+        return new Response(
+          JSON.stringify({ error: { code: "remote_unavailable", details: {} } }),
+          {
+            status,
+          },
+        );
+      }
+    } else if (net.ledgerStatus !== undefined && String(input) === "/api/ledger") {
       return new Response(JSON.stringify({ error: { code: "remote_unavailable", details: {} } }), {
         status: net.ledgerStatus,
       });
@@ -52,10 +68,19 @@ const Probe = () => <p>{`eventos:${store.snapshot()?.events.length ?? "ninguno"}
 
 const shown = async () => showInShell("/", { "*": Probe });
 
+// Every `watchConnection` of a test is removed at its end (M4 of the review).
+const watchers: (() => void)[] = [];
+const watching = (request: typeof fetch): void => {
+  watchers.push(watchConnection(request));
+};
+
 beforeEach(() => {
   store.setLoad({ phase: "loading" });
 });
 afterEach(() => {
+  for (const stop of watchers.splice(0)) {
+    stop();
+  }
   store.setDeps(undefined);
   store.setLoad({ phase: "loading" });
   document.body.innerHTML = "";
@@ -147,7 +172,7 @@ describe("cloud boot", () => {
     const { request, net, asked } = await rig();
     net.down = true;
     const host = await shown();
-    watchConnection(request);
+    watching(request);
     await bootCloud(request);
     await until(() => text(host).includes("Sin conexión"), "the offline screen");
 
@@ -180,7 +205,7 @@ describe("cloud boot", () => {
   it("losing the connection with the application open hides the data at once", async () => {
     const { request } = await rig();
     const host = await shown();
-    watchConnection(request);
+    watching(request);
     await bootCloud(request);
     await until(() => text(host).includes("eventos:200"), "the data");
 
@@ -207,6 +232,45 @@ describe("cloud boot", () => {
         Object.defineProperty(window.navigator, "onLine", navigatorOnline);
       }
     }
+  });
+
+  it("an old boot never overwrites a newer one: offline then back, with a read in flight", async () => {
+    const { request, net } = await rig();
+    const host = await shown();
+    watching(request);
+    let release: () => void = () => undefined;
+    net.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    net.ledgerStatus = 503;
+    const old = bootCloud(request);
+    await until(() => net.hold === undefined, "the old read in flight");
+    window.dispatchEvent(new Event("offline"));
+    window.dispatchEvent(new Event("online"));
+    await until(() => text(host).includes("eventos:200"), "the newer boot ready");
+    release();
+    await old;
+    // The old read ended in a failure; it must not replace what the newer boot shows.
+    expect(store.load().phase).toBe("ready");
+    expect(text(host)).toContain("eventos:200");
+  });
+
+  it("an old read that succeeds after going offline does not bring the data back", async () => {
+    const { request, net } = await rig();
+    const host = await shown();
+    watching(request);
+    let release: () => void = () => undefined;
+    net.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const old = bootCloud(request);
+    await until(() => net.hold === undefined, "the read in flight");
+    window.dispatchEvent(new Event("offline"));
+    await until(() => text(host).includes("Sin conexión"), "the offline screen");
+    release();
+    await old;
+    expect(store.load()).toEqual({ phase: "offline" });
+    expect(text(host)).not.toContain("eventos:");
   });
 
   it("a failed read says so and offers to retry; nothing partial is shown", async () => {
