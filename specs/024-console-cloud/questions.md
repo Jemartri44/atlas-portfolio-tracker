@@ -1,0 +1,5 @@
+# Preguntas — 024 (no bloquean; piden confirmación)
+
+1. **`atlas sync` retirado ya en E3.** ADR-0035 §7 pone el borrado de `atlas sync` en E5, pero §4 dice que «no hay ningún camino que sincronice lo local con la nube»: dejar `sync init`/`join` vivos permitiría crear una carpeta con `ledger.jsonl` y `sync/remote.json`, que es justo la ambigua. He sustituido el comando por un aviso de retirada (código 64) y borrado `commands/sync.ts`, `output/sync.ts` y `test/sync/commands.test.ts`, más un test que ejercitaba la sincronización por la API. **No** he tocado `packages/adapters/src/sync/` ni el dominio (E5). ¿Confirmas, o prefieres que `atlas sync` siga y solo se bloquee `init`/`join`?
+2. **`remote login` vincula la carpeta.** ADR-0035 deja al plan decidir quién escribe `sync/remote.json`; he elegido `atlas remote login` en una carpeta sin `ledger.jsonl` (y `remote upload --from <fichero>` para subir). Cambia el contrato antiguo «iniciar sesión no escribe nada en la carpeta».
+3. **`atlas admin *`, `lock` y `synth` no miran el modo** (no leen el libro de la carpeta); `admin compact`/`restore` siguen como estaban, con su comprobación de la cola hasta E4/E5.

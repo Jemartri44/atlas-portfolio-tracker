@@ -12,6 +12,11 @@ Ejecutable `atlas` (`apps/cli`), sin dependencias. Global: `--ledger <ruta>` (po
 | 3 | Huella repetida sin `--confirm-duplicate` |
 | 4 | Confirmación necesaria sin TTY y sin `--yes` |
 | 5 | Libro con `schema_version` más nueva que esta CLI |
+| 6 | El cerrojo de la carpeta está tomado |
+| 7 | `atlas prices update`: una fuente llegó al umbral de fallos seguidos |
+| 8 | Carpeta de nube y sin respuesta de la nube: **no se ha leído ni registrado nada** (ADR-0035, E3) |
+| 9 | Carpeta de nube: una escritura se envió y la conexión se cortó, **no se sabe si se registró** (ADR-0035, E3) |
+| 10 | Carpeta de nube: la sesión falta, ha caducado o la API la rechaza; remite a `atlas remote login` (ADR-0035, E3) |
 | 64 | Uso incorrecto (comando o flags desconocidos, falta un flag obligatorio) |
 
 ## Comandos
