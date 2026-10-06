@@ -16,7 +16,6 @@ export interface TokenRow {
   readonly issued_at?: string;
   readonly expires_at?: string;
   readonly revoked_at?: string;
-  readonly last_sync_at?: string;
   readonly recent?: boolean;
 }
 

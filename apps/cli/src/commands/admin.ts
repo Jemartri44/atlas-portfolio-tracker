@@ -7,7 +7,6 @@
 // of this is reachable from `apps/api` (architecture test).
 
 import { dirname } from "node:path";
-import { folderSyncPresence } from "@atlas/adapters";
 import {
   DependencyUnavailable,
   DeviceStore,
@@ -32,7 +31,6 @@ import {
   compareForRestore,
   forgetRefusal,
   forgottenDevice,
-  remoteRewritePermission,
 } from "@atlas/domain/admin";
 import { symbolsPushPlan } from "@atlas/domain/quotes";
 import { linesOfText, RefusedError, syncArchiveName } from "@atlas/domain/sync";
@@ -314,19 +312,6 @@ const forgetOrder = async (
   return EXIT.ok;
 };
 
-/**
- * What refuses a rewrite of the remote from here (ADR-0026, Part A): this
- * folder's queue when it is synced, and every device's published one.
- */
-const rewriteRefusal = async (ctx: Context, clients: AdminClients) => {
-  const { presence } = await folderSyncPresence(dirname(ctx.ledgerPath));
-  const pendingHere =
-    presence.present && typeof presence.marker === "object"
-      ? (await ctx.deps.store.load()).lines.length - presence.marker.synced_lines
-      : 0;
-  return remoteRewritePermission(presence, pendingHere, await readDevices(clients));
-};
-
 /** The remote ledger as a store: the bytes of S3, archiving before every rewrite. */
 const remoteStore = (ctx: Context, clients: AdminClients): LedgerStore =>
   new BlobLedgerStore(new S3LedgerBlob(clients.objects), ctx.deps.store.schema);
@@ -344,10 +329,6 @@ const compactOrder = async (
   environment: string,
   flags: Flags,
 ): Promise<number> => {
-  const refusal = await rewriteRefusal(ctx, clients);
-  if (refusal !== undefined) {
-    throw new RefusedError(refusal);
-  }
   const deps: UseCaseDeps = { ...ctx.deps, store: remoteStore(ctx, clients) };
   const plan = await planCompact(deps);
   if (plan.outdated === 0) {
@@ -370,7 +351,7 @@ const compactOrder = async (
     ctx,
     result,
     result.status === "compacted"
-      ? `Compactada la nube: ${result.linesBefore} → ${result.linesAfter} líneas. El original está en archive/${result.archiveName}. Cada dispositivo verá la reescritura al sincronizar, se detendrá y volverá a descargar cuando su usuario lo pida.`
+      ? `Compactada la nube: ${result.linesBefore} → ${result.linesAfter} líneas. El original está en archive/${result.archiveName}. Quien tenga Atlas abierto verá «El libro ha cambiado» en su siguiente escritura y recargará.`
       : "Nada que compactar en la nube.",
   );
   return EXIT.ok;
@@ -449,10 +430,6 @@ const restoreOrder = async (
   environment: string,
   flags: Flags,
 ): Promise<number> => {
-  const refusal = await rewriteRefusal(ctx, clients);
-  if (refusal !== undefined) {
-    throw new RefusedError(refusal);
-  }
   // 1. The candidate.
   const from = requireFlag(flags, "from");
   const lines = linesOfText(await candidateText(clients, from));
@@ -490,7 +467,7 @@ const restoreOrder = async (
   ctx.io.out(`5. Restaurada. Lo que había está en archive/${archive}, que nunca se sobrescribe.`);
   // 6. What each device has to do.
   ctx.io.out(
-    "6. Cada dispositivo verá la reescritura al sincronizar y se detendrá (remote_rewritten). Que su usuario vuelva a descargar: lo que tenía y la copia no queda retenido para revisarlo, y nunca se vuelve a subir solo.",
+    "6. Quien tenga Atlas abierto verá «El libro ha cambiado» en su siguiente escritura y recargará el libro restaurado.",
   );
   return EXIT.ok;
 };

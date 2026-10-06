@@ -41,12 +41,10 @@ import {
   consoleCodePayload,
   consoleLoginPayload,
   cookieValues,
-  DEVICE_BOUND_PATHS,
   DEVICE_TOKEN_HEADER,
   deviceRefusal,
   entryForSubject,
   expectEmptyObject,
-  expectedDeviceRefusal,
   findRoute,
   formatDeviceToken,
   instantOf,
@@ -82,7 +80,6 @@ import {
   tokenListItem,
   tokenStatus,
 } from "@atlas/domain/access";
-import { EXPECTED_DEVICE_HEADER } from "@atlas/domain/sync";
 import { type FunctionUrlEvent, type FunctionUrlResult, normalise, type Request } from "./event.js";
 import { type LogEntry, logLine } from "./log.js";
 import { fail, type Outcome } from "./outcome.js";
@@ -339,7 +336,7 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       config.sessionTtlSeconds,
     );
     return {
-      result: redirect(`${config.origin}/ajustes#sincronizacion`, [clearLoginCookie(), cookie]),
+      result: redirect(`${config.origin}/`, [clearLoginCookie(), cookie]),
       code: presented === deviceId ? "signed_in" : "signed_in_new_device",
       reason: await signInDate(),
     };
@@ -400,7 +397,6 @@ export const createHandler = (deps: HandlerDeps): Handler => {
     request: Request,
     path: string,
     params: Readonly<Record<string, string>>,
-    credential: SyncCredential,
     body: unknown,
   ): Promise<Outcome> => {
     switch (path) {
@@ -410,8 +406,6 @@ export const createHandler = (deps: HandlerDeps): Handler => {
           : sync.initialise(request.headers.get("if-match"), body);
       case "/api/ledger/lines":
         return sync.appendLines(request.headers.get("if-match"), body);
-      case "/api/sync/devices/self":
-        return sync.publish(credential, body);
       case "/api/reference/index":
         return sync.indexReference();
       default:
@@ -725,7 +719,6 @@ export const createHandler = (deps: HandlerDeps): Handler => {
   /** `GET /api/devices/tokens` (§4.5): every record, the unreadable ones too, never an e-mail. */
   const listTokens = async (): Promise<Outcome> => {
     const nowMs = deps.now().getTime();
-    const lastSync = new Map<string, string | undefined>();
     const readable: TokenListItem[] = [];
     const unreadable: { token_id: string; status: "unreadable" }[] = [];
     for (const { tokenId, read } of await tokens.list()) {
@@ -733,13 +726,7 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         unreadable.push({ token_id: tokenId, status: "unreadable" });
         continue;
       }
-      if (!lastSync.has(read.device_id)) {
-        const device = await devices.read(read.device_id);
-        lastSync.set(read.device_id, typeof device === "object" ? device.last_sync_at : undefined);
-      }
-      readable.push(
-        tokenListItem(read, lastSync.get(read.device_id), nowMs, config.recentIssueDays),
-      );
+      readable.push(tokenListItem(read, nowMs, config.recentIssueDays));
     }
     readable.sort((a, b) => b.issued_at.localeCompare(a.issued_at));
     return {
@@ -855,7 +842,6 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         return { outcome: await revokeOwn(admission, body), route: at };
       case "/api/ledger":
       case "/api/ledger/lines":
-      case "/api/sync/devices/self":
       case "/api/reference/index":
       case "/api/reference/ecb/{name}":
       case "/api/reference/prices/{name}": {
@@ -863,21 +849,7 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         if ("code" in credential) {
           return { outcome: fail(credential), route: at };
         }
-        // The device the client expects, before anything is read or written
-        // (review of PR #97, security B1; docs/api.md §5.4).
-        const expected = DEVICE_BOUND_PATHS.has(spec.path)
-          ? expectedDeviceRefusal(credential, request.headers.get(EXPECTED_DEVICE_HEADER))
-          : undefined;
-        if (expected !== undefined) {
-          return {
-            outcome:
-              credential.tokenId === undefined
-                ? fail(expected)
-                : { ...fail(expected), tokenId: credential.tokenId },
-            route: at,
-          };
-        }
-        const outcome = await syncRoute(request, spec.path, matched.params, credential, body);
+        const outcome = await syncRoute(request, spec.path, matched.params, body);
         return {
           outcome:
             credential.tokenId === undefined

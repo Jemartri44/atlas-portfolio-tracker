@@ -219,8 +219,6 @@ export interface TokenListItem {
   readonly expires_at: string;
   readonly status: TokenStatus;
   readonly revoked_at?: string;
-  /** From the object of the device (`sync/devices/<id>.json`), never kept in the record. */
-  readonly last_sync_at?: string;
   /** Issued within the last `recentDays`: the web marks it (ADR-0033, point 8). */
   readonly recent: boolean;
 }
@@ -228,7 +226,6 @@ export interface TokenListItem {
 /** A row of `GET /api/devices/tokens`: no e-mail, no `sub`, no hash. */
 export const tokenListItem = (
   record: TokenRecord,
-  lastSyncAt: string | undefined,
   nowMs: number,
   recentDays: number,
 ): TokenListItem => {
@@ -241,7 +238,6 @@ export const tokenListItem = (
     expires_at: record.expires_at,
     status: tokenStatus(record, nowMs),
     ...(record.revoked_at === undefined ? {} : { revoked_at: record.revoked_at }),
-    ...(lastSyncAt === undefined ? {} : { last_sync_at: lastSyncAt }),
     recent: issued <= nowMs && nowMs - issued < recentDays * DAY_MS,
   };
 };

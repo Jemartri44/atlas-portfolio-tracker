@@ -14,7 +14,6 @@ import {
   deactivatePermission,
   importPermission,
   RefusedError,
-  rewritePermission,
   syncPermission,
 } from "../../src/sync/permission.js";
 
@@ -36,23 +35,6 @@ describe("the refusals of a synced device", () => {
     expect(code(compactPermission(missing))).toBe("compact_refused_marker_missing");
     expect(compactPermission(disabled)).toBeUndefined();
     expect(compactPermission(none)).toBeUndefined();
-  });
-
-  it("rewriting the remote: pending here or published by another device block; held lines never do (V5)", () => {
-    expect(rewritePermission(enabled, 0, [])).toBeUndefined();
-    expect(rewritePermission(enabled, 2, [])).toEqual({
-      code: "rewrite_refused_pending_here",
-      details: { pending: 2 },
-    });
-    expect(
-      rewritePermission(enabled, 0, [
-        { device_id: "a", pending: 0, held: 5, last_sync_at: "t" },
-        { device_id: "b", pending: 1, held: 0, last_sync_at: "t" },
-      ]),
-    ).toEqual({ code: "rewrite_refused_pending_devices", details: { devices: ["b"] } });
-    expect(code(rewritePermission(unreadable, 0, []))).toBe("rewrite_refused_marker_unreadable");
-    expect(code(rewritePermission(missing, 0, []))).toBe("rewrite_refused_marker_missing");
-    expect(rewritePermission(none, 0, [])).toBeUndefined();
   });
 
   it("import: refused on a synced web, admitted once deactivated (P2)", () => {

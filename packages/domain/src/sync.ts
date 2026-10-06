@@ -8,7 +8,6 @@ export {
   type AppendEntry,
   type AppendResult,
   type DeviceQueueState,
-  EXPECTED_DEVICE_HEADER,
   LINE_REJECTION_CODES,
   type LineRejection,
   REMOTE_FAILURE_CODES,
@@ -86,7 +85,6 @@ export {
   importPermission,
   type Refusal,
   RefusedError,
-  rewritePermission,
   syncPermission,
 } from "./sync/permission.js";
 export { type ReapplyBase, type ReapplyOutcome, reapplyUnits } from "./sync/reapply.js";

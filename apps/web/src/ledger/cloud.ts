@@ -34,15 +34,9 @@ const pageFetch: Fetch = (input, init) => fetch(input, init);
 /** The `fetch` of the last boot, so a reload or a new session goes through the same door. */
 let lastRequest: Fetch = pageFetch;
 
-/** The use cases over the ledger of the cloud, for the device the session names. */
-const depsFor = (
-  session: Extract<SessionState, { kind: "signed_in" }>,
-  request: Fetch,
-): UseCaseDeps => ({
-  store: new ApiLedgerStore(
-    // `expectedDevice`: the API binds the ledger routes to the device of the cookie.
-    httpRemote({ origin: "", fetch: request, expectedDevice: session.deviceId }),
-  ),
+/** The use cases over the ledger of the cloud. */
+const depsFor = (request: Fetch): UseCaseDeps => ({
+  store: new ApiLedgerStore(httpRemote({ origin: "", fetch: request })),
   clock: systemClock,
   random: webCryptoRandom,
 });
@@ -125,7 +119,7 @@ export const bootCloud = async (request: Fetch = pageFetch): Promise<void> => {
     return;
   }
   await loadInto(
-    { deps: depsFor(session, request), source: { kind: "cloud", expiresAt: session.expiresAt } },
+    { deps: depsFor(request), source: { kind: "cloud", expiresAt: session.expiresAt } },
     ofReadFailure,
     current,
   );
@@ -188,7 +182,7 @@ export const refreshSession = async (
     return "signed_out";
   }
   const phase = store.load();
-  store.setDeps(depsFor(session, request));
+  store.setDeps(depsFor(request));
   if (phase.phase === "ready") {
     store.setLoad({ ...phase, source: { kind: "cloud", expiresAt: session.expiresAt } });
   }

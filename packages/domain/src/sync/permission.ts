@@ -5,7 +5,6 @@
 // function they will ask.
 
 import { DomainError } from "../errors.js";
-import type { DeviceQueueState } from "../ports/remote-ledger.js";
 import type { SyncPresence } from "./marker.js";
 
 export interface Refusal {
@@ -43,37 +42,6 @@ export const compactPermission = (presence: SyncPresence): Refusal | undefined =
     typeof presence.marker === "object" &&
     presence.marker.status === "enabled"
     ? { code: "compact_refused_folder_synced", details: {} }
-    : undefined;
-};
-
-/**
- * Whether the **remote** may be rewritten (compacted or restored, from a
- * folder that administers it): refused with pending lines in this folder or
- * published by any known device. **Only what is pending blocks**; what a device
- * holds back lives there, is never uploaded alone and does not depend on the
- * remote being rewritten (§6.3 (V5)).
- */
-export const rewritePermission = (
-  presence: SyncPresence,
-  pendingHere: number,
-  devices: readonly (Pick<DeviceQueueState, "pending" | "held"> & {
-    readonly device_id: string;
-    readonly last_sync_at?: string;
-  })[],
-): Refusal | undefined => {
-  const marker = markerState(presence);
-  if (marker === "unreadable") {
-    return { code: "rewrite_refused_marker_unreadable", details: {} };
-  }
-  if (marker === "missing") {
-    return { code: "rewrite_refused_marker_missing", details: {} };
-  }
-  if (pendingHere > 0) {
-    return { code: "rewrite_refused_pending_here", details: { pending: pendingHere } };
-  }
-  const blocking = devices.filter((device) => device.pending > 0).map((device) => device.device_id);
-  return blocking.length > 0
-    ? { code: "rewrite_refused_pending_devices", details: { devices: blocking } }
     : undefined;
 };
 

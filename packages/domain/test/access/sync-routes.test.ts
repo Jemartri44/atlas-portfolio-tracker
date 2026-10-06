@@ -1,16 +1,12 @@
 // Feature 015, E3: the rules of the routes of the sync and of the reference
 // data (`docs/api.md` §5 and §6), pure: the etag a request asks for, the
-// object of a device after it publishes, the names and types of the
+// names and types of the
 // reference data, the index and the conditional read.
 
 import { describe, expect, it } from "vitest";
 import { API_ERRORS, refusal } from "../../src/access/codes.js";
-import { newDevice } from "../../src/access/device.js";
 import {
-  DEVICE_BOUND_PATHS,
-  expectedDeviceRefusal,
   ifNoneMatchHits,
-  publishedDevice,
   referenceContentType,
   referenceIndex,
   referenceKey,
@@ -38,44 +34,6 @@ describe("requestedEtag: the If-Match of a write (§5.2 and §5.5)", () => {
     ]) {
       expect(requestedEtag(value), value).toEqual({ etag: "" });
     }
-  });
-});
-
-describe("publishedDevice: what PUT /api/sync/devices/self writes (§5.3)", () => {
-  const console = {
-    ...newDevice({
-      deviceId: "C".repeat(22),
-      type: "console",
-      createdAt: "2026-09-01T10:00:00Z",
-      deviceName: "sobremesa",
-    }),
-    pending: 4,
-  };
-
-  it("keeps type, state, creation and name, and writes the queue and the hour", () => {
-    expect(
-      publishedDevice(
-        console,
-        { pending: 1, held: 2, last_sync_at: "2026-10-01T09:00:00Z" },
-        "2026-10-01T10:00:00.000Z",
-      ),
-    ).toEqual({
-      ...console,
-      pending: 1,
-      held: 2,
-      last_sync_at: "2026-10-01T09:00:00Z",
-      published_at: "2026-10-01T10:00:00.000Z",
-    });
-  });
-
-  it("refuses a last_sync_at that is not an instant: the object would stop being readable", () => {
-    expect(
-      publishedDevice(
-        console,
-        { pending: 0, held: 0, last_sync_at: "ayer" },
-        "2026-10-01T10:00:00Z",
-      ),
-    ).toEqual(refusal("body_invalid", { reason: "last_sync_at" }));
   });
 });
 
@@ -228,32 +186,5 @@ describe("refusalOfRemote: a rule of the sync said no (§5 and §7)", () => {
     for (const code of answerable) {
       expect(REMOTE_FAILURE_CODES as readonly string[], code).toContain(code);
     }
-  });
-});
-
-describe("expectedDeviceRefusal: the device the client expects (review of PR #97, security B1)", () => {
-  const web = { type: "web", deviceId: "D".repeat(22) } as const;
-  const console = { type: "console", deviceId: "C".repeat(22) } as const;
-
-  it("asks the cookie for the header, and lets the token go without it", () => {
-    expect(expectedDeviceRefusal(web, undefined)).toEqual(refusal("expected_device_required"));
-    expect(expectedDeviceRefusal(console, undefined)).toBeUndefined();
-  });
-
-  it("admits the credential's own device and refuses any other, whichever the credential", () => {
-    expect(expectedDeviceRefusal(web, web.deviceId)).toBeUndefined();
-    expect(expectedDeviceRefusal(console, console.deviceId)).toBeUndefined();
-    expect(expectedDeviceRefusal(web, console.deviceId)).toEqual(refusal("sync_device_changed"));
-    expect(expectedDeviceRefusal(console, "")).toEqual(refusal("sync_device_changed"));
-    expect(API_ERRORS.expected_device_required).toBe(400);
-    expect(API_ERRORS.sync_device_changed).toBe(409);
-  });
-
-  it("binds the routes that act as a device, and not the reference data", () => {
-    expect([...DEVICE_BOUND_PATHS].sort()).toEqual([
-      "/api/ledger",
-      "/api/ledger/lines",
-      "/api/sync/devices/self",
-    ]);
   });
 });

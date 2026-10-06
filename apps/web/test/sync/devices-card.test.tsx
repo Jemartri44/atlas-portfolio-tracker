@@ -23,7 +23,6 @@ const ACTIVE = {
   issued_at: "2026-10-01T10:00:00Z",
   expires_at: "2026-12-30T10:00:00Z",
   status: "active",
-  last_sync_at: "2026-10-02T08:00:00Z",
   recent: true,
 };
 const REVOKED = {
@@ -33,7 +32,6 @@ const REVOKED = {
   status: "revoked",
   revoked_at: "2026-10-03T09:00:00Z",
   recent: false,
-  last_sync_at: undefined,
 };
 
 const api = (tokens: unknown[]) => {
@@ -107,8 +105,8 @@ describe("DevicesCard", () => {
     expect(text).toContain("Reciente");
     expect(text).toContain("Revocado");
     expect(text).toContain("Ilegible");
-    expect(text).toContain("Última sincronización");
-    expect(text).toContain("nunca");
+    // No queue is synchronised any more (ADR-0035): the card says nothing of it.
+    expect(text).not.toContain("sincronización");
     // Only the live one can be revoked.
     expect(host.querySelectorAll("button")).toHaveLength(1);
   });

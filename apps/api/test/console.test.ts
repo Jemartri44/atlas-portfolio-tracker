@@ -774,21 +774,13 @@ describe("the exchange sent again, and the rules no test tied (review of PR #95)
 });
 
 describe("the list and the revocation of the web (§4.5; T25)", () => {
-  it("lists with the session only: status, last sync, recent, and no e-mail nor sub", async () => {
+  it("lists with the session only: status, recent, and no e-mail nor sub", async () => {
     const api = setup();
     const {
       token,
       device_id: deviceId,
       token_id: tokenId,
     } = (await login(api)).body as Record<string, string>;
-    const key = `sync/devices/${deviceId}.json`;
-    api.s3.seed(
-      key,
-      serializeDeviceObject({
-        ...JSON.parse(api.s3.text(key) as string),
-        last_sync_at: "2026-10-01T11:00:00Z",
-      }),
-    );
     api.ssm.set(`${TOKENS}broken`, "{");
     expect(errorOf(await withToken(api, "/api/devices/tokens", token as string, "GET")).code).toBe(
       "forbidden_for_credential",
@@ -805,7 +797,6 @@ describe("the list and the revocation of the web (§4.5; T25)", () => {
         issued_at: "2026-10-01T10:00:00Z",
         expires_at: "2026-12-30T10:00:00Z",
         status: "active",
-        last_sync_at: "2026-10-01T11:00:00Z",
         recent: true,
       },
       { token_id: "broken", status: "unreadable" },

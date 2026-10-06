@@ -210,8 +210,8 @@ describe("the check of a token, in the order of docs/api.md §2.2", () => {
 });
 
 describe("a row of the list of tokens (docs/api.md §4.5)", () => {
-  it("says the status, the last sync from the device and whether it is recent, without e-mail or sub", () => {
-    const row = tokenListItem(record(), "2026-10-03T08:00:00Z", T0 + DAY, 7);
+  it("says the status and whether it is recent, without e-mail or sub", () => {
+    const row = tokenListItem(record(), T0 + DAY, 7);
     expect(row).toEqual({
       token_id: TID,
       device_id: DID,
@@ -219,7 +219,6 @@ describe("a row of the list of tokens (docs/api.md §4.5)", () => {
       issued_at: "2026-10-01T10:00:00Z",
       expires_at: "2026-12-30T10:00:00Z",
       status: "active",
-      last_sync_at: "2026-10-03T08:00:00Z",
       recent: true,
     });
     expect(JSON.stringify(row)).not.toContain(PAIR.email);
@@ -228,11 +227,10 @@ describe("a row of the list of tokens (docs/api.md §4.5)", () => {
   });
 
   it("is recent strictly inside the window, and shows when it was revoked", () => {
-    expect(tokenListItem(record(), undefined, T0 + 7 * DAY - 1, 7).recent).toBe(true);
-    expect(tokenListItem(record(), undefined, T0 + 7 * DAY, 7).recent).toBe(false);
-    expect(tokenListItem(record(), undefined, T0 - 1, 7).recent).toBe(false);
-    const revoked = tokenListItem(revokedRecord(record(), T0 + DAY), undefined, T0 + 2 * DAY, 7);
+    expect(tokenListItem(record(), T0 + 7 * DAY - 1, 7).recent).toBe(true);
+    expect(tokenListItem(record(), T0 + 7 * DAY, 7).recent).toBe(false);
+    expect(tokenListItem(record(), T0 - 1, 7).recent).toBe(false);
+    const revoked = tokenListItem(revokedRecord(record(), T0 + DAY), T0 + 2 * DAY, 7);
     expect(revoked).toMatchObject({ status: "revoked", revoked_at: "2026-10-02T10:00:00Z" });
-    expect("last_sync_at" in revoked).toBe(false);
   });
 });
