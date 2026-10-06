@@ -83,13 +83,15 @@ export const reverseEvent = async (
   deps: UseCaseDeps,
   targetId: string,
   reason: string,
+  /** The id of the reversal, chosen beforehand so a retry after a cut can look for it. */
+  options: { id?: string } = {},
 ): Promise<ReverseResult> => {
   const { events, etag } = await deps.store.load();
   const target = findTarget(events, targetId);
   const reversal = completeDraft<ReversalEvent>(
     deps,
     { type: "reversal", reverses_id: targetId, reason },
-    createUlidGenerator(deps).next(),
+    options.id ?? createUlidGenerator(deps).next(),
   );
   const candidate = [...events, reversal];
   const state = checkCandidate(events, candidate, [reversal.id], targetId);

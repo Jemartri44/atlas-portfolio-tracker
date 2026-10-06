@@ -59,6 +59,16 @@ describe("reverseEvent", () => {
     expect(positionOf(state, "acc_fund", "ast_world").toString()).toBe("10");
   });
 
+  it("writes the reversal with the id chosen beforehand", async () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const buy = b.buy({ account_id: "acc_fund", asset_id: "ast_world" });
+    const deps = testDeps(new TestStore(b.build()), "2028-03-01T10:00:00.000Z");
+    const chosen = "01J00000000000000000000CH0";
+    const result = await reverseEvent(deps, buy.id, "typo", { id: chosen });
+    expect(result.reversal.id).toBe(chosen);
+  });
+
   it("rejects reversing a buy whose lot was consumed, listing the dependants", async () => {
     const b = new LedgerBuilder();
     catalogue(b);
