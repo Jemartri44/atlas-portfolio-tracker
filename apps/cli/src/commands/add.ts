@@ -248,10 +248,6 @@ export const addCommand = async (
   // `--draft` is not a field of the operation: it says where to keep it.
   const asDraft = booleanFlag(flags, "draft");
   flags.delete("draft");
-  // A cloud folder keeps no drafts until E6 (ADR-0035, §4).
-  if (asDraft && ctx.mode.kind === "cloud") {
-    throw new DomainError("drafts_not_in_cloud", "a cloud folder has no drafts", {});
-  }
   const rated = await rateDraft(ctx, draftFromFlags(spec, flags));
   const draft = rated.draft;
   if (rated.waiting) {
@@ -261,11 +257,7 @@ export const addCommand = async (
     if (asDraft) {
       return saveAsDraft(ctx, draft, rated.history, rated.staleDays);
     }
-    ctx.io.out(
-      ctx.mode.kind === "cloud"
-        ? describeError(new DomainError("drafts_not_in_cloud", "a cloud folder has no drafts", {}))
-        : "Para guardarla como borrador, repite el comando con --draft.",
-    );
+    ctx.io.out("Para guardarla como borrador, repite el comando con --draft.");
     return EXIT.domain;
   }
   if (asDraft) {

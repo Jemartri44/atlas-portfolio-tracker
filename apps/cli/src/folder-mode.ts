@@ -11,6 +11,7 @@
 
 import { dirname } from "node:path";
 import { ApiLedgerStore } from "@atlas/adapters";
+import { ApiDraftStore } from "@atlas/adapters/drafts-http";
 import { httpRemote } from "@atlas/adapters/sync-http";
 import {
   CURRENT_LEDGER_SCHEMA,
@@ -21,6 +22,7 @@ import {
   type LoadedLedger,
 } from "@atlas/domain";
 import { entryForRemote, type RemoteJson } from "@atlas/domain/access";
+import type { PendingDraftStore } from "@atlas/domain/ecb";
 import type { RemoteLedger } from "@atlas/domain/sync";
 import { pathExists } from "./commands/synth.js";
 import type { Context } from "./context.js";
@@ -80,7 +82,9 @@ export class CloudSessionError extends Error {
  * the load a write is judged against is the one the use case made.
  */
 export class CloudLedgerStore implements LedgerStore {
-  private api: Promise<{ store: ApiLedgerStore; remote: RemoteLedger }> | undefined;
+  private api:
+    | Promise<{ store: ApiLedgerStore; remote: RemoteLedger; drafts: PendingDraftStore }>
+    | undefined;
 
   constructor(
     private readonly ctx: () => Context,
@@ -88,7 +92,11 @@ export class CloudLedgerStore implements LedgerStore {
     readonly schema: LedgerSchema = CURRENT_LEDGER_SCHEMA,
   ) {}
 
-  private open(): Promise<{ store: ApiLedgerStore; remote: RemoteLedger }> {
+  private open(): Promise<{
+    store: ApiLedgerStore;
+    remote: RemoteLedger;
+    drafts: PendingDraftStore;
+  }> {
     this.api ??= (async () => {
       const ctx = this.ctx();
       const env = ctx.remote ?? systemRemote();
@@ -105,13 +113,24 @@ export class CloudLedgerStore implements LedgerStore {
         });
       }
       const remote = httpRemote({ origin: entry.origin, fetch: env.fetch, token: entry.token });
-      return { store: new ApiLedgerStore(remote, this.schema), remote };
+      // The drafts of the cloud (ADR-0035, E6): the same token, nothing kept on this computer.
+      const drafts = new ApiDraftStore({
+        origin: entry.origin,
+        fetch: env.fetch,
+        token: entry.token,
+      });
+      return { store: new ApiLedgerStore(remote, this.schema), remote, drafts };
     })();
     // A failed lookup is not remembered: the next use asks again.
     this.api.catch(() => {
       this.api = undefined;
     });
     return this.api;
+  }
+
+  /** The drafts of the cloud, with the same session as the ledger. */
+  async drafts(): Promise<PendingDraftStore> {
+    return (await this.open()).drafts;
   }
 
   /** The remote itself, for what needs the bytes (`backup`, `export`, `remote upload`). */

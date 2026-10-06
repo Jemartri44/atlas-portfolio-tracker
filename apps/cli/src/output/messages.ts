@@ -381,8 +381,6 @@ export const describeError = (error: DomainError): string => {
       return `Esta carpeta tiene a la vez un libro local (${text(d.ledger)}) y la identidad de una nube (sync/remote.json, ${text(d.origin)}): no se sabe cuál es la verdad y no se ha leído ni escrito nada. Una carpeta es de nube (sync/remote.json y sin ledger.jsonl) o local (ledger.jsonl y sin sync/remote.json), nunca las dos. Si su libro es el de la nube: guarda una copia de ledger.jsonl fuera de la carpeta, comprueba con «atlas backup --to <directorio>» que la nube la tiene, y quita ledger.jsonl de aquí. Si es local: quita sync/remote.json (y el resto de sync/). Nada se sincroniza entre los dos.`;
     case "compact_cloud_folder":
       return "Esta carpeta es de nube: no tiene libro que compactar aquí. Compactar el libro de la nube es «atlas admin compact --env <entorno>», con el rol de administración (ADR-0032).";
-    case "drafts_not_in_cloud":
-      return "En una carpeta de nube no hay borradores: llegan con la entrega E6 de ADR-0035. Registra la operación cuando el BCE publique su tipo, o tecléalo (--fx-rate y --fx-rate-date).";
     case "ledger_in_cloud_folder":
       return `No se escribe un ledger.jsonl en una carpeta de nube (${text(d.path)}, nube ${text(d.origin)}): sería la carpeta ambigua de ADR-0035, que la consola se niega a abrir. Escríbelo en otra carpeta o con otro nombre.`;
     case "upload_needs_cloud_folder":

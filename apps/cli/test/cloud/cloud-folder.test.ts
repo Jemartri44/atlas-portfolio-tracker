@@ -227,16 +227,37 @@ describe("a cloud folder reads and writes the cloud's ledger", () => {
     expect(c.api.s3.text(LEDGER_KEY)).not.toContain('"amount":"7"');
   });
 
-  it("refuses compact and drafts; compact works in a local folder", async () => {
+  it("refuses compact; compact works in a local folder", async () => {
     const { c } = await cloud();
     expect(await c.exec(["compact", "--yes"])).toBe(EXIT.domain);
     expect(said(c)).toContain("compact_cloud_folder");
     c.err.length = 0;
-    expect(await c.exec(["draft", "list"])).toBe(EXIT.domain);
-    expect(said(c)).toContain("drafts_not_in_cloud");
     const local = await setupConsole();
     await writeFile(join(local.ledger, "ledger.jsonl"), textOf(baseLines()));
     expect(await local.exec(["compact", "--yes"])).toBe(EXIT.ok);
+  });
+
+  it("lists the drafts of the cloud with the token, and keeps none in the folder (E6)", async () => {
+    const { c } = await cloud();
+    c.out.length = 0;
+    expect(await c.exec(["draft", "list"])).toBe(EXIT.ok);
+    expect(c.out.join("\n")).toContain("No hay borradores pendientes.");
+    const id = "01J0000000000000000000000A";
+    c.api.s3.seed(
+      `drafts/${id}.json`,
+      JSON.stringify({
+        draft_format: 1,
+        id,
+        saved_at: "2026-10-06T10:00:00.000Z",
+        event: { type: "buy", asset_id: "ast_gold", trade_date: "2026-10-06" },
+      }),
+    );
+    c.out.length = 0;
+    expect(await c.exec(["draft", "list"])).toBe(EXIT.ok);
+    expect(c.out.join("\n")).toContain("Un borrador pendiente");
+    expect(c.out.join("\n")).toContain("ast_gold");
+    // Nothing of it on this computer (ADR-0035, §4).
+    await expect(readdir(join(c.ledger, "drafts"))).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   describe("a settings change that would leave events invalid", () => {

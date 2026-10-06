@@ -112,6 +112,15 @@ locals {
         Condition = { Null = { "s3:if-none-match" = "true" }, Bool = { "s3:ObjectCreationOperation" = "true" } }
       },
       {
+        # Drafts of the cloud (E6 of ADR-0035): created once, never overwritten; same form as backups.
+        Sid       = "DraftsOnlyIfAbsent"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:PutObject"
+        Resource  = "${local.data_arn}/drafts/*"
+        Condition = { Null = { "s3:if-none-match" = "true" }, Bool = { "s3:ObjectCreationOperation" = "true" } }
+      },
+      {
         Sid       = "DenyInsecureTransport"
         Effect    = "Deny"
         Principal = "*"

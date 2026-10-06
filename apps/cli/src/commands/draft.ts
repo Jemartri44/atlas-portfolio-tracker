@@ -19,17 +19,23 @@ import {
   draftRecordedAs,
   type EcbHistory,
   type PendingDraft,
+  type PendingDraftStore,
   pendingDraftStatus,
   preparePendingDraft,
   recordPendingDraft,
 } from "@atlas/domain/ecb";
 import { UsageError } from "../args.js";
 import { type Context, EXIT } from "../context.js";
+import { cloudStoreOf } from "../folder-mode.js";
 import { day } from "../output/ecb.js";
 import { historyOf } from "./rates.js";
 import { confirm, confirmAndRecord, preview, render } from "./shared.js";
 
-const storeOf = (ctx: Context): FileDraftStore => new FileDraftStore(dirname(ctx.ledgerPath));
+/** The drafts of the cloud for a cloud folder (ADR-0035, E6), the folder's own `drafts/` otherwise. */
+const storeOf = async (ctx: Context): Promise<PendingDraftStore> => {
+  const cloud = cloudStoreOf(ctx);
+  return cloud === undefined ? new FileDraftStore(dirname(ctx.ledgerPath)) : cloud.drafts();
+};
 
 /** One line that tells a draft apart: what, where and when. */
 const summaryOf = (draft: PendingDraft): string => {
@@ -79,7 +85,7 @@ export const saveAsDraft = async (
       `Aviso: ya hay ${prepared.duplicates.length === 1 ? "un movimiento registrado" : `${prepared.duplicates.length} movimientos registrados`} con la misma huella (${prepared.duplicates.join(", ")}). Si es el mismo, no hace falta el borrador.`,
     );
   }
-  await storeOf(ctx).save(prepared.draft);
+  await (await storeOf(ctx)).save(prepared.draft);
   ctx.io.out(
     `Guardado el borrador ${prepared.draft.id} en drafts/. No cuenta en ninguna cifra y no se registra solo: cuando el BCE publique el tipo, \`atlas fx update\` y \`atlas draft confirm ${prepared.draft.id}\`.`,
   );
@@ -90,7 +96,7 @@ const find = async (ctx: Context, id: string | undefined): Promise<PendingDraft 
   if (id === undefined) {
     throw new UsageError("uso: atlas draft confirm|discard <id>");
   }
-  const found = (await storeOf(ctx).list()).drafts.find((draft) => draft.id === id);
+  const found = (await (await storeOf(ctx)).list()).drafts.find((draft) => draft.id === id);
   if (found === undefined) {
     ctx.io.err(`Error: no hay ningún borrador ${id} en drafts/. Consulta \`atlas draft list\`.`);
   }
@@ -98,7 +104,7 @@ const find = async (ctx: Context, id: string | undefined): Promise<PendingDraft 
 };
 
 const listDrafts = async (ctx: Context): Promise<number> => {
-  const { drafts, unreadable } = await storeOf(ctx).list();
+  const { drafts, unreadable } = await (await storeOf(ctx)).list();
   const { history, problem, staleDays } = await ecbOf(ctx);
   const { state, events } = await loadAndProject(ctx.deps, { collectErrors: true });
   const rows = drafts.map((draft) => ({
@@ -157,7 +163,7 @@ const confirmDraft = async (ctx: Context, id: string | undefined): Promise<numbe
   // drafts/): confirming again only removes it — never a second line.
   const recorded = draftRecordedAs(events, draft);
   if (recorded.length > 0) {
-    await storeOf(ctx).remove(draft.id);
+    await (await storeOf(ctx)).remove(draft.id);
     ctx.io.out(
       `El borrador ${draft.id} ya estaba registrado (${recorded.join(", ")}): se quita de drafts/ sin registrarlo otra vez.`,
     );
@@ -177,7 +183,13 @@ const confirmDraft = async (ctx: Context, id: string | undefined): Promise<numbe
   );
   let removed = true;
   const result = await confirmAndRecord(ctx, status.event, notes, async (options) => {
-    const recorded = await recordPendingDraft(ctx.deps, storeOf(ctx), draft, status.event, options);
+    const recorded = await recordPendingDraft(
+      ctx.deps,
+      await storeOf(ctx),
+      draft,
+      status.event,
+      options,
+    );
     removed = recorded.draftRemoved;
     return recorded;
   });
@@ -201,15 +213,12 @@ const discardDraft = async (ctx: Context, id: string | undefined): Promise<numbe
     ctx.io.out("Cancelado.");
     return EXIT.ok;
   }
-  await storeOf(ctx).remove(draft.id);
+  await (await storeOf(ctx)).remove(draft.id);
   ctx.io.out(`Borrador ${draft.id} descartado.`);
   return EXIT.ok;
 };
 
 export const draftCommand = async (ctx: Context, positionals: string[]): Promise<number> => {
-  if (ctx.mode.kind === "cloud") {
-    throw new DomainError("drafts_not_in_cloud", "a cloud folder has no drafts", {});
-  }
   switch (positionals[1]) {
     case "list":
       return listDrafts(ctx);
