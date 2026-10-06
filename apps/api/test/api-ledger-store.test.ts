@@ -56,6 +56,10 @@ interface Net {
   dropAfter?: boolean;
   /** Answer 502 after serving the request (a gateway that lost the Lambda's answer). */
   badGatewayAfter?: boolean;
+  /** Answers a POST without serving it: the API never saw it. */
+  instead?: Response | undefined;
+  /** Serves a POST and then hands back this answer instead of the API's. */
+  after?: Response | undefined;
 }
 
 const rig = async (lines: readonly string[] = [lineOf(account)]) => {
@@ -70,6 +74,9 @@ const rig = async (lines: readonly string[] = [lineOf(account)]) => {
     if (net.dropBefore) {
       throw new TypeError("network down");
     }
+    if (init.method === "POST" && net.instead !== undefined) {
+      return net.instead;
+    }
     const result = await api.call(init.method ?? "GET", url.replace(SELF, ""), {
       headers: init.headers as Record<string, string>,
       ...(init.body === undefined
@@ -79,6 +86,9 @@ const rig = async (lines: readonly string[] = [lineOf(account)]) => {
     });
     if (net.dropAfter) {
       throw new TypeError("connection reset");
+    }
+    if (init.method === "POST" && net.after !== undefined) {
+      return net.after;
     }
     const response = new Response(
       result.isBase64Encoded ? Buffer.from(result.body, "base64") : result.body,
@@ -278,6 +288,31 @@ describe("ApiLedgerStore: 412, rejection and what is deduced", () => {
     ]);
   });
 
+  it("confirms both members of a chain whose corrections share a fingerprint (the whole unit counts)", async () => {
+    const first = depositOf(1);
+    const second = depositOf(2);
+    const { store, stored, sent } = await rig([lineOf(account), lineOf(first), lineOf(second)]);
+    const { etag } = await store.load();
+    const chain = [
+      reversalOf(1, first.id),
+      correctionOf(3, first, { fingerprint: "sha256:x" }),
+      reversalOf(2, second.id),
+      correctionOf(4, second, { fingerprint: "sha256:x" }),
+    ];
+    await store.append(chain, etag);
+    expect(stored().split("\n").filter(Boolean)).toHaveLength(7);
+    const body = JSON.parse(new TextDecoder().decode(sent.at(-1)?.init.body as Uint8Array)) as {
+      lines: Record<string, unknown>[];
+    };
+    // The first correction repeats the fingerprint of a LATER member of its unit.
+    expect(body.lines.map((entry) => entry.confirm_duplicate === true)).toEqual([
+      false,
+      true,
+      false,
+      true,
+    ]);
+  });
+
   it("a pair the API refuses is remote_rejected and leaves the ledger as it was", async () => {
     const { store, stored } = await rig([lineOf(account), lineOf(deposit)]);
     const { etag } = await store.load();
@@ -305,24 +340,31 @@ describe("ApiLedgerStore: 412, rejection and what is deduced", () => {
     expect(stored()).toBe(textOf([lineOf(account), lineOf(depositOf(1))]));
   });
 
-  it("rethrows what proves nothing was written (a credential that is not accepted)", async () => {
-    const { api, sent } = await rig();
-    const store = new ApiLedgerStore(
-      httpRemote({
-        origin: SELF,
-        token: `atlasdt1.${"T".repeat(22)}.${"s".repeat(43)}`,
-        fetch: (async (url: string, init: RequestInit) => {
-          sent.push({ method: init.method ?? "GET", url, init });
-          return new Response(JSON.stringify({ error: { code: "device_token_invalid" } }), {
-            status: 401,
-            headers: { "content-type": "application/json" },
-          });
-        }) as unknown as typeof fetch,
-      }),
-    );
-    void api;
-    const error = await failureOf(store.append([deposit], sha(textOf([lineOf(account)]))));
+  const shaped = (status: number, code: string) =>
+    new Response(JSON.stringify({ error: { code, details: {} } }), {
+      status,
+      headers: { "content-type": "application/json" },
+    });
+
+  it("a 401 at the POST, with the store loaded, is not an unknown outcome and writes nothing", async () => {
+    const { store, net, stored } = await rig();
+    const { etag } = await store.load();
+    net.instead = shaped(401, "device_token_invalid");
+    const error = await failureOf(store.append([deposit], etag));
+    expect(error).not.toBeInstanceOf(WriteOutcomeUnknownError);
     expect(error).toBeInstanceOf(RemoteError);
+    expect((error as RemoteError).code).toBe("device_token_invalid");
+    expect((error as RemoteError).status).toBe(401);
+    expect(stored()).toBe(textOf([lineOf(account)]));
+  });
+
+  it("a 4xx at the POST (a request the API refuses as a whole) is rethrown as it is", async () => {
+    const { store, net } = await rig();
+    const { etag } = await store.load();
+    net.instead = shaped(400, "body_invalid");
+    const error = await failureOf(store.append([deposit], etag));
+    expect(error).not.toBeInstanceOf(WriteOutcomeUnknownError);
+    expect((error as RemoteError).code).toBe("body_invalid");
   });
 });
 
@@ -368,6 +410,32 @@ describe("ApiLedgerStore: unknown outcome", () => {
     const error = await failureOf(store.append([deposit], etag));
     expect(error).toBeInstanceOf(WriteOutcomeUnknownError);
     net.badGatewayAfter = false;
+    expect((await store.findOutcome([deposit.id])).outcome).toBe("written");
+  });
+
+  it("a 503 with the shape of the API, after the write, is unknown (status >= 500)", async () => {
+    const { store, net } = await rig();
+    const { etag } = await store.load();
+    net.after = new Response(
+      JSON.stringify({ error: { code: "remote_unavailable", details: {} } }),
+      {
+        status: 503,
+        headers: { "content-type": "application/json" },
+      },
+    );
+    const error = await failureOf(store.append([deposit], etag));
+    expect(error).toBeInstanceOf(WriteOutcomeUnknownError);
+    net.after = undefined;
+    expect((await store.findOutcome([deposit.id])).outcome).toBe("written");
+  });
+
+  it("a 200 with a broken body is transport_rejected, hence unknown", async () => {
+    const { store, net } = await rig();
+    const { etag } = await store.load();
+    net.after = new Response("<html>not the API</html>", { status: 200 });
+    const error = await failureOf(store.append([deposit], etag));
+    expect(error).toBeInstanceOf(WriteOutcomeUnknownError);
+    net.after = undefined;
     expect((await store.findOutcome([deposit.id])).outcome).toBe("written");
   });
 
