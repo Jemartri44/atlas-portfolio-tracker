@@ -297,6 +297,11 @@ describe("architecture (015): the web configures the sync only through its engin
     join(webSrc, "sync", "engine.ts"),
     join(webSrc, "sync", "engine-held.ts"),
   ]);
+  // ADR-0035, E2a: the cloud boot reads the ledger with `ApiLedgerStore` over
+  // `httpRemote`, outside the engine. It is the one exception to the two rules
+  // below about the client of the sync; E5 retires the engine and, with it,
+  // the rules.
+  const CLOUD_BOOT = new Set([join(webSrc, "ledger", "cloud.ts")]);
   const READ_ONLY = new Set([
     "browserSyncConfigured",
     "browserSyncPresence",
@@ -339,7 +344,12 @@ describe("architecture (015): the web configures the sync only through its engin
         const at = `${relative(repoRoot, file)}: ${binding.how} ${binding.name} from ${binding.specifier}`;
         if (binding.how === "dynamic") {
           violations.push(at);
-        } else if (!ENGINES.has(file) && !binding.isType && !READ_ONLY.has(binding.name)) {
+        } else if (
+          !ENGINES.has(file) &&
+          !CLOUD_BOOT.has(file) &&
+          !binding.isType &&
+          !READ_ONLY.has(binding.name)
+        ) {
           violations.push(at);
         }
       }
@@ -360,8 +370,8 @@ describe("architecture (015): the web configures the sync only through its engin
   it("reaches the client of the sync only through the engine, by any path", () => {
     const violations = [
       ...reach(
-        listSources(webSrc).filter((file) => !ENGINES.has(file)),
-        ENGINES,
+        listSources(webSrc).filter((file) => !ENGINES.has(file) && !CLOUD_BOOT.has(file)),
+        new Set([...ENGINES, ...CLOUD_BOOT]),
       ),
     ]
       .filter(([file]) => /[/\\]adapters[/\\]src[/\\]sync(-http)?[/\\]/.test(file))
