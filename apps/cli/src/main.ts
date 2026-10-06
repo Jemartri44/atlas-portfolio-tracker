@@ -455,11 +455,7 @@ const reportUnknownOutcome = async (
 };
 
 /** What went wrong talking to the cloud of a cloud folder, said as it is, with its own exit code. */
-const reportCloud = (
-  io: Io,
-  error: unknown,
-  cloud: CloudLedgerStore | undefined,
-): number | undefined => {
+const reportCloud = (io: Io, error: unknown): number | undefined => {
   if (error instanceof CloudSessionError) {
     io.err(describeCloudSession(error));
     return EXIT.session;
@@ -469,7 +465,7 @@ const reportCloud = (
     return EXIT.session;
   }
   if (error instanceof RemoteError && OFFLINE_CODES.has(error.code)) {
-    io.err(describeOffline(error.code, cloud?.appended ?? 0));
+    io.err(describeOffline(error.code));
     return EXIT.offline;
   }
   if (error instanceof RemoteError) {
@@ -483,7 +479,7 @@ const report = async (io: Io, error: unknown, cloud?: CloudLedgerStore): Promise
   if (error instanceof WriteOutcomeUnknownError && cloud !== undefined) {
     return reportUnknownOutcome(io, cloud, error);
   }
-  const code = reportCloud(io, error, cloud);
+  const code = reportCloud(io, error);
   if (code !== undefined) {
     return code;
   }

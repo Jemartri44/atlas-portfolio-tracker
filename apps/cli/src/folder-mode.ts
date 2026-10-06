@@ -81,8 +81,6 @@ export class CloudSessionError extends Error {
  */
 export class CloudLedgerStore implements LedgerStore {
   private api: Promise<{ store: ApiLedgerStore; remote: RemoteLedger }> | undefined;
-  /** Writes the cloud accepted during this order (for saying what was done when a later one fails). */
-  appended = 0;
 
   constructor(
     private readonly ctx: () => Context,
@@ -126,11 +124,7 @@ export class CloudLedgerStore implements LedgerStore {
   }
 
   async append(events: readonly LedgerEvent[], etag: string): Promise<{ etag: string }> {
-    const result = await (await this.open()).store.append(events, etag);
-    if (events.length > 0) {
-      this.appended += 1;
-    }
-    return result;
+    return (await this.open()).store.append(events, etag);
   }
 
   async findOutcome(ids: readonly string[]) {

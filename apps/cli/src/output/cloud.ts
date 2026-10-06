@@ -26,14 +26,8 @@ export const OFFLINE_CODES: ReadonlySet<string> = new Set([
 
 const DID_NOTHING = "No se ha leído ni registrado nada.";
 
-/** What the earlier writes of the same order change in «nothing was recorded». */
-const earlier = (appended: number): string =>
-  appended === 0
-    ? DID_NOTHING
-    : `Antes del fallo la nube ya había aceptado ${appended === 1 ? "una escritura" : `${appended} escrituras`} de esta orden: comprueba el libro antes de repetirla.`;
-
-export const describeOffline = (code: string, appended: number): string =>
-  `Error (${code}): ${describeRemoteFailure(code)} ${earlier(appended)}`;
+export const describeOffline = (code: string): string =>
+  `Error (${code}): ${describeRemoteFailure(code)} ${DID_NOTHING}`;
 
 export const describeSession = (code: string): string =>
   `Error (${code}): ${describeRemoteFailure(code)} ${DID_NOTHING} Inicia sesión con «atlas remote login».`;
