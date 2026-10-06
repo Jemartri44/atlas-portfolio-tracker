@@ -1,5 +1,6 @@
 // The session of the web lasts 24 hours and is not renewed (`docs/api.md` §3;
-// ADR-0035, question 6), and a form left half-written is lost if it ends. So,
+// ADR-0035, question 6), and a form left half-written cannot be saved once it
+// ends (what was typed stays on screen, but the write is refused). So,
 // **before a form opens**, the page says if less than 15 minutes are left, and
 // when a write finds the session already gone it says so too.
 //
@@ -8,7 +9,7 @@
 // it is. Coming back, «Ya he entrado» reads the session again and gives the page
 // the device of the new one; nothing is written on the device.
 
-import { createSignal, type JSX, Show } from "solid-js";
+import { createSignal, type JSX, onCleanup, Show } from "solid-js";
 import { Notice } from "../components/Notice.jsx";
 import { store } from "../ledger/state.js";
 import { signInHref } from "../sync/session.js";
@@ -36,7 +37,14 @@ export const SessionNotice = (props: {
   const [opened, setOpened] = createSignal(false);
   const [busy, setBusy] = createSignal(false);
 
-  const left = (): number | undefined => minutesLeft();
+  // The minutes left are re-read with the time, not only when something else changes.
+  const [tick, setTick] = createSignal(0);
+  const timer = setInterval(() => setTick((value) => value + 1), 30_000);
+  onCleanup(() => clearInterval(timer));
+  const left = (): number | undefined => {
+    tick();
+    return minutesLeft();
+  };
   const ending = (): boolean =>
     props.expired === true || (left() ?? Number.POSITIVE_INFINITY) < SESSION_WARNING_MINUTES;
 
@@ -90,7 +98,7 @@ export const SessionNotice = (props: {
         >
           {props.expired === true
             ? "Lo último no se ha guardado. Entra de nuevo con Google (se abre en otra pestaña), vuelve aquí y confirma otra vez: lo que has escrito sigue en pantalla."
-            : `Quedan ${Math.max(left() ?? 0, 0)} minutos. Si caduca mientras rellenas, se pierde lo escrito: entra de nuevo ahora con Google (se abre en otra pestaña) y sigue aquí.`}
+            : `Quedan ${Math.max(left() ?? 0, 0)} minutos. Si caduca mientras rellenas, lo escrito se conserva, pero no podrás guardarlo hasta entrar de nuevo: hazlo ahora con Google (se abre en otra pestaña) y sigue aquí.`}
         </Notice>
       </Show>
       <Show when={said()}>
