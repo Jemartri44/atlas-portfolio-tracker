@@ -6,8 +6,6 @@ import type { LedgerEvent, ReversalEvent, SupportedEvent } from "../../src/schem
 import { fingerprintOf } from "../../src/schema/fingerprint.js";
 import { encodeLine } from "../../src/schema/line.js";
 import { DEFAULT_SETTINGS, mergeSettings } from "../../src/settings/settings.js";
-import type { LocalSide } from "../../src/sync/client-plan.js";
-import { markerFor } from "../../src/sync/marker.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 
 export const linesOf = (events: readonly LedgerEvent[]): string[] => events.map(encodeLine);
@@ -49,23 +47,6 @@ export const correction = <E extends SupportedEvent>(
   const corrected = (fingerprint === undefined ? draft : { ...draft, fingerprint }) as unknown as E;
   builder.raw(corrected);
   return [reversal, corrected];
-};
-
-/** The device as its store reads it: synced up to `synced` lines, nothing held. */
-export const localSide = (
-  events: readonly LedgerEvent[],
-  synced: number,
-  extra: Partial<LocalSide> = {},
-): LocalSide => {
-  const lines = linesOf(events);
-  return {
-    lines,
-    events,
-    marker: markerFor(lines, synced),
-    held: [],
-    confirmations: [],
-    ...extra,
-  };
 };
 
 /**

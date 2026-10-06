@@ -141,7 +141,7 @@ export const ifNoneMatchHits = (header: string | undefined, version: string): bo
 
 /**
  * A rule of the sync that said no, thrown as a `RemoteError` by the domain
- * (`parseAppendBody`, `parsePublishBody`, `parseInitBody`, `acceptInit`),
+ * (`parseAppendBody`, `parseInitBody`, `acceptInit`),
  * answered with **its own** code and details. A code the API does not answer
  * is a bug, never folded into another.
  */

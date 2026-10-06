@@ -1,11 +1,8 @@
-// What a synced device may not do, decided in one place and each refusal with
-// its own literal (ADR-0026, Part A and Part B; ADR-0032; §6.2 P2 to P5 and
-// §6.3 (V5) of prompt 014). The orders that act on the remote (compact of the
-// remote, restore, forget a device) are feature 015's; this is the pure
-// function they will ask.
+// A refusal as a value and as an error (ADR-0026, Part A; ADR-0032), for the
+// interfaces that stop an order with it. What each order refuses is decided by
+// whoever owns the order; this is only the shape.
 
 import { DomainError } from "../errors.js";
-import type { SyncPresence } from "./marker.js";
 
 export interface Refusal {
   readonly code: string;
@@ -18,76 +15,3 @@ export class RefusedError extends DomainError {
     super(refusal.code, `refused: ${refusal.code}`, { ...refusal.details });
   }
 }
-
-/** The marker a refusal is about: unreadable, or missing with `sync/` present. */
-const markerState = (presence: SyncPresence): "unreadable" | "missing" | undefined =>
-  presence.present && typeof presence.marker === "string" ? presence.marker : undefined;
-
-/**
- * Whether `atlas compact` may rewrite **this folder**: never while it is
- * synced — it is a replica, and compacting it would leave the marker
- * meaningless and upload as pending the waivers it writes (ADR-0026, Part A) —,
- * nor with the marker unreadable, nor with `sync/` and no marker. A folder
- * whose sync was deactivated explicitly may compact again (D-Q6).
- */
-export const compactPermission = (presence: SyncPresence): Refusal | undefined => {
-  const marker = markerState(presence);
-  if (marker === "unreadable") {
-    return { code: "compact_refused_marker_unreadable", details: {} };
-  }
-  if (marker === "missing") {
-    return { code: "compact_refused_marker_missing", details: {} };
-  }
-  return presence.present &&
-    typeof presence.marker === "object" &&
-    presence.marker.status === "enabled"
-    ? { code: "compact_refused_folder_synced", details: {} }
-    : undefined;
-};
-
-/**
- * Whether an import may replace the ledger of a synced web: never (§6.2 P2).
- * It would wipe what is pending, and an import over a shared ledger is exactly
- * the rewrite the sync detects. Deactivate first, explicitly.
- */
-export const importPermission = (configured: boolean): Refusal | undefined =>
-  configured ? { code: "import_refused_synced", details: {} } : undefined;
-
-/**
- * Whether the sync may be deactivated: never with pending lines, which would
- * never reach the remote and nobody would know (§6.2 P4); nor with the marker
- * unreadable (sync first: it rebuilds it). What is held back **stays**.
- */
-export const deactivatePermission = (
-  presence: SyncPresence,
-  pendingHere: number,
-): Refusal | undefined => {
-  if (markerState(presence) === "unreadable") {
-    return { code: "deactivate_refused_marker_unreadable", details: {} };
-  }
-  // Without a marker nobody knows which lines are pending: refused as with an
-  // unreadable one (non-blocking 3 of the review of PR #83), never read as
-  // «nothing pending».
-  if (markerState(presence) === "missing") {
-    return { code: "deactivate_refused_marker_missing", details: {} };
-  }
-  return pendingHere > 0
-    ? { code: "deactivate_refused_pending", details: { pending: pendingHere } }
-    : undefined;
-};
-
-/**
- * Whether a sync may run at all (non-blocking 4 of the review of PR #83):
- * only on a device whose sync is configured. Starting is always an explicit
- * choice — initialising an empty remote with the whole ledger, or joining
- * from the remote or with the device's own lines —, never a side effect of a
- * sync that would upload a ledger line by line (V6).
- */
-export const syncPermission = (presence: SyncPresence): Refusal | undefined => {
-  if (!presence.present) {
-    return { code: "sync_not_configured", details: {} };
-  }
-  return typeof presence.marker === "object" && presence.marker.status === "disabled"
-    ? { code: "sync_deactivated", details: {} }
-    : undefined;
-};
