@@ -13,6 +13,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { FakeIdbFactory } from "../../../../packages/adapters/test/fake-idb.js";
 import { bootCloud } from "../../src/ledger/cloud.js";
 import { store } from "../../src/ledger/state.js";
+import { mountDraftCounter } from "../../src/shell/draft-counter.js";
 import { goldenEvents, goldenText } from "../helpers/golden.js";
 import { showInShell, text, until } from "../helpers/render.jsx";
 import { apiAt, sameOrigin, signedIn } from "./api-support.js";
@@ -99,8 +100,14 @@ const session = async () => {
 describe("what stays on the device after a session of the cloud", () => {
   it("opens no database at all when nothing public was saved", async () => {
     const request = await session();
+    // The frame mounts the counter of drafts before and after the ledger loads.
+    const slot = document.createElement("span");
+    mountDraftCounter(slot);
     await bootCloud(request);
     await until(() => store.load().phase === "ready", "the ledger");
+    mountDraftCounter(slot);
+    window.dispatchEvent(new Event("atlas:drafts"));
+    await new Promise((resolve) => setTimeout(resolve, 20));
     expect(factory.databases.size).toBe(0);
     expect(onDevice().entries).toEqual([]);
   });

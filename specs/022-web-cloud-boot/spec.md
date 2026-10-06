@@ -16,7 +16,7 @@ Como persona que usa Atlas, quiero que la web, al abrirse, compruebe mi sesión 
 - **FR-006** Caché: el *service worker* precarga solo el *shell*; sin reglas de caché en tiempo de ejecución; `navigateFallbackDenylist: [/^\/api\//]`. Toda petición de la web a su API pide `cache: "no-store"` (arranque, `signOut` y los dispositivos incluidos; el BCE público conserva `ETag`/`304`).
 - **FR-007** En el dispositivo, tras una sesión, solo queda lo que no es dato personal: las preferencias de la interfaz (`atlas.privacy`, `atlas.theme`) y la copia pública del BCE en IndexedDB. Ninguna clave `atlas.source`, ningún almacén con el libro, ninguna entrada de caché.
 - **FR-008** Desarrollo sin AWS: `npm run dev` lleva `/api` al servidor local de pruebas con el *proxy* de Vite (`ATLAS_API_URL`, por defecto `http://127.0.0.1:8787`), solo en desarrollo.
-- **FR-009** Techos del paquete (`check-bundle.mjs`): el arranque se queda dentro; el total no cabe (ver `questions.md`).
+- **FR-009** Techos del paquete (`check-bundle.mjs`): el arranque se queda dentro; el total sube a 320.500 por decisión de la dirección (`questions.md`).
 
 ## Fuera de alcance
 

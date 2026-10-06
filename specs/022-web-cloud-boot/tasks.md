@@ -7,4 +7,5 @@
 - [x] T5 `no-store` en todas las llamadas de la web a la API; `WORKBOX_OPTIONS` exportado.
 - [x] T6 Tests: arranque, dispositivo, `no-store`, *service worker*.
 - [x] T7 *Proxy* de desarrollo, `--origin` y `--ledger` del servidor local, README.
-- [ ] T8 Techo del total del bundle: pendiente de la dirección (`questions.md`).
+- [x] T8 Techo del total a 320.500 (decidido por la dirección).
+- [x] T9 El contador de borradores no abre IndexedDB en modo nube.

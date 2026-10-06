@@ -6,4 +6,6 @@
 - **Adaptadores por subruta** (`@atlas/adapters/api-store`, `sync-http`): alias en `vite.config.ts` y `vitest.config.ts`. La regla de arquitectura de la 015 («el cliente de la sync solo por el motor») admite `ledger/cloud.ts` como única excepción hasta E5.
 - **Caché:** `WORKBOX_OPTIONS` se exporta para poder probarlo; `cache: "no-store"` añadido a `signOut` y a los dos `POST` de dispositivos.
 - **Desarrollo:** `server.proxy` en Vite; el servidor local de pruebas admite `--origin` (el origen que ve el navegador) y `--ledger` (libro sintético inicial).
-- **Medido** (gzip, bytes): arranque 75.949 (techo 76.055, autorizado 76.069); total 320.215 (techo 315.745): ver `questions.md`.
+- **Redirección tras el inicio de sesión** (`/ajustes#sincronizacion`): se deja como está; es de la API y se cambia en E4.
+- **Borradores:** el contador del marco no abre IndexedDB en modo nube.
+- **Medido** (gzip, bytes): arranque 75.949 (techo 76.055, autorizado 76.069); total 320.215 (techo subido a 320.500 por la dirección: carga perezosa; E2b/E5 devuelven sitio y entonces se baja).

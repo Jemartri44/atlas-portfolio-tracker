@@ -1173,7 +1173,17 @@ const BOOT_BUDGET_GZIP_BYTES = 76_055;
  * instead of a band of «sin precios»: all lazy, in the chunk of the Cubo. The
  * boot is −11 (76.024, ceiling unchanged). The trend: 315.154 → 315.489.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 315_745;
+/*
+ * **Feature 022 (ADR-0035, E2a), by decision of the direction (2026-10-06):
+ * measured 320.215, ceiling 320.500 — measured + 285**, inside the
+ * authorisation (500.000). The cloud boot (`ledger/cloud.ts` with
+ * `ApiLedgerStore` and the HTTP client, 1,8 KB gzip), the gate screen
+ * (`CloudGate`, 0,9 KB) and the chunks the lazy local path splits into are all
+ * lazy; the boot is not touched (75.949, ceiling 76.055). **E2b and E5 give the
+ * room back** (they retire the local ledger and the queue); the ceiling comes
+ * back down then. The trend: 315.489 → 320.215.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 320_500;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,

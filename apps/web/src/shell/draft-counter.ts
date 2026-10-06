@@ -10,6 +10,8 @@
 
 import { countOf } from "../format/number.js";
 import { countDrafts, DRAFTS_CHANGED } from "../ledger/draft-store.js";
+import { LEDGER_MODE } from "../ledger/mode.js";
+import { store } from "../ledger/state.js";
 
 /** The clock of the icon set (`Icon.tsx`): a trusted constant, never data. */
 const CLOCK =
@@ -45,6 +47,12 @@ export const mountDraftCounter = (slot: HTMLElement): void => {
   const read = (): void => {
     if (!slot.isConnected && slot.childNodes.length > 0) {
       window.removeEventListener(DRAFTS_CHANGED, read);
+      return;
+    }
+    // Cloud mode keeps no drafts on the device (ADR-0035; they come with E6):
+    // the database is not even opened until a local ledger is.
+    const source = store.source();
+    if (source?.kind === "cloud" || (LEDGER_MODE === "cloud" && source === undefined)) {
       return;
     }
     void countDrafts().then((total) => paint(slot, total ?? 0));
