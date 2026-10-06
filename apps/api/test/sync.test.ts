@@ -389,7 +389,7 @@ describe("the retired device binding (ADR-0035, E4; §5.4)", () => {
     headers: { ...as.headers, "x-atlas-expected-device": device },
   });
 
-  it("serves the cookie of the web without the header, on the three routes of the ledger", async () => {
+  it("serves the cookie of the web without the header, on the reads and the appends of the ledger", async () => {
     const { api, session, etag } = await seeded();
     expect((await read(api, session, "/api/ledger")).statusCode).toBe(200);
     const appended = await write(

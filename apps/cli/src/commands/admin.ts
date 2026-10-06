@@ -317,11 +317,11 @@ const remoteStore = (ctx: Context, clients: AdminClients): LedgerStore =>
   new BlobLedgerStore(new S3LedgerBlob(clients.objects), ctx.deps.store.schema);
 
 /**
- * `atlas admin compact` (ADR-0026, Part A): refused by the rule of the
- * rewrite; the plan and the confirmation of the local `compact`; the store
- * archives the bytes first (`archive/`, never overwritten) and writes on the
- * condition of the remote that was read. Every device then sees the rewrite by
- * the hash of its prefix and downloads again when its user asks.
+ * `atlas admin compact` (ADR-0026, Part A): the plan and the confirmation of
+ * the local `compact`; the store archives the bytes first (`archive/`, never
+ * overwritten) and writes on the condition of the remote that was read
+ * (`If-Match`), so a ledger that changed meanwhile is never overwritten. There
+ * is no queue to check (ADR-0035): clients reload the ledger on their next `412`.
  */
 const compactOrder = async (
   ctx: Context,
@@ -419,7 +419,7 @@ const checkCandidate = (ctx: Context, lines: string[]): LedgerEvent[] => {
 
 /**
  * `atlas admin restore --from …` (ADR-0032), **the six steps in order**, none
- * skipped, and refused by the rule of the rewrite. Restoring never deletes:
+ * skipped. Restoring never deletes:
  * the current bytes are archived first (`archive/pre-restore-…`), and the
  * candidate is written **line by line as it is** (`replaceLines`, never
  * `replace`, which reserialises), on the condition of the remote compared.
