@@ -61,9 +61,12 @@ const synced = async (assets: readonly string[] = ["ast_a"]) => {
     b.asset(asset);
     b.buy("acc_ib", asset, "2026-09-01", "1", "10");
   }
-  await writeFile(join(c.ledger, "ledger.jsonl"), text(b.build().map(encodeLine)));
+  // A cloud folder (ADR-0035): signing in from a folder with no ledger makes it
+  // one; the ledger goes up from a file outside the folder, to an empty cloud.
+  const seed = join(c.root, "seed.jsonl");
+  await writeFile(seed, text(b.build().map(encodeLine)));
   expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
-  expect(await c.exec(["sync", "init", "--origin", SELF])).toBe(0);
+  expect(await c.exec(["remote", "upload", "--from", seed, "--yes"])).toBe(0);
   await mkdir(join(c.ledger, "prices"), { recursive: true });
   await writeFile(
     join(c.ledger, "prices", "symbols.json"),
@@ -191,7 +194,7 @@ describe("atlas prices update in a folder synced with a cloud that has prices (0
     await writeFile(c.credentials, '{"credentials_format":1,"entries":{}}\n');
     await chmod(c.credentials, 0o600);
     expect(await c.exec(["prices", "update"])).toBe(1);
-    expect(c.err.join("\n")).toContain("sync_credential_missing");
+    expect(c.err.join("\n")).toContain("session_missing");
     expect(eodhd.calls).toEqual([]);
     expect(existsSync(join(c.ledger, "prices", "ast_a.jsonl"))).toBe(false);
   });
@@ -267,7 +270,7 @@ describe("atlas prices update in a folder synced with a cloud that has prices (0
   });
 });
 
-describe("the sources from a synced folder: explicit, and with the leftover of the plans (N2 of §15)", () => {
+describe("the sources from a cloud folder: explicit, and with the leftover of the plans (N2 of §15)", () => {
   it("calls the sources only with --from-sources, saying it spends the quota shared with the cloud", async () => {
     const { c, eodhd } = await synced(["ast_a", "ast_b", "ast_c"]);
     c.api.s3.seed("prices/ast_a.jsonl", text([close("2026-09-29", "10")]));

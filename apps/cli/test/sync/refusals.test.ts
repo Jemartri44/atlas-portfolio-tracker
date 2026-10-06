@@ -134,8 +134,7 @@ describe("atlas settings set --accept-invalid on a synced folder (V7)", () => {
     const before = await readFile(f.ledger, "utf8");
     const result = await change(f);
     expect(result.code).not.toBe(0);
-    expect(result.text).toContain("Esta carpeta se sincroniza");
-    expect(result.text).toContain("desactiva la sincronización");
+    expect(result.text).toContain("solo vale en una carpeta local sin nube ni sincronización");
     expect(await readFile(f.ledger, "utf8")).toBe(before);
   });
 

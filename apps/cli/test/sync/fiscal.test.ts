@@ -39,10 +39,8 @@ import {
   textOfLines,
 } from "@atlas/domain/sync";
 import { describe, expect, it } from "vitest";
-import { SELF } from "../../../api/test/harness.js";
 import { CLI_SETTINGS, Events } from "../events.js";
 import { folder } from "../prices/folder.js";
-import { setupConsole } from "../support/console.js";
 
 const fixtures = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -195,47 +193,4 @@ describe("the fiscal output with sync/ next to the ledger", () => {
       "2028-03-01T10:00:00.000Z",
     );
   }, 60_000);
-  it("is identical for a ledger reordered by a sync through the API (feature 015)", async () => {
-    const b = new Events();
-    b.settings(CLI_SETTINGS);
-    b.account("acc_ib", "IE");
-    b.asset("etf_a", "etf");
-    b.deposit("acc_ib", "2027-01-04", "70000");
-    b.buy("acc_ib", "etf_a", "2027-01-05", "100", "500");
-    const shared = b.build().map(encodeLine);
-    const sale = (id: string, quantity: string, price: string): string =>
-      encodeLine({
-        ...new Events().sell("acc_ib", "etf_a", "2027-03-05", quantity, price),
-        id,
-        fingerprint: `sha256:${id}`,
-      } as LedgerEvent);
-    const laptop = await setupConsole();
-    const phone = await setupConsole({}, laptop.api);
-    for (const c of [laptop, phone]) {
-      await writeFile(join(c.ledger, "ledger.jsonl"), textOfLines(shared));
-      expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
-    }
-    expect(await laptop.exec(["sync", "init", "--origin", SELF])).toBe(0);
-    expect(await phone.exec(["sync", "join", "--from-remote", "--origin", SELF])).toBe(0);
-    const add = async (dir: string, line: string) => {
-      const path = join(dir, "ledger.jsonl");
-      await writeFile(path, (await readFile(path, "utf8")) + textOfLines([line]));
-    };
-    await add(phone.ledger, sale("01ARYZ6S41TSV4RRFFQ690P002", "20", "510"));
-    await add(laptop.ledger, sale("01ARYZ6S41TSV4RRFFQ690M002", "10", "520"));
-    expect(await phone.exec(["sync"])).toBe(0);
-    expect(await laptop.exec(["sync"])).toBe(0);
-    // Reordered by the API: the laptop's sale behind the phone's, byte for byte the remote.
-    const reordered = linesOfText(await readFile(join(laptop.ledger, "ledger.jsonl"), "utf8"));
-    expect(reordered).toEqual(linesOfText(laptop.api.s3.text("ledger/ledger.jsonl") as string));
-    expect(reordered.slice(-2)).toEqual([
-      sale("01ARYZ6S41TSV4RRFFQ690P002", "20", "510"),
-      sale("01ARYZ6S41TSV4RRFFQ690M002", "10", "520"),
-    ]);
-    await sameFiscalOutput(
-      reordered.map((line) => decodeLine(line).event),
-      ["2027"],
-      "2028-03-01T10:00:00.000Z",
-    );
-  }, 120_000);
 });
