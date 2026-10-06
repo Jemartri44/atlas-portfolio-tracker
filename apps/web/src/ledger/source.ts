@@ -29,7 +29,18 @@ export interface BrowserSource {
   persisted: boolean;
 }
 
-export type LedgerSource = BrowserSource;
+/**
+ * The ledger of the cloud (ADR-0035): the one in S3, read through the API. The
+ * device keeps nothing of it, so there is nothing to export, no age and no
+ * reminder: only the expiry of the session, which the boot read.
+ */
+export interface CloudSource {
+  kind: "cloud";
+  /** When the session ends (`GET /api/session`), an instant. */
+  expiresAt: string;
+}
+
+export type LedgerSource = BrowserSource | CloudSource;
 
 /** Whether this browser can link a folder to read, so the interface never shows a dead button. */
 export const canLinkFolder = (): boolean => supportsDirectoryPicker();
@@ -80,13 +91,14 @@ export const daysSinceExport = (source: BrowserSource, today: string): number | 
 };
 
 /** Whether the export reminder is due: never exported, or more than a week ago. */
-export const exportIsOverdue = (source: LedgerSource, today: string): boolean => {
+export const exportIsOverdue = (source: BrowserSource, today: string): boolean => {
   const days = daysSinceExport(source, today);
   return days === undefined || days > EXPORT_REMINDER_DAYS;
 };
 
 /** Where the ledger is, written in full: the settings screen has the room. */
-export const sourceLabel = (_source: LedgerSource): string => "Almacenamiento del navegador";
+export const sourceLabel = (source: LedgerSource): string =>
+  source.kind === "cloud" ? "Nube de Atlas" : "Almacenamiento del navegador";
 
 /**
  * The same thing in as few words as possible, for the chip of the status bar
@@ -95,4 +107,5 @@ export const sourceLabel = (_source: LedgerSource): string => "Almacenamiento de
  * a third of the width (review of 2026-09-18). The full sentence stays one tap
  * away, in the chip's `title` and in Ajustes.
  */
-export const sourceShortLabel = (_source: LedgerSource): string => "Navegador";
+export const sourceShortLabel = (source: LedgerSource): string =>
+  source.kind === "cloud" ? "Nube" : "Navegador";

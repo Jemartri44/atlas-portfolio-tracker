@@ -47,7 +47,7 @@ export interface ExportResult {
 /** The export as the chip reads it: its date, and what it still owes. */
 const markSource = (lastExportAt: string, heldOwed: number | undefined): void => {
   const current = store.load();
-  if (current.phase !== "ready") {
+  if (current.phase !== "ready" || current.source.kind !== "browser") {
     return;
   }
   const { heldOwed: _paid, ...rest } = current.source;
@@ -66,7 +66,11 @@ export const downloadHeld = async (held: HeldExport): Promise<void> => {
   download(held.text, EXPORT_HELD_FILE_NAME);
   await heldDownloaded();
   const current = store.load();
-  if (current.phase === "ready" && current.source.lastExportAt !== undefined) {
+  if (
+    current.phase === "ready" &&
+    current.source.kind === "browser" &&
+    current.source.lastExportAt !== undefined
+  ) {
     markSource(current.source.lastExportAt, undefined);
   }
 };

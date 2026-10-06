@@ -8,7 +8,7 @@
 // because the first steps lead to Registrar and to Ajustes (D8).
 
 import { A, useLocation } from "@solidjs/router";
-import { createEffect, createMemo, ErrorBoundary, type JSX, onCleanup, Show } from "solid-js";
+import { createEffect, createMemo, ErrorBoundary, type JSX, lazy, onCleanup, Show } from "solid-js";
 import { Icon } from "../components/Icon.jsx";
 // Imported straight from their modules, not through the barrel: the shell is
 // on the boot path, and a barrel drags everything it re-exports with it — the
@@ -16,7 +16,7 @@ import { Icon } from "../components/Icon.jsx";
 // before the first screen paints.
 import { Notice } from "../components/Notice.jsx";
 import { countOf } from "../format/number.js";
-import { store } from "../ledger/state.js";
+import { blocksTheApp, store } from "../ledger/state.js";
 import { decodeFragment, historyGate, scrollToFragment } from "./anchor.js";
 import { LedgerChip } from "./LedgerChip.jsx";
 import { inSection, Nav } from "./Nav.jsx";
@@ -86,8 +86,14 @@ const ScreenFailed = (props: { failure: unknown; retry: () => void }): JSX.Eleme
   </Notice>
 );
 
+/** The cloud mode screen that stands in for the application (sign-in, offline, failed read). */
+const CloudGate = lazy(() => import("./CloudGate.jsx"));
+
+/** Whether the cloud boot has stopped the application: no data, no navigation. */
+const gated = (): boolean => blocksTheApp(store.load());
+
 /** Whether a ledger is open or on its way: only the first run has none. */
-const hasLedger = (): boolean => store.load().phase !== "unconfigured";
+const hasLedger = (): boolean => store.load().phase !== "unconfigured" && !gated();
 
 /**
  * Settings are current on their page, on everything under it, and — with data
@@ -199,7 +205,9 @@ export const AppShell = (props: { children?: JSX.Element }): JSX.Element => (
       >
         {/* Inside the boundary: a fragment it cannot follow never blanks the page. */}
         <FollowFragment />
-        {props.children}
+        <Show when={!gated()} fallback={<CloudGate />}>
+          {props.children}
+        </Show>
       </ErrorBoundary>
     </main>
   </div>

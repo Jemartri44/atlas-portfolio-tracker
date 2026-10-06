@@ -35,8 +35,8 @@ describe("the chip of the data", () => {
   it("says what is held back is still to be downloaded, until it is", async () => {
     const exported = (heldOwed?: number) => {
       const current = store.load();
-      if (current.phase !== "ready") {
-        throw new Error("no ledger");
+      if (current.phase !== "ready" || current.source.kind !== "browser") {
+        throw new Error("no browser ledger");
       }
       const { heldOwed: _gone, ...rest } = current.source;
       store.setLoad({

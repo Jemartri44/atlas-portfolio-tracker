@@ -92,6 +92,7 @@ export const signOut = async (
       method: "POST",
       credentials: "same-origin",
       redirect: "error",
+      cache: "no-store",
       headers: {
         "content-type": "application/json",
         "x-amz-content-sha256": await bodySha256(body),

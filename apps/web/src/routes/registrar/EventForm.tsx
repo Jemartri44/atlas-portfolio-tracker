@@ -12,7 +12,7 @@ import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { useNavigate } from "@solidjs/router";
 import { createSignal, type JSX, Show } from "solid-js";
 import { nameIndex } from "../../format/names.js";
-import { today } from "../../ledger/state.js";
+import { store, today } from "../../ledger/state.js";
 import { GRID, mediaQuery } from "../../shell/media.js";
 import type { EventFormSpec, FormValues } from "../../view-models/forms/index.js";
 import {
@@ -192,7 +192,10 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
               rates={rates}
               currency={values().currency ?? ""}
               onDraft={
-                props.correcting === undefined && props.fromDraft === undefined
+                props.correcting === undefined &&
+                props.fromDraft === undefined &&
+                // Cloud mode keeps no drafts on the device (ADR-0035; E6 brings them).
+                store.source()?.kind !== "cloud"
                   ? () => void onDraft()
                   : undefined
               }

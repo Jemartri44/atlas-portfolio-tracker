@@ -58,7 +58,25 @@ export type LoadPhase =
   | { phase: "unconfigured"; retiredFolder?: true }
   | { phase: "loading"; source?: LedgerSource }
   | { phase: "ready"; source: LedgerSource; snapshot: LedgerSnapshot }
-  | { phase: "failed"; source?: LedgerSource; error: AppError };
+  | { phase: "failed"; source?: LedgerSource; error: AppError }
+  /**
+   * Cloud mode (ADR-0035): no valid session. Nothing of the ledger is shown,
+   * only the way to sign in; `reason` tells why, so the sentence is the right one.
+   */
+  | { phase: "signed_out"; reason: SignedOutReason }
+  /** Cloud mode: no connection. No data, no forms; it reloads when it comes back. */
+  | { phase: "offline" }
+  /** Cloud mode: the session or the ledger could not be read. Nothing is shown but the reason. */
+  | { phase: "cloud_failed"; error: AppError };
+
+/**
+ * The phases of the cloud boot that replace the whole content with one screen
+ * (`shell/CloudGate.tsx`): no session, no connection, or a read that failed.
+ */
+export const blocksTheApp = (phase: LoadPhase): boolean =>
+  phase.phase === "signed_out" || phase.phase === "offline" || phase.phase === "cloud_failed";
+
+export type SignedOutReason = "signed_out" | "expired" | "not_allowed" | "forgotten";
 
 export type Theme = "system" | "light" | "dark";
 

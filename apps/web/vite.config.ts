@@ -14,7 +14,7 @@ import { existsSync, realpathSync } from "node:fs";
 import { isAbsolute, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
-import { VitePWA } from "vite-plugin-pwa";
+import { VitePWA, type VitePWAOptions } from "vite-plugin-pwa";
 import solid from "vite-plugin-solid";
 
 const repo = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
@@ -154,6 +154,25 @@ const DEVELOPMENT_CSP = PRODUCTION_CSP.replace(
   .replace("style-src 'self'", "style-src 'self' 'unsafe-inline'")
   .replace("connect-src 'self'", "connect-src 'self' ws: wss:");
 
+/**
+ * What the service worker keeps: **the shell of the application and nothing
+ * else** (ADR-0035, §3). No runtime caching rule exists, so no response of
+ * `/api/*` — the ledger above all — is ever stored by it, and navigations
+ * under `/api/` (the sign-in and the return from Google) are never answered
+ * with `index.html`. Exported for `test/pwa-cache.test.ts`.
+ */
+export const WORKBOX_OPTIONS: NonNullable<VitePWAOptions["workbox"]> = {
+  globPatterns: ["**/*.{js,css,html,svg,png,webmanifest}"],
+  // The shell opens without a connection and says «Sin conexión» by itself.
+  navigateFallback: "index.html",
+  // Except under /api/: the sign-in (`/api/auth/login`) and the return
+  // from Google are navigations the Lambda must answer. Found on the
+  // screen in feature 015: with the service worker installed, the SPA
+  // painted «Aquí no hay nada» instead of going to Google.
+  navigateFallbackDenylist: [/^\/api\//],
+  cleanupOutdatedCaches: true,
+};
+
 export default defineConfig(({ command }) => ({
   plugins: [
     solid(),
@@ -193,17 +212,7 @@ export default defineConfig(({ command }) => ({
           },
         ],
       },
-      workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,png,webmanifest}"],
-        // The ledger lives on the device: nothing to fetch, nothing to fall back to.
-        navigateFallback: "index.html",
-        // Except under /api/: the sign-in (`/api/auth/login`) and the return
-        // from Google are navigations the Lambda must answer. Found on the
-        // screen in feature 015: with the service worker installed, the SPA
-        // painted «Aquí no hay nada» instead of going to Google.
-        navigateFallbackDenylist: [/^\/api\//],
-        cleanupOutdatedCaches: true,
-      },
+      workbox: WORKBOX_OPTIONS,
       devOptions: { enabled: false },
     }),
   ],
@@ -219,6 +228,9 @@ export default defineConfig(({ command }) => ({
       "@atlas/domain/sync": repo("../../packages/domain/src/sync.ts"),
       "@atlas/domain/remote-answers": repo("../../packages/domain/src/remote-answers.ts"),
       "@atlas/domain": repo("../../packages/domain/src/index.ts"),
+      "@atlas/adapters/api-store": repo("../../packages/adapters/src/sync/api-ledger-store.ts"),
+      "@atlas/adapters/sync-http": repo("../../packages/adapters/src/sync/http-remote.ts"),
+      "@atlas/adapters/reference-http": repo("../../packages/adapters/src/reference/http.ts"),
       "@atlas/adapters/blob": repo("../../packages/adapters/src/ledger-store/blob.ts"),
       "@atlas/adapters/web-device": repo(
         "../../packages/adapters/src/ledger-store/browser/web-device.ts",
@@ -308,6 +320,14 @@ export default defineConfig(({ command }) => ({
       },
     },
   },
-  server: { port: 5173 },
+  server: {
+    port: 5173,
+    // Development without AWS (ADR-0035, §5): `/api` goes to the test server that
+    // composes the real handler with the doubles of S3, SSM and Google
+    // (`apps/api/test/support/local-server.ts`, started with `--origin
+    // http://localhost:5173` so the cookie and the redirects stay on this origin).
+    // Only the dev server has it; the build and the product never see it.
+    proxy: { "/api": { target: process.env.ATLAS_API_URL ?? "http://127.0.0.1:8787" } },
+  },
   preview: { port: 4173 },
 }));
