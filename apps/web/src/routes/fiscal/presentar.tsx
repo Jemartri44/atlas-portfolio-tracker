@@ -20,10 +20,12 @@ import { Field, Notice, Section } from "../../components/index.js";
 import { decimalForInput, parseDecimalInput } from "../../format/input.js";
 import { nameIndex } from "../../format/names.js";
 import { toAppError } from "../../ledger/errors.js";
+import { sentenceOf } from "../../ledger/failure-text.js";
 import type { AppError } from "../../ledger/state.js";
 import { today } from "../../ledger/state.js";
 import { recordDraft } from "../../ledger/write.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
+import { SessionNotice } from "../../shell/SessionNotice.jsx";
 import { filingFields, filingTitle } from "../../view-models/fiscal/index.js";
 import { asEventDraft } from "../../view-models/forms/values.js";
 import { RequireLedger } from "../guard.jsx";
@@ -32,12 +34,6 @@ import { FormActions } from "../registrar/FormActions.jsx";
 import { createWarned } from "../registrar/warned.js";
 
 const MODELS = new Set(["renta", "720", "721"]);
-
-/** What went wrong with a write, in one sentence and with no jargon. */
-const failureText = (kind: string): string =>
-  kind === "conflict"
-    ? "Tus datos han cambiado mientras rellenabas esto. Se han vuelto a leer: comprueba las cifras y vuelve a registrarlo."
-    : "No se ha podido registrar.";
 
 export default function PresentarRoute(): JSX.Element {
   const params = useParams<{ modelo: string; ano: string }>();
@@ -53,6 +49,7 @@ export default function PresentarRoute(): JSX.Element {
   const [fieldProblem, setFieldProblem] = createSignal<Record<string, string>>({});
   const [failure, setFailure] = createSignal<AppError | undefined>();
   const [busy, setBusy] = createSignal(false);
+  const [signedOut, setSignedOut] = createSignal(false);
   /**
    * A filing with the same fingerprint is already recorded: a warning with a
    * confirmation, never a refusal (ADR-0012), as `--confirm-duplicate` in the
@@ -138,7 +135,8 @@ export default function PresentarRoute(): JSX.Element {
             } else if (result.failure.kind === "error") {
               setFailure(result.failure.error);
             } else {
-              setProblem(failureText(result.failure.kind));
+              setSignedOut(result.failure.kind === "signed_out");
+              setProblem(sentenceOf(result.failure));
             }
           } catch (error) {
             setFailure(toAppError(error));
@@ -209,6 +207,9 @@ export default function PresentarRoute(): JSX.Element {
                   value={meta().notes}
                   onInput={(value) => setMeta({ ...meta(), notes: value })}
                 />
+                <Show when={signedOut()}>
+                  <SessionNotice expired onRenewed={() => setSignedOut(false)} />
+                </Show>
                 <FormActions problem={problem()} failure={failure()}>
                   <button type="button" disabled={busy()} onClick={() => void record()}>
                     Registrar lo presentado

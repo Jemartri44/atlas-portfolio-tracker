@@ -13,8 +13,6 @@ import { ConfirmDialog, Icon, Notice, Section } from "../../components/index.js"
 import { downloadCloudHistory } from "../../ecb/cloud.js";
 import { formatDate, formatInstantDate } from "../../format/date.js";
 import { toAppError } from "../../ledger/errors.js";
-import { linkFolder } from "../../ledger/folder.js";
-import { canLinkFolder } from "../../ledger/source.js";
 // Statically, as the card of the session does: the section of Ajustes is
 // lazy already, and a dynamic import would split it for nothing.
 import { readSession } from "../../sync/session.js";
@@ -25,12 +23,6 @@ const ecb = () => import("../../ecb/history.js");
 type Fetch = typeof fetch;
 
 const PROBLEMS = {
-  permission:
-    "Hay una carpeta enlazada, pero el navegador ha perdido el permiso para leerla. Vuelve a enlazarla.",
-  damaged:
-    "El histórico de la carpeta no es el archivo que registra su manifiesto: alguien lo ha cambiado. No se usa; descárgalo otra vez con la consola.",
-  unreadable:
-    "El histórico de la carpeta no se puede leer. No se usa; descárgalo otra vez con la consola.",
   storage:
     "Este navegador no permite guardar datos del sitio: no puede guardar un histórico importado.",
   config:
@@ -94,17 +86,6 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
     });
   };
 
-  const onLink = (): Promise<void> =>
-    guarded(async () => {
-      if (!(await linkFolder())) {
-        return undefined;
-      }
-      const loaded = await (await ecb()).reloadWebHistory();
-      return loaded.history === undefined
-        ? "Carpeta enlazada, pero no trae histórico del BCE: descárgalo en ella con `atlas fx update`."
-        : "Carpeta enlazada: se usa el histórico que descargó la consola.";
-    });
-
   const onImport = async (event: Event): Promise<void> => {
     const input = event.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
@@ -143,11 +124,9 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
               }
             >
               <p>
-                {loaded().origin === "folder"
-                  ? "El que descargó la consola en la carpeta enlazada"
-                  : loaded().origin === "cloud"
-                    ? "Bajado de tu nube"
-                    : "Importado a mano en este navegador"}
+                {loaded().origin === "cloud"
+                  ? "Bajado de tu nube"
+                  : "Importado a mano en este navegador"}
                 ,{" "}
                 {loaded().source === "zip"
                   ? "del ZIP oficial del BCE"
@@ -159,14 +138,7 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
               </p>
             </Show>
             <Show when={loaded().problem}>
-              {(problem) => (
-                <p class="card-note">
-                  {PROBLEMS[problem()]}
-                  <Show when={loaded().configField}>
-                    {(field) => <> No se entiende «{field()}».</>}
-                  </Show>
-                </p>
-              )}
+              {(problem) => <p class="card-note">{PROBLEMS[problem()]}</p>}
             </Show>
           </>
         )}
@@ -196,12 +168,6 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
             Borrar la copia del BCE de este navegador
           </button>
         </Show>
-        <Show when={canLinkFolder()}>
-          <button type="button" class="secondary" disabled={busy()} onClick={() => void onLink()}>
-            <Icon name="laptop" class="icon-sm" />
-            Leer de la carpeta de la consola
-          </button>
-        </Show>
         <label class="file-button">
           <Icon name="import" class="icon-sm" />
           <span>Importar el histórico</span>
@@ -215,9 +181,8 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
         </label>
       </div>
       <p class="card-note">
-        La web no descarga nada de fuera. En el ordenador lo descarga la consola con{" "}
-        <code>atlas fx update</code>; en el móvil, con la sesión iniciada, se baja de tu nube al
-        abrir esta tarjeta, o importa el <code>eurofxref-hist.zip</code> de la web del BCE.
+        La web no descarga nada de fuera: con la sesión iniciada se baja de tu nube al abrir esta
+        tarjeta, o importa el <code>eurofxref-hist.zip</code> de la web del BCE.
       </p>
       <ConfirmDialog
         open={forgetting()}

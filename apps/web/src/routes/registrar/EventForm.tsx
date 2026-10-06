@@ -6,14 +6,19 @@
 // about one field goes under it; the rest, next to the button (`FormActions`).
 // On a phone the effect replaces the form, with a way back; from 1024px it sits
 // beside it, and touching the form takes it away (docs/design/system.md §7.4).
+//
+// The write goes to the cloud (ADR-0035): a `412` rebuilds the effect of the
+// **same form** over the ledger reloaded, and the person confirms again; a lost
+// answer is the notice of the frame (`shell/PendingWrite.tsx`), not this form's.
 
 import type { EventPreview, LedgerEvent, LedgerState } from "@atlas/domain";
 import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { useNavigate } from "@solidjs/router";
 import { createSignal, type JSX, Show } from "solid-js";
 import { nameIndex } from "../../format/names.js";
-import { store, today } from "../../ledger/state.js";
+import { today } from "../../ledger/state.js";
 import { GRID, mediaQuery } from "../../shell/media.js";
+import { SessionNotice } from "../../shell/SessionNotice.jsx";
 import type { EventFormSpec, FormValues } from "../../view-models/forms/index.js";
 import {
   errorsAfterEdit,
@@ -33,7 +38,7 @@ import { previewStep } from "./preview-step.js";
 import { RateHint } from "./RateNotes.jsx";
 import { useFormRates } from "./rates.js";
 import { createWarned } from "./warned.js";
-import { draftStep, writeStep } from "./write-step.js";
+import { writeStep } from "./write-step.js";
 
 interface EventFormProps {
   spec: EventFormSpec;
@@ -42,8 +47,6 @@ interface EventFormProps {
   events?: readonly LedgerEvent[];
   /** Correcting an existing event instead of recording a new one. */
   correcting?: { id: string; values: FormValues };
-  /** Recording a draft (block 5): its values, the rate left for the history to propose. */
-  fromDraft?: { id: string; values: FormValues } | undefined;
 }
 
 type Step = "form" | "preview";
@@ -52,7 +55,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   const navigate = useNavigate();
   const wide = mediaQuery(GRID);
   const [values, setValues] = createSignal<FormValues>(
-    props.correcting?.values ?? props.fromDraft?.values ?? initialValues(props.spec, today()),
+    props.correcting?.values ?? initialValues(props.spec, today()),
   );
   const [step, setStep] = createSignal<Step>("form");
   // What the user typed, by field: in the draft and not in the fields, which a
@@ -67,6 +70,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   const [duplicate, setDuplicate] = createSignal<readonly string[] | undefined>(undefined);
   const warned = createWarned();
   const [conflict, setConflict] = createSignal(false);
+  const [signedOut, setSignedOut] = createSignal(false);
   const rates = useFormRates({
     spec: props.spec,
     state: props.state,
@@ -121,22 +125,11 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
     }
   };
 
-  /** Keeps it as a draft, without a rate: the ECB has not published it yet (block 5). */
-  const onDraft = async (): Promise<void> => {
-    if (!readable(values())) {
-      return;
-    }
-    try {
-      navigate(await draftStep(toDraft(props.spec, values(), props.state), rates.web()));
-    } catch (refusal) {
-      place(refusal, values());
-    }
-  };
-
   const onConfirm = async (confirmDuplicate = false): Promise<void> => {
     setProblem(undefined);
     setFailure(undefined);
     setDuplicate(undefined);
+    setSignedOut(false);
     if (!rates.cleared()) {
       return;
     }
@@ -154,8 +147,21 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
       return;
     }
     if (result.failure.kind === "conflict") {
+      // The ledger was read again; the same form shows its effect on the new one.
       setConflict(true);
       setStep("form");
+      await onPreview();
+      return;
+    }
+    if (result.failure.kind === "signed_out") {
+      setSignedOut(true);
+      return;
+    }
+    if (result.failure.kind === "unknown") {
+      setProblem(
+        "No sabemos si se ha guardado: la conexión falló justo al enviarlo. Mira el aviso de arriba; no hace falta que repitas nada.",
+      );
+      window.scrollTo?.({ top: 0 });
       return;
     }
     if (result.failure.kind === "dependents") {
@@ -169,6 +175,9 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
     <>
       <Show when={conflict()}>
         <Reloaded />
+      </Show>
+      <Show when={signedOut()}>
+        <SessionNotice expired onRenewed={() => setSignedOut(false)} />
       </Show>
 
       <div class="register">
@@ -188,18 +197,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
               revealed={revealed}
               onTyped={(name) => setTyped(new Set([...typed(), name]))}
             />
-            <RateHint
-              rates={rates}
-              currency={values().currency ?? ""}
-              onDraft={
-                props.correcting === undefined &&
-                props.fromDraft === undefined &&
-                // Cloud mode keeps no drafts on the device (ADR-0035; E6 brings them).
-                store.source()?.kind !== "cloud"
-                  ? () => void onDraft()
-                  : undefined
-              }
-            />
+            <RateHint rates={rates} currency={values().currency ?? ""} />
 
             <Show when={props.correcting !== undefined}>
               <CorrectionReason value={reason()} onInput={setReason} />

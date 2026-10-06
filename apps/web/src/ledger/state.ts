@@ -50,31 +50,57 @@ export const messageWithLine = (error: AppError): string =>
     : `Línea ${error.line} del archivo: ${error.message}`;
 
 export type LoadPhase =
-  /**
-   * Nothing open. `retiredFolder`: the last session wrote in the console's
-   * folder, which the web no longer does (feature 012), and the opening screen
-   * has to say so instead of starting from an empty ledger as if nothing were.
-   */
-  | { phase: "unconfigured"; retiredFolder?: true }
   | { phase: "loading"; source?: LedgerSource }
   | { phase: "ready"; source: LedgerSource; snapshot: LedgerSnapshot }
-  | { phase: "failed"; source?: LedgerSource; error: AppError }
   /**
-   * Cloud mode (ADR-0035): no valid session. Nothing of the ledger is shown,
-   * only the way to sign in; `reason` tells why, so the sentence is the right one.
+   * No valid session. Nothing of the ledger is shown, only the way to sign in;
+   * `reason` tells why, so the sentence is the right one.
    */
   | { phase: "signed_out"; reason: SignedOutReason }
-  /** Cloud mode: no connection. No data, no forms; it reloads when it comes back. */
+  /** No connection. No data, no forms; it reloads when it comes back. */
   | { phase: "offline" }
-  /** Cloud mode: the session or the ledger could not be read. Nothing is shown but the reason. */
+  /** The session or the ledger could not be read. Nothing is shown but the reason. */
   | { phase: "cloud_failed"; error: AppError };
 
 /**
- * The phases of the cloud boot that replace the whole content with one screen
+ * The phases of the boot that replace the whole content with one screen
  * (`shell/CloudGate.tsx`): no session, no connection, or a read that failed.
  */
 export const blocksTheApp = (phase: LoadPhase): boolean =>
   phase.phase === "signed_out" || phase.phase === "offline" || phase.phase === "cloud_failed";
+
+/**
+ * A write that was sent and whose answer never arrived whole (ADR-0035, §2):
+ * the ids were fixed before sending, so the screen can look for them once there
+ * is a connection. Kept **in memory only**: a reload of the page forgets it, and
+ * nothing of it reaches the device.
+ */
+export type PendingState =
+  | "unknown" // sent, answer lost: not looked for yet (or the connection is still down)
+  | "checking"
+  | "written" // found in the ledger: it was recorded
+  | "not_written" // not in the ledger: nothing was written, the same data can be sent again
+  /** Only some of its ids are there (it should not happen): the ledger has to be looked at. */
+  | "partial"
+  /** The ledger changed since the effect was seen: nothing is resent; it is redone from its form. */
+  | "changed";
+
+export type RetryResult =
+  | { kind: "done"; id: string }
+  | { kind: "unknown" }
+  | { kind: "conflict" }
+  | { kind: "refused"; message: string };
+
+export interface PendingWrite {
+  readonly ids: readonly string[];
+  readonly state: PendingState;
+  /** The etag the person saw the effect on: a retry compares with this, never with a reload. */
+  readonly seenEtag?: string;
+  /** Sends it again **with the same ids**; the screen decides when, never a timer. */
+  readonly retry: () => Promise<RetryResult>;
+  /** A sentence about the last attempt that was refused, if any. */
+  readonly said?: string;
+}
 
 export type SignedOutReason = "signed_out" | "expired" | "not_allowed" | "forgotten";
 
@@ -116,17 +142,10 @@ const writeLocal = (key: string, value: string): void => {
 export const privacyFromPreference = (stored: string | undefined): boolean => stored !== "off";
 
 const createStore = () => {
-  /*
-   * It starts **loading**, not `unconfigured`. `restoreLedger` is async (it
-   * reads localStorage, then IndexedDB or the folder handle) and every screen
-   * behind `RequireLedger` sends an `unconfigured` phase straight to `/libro`
-   * with a `<Navigate>`: whoever won the race decided the first screen, so a
-   * reload with a ledger already chosen landed on the opening screen instead of
-   * the summary (review of 2026-09-18). `unconfigured` is now a **conclusion**
-   * of the boot, never its starting point, and while it lasts the screens show
-   * their skeleton.
-   */
+  // It starts **loading**: the boot is async (session, then ledger), and while
+  // it lasts the screens show their skeleton.
   const [load, setLoad] = createSignal<LoadPhase>({ phase: "loading" });
+  const [pending, setPending] = createSignal<PendingWrite | undefined>(undefined);
   const [deps, setDeps] = createSignal<UseCaseDeps | undefined>(undefined);
   const [writing, setWriting] = createSignal(false);
   // Privacy is **on** by default: the first read is what decides (FR-021).
@@ -140,9 +159,7 @@ const createStore = () => {
 
   const source = createMemo<LedgerSource | undefined>(() => {
     const phase = load();
-    return phase.phase === "ready" || phase.phase === "loading" || phase.phase === "failed"
-      ? phase.source
-      : undefined;
+    return phase.phase === "ready" || phase.phase === "loading" ? phase.source : undefined;
   });
 
   const invalidCount = createMemo<number>(() => snapshot()?.state.invalid.length ?? 0);
@@ -172,6 +189,8 @@ const createStore = () => {
   return {
     load,
     setLoad,
+    pending,
+    setPending,
     deps,
     setDeps,
     snapshot,

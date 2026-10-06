@@ -12,7 +12,7 @@ import FiscalCard from "../src/routes/resumen/FiscalCard.jsx";
 import { fiscalStatus } from "../src/routes/resumen/fiscal-status.js";
 import { hasState, type MovementRow, showsStateColumn } from "../src/view-models/index.js";
 import { goldenEvents } from "./helpers/golden.js";
-import { settle, show, text, withGoldenLedger } from "./helpers/render.jsx";
+import { show, text, until, withGoldenLedger } from "./helpers/render.jsx";
 import { applied, withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
@@ -77,11 +77,13 @@ describe("the list of the tax card", () => {
     withStyles(400);
     const events = goldenEvents();
     // In the season, where the card has its list (feature 020, E2).
-    const status = fiscalStatus(events, "2029-05-10");
+    // The list is what is measured: give it a line whatever the golden ledger owes that year.
+    const status = { ...fiscalStatus(events, "2029-05-10"), lines: ["Una cifra por declarar."] };
     const host = await show("/", () => (
       <FiscalCard season={true} status={() => status} year={2028} today="2029-05-10" names={{}} />
     ));
-    await settle(10);
+    // The body of the card is a lazy chunk: wait for it, not for a fixed time.
+    await until(() => host.querySelector(".fiscal-todo") !== null, "the list of the card");
     expect(applied(host.querySelector(".fiscal-todo"), "padding-left")).toMatch(/^0(px)?$/);
   });
 });

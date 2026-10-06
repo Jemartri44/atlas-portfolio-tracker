@@ -155,9 +155,9 @@ export const SettingsDialogs = (props: DialogsProps): JSX.Element => {
       <ConfirmDialog
         open={props.invalidating !== undefined}
         title="Hay eventos que quedarían inválidos"
-        confirm="Aceptar y guardar"
+        confirm="Entendido"
         onClose={() => props.onDismiss("invalidating")}
-        onConfirm={() => props.onSave(true)}
+        onConfirm={() => props.onDismiss("invalidating")}
       >
         <p>
           Con la configuración nueva,{" "}
@@ -166,8 +166,9 @@ export const SettingsDialogs = (props: DialogsProps): JSX.Element => {
             "movimiento ya registrado deja",
             "movimientos ya registrados dejan",
           )}{" "}
-          de ser válidos. Los hechos no cambian, cambia cómo se leen: las consultas seguirán
-          avisando y no podrás registrar nada más hasta rectificarlos.
+          de ser válidos. Tus datos están en la nube y esta nunca guarda datos que queden inválidos:
+          no se ha guardado nada. Rectifica antes esos movimientos (Ajustes › Verificación) y vuelve
+          a guardar la configuración.
         </p>
         <ul>
           <For each={props.invalidating ?? []}>

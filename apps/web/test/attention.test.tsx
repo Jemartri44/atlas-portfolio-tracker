@@ -8,7 +8,7 @@ import type { Warning } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import Resumen from "../src/routes/resumen/index.jsx";
 import { attentionItems } from "../src/view-models/index.js";
-import { show, text, today, ULID, withGoldenLedger } from "./helpers/render.jsx";
+import { show, text, today, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -228,19 +228,6 @@ describe("the rules whose repeats are one thing to do", () => {
 });
 
 describe("the list, on the summary", () => {
-  it("says the export on its own line, before the list and not in it, and never an identifier or an ISO date", async () => {
-    // Feature 020, E2, M2: the risk of losing the data goes first, once.
-    const host = await show("/", Resumen);
-    const grid = host.querySelector(".grid");
-    expect(grid?.firstElementChild?.classList.contains("summary-loss")).toBe(true);
-    expect(text(grid?.firstElementChild)).toContain("nunca los has exportado");
-    const list = text(host.querySelector('[aria-label="Lo que reclama atención"]'));
-    expect(list).not.toContain("exportado");
-    const shown = text(host.querySelector('[aria-label="Lo que reclama atención"]'));
-    expect(shown).not.toMatch(ULID);
-    expect(shown).not.toMatch(/\d{4}-\d{2}-\d{2}|th_alpha/);
-  });
-
   it("groups the repeats of one rule about one sale, and drops the windows already closed", async () => {
     // 10/01/2027: days after a fund sold at a loss (value date 06/01/2027) with
     // eleven purchases inside the year before it.

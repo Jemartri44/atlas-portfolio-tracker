@@ -1,35 +1,19 @@
-// The gate every screen that needs the ledger goes through, so the four states
-// are written once (FR-019): loading shows the shape of what is coming, no
-// ledger sends you to open one, a failure explains itself with its action, and
-// a degraded ledger blocks **writing** only.
+// The gate every screen that needs the ledger goes through, so the states are
+// written once (FR-019): loading shows the shape of what is coming, and a
+// degraded ledger blocks **writing** only. No session, no connection and a read
+// that failed never get here: the frame puts `CloudGate` in place of the
+// content (`shell/AppShell.tsx`).
+//
+// A screen that **writes** is not unmounted while a write is in flight or after
+// a `412` reloaded the ledger (ADR-0035, §2): the form keeps what the person
+// typed and rebuilds its preview over the new ledger.
 
-import { A, Navigate } from "@solidjs/router";
-import { createResource, type JSX, Show } from "solid-js";
-import { ErrorView, Notice, Skeleton } from "../components/index.js";
-import type { AppError, LedgerSnapshot } from "../ledger/state.js";
+import { A } from "@solidjs/router";
+import { createMemo, type JSX, Show, untrack } from "solid-js";
+import { Notice, Skeleton } from "../components/index.js";
+import type { LedgerSnapshot } from "../ledger/state.js";
 import { store } from "../ledger/state.js";
-
-/**
- * Whether the sync is the cause of an invalid ledger (review of PR #97,
- * correctness B1): D-Q1 lets a correction the sync holds back leave the
- * ledger of this browser invalid, and that is resolved in the section of the
- * sync in Ajustes, not in the verification. Read lazily, and only when the
- * notice is painted; it only reads.
- */
-const HeldCause = (): JSX.Element => {
-  const [pending] = createResource(() =>
-    import("../sync/held-pending.js").then((sync) => sync.browserHeldPending()).catch(() => 0),
-  );
-  return (
-    <Show when={(pending() ?? 0) > 0}>
-      <p>
-        <strong>La causa es lo que la sincronización retiene</strong>: mientras no se resuelva, tus
-        datos aquí pueden quedar incompletos. Se resuelve en{" "}
-        <A href="/ajustes#sincronizacion">Ajustes › Sincronización › Retenidas</A>.
-      </p>
-    </Show>
-  );
-};
+import { SessionNotice } from "../shell/SessionNotice.jsx";
 
 interface RequireLedgerProps {
   /** Painted with the loaded ledger. */
@@ -44,65 +28,60 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
   const phase = () => store.load();
 
   /*
-   * The two phases that carry something, read through the type and not through
-   * an assertion: `<Show when={x()}>{(x) => …}</Show>` narrows, which is what
-   * the twelve `as NonNullable<…>` of the screens were standing in for.
+   * The phase that carries something, read through the type and not through an
+   * assertion: `<Show when={x()}>{(x) => …}</Show>` narrows, which is what the
+   * twelve `as NonNullable<…>` of the screens were standing in for.
    */
   const loaded = (): LedgerSnapshot | undefined => {
     const current = phase();
     return current.phase === "ready" ? current.snapshot : undefined;
   };
 
-  const failure = (): AppError | undefined => {
-    const current = phase();
-    return current.phase === "failed" ? current.error : undefined;
-  };
+  /**
+   * What the content is painted from. While a write is in flight, a ledger that
+   * arrives (the reload after a `412`) does **not** replace it: replacing it
+   * would paint the screen again and lose what the person typed.
+   */
+  let held: LedgerSnapshot | undefined;
+  const painted = createMemo<LedgerSnapshot | undefined>(() => {
+    const next = loaded();
+    if (untrack(store.writing) && held !== undefined) {
+      return held;
+    }
+    held = next;
+    return next;
+  });
 
   return (
-    <Show when={phase().phase !== "unconfigured"} fallback={<Navigate href="/libro" />}>
-      <Show
-        when={phase().phase !== "loading"}
-        fallback={<Skeleton lines={props.skeleton ?? 4} tall />}
-      >
-        <Show
-          when={loaded()}
-          fallback={
-            <Show when={failure()}>
-              {(error) => (
-                <ErrorView error={error()} title="No se han podido leer tus datos">
-                  <Show when={error().action === undefined}>
-                    <A href="/libro" role="button">
-                      Abrir otro archivo
-                    </A>
-                  </Show>
-                </ErrorView>
-              )}
+    <Show
+      when={phase().phase !== "loading"}
+      fallback={<Skeleton lines={props.skeleton ?? 4} tall />}
+    >
+      <Show when={painted()}>
+        {(snapshot) => (
+          <Show
+            when={props.writes !== true || store.invalidCount() === 0}
+            fallback={
+              <Notice
+                severity="danger"
+                title="Tus datos tienen movimientos inválidos"
+                action={
+                  <A href="/ajustes/verificacion" role="button">
+                    Ver la verificación
+                  </A>
+                }
+              >
+                Mientras haya eventos inválidos solo se puede registrar un cambio de configuración.
+                Rectifica lo que falla y vuelve.
+              </Notice>
+            }
+          >
+            <Show when={props.writes === true}>
+              <SessionNotice />
             </Show>
-          }
-        >
-          {(snapshot) => (
-            <Show
-              when={props.writes !== true || store.invalidCount() === 0}
-              fallback={
-                <Notice
-                  severity="danger"
-                  title="Tus datos tienen movimientos inválidos"
-                  action={
-                    <A href="/ajustes/verificacion" role="button">
-                      Ver la verificación
-                    </A>
-                  }
-                >
-                  Mientras haya eventos inválidos solo se puede registrar un cambio de
-                  configuración. Rectifica lo que falla y vuelve.
-                  <HeldCause />
-                </Notice>
-              }
-            >
-              {props.children(snapshot())}
-            </Show>
-          )}
-        </Show>
+            {props.children(snapshot())}
+          </Show>
+        )}
       </Show>
     </Show>
   );

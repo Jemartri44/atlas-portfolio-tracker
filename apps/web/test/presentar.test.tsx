@@ -32,7 +32,7 @@ const open = async (): Promise<void> => {
       target.fill(counter % 251);
     },
   };
-  await loadInto({ deps, source: { kind: "browser", persisted: false } });
+  await loadInto({ deps, source: { kind: "cloud", expiresAt: "2099-01-01T00:00:00.000Z" } });
 };
 
 const lastEvent = (): Record<string, unknown> => {

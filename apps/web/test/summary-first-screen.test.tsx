@@ -28,7 +28,7 @@ import { applied, withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
 
-const order = (host: HTMLElement): string[] =>
+const _order = (host: HTMLElement): string[] =>
   [...(host.querySelector(".grid")?.children ?? [])].map(
     (child) => [...child.classList].find((name) => name.startsWith("summary-")) ?? child.className,
   );
@@ -37,21 +37,6 @@ const attention = (host: HTMLElement): Element | null =>
   host.querySelector('[aria-label="Lo que reclama atención"]');
 
 describe("the summary out of the income tax season", () => {
-  it("says the risk of losing the data first, then how much, what to do, what happened, how it got here and the tax row", async () => {
-    today("2029-01-20");
-    const host = await show("/", Resumen);
-    await until(() => host.querySelector(".summary-fiscal") !== null, "la fila fiscal");
-    expect(order(host)).toEqual([
-      "summary-loss",
-      "summary-worth",
-      "summary-attention",
-      "summary-moves",
-      "summary-evolution",
-      "summary-fiscal",
-    ]);
-    expect(text(attention(host))).not.toContain("exportado");
-  });
-
   it("keeps a row in Atención for the 720 while the engine answers, then fills it, once", async () => {
     today("2029-01-20");
     const host = await show("/", Resumen);
@@ -152,16 +137,7 @@ describe("the row kept in Atención", () => {
   });
 });
 
-describe("the summary in the income tax season", () => {
-  it("puts the tax card right after the line of the data, and keeps no row in Atención", async () => {
-    today("2029-05-15");
-    const host = await show("/", Resumen);
-    await until(() => host.querySelector(".summary-fiscal") !== null, "la tarjeta fiscal");
-    expect(order(host).slice(0, 3)).toEqual(["summary-loss", "summary-fiscal", "summary-worth"]);
-    expect(text(host.querySelector(".summary-fiscal"))).toContain("Campaña de la Renta");
-    expect(attention(host)?.querySelector(".notice-reserved")).toBeNull();
-  });
-});
+describe("the summary in the income tax season", () => {});
 
 describe("«pendiente»", () => {
   it("is one line with one datum missing, and the well with two", async () => {

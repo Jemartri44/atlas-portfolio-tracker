@@ -1,24 +1,32 @@
-// Writing to the ledger. The screens call these and never touch a use case
-// directly, which is what lets the write flows be tested end to end **without a
-// DOM**, checking the bytes of the file (Q8, D16 of the 006).
+// Writing to the ledger (ADR-0035, §2). The screens call these and never touch
+// a use case directly, which is what lets the write flows be tested end to end
+// over the real handler with its doubles, checking the bytes of the ledger.
 //
-// Three rules live here:
-//   1. Writing goes through the domain use cases with the etag of that load; a
-//      conflict reloads and is reported, never overwritten (FR-015).
+// Four rules live here:
+//   1. A write is **one unit** (an event, a pair, a chain) through the use cases
+//      and `ApiLedgerStore`, with the etag of that load (`If-Match`); a conflict
+//      reloads **quietly** (the form stays mounted with what was typed) and is
+//      reported, never overwritten and never retried alone (FR-015).
 //   2. A duplicate fingerprint and a dependent-events refusal are **outcomes**,
 //      not exceptions: the interface has to ask before insisting.
-//   3. When in doubt, nothing is written. Every path that is not a clean
-//      success leaves the ledger exactly as it was.
+//   3. The ids are fixed **before** sending. If the answer is lost, the write is
+//      kept in memory as pending (`pending.ts`): once there is a connection the
+//      ledger is looked for those ids, and a retry uses the same ones.
+//   4. When in doubt, nothing is written. Every path that is not a clean
+//      success leaves the ledger exactly as it was, or says it does not know.
 //
-// Separate from `actions.ts` since feature 007: opening a ledger is what the
-// boot does, writing to it is what a form does, and keeping them in one module
-// meant the boot chunk carried the write flows.
+// LINE BUDGET: the whole write path (ids, conflict, unknown outcome, impacts of
+// a change) stays in one module on purpose; E5 will not split it.
+//
+// Separate from `actions.ts`: opening a ledger is what the boot does, writing
+// to it is what a form does, and keeping them together put the write flows in
+// the boot chunk.
 
-import { browserSyncConfigured } from "@atlas/adapters/sync";
 import {
   type AffectedEvent,
   ConflictError,
   correctEvent,
+  createUlidGenerator,
   DependentEventsError,
   DomainError,
   type Draft,
@@ -31,25 +39,33 @@ import {
   previewReversal,
   type RecordOptions,
   type RecordResult,
+  RemoteRejectedError,
   type ReverseResult,
   recordEvent,
   reverseEvent,
   type Settings,
   type SupportedEvent,
   todayInMadrid,
+  type UlidGenerator,
   type UseCaseDeps,
+  WriteOutcomeUnknownError,
 } from "@atlas/domain";
 import type { ClosedYearImpact, Reading } from "@atlas/domain/fiscal";
 import { closedYearImpact } from "@atlas/domain/fiscal";
-import { reloadLedger } from "./actions.js";
+import { reloadLedger } from "./cloud.js";
 import { toAppError } from "./errors.js";
-import type { AppError } from "./state.js";
+import { signedOutReason } from "./session-errors.js";
+import type { AppError, RetryResult, SignedOutReason } from "./state.js";
 import { requireDeps, store } from "./state.js";
 
 export type WriteFailure =
   | { kind: "duplicate"; existing: readonly string[] }
   | { kind: "conflict" }
   | { kind: "dependents"; target: string; affected: readonly AffectedEvent[]; settings: boolean }
+  /** The session is gone: nothing was written; signing in again keeps the screen. */
+  | { kind: "signed_out"; reason: SignedOutReason }
+  /** Sent, and the answer never came whole: it is kept as pending and looked for (`pending.ts`). */
+  | { kind: "unknown" }
   | { kind: "error"; error: AppError };
 
 export type WriteResult<T> = { ok: true; value: T } | { ok: false; failure: WriteFailure };
@@ -57,10 +73,10 @@ export type WriteResult<T> = { ok: true; value: T } | { ok: false; failure: Writ
 /**
  * Has the ledger changed since the screen read it? The use cases load the
  * ledger themselves and append with the etag of **their own** load, which
- * protects the write but says nothing about what the user was looking at. On a
- * phone a form can stay open for minutes while the CLI writes, so the etag of
+ * protects the write but says nothing about what the user was looking at. A
+ * form can stay open for minutes while another device writes, so the etag of
  * the snapshot is compared before writing: the preview the user confirmed has
- * to belong to the ledger that is on disk (FR-015).
+ * to belong to the ledger that is in the cloud (FR-015).
  */
 const changedUnderneath = async (deps: UseCaseDeps): Promise<boolean> => {
   const snapshot = store.snapshot();
@@ -71,20 +87,38 @@ const changedUnderneath = async (deps: UseCaseDeps): Promise<boolean> => {
   return etag !== snapshot.etag;
 };
 
+/** The ids of a write, chosen now: the ledger is looked for them if the answer is lost. */
+const reserve = (count: number): string[] => {
+  const ids = createUlidGenerator(requireDeps());
+  return Array.from({ length: count }, () => ids.next());
+};
+
+/** A generator that hands out exactly the ids already chosen, in order. */
+const replay = (ids: readonly string[]): UlidGenerator => {
+  const queue = [...ids];
+  return { next: () => queue.shift() as string };
+};
+
+const BLOCKED_BY_PENDING: AppError = {
+  code: "write_pending",
+  message:
+    "Todavía no se sabe si la última operación quedó registrada. Mira el aviso de arriba y resuélvelo antes de registrar otra cosa.",
+};
+
 /**
- * Runs a write, translating the three answers the interface has to act on.
- * Exported for the one write that is not a use case of the barrel: the chain
- * of ECB rate corrections (feature 012, block 6), which lives behind the door
- * of the ECB so that nothing of it lands where the forms are.
+ * One attempt to write, translating every answer the interface has to act on.
+ * A clean success reloads (the screen refreshes); a conflict reloads **quietly**
+ * so what the person typed is still there to see the preview again.
  */
-export const runWrite = async <T>(run: () => Promise<T>): Promise<WriteResult<T>> => {
+const attempt = async <T>(run: () => Promise<T>): Promise<WriteResult<T>> => {
   store.setWriting(true);
   try {
     if (await changedUnderneath(requireDeps())) {
-      await reloadLedger();
+      await reloadLedger({ quiet: true });
       return { ok: false, failure: { kind: "conflict" } };
     }
     const value = await run();
+    store.setWriting(false);
     await reloadLedger();
     return { ok: true, value };
   } catch (error) {
@@ -92,12 +126,23 @@ export const runWrite = async <T>(run: () => Promise<T>): Promise<WriteResult<T>
       return { ok: false, failure: { kind: "duplicate", existing: error.existing } };
     }
     if (error instanceof ConflictError) {
-      // The file changed underneath: reload so the preview is built again on
-      // what is there now. Nothing was written (FR-015).
-      await reloadLedger();
+      // The ledger changed underneath: read it again, in silence, so the preview
+      // is built again on what is there now. Nothing was written (FR-015).
+      await reloadLedger({ quiet: true });
       return { ok: false, failure: { kind: "conflict" } };
     }
-    // The refusal of `acceptInvalid` on a synced ledger (V7) is not a list of
+    if (error instanceof WriteOutcomeUnknownError) {
+      return { ok: false, failure: { kind: "unknown" } };
+    }
+    const reason = signedOutReason(error);
+    if (reason !== undefined) {
+      return { ok: false, failure: { kind: "signed_out", reason } };
+    }
+    if (error instanceof RemoteRejectedError && error.accepted > 0) {
+      // Written only in part (it should not happen): what is there is what counts.
+      await reloadLedger({ quiet: true });
+    }
+    // The refusal of `acceptInvalid` on the cloud ledger is not a list of
     // dependants to rectify, nor the question of ADR-0015 again: it is said.
     if (error instanceof DependentEventsError && error.code !== "accept_invalid_while_synced") {
       return {
@@ -114,6 +159,69 @@ export const runWrite = async <T>(run: () => Promise<T>): Promise<WriteResult<T>
   } finally {
     store.setWriting(false);
   }
+};
+
+/** What a retry of a pending write makes of an attempt: one of the four things it can end in. */
+const resultOfRetry = <T>(result: WriteResult<T>, id: string): RetryResult => {
+  if (result.ok) {
+    return { kind: "done", id };
+  }
+  switch (result.failure.kind) {
+    case "unknown":
+      return { kind: "unknown" };
+    case "conflict":
+      return { kind: "conflict" };
+    case "error":
+      return { kind: "refused", message: result.failure.error.message };
+    case "signed_out":
+      return {
+        kind: "refused",
+        message:
+          "Tu sesión ha terminado: entra de nuevo y vuelve a intentarlo. No se ha guardado nada.",
+      };
+    case "duplicate":
+      return {
+        kind: "refused",
+        message:
+          "Se parece a otra operación ya registrada: no se ha guardado. Revísala en Movimientos.",
+      };
+    case "dependents":
+      return {
+        kind: "refused",
+        message: "Otras operaciones dependen de esta: no se ha guardado. Rectifícalas antes.",
+      };
+  }
+};
+
+/**
+ * Runs a write with its ids fixed beforehand. If the answer is lost, it stays in
+ * memory as pending, with a way to send it again **with the same ids**, and
+ * nothing else may be recorded until it is settled.
+ *
+ * Exported for the one write that is not a use case of the barrel: the chain
+ * of ECB rate corrections (feature 012, block 6), which lives behind the door
+ * of the ECB so that nothing of it lands where the forms are.
+ */
+export const runWrite = async <T>(
+  run: () => Promise<T>,
+  ids: readonly string[] = [],
+): Promise<WriteResult<T>> => {
+  if (store.pending() !== undefined) {
+    return { ok: false, failure: { kind: "error", error: BLOCKED_BY_PENDING } };
+  }
+  const seenEtag = store.snapshot()?.etag;
+  const result = await attempt(run);
+  if (!result.ok && result.failure.kind === "unknown") {
+    store.setPending({
+      ids,
+      state: "unknown",
+      ...(seenEtag === undefined ? {} : { seenEtag }),
+      retry: async () => resultOfRetry(await attempt(run), ids[0] ?? ""),
+    });
+    // With a connection (a `5xx`), the answer is looked for at once; without one, when it returns.
+    void import("./pending.js").then((pending) => pending.settlePending());
+  }
+  return result;
 };
 
 /** The preview of a candidate, straight from the domain use case (decision (h)). */
@@ -135,22 +243,35 @@ export const previewCorrectionDraft = async <E extends SupportedEvent>(
 export const recordDraft = async <E extends SupportedEvent>(
   draft: Draft<E>,
   options: RecordOptions = {},
-): Promise<WriteResult<RecordResult<E>>> =>
-  runWrite(() => recordEvent<E>(requireDeps(), draft, options));
+): Promise<WriteResult<RecordResult<E>>> => {
+  const ids = reserve(1);
+  return runWrite(
+    () => recordEvent<E>(requireDeps(), draft, { ...options, id: ids[0] as string }),
+    ids,
+  );
+};
 
-export const reverse = async (id: string, reason: string): Promise<WriteResult<ReverseResult>> =>
-  runWrite(() => reverseEvent(requireDeps(), id, reason));
+export const reverse = async (id: string, reason: string): Promise<WriteResult<ReverseResult>> => {
+  const ids = reserve(1);
+  return runWrite(() => reverseEvent(requireDeps(), id, reason, { id: ids[0] as string }), ids);
+};
 
 export const correct = async <E extends SupportedEvent>(
   id: string,
   draft: Draft<E>,
   reason: string,
   options: RecordOptions = {},
-): Promise<WriteResult<{ event: E; priorYear: boolean }>> =>
-  runWrite(async () => {
-    const result = await correctEvent<E>(requireDeps(), id, draft, reason, options);
+): Promise<WriteResult<{ event: E; priorYear: boolean }>> => {
+  // The reversal and the corrected event, in that order (`prepareCorrection`).
+  const ids = reserve(2);
+  return runWrite(async () => {
+    const result = await correctEvent<E>(requireDeps(), id, draft, reason, {
+      ...options,
+      ids: replay(ids),
+    });
     return { event: result.event, priorYear: result.priorYear };
-  });
+  }, ids);
+};
 
 /**
  * Which filed returns a change would reach, and how much it moves of each
@@ -221,20 +342,24 @@ export const closedYearsOfSettings = async (
   impactOf(async (_deps, events) => ({ events, settings }));
 
 /**
- * `acceptInvalid` is the explicit yes of ADR-0015 — and, with this browser's
- * ledger synced, the domain refuses it (§6.3 (V7)): whether it is synced is
- * read here, from the store, and handed to the use case.
+ * `acceptInvalid` is the explicit yes of ADR-0015 — and the cloud ledger never
+ * accepts an invalid projection (ADR-0035, §4): the domain refuses it because
+ * the ledger is always synced, and the API would too.
  */
 export const changeSettings = async (
   settings: Settings,
   acceptInvalid = false,
-  /** Whether this browser's ledger is synced; the store answers it (a test seam for the rest). */
-  synced: () => Promise<boolean> = browserSyncConfigured,
-): Promise<WriteResult<RecordResult>> =>
-  runWrite(async () =>
-    recordEvent(
-      requireDeps(),
-      { type: "settings_changed", settings },
-      acceptInvalid ? { acceptInvalid: true, syncConfigured: await synced() } : {},
-    ),
+): Promise<WriteResult<RecordResult>> => {
+  const ids = reserve(1);
+  return runWrite(
+    () =>
+      recordEvent(
+        requireDeps(),
+        { type: "settings_changed", settings },
+        acceptInvalid
+          ? { id: ids[0] as string, acceptInvalid: true, syncConfigured: true }
+          : { id: ids[0] as string },
+      ),
+    ids,
   );
+};

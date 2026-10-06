@@ -20,7 +20,6 @@ const Configuracion = lazy(() => import("./routes/ajustes/configuracion.jsx"));
 const Verificacion = lazy(() => import("./routes/ajustes/verificacion.jsx"));
 const Fiscal = lazy(() => import("./routes/fiscal/index.jsx"));
 const Presentar = lazy(() => import("./routes/fiscal/presentar.jsx"));
-const Libro = lazy(() => import("./routes/libro/index.jsx"));
 const NoExiste = lazy(() => import("./routes/no-existe.jsx"));
 
 /**
@@ -50,7 +49,6 @@ export const App = () => (
     <Route path="/ajustes/verificacion" component={Verificacion} />
     <Route path="/fiscal" component={Fiscal} />
     <Route path="/fiscal/presentar/:modelo/:ano" component={Presentar} />
-    <Route path="/libro" component={Libro} />
     <Route path="*" component={NoExiste} />
   </Router>
 );

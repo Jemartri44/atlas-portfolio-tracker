@@ -7,7 +7,7 @@
 
 import { render } from "solid-js/web";
 import { afterEach, describe, expect, it } from "vitest";
-import { DevicesCard } from "../../src/routes/ajustes/sync/DevicesCard.jsx";
+import { DevicesCard } from "../../src/routes/ajustes/DevicesCard.jsx";
 import { readTokens, revokeToken } from "../../src/sync/devices.js";
 
 const settle = async (): Promise<void> => {

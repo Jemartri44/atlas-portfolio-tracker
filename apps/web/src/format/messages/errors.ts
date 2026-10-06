@@ -37,6 +37,25 @@ import {
  * with its own sentence. Exported so that a test holds it level with the
  * closed list of the domain.
  */
+/** Why the cloud refused a line of a write (`docs/api.md` §5.2), in words for the person. */
+const REJECTION_REASONS: Readonly<Record<string, string>> = {
+  line_unreadable: "una línea no se podía leer; es un fallo de la aplicación.",
+  schema_version_unsupported:
+    "tus datos usan un formato más nuevo que el de la nube; actualiza la aplicación.",
+  pair_declaration_invalid: "una corrección venía mal declarada; es un fallo de la aplicación.",
+  line_invalid: "los datos de la operación no son válidos para la nube.",
+  recorded_at_in_future:
+    "la hora de este dispositivo va adelantada respecto a la de la nube; revisa la hora.",
+  domain_rejected: "con ella, tus datos quedarían incoherentes.",
+  duplicate_unconfirmed: "se parece a otra ya registrada y no se confirmó que fuera distinta.",
+  seal_mismatch: "una declaración presentada ya no cuadra con lo anterior.",
+  waiver_not_appendable: "esa renuncia solo se puede hacer al compactar los datos.",
+  pair_incomplete: "una anulación llegó sin su corrección.",
+  pair_not_contiguous: "una anulación y su corrección no iban seguidas.",
+  pair_rejected: "la anulación y su corrección juntas dejarían tus datos incoherentes.",
+  partial_write: "solo se escribió una parte.",
+};
+
 export const REMOTE_FAILURES: Readonly<Record<string, string>> = {
   unauthenticated: "la nube pide iniciar sesión.",
   credentials_ambiguous:
@@ -488,9 +507,13 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   conflict: () =>
     "Tus datos han cambiado desde que se cargaron (la CLI u otra pestaña han escrito): se recargan y se vuelve a intentar.",
   remote_rejected: (d) =>
-    `La operación se ha rechazado: ${
-      d.accepted === 0 ? "no se ha guardado nada" : "solo se ha guardado una parte, revisa el libro"
-    }.`,
+    `La nube ha rechazado la operación: ${
+      REJECTION_REASONS[String(d.remote_code)] ?? "no la ha aceptado tal como estaba."
+    } ${
+      d.accepted === 0
+        ? "No se ha guardado nada."
+        : "Solo se ha guardado una parte: revisa tus movimientos."
+    }`,
   write_outcome_unknown: () =>
     "La conexión se cortó al guardar y no se sabe si la operación quedó registrada: antes de repetirla, comprueba el libro.",
   schema_too_new: (d) =>

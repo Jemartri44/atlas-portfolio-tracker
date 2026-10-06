@@ -15,6 +15,7 @@ Como persona que usa Atlas, quiero que la web, al abrirse, compruebe mi sesión 
 - **FR-005** Otro fallo de lectura (`5xx`, forma inesperada, esquema más nuevo, libro ilegible): «No se han podido leer tus datos», con su frase y «Reintentar». Nunca un libro vacío ni parcial.
 - **FR-006** Caché: el *service worker* precarga solo el *shell*; sin reglas de caché en tiempo de ejecución; `navigateFallbackDenylist: [/^\/api\//]`. Toda petición de la web a su API pide `cache: "no-store"` (arranque, `signOut` y los dispositivos incluidos; el BCE público conserva `ETag`/`304`).
 - **FR-007** En el dispositivo, tras una sesión de nube, solo queda lo que no es dato personal: las preferencias de la interfaz (`atlas.privacy`, `atlas.theme`) y la copia pública del BCE en IndexedDB. Ninguna clave `atlas.source`, ningún almacén con el libro o con borradores, ninguna entrada de caché. «Guardar como borrador» no se ofrece en modo nube y `saveDraft` se niega (los borradores en la nube llegan con E6). **Excepción hasta E2b:** la tarjeta de sincronización de Ajustes (`SessionCard`) sigue guardando el `device_id` en IndexedDB; E2b la retira.
+- **FR-007c** (añadido por E2b) Excepción a FR-007: los precios importados (`importedPrices`) se guardan en IndexedDB `atlas` junto a la copia del BCE, por ser datos públicos y no personales.
 - **FR-007b** Un arranque viejo nunca pisa a uno nuevo: cada arranque, y cada evento `offline`, toma un número de generación, y quien ya no es el último no publica nada (ni `ready`, ni fallo, ni `offline`).
 - **FR-008** Desarrollo sin AWS: `npm run dev` lleva `/api` al servidor local de pruebas con el *proxy* de Vite (`ATLAS_API_URL`, por defecto `http://127.0.0.1:8787`), solo en desarrollo.
 - **FR-009** Techos del paquete (`check-bundle.mjs`): el arranque se queda dentro; el total sube a 320.500 por decisión de la dirección (`questions.md`).
@@ -22,6 +23,8 @@ Como persona que usa Atlas, quiero que la web, al abrirse, compruebe mi sesión 
 ## Estado intermedio: E2a y E2b van juntas
 
 Mientras no llegue E2b, el código conserva tres cosas que la revisión señaló y que **no se arreglan aquí**, porque E2b las retira: (I1) el camino local sigue alcanzable (`/libro`, importar, abrir el libro del navegador); (I2) `SessionCard` guarda el `device_id` en IndexedDB; (I3) los formularios escriben sin las reglas del resultado desconocido ni del `412` guiado. **`develop` no se despliega entre E2a y E2b (la 018 espera).**
+
+**Cerrado por E2b (PR #129, `specs/023-web-cloud-write`):** I1, I2 e I3 están resueltos. La excepción de FR-007 sobre el `device_id` (`SessionCard`) queda retirada. Queda en su lugar otra excepción, **FR-007c**: los precios importados (`importedPrices`) siguen en IndexedDB `atlas` junto a la copia del BCE, por ser datos públicos y no personales.
 
 ## Fuera de alcance
 

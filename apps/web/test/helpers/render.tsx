@@ -34,7 +34,7 @@ const deps = (text: string): UseCaseDeps => ({
 
 /** Opens a ledger, the golden one unless another text is given. */
 export const openLedger = async (text: string = goldenText()): Promise<void> =>
-  loadInto({ deps: deps(text), source: { kind: "browser", persisted: false } });
+  loadInto({ deps: deps(text), source: { kind: "cloud", expiresAt: "2099-01-01T00:00:00.000Z" } });
 
 const disposers: (() => void)[] = [];
 

@@ -105,30 +105,6 @@
   white-space: nowrap;
 }
 
-.source .age {
-  align-items: center;
-  display: inline-flex;
-  gap: var(--space-1);
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.source .age.is-overdue {
-  color: var(--c-caution);
-}
-
-.overdue-icon {
-  color: var(--c-caution-icon);
-}
-
-/* ---- Drafts waiting for their ECB rate (feature 012): a place, no box ---- */
-
-.draft-slot {
-  display: contents;
-}
-
 /* ---- Privacy: a pressed or unpressed pill ------------------------------- */
 
 .privacy {

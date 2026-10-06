@@ -41,7 +41,6 @@ const KNOWN = new Map<string, string>([
   ["ledger/cloud.ts", "pass-through of the page's fetch to httpRemote (no-store inside it)"],
   ["sync/devices.ts", "own requests"],
   ["sync/session.ts", "own requests"],
-  ["sync/engine.ts", "httpRemote"],
   ["ecb/cloud.ts", "httpReference: public data, ETag and 304 on purpose"],
 ]);
 

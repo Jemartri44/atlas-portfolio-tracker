@@ -3,9 +3,9 @@
 // comes **before** <main> in the document, as the eye and the keyboard expect,
 // and there is never a second navigation anywhere.
 //
-// Without any open ledger (the first run) there is no navigation at all:
-// every destination needs data. An open ledger, even an empty one, shows it,
-// because the first steps lead to Registrar and to Ajustes (D8).
+// While the gate stands in for the application (no session, no connection) there
+// is no navigation at all: every destination needs data. An open ledger, even an
+// empty one, shows it, because the first steps lead to Registrar and to Ajustes.
 
 import { A, useLocation } from "@solidjs/router";
 import { createEffect, createMemo, ErrorBoundary, type JSX, lazy, onCleanup, Show } from "solid-js";
@@ -21,24 +21,6 @@ import { decodeFragment, historyGate, scrollToFragment } from "./anchor.js";
 import { LedgerChip } from "./LedgerChip.jsx";
 import { inSection, Nav } from "./Nav.jsx";
 import { PrivacyToggle } from "./PrivacyToggle.jsx";
-
-/**
- * The drafts waiting for their ECB rate (feature 012, block 5): on every
- * screen, but of the ECB, so it arrives in a chunk of its own after the first
- * paint. The frame only keeps its place in the bar.
- */
-const DraftSlot = (): JSX.Element => (
-  <span
-    class="draft-slot"
-    ref={(slot) =>
-      // A counter that cannot load (an installed app that lost the network
-      // before caching its chunk) leaves the place empty, never an error.
-      void import("./draft-counter.js")
-        .then((module) => module.mountDraftCounter(slot))
-        .catch(() => undefined)
-    }
-  />
-);
 
 const DegradedBand = (): JSX.Element => (
   <Show when={store.invalidCount() > 0}>
@@ -92,14 +74,13 @@ const CloudGate = lazy(() => import("./CloudGate.jsx"));
 /** Whether the cloud boot has stopped the application: no data, no navigation. */
 const gated = (): boolean => blocksTheApp(store.load());
 
-/** Whether a ledger is open or on its way: only the first run has none. */
-const hasLedger = (): boolean => store.load().phase !== "unconfigured" && !gated();
+/** The notice of a write whose answer was lost (`ledger/pending.ts`): lazy, nothing on the boot path. */
+const PendingWrite = lazy(() => import("./PendingWrite.jsx"));
 
-/**
- * Settings are current on their page, on everything under it, and — with data
- * open — on the page that changes their file (`/libro`), which is reached from
- * them and marked nothing at all.
- */
+/** Whether there is a ledger to navigate: not while the gate stands in for the application. */
+const hasLedger = (): boolean => !gated();
+
+/** Settings are current on their page and on everything under it. */
 const SettingsButton = (): JSX.Element => {
   const location = useLocation();
   return (
@@ -107,13 +88,7 @@ const SettingsButton = (): JSX.Element => {
       href="/ajustes"
       class="icon-button"
       aria-label="Ajustes"
-      aria-current={
-        inSection(location.pathname, "/ajustes") ||
-        // Without data, «Abrir tus datos» already marks that page.
-        (hasLedger() && inSection(location.pathname, "/libro"))
-          ? "page"
-          : undefined
-      }
+      aria-current={inSection(location.pathname, "/ajustes") ? "page" : undefined}
     >
       <Icon name="settings" />
     </a>
@@ -192,7 +167,6 @@ export const AppShell = (props: { children?: JSX.Element }): JSX.Element => (
         </Show>
         <div class="status">
           <LedgerChip />
-          <DraftSlot />
           <PrivacyToggle />
           <SettingsButton />
         </div>
@@ -205,6 +179,9 @@ export const AppShell = (props: { children?: JSX.Element }): JSX.Element => (
       >
         {/* Inside the boundary: a fragment it cannot follow never blanks the page. */}
         <FollowFragment />
+        <Show when={store.pending() !== undefined}>
+          <PendingWrite />
+        </Show>
         <Show when={!gated()} fallback={<CloudGate />}>
           {props.children}
         </Show>

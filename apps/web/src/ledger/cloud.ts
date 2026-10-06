@@ -18,10 +18,12 @@ import { ApiLedgerStore } from "@atlas/adapters/api-store";
 import { systemClock } from "@atlas/adapters/clock";
 import { webCryptoRandom } from "@atlas/adapters/random";
 import { httpRemote } from "@atlas/adapters/sync-http";
+import type { UseCaseDeps } from "@atlas/domain";
 import { RemoteError } from "@atlas/domain/sync";
 import { readSession, type SessionState } from "../sync/session.js";
 import { loadInto } from "./actions.js";
-import type { AppError, LoadPhase, SignedOutReason } from "./state.js";
+import { SIGNED_OUT } from "./session-errors.js";
+import type { AppError, LoadPhase } from "./state.js";
 import { store } from "./state.js";
 
 type Fetch = typeof fetch;
@@ -29,18 +31,26 @@ type Fetch = typeof fetch;
 /** The page's `fetch`, looked up at each call so a test can replace it. */
 const pageFetch: Fetch = (input, init) => fetch(input, init);
 
+/** The `fetch` of the last boot, so a reload or a new session goes through the same door. */
+let lastRequest: Fetch = pageFetch;
+
+/** The use cases over the ledger of the cloud, for the device the session names. */
+const depsFor = (
+  session: Extract<SessionState, { kind: "signed_in" }>,
+  request: Fetch,
+): UseCaseDeps => ({
+  store: new ApiLedgerStore(
+    // `expectedDevice`: the API binds the ledger routes to the device of the cookie.
+    httpRemote({ origin: "", fetch: request, expectedDevice: session.deviceId }),
+  ),
+  clock: systemClock,
+  random: webCryptoRandom,
+});
+
 const failed = (code: string, message: string): LoadPhase => ({
   phase: "cloud_failed",
   error: { code, message },
 });
-
-/** The codes of §7 that mean «no usable session», each with its reason. */
-const SIGNED_OUT: Readonly<Record<string, SignedOutReason>> = {
-  unauthenticated: "signed_out",
-  session_invalid: "expired",
-  not_allowed: "not_allowed",
-  device_forgotten: "forgotten",
-};
 
 /** What the boot makes of a session check that did not give a session. */
 const ofStopped = (session: Exclude<SessionState, { kind: "signed_in" }>): LoadPhase => {
@@ -99,6 +109,7 @@ const showOffline = (): void => {
  * so what comes back after an outage is never what was on the screen before.
  */
 export const bootCloud = async (request: Fetch = pageFetch): Promise<void> => {
+  lastRequest = request;
   generation += 1;
   const mine = generation;
   const current = (): boolean => generation === mine;
@@ -114,24 +125,74 @@ export const bootCloud = async (request: Fetch = pageFetch): Promise<void> => {
     return;
   }
   await loadInto(
-    {
-      deps: {
-        store: new ApiLedgerStore(
-          // `expectedDevice`: the API binds the ledger routes to the device of the cookie.
-          httpRemote({ origin: "", fetch: request, expectedDevice: session.deviceId }),
-        ),
-        clock: systemClock,
-        random: webCryptoRandom,
-      },
-      source: { kind: "cloud", expiresAt: session.expiresAt },
-    },
+    { deps: depsFor(session, request), source: { kind: "cloud", expiresAt: session.expiresAt } },
     ofReadFailure,
     current,
   );
   // The connection went while the ledger was coming: whatever arrived is not shown.
   if (current() && isOffline()) {
     showOffline();
+    return;
   }
+  settleAfterBoot();
+};
+
+/** A write whose answer was lost is looked for as soon as the ledger is back (ADR-0035, §2). */
+const settleAfterBoot = (): void => {
+  if (store.pending() !== undefined && store.load().phase === "ready") {
+    void import("./pending.js").then((pending) => pending.settlePending());
+  }
+};
+
+/**
+ * Reads the ledger again from the same store, after a write or a `412`.
+ * `quiet` keeps the screen mounted (it never passes through `loading`), which
+ * is what lets a form keep what was typed while the preview is rebuilt.
+ */
+export const reloadLedger = async (options: { quiet?: boolean } = {}): Promise<void> => {
+  const phase = store.load();
+  const deps = store.deps();
+  if (deps === undefined || (phase.phase !== "ready" && phase.phase !== "loading")) {
+    return;
+  }
+  const source = phase.source;
+  if (source === undefined) {
+    return;
+  }
+  const mine = generation;
+  await loadInto(
+    { deps, source },
+    ofReadFailure,
+    () => generation === mine,
+    options.quiet === true,
+  );
+  if (generation === mine && isOffline()) {
+    showOffline();
+  }
+};
+
+/**
+ * The person signed in again (in another tab, so what is on screen stays): the
+ * session is read again and the store is rebuilt for the device it names. The
+ * ledger on screen is **not** replaced; the next write finds out, through
+ * `If-Match`, whether it is still the same.
+ */
+export const refreshSession = async (
+  request: Fetch = lastRequest,
+): Promise<"signed_in" | "signed_out" | "offline"> => {
+  const session = await readSession(request);
+  if (session.kind === "unavailable") {
+    return "offline";
+  }
+  if (session.kind !== "signed_in") {
+    return "signed_out";
+  }
+  const phase = store.load();
+  store.setDeps(depsFor(session, request));
+  if (phase.phase === "ready") {
+    store.setLoad({ ...phase, source: { kind: "cloud", expiresAt: session.expiresAt } });
+  }
+  return "signed_in";
 };
 
 /**

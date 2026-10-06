@@ -7,7 +7,8 @@
 // only when something went wrong.
 
 import { DomainError } from "@atlas/domain";
-import { describeError } from "../format/messages/errors.js";
+import { RemoteError } from "@atlas/domain/sync";
+import { describeError, REMOTE_FAILURES } from "../format/messages/errors.js";
 import { nameIndex } from "../format/names.js";
 import { countOf } from "../format/number.js";
 import type { AppError } from "./state.js";
@@ -34,6 +35,16 @@ export const toAppError = (error: unknown): AppError => {
         privacy: store.privacy(),
       }),
       ...(typeof line === "number" ? { line } : {}),
+    };
+  }
+  // The cloud did not answer as it should, before anything was sent: nothing was written.
+  if (error instanceof RemoteError) {
+    return {
+      code: error.code,
+      message:
+        error.code === "network_failed"
+          ? "No hay conexión con la nube: no se ha guardado nada."
+          : `No se ha podido hablar con la nube: ${REMOTE_FAILURES[error.code] ?? "ha respondido con un error."} No se ha guardado nada.`,
     };
   }
   if (error instanceof Error && error.name === "NoLedgerInFolder") {

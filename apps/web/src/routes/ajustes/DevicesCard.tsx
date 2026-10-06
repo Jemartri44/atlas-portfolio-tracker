@@ -7,9 +7,9 @@
 // privacy mode has nothing to cover.
 
 import { createResource, createSignal, For, type JSX, Match, Show, Switch } from "solid-js";
-import { Notice } from "../../../components/index.js";
-import { formatInstantDate } from "../../../format/date.js";
-import { readTokens, revokeToken, type TokenRow } from "../../../sync/devices.js";
+import { Notice } from "../../components/index.js";
+import { formatInstantDate } from "../../format/date.js";
+import { readTokens, revokeToken, type TokenRow } from "../../sync/devices.js";
 
 type Fetch = typeof fetch;
 

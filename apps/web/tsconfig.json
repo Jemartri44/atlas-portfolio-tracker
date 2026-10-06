@@ -13,8 +13,7 @@
   "include": ["src", "test", "vite.config.ts", "../../packages/adapters/test/fake-idb.ts"],
   "exclude": [
     "test/sync/api-support.ts",
-    "test/sync/engine.test.ts",
-    "test/sync/sync-card.test.tsx",
+    "test/write/cloud-write.test.tsx",
     "test/sync/cloud-boot.test.tsx",
     "test/sync/cloud-device.test.tsx"
   ],

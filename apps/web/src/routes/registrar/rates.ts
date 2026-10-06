@@ -45,7 +45,7 @@ export const useFormRates = (options: {
       .then((module) => module.loadWebHistory())
       // The module itself did not load (the network of an old PWA): the form
       // works as always, typed by hand, and says there is no history.
-      .catch((): WebHistory => ({ staleDays: 30, problem: "unreadable" }))
+      .catch((): WebHistory => ({ staleDays: 30, problem: "storage" }))
       .then(setWeb);
   });
 
