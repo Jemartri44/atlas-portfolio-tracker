@@ -40,12 +40,12 @@ export default function CloudGate(): JSX.Element {
           severity="info"
           title="Entrar en Atlas"
           action={
-            // A full navigation to our own origin, never a router link nor a fetch: the
-            // Lambda redirects to Google and the token never reaches the page.
-            // biome-ignore lint/a11y/useSemanticElements: a link that looks like a button
-            <a href={signInHref(undefined)} role="button">
+            // A full navigation to our own origin, never the router (it would take an
+            // `<a>` for a screen of its own, found in a real browser): the Lambda
+            // answers with a redirect to Google and the token never reaches the page.
+            <button type="button" onClick={() => window.location.assign(signInHref(undefined))}>
               Entrar con Google
-            </a>
+            </button>
           }
         >
           {SENTENCES[(phase() as { reason: SignedOutReason }).reason]}

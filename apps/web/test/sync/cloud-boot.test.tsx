@@ -6,7 +6,7 @@
 // order (session, ledger, projection), the four stops (no session, no
 // connection, failed read, nothing shown) and that nothing is cached.
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { futureLine } from "../../../../packages/adapters/test/fixtures.js";
 import { allowListOf, NAMES } from "../../../api/test/harness.js";
 import { bootCloud, watchConnection } from "../../src/ledger/cloud.js";
@@ -94,8 +94,11 @@ describe("cloud boot", () => {
     await bootCloud(request);
     await until(() => text(host).includes("Entrar con Google"), "the sign-in");
     expect(store.load()).toEqual({ phase: "signed_out", reason: "signed_out" });
-    const link = [...host.querySelectorAll("a")].find((a) => a.textContent === "Entrar con Google");
-    expect(link?.getAttribute("href")).toBe("/api/auth/login");
+    // A button that navigates by itself: a router link would show the unknown screen.
+    const assign = vi.spyOn(window.location, "assign").mockImplementation(() => undefined);
+    await press(host, "Entrar con Google");
+    expect(assign).toHaveBeenCalledWith("/api/auth/login");
+    assign.mockRestore();
     expect(text(host)).not.toContain("eventos:");
     expect(host.querySelector("nav")).toBeNull();
     // The ledger was never asked for.
