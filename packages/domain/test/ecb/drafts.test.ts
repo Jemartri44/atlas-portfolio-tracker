@@ -14,7 +14,7 @@ import {
 } from "../../src/ecb/drafts.js";
 import { readEcbZipCsv } from "../../src/ecb/history.js";
 import { DuplicateFingerprintError, ValidationError } from "../../src/errors.js";
-import type { PendingDraftStore } from "../../src/ports/draft-store.js";
+import type { DraftEnd, PendingDraftStore } from "../../src/ports/draft-store.js";
 import { cashBalances } from "../../src/projections/cash.js";
 import { physicalPositions } from "../../src/projections/positions.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
@@ -68,7 +68,9 @@ class MemoryDrafts implements PendingDraftStore {
   async update(draft: PendingDraft) {
     this.saved.set(draft.id, draft);
   }
-  async remove(id: string) {
+  readonly ends: { id: string; end: DraftEnd | undefined }[] = [];
+  async remove(id: string, end?: DraftEnd) {
+    this.ends.push({ id, end });
     this.saved.delete(id);
   }
 }
@@ -283,6 +285,11 @@ describe("recordPendingDraft", () => {
     const result = await recordPendingDraft(deps, drafts, draft, status.event);
     expect(result.event).toMatchObject({ fx_rate: "1.1104", fx_rate_date: "2026-04-01" });
     expect(drafts.saved.size).toBe(0);
+    // It ends as confirmed, with the id the event was written with: a store
+    // that cannot delete (the cloud one) records exactly that.
+    expect(drafts.ends).toEqual([
+      { id: draft.id, end: { outcome: "confirmed", eventId: result.event.id } },
+    ]);
   });
 
   it("keeps the draft when the record is refused, and a second record is a duplicate", async () => {

@@ -36,6 +36,9 @@ export const API_ERRORS = {
   precondition_failed: 412,
   init_rejected: 422,
   reference_name_invalid: 400,
+  // E6, the drafts in the cloud (`docs/api.md` §6.1 and §7).
+  draft_exists: 409,
+  draft_changed: 409,
 } as const;
 
 export type ApiErrorCode = keyof typeof API_ERRORS;

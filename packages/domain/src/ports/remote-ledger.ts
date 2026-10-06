@@ -72,6 +72,10 @@ export const REMOTE_FAILURE_CODES = [
   "device_forgotten",
   "remote_unavailable",
   "body_too_large",
+  // E6 (docs/api.md §6.1): the drafts in the cloud. A draft that already exists,
+  // or that is no longer as it was read (closed, or stamped with another id).
+  "draft_exists",
+  "draft_changed",
   "transport_rejected",
   "network_failed",
 ] as const;
