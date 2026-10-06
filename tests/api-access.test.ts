@@ -302,6 +302,8 @@ describe("architecture (015): the web configures the sync only through its engin
   // below about the client of the sync; E5 retires the engine and, with it,
   // the rules.
   const CLOUD_BOOT = new Set([join(webSrc, "ledger", "cloud.ts")]);
+  /** The only names the cloud boot may take from the client of the sync, and it re-exports none. */
+  const CLOUD_BOOT_NAMES = new Set(["httpRemote", "RemoteError", "ApiLedgerStore"]);
   const READ_ONLY = new Set([
     "browserSyncConfigured",
     "browserSyncPresence",
@@ -344,6 +346,12 @@ describe("architecture (015): the web configures the sync only through its engin
         const at = `${relative(repoRoot, file)}: ${binding.how} ${binding.name} from ${binding.specifier}`;
         if (binding.how === "dynamic") {
           violations.push(at);
+        } else if (CLOUD_BOOT.has(file)) {
+          if (binding.isType === false && !CLOUD_BOOT_NAMES.has(binding.name)) {
+            violations.push(
+              `${at} (the cloud boot may take only ${[...CLOUD_BOOT_NAMES].join(", ")})`,
+            );
+          }
         } else if (
           !ENGINES.has(file) &&
           !CLOUD_BOOT.has(file) &&
@@ -358,6 +366,16 @@ describe("architecture (015): the web configures the sync only through its engin
       }
     }
     expect(violations).toEqual([]);
+  });
+
+  it("keeps the cloud boot from re-exporting what it takes from the client of the sync", () => {
+    for (const file of CLOUD_BOOT) {
+      const source = readFileSync(file, "utf8");
+      expect(source, relative(repoRoot, file)).not.toMatch(/^\s*export\s+(\*|\{[^}]*\}\s+from)/m);
+      for (const name of CLOUD_BOOT_NAMES) {
+        expect(source, name).not.toMatch(new RegExp(`export\\s*\\{[^}]*\\b${name}\\b`));
+      }
+    }
   });
 
   /**
