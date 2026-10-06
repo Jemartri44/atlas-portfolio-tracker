@@ -5,11 +5,13 @@
 // `412` reloads quietly and asks to confirm again; a lost answer is looked for
 // by its ids and a retry uses the same ones; an ended session is said, not lost.
 
+import type { PreparedRateCorrections } from "@atlas/domain/ecb";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { bootCloud } from "../../src/ledger/cloud.js";
 import { discardPending, retryPending, settlePending } from "../../src/ledger/pending.js";
-import { store } from "../../src/ledger/state.js";
-import { recordDraft } from "../../src/ledger/write.js";
+import { writeCorrections } from "../../src/ledger/rate-corrections.js";
+import { requireDeps, store } from "../../src/ledger/state.js";
+import { previewDraft, recordDraft } from "../../src/ledger/write.js";
 import { goldenText } from "../helpers/golden.js";
 import { until } from "../helpers/render.jsx";
 import { apiAt, cloudText, sameOrigin, signedIn } from "../sync/api-support.js";
@@ -124,5 +126,51 @@ describe("writing to the cloud", () => {
     expect(result.ok).toBe(false);
     expect(!result.ok && result.failure.kind).toBe("signed_out");
     expect((await cloudText(api)).trim().split("\n")).toHaveLength(before);
+  });
+});
+
+describe("writing the chain of ECB rate corrections", () => {
+  /** A real chain of two events, as `prepareRateCorrections` would hand it over. */
+  const chain = async (): Promise<PreparedRateCorrections> => {
+    const first = (await previewDraft(deposit("11"))).candidates;
+    const second = (await previewDraft(deposit("12"))).candidates;
+    const loaded = await requireDeps().store.load();
+    return {
+      chain: [...first, ...second],
+      etag: loaded.etag,
+      events: loaded.events,
+    } as unknown as PreparedRateCorrections;
+  };
+
+  it("a lost answer finds the chain by the ids it sent: it was written, and is not written twice", async () => {
+    const { api, net } = await rig();
+    const before = (await cloudText(api)).trim().split("\n").length;
+    const prepared = await chain();
+    expect(new Set(prepared.chain.map((event) => event.id)).size).toBe(2);
+    net.post = "lost";
+    const result = await writeCorrections(prepared);
+    expect(result).toEqual({ ok: false, failure: { kind: "unknown" } });
+    expect(store.pending()?.ids).toEqual(prepared.chain.map((event) => event.id));
+    await until(() => store.pending()?.state === "written", "the outcome");
+    expect((await cloudText(api)).trim().split("\n")).toHaveLength(before + prepared.chain.length);
+    discardPending();
+  });
+
+  it("a send that never left is sent again with the same ids, and nothing is duplicated", async () => {
+    const { api, net } = await rig();
+    const before = (await cloudText(api)).trim().split("\n").length;
+    const prepared = await chain();
+    net.post = "dropped";
+    await writeCorrections(prepared);
+    await until(() => store.pending()?.state === "not_written", "the outcome");
+    await retryPending();
+    expect(store.pending()?.said).toBeUndefined();
+    expect(store.pending()?.state).toBe("written");
+    const lines = (await cloudText(api)).trim().split("\n");
+    expect(lines).toHaveLength(before + prepared.chain.length);
+    for (const event of prepared.chain) {
+      expect(lines.filter((line) => line.includes(event.id))).toHaveLength(1);
+    }
+    discardPending();
   });
 });

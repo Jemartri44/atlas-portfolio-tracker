@@ -46,8 +46,14 @@ export const proposeCorrections = async (): Promise<ProposedCorrections> => {
   return { prepared, closed, history: web.history !== undefined };
 };
 
-/** Writes the whole chain, or nothing. */
+/**
+ * Writes the whole chain, or nothing. The ids of the chain are fixed already
+ * (they are those of the events sent), so a lost answer is looked for by them.
+ */
 export const writeCorrections = (
   prepared: PreparedRateCorrections,
 ): Promise<WriteResult<{ etag: string }>> =>
-  runWrite(() => writeRateCorrections(requireDeps(), prepared));
+  runWrite(
+    () => writeRateCorrections(requireDeps(), prepared),
+    prepared.chain.map((event) => event.id),
+  );
