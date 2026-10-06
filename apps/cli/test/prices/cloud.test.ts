@@ -182,10 +182,58 @@ describe("atlas prices update in a folder synced with a cloud that has prices (0
   it("says what it could not do, calls no source and writes nothing when the API fails", async () => {
     const { c, eodhd } = await synced();
     c.hooks.tamper = (path, body) => (path === "/api/reference/index" ? "{" : body);
-    expect(await c.exec(["prices", "update"])).toBe(1);
+    expect(await c.exec(["prices", "update"])).toBe(8);
     expect(c.err.join("\n")).toContain("transport_rejected");
     expect(eodhd.calls).toEqual([]);
     expect(existsSync(join(c.ledger, "prices", "_cloud.json"))).toBe(false);
+  });
+
+  it("exits 8 with no network, and 10 when the cloud refuses the token, calling no source", async () => {
+    const { c, eodhd } = await synced();
+    const real = c.remote.fetch;
+    (c.remote as { fetch: typeof fetch }).fetch = (async (
+      input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      if (String(input).includes("/api/reference/")) {
+        throw new TypeError("fetch failed");
+      }
+      return real(input, init);
+    }) as typeof fetch;
+    expect(await c.exec(["prices", "update"])).toBe(8);
+    expect(c.err.join("\n")).toContain("network_failed");
+    (c.remote as { fetch: typeof fetch }).fetch = real;
+    c.err.length = 0;
+    (c.remote as { fetch: typeof fetch }).fetch = (async () =>
+      new Response(JSON.stringify({ error: { code: "device_token_revoked", details: {} } }), {
+        status: 401,
+        headers: { "content-type": "application/json" },
+      })) as typeof fetch;
+    expect(await c.exec(["prices", "update"])).toBe(10);
+    expect(eodhd.calls).toEqual([]);
+  });
+
+  it("reads status from prices/ alone: no session, no network, not even with an expired token", async () => {
+    const { c } = await synced();
+    c.api.s3.seed("prices/ast_a.jsonl", text([close("2026-09-29", "10")]));
+    expect(await c.exec(["prices", "update"])).toBe(0);
+    // No network at all, and a token that expired 91 days ago.
+    (c.remote as { fetch: typeof fetch }).fetch = (async () => {
+      throw new TypeError("fetch failed");
+    }) as typeof fetch;
+    c.api.advance(91 * 86_400_000);
+    c.seen.length = 0;
+    c.out.length = 0;
+    c.err.length = 0;
+    expect(await c.exec(["prices", "status"])).toBe(0);
+    expect(c.out.join("\n")).toContain("ast_a");
+    expect(c.out.join("\n")).toContain("2026-09-29");
+    expect(c.seen).toEqual([]);
+    expect(c.err).toEqual([]);
+    // And with no credentials at all.
+    await writeFile(c.credentials, '{"credentials_format":1,"entries":{}}\n');
+    await chmod(c.credentials, 0o600);
+    expect(await c.exec(["prices", "status"])).toBe(0);
   });
 
   it("never falls to the sources when the session of the folder cannot be used", async () => {
@@ -193,7 +241,7 @@ describe("atlas prices update in a folder synced with a cloud that has prices (0
     c.api.s3.seed("prices/ast_a.jsonl", text([close("2026-09-29", "10")]));
     await writeFile(c.credentials, '{"credentials_format":1,"entries":{}}\n');
     await chmod(c.credentials, 0o600);
-    expect(await c.exec(["prices", "update"])).toBe(1);
+    expect(await c.exec(["prices", "update"])).toBe(10);
     expect(c.err.join("\n")).toContain("session_missing");
     expect(eodhd.calls).toEqual([]);
     expect(existsSync(join(c.ledger, "prices", "ast_a.jsonl"))).toBe(false);
