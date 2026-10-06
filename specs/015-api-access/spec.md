@@ -1,5 +1,7 @@
 # Especificación de la feature: API y acceso (`015-api-access`)
 
+> **Nota (feature 025, ADR-0035, E4):** `PUT /api/sync/devices/self`, la cabecera `x-atlas-expected-device` y la negativa por pendientes de `compact` y de la restauración se retiraron de la API; este documento es histórico en eso. Véase `docs/api.md` §5.3 y §5.4.
+
 > **Histórica en parte (en particular E4), enmendada por ADR-0035 (2026-10-06).** La sincronización desde la web y la consola (tarjeta «Sincronización», `PUT /api/sync/devices/self`, la cabecera `x-atlas-expected-device`, `sync:device`, lo retenido y su descarga) **se retira**. **Se conserva** el acceso (ADR-0027, ADR-0033), las rutas del libro y de referencia, los objetos de dispositivo como identidad, y las operaciones de administración. La sesión de la web pasa de 8 h a 24 h. Lo retira E4 (API) y E5 (código muerto); **hasta entonces el código sigue como está.** No se reescribe el texto de abajo.
 
 **Rama**: `feature/015-api-access`, creada desde `origin/develop` (`b3e2fcb`, la fusión de la PR #89 con el encargo revisado en tres rondas). El código es el de `f7ba7e4`, sobre el que se escribió el encargo: `git diff --stat f7ba7e4..b3e2fcb -- packages apps tests` sale vacío.

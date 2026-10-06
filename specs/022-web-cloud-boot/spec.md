@@ -1,5 +1,7 @@
 # Especificación — 022 La web arranca en la nube: leer y sin conexión (ADR-0035, E2a)
 
+> **Nota (feature 025, ADR-0035, E4):** `PUT /api/sync/devices/self`, la cabecera `x-atlas-expected-device` y la negativa por pendientes de `compact` y de la restauración se retiraron de la API; este documento es histórico en eso. Véase `docs/api.md` §5.3 y §5.4.
+
 **Origen:** ADR-0035 (Aceptada), §2, §3 y §5, entrega E2a; `docs/api.md` §3 y §5.8; `specs/021-api-ledger-store`. **Alcance:** solo **leer** y el comportamiento **sin conexión**. Escribir (formularios sobre `ApiLedgerStore`, `412` guiado, «Descargar copia») es E2b; retirar el libro local, importar y la cola es E2b/E5. El camino local sigue en el código, solo para los tests.
 
 ## Historia
