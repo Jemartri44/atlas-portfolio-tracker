@@ -10,7 +10,7 @@ Como cliente de Atlas (la web y la consola, más adelante), quiero un `LedgerSto
 
 - **FR-001** `load()` descarga el libro entero (`GET /api/ledger`), comprueba que el `ETag` es el SHA-256 de los bytes (lo hace `httpRemote`) y lo decodifica con el esquema del almacén. Una versión de esquema más nueva se niega (`SchemaTooNewError`).
 - **FR-002** `append(events, etag)` codifica cada evento con `encodeLine` y lo envía en un `POST /api/ledger/lines` con `If-Match: "<etag>"`. Cada escritura de un caso de uso (un evento, una pareja, una cadena) viaja en una sola petición.
-- **FR-003** Las declaraciones las deduce el adaptador, no el llamador: `has_correction` y `chain_continues` de la forma del lote (`unitsOf`/`entriesOf`, los de la cola); `confirm_duplicate` en cada línea cuya huella repite la de un evento no anulado del libro cargado o de una línea anterior del lote (misma regla que la inicialización, `docs/api.md` §5.5).
+- **FR-003** Las declaraciones las deduce el adaptador, no el llamador: `has_correction` y `chain_continues` de la forma del lote (`unitsOf`/`entriesOf`); `confirm_duplicate`, por unidad, con las huellas del libro cargado más la unidad entera (miembros posteriores incluidos), evaluada con `evaluateUnit` y `duplicatesOf` como hace la API (`docs/api.md` §5.2, fila 7). Una unidad que el dominio rechaza se envía sin confirmaciones: la API la rechaza antes.
 - **FR-004** `412` es `ConflictError`: ni reintento ni fusión. Si el etag recibido no es el de la última carga, el almacén recarga y, si no coincide, lanza `ConflictError` sin enviar.
 - **FR-005** Un rechazo dentro de un `200` es `RemoteRejectedError` (`code: "remote_rejected"`, con el código de la API y `accepted`). Si `accepted > 0` fue una aceptación parcial (fallo interno): el llamador recarga y dice qué quedó escrito.
 - **FR-006** Fallo de red, `5xx` o `transport_rejected` tras enviar es `WriteOutcomeUnknownError` con los `id` de los eventos, fijados antes de enviar. `findOutcome(ids)` recarga y devuelve `written`, `not_written` o `partial`, con el libro recargado. Reintentar con los mismos `id` es seguro: la API rechaza `duplicate_id`.
@@ -18,9 +18,13 @@ Como cliente de Atlas (la web y la consola, más adelante), quiero un `LedgerSto
 - **FR-008** `replace`, `appendLines` y `replaceLines` se niegan (`operation_not_supported`).
 - **FR-009** Nada se guarda en el dispositivo: la petición pide `cache: "no-store"`, el almacén olvida lo cargado tras escribir y no registra nada.
 
+## Mensajes
+
+La prueba de mensajes obliga a traducir los dos códigos nuevos en la CLI y la web: están en alcance. El texto de la web no promete comportamientos de E2 (recargar, comprobar solos).
+
 ## Fuera de alcance
 
-Mensajes en español de `remote_rejected` y `write_outcome_unknown` (los traducen las interfaces en E2 y E3); el uso desde web y consola; quitar la carga duplicada de cada escritura (aceptada por ADR-0035 §2).
+El uso desde web y consola; quitar la carga duplicada de cada escritura (aceptada por ADR-0035 §2).
 
 ## Criterios de aceptación
 

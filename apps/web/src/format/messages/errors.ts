@@ -489,12 +489,10 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "Tus datos han cambiado desde que se cargaron (la CLI u otra pestaña han escrito): se recargan y se vuelve a intentar.",
   remote_rejected: (d) =>
     `La operación se ha rechazado: ${
-      d.accepted === 0
-        ? "no se ha guardado nada"
-        : "solo se ha guardado una parte; se recarga el libro"
+      d.accepted === 0 ? "no se ha guardado nada" : "solo se ha guardado una parte, revisa el libro"
     }.`,
   write_outcome_unknown: () =>
-    "La conexión se cortó al guardar. Cuando vuelva, se comprobará si la operación quedó registrada antes de repetirla.",
+    "La conexión se cortó al guardar y no se sabe si la operación quedó registrada: antes de repetirla, comprueba el libro.",
   schema_too_new: (d) =>
     `Tus datos los ha escrito una versión más nueva de la aplicación (formato ${text(d.found)}; esta entiende hasta el ${text(d.supported)}): actualiza la aplicación recargando con conexión.`,
   missing_migration: (d) =>
