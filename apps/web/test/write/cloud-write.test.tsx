@@ -11,7 +11,7 @@ import { bootCloud } from "../../src/ledger/cloud.js";
 import { discardPending, retryPending, settlePending } from "../../src/ledger/pending.js";
 import { writeCorrections } from "../../src/ledger/rate-corrections.js";
 import { requireDeps, store } from "../../src/ledger/state.js";
-import { previewDraft, recordDraft } from "../../src/ledger/write.js";
+import { correct, previewDraft, recordDraft, reverse } from "../../src/ledger/write.js";
 import { goldenText } from "../helpers/golden.js";
 import { until } from "../helpers/render.jsx";
 import { apiAt, cloudText, sameOrigin, signedIn } from "../sync/api-support.js";
@@ -34,23 +34,35 @@ const rig = async () => {
   api.s3.seed(LEDGER, goldenText());
   const net = {
     cookie: (await signedIn(api)).cookie as string | undefined,
-    /** "lost": the POST reaches the API and the answer never comes; "dropped": it never leaves. */
-    post: "ok" as "ok" | "lost" | "dropped",
+    /** "lost": the POST reaches the API and the answer never comes; "dropped": it never leaves;
+     * "stale": another device writes first, so the real `If-Match` of the POST fails. */
+    post: "ok" as "ok" | "lost" | "dropped" | "stale",
+    /** Runs when a POST is lost or dropped, before the interface looks for its ids. */
+    meanwhile: undefined as (() => Promise<void> | void) | undefined,
   };
   const through = sameOrigin(api, () => net.cookie);
   const request = (async (input: string | URL | Request, init?: RequestInit) => {
-    if (String(input) === "/api/ledger/lines" && net.post !== "ok") {
+    if (String(input) === "/api/ledger/lines" && net.post === "stale") {
+      net.post = "ok";
+      await net.meanwhile?.();
+    } else if (String(input) === "/api/ledger/lines" && net.post !== "ok") {
       if (net.post === "lost") {
         await through(input, init);
       }
       net.post = "ok";
+      await net.meanwhile?.();
       throw new TypeError("network lost");
     }
     return through(input, init);
   }) as typeof fetch;
   await bootCloud(request);
+  const another = async (amount: string): Promise<void> => {
+    // Another device records something: the ledger in the cloud moves on.
+    const [event] = (await previewDraft(deposit(amount))).candidates;
+    api.s3.seed(LEDGER, `${api.s3.text(LEDGER)?.trimEnd()}\n${JSON.stringify(event)}\n`);
+  };
   await until(() => store.load().phase === "ready", "the ledger");
-  return { api, net };
+  return { api, net, another };
 };
 
 beforeEach(() => store.setPending(undefined));
@@ -115,6 +127,61 @@ describe("writing to the cloud", () => {
     expect(lines).toHaveLength(before + 1);
     expect(lines.at(-1)).toContain(id);
     await settlePending();
+    discardPending();
+  });
+
+  it("a lost answer after another device wrote is not sent again blindly: the data changed", async () => {
+    const { api, net, another } = await rig();
+    const before = (await cloudText(api)).trim().split("\n").length;
+    net.post = "dropped";
+    net.meanwhile = () => another("20");
+    await recordDraft(deposit("9"));
+    // The silent reload that looks for the ids has already moved the screen's ledger.
+    await until(() => store.pending()?.state === "changed", "the changed state");
+    await retryPending();
+    expect(store.pending()?.state).toBe("changed");
+    expect((await cloudText(api)).trim().split("\n")).toHaveLength(before + 1);
+  });
+
+  it("a 412 of the server after the check passed writes nothing and reloads quietly", async () => {
+    const { api, net, another } = await rig();
+    const before = (await cloudText(api)).trim().split("\n").length;
+    net.post = "stale";
+    net.meanwhile = () => another("20");
+    const result = await recordDraft(deposit("9"));
+    expect(result).toEqual({ ok: false, failure: { kind: "conflict" } });
+    expect(store.pending()).toBeUndefined();
+    const lines = (await cloudText(api)).trim().split("\n");
+    expect(lines).toHaveLength(before + 1);
+    expect(store.snapshot()?.events).toHaveLength(before + 1);
+  });
+
+  it("sending a correction or an annulment again uses the same ids", async () => {
+    const { api, net } = await rig();
+    const target = store.snapshot()?.events.find((event) => event.type === "cash_deposit")
+      ?.id as string;
+    const before = (await cloudText(api)).trim().split("\n").length;
+    net.post = "dropped";
+    await correct(target, deposit("55"), "typo");
+    await until(() => store.pending()?.state === "not_written", "the outcome");
+    const ids = [...(store.pending()?.ids ?? [])];
+    expect(ids).toHaveLength(2);
+    await retryPending();
+    expect(store.pending()?.state).toBe("written");
+    let lines = (await cloudText(api)).trim().split("\n");
+    expect(lines).toHaveLength(before + 2);
+    expect(lines.slice(-2).map((line) => (JSON.parse(line) as { id: string }).id)).toEqual(ids);
+    discardPending();
+    // The annulment of the corrected event: a reversal, with its id fixed beforehand.
+    net.post = "dropped";
+    await reverse(ids[1] as string, "wrong");
+    await until(() => store.pending()?.state === "not_written", "the outcome");
+    const annulment = [...(store.pending()?.ids ?? [])];
+    await retryPending();
+    expect(store.pending()?.state).toBe("written");
+    lines = (await cloudText(api)).trim().split("\n");
+    expect(lines).toHaveLength(before + 3);
+    expect((JSON.parse(lines.at(-1) as string) as { id: string }).id).toBe(annulment[0]);
     discardPending();
   });
 

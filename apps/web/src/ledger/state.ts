@@ -85,7 +85,11 @@ export type PendingState =
   | "not_written"
   /** Only some of its ids are there (it should not happen): the ledger has to be looked at. */
   | "partial"
-  /** Sent again with the same ids and the ledger had changed: nothing written, asks again. */
+  /**
+   * The ledger changed after the person saw the effect: nothing is sent again
+   * from here. The operation is made again from its form, which shows the
+   * effect on the new ledger and asks for another yes.
+   */
   | "changed";
 
 export type RetryResult =
@@ -97,6 +101,12 @@ export type RetryResult =
 export interface PendingWrite {
   readonly ids: readonly string[];
   readonly state: PendingState;
+  /**
+   * The etag of the ledger the person saw the effect on, when it was sent. The
+   * silent reloads that look for the ids move the screen's snapshot, so a retry
+   * compares against **this**, never against the reloaded ledger.
+   */
+  readonly seenEtag?: string;
   /** Sends it again **with the same ids**; the screen decides when, never a timer. */
   readonly retry: () => Promise<RetryResult>;
   /** A sentence about the last attempt that was refused, if any. */

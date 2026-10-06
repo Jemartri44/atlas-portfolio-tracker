@@ -5,6 +5,10 @@
 //   - they are there: it was recorded, and it must not be recorded again;
 //   - they are not: nothing was written, and the same data can be sent again,
 //     **with the same ids**, by the person's own click — never by a timer;
+//   - if the ledger is no longer the one the person saw the effect on (another
+//     device wrote meanwhile), nothing is sent from here: «Tus datos han
+//     cambiado», and the operation is made again from its form, with its effect
+//     shown on the new ledger and another yes;
 //   - after a `412` that follows an unknown outcome, the ledger is searched
 //     **again** before asking to confirm: the first send may have landed after
 //     the first look (`specs/021-api-ledger-store`, reminder for E2b).
@@ -33,6 +37,12 @@ const update = (state: PendingState, said?: string): void => {
   }
 };
 
+/** Is the ledger on screen no longer the one the person saw the effect on? */
+const movedSinceSeen = (): boolean => {
+  const seen = store.pending()?.seenEtag;
+  return seen !== undefined && store.snapshot()?.etag !== seen;
+};
+
 /** Looks for the ids of the pending write in the ledger; a lost connection leaves it unknown. */
 export const settlePending = async (): Promise<void> => {
   const current = store.pending();
@@ -43,8 +53,9 @@ export const settlePending = async (): Promise<void> => {
   update("checking");
   try {
     const found = await finder.findOutcome(current.ids);
-    update(found.outcome);
+    // Quiet reload first: the state is told once the ledger on screen is the one found.
     await reloadLedger({ quiet: true });
+    update(found.outcome === "not_written" && movedSinceSeen() ? "changed" : found.outcome);
   } catch (error) {
     const reason = signedOutReason(error);
     if (reason !== undefined) {
@@ -58,6 +69,11 @@ export const settlePending = async (): Promise<void> => {
 export const retryPending = async (): Promise<void> => {
   const current = store.pending();
   if (current === undefined || current.state === "checking") {
+    return;
+  }
+  if (movedSinceSeen()) {
+    // Never send what the person has not seen the effect of on this ledger.
+    update("changed");
     return;
   }
   update("checking");

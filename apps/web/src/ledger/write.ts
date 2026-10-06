@@ -209,11 +209,13 @@ export const runWrite = async <T>(
   if (store.pending() !== undefined) {
     return { ok: false, failure: { kind: "error", error: BLOCKED_BY_PENDING } };
   }
+  const seenEtag = store.snapshot()?.etag;
   const result = await attempt(run);
   if (!result.ok && result.failure.kind === "unknown") {
     store.setPending({
       ids,
       state: "unknown",
+      ...(seenEtag === undefined ? {} : { seenEtag }),
       retry: async () => resultOfRetry(await attempt(run), ids[0] ?? ""),
     });
     // With a connection (a `5xx`), the answer is looked for at once; without one, when it returns.

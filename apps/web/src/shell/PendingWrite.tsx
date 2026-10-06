@@ -60,10 +60,10 @@ export default function PendingWrite(): JSX.Element {
               nada más.
             </Notice>
           </Match>
-          <Match when={pending().state === "not_written" || pending().state === "changed"}>
+          <Match when={pending().state === "not_written"}>
             <Notice
               severity="caution"
-              title={pending().state === "changed" ? "Tus datos han cambiado" : "No se guardó"}
+              title="No se guardó"
               action={
                 <div class="button-row">
                   <button type="button" onClick={() => void retryPending()}>
@@ -75,10 +75,25 @@ export default function PendingWrite(): JSX.Element {
                 </div>
               }
             >
-              {pending().state === "changed"
-                ? "Mientras tanto se ha registrado algo más en tus datos. La operación sigue sin estar guardada: revisa tus datos y, si quieres, envíala otra vez."
-                : "La operación no llegó a registrarse. Puedes enviarla otra vez con los mismos datos: no se duplicará."}
+              La operación no llegó a registrarse. Puedes enviarla otra vez con los mismos datos: no
+              se duplicará.
               <Show when={pending().said}>{(said) => <p>{said()}</p>}</Show>
+            </Notice>
+          </Match>
+          <Match when={pending().state === "changed"}>
+            {/* No «send again» here: there is no effect to confirm, so the form is the way. */}
+            <Notice
+              severity="caution"
+              title="Tus datos han cambiado"
+              action={
+                <button type="button" onClick={discardPending}>
+                  Entendido
+                </button>
+              }
+            >
+              Mientras tanto se ha registrado algo más en tus datos, y la operación no está
+              guardada. Vuelve a hacerla desde su pantalla: verás su efecto sobre los datos actuales
+              y se te pedirá confirmar otra vez.
             </Notice>
           </Match>
         </Switch>
