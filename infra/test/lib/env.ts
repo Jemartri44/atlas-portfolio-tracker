@@ -51,8 +51,11 @@ const emptyAwsFiles = (): { config: string; credentials: string } => {
   return neutralFiles;
 };
 
+/** The real temporary folder: `TMPDIR` is per run (tests/support/tmp-per-run.ts). */
+const cacheRoot = process.env.ATLAS_TEST_CACHE_ROOT ?? tmpdir();
+
 /** Where Terraform keeps the providers it downloads, shared by every run. */
-export const pluginCacheDir = join(tmpdir(), "atlas-infra-tf-plugin-cache");
+export const pluginCacheDir = join(cacheRoot, "atlas-infra-tf-plugin-cache");
 
 /**
  * The environment of every child process the suite starts. It is **built from
