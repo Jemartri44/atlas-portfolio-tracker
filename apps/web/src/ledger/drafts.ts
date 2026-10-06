@@ -83,7 +83,12 @@ export const saveDraft = async (
     if (reason !== undefined) {
       return { ok: false, failure: { kind: "signed_out", reason } };
     }
-    if (error.code === "network_failed" && sent !== undefined) {
+    // A lost answer, a `5xx` or a gateway refusal: the draft may be saved, so the same id is sent again.
+    const lost =
+      error.code === "network_failed" ||
+      error.code === "transport_rejected" ||
+      (error.status !== undefined && error.status >= 500);
+    if (lost && sent !== undefined) {
       return { ok: false, failure: { kind: "unknown", draft: sent } };
     }
     return { ok: false, failure: { kind: "error", error: toAppError(error) } };

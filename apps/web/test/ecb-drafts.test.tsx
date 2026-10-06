@@ -63,7 +63,7 @@ const importHistory = async (csv: string): Promise<void> => {
 /** How the network misbehaves for the next request to the drafts, if at all. */
 interface Net {
   /** `dropped`: never leaves; `lost`: the API answers and the answer never comes. */
-  next: { match: RegExp; mode: "dropped" | "lost" } | undefined;
+  next: { match: RegExp; mode: "dropped" | "lost" | "gateway" } | undefined;
   /** Runs once, just before the next request that matches goes through. */
   before: { match: RegExp; run: () => Promise<void> } | undefined;
 }
@@ -97,6 +97,10 @@ beforeEach(async () => {
     if (net.next?.match.test(asked) === true) {
       const { mode } = net.next;
       net.next = undefined;
+      if (mode === "gateway") {
+        // A refusal of the network with no shape of the API (or a `5xx`): it may have arrived.
+        return new Response("<html>", { status: 502 });
+      }
       if (mode === "lost") {
         await through(input, init);
       }
@@ -292,7 +296,7 @@ describe("a draft from the form", () => {
     const host = await openToConfirm(id);
     const recorded = events();
     const written = await cloudText(api);
-    await elsewhere().remove(id);
+    await elsewhere().remove(id, { outcome: "discarded" });
     confirmButton(host).click();
     await until(() => text(host).includes("Ese borrador ya no está pendiente"), "the refusal");
     expect(events()).toBe(recorded);
@@ -375,6 +379,16 @@ describe("without a connection", () => {
     const drafts = await pending();
     expect(drafts).toHaveLength(1);
     expect(new URLSearchParams(window.location.search).get("guardado")).toBe(drafts[0]?.id);
+  });
+
+  it("does not know either after a 502 with no shape, and sending again saves it once", async () => {
+    const host = await fillGold();
+    net.next = { match: /\/api\/drafts$/, mode: "gateway" };
+    await press(host, "Guardar como borrador");
+    await until(() => text(host).includes("No sabemos si se ha guardado el borrador"), "unknown");
+    await press(host, "Guardar como borrador");
+    await until(() => window.location.pathname === "/registrar/borradores", "the list");
+    expect(await pending()).toHaveLength(1);
   });
 
   it("sends the same draft again when the first never left", async () => {
