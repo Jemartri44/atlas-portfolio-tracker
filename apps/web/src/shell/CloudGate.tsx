@@ -71,7 +71,7 @@ export default function CloudGate(): JSX.Element {
           {SENTENCES[(phase() as { reason: SignedOutReason }).reason]}
           <Show when={warned() && unresolved()}>
             <p>
-              Hay una operación de la que no se sabe si quedó guardada, y este aviso se pierde al
+              Hay una operación sin resolver (puede que no esté guardada), y este aviso se pierde al
               entrar. Cuando vuelvas, compruébalo en Movimientos antes de repetirla.
             </p>
           </Show>
