@@ -12,14 +12,14 @@ import { type JSX, Show } from "solid-js";
 import { Icon } from "../components/Icon.jsx";
 import { formatInstantDate } from "../format/date.js";
 import { countOf } from "../format/number.js";
-import { daysSinceExport, exportIsOverdue, type LedgerSource } from "../ledger/source.js";
-import { store, today } from "../ledger/state.js";
+import { type BrowserSource, daysSinceExport, exportIsOverdue } from "../ledger/source.js";
+import { blocksTheApp, store, today } from "../ledger/state.js";
 
 /** Something has been recorded: from then on there is something to lose. */
 const hasData = (): boolean => (store.snapshot()?.events.length ?? 0) > 0;
 
 /** The short second half of the chip: how old the copy is. */
-const ageOf = (source: LedgerSource): string => {
+const ageOf = (source: BrowserSource): string => {
   if (source.heldOwed) {
     return "falta descargar lo retenido";
   }
@@ -31,7 +31,7 @@ const ageOf = (source: LedgerSource): string => {
 };
 
 /** The whole sentence, for the title of the chip. */
-const detailOf = (source: LedgerSource): string => {
+const detailOf = (source: BrowserSource): string => {
   if (!hasData()) {
     return "Tus datos viven en este navegador. Todavía no hay nada que exportar.";
   }
@@ -42,34 +42,52 @@ const detailOf = (source: LedgerSource): string => {
 };
 
 /** Overdue, or exported without what the sync holds back (review of PR #97, round 2, N2). */
-const needsAttention = (source: LedgerSource): boolean =>
+const needsAttention = (source: BrowserSource): boolean =>
   hasData() && (!!source.heldOwed || exportIsOverdue(source, today()));
+
+/** The cloud ledger: nothing to export and no age, only where it lives. */
+const CLOUD_DETAIL = "Tus datos viven en la nube de Atlas: este dispositivo no guarda el libro.";
 
 export const LedgerChip = (): JSX.Element => (
   <Show
     when={store.source()}
     fallback={
-      <A href="/libro" class="source">
-        <Icon name="browser" class="icon-sm source-icon" />
-        <span class="where">Abrir tus datos</span>
-      </A>
+      // The cloud boot has no ledger to open: the screen in the page says what to do.
+      <Show when={!blocksTheApp(store.load())}>
+        <A href="/libro" class="source">
+          <Icon name="browser" class="icon-sm source-icon" />
+          <span class="where">Abrir tus datos</span>
+        </A>
+      </Show>
     }
   >
     {(source) => (
-      // A plain link: the router still handles it, but it does not mark it as
-      // the current page, which on /ajustes is the settings button's job.
-      <a href="/ajustes" class="source" title={detailOf(source())}>
-        <Icon name="browser" class="icon-sm source-icon" />
-        <span class="where">Navegador</span>
-        <Show when={hasData()}>
-          <span class={`age${needsAttention(source()) ? " is-overdue" : ""}`}>
-            <Show when={needsAttention(source())}>
-              <Icon name="caution" class="icon-sm overdue-icon" />
+      <Show
+        when={source().kind === "browser" && (source() as BrowserSource)}
+        fallback={
+          <a href="/ajustes" class="source" title={CLOUD_DETAIL}>
+            <Icon name="browser" class="icon-sm source-icon" />
+            <span class="where">Nube</span>
+          </a>
+        }
+      >
+        {(browser) => (
+          // A plain link: the router still handles it, but it does not mark it as
+          // the current page, which on /ajustes is the settings button's job.
+          <a href="/ajustes" class="source" title={detailOf(browser())}>
+            <Icon name="browser" class="icon-sm source-icon" />
+            <span class="where">Navegador</span>
+            <Show when={hasData()}>
+              <span class={`age${needsAttention(browser()) ? " is-overdue" : ""}`}>
+                <Show when={needsAttention(browser())}>
+                  <Icon name="caution" class="icon-sm overdue-icon" />
+                </Show>
+                <span>{ageOf(browser())}</span>
+              </span>
             </Show>
-            <span>{ageOf(source())}</span>
-          </span>
-        </Show>
-      </a>
+          </a>
+        )}
+      </Show>
     )}
   </Show>
 );

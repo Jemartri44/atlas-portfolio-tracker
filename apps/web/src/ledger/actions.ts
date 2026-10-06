@@ -10,7 +10,7 @@
 
 import { projectLedger } from "@atlas/domain";
 import { forgetKind, type LedgerSource, type LedgerSourceKind, rememberedKind } from "./source.js";
-import { store } from "./state.js";
+import { type LoadPhase, store } from "./state.js";
 import { forgetLedger, type OpenedLedger, openBrowserStorage } from "./store.js";
 
 /**
@@ -21,8 +21,16 @@ import { forgetLedger, type OpenedLedger, openBrowserStorage } from "./store.js"
  */
 const explained = async (error: unknown) => (await import("./errors.js")).toAppError(error);
 
-/** Loads the opened ledger, projects it once and publishes the snapshot. */
-export const loadInto = async (opened: OpenedLedger): Promise<void> => {
+/**
+ * Loads the opened ledger, projects it once and publishes the snapshot.
+ * `classify` lets a source give a failure its own phase (the cloud turns a cut
+ * connection into «Sin conexión»); without it, or when it answers nothing, a
+ * failure is `failed` with its explanation.
+ */
+export const loadInto = async (
+  opened: OpenedLedger,
+  classify?: (error: unknown) => Promise<LoadPhase | undefined>,
+): Promise<void> => {
   store.setLoad({ phase: "loading", source: opened.source });
   store.setDeps(opened.deps);
   store.clearCache();
@@ -35,7 +43,13 @@ export const loadInto = async (opened: OpenedLedger): Promise<void> => {
       snapshot: { events, lines, etag, state, loadedAt: new Date().toISOString() },
     });
   } catch (error) {
-    store.setLoad({ phase: "failed", source: opened.source, error: await explained(error) });
+    store.setLoad(
+      (await classify?.(error)) ?? {
+        phase: "failed",
+        source: opened.source,
+        error: await explained(error),
+      },
+    );
   }
 };
 
