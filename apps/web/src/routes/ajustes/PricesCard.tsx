@@ -11,7 +11,6 @@ import { createResource, createSignal, type JSX, Show } from "solid-js";
 import { Icon, Notice, Section } from "../../components/index.js";
 import { formatDate, formatInstantDate } from "../../format/date.js";
 import { toAppError } from "../../ledger/errors.js";
-import { canLinkFolder } from "../../ledger/source.js";
 import { store } from "../../ledger/state.js";
 
 const prices = () => import("../../prices/quotes.js");
@@ -116,11 +115,9 @@ export const PricesCard = (): JSX.Element => {
               }
             >
               <p>
-                {loaded().origin === "folder"
-                  ? "Los que descargó la consola en la carpeta enlazada"
-                  : "Importados a mano en este navegador"}
-                : {loaded().closes.size === 1 ? "un activo" : `${loaded().closes.size} activos`},
-                con cierres hasta el {formatDate(latest() as string)}
+                Importados a mano en este navegador :{" "}
+                {loaded().closes.size === 1 ? "un activo" : `${loaded().closes.size} activos`}, con
+                cierres hasta el {formatDate(latest() as string)}
                 {loaded().importedAt === undefined
                   ? "."
                   : `; importados el ${formatInstantDate(loaded().importedAt as string)}.`}
@@ -155,21 +152,10 @@ export const PricesCard = (): JSX.Element => {
           </button>
         </Show>
       </div>
-      <Show
-        when={canLinkFolder()}
-        fallback={
-          <p class="card-note">
-            En el teléfono no hay precios automáticos hasta que exista la sincronización con la
-            nube. Puedes importar a mano los ficheros de la carpeta <code>prices</code> que descarga
-            la consola.
-          </p>
-        }
-      >
-        <p class="card-note">
-          La web no descarga precios. Los descarga la consola con <code>atlas prices update</code>{" "}
-          en la carpeta del libro, y la web los lee de la carpeta enlazada.
-        </p>
-      </Show>
+      <p class="card-note">
+        La web no descarga precios y todavía no los baja de la nube. Puedes importar a mano los
+        ficheros de la carpeta <code>prices</code> que descarga la consola.
+      </p>
       <p class="card-note">
         La consola descarga los precios de los activos de su libro: un activo dado de alta solo en
         esta web no tiene precio automático hasta que pase al libro de la consola exportándolo e

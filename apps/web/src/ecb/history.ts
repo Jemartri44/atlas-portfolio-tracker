@@ -10,13 +10,11 @@
 // Everything here is loaded lazily: nothing of the ECB is on the boot path
 // (decision (r)), and the build fails if it ever is.
 
-import { queryFolderPermission, readFolderText, rememberedFolder } from "@atlas/adapters/folder";
 import {
   forgetImportedHistory,
   importedHistory,
   saveImportedHistory,
 } from "@atlas/adapters/reference";
-import { sha256Hex, utf8Encode } from "@atlas/domain";
 import {
   asciiText,
   checkHistoryUpdate,
@@ -25,7 +23,6 @@ import {
   type EcbSource,
   type HistoryConflict,
   latestPublication,
-  parseLocalConfig,
   readEcbHistory,
 } from "@atlas/domain/ecb";
 import { entryOfZip, isZip } from "./zip.js";
@@ -33,7 +30,7 @@ import { entryOfZip, isZip } from "./zip.js";
 export interface WebHistory {
   history?: EcbHistory;
   /** Where it came from: the linked folder, a copy imported by hand, or the cloud (feature 016, E3). */
-  origin?: "folder" | "imported" | "cloud";
+  origin?: "imported" | "cloud";
   source?: EcbSource;
   /** The last day it publishes. */
   latest?: string;
@@ -46,67 +43,8 @@ export interface WebHistory {
    * permission, its file is not the one its manifest records, it does not
    * read, or this browser keeps no data at all. Said, never swallowed.
    */
-  problem?: "permission" | "damaged" | "unreadable" | "storage" | "config";
-  /**
-   * With `problem: "config"`: the key of `atlas.config.json` that is not
-   * understood (`invalid_local_config`). A local configuration that does not
-   * read is said as such, never as a browser that keeps no data (feature 013,
-   * §6.4 (d): it used to reach the `catch` of `loadWebHistory` and say
-   * «storage», which was false).
-   */
-  configField?: string;
+  problem?: "storage";
 }
-
-interface Manifest {
-  active: { file: string; source: EcbSource; sha256: string; fetched_at: string };
-}
-
-const fromFolder = async (): Promise<WebHistory | undefined> => {
-  const handle = await rememberedFolder();
-  if (handle === undefined) {
-    return undefined;
-  }
-  if ((await queryFolderPermission(handle)) !== "granted") {
-    return { staleDays: DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days, problem: "permission" };
-  }
-  const config = await readFolderText(handle, ["atlas.config.json"]);
-  let staleDays = DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days;
-  if (config !== undefined) {
-    try {
-      staleDays = parseLocalConfig(config).ecb_stale_currency_days;
-    } catch (error) {
-      const field = (error as { details?: { field?: unknown } }).details?.field;
-      return {
-        staleDays,
-        problem: "config",
-        ...(typeof field === "string" ? { configField: field } : {}),
-      };
-    }
-  }
-  const manifest = await readFolderText(handle, ["reference", "ecb", "manifest.json"]);
-  if (manifest === undefined) {
-    return undefined;
-  }
-  try {
-    const { active } = JSON.parse(manifest) as Manifest;
-    const text = await readFolderText(handle, ["reference", "ecb", ...active.file.split("/")]);
-    if (text === undefined || sha256Hex(utf8Encode(text)) !== active.sha256) {
-      return { staleDays, problem: "damaged" };
-    }
-    const history = readEcbHistory(text, active.source);
-    return {
-      history,
-      origin: "folder",
-      source: active.source,
-      latest: latestPublication(history),
-      when: active.fetched_at,
-      staleDays,
-    };
-  } catch {
-    // A manifest or a history that does not read: said as such.
-    return { staleDays, problem: "unreadable" };
-  }
-};
 
 const fromImport = async (staleDays: number): Promise<WebHistory | undefined> => {
   const stored = await importedHistory();
@@ -126,7 +64,7 @@ const fromImport = async (staleDays: number): Promise<WebHistory | undefined> =>
 
 let cached: Promise<WebHistory> | undefined;
 
-/** The history in force for the web: the folder's, else the imported one, else none. */
+/** The history in force for the web: the copy of this browser (public), else none. */
 export const loadWebHistory = (): Promise<WebHistory> => {
   cached ??= load().catch(
     // Without a store to read from (private mode, blocked site data) there is
@@ -139,20 +77,10 @@ export const loadWebHistory = (): Promise<WebHistory> => {
   return cached;
 };
 
-const load = (): Promise<WebHistory> =>
-  (async () => {
-    const folder = await fromFolder();
-    if (folder?.history !== undefined) {
-      return folder;
-    }
-    const staleDays = folder?.staleDays ?? DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days;
-    const imported = await fromImport(staleDays);
-    const problem = {
-      ...(folder?.problem === undefined ? {} : { problem: folder.problem }),
-      ...(folder?.configField === undefined ? {} : { configField: folder.configField }),
-    };
-    return imported === undefined ? { staleDays, ...problem } : { ...imported, ...problem };
-  })();
+const load = async (): Promise<WebHistory> =>
+  (await fromImport(DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days)) ?? {
+    staleDays: DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days,
+  };
 
 /** Forget what was read, after linking a folder or importing a file. */
 export const reloadWebHistory = (): Promise<WebHistory> => {

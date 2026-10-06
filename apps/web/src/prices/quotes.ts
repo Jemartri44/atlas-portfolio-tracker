@@ -14,12 +14,10 @@
 // Loaded lazily: nothing of it is on the boot path, and the build fails if it
 // ever is.
 
-import { queryFolderPermission, readFolderText, rememberedFolder } from "@atlas/adapters/folder";
 import {
   assetOfPriceFile,
   forgetImportedPrices,
   importedPrices,
-  readFolderPrices,
   saveImportedPrices,
 } from "@atlas/adapters/prices";
 import type { AssetId, ExternalPrices, LedgerState } from "@atlas/domain";
@@ -39,7 +37,7 @@ import { loadWebHistory, type WebHistory } from "../ecb/history.js";
 export interface WebQuotes {
   readonly closes: ReadonlyMap<AssetId, readonly EffectiveClose[]>;
   /** Where they came from; absent when there are none. */
-  readonly origin?: "folder" | "imported";
+  readonly origin?: "imported";
   /** When the import was made. */
   readonly importedAt?: string;
   /** Files that do not read: their assets have no automatic price, and it is said. */
@@ -59,7 +57,7 @@ export interface WebQuotes {
   /** What the screens say of `symbols`, here and not in a module of its own (the boot). */
   readonly symbolsNotice?: string;
   /** The folder is linked and lost its permission, or this browser keeps nothing. */
-  readonly problem?: "permission" | "storage";
+  readonly problem?: "storage";
   readonly history: WebHistory;
 }
 
@@ -114,36 +112,13 @@ const withSymbols = (
   };
 };
 
-const fromFolder = async (
-  assetIds: readonly AssetId[],
-): Promise<{ files?: Map<AssetId, string>; symbols?: string; problem?: "permission" }> => {
-  const handle = await rememberedFolder();
-  if (handle === undefined) {
-    return {};
-  }
-  if ((await queryFolderPermission(handle)) !== "granted") {
-    return { problem: "permission" };
-  }
-  const files = await readFolderPrices(handle, assetIds);
-  if (files.size === 0) {
-    return {};
-  }
-  const symbols = await readFolderText(handle, ["prices", "symbols.json"]);
-  return symbols === undefined ? { files } : { files, symbols };
-};
-
 /** The closes for the assets given: the folder's, else the imported ones, else none. */
 export const loadWebQuotes = async (assetIds: readonly AssetId[]): Promise<WebQuotes> => {
   const history = await loadWebHistory();
   try {
-    const folder = await fromFolder(assetIds);
-    const problem = folder.problem === undefined ? {} : { problem: folder.problem };
-    if (folder.files !== undefined) {
-      return { ...withSymbols(folder.files, folder.symbols), origin: "folder", history };
-    }
     const imported = await importedPrices();
     if (imported === undefined) {
-      return { closes: new Map(), unreadable: [], mismatched: [], history, ...problem };
+      return { closes: new Map(), unreadable: [], mismatched: [], history };
     }
     const wanted = new Set(assetIds);
     return {
@@ -154,7 +129,6 @@ export const loadWebQuotes = async (assetIds: readonly AssetId[]): Promise<WebQu
       origin: "imported",
       importedAt: imported.imported_at,
       history,
-      ...problem,
     };
   } catch {
     // Without a store to read from (private mode, blocked site data): said.

@@ -240,7 +240,10 @@ export const recordDraft = async <E extends SupportedEvent>(
   options: RecordOptions = {},
 ): Promise<WriteResult<RecordResult<E>>> => {
   const ids = reserve(1);
-  return runWrite(() => recordEvent<E>(requireDeps(), draft, { ...options, id: ids[0] }), ids);
+  return runWrite(
+    () => recordEvent<E>(requireDeps(), draft, { ...options, id: ids[0] as string }),
+    ids,
+  );
 };
 
 export const reverse = async (id: string, reason: string): Promise<WriteResult<ReverseResult>> => {

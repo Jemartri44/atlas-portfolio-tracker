@@ -9,7 +9,7 @@
 // typed and rebuilds its preview over the new ledger.
 
 import { A } from "@solidjs/router";
-import { createMemo, type JSX, on, Show } from "solid-js";
+import { createMemo, type JSX, Show, untrack } from "solid-js";
 import { Notice, Skeleton } from "../components/index.js";
 import type { LedgerSnapshot } from "../ledger/state.js";
 import { store } from "../ledger/state.js";
@@ -42,9 +42,15 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
    * arrives (the reload after a `412`) does **not** replace it: replacing it
    * would paint the screen again and lose what the person typed.
    */
-  const painted = createMemo(
-    on(loaded, (next, _before, held) => (store.writing() && held !== undefined ? held : next)),
-  );
+  let held: LedgerSnapshot | undefined;
+  const painted = createMemo<LedgerSnapshot | undefined>(() => {
+    const next = loaded();
+    if (untrack(store.writing) && held !== undefined) {
+      return held;
+    }
+    held = next;
+    return next;
+  });
 
   return (
     <Show

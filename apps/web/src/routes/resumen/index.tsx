@@ -34,14 +34,12 @@ import { Icon, type NoticeItem, NoticeLink, Section } from "../../components/ind
 import { formatLongDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
-import { daysSinceExport } from "../../ledger/source.js";
 import { store, today } from "../../ledger/state.js";
 import { QuotesNotice, useQuotes } from "../../prices/use-quotes.jsx";
 import { MONITOR, mediaQuery } from "../../shell/media.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import {
   attentionItems,
-  dataLossItem,
   firstEntries,
   fiscalSlot,
   movementRows,
@@ -99,16 +97,6 @@ export default function ResumenRoute(): JSX.Element {
         // `transfer_max_days` and emits `transfer_overdue`. Reading the plain
         // query here left the rule computed and never shown.
         const transfers = transferWatch(dated, date, settings);
-        const source = store.source();
-        const overdueDays =
-          source?.kind === "browser"
-            ? (daysSinceExport(source, date) ?? ("never" as const))
-            : undefined;
-        // The risk of losing the data: its own first line, never in the list.
-        const loss =
-          overdueDays === undefined || (overdueDays !== "never" && overdueDays <= 7)
-            ? undefined
-            : dataLossItem(overdueDays);
         // Known on the first paint, so nothing jumps when the engine answers:
         // whether it is the season (the card goes first) and whether the 720
         // or the 721 could have something to say (a row of *Atención* is kept).
@@ -173,11 +161,8 @@ export default function ResumenRoute(): JSX.Element {
         // The cards, each once; `summaryOrder` says in which order they go.
         const cards: Record<SummaryCard, () => JSX.Element> = {
           worth: () => <NetWorthBlock view={liveWorth()} />,
-          loss: () => (
-            <Show when={loss}>
-              {(item) => <NoticeLink item={noticeOf(item())} class="summary-loss" />}
-            </Show>
-          ),
+          // The ledger lives in the cloud (ADR-0035): no copy on the device to lose.
+          loss: () => <></>,
           attention: () => <AttentionBlock items={items} fiscal={fiscalNotice} />,
           moves: () => (
             <Section
@@ -223,9 +208,7 @@ export default function ResumenRoute(): JSX.Element {
               <Show when={onboarding}>{(steps) => <FirstSteps onboarding={steps()} />}</Show>
 
               <Show when={moved}>
-                <For
-                  each={summaryOrder({ monitor: monitor(), season, dataLoss: loss !== undefined })}
-                >
+                <For each={summaryOrder({ monitor: monitor(), season, dataLoss: false })}>
                   {(card) => cards[card]()}
                 </For>
               </Show>
