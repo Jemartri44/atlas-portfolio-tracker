@@ -76,20 +76,13 @@ export const blocksTheApp = (phase: LoadPhase): boolean =>
  * nothing of it reaches the device.
  */
 export type PendingState =
-  /** Sent, answer lost: not looked for yet (or the connection is still down). */
-  | "unknown"
+  | "unknown" // sent, answer lost: not looked for yet (or the connection is still down)
   | "checking"
-  /** Found in the ledger: it was recorded. */
-  | "written"
-  /** Not in the ledger: nothing was written, and the same data can be sent again. */
-  | "not_written"
+  | "written" // found in the ledger: it was recorded
+  | "not_written" // not in the ledger: nothing was written, the same data can be sent again
   /** Only some of its ids are there (it should not happen): the ledger has to be looked at. */
   | "partial"
-  /**
-   * The ledger changed after the person saw the effect: nothing is sent again
-   * from here. The operation is made again from its form, which shows the
-   * effect on the new ledger and asks for another yes.
-   */
+  /** The ledger changed since the effect was seen: nothing is resent; it is redone from its form. */
   | "changed";
 
 export type RetryResult =
@@ -101,11 +94,7 @@ export type RetryResult =
 export interface PendingWrite {
   readonly ids: readonly string[];
   readonly state: PendingState;
-  /**
-   * The etag of the ledger the person saw the effect on, when it was sent. The
-   * silent reloads that look for the ids move the screen's snapshot, so a retry
-   * compares against **this**, never against the reloaded ledger.
-   */
+  /** The etag the person saw the effect on: a retry compares with this, never with a reload. */
   readonly seenEtag?: string;
   /** Sends it again **with the same ids**; the screen decides when, never a timer. */
   readonly retry: () => Promise<RetryResult>;
