@@ -21,6 +21,7 @@
     "test/helpers/golden.ts",
     "test/helpers/memory-blob.ts",
     "../../packages/adapters/test/fake-idb.ts",
+    "../../packages/adapters/test/fixtures.ts",
     "../api/test/harness.ts",
     "../../packages/adapters/test/aws/test-only-fake-s3.ts",
     "../../packages/adapters/test/aws/test-only-fake-ssm.ts",
@@ -32,9 +33,6 @@
     },
     {
       "path": "../../packages/adapters"
-    },
-    {
-      "path": "../../packages/adapters/tsconfig.test-sync.json"
     },
     {
       "path": "../api"

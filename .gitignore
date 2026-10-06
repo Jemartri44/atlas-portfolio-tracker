@@ -44,7 +44,6 @@ plan-financiero.md
 coverage/
 dist-test/
 dist-test-browser/
-dist-test-sync/
 dist-lambda/
 *.tsbuildinfo
 

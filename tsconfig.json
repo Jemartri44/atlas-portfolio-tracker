@@ -20,9 +20,6 @@
       "path": "packages/adapters/tsconfig.test-browser.json"
     },
     {
-      "path": "packages/adapters/tsconfig.test-sync.json"
-    },
-    {
       "path": "apps/cli"
     },
     {

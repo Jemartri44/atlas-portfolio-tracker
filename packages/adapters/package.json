@@ -50,14 +50,6 @@
       "types": "./dist/random/web-crypto.d.ts",
       "import": "./dist/random/web-crypto.js"
     },
-    "./sync": {
-      "types": "./dist/ledger-store/browser/sync-store.d.ts",
-      "import": "./dist/ledger-store/browser/sync-store.js"
-    },
-    "./sync-client": {
-      "types": "./dist/sync/client.d.ts",
-      "import": "./dist/sync/client.js"
-    },
     "./sync-http": {
       "types": "./dist/sync/http-remote.d.ts",
       "import": "./dist/sync/http-remote.js"
@@ -97,10 +89,6 @@
     "./identity": {
       "types": "./dist/identity/index.d.ts",
       "import": "./dist/identity/index.js"
-    },
-    "./web-device": {
-      "types": "./dist/ledger-store/browser/web-device.d.ts",
-      "import": "./dist/ledger-store/browser/web-device.js"
     }
   },
   "files": [

@@ -40,12 +40,6 @@ export interface StoredLedger {
 
 export interface StoredMeta {
   lastExportAt: string;
-  /**
-   * Operations the sync held back at that export whose file was not
-   * downloaded yet (round 2 of the review of PR #97, N2): the export is not
-   * complete until it is.
-   */
-  heldOwed?: number;
 }
 
 const decoder = new TextDecoder();

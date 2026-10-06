@@ -10,9 +10,6 @@ export default defineConfig({
     // would otherwise swallow `@atlas/adapters/blob`.
     alias: {
       "@atlas/adapters/blob": local("./packages/adapters/src/ledger-store/blob.ts"),
-      "@atlas/adapters/web-device": local(
-        "./packages/adapters/src/ledger-store/browser/web-device.ts",
-      ),
       "@atlas/adapters/aws-sdk": local("./packages/adapters/src/aws/sdk.ts"),
       "@atlas/adapters/aws-admin": local("./packages/adapters/src/aws/sdk-admin.ts"),
       "@atlas/adapters/aws-jobs": local("./packages/adapters/src/aws/jobs.ts"),
@@ -22,10 +19,8 @@ export default defineConfig({
       "@atlas/adapters/access": local("./packages/adapters/src/access/crypto.ts"),
       "@atlas/adapters/identity": local("./packages/adapters/src/identity/index.ts"),
       "@atlas/adapters/api-store": local("./packages/adapters/src/sync/api-ledger-store.ts"),
-      "@atlas/adapters/sync-client": local("./packages/adapters/src/sync/client.ts"),
       "@atlas/adapters/sync-http": local("./packages/adapters/src/sync/http-remote.ts"),
       "@atlas/adapters/reference-http": local("./packages/adapters/src/reference/http.ts"),
-      "@atlas/adapters/sync": local("./packages/adapters/src/ledger-store/browser/sync-store.ts"),
       "@atlas/adapters/reference": local(
         "./packages/adapters/src/ledger-store/browser/reference.ts",
       ),
@@ -57,13 +52,7 @@ export default defineConfig({
     globalSetup: [local("./tests/support/tmp-per-run.ts")],
     // Every outDir of a tsconfig (tests/test-outputs.test.ts): a compiled test
     // must never run a second time after a build.
-    exclude: [
-      "**/node_modules/**",
-      "**/dist/**",
-      "**/dist-test/**",
-      "**/dist-test-sync/**",
-      "**/dist-test-browser/**",
-    ],
+    exclude: ["**/node_modules/**", "**/dist/**", "**/dist-test/**", "**/dist-test-browser/**"],
     projects: [
       { extends: true, test: { name: "domain", root: "packages/domain" } },
       { extends: true, test: { name: "adapters", root: "packages/adapters" } },
