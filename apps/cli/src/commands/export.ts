@@ -6,6 +6,7 @@ import { linesOfText } from "@atlas/domain/sync";
 import { assertKnownFlags, type Flags, stringFlag, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { cloudStoreOf } from "../folder-mode.js";
+import { assertNoLedgerInCloudFolder } from "../remote/credentials-file.js";
 import { confirmOutsideRepository, degradedHeader, loadForQuery } from "./shared.js";
 
 const csvCell = (value: unknown): string => {
@@ -68,6 +69,9 @@ export const exportCommand = async (
   const header = degradedHeader(state);
   if (header !== undefined) {
     ctx.io.err(header);
+  }
+  if (out !== undefined) {
+    await assertNoLedgerInCloudFolder(out);
   }
   if (out === undefined) {
     ctx.io.out(content.endsWith("\n") ? content.slice(0, -1) : content);

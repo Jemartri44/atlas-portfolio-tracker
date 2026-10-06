@@ -5,7 +5,8 @@
 // other. What it holds is read strictly by the domain.
 
 import { promises as fs } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { DomainError } from "@atlas/domain";
 import {
   type CredentialsFile,
   EMPTY_CREDENTIALS,
@@ -151,4 +152,24 @@ export const readRemoteJson = async (ledgerFolder: string): Promise<RemoteJson |
     throw new CredentialsError("sync_remote_unreadable", path);
   }
   return parsed;
+};
+
+/**
+ * A `ledger.jsonl` is never written into a cloud folder (the one with
+ * `sync/remote.json`): it would be the ambiguous folder of ADR-0035, §4, which
+ * the console refuses to open. Said before anything is written.
+ */
+export const assertNoLedgerInCloudFolder = async (target: string): Promise<void> => {
+  const path = resolve(target);
+  if (basename(path) !== "ledger.jsonl") {
+    return;
+  }
+  const remote = await readRemoteJson(dirname(path));
+  if (remote !== undefined) {
+    throw new DomainError(
+      "ledger_in_cloud_folder",
+      "a ledger.jsonl is not written into a cloud folder",
+      { path, origin: remote.origin },
+    );
+  }
 };

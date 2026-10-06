@@ -485,6 +485,8 @@ export const describeError = (error: DomainError): string => {
       return "Esta carpeta es de nube: no tiene libro que compactar aquí. Compactar el libro de la nube es «atlas admin compact --env <entorno>», con el rol de administración (ADR-0032).";
     case "drafts_not_in_cloud":
       return "En una carpeta de nube no hay borradores: llegan con la entrega E6 de ADR-0035. Registra la operación cuando el BCE publique su tipo, o tecléalo (--fx-rate y --fx-rate-date).";
+    case "ledger_in_cloud_folder":
+      return `No se escribe un ledger.jsonl en una carpeta de nube (${text(d.path)}, nube ${text(d.origin)}): sería la carpeta ambigua de ADR-0035, que la consola se niega a abrir. Escríbelo en otra carpeta o con otro nombre.`;
     case "upload_needs_cloud_folder":
       return "La subida inicial se hace desde una carpeta de nube: inicia sesión en una carpeta sin libro con «atlas remote login --origin <https://…>» y repite «atlas remote upload --from <ledger.jsonl>» desde ella.";
     case "upload_cloud_not_empty":

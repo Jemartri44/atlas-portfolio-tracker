@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import { SELF } from "../../../api/test/harness.js";
 import { EXIT } from "../../src/context.js";
 import { CLI_SETTINGS, Events } from "../events.js";
-import { type ConsoleUnderTest, setupConsole, writeRemoteJson } from "../support/console.js";
+import { type ConsoleUnderTest, folderTree, setupConsole } from "../support/console.js";
 
 const LEDGER_KEY = "ledger/ledger.jsonl";
 const textOf = (lines: readonly string[]) => lines.map((line) => `${line}\n`).join("");
@@ -407,11 +407,35 @@ describe("atlas sync is retired: no path syncs a local ledger with the cloud", (
   it("says so, whatever follows, and writes nothing in the folder", async () => {
     const c = await setupConsole();
     await mkdir(join(c.ledger, "x"), { recursive: true });
-    for (const argv of [["sync"], ["sync", "init", "--origin", SELF]]) {
+    const before = await folderTree(c.ledger);
+    for (const argv of [["sync"], ["sync", "init", "--origin", SELF], ["sync", "join"]]) {
       c.err.length = 0;
       expect(await c.exec(argv)).toBe(EXIT.usage);
       expect(said(c)).toContain("se ha retirado");
     }
-    await writeRemoteJson(c.ledger, "AAAAAAAAAAAAAAAAAAAAAA");
+    expect(await folderTree(c.ledger)).toEqual(before);
+    expect(c.seen).toEqual([]);
+  });
+});
+
+describe("no ledger.jsonl is written into a cloud folder", () => {
+  it("is refused by export and synth, with nothing written", async () => {
+    const { c } = await cloud();
+    const target = join(c.ledger, "ledger.jsonl");
+    const before = await folderTree(c.ledger);
+    for (const argv of [
+      ["export", "--format", "jsonl", "--out", target, "--yes"],
+      ["export", "--format", "csv", "--out", target, "--yes"],
+      ["synth", "--out", target],
+    ]) {
+      c.err.length = 0;
+      expect(await c.exec(argv)).toBe(EXIT.domain);
+      expect(said(c)).toContain("ledger_in_cloud_folder");
+    }
+    expect(await folderTree(c.ledger)).toEqual(before);
+    // Any other name in that folder, and the same name elsewhere, is not the ambiguity.
+    const elsewhere = join(c.root, "otra", "ledger.jsonl");
+    await mkdir(join(c.root, "otra"));
+    expect(await c.exec(["synth", "--out", elsewhere])).toBe(EXIT.ok);
   });
 });
