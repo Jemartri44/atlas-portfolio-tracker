@@ -11,8 +11,8 @@
       "import": "./dist/index.js"
     },
     "./api-store": {
-      "types": "./dist/ledger-store/api.d.ts",
-      "import": "./dist/ledger-store/api.js"
+      "types": "./dist/sync/api-ledger-store.d.ts",
+      "import": "./dist/sync/api-ledger-store.js"
     },
     "./blob": {
       "types": "./dist/ledger-store/blob.d.ts",

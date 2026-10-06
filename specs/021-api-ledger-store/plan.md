@@ -2,10 +2,11 @@
 
 ## Diseño
 
-- **`packages/adapters/src/ledger-store/api.ts`** — `ApiLedgerStore implements LedgerStore`. Recibe un `RemoteLedger` (el puerto del dominio): en producción, `httpRemote` con la cookie (web) o el token (consola). No duplica el cliente HTTP; hereda su `x-amz-content-sha256`, `redirect: "error"` y la traducción de errores.
+- **`packages/adapters/src/sync/api-ledger-store.ts`** — `ApiLedgerStore implements LedgerStore`. Recibe un `RemoteLedger` (el puerto del dominio): en producción, `httpRemote` con la cookie (web) o el token (consola). No duplica el cliente HTTP; hereda su `x-amz-content-sha256`, `redirect: "error"` y la traducción de errores.
 - **Declaraciones:** reutiliza `unitsOf` y `entriesOf` del dominio. Las huellas vivas salen de `projectLedger(base, { collectErrors: true }).fingerprints` (los eventos no anulados); el lote se recorre en orden, quitando la huella de lo que anula y sumando la de cada línea.
 - **Errores nuevos del dominio** (`errors.ts`): `RemoteRejectedError` (`remote_rejected`) y `WriteOutcomeUnknownError` (`write_outcome_unknown`). El resto, los existentes (`ConflictError`, `SchemaTooNewError`, `RemoteError`).
 - **`httpRemote`:** añade `cache: "no-store"` a cada petición.
+- **Va en `src/sync/`**, la única carpeta que la prueba de arquitectura de 015 deja tomar `@atlas/domain/sync`. Las dos etiquetas nuevas llevan su traducción en la CLI y la web (prueba de mensajes).
 - **Subruta** `@atlas/adapters/api-store` para que la web lo empaquete sin el resto del barril (E2).
 
 ## Decisiones

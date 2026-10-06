@@ -12,7 +12,6 @@ export {
 } from "./ecb/history-store.js";
 export { ECB_API_URL, ECB_ZIP_URL, EcbDownloadFailed, EcbFxRateSource } from "./ecb/source.js";
 export { entryOfZip, ZipUnreadable } from "./ecb/zip.js";
-export { ApiLedgerStore, type WriteOutcome } from "./ledger-store/api.js";
 export { BlobArchiveExists, BlobLedgerStore, type LedgerBlob } from "./ledger-store/blob.js";
 export {
   FileLedgerStore,
@@ -47,6 +46,7 @@ export {
   secretsPath,
 } from "./prices/secrets.js";
 export { webCryptoRandom } from "./random/web-crypto.js";
+export { ApiLedgerStore, type WriteOutcome } from "./sync/api-ledger-store.js";
 export * from "./sync/client.js";
 export {
   DISCARDED_FILE,

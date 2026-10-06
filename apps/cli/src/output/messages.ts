@@ -288,6 +288,14 @@ export const describeError = (error: DomainError): string => {
       return `El libro usa schema_version ${text(d.found)} y esta CLI solo entiende hasta ${text(d.supported)}: actualiza la aplicación.`;
     case "conflict":
       return "El libro ha cambiado desde que se cargó: repite el comando.";
+    case "remote_rejected":
+      return `La API ha rechazado la escritura (${text(d.remote_code)}): ${
+        d.accepted === 0
+          ? "no se ha escrito nada"
+          : "solo se ha escrito una parte; recarga el libro"
+      }.`;
+    case "write_outcome_unknown":
+      return "La conexión se cortó al guardar y no se sabe si la operación quedó registrada: cuando vuelva la conexión, comprueba el libro antes de repetirla.";
     case "invalid_events":
       return `El libro tiene eventos inválidos; rectifícalos antes de compactar:\n${table(
         ["id", "tipo", "motivo"],
