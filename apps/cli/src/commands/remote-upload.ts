@@ -21,6 +21,12 @@ import { type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { cloudStoreOf } from "../folder-mode.js";
 import { confirm, render } from "./shared.js";
 
+/** The answer never came back: not known whether the PUT was applied. */
+const CUT_CODES: ReadonlySet<string> = new Set(["network_failed", "transport_rejected"]);
+
+const UPLOAD_OUTCOME_UNKNOWN =
+  "la conexión se cortó al subir y no se sabe si el libro quedó en la nube. Repite la orden con el mismo fichero: si ya estaba, dirá que no hay nada que subir; si no, lo sube.";
+
 const strictText = async (path: string): Promise<string> => {
   const bytes = await readFile(path).catch(() => undefined);
   if (bytes === undefined) {
@@ -101,6 +107,12 @@ export const uploadCommand = async (
         `Error (init_rejected): la nube no ha aceptado el libro (${why}${line}). No se ha escrito nada.`,
       );
       return EXIT.domain;
+    }
+    // The PUT was sent and the answer never came: the cloud may hold the book.
+    // Repeating is safe, because the same bytes answer `already_uploaded`.
+    if (error instanceof RemoteError && CUT_CODES.has(error.code)) {
+      ctx.io.err(`Error (write_outcome_unknown): ${UPLOAD_OUTCOME_UNKNOWN}`);
+      return EXIT.outcomeUnknown;
     }
     throw error;
   }

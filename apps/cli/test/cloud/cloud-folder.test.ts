@@ -33,6 +33,48 @@ const cloud = async () => {
   return { c, seed };
 };
 
+const CASH_IN = [
+  "add",
+  "cash-in",
+  "--account",
+  "acc_ib",
+  "--value-date",
+  "2027-02-01",
+  "--amount",
+  "7",
+  "--currency",
+  "EUR",
+  "--yes",
+];
+
+/**
+ * Breaks the connection on the requests `when` picks, up to `times`: after the
+ * request reached the cloud (the answer is lost) or before it (it never did).
+ */
+const cutting = (
+  c: ConsoleUnderTest,
+  when: (method: string, url: string) => boolean,
+  options: { reaches: boolean; times: number },
+): void => {
+  const real = c.remote.fetch;
+  let left = options.times;
+  (c.remote as { fetch: typeof fetch }).fetch = (async (
+    input: string | URL | Request,
+    init?: RequestInit,
+  ) => {
+    if (left > 0 && when(init?.method ?? "GET", String(input))) {
+      left -= 1;
+      if (options.reaches) {
+        await real(input, init);
+      }
+      throw new TypeError("fetch failed");
+    }
+    return real(input, init);
+  }) as typeof fetch;
+};
+const isAppend = (method: string, url: string) =>
+  method === "POST" && url.endsWith("/api/ledger/lines");
+
 describe("the mode of a folder", () => {
   it("refuses a folder with a ledger and a cloud identity, before reading or writing anything", async () => {
     const { c } = await cloud();
@@ -150,6 +192,40 @@ describe("a cloud folder reads and writes the cloud's ledger", () => {
     expect(c.api.s3.text(LEDGER_KEY)).toContain('"amount":"7"');
   });
 
+  it("says nothing is known when the cut write cannot be looked up either, with exit 9", async () => {
+    const { c } = await cloud();
+    // The write reaches the cloud, its answer is lost, and the lookup is lost too.
+    cutting(c, isAppend, { reaches: true, times: 1 });
+    const real = c.remote.fetch;
+    let cuts = 0;
+    (c.remote as { fetch: typeof fetch }).fetch = (async (
+      input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      if (cuts > 0 && String(input).endsWith("/api/ledger") && (init?.method ?? "GET") === "GET") {
+        throw new TypeError("fetch failed");
+      }
+      try {
+        return await real(input, init);
+      } catch (error) {
+        cuts += 1;
+        throw error;
+      }
+    }) as typeof fetch;
+    expect(await c.exec(CASH_IN)).toBe(EXIT.outcomeUnknown);
+    expect(said(c)).toContain("write_outcome_unknown");
+    expect(said(c)).toContain("no se sabe si la operación quedó registrada");
+    expect(c.api.s3.text(LEDGER_KEY)).toContain('"amount":"7"');
+  });
+
+  it("says it was NOT recorded, with exit 8, when the lookup shows the write never arrived", async () => {
+    const { c } = await cloud();
+    cutting(c, isAppend, { reaches: false, times: 1 });
+    expect(await c.exec(CASH_IN)).toBe(EXIT.offline);
+    expect(said(c)).toContain("NO quedó registrada");
+    expect(c.api.s3.text(LEDGER_KEY)).not.toContain('"amount":"7"');
+  });
+
   it("refuses compact, --accept-invalid and drafts; compact works in a local folder", async () => {
     const { c } = await cloud();
     expect(await c.exec(["compact", "--yes"])).toBe(EXIT.domain);
@@ -215,6 +291,25 @@ describe("the initial upload", () => {
     expect(await c.exec(["remote", "upload", "--from", other, "--yes"])).toBe(EXIT.domain);
     expect(said(c)).toContain("upload_cloud_not_empty");
     expect(said(c)).toContain("atlas admin restore");
+  });
+
+  it("says an upload cut after sending is not known, with exit 9, and repeating is safe", async () => {
+    const c = await setupConsole();
+    const seed = join(c.root, "seed.jsonl");
+    await writeFile(seed, textOf(baseLines()));
+    expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
+    cutting(c, (method, url) => method === "PUT" && url.endsWith("/api/ledger"), {
+      reaches: true,
+      times: 1,
+    });
+    c.err.length = 0;
+    expect(await c.exec(["remote", "upload", "--from", seed, "--yes"])).toBe(EXIT.outcomeUnknown);
+    expect(said(c)).toContain("write_outcome_unknown");
+    expect(said(c)).toContain("Repite la orden con el mismo fichero");
+    expect(c.api.s3.text(LEDGER_KEY)).toBe(textOf(baseLines()));
+    c.out.length = 0;
+    expect(await c.exec(["remote", "upload", "--from", seed, "--yes"])).toBe(EXIT.ok);
+    expect(said(c)).toContain("ya tiene exactamente este libro");
   });
 
   it("is refused from a local folder, and writes nothing", async () => {
