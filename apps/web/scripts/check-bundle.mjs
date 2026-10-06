@@ -1185,12 +1185,12 @@ const BOOT_BUDGET_GZIP_BYTES = 76_055;
  */
 /*
  * **Feature 023, E2b (2026-10-06): the local ledger, import, folder, sync card
- * and drafts leave the product; measured ≈ 289.4 KB (−25 KB against the 320.215
- * of E2a), ceiling 296.500 (rejection messages by reason, the session notice
+ * and drafts leave the product; measured ≈ 289.7 KB (−25 KB against the 320.215
+ * of E2a), ceiling 297.500 (review fixes; rejection messages by reason, the session notice
  * and the pending-write notice came after the first figure).** The boot ceiling
  * is not touched; E5 lowers the total to what is measured.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 296_500;
+const TOTAL_BUDGET_GZIP_BYTES = 297_500;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
