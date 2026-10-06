@@ -42,7 +42,11 @@ const at = (date: CivilDate, year: number): number =>
 /** The sentence of one date, without its day. */
 export const calendarPhrase = (one: CalendarDate, names: NameIndex): string =>
   one.kind === "filing_deadline"
-    ? `${SAYS[one.kind]} ${one.model} de ${one.year}${one.verified === false ? ` · ${UNVERIFIED}` : ""}`
+    ? `${SAYS[one.kind]} ${one.model} de ${one.year}${
+        one.extended_from === undefined || one.file_by === undefined
+          ? ""
+          : ` · prórroga legal del ${formatDate(one.extended_from)}; conviene presentarlo antes del ${formatDate(one.file_by)}`
+      }`
     : one.kind === "wash_sale_end"
       ? `${SAYS[one.kind]}: ${[...new Set(one.sources.filter((_, index) => index % 2 === 1))]
           .map((id) => displayName(names, id))
@@ -80,11 +84,6 @@ export const CalendarStrip = (props: {
         {(one) => (
           <svg x={`${at(one.date, year)}%`} y="22" overflow="visible" aria-hidden="true">
             <path d={SHAPE[one.kind]} opacity={one.date < props.today ? 0.4 : 1} />
-            <Show when={one.verified === false}>
-              <text x="8" y="-8">
-                ?
-              </text>
-            </Show>
             <Show when={Number(one.date.slice(0, 4)) > year}>
               <text x="-8" y="-8" text-anchor="end">{`${one.date.slice(0, 4)} ›`}</text>
             </Show>

@@ -15,7 +15,7 @@
 // (`hasForeignAccountsAt`): without one, the models have nothing to ask for.
 
 import type { CivilDate } from "../dates/civil-date.js";
-import { yearOf } from "../dates/civil-date.js";
+import { lastWorkingDay, yearOf } from "../dates/civil-date.js";
 import { hasForeignAccountsAt } from "../projections/foreign-accounts.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import type { AssetType, LedgerEvent } from "../schema/events.js";
@@ -37,8 +37,10 @@ export interface CalendarDate {
   /** The fiscal year it refers to, when it refers to one. */
   year?: number;
   model?: "720" | "721";
-  /** Only on a filing deadline: `false` when its day was never verified against a primary source. */
-  verified?: boolean;
+  /** Only on a filing deadline carried off a weekend: the literal 31 March it was carried from. */
+  extended_from?: CivilDate;
+  /** With `extended_from`: the last working day before it, the recommended day to file by. */
+  file_by?: CivilDate;
   /** Ids of what originates it (a sale, an asset): never an amount. */
   sources: string[];
 }
@@ -116,7 +118,9 @@ export const fiscalCalendar = (
           kind: "filing_deadline",
           year: row.year,
           model,
-          verified: row.verified,
+          ...(row.extended_from === undefined
+            ? {}
+            : { extended_from: row.extended_from, file_by: lastWorkingDay(row.extended_from) }),
           sources: [],
         });
       }

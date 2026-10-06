@@ -2,6 +2,7 @@
 // what it must never say.
 
 import { describe, expect, it } from "vitest";
+import { nextWorkingDay } from "../../src/dates/civil-date.js";
 import {
   type CalendarDate,
   FILING_DEADLINES,
@@ -141,19 +142,24 @@ describe("fiscalCalendar: the informative returns", () => {
     );
     expect(calendar.unknown_deadlines).toEqual([]);
     // 31/03/2027 is a Wednesday: the order says it and nothing shifts it.
-    expect(of(calendar, "filing_deadline").map((entry) => entry.verified)).toEqual([true, true]);
+    expect(of(calendar, "filing_deadline").map((entry) => entry.extended_from)).toEqual([
+      undefined,
+      undefined,
+    ]);
   });
 
-  it("carries the mark of a deadline that nobody verified", () => {
-    // 31/03/2024 was a Sunday: the row of 2023 stays at the literal day, unverified.
+  it("carries a deadline off a weekend to the next working day, and says from where", () => {
+    // 31/03/2024 was a Sunday: the row of 2023 moves to Monday 01/04/2024.
     const b = new LedgerBuilder();
     b.recordedAt("2023-06-01");
     catalogue(b);
     const calendar = fiscalCalendar(b.build(), "2024-01-20");
     const deadlines = of(calendar, "filing_deadline");
-    expect(deadlines.map((entry) => [entry.model, entry.date, entry.verified])).toEqual([
-      ["720", "2024-03-31", false],
-      ["721", "2024-03-31", false],
+    expect(
+      deadlines.map((entry) => [entry.model, entry.date, entry.extended_from, entry.file_by]),
+    ).toEqual([
+      ["720", "2024-04-01", "2024-03-31", "2024-03-29"],
+      ["721", "2024-04-01", "2024-03-31", "2024-03-29"],
     ]);
   });
 
@@ -190,21 +196,33 @@ describe("FILING_DEADLINES", () => {
       2023, 2024, 2025, 2026,
     ]);
     for (const row of FILING_DEADLINES) {
-      expect(row.deadline).toBe(`${row.year + 1}-03-31`);
+      expect(row.extended_from ?? row.deadline).toBe(`${row.year + 1}-03-31`);
       expect(row.source.url.startsWith("https://www.boe.es/")).toBe(true);
       expect(row.source.checked).toBe("2026-10-04");
     }
   });
 
-  it("verifies the years whose 31 March is a working day and only those", () => {
-    const weekend = (deadline: string): boolean =>
-      [0, 6].includes(new Date(`${deadline}T00:00:00Z`).getUTCDay());
-    for (const row of FILING_DEADLINES) {
-      expect(row.verified, `${row.model} ${row.year}`).toBe(!weekend(row.deadline));
-    }
-    expect(
-      FILING_DEADLINES.filter((row) => !row.verified).map((row) => `${row.model}-${row.year}`),
-    ).toEqual(["720-2017", "720-2018", "720-2023", "721-2023"]);
+  it("carries the weekend years to the next working day: 2017, 2018 and 2023, and any later one", () => {
+    const moved = FILING_DEADLINES.filter((row) => row.extended_from !== undefined);
+    expect(moved.map((row) => [row.model, row.year, row.extended_from, row.deadline])).toEqual([
+      ["720", 2017, "2018-03-31", "2018-04-02"],
+      ["720", 2018, "2019-03-31", "2019-04-01"],
+      ["720", 2023, "2024-03-31", "2024-04-01"],
+      ["721", 2023, "2024-03-31", "2024-04-01"],
+    ]);
+    // A working day: nothing moves.
+    const plain = FILING_DEADLINES.find((row) => row.model === "720" && row.year === 2024);
+    expect(plain?.deadline).toBe("2025-03-31");
+    expect(plain?.extended_from).toBeUndefined();
+  });
+});
+
+describe("nextWorkingDay", () => {
+  it("rolls Saturday and Sunday to Monday, and leaves a weekday alone, in any year", () => {
+    expect(nextWorkingDay("2029-03-31")).toBe("2029-04-02"); // Saturday
+    expect(nextWorkingDay("2035-03-31")).toBe("2035-04-02"); // Saturday (2034 fiscal year)
+    expect(nextWorkingDay("2029-04-01")).toBe("2029-04-02"); // Sunday
+    expect(nextWorkingDay("2029-04-03")).toBe("2029-04-03"); // Tuesday
   });
 });
 
