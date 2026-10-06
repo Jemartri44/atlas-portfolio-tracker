@@ -338,7 +338,7 @@ No es una ruta: es la regla con la que un cliente clasifica lo que retiene al vo
 
 ### 5.7 La parte del cliente *(014)*
 
-> **Histórica, enmendada por ADR-0035.** Todo lo de esta sección (cola, marcador, lo retenido, volver a descargar, unirse, `syncDevice` y sus códigos) describe el motor de sincronización que **ADR-0035 retira**. El motor se borra del código en **E5** (`packages/adapters/src/sync/` salvo `http-remote`; se conserva lo que importa la API, como `acceptAppend`); sus clientes dejan de usarse desde E2b y E3. Hasta entonces el código sigue como está. Lo que lo sustituye es §5.8.
+> **Histórica, enmendada por ADR-0035.** Todo lo de esta sección (cola, marcador, lo retenido, volver a descargar, unirse, `syncDevice` y sus códigos) describe el motor de sincronización que **ADR-0035 retira**. El motor se borra del código en **E5** (`packages/adapters/src/sync/` salvo `http-remote` y `api-ledger-store`; se conserva lo que importa la API, como `acceptAppend`, y `unitsOf` y `entriesOf`, de los que depende `ApiLedgerStore`); sus clientes dejan de usarse desde E2b y E3. Hasta entonces el código sigue como está. Lo que lo sustituye es §5.8.
 
 No es una ruta: es lo que el cliente hace con §5.1 a §5.5, fijado por el código de la 014 (`syncDevice`, `initialiseRemote`, `replaceFromRemote` y `joinWithOwnLines` en `packages/adapters/src/sync/client.ts`; `inspect`, `planUpload` y `settle` en `packages/domain/src/sync/client-plan.ts`). Los dos clientes, la consola sobre su carpeta y la web sobre su IndexedDB, comparten esta orquestación. Cada interfaz traduce cada código con su propia frase (`tests/messages.test.ts`).
 
@@ -379,10 +379,10 @@ Al volver a descargar un remoto reescrito o al unirse desde el remoto se retiene
 
 ### 5.8 El cliente de escritura directa (ADR-0035)
 
-Propuesto por ADR-0035 (aceptada el 2026-10-06) y **sin implementar**: llega en E1 (adaptador), E2a/E2b (web) y E3 (consola). Los nombres `ApiLedgerStore` y `remote_rejected` son los que **propone** la ADR.
+Decidido por ADR-0035 (aceptada el 2026-10-06). **El adaptador está implementado (E1, `specs/021-api-ledger-store`)**: `ApiLedgerStore` sobre `httpRemote`, con los errores `remote_rejected` (`RemoteRejectedError`) y `write_outcome_unknown` (`WriteOutcomeUnknownError`) y `findOutcome(ids)` para resolver el resultado desconocido. Falta su uso en la web (E2a/E2b) y en la consola (E3).
 
 - **Un solo almacén, `ApiLedgerStore`**, implementa `LedgerStore` sobre HTTP: `load()` es `GET /api/ledger` (se comprueba que el `ETag` es el SHA-256 de los bytes); `append(events, etag)` serializa cada evento con `encodeLine` y lo envía en `POST /api/ledger/lines` con `If-Match: "<etag>"`. `replace`, `appendLines` y `replaceLines` se niegan. Sin cola local y sin libro guardado en el dispositivo.
-- **Las declaraciones de §5.2 las deduce el adaptador:** `has_correction` y `chain_continues`, de la forma del lote; `confirm_duplicate`, en cada línea cuya huella repite la de un evento no anulado del libro cargado.
+- **Las declaraciones de §5.2 las deduce el adaptador:** `has_correction` y `chain_continues`, de la forma del lote; `confirm_duplicate`, por unidad, con las huellas del libro cargado más la unidad entera (miembros posteriores incluidos), que es la regla de la fila 7 de la tabla de §5.2.
 - **Cada escritura de un caso de uso es una unidad** (un evento, una pareja o una cadena): la API la acepta entera o no.
 - **Respuestas:**
 

@@ -10,6 +10,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./api-store": {
+      "types": "./dist/sync/api-ledger-store.d.ts",
+      "import": "./dist/sync/api-ledger-store.js"
+    },
     "./blob": {
       "types": "./dist/ledger-store/blob.d.ts",
       "import": "./dist/ledger-store/blob.js"

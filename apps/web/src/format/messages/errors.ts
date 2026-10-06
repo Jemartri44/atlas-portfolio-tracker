@@ -487,6 +487,12 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     `La línea ${text(d.line)} de tus datos lleva dentro un salto de línea o un retorno de carro: el fichero tiene finales de línea de Windows, que solo deja una edición a mano, y así no se escribe tal cual. Conviértelo a finales LF en la consola, desde la carpeta del libro, con la orden que da «atlas» para este mismo error (copia antes el fichero en ledger.jsonl.crlf y cambia solo los finales de línea), y después vuelve a sincronizar. Aquí no se puede importar un fichero mientras la sincronización esté configurada.`,
   conflict: () =>
     "Tus datos han cambiado desde que se cargaron (la CLI u otra pestaña han escrito): se recargan y se vuelve a intentar.",
+  remote_rejected: (d) =>
+    `La operación se ha rechazado: ${
+      d.accepted === 0 ? "no se ha guardado nada" : "solo se ha guardado una parte, revisa el libro"
+    }.`,
+  write_outcome_unknown: () =>
+    "La conexión se cortó al guardar y no se sabe si la operación quedó registrada: antes de repetirla, comprueba el libro.",
   schema_too_new: (d) =>
     `Tus datos los ha escrito una versión más nueva de la aplicación (formato ${text(d.found)}; esta entiende hasta el ${text(d.supported)}): actualiza la aplicación recargando con conexión.`,
   missing_migration: (d) =>
