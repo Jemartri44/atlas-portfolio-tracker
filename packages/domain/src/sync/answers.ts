@@ -66,17 +66,6 @@ export const parseInitAnswer = (value: unknown): { etag: string; lines: number }
     ? { etag: value.etag, lines: value.lines }
     : undefined;
 
-/** The `200` of `PUT /api/sync/devices/self`. */
-export const parsePublishAnswer = (
-  value: unknown,
-): { device_id: string; published_at: string } | undefined =>
-  isRecord(value) &&
-  onlyKeys(value, ["device_id", "published_at"]) &&
-  typeof value.device_id === "string" &&
-  typeof value.published_at === "string"
-    ? { device_id: value.device_id, published_at: value.published_at }
-    : undefined;
-
 /** The SHA-256 an `ETag` quotes, strong or weak (CloudFront weakens it when it compresses). */
 export const etagOfHeader = (header: string | null): string | undefined => {
   const quoted = /^(?:W\/)?"([0-9a-f]{64})"$/.exec(header ?? "");

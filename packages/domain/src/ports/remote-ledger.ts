@@ -43,13 +43,6 @@ export interface AppendResult {
   readonly rejected?: LineRejection;
 }
 
-/** What a device publishes of its queue (`docs/api.md` §5.3); the device id comes from the credential. */
-export interface DeviceQueueState {
-  readonly pending: number;
-  readonly held: number;
-  readonly last_sync_at: string;
-}
-
 /**
  * Every code a request of the sync can fail with, **closed**: those of
  * `docs/api.md` §7 the routes of §5 can answer, and the two the client names
@@ -131,6 +124,4 @@ export interface RemoteLedger {
     confirmDuplicateIds: readonly string[],
     ifMatch: string,
   ): Promise<{ etag: string; lines: number }>;
-  /** Publishes the state of this device's queue. */
-  publish(state: DeviceQueueState): Promise<{ device_id: string; published_at: string }>;
 }

@@ -1190,7 +1190,14 @@ const BOOT_BUDGET_GZIP_BYTES = 76_055;
  * and the pending-write notice came after the first figure).** The boot ceiling
  * is not touched; E5 lowers the total to what is measured.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 297_500;
+/*
+ * **Feature 026, E5 of ADR-0035 (2026-10-06): the code of the old queue is
+ * deleted (the client engine, the browser store of the sync, the held
+ * download and the sentences of the queue); measured 294.424 (−3.076 against
+ * the ceiling of 297.500), ceiling 294.800 — measured + 376.** The boot is not
+ * touched (ceiling 76.055). The trend: 320.215 → ≈ 296.600 (E2b) → 294.424.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 294_800;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
@@ -1434,23 +1441,11 @@ const LAZY_ONLY = [
   // the devices and the screens of the sync are a lazy section of Ajustes.
   { path: "/packages/domain/src/access/", what: "las reglas del acceso" },
   { path: "/packages/domain/src/access.ts", what: "la puerta del acceso" },
-  {
-    path: "/packages/adapters/src/ledger-store/browser/web-device.ts",
-    what: "el identificador del dispositivo de la web",
-  },
   { path: "/src/sync/", what: "la sesión y la sincronización de la web" },
   { path: "/src/routes/ajustes/sync/", what: "la sección de sincronización de Ajustes" },
   { path: "/packages/domain/src/sync.ts", what: "la puerta de la sincronización" },
   { path: "/packages/domain/src/ports/remote-ledger.ts", what: "el puerto del remoto" },
-  {
-    path: "/packages/domain/src/ports/sync-state-store.ts",
-    what: "el puerto del estado de la sincronización",
-  },
   { path: "/packages/adapters/src/sync/", what: "la orquestación de la sincronización" },
-  {
-    path: "/packages/adapters/src/ledger-store/browser/sync-store.ts",
-    what: "el estado de la sincronización en el navegador",
-  },
 ];
 
 /** The modules a chunk is made of, from its source map; empty when it has none. */

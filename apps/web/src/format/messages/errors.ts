@@ -390,104 +390,12 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "Retenida: la declaración ya no cuadra con los movimientos que tendría delante en la nube. Regístrala otra vez sobre tus datos actuales.",
   waiver_not_appendable: () =>
     "Una renuncia a verificar una huella solo nace al compactar en la consola y nunca se sube sola. Queda retenida.",
-  seals_prefix: () =>
-    "Retenida: es una declaración que sella los movimientos que tiene delante, y en la nube ya no son los mismos. Regístrala otra vez sobre tus datos actuales.",
-  concurrent_settings: () =>
-    "Retenida: la configuración también cambió en otro dispositivo, y cada cambio la guarda entera. Subirla borraría ese otro cambio: rehazla sobre la configuración actual.",
-  concurrent_account: () =>
-    "Retenida: esa cuenta también cambió en otro dispositivo, y cada cambio la guarda entera. Rehaz el cambio sobre la cuenta actual.",
-  concurrent_asset: () =>
-    "Retenida: ese activo también cambió en otro dispositivo, y cada cambio lo guarda entero. Rehaz el cambio sobre el activo actual.",
-  new_duplicate: () =>
-    "Retenida: con lo que ha llegado de otro dispositivo, parece repetida. Confírmala en «Retenidas» si son operaciones distintas, o descártala si es la misma.",
-  new_closed_year: () =>
-    "Retenida: cae en un ejercicio que otro dispositivo ha marcado como presentado. Confírmala si de verdad corresponde ahí; puede tocar rectificar la declaración.",
-  settings_leave_invalid: () =>
-    "Retenida: ese cambio de configuración dejaría inválidas operaciones que ya están en la nube, y la nube nunca recibe datos inválidos. Repara antes esas operaciones y rehaz el cambio.",
-  partner_discarded: () =>
-    "Retenida: descartaste la anulación de esta corrección, y una corrección sin su anulación no corrige nada: ni se sube ni se puede rehacer. Descártala también; si el cambio sigue siendo cierto, corrige de nuevo la operación en vigor.",
-  absent_after_rewrite: () =>
-    "Retenida al volver a descargar: la nube se ha reescrito y ya no tiene esta operación. Nunca se sube sola: rehazla si sigue siendo cierta, o descártala.",
-  differs_after_rewrite: () =>
-    "Retenida al volver a descargar: la nube tiene esta misma operación con otro contenido. Compara las dos y rehaz o descarta la tuya.",
-  absent_at_join: () =>
-    "Retenida al empezar desde la nube: la nube no tiene esta operación de tus datos anteriores, que quedan archivados. Rehazla si sigue siendo cierta, o descártala.",
-  differs_at_join: () =>
-    "Retenida al empezar desde la nube: la nube tiene esta operación con otro contenido. Compara y rehaz o descarta la tuya.",
-  discarded_by_user: () => "Descartada por ti: queda aparte, fuera de tus datos.",
-  redone: () => "Rehecha: la sustituye la operación registrada otra vez sobre tus datos actuales.",
   // Why a sync stops: nothing is lost and nothing is held back.
-  local_prefix_changed: () =>
-    "No se sincroniza: lo que este navegador tenía por sincronizado ya no coincide. No se ha subido nada.",
-  remote_rewritten: () =>
-    "No se sincroniza: los datos de la nube se han reescrito desde la última vez. No se ha subido nada. Cuando quieras, vuelve a descargarlos: lo que tenías y la nube no quedará retenido para que lo revises.",
-  remote_schema_too_new: () =>
-    "No se sincroniza: la nube usa un formato más nuevo que el de esta versión. Actualiza la aplicación recargando con conexión; lo pendiente espera aquí.",
-  remote_unreadable: () =>
-    "No se sincroniza: no se pueden leer los datos de la nube. Lo pendiente espera aquí.",
-  remote_ledger_invalid: () =>
-    "No se sincroniza: los datos de la nube tienen operaciones inválidas, y sobre ellos no se sube nada hasta repararlos. Lo pendiente espera aquí.",
-  remote_failed: (d) =>
-    `No se sincroniza: ${REMOTE_FAILURES[String(d.remote_code)] ?? "la nube ha respondido con un error."} Lo pendiente sigue pendiente; vuelve a intentarlo después.`,
-  remote_contention: () =>
-    "No se sincroniza: otro dispositivo ha escrito en la nube varias veces seguidas mientras lo intentábamos. Vuelve a intentarlo.",
-  local_changed: () =>
-    "No se sincroniza: tus datos han cambiado varias veces mientras sincronizábamos (otra pestaña escribe a la vez). Vuelve a intentarlo.",
-  publish_failed: (d) =>
-    `Sincronizado, pero no se ha podido avisar a la nube de lo que queda pendiente aquí (${REMOTE_FAILURES[String(d.remote_code)] ?? "error de la nube"}). Se hará en la próxima sincronización.`,
   // What a synced ledger refuses.
-  compact_refused_folder_synced: () =>
-    "Esa carpeta está sincronizada: se compacta la copia de la nube, no la carpeta.",
-  compact_refused_marker_unreadable: () =>
-    "No se compacta: no se puede leer el estado de la sincronización. Sincroniza primero.",
-  compact_refused_marker_missing: () =>
-    "No se compacta: falta el estado de la sincronización de una carpeta que se sincroniza. Sincroniza primero o desactiva la sincronización.",
-  import_refused_synced: () =>
-    "No se importa: tus datos se sincronizan, e importar otro fichero borraría lo pendiente. Desactiva antes la sincronización.",
-  deactivate_refused_pending: () =>
-    "No se desactiva la sincronización: hay operaciones pendientes que nunca llegarían a la nube. Sincroniza primero; lo retenido se queda aquí de todas formas.",
-  deactivate_refused_marker_missing: () =>
-    "No se desactiva: falta el estado de la sincronización, así que no se sabe qué operaciones están pendientes. Sincroniza primero.",
-  sync_not_configured: () =>
-    "Tus datos no se sincronizan. Para empezar hay que elegirlo: subirlos enteros a una nube vacía, o unirte a una que ya tiene datos.",
-  sync_device_changed: () =>
-    "Este navegador se unió a la nube con otro dispositivo, que ya no es el de tu sesión (se olvidó, o no se aceptó). Lo pendiente sigue aquí. Para seguir, únete otra vez: «Unirme desde la nube» o «Unirme con mis operaciones».",
-  sync_device_unknown: () =>
-    "Este navegador se sincroniza pero no sabe con qué dispositivo se unió. Únete otra vez: «Unirme desde la nube» o «Unirme con mis operaciones». Lo pendiente sigue aquí.",
-  sync_already_configured: () => "Tus datos ya se sincronizan: no hace falta empezar otra vez.",
-  sync_deactivated: () =>
-    "La sincronización está desactivada. Para volver a sincronizar hay que unirse otra vez, de forma explícita: «Unirme desde la nube» o «Unirme con mis operaciones».",
-  remote_empty: () =>
-    "La nube está vacía y aquí no se ha sincronizado nada: no se sube operación a operación. Inicializa la nube con tus datos enteros, de forma explícita.",
-  deactivate_refused_marker_unreadable: () =>
-    "No se desactiva: no se puede leer el estado de la sincronización. Sincroniza primero.",
   init_refused_invalid_ledger: (d) =>
     `No se suben tus datos a la nube: tienen ${count(d.invalid)} operaciones inválidas, y la nube nunca recibe datos inválidos. Repáralas primero en Ajustes → Verificación.`,
-  redo_filing_in_remote: () =>
-    "Esa declaración ya está en la nube: rehacerla sería registrar otra presentación que no se hizo. Descártala.",
-  redo_waits_for_pair: (d) =>
-    `Todavía no: esta pareja corrige otra de la misma cadena que sigue retenida. Primero la pareja ${count(d.pair)}.`,
-  redo_waits_for_unit: () =>
-    "Todavía no: esto corrige una operación que sigue retenida en otro grupo. Resuelve antes ese; después, esto.",
-  redo_id_mismatch: () =>
-    "No se rehace: la operación no lleva el identificador que se reservó para rehacerla. Para registrar otra cosa, descarta lo retenido y regístrala de nuevo.",
-  redo_type_mismatch: () =>
-    "No se rehace: la operación no es del tipo que se retuvo. Para registrar otra cosa, descarta lo retenido y regístrala de nuevo.",
-  redo_plan_not_recordable: () =>
-    "Una corrección se rehace entera, con su anulación; es un fallo de la aplicación.",
-  redo_partner_discarded: () =>
-    "No se rehace: descartaste su anulación, y una corrección sin su anulación no corrige nada. Descártala.",
-  join_required: (d) =>
-    `La sincronización de este navegador perdió su estado, y aquí hay ${count(d.own_lines)} operaciones que la nube no tiene. No se mezclan solas: unirse a la nube es siempre una elección explícita, con «Unirme desde la nube» o «Unirme con mis operaciones». No se ha tocado nada.`,
   accept_invalid_while_synced: (d) =>
     `Tus datos se sincronizan, y este cambio dejaría ${count(d.affected)} operaciones inválidas: tus datos quedarían inválidos, no se podrían sincronizar y la sincronización se pararía. Repara antes esas operaciones (Ajustes → Verificación) o desactiva la sincronización de forma explícita.`,
-  held_unit_unknown: () => "Ya no hay nada retenido ahí: puede que ya se haya resuelto.",
-  redo_not_recorded: () =>
-    "Todavía no están registradas las operaciones que la rehacen, con los identificadores que se reservaron: regístralas primero; lo retenido sigue donde estaba. Si registraste a mano lo que había que rehacer, descarta lo retenido: lo que registraste se queda en tus datos.",
-  resolution_not_offered: () => "Eso no se puede hacer con esta operación retenida.",
-  sync_marker_unreadable: () => "No se puede leer el estado de la sincronización.",
-  sync_held_unreadable: () =>
-    "No se pueden leer las operaciones retenidas o descartadas. No se tocan: hay que revisarlas antes de seguir.",
   raw_lone_surrogate: () =>
     "Una operación lleva un carácter que no es Unicode: no se ha guardado nada.",
   raw_line_break: (d) =>

@@ -11,7 +11,6 @@ import {
   parseAppendAnswer,
   parseErrorAnswer,
   parseInitAnswer,
-  parsePublishAnswer,
 } from "../../src/sync/answers.js";
 
 const SHA = "c".repeat(64);
@@ -100,8 +99,8 @@ describe("parseAppendAnswer (§5.2)", () => {
   });
 });
 
-describe("parseInitAnswer and parsePublishAnswer (§5.5 and §5.3)", () => {
-  it("read the two answers and nothing else", () => {
+describe("parseInitAnswer (§5.5)", () => {
+  it("reads the answer and nothing else", () => {
     expect(parseInitAnswer({ etag: SHA, lines: 4 })).toEqual({ etag: SHA, lines: 4 });
     for (const value of [
       { etag: SHA },
@@ -110,16 +109,6 @@ describe("parseInitAnswer and parsePublishAnswer (§5.5 and §5.3)", () => {
       [],
     ]) {
       expect(parseInitAnswer(value)).toBeUndefined();
-    }
-    const published = { device_id: "D".repeat(22), published_at: "2026-10-01T10:00:00.000Z" };
-    expect(parsePublishAnswer(published)).toEqual(published);
-    for (const value of [
-      { device_id: "D".repeat(22) },
-      { ...published, more: 1 },
-      { ...published, published_at: 5 },
-      null,
-    ]) {
-      expect(parsePublishAnswer(value)).toBeUndefined();
     }
   });
 });

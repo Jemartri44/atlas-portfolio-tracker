@@ -1,6 +1,5 @@
-// The name of the archive a sync leaves when it moves lines (ADR-0026, Part B,
-// step 6; decision D-Q12): the local bytes before a sync that reorders, before
-// joining from the remote and before downloading a rewritten remote again.
+// The name of the archive the restore of the remote leaves (ADR-0032, step 5):
+// the bytes of the cloud's ledger before `atlas admin restore` replaces them.
 // Date and time in Europe/Madrid, plus the start of the etag of what is
 // archived, so two archives of the same second are still two names.
 
@@ -23,16 +22,9 @@ const stamp = (now: Date): string => {
 };
 
 /**
- * `pre-sync-2026-09-25T061200-0123456789ab.jsonl` and its siblings — `pre-restore-…`
- * is the remote's, before `atlas admin restore` (ADR-0032, step 5). An
- * archive is never overwritten: when the name is taken — a write cut after
- * archiving and retried within the same second —, `-2`, `-3`… as `compact`
- * does.
+ * `pre-restore-2026-10-03T100000-0123456789ab.jsonl`. An archive is never
+ * overwritten: when the name is taken the store refuses with
+ * `ArchiveExistsError`.
  */
-export const syncArchiveName = (
-  kind: "sync" | "join" | "redownload" | "restore",
-  now: Date,
-  etag: string,
-  attempt = 1,
-): string =>
-  `pre-${kind}-${stamp(now)}-${etag.slice(0, 12)}${attempt === 1 ? "" : `-${attempt}`}.jsonl`;
+export const syncArchiveName = (kind: "restore", now: Date, etag: string): string =>
+  `pre-${kind}-${stamp(now)}-${etag.slice(0, 12)}.jsonl`;

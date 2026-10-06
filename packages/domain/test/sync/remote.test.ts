@@ -14,7 +14,6 @@ import {
   initDuplicateIds,
   parseAppendBody,
   parseInitBody,
-  parsePublishBody,
   type RemoteRules,
 } from "../../src/sync/remote.js";
 import {
@@ -158,22 +157,6 @@ describe("the bodies of the routes, by their shape only", () => {
     );
     // Not JSON of a line at all is still a shape-valid body: judged per line.
     expect(parseAppendBody({ lines: [{ line: "{" }] })).toEqual([{ line: "{" }]);
-  });
-
-  it("reads a published state, never with a device", () => {
-    const state = { pending: 2, held: 1, last_sync_at: "2027-08-30T10:00:00Z" };
-    expect(parsePublishBody(state)).toEqual(state);
-    for (const bad of [
-      null,
-      { ...state, device_id: "d" },
-      { ...state, pending: -1 },
-      { ...state, pending: 1.5 },
-      { ...state, held: -1 },
-      { ...state, held: "1" },
-      { ...state, last_sync_at: 1 },
-    ]) {
-      expect(bodyError(() => parsePublishBody(bad))).toBe("publish");
-    }
   });
 
   it("reads an initialisation", () => {

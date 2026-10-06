@@ -7,7 +7,6 @@ import { ArchiveExistsError, ConflictError, sha256Hex } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { DependencyUnavailable, LEDGER_KEY, S3LedgerBlob } from "../../src/aws/index.js";
 import { BlobLedgerStore } from "../../src/ledger-store/blob.js";
-import { withArchiveNames } from "../../src/sync/archive-names.js";
 import { account, deposit, lineOf } from "../fixtures.js";
 import { ledgerStoreContract } from "../ledger-store.contract.js";
 import { TestOnlyFakeS3 } from "./test-only-fake-s3.js";
@@ -149,7 +148,7 @@ describe("S3LedgerBlob", () => {
     expect(s3.text("archive/pre-restore.jsonl")).toBe(before);
     expect(s3.text(LEDGER_KEY)).toBe(before);
     // The retry takes the next name: nothing overwritten, lost or written twice.
-    await withArchiveNames(replace);
+    await replace(2);
     expect(s3.text("archive/pre-restore.jsonl")).toBe(before);
     expect(s3.text("archive/pre-restore-2.jsonl")).toBe(before);
     expect(s3.text(LEDGER_KEY)).toBe(textOf([lineOf(deposit)]));

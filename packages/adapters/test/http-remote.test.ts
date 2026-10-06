@@ -6,7 +6,7 @@
 import { createHash } from "node:crypto";
 import { RemoteError } from "@atlas/domain/sync";
 import { describe, expect, it } from "vitest";
-import { httpRemote } from "../../src/sync/http-remote.js";
+import { httpRemote } from "../src/sync/http-remote.js";
 
 const ORIGIN = "https://atlas.example";
 const TOKEN = `atlasdt1.${"T".repeat(22)}.${"s".repeat(43)}`;
@@ -83,18 +83,14 @@ describe("httpRemote: what it sends", () => {
     const { fetch, calls } = scripted((sent) =>
       sent.url.endsWith("/lines")
         ? jsonAnswer(200, { etag, lines: 1, accepted: 1 })
-        : sent.url.endsWith("/self")
-          ? jsonAnswer(200, { device_id: "D".repeat(22), published_at: "2026-10-01T10:00:00Z" })
-          : jsonAnswer(200, { etag, lines: 1 }),
+        : jsonAnswer(200, { etag, lines: 1 }),
     );
     const remote = httpRemote({ origin: ORIGIN, fetch, token: TOKEN });
     await remote.append([{ line: '{"é":1}', confirm_duplicate: true }], "f".repeat(64));
     await remote.init("x\n", ["id1"], "0".repeat(64));
-    await remote.publish({ pending: 1, held: 0, last_sync_at: "2026-10-01T09:00:00Z" });
     expect(calls.map((sent) => `${sent.init.method} ${sent.url}`)).toEqual([
       `POST ${ORIGIN}/api/ledger/lines`,
       `PUT ${ORIGIN}/api/ledger`,
-      `PUT ${ORIGIN}/api/sync/devices/self`,
     ]);
     for (const sent of calls) {
       const body = sent.init.body as Uint8Array;
@@ -129,7 +125,7 @@ describe("httpRemote: reading the remote (§5.1)", () => {
   });
 
   it("refuses an ETag that does not say the hash, no ETag, and bytes that are not UTF-8", async () => {
-    const cases: [BodyInit, Record<string, string>, string][] = [
+    const cases: [string | Uint8Array<ArrayBuffer>, Record<string, string>, string][] = [
       ["a\n", { etag: `"${sha("b\n")}"` }, "etag"],
       ["a\n", {}, "etag"],
       [

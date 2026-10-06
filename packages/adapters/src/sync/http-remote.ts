@@ -24,12 +24,10 @@
 import {
   type AppendEntry,
   type AppendResult,
-  type DeviceQueueState,
   etagOfHeader,
   parseAppendAnswer,
   parseErrorAnswer,
   parseInitAnswer,
-  parsePublishAnswer,
   RemoteError,
   type RemoteLedger,
   type RemoteSnapshot,
@@ -166,10 +164,6 @@ export const httpRemote = (options: HttpRemoteOptions): RemoteLedger => {
         ),
         parseInitAnswer,
       );
-    },
-
-    async publish(state: DeviceQueueState) {
-      return answer(await call("PUT", "/api/sync/devices/self", state), parsePublishAnswer);
     },
   };
 };

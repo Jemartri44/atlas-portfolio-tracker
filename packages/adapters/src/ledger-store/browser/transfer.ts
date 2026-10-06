@@ -7,13 +7,6 @@
 // in (`indexeddb.ts`), for the reasons of feature 012, block 0.
 
 import { sha256Hex } from "@atlas/domain";
-import {
-  importPermission,
-  parseHeld,
-  RefusedError,
-  syncConfiguredByText,
-  unresolvedHeld,
-} from "@atlas/domain/sync";
 import { openAtlasDb } from "./idb.js";
 import {
   CURRENT_KEY,
@@ -24,91 +17,30 @@ import {
   transact,
 } from "./indexeddb.js";
 
-// The keys of the state of the sync (`sync-store.ts`), written again here so
-// that the import and the export do not share a chunk with the store of the
-// sync: a shared chunk is a name more in the table of the boot. The tests of
-// the import hold them equal, by setting the keys of the store and expecting
-// the refusal.
-const SYNC_STATE_KEY = "sync:state";
-const SYNC_HELD_KEY = "sync:held";
-const SYNC_DISCARDED_KEY = "sync:discarded";
-const SYNC_DEVICE_KEY = "sync:device";
-
 const encoder = new TextEncoder();
 
 /** What an export hands over (§6.2 P3; review of PR #97, security B2 and N3). */
 export interface LedgerExport {
   /** The ledger, byte for byte. */
   readonly text: string;
-  /** The text of what the sync holds back, when anything of it is unresolved. */
-  readonly held?: string;
-  /** How many operations are held back and unresolved: the lines of every unit. */
-  readonly heldOperations?: number;
-  /** What is held back cannot be read: the ledger goes anyway, and this says so. */
-  readonly heldUnreadable?: true;
 }
 
-/** What is held back, read without throwing: a throw would abort the export of the ledger (N3). */
-const heldOf = (heldText: string | undefined): Omit<LedgerExport, "text"> => {
-  if (heldText === undefined) {
-    return {};
-  }
-  try {
-    const units = unresolvedHeld(parseHeld(heldText));
-    const operations = units.reduce((sum, unit) => sum + unit.lines.length, 0);
-    return operations === 0 ? {} : { held: heldText, heldOperations: operations };
-  } catch {
-    return { heldUnreadable: true };
-  }
-};
-
 /**
- * The export **with what the sync holds back** (§6.2 P3): the text of the
- * ledger and, apart, the text of the held records when any is unresolved —
- * both read, and the date of this export written, in **one** transaction
- * (feature 012, D4): the date can never claim an export that did not include
- * the last line recorded. Only the date is written; no date when there is no
- * ledger. A `sync:held` that cannot be read never stops the ledger from going
- * (review of PR #97, N3): the export says it instead.
+ * The export: the text of the ledger and the date of this export, both read
+ * and written in **one** transaction (feature 012, D4): the date can never
+ * claim an export that did not include the last line recorded. Only the date
+ * is written; no date when there is no ledger.
  */
-export const exportLedgerAndHeld = (
-  when: Date,
-  open: Opener = openAtlasDb,
-): Promise<LedgerExport> =>
+export const exportLedger = (when: Date, open: Opener = openAtlasDb): Promise<LedgerExport> =>
   transact<LedgerExport>(open, "readwrite", (store, _tx, settle) => {
     const get = store.get(CURRENT_KEY);
-    const held = store.get(SYNC_HELD_KEY);
-    held.onsuccess = () => {
+    get.onsuccess = () => {
       const stored = get.result as StoredLedger | undefined;
-      const apart = heldOf(held.result as string | undefined);
       if (stored !== undefined) {
-        // What is held back goes by its own button: until it is downloaded,
-        // the export owes it (round 2 of the review of PR #97, N2).
-        const meta: StoredMeta = {
-          lastExportAt: when.toISOString(),
-          ...(apart.heldOperations === undefined ? {} : { heldOwed: apart.heldOperations }),
-        };
+        const meta: StoredMeta = { lastExportAt: when.toISOString() };
         store.put(meta, META_KEY);
       }
-      settle.ok({ text: stored?.text ?? "", ...apart });
-    };
-  });
-
-/**
- * What is held back was downloaded apart: the export no longer owes it. Only
- * that is written; the date of the export stays (round 2 of the review of PR
- * #97, N2).
- */
-export const heldDownloaded = (open: Opener = openAtlasDb): Promise<void> =>
-  transact<void>(open, "readwrite", (store, _tx, settle) => {
-    const get = store.get(META_KEY);
-    get.onsuccess = () => {
-      const meta = get.result as StoredMeta | undefined;
-      if (meta?.heldOwed !== undefined) {
-        const paid: StoredMeta = { lastExportAt: meta.lastExportAt };
-        store.put(paid, META_KEY);
-      }
-      settle.ok(undefined);
+      settle.ok({ text: stored?.text ?? "" });
     };
   });
 
@@ -141,26 +73,7 @@ export const replaceLedgerText = (
 ): Promise<void> =>
   transact<void>(open, "readwrite", (store, _tx, settle) => {
     const get = store.get(CURRENT_KEY);
-    const marker = store.get(SYNC_STATE_KEY);
-    const held = store.get(SYNC_HELD_KEY);
-    const discarded = store.get(SYNC_DISCARDED_KEY);
-    const device = store.get(SYNC_DEVICE_KEY);
-    device.onsuccess = () => {
-      // A synced ledger is not replaced by a file (§6.2 P2): checked in this
-      // same transaction, with the state of the sync next to the ledger.
-      const refusal = importPermission(
-        syncConfiguredByText(
-          marker.result !== undefined ||
-            held.result !== undefined ||
-            discarded.result !== undefined ||
-            device.result !== undefined,
-          marker.result as string | undefined,
-        ),
-      );
-      if (refusal !== undefined) {
-        settle.fail(new RefusedError(refusal));
-        return;
-      }
+    get.onsuccess = () => {
       const current = (get.result as StoredLedger | undefined)?.text ?? "";
       if (etagOfText(current) !== expectedEtag) {
         settle.fail(

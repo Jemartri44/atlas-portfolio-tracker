@@ -7,7 +7,7 @@
 
 import type { DomainError } from "../errors.js";
 import { isRecord, type UnknownRecord } from "../guards.js";
-import type { AppendEntry, DeviceQueueState, LineRejection } from "../ports/remote-ledger.js";
+import type { AppendEntry, LineRejection } from "../ports/remote-ledger.js";
 import { RemoteError } from "../ports/remote-ledger.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import type { LedgerEvent, ReversalEvent, TaxReturnFiledEvent } from "../schema/events.js";
@@ -89,22 +89,6 @@ const textRefusal = (line: string): "lone_surrogate" | "duplicate_key" | undefin
     return undefined;
   }
   return repeatsKey(line) ? "duplicate_key" : undefined;
-};
-
-/** The body of `PUT /api/sync/devices/self` (§5.3): two counts and a date; never a device. */
-export const parsePublishBody = (body: unknown): DeviceQueueState => {
-  if (
-    !isRecord(body) ||
-    Object.keys(body).some((key) => !["pending", "held", "last_sync_at"].includes(key)) ||
-    !Number.isSafeInteger(body.pending) ||
-    (body.pending as number) < 0 ||
-    !Number.isSafeInteger(body.held) ||
-    (body.held as number) < 0 ||
-    typeof body.last_sync_at !== "string"
-  ) {
-    throw bodyInvalid("publish");
-  }
-  return body as unknown as DeviceQueueState;
 };
 
 /** The body of `PUT /api/ledger` (§5.5). */

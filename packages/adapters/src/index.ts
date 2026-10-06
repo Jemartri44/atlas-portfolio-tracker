@@ -47,12 +47,3 @@ export {
 } from "./prices/secrets.js";
 export { webCryptoRandom } from "./random/web-crypto.js";
 export { ApiLedgerStore, type WriteOutcome } from "./sync/api-ledger-store.js";
-export * from "./sync/client.js";
-export {
-  DISCARDED_FILE,
-  FolderSyncStore,
-  folderSyncPresence,
-  HELD_FILE,
-  MARKER_FILE,
-  SYNC_DIR,
-} from "./sync/folder-store.js";
