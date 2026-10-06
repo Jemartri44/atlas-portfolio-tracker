@@ -55,9 +55,9 @@ Decidida por la dirección al levantar la parada del paso 0 de la feature 012 (d
 
 **En el código** (feature 012, PR #75): la web pide la carpeta solo para leer; un test de arquitectura impide que vuelva a pedir permiso de escritura o cree un fichero en ella. Toda lectura seguida de escritura del libro en IndexedDB es **una sola transacción** de lectura y escritura (`LedgerBlob.update`), y la fecha de la última exportación vive aparte del texto (`current:meta`).
 
-## Nota del 2026-10-06: enmienda parcial propuesta en ADR-0035
+## Nota del 2026-10-06: enmienda parcial por ADR-0035
 
-**ADR-0035 (Propuesta)** desarrolla la decisión de la persona del 2026-10-06: el libro de S3 pasa a ser la única fuente de verdad y la web escribe directamente contra la API, con `If-Match`. **Si se acepta, dejan de valer de esta ADR:**
+**ADR-0035 (Aceptada, 2026-10-06)** desarrolla la decisión de la persona: el libro de S3 pasa a ser la única fuente de verdad y la web escribe directamente contra la API, con `If-Match`. **Dejan de valer de esta ADR:**
 
 - el libro en IndexedDB;
 - «sin conexión no se pierde ninguna funcionalidad»: sin conexión no se registra ni se enseña nada;
@@ -65,4 +65,4 @@ Decidida por la dirección al levantar la parada del paso 0 de la feature 012 (d
 - importar un libro y el aviso de exportar;
 - la lectura de la carpeta de la consola.
 
-**Sigue valiendo:** el dominio compartido, que proyecta en el navegador sobre el libro descargado, y la caché del *shell* de la PWA. **Mientras ADR-0035 no se acepte, esta ADR rige sin cambios.**
+**Sigue valiendo:** el dominio compartido, que proyecta en el navegador sobre el libro descargado, y la caché del *shell* de la PWA. La enmienda está vigente en la decisión; el código de la web cambia con las entregas de ADR-0035 (§7), y hasta que la nube esté desplegada (features 018 y 019) la web actual sigue como está.
