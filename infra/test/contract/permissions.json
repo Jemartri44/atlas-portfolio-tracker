@@ -942,7 +942,8 @@
             "arn:aws:s3:::atlas-{env}-data-{suffix}/ledger/ledger.jsonl",
             "arn:aws:s3:::atlas-{env}-data-{suffix}/sync/devices/*",
             "arn:aws:s3:::atlas-{env}-data-{suffix}/reference/ecb/*",
-            "arn:aws:s3:::atlas-{env}-data-{suffix}/prices/*"
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/prices/*",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/drafts/*"
           ],
           "contract": "C15"
         },
@@ -952,7 +953,8 @@
           "actions": ["s3:PutObject"],
           "resources": [
             "arn:aws:s3:::atlas-{env}-data-{suffix}/ledger/ledger.jsonl",
-            "arn:aws:s3:::atlas-{env}-data-{suffix}/sync/devices/*"
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/sync/devices/*",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/drafts/*"
           ],
           "contract": "C15"
         },
@@ -970,7 +972,14 @@
           "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}"],
           "condition": {
             "StringLike": {
-              "s3:prefix": ["ledger/*", "sync/devices/*", "reference/ecb/*", "prices/*", "access/*"]
+              "s3:prefix": [
+                "ledger/*",
+                "sync/devices/*",
+                "reference/ecb/*",
+                "prices/*",
+                "access/*",
+                "drafts/*"
+              ]
             }
           },
           "contract": "C15; P12-B5"

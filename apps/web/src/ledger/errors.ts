@@ -26,6 +26,17 @@ import { store } from "./state.js";
 const FILE_READ_ERRORS = new Set(["NotReadableError", "NotFoundError", "EncodingError"]);
 
 export const toAppError = (error: unknown): AppError => {
+  // First: a `RemoteError` is a `DomainError` too, and says its own sentence.
+  // The cloud did not answer as it should, before anything was sent: nothing was written.
+  if (error instanceof RemoteError) {
+    return {
+      code: error.code,
+      message:
+        error.code === "network_failed"
+          ? "No hay conexión con la nube: no se ha guardado nada."
+          : `No se ha podido hablar con la nube: ${REMOTE_FAILURES[error.code] ?? "ha respondido con un error."} No se ha guardado nada.`,
+    };
+  }
   if (error instanceof DomainError) {
     const line = error.details.line;
     return {
@@ -35,16 +46,6 @@ export const toAppError = (error: unknown): AppError => {
         privacy: store.privacy(),
       }),
       ...(typeof line === "number" ? { line } : {}),
-    };
-  }
-  // The cloud did not answer as it should, before anything was sent: nothing was written.
-  if (error instanceof RemoteError) {
-    return {
-      code: error.code,
-      message:
-        error.code === "network_failed"
-          ? "No hay conexión con la nube: no se ha guardado nada."
-          : `No se ha podido hablar con la nube: ${REMOTE_FAILURES[error.code] ?? "ha respondido con un error."} No se ha guardado nada.`,
     };
   }
   if (error instanceof Error && error.name === "NoLedgerInFolder") {

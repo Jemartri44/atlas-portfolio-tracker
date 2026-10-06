@@ -1197,7 +1197,20 @@ const BOOT_BUDGET_GZIP_BYTES = 76_055;
  * the ceiling of 297.500), ceiling 294.800 — measured + 376.** The boot is not
  * touched (ceiling 76.055). The trend: 320.215 → ≈ 296.600 (E2b) → 294.424.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 294_800;
+/*
+ * **Feature 027, E6 of ADR-0035 (2026-10-06): the two sentences of the cloud
+ * drafts' errors (`draft_exists`, `draft_changed`) in the catalogue; measured
+ * ≈ 295.450 (the script prints KB), ceiling 295.800 — measured + ≈ 350.** The
+ * boot is not touched. The web client of the drafts (T4) came in the next block
+ * with its own figure.
+ */
+/*
+ * **Feature 027, E6 (2026-10-06): the cloud drafts come back to the web (list,
+ * counter, save, confirm, discard) over `ApiDraftStore`; measured ≈ 302.9 KB
+ * (the script prints KiB, so ±50 bytes), ceiling 303.300.** The boot ceiling is
+ * not touched. The way down is E5-like clean-up of the unused browser stores.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 303_300;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,

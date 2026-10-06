@@ -50,6 +50,10 @@
       "types": "./dist/random/web-crypto.d.ts",
       "import": "./dist/random/web-crypto.js"
     },
+    "./drafts-http": {
+      "types": "./dist/drafts/api-drafts.d.ts",
+      "import": "./dist/drafts/api-drafts.js"
+    },
     "./sync-http": {
       "types": "./dist/sync/http-remote.d.ts",
       "import": "./dist/sync/http-remote.js"

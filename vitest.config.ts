@@ -19,6 +19,7 @@ export default defineConfig({
       "@atlas/adapters/access": local("./packages/adapters/src/access/crypto.ts"),
       "@atlas/adapters/identity": local("./packages/adapters/src/identity/index.ts"),
       "@atlas/adapters/api-store": local("./packages/adapters/src/sync/api-ledger-store.ts"),
+      "@atlas/adapters/drafts-http": local("./packages/adapters/src/drafts/api-drafts.ts"),
       "@atlas/adapters/sync-http": local("./packages/adapters/src/sync/http-remote.ts"),
       "@atlas/adapters/reference-http": local("./packages/adapters/src/reference/http.ts"),
       "@atlas/adapters/reference": local(

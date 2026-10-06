@@ -12,6 +12,8 @@ El contrato HTTP de la Lambda de la API (`apps/api`), que se alcanza **solo a tr
 
 **Enmendado el 2026-10-06 por ADR-0035 (entrega E0, solo documentos).** Atlas pasa a ser siempre en la nube: el libro de S3 es la única fuente de verdad y no hay cola local. **E4 entregada (feature 025):** la API ya no ofrece `PUT /api/sync/devices/self` ni exige ni lee `x-atlas-expected-device`, y `compact` y la restauración no se niegan por pendientes (§2.3, §5.3, §5.4, §7, §8); la sesión de la web pasa a 24 h (§3); `GET /api/ledger` sigue sin comprimir (§5.1); y §5.8 describe el cliente de escritura directa. **El código del cliente que sobraba (§5.7) se borró en E5 (feature 026).**
 
+**Puesto al día el 2026-10-06 con E6 de ADR-0035 (feature 027):** §6.1 (borradores en la nube: cuatro rutas, objetos inmutables de `drafts/`), dos códigos nuevos en §7 (`draft_exists`, `draft_changed`) y una fila en §2.3.
+
 **Si este documento discrepa de una ADR, manda la ADR**, y la discrepancia se anota en el `questions.md` de la feature que la encuentre.
 
 ## 1. Reglas generales
@@ -71,6 +73,7 @@ Solo pueden cachearse los negativos que no pueden volver a valer (revocado, cadu
 |---|---|---|
 | §5 Sincronización: leer el libro, añadir líneas, inicializar un remoto vacío (§5.5; con ADR-0035, solo la subida inicial a una nube vacía y la restauración), sin publicar ninguna cola (retirado en E4) | Sí | Sí |
 | §6 Datos de referencia | Sí | Sí |
+| §6.1 Borradores (E6 de ADR-0035) | Sí | Sí |
 | §4.4 Revocar **el propio** token | — | Sí |
 | §4.5 Listar tokens y revocar uno cualquiera; leer el estado de todos los dispositivos | Sí | **No**: `403 forbidden_for_credential` |
 | §4.1 Emitir un token | Solo al final de un inicio de sesión que abre la consola (§4) | **No** |
@@ -395,6 +398,28 @@ Si no existe, `404 not_found` (`details.reason: "missing"`). `Content-Type` por 
 
 `documents/` e `imports/` se suben con la regla de añadir y nunca sobrescribir (ADR-0026, Consecuencias), con su detalle en la feature que los use (la subida no es de la 015).
 
+### 6.1 Borradores *(E6 de ADR-0035, feature 027)*
+
+Decidido el 2026-10-06 (ADR-0035, pregunta 1, y ADR-0029, punto 9, opción B). Una operación en divisa registrada **antes** de que el BCE publique el tipo de su fecha fiscal no es un hecho: no entra en el libro, no cuenta en ninguna cifra y **nunca se confirma sola**. Hasta E6 los clientes de nube no la guardaban; desde E6 se guarda **en la nube**, por la API, con el formato propio de ADR-0029 (`docs/data-schema.md` §1, fila `drafts/`), y es **compartida** por la web y la consola (no es de un dispositivo). Con la cookie o con el token (§2.3), como §5 y §6; con la cookie, toda escritura comprueba `Origin` (§2). El libro **nunca** guarda un dato provisional: confirmar es registrar el evento por §5 (`POST /api/ledger/lines`), con su vista previa y su pregunta de duplicado, y después cerrar el borrador.
+
+**Nada se sobrescribe ni se borra.** El rol de la API tiene `GetObject`, `PutObject` y `ListBucket` sobre `drafts/` y **ningún permiso de borrado**, y cada objeto se crea con `If-None-Match: *`: la creación es atómica y un segundo intento recibe `412`, que la API traduce. Un borrador son **hasta tres objetos inmutables**, uno por estado (`docs/data-schema.md` §1): `drafts/<id>.json` (guardado), `drafts/<id>.stamp.json` (el identificador que tendrá su evento, `pending_event_id`) y `drafts/<id>.end.json` (confirmado o descartado). «Pendiente» es tener el primero y no el tercero. Es la única forma de cumplir «sin borrar y sin sobrescribir» con las reglas de `pending_event_id` (§6.3 del esquema): sellar es **crear** el objeto de sello, y «solo si sigue como se leyó» es que ese `If-None-Match` falle.
+
+| Ruta | Qué hace |
+|---|---|
+| `GET /api/drafts` | `200 { "drafts": [ <borrador> ], "unreadable": [ "<nombre>" ] }`. Solo los **pendientes**, del más antiguo al más reciente (el orden del identificador). Cada `<borrador>` es el formato lógico `{ "draft_format": 1, "id", "saved_at", "event", "pending_event_id"? }`, con el sello ya incorporado. `unreadable` nombra, sin leerlos ni borrarlos, los objetos de `drafts/` que no cumplen la forma (un nombre ajeno, un sello o un cierre sin borrador, un JSON ilegible o que no corresponde a su nombre): puede ser la única copia de una operación |
+| `POST /api/drafts` | Cuerpo `{ "draft": { "draft_format": 1, "id", "saved_at", "event" } }`, **sin** `pending_event_id`. Crea `drafts/<id>.json`. `201 { "id" }`. `409 draft_exists` si ya hay un borrador con ese `id` (también uno cerrado) |
+| `POST /api/drafts/{id}/stamp` | Cuerpo `{ "pending_event_id": "<ULID>" }`. Crea `drafts/<id>.stamp.json` **solo si no existe**: `200 { "id", "pending_event_id", "created": true }`. Si ya existe **con ese mismo identificador**, `200` con `"created": false` (reintentar un corte es seguro). Si existe con **otro**, `409 draft_changed` con `details.now = "stamped"`: otro cliente lo está confirmando, no se escribe nada. Si el borrador está cerrado, `409 draft_changed` con `details.now = "gone"`; si nunca existió, `404 not_found` con `details.reason = "draft_missing"` |
+| `POST /api/drafts/{id}/end` | Cuerpo `{ "outcome": "confirmed", "event_id": "<ULID>" }` o `{ "outcome": "discarded" }`. Crea `drafts/<id>.end.json`. `200 { "id", "outcome", "created" }`. **Confirmar exige que el sello exista y sea exactamente `event_id`** (`409 draft_changed`, `now = "stamped"`, si es otro; `400 body_invalid`, `reason = "not_stamped"`, si no hay sello); descartar no lo exige. Cerrar otra vez con el **mismo** resultado es `200` con `"created": false`; con otro distinto, `409 draft_changed`, `now = "gone"` (gana el primero). `404 draft_missing` si no existe |
+
+- **`{id}` es un ULID** (26 caracteres de Crockford); otra cosa es `400 body_invalid` con `reason = "draft_id"`, **antes** de tocar S3. Los nombres de objeto los construye la Lambda, nunca el cliente; ninguna ruta lee ni escribe fuera de `drafts/` ni más de un nivel.
+- **Un cuerpo exacto:** un campo desconocido, `pending_event_id` al crear, un `draft_format` distinto de `1`, un `id` que no es ULID, un `saved_at` que no es un instante ISO 8601 en UTC con `Z`, o un `event` que no es un objeto con `type` en texto, es `400 body_invalid` con el motivo en `details.reason`. **La API no juzga la operación** (le falta el tipo del BCE, y la vista previa es del cliente): solo la forma. El libro sigue exigiendo `fx_rate` cuando se confirma.
+- **Tope propio:** un borrador de más de **65.536 bytes** una vez serializado es `413 body_too_large` con `details.limit`. Un borrador real ocupa unos cientos de bytes.
+- **Carrera entre cerrar y sellar:** tras crear el sello, la API vuelve a mirar si el borrador se cerró entre medias y, si es así, responde `409 draft_changed` (`now = "gone"`): el cliente no llega a escribir el evento. El sello que quedó no hace daño (un borrador cerrado no se vuelve a abrir).
+- **Qué hace el cliente al confirmar** (`recordPendingDraft`, dominio): sella con `…/stamp`, escribe el evento por §5 con ese identificador, y cierra con `…/end` (`confirmed`). Un corte entre escribir y cerrar deja el borrador **pendiente y sellado**: al reintentar, solo un evento del libro con **exactamente** ese identificador cuenta como «ya registrado», y entonces solo se cierra. Si cerrar falla, el cliente lo dice y no lo traga.
+- **Registros de la Lambda:** solo el código (`drafts_listed`, `draft_saved`, `draft_stamped`, `draft_ended`, o el del error). Nunca el `id`, la operación ni un importe.
+- **No se comprime, no se cachea y no se versiona en el cliente:** como todo `/api/*`, `Cache-Control: no-store`; la web no guarda ningún borrador en el dispositivo (ADR-0035, §3).
+
+
 ## 7. Errores
 
 Todo error de la Lambda tiene esta forma, sin mensaje en lenguaje natural (lo ponen las interfaces, que traducen cada código, `tests/messages.test.ts`):
@@ -425,12 +450,14 @@ Todo error de la Lambda tiene esta forma, sin mensaje en lenguaje natural (lo po
 | `precondition_required` | 428 | `POST /api/ledger/lines` o `PUT /api/ledger` sin `If-Match` |
 | `init_rejected` | 422 | La inicialización de §5.5 trae un contenido que no carga o no proyecta válido; nada escrito |
 | `precondition_failed` | 412 | `If-Match` distinto del etag actual; nada escrito |
-| `not_found` | 404 | Ruta que no existe; y en §4.5, un token sin registro o con un registro ilegible (`details.reason`: `token_missing` \| `token_unreadable`) |
+| `not_found` | 404 | Ruta que no existe; y en §4.5, un token sin registro o con un registro ilegible (`details.reason`: `token_missing` \| `token_unreadable`); y en §6.1, un borrador que no existe (`details.reason`: `draft_missing`) |
 | `internal` | 500 | Cualquier otro fallo; nada escrito |
 | `device_forgotten` | 403 | El objeto del dispositivo de la credencial falta, es de otro tipo o está olvidado (§2), con `details.reason` |
 | `remote_unavailable` | 503 | Fallo transitorio de SSM o de S3; se puede reintentar (`Retry-After: 5`, `details.dependency`: `ssm` \| `s3`). Nunca deja pasar una credencial |
 | `reissue_device_missing`, `reissue_device_forgotten`, `reissue_device_not_console`, `reissue_device_unreadable` | 403 | La reemisión de §4.3 pide un dispositivo que no existe, está olvidado, no es de consola o cuyo objeto no se lee (el cuarto, decidido el 2026-09-26) |
 | `reference_name_invalid` | 400 | Un nombre de §6 que no cumple su regla |
+| `draft_exists` | 409 | `POST /api/drafts` con un `id` que ya tiene borrador (§6.1) |
+| `draft_changed` | 409 | El borrador ya no está como se leyó: cerrado (`details.now = "gone"`) o sellado con otro identificador (`"stamped"`). Nada escrito; el cliente no registra la operación como nueva (`docs/data-schema.md` §6.3) |
 | `body_too_large` | 413 | Un cuerpo por encima del tope propio de la Lambda, antes de leerlo (la Function URL admite 6 MB) |
 
 *(014)* **La lista cerrada de los fallos que no son de una línea** es `REMOTE_FAILURE_CODES` (`packages/domain/src/ports/remote-ledger.ts`). Contiene los códigos de esta tabla que pueden responder las rutas de §5, menos los de las rutas de acceso de §4, más `device_forgotten` y `remote_unavailable` (feature 015), y dos que nombra el cliente para lo que no llegó a la API: `transport_rejected` (abajo) y `network_failed`, un fallo de red. El cliente los lleva tal cual en `remote_failed` (§5.7), nunca retiene por ellos, y cada interfaz tiene una frase para cada uno.
@@ -452,6 +479,7 @@ Fuera de la Lambda: `transport_rejected` es el nombre que da **el cliente** a un
 | La Lambda: §1 a §7 sobre HTTP, `LedgerStore` sobre S3 con `If-Match`, el registro en SSM, los clientes HTTP de la web y de la consola, `atlas remote login` y `logout`, la pantalla de dispositivos de la web | **015** |
 | El correo mensual con los inicios de sesión de la web y de la consola y los tokens vivos y emitidos; `access/last-web-sign-in.json` (§3); la regla de nombres de `prices/` y los clientes de §6 | **016**, fusionada (PR #104, #106, #108 y #109, 2026-09-28) |
 | El prefijo de SSM y sus permisos, la política de origen que reenvía a `/api/*` `x-atlas-device-token`, (`x-atlas-expected-device` se retiró en E4, §5.4), **`Sec-Fetch-Site` y `Origin`** (sin las dos últimas, la Lambda nunca sabe que un inicio de sesión viene del propio sitio: ignora siempre el `device_id` de §3 y cada inicio de sesión de la web crea un dispositivo nuevo, sin avisar; y sin `Origin`, toda escritura con cookie se rechaza con `origin_rejected`, §2; revisión de la PR #90, ronda 2), la CSP que respeta la `sandbox` de §4.2 | **017** |
+| Los borradores en la nube: §6.1, el prefijo `drafts/` del rol de la API sin permiso de borrado, el puerto sobre la API y los clientes de la web y de la consola | **027** (E6 de ADR-0035) |
 
 ## 9. Parámetros de SSM y configuración de la Lambda
 

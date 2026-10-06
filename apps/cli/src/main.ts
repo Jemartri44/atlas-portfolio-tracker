@@ -354,7 +354,8 @@ const dispatch = async (
       ...(admin === undefined ? {} : { admin }),
     };
     cloud = ctx.deps.store instanceof CloudLedgerStore ? ctx.deps.store : undefined;
-    // A cloud folder has no drafts (they come with E6): nothing to remind.
+    // The reminder reads the folder's own `drafts/`: a cloud folder has none (its drafts are in
+    // the cloud, `atlas draft list`), and the reminder would cost a request on every command.
     if (name !== "draft" && mode.kind === "local") {
       remindAt(ledgerPath);
     }

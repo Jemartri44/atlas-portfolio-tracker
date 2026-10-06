@@ -276,7 +276,7 @@ export const recordPendingDraft = async (
   await drafts.update({ ...draft, pending_event_id: id }, draft.pending_event_id);
   const result = await recordEvent(deps, event as unknown as Draft, { ...options, id });
   try {
-    await drafts.remove(draft.id);
+    await drafts.remove(draft.id, { outcome: "confirmed", eventId: id });
   } catch {
     return { ...result, draftRemoved: false };
   }

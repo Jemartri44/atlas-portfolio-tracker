@@ -19,6 +19,7 @@ import {
 import {
   admit,
   findRoute,
+  matchRoute,
   originAccepted,
   ROUTES,
   type RouteSpec,
@@ -102,7 +103,27 @@ describe("the routes and what each admits (api §2.3)", () => {
       "POST /api/devices/tokens/{token_id}/revoke",
       "POST /api/ledger/lines",
       "PUT /api/ledger",
+      // E6, the drafts in the cloud.
+      "POST /api/drafts",
+      "POST /api/drafts/{id}/stamp",
+      "POST /api/drafts/{id}/end",
     ]);
+  });
+
+  it("gives the drafts of the cloud to both credentials, with an id in the path (E6)", () => {
+    for (const [method, path] of [
+      ["GET", "/api/drafts"],
+      ["POST", "/api/drafts"],
+      ["POST", "/api/drafts/{id}/stamp"],
+      ["POST", "/api/drafts/{id}/end"],
+    ] as const) {
+      expect(findRoute(method, path)?.policy, path).toBe("sync");
+    }
+    expect(matchRoute("POST", "/api/drafts/01J0000000000000000000000A/end")?.params).toEqual({
+      id: "01J0000000000000000000000A",
+    });
+    expect(findRoute("DELETE", "/api/drafts/01J0000000000000000000000A")).toBeUndefined();
+    expect(findRoute("POST", "/api/drafts/a/b/end")).toBeUndefined();
   });
 
   it("gives the sync and the reference data to both credentials, and the devices to the session (E3)", () => {

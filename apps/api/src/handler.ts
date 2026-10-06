@@ -20,6 +20,7 @@ import {
   appendOnlyLedger,
   DependencyUnavailable,
   DeviceStore,
+  draftObjects,
   type ObjectStore,
   type ParameterStore,
   recordWebSignIn,
@@ -80,6 +81,7 @@ import {
   tokenListItem,
   tokenStatus,
 } from "@atlas/domain/access";
+import { draftRoutes } from "./drafts.js";
 import { type FunctionUrlEvent, type FunctionUrlResult, normalise, type Request } from "./event.js";
 import { type LogEntry, logLine } from "./log.js";
 import { fail, type Outcome } from "./outcome.js";
@@ -138,6 +140,7 @@ export const createHandler = (deps: HandlerDeps): Handler => {
     devices,
     now: deps.now,
   });
+  const drafts = draftRoutes({ objects: draftObjects(deps.objects), now: deps.now });
   let signer: { readonly key: string; readonly signer: Signer } | undefined;
 
   const nowSeconds = (): number => Math.floor(deps.now().getTime() / 1000);
@@ -408,6 +411,12 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         return sync.appendLines(request.headers.get("if-match"), body);
       case "/api/reference/index":
         return sync.indexReference();
+      case "/api/drafts":
+        return request.method === "GET" ? drafts.list() : drafts.create(body);
+      case "/api/drafts/{id}/stamp":
+        return drafts.stamp(params.id as string, body);
+      case "/api/drafts/{id}/end":
+        return drafts.end(params.id as string, body);
       default:
         return sync.readReference(
           path === "/api/reference/ecb/{name}" ? "ecb" : "prices",
@@ -844,7 +853,10 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       case "/api/ledger/lines":
       case "/api/reference/index":
       case "/api/reference/ecb/{name}":
-      case "/api/reference/prices/{name}": {
+      case "/api/reference/prices/{name}":
+      case "/api/drafts":
+      case "/api/drafts/{id}/stamp":
+      case "/api/drafts/{id}/end": {
         const credential = await credentialOf(admission);
         if ("code" in credential) {
           return { outcome: fail(credential), route: at };

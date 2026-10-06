@@ -4,18 +4,20 @@
 # No `kms:` line: see `infra/bootstrap/env/statements-admin.tf` and questions.md, E2 b0.4.
 
 locals {
+  # `drafts/*` (E6 of ADR-0035): Get, Put and List, **no delete**; every object is created
+  # once with If-None-Match (the bucket policy, `DraftsOnlyIfAbsent`, refuses the rest).
   api_statements = [
     {
       Sid      = "LedgerRead"
       Effect   = "Allow"
       Action   = ["s3:GetObject"]
-      Resource = ["${local.data_arn}/ledger/ledger.jsonl", "${local.data_arn}/sync/devices/*", "${local.data_arn}/reference/ecb/*", "${local.data_arn}/prices/*"]
+      Resource = ["${local.data_arn}/ledger/ledger.jsonl", "${local.data_arn}/sync/devices/*", "${local.data_arn}/reference/ecb/*", "${local.data_arn}/prices/*", "${local.data_arn}/drafts/*"]
     },
     {
       Sid      = "LedgerWrite"
       Effect   = "Allow"
       Action   = ["s3:PutObject"]
-      Resource = ["${local.data_arn}/ledger/ledger.jsonl", "${local.data_arn}/sync/devices/*"]
+      Resource = ["${local.data_arn}/ledger/ledger.jsonl", "${local.data_arn}/sync/devices/*", "${local.data_arn}/drafts/*"]
     },
     {
       Sid      = "AccessMarker"
@@ -29,7 +31,7 @@ locals {
       Effect    = "Allow"
       Action    = ["s3:ListBucket"]
       Resource  = [local.data_arn]
-      Condition = { StringLike = { "s3:prefix" = ["ledger/*", "sync/devices/*", "reference/ecb/*", "prices/*", "access/*"] } }
+      Condition = { StringLike = { "s3:prefix" = ["ledger/*", "sync/devices/*", "reference/ecb/*", "prices/*", "access/*", "drafts/*"] } }
     },
     {
       Sid      = "SsmRead"

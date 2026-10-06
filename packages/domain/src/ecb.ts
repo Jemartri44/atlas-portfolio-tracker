@@ -14,6 +14,25 @@ export {
 export { type BrokerSettlement, brokerSettlementOf } from "./ecb/broker-settlement.js";
 export { checkLedgerRates, foreignRatesOf, type RateCheck } from "./ecb/check.js";
 export {
+  composeDraft,
+  DRAFTS_PREFIX,
+  type DraftListing,
+  type DraftObjectKind,
+  draftKey,
+  draftObjectText,
+  endObjectText,
+  listDraftNames,
+  MAX_DRAFT_BYTES,
+  type Parsed,
+  parseCreateDraftBody,
+  parseDraftName,
+  parseEndBody,
+  parseStampBody,
+  readEndObject,
+  readStampObject,
+  stampObjectText,
+} from "./ecb/cloud-drafts.js";
+export {
   DRAFT_FORMAT,
   DraftChangedError,
   type DraftRecord,
@@ -79,7 +98,7 @@ export {
   rebuildEcbHistory,
   updateEcbHistory,
 } from "./ecb/update-history.js";
-export type { PendingDraftStore } from "./ports/draft-store.js";
+export type { DraftEnd, PendingDraftStore } from "./ports/draft-store.js";
 export type {
   DownloadedHistory,
   EcbHistoryStore,

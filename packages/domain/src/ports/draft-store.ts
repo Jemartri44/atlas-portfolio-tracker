@@ -1,4 +1,14 @@
 import type { PendingDraft } from "../ecb/drafts.js";
+import type { Ulid } from "../ids/ulid.js";
+
+/**
+ * How a draft ends. The local stores just take it away; the cloud store
+ * (ADR-0035, E6) cannot delete anything, so it records the way it ended.
+ * `eventId` is the id the draft was stamped with: the event it became.
+ */
+export type DraftEnd =
+  | { readonly outcome: "confirmed"; readonly eventId: Ulid }
+  | { readonly outcome: "discarded" };
 
 /**
  * Where the drafts of operations recorded before their ECB rate live (ADR-0029,
@@ -21,6 +31,10 @@ export interface PendingDraftStore {
    * not, `DraftChangedError`, and nothing is written: never re-created.
    */
   update(draft: PendingDraft, readStamp: string | undefined): Promise<void>;
-  /** Removing one that is not there is not an error: it is already gone. */
-  remove(id: string): Promise<void>;
+  /**
+   * Removing one that is not there is not an error: it is already gone.
+   * `end` says how it ended, always said by the caller; a store that deletes
+   * ignores it.
+   */
+  remove(id: string, end: DraftEnd): Promise<void>;
 }

@@ -78,6 +78,9 @@ export const REMOTE_FAILURES: Readonly<Record<string, string>> = {
   device_forgotten:
     "este navegador fue olvidado como dispositivo: vuelve a iniciar sesión y recibirá uno nuevo.",
   remote_unavailable: "la nube no está disponible ahora mismo: inténtalo de nuevo en unos minutos.",
+  draft_changed:
+    "el borrador ya no está como se leyó (se cerró o se está confirmando en otro sitio); no se ha escrito nada.",
+  draft_exists: "ya hay un borrador con ese identificador en la nube; no se ha guardado nada.",
   body_too_large: "la petición era demasiado grande para la nube; no se ha escrito nada.",
   transport_rejected: "la red ha rechazado la petición antes de llegar a la nube.",
   network_failed: "no hay conexión con la nube.",
@@ -309,10 +312,9 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "Ningún tipo de esta operación está esperando al BCE: regístrala como siempre, no hace falta borrador.",
   draft_changed: (d) =>
     d.now === "gone"
-      ? "Ese borrador ya no está en este navegador: se ha confirmado o descartado en otra pestaña. No se ha registrado nada; mira tus movimientos y tus borradores."
-      : "Ese borrador se está confirmando en otra pestaña: no se ha registrado nada. Mira tus borradores dentro de un momento.",
-  draft_unreadable: () =>
-    "Un borrador guardado en este navegador no tiene el formato esperado: no se ha tocado.",
+      ? "Ese borrador ya no está pendiente: se ha confirmado o descartado en otro dispositivo, en otra pestaña o en la consola. No se ha registrado nada; mira tus movimientos y tus borradores."
+      : "Ese borrador se está confirmando en otro sitio: no se ha registrado nada. Mira tus borradores dentro de un momento.",
+  draft_unreadable: () => "Un borrador de tu cuenta no tiene el formato esperado: no se ha tocado.",
   ecb_history_empty: () =>
     "El histórico del BCE no trae ninguna publicación: no se ha usado. Descárgalo otra vez con la consola o importa el archivo del BCE.",
   dangling_correction: () => "La corrección apunta a un movimiento que no está anulado.",

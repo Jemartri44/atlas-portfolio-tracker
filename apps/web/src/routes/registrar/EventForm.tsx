@@ -10,6 +10,10 @@
 // The write goes to the cloud (ADR-0035): a `412` rebuilds the effect of the
 // **same form** over the ledger reloaded, and the person confirms again; a lost
 // answer is the notice of the frame (`shell/PendingWrite.tsx`), not this form's.
+//
+// LINE BUDGET: this form is the one flow of the four ways to write (record, correct,
+// confirm a draft, save a draft); what can leave it already has (`draft-save.ts`,
+// `form-problems.ts`, `write-step.ts`).
 
 import type { EventPreview, LedgerEvent, LedgerState } from "@atlas/domain";
 import type { ClosedYearImpact } from "@atlas/domain/fiscal";
@@ -29,6 +33,7 @@ import {
 } from "../../view-models/forms/index.js";
 import { isBucketAccount } from "../../view-models/options.js";
 import { DuplicateDialog } from "./DuplicateDialog.jsx";
+import { createDraftSaver } from "./draft-save.js";
 import { Effect } from "./Effect.jsx";
 import { FormActions } from "./FormActions.jsx";
 import { FormFields } from "./FormFields.jsx";
@@ -47,6 +52,8 @@ interface EventFormProps {
   events?: readonly LedgerEvent[];
   /** Correcting an existing event instead of recording a new one. */
   correcting?: { id: string; values: FormValues };
+  /** Recording a draft (block 5): its values, the rate left for the history to propose. */
+  fromDraft?: { id: string; values: FormValues } | undefined;
 }
 
 type Step = "form" | "preview";
@@ -55,7 +62,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   const navigate = useNavigate();
   const wide = mediaQuery(GRID);
   const [values, setValues] = createSignal<FormValues>(
-    props.correcting?.values ?? initialValues(props.spec, today()),
+    props.correcting?.values ?? props.fromDraft?.values ?? initialValues(props.spec, today()),
   );
   const [step, setStep] = createSignal<Step>("form");
   // What the user typed, by field: in the draft and not in the fields, which a
@@ -64,8 +71,9 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   const revealed = (name: string): boolean => props.correcting === undefined || typed().has(name);
   const [preview, setPreview] = createSignal<EventPreview | undefined>(undefined);
   const [closedYears, setClosedYears] = createSignal<readonly ClosedYearImpact[]>([]);
+  const problems = useFormProblems(props.spec.fields);
   const { fieldErrors, setFieldErrors, problem, setProblem, failure, setFailure, readable, place } =
-    useFormProblems(props.spec.fields);
+    problems;
   const [reason, setReason] = createSignal("");
   const [duplicate, setDuplicate] = createSignal<readonly string[] | undefined>(undefined);
   const warned = createWarned();
@@ -124,6 +132,15 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
       place(refusal, values());
     }
   };
+
+  const onDraft = createDraftSaver(
+    props.spec,
+    props.state,
+    values,
+    rates.web,
+    problems,
+    setSignedOut,
+  );
 
   const onConfirm = async (confirmDuplicate = false): Promise<void> => {
     setProblem(undefined);
@@ -197,7 +214,15 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
               revealed={revealed}
               onTyped={(name) => setTyped(new Set([...typed(), name]))}
             />
-            <RateHint rates={rates} currency={values().currency ?? ""} />
+            <RateHint
+              rates={rates}
+              currency={values().currency ?? ""}
+              onDraft={
+                props.correcting === undefined && props.fromDraft === undefined
+                  ? () => void onDraft()
+                  : undefined
+              }
+            />
 
             <Show when={props.correcting !== undefined}>
               <CorrectionReason value={reason()} onInput={setReason} />

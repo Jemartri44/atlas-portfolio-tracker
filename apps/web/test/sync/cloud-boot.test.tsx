@@ -95,7 +95,11 @@ describe("cloud boot", () => {
     const phase = store.load();
     expect(phase.phase === "ready" && phase.source.kind).toBe("cloud");
     expect(store.snapshot()?.events.length).toBe(200);
-    expect(asked.map((call) => call.url)).toEqual(["/api/session", "/api/ledger"]);
+    // The boot is the session and then the ledger; the frame's counter of drafts
+    // asks for them once the ledger is there, and nothing else is asked.
+    const urls = asked.map((call) => call.url);
+    expect(urls.slice(0, 2)).toEqual(["/api/session", "/api/ledger"]);
+    expect(urls.slice(2).every((url) => url === "/api/drafts")).toBe(true);
     expect(text(host)).toContain("eventos:200");
   });
 

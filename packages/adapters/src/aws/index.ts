@@ -3,6 +3,7 @@
 // never reached by the web (architecture test).
 
 export { DeviceStore } from "./device-store.js";
+export { type DraftObjects, draftObjects } from "./draft-objects.js";
 export { DependencyUnavailable } from "./errors.js";
 export type {
   AdminObjectStore,

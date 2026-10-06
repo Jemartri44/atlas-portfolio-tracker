@@ -229,6 +229,7 @@ export default defineConfig(({ command }) => ({
       "@atlas/domain/remote-answers": repo("../../packages/domain/src/remote-answers.ts"),
       "@atlas/domain": repo("../../packages/domain/src/index.ts"),
       "@atlas/adapters/api-store": repo("../../packages/adapters/src/sync/api-ledger-store.ts"),
+      "@atlas/adapters/drafts-http": repo("../../packages/adapters/src/drafts/api-drafts.ts"),
       "@atlas/adapters/sync-http": repo("../../packages/adapters/src/sync/http-remote.ts"),
       "@atlas/adapters/reference-http": repo("../../packages/adapters/src/reference/http.ts"),
       "@atlas/adapters/blob": repo("../../packages/adapters/src/ledger-store/blob.ts"),

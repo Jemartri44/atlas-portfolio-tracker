@@ -34,6 +34,9 @@ const pageFetch: Fetch = (input, init) => fetch(input, init);
 /** The `fetch` of the last boot, so a reload or a new session goes through the same door. */
 let lastRequest: Fetch = pageFetch;
 
+/** The `fetch` of the session, for what else the page asks of the API (the drafts, E6). */
+export const cloudFetch = (): Fetch => lastRequest;
+
 /** The use cases over the ledger of the cloud. */
 const depsFor = (request: Fetch): UseCaseDeps => ({
   store: new ApiLedgerStore(httpRemote({ origin: "", fetch: request })),

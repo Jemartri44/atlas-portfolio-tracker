@@ -3,7 +3,9 @@
 
 import { createHash } from "node:crypto";
 import { chmod, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { FileEcbHistoryStore } from "@atlas/adapters";
 import { encodeLine } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { SELF } from "../../../api/test/harness.js";
@@ -227,16 +229,143 @@ describe("a cloud folder reads and writes the cloud's ledger", () => {
     expect(c.api.s3.text(LEDGER_KEY)).not.toContain('"amount":"7"');
   });
 
-  it("refuses compact and drafts; compact works in a local folder", async () => {
+  it("refuses compact; compact works in a local folder", async () => {
     const { c } = await cloud();
     expect(await c.exec(["compact", "--yes"])).toBe(EXIT.domain);
     expect(said(c)).toContain("compact_cloud_folder");
     c.err.length = 0;
-    expect(await c.exec(["draft", "list"])).toBe(EXIT.domain);
-    expect(said(c)).toContain("drafts_not_in_cloud");
     const local = await setupConsole();
     await writeFile(join(local.ledger, "ledger.jsonl"), textOf(baseLines()));
     expect(await local.exec(["compact", "--yes"])).toBe(EXIT.ok);
+  });
+
+  it("lists the drafts of the cloud with the token, and keeps none in the folder (E6)", async () => {
+    const { c } = await cloud();
+    c.out.length = 0;
+    expect(await c.exec(["draft", "list"])).toBe(EXIT.ok);
+    expect(c.out.join("\n")).toContain("No hay borradores pendientes.");
+    const id = "01J0000000000000000000000A";
+    c.api.s3.seed(
+      `drafts/${id}.json`,
+      JSON.stringify({
+        draft_format: 1,
+        id,
+        saved_at: "2026-10-06T10:00:00.000Z",
+        event: { type: "buy", asset_id: "ast_gold", trade_date: "2026-10-06" },
+      }),
+    );
+    c.out.length = 0;
+    expect(await c.exec(["draft", "list"])).toBe(EXIT.ok);
+    expect(c.out.join("\n")).toContain("Un borrador pendiente");
+    expect(c.out.join("\n")).toContain("ast_gold");
+    // Nothing of it on this computer (ADR-0035, §4).
+    await expect(readdir(join(c.ledger, "drafts"))).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  describe("drafts in a cloud folder (E6)", () => {
+    const fixtures = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../../../tests/fixtures/ecb",
+    );
+    const BUY = [
+      "add",
+      "buy",
+      "--account",
+      "acc_ib",
+      "--asset",
+      "ast_gold",
+      "--trade-date",
+      "2026-04-01",
+      "--value-date",
+      "2026-04-03",
+      "--quantity",
+      "1",
+      "--unit-price",
+      "100",
+      "--currency",
+      "USD",
+    ];
+    const goldLines = (): string[] => {
+      const b = new Events();
+      b.settings(CLI_SETTINGS);
+      b.account("acc_ib", "IE");
+      b.push("asset_created", {
+        asset_id: "ast_gold",
+        asset_type: "etc",
+        book: "core",
+        asset_class: "gold",
+        name: "Gold",
+        currency: "USD",
+        transferable: false,
+        active: true,
+      });
+      return b.build().map(encodeLine);
+    };
+    /** The history of the folder: up to 2026-03-31, or with 2026-04-01 (dollar at 1.1104) too. */
+    const history = async (c: ConsoleUnderTest, later: boolean): Promise<void> => {
+      let csv = await readFile(join(fixtures, "eurofxref-hist.csv"), "utf8");
+      if (later) {
+        const [header, newest, ...rest] = csv.split("\n");
+        const next = (newest as string).replace("2026-03-31,1.1091,", "2026-04-01,1.1104,");
+        csv = [header, next, newest, ...rest].join("\n");
+      }
+      await new FileEcbHistoryStore(c.ledger).activate({
+        source: "zip",
+        bytes: Buffer.from(csv),
+        url: "https://example.invalid/hist.zip",
+        fetched_at: "2026-04-01T10:00:00.000Z",
+      });
+    };
+    const saved = async () => {
+      const { c } = await cloud(goldLines());
+      await history(c, false);
+      expect(await c.exec([...BUY, "--draft", "--yes"])).toBe(EXIT.ok);
+      const id = /borrador ([0-9A-Z]{26})/.exec(c.out.join("\n"))?.[1] as string;
+      expect(c.api.s3.keys()).toContain(`drafts/${id}.json`);
+      await history(c, true);
+      c.out.length = 0;
+      return { c, id };
+    };
+    const ledgerLines = (c: ConsoleUnderTest) =>
+      c.api.s3.text(LEDGER_KEY)?.trimEnd().split("\n") ?? [];
+    const endOf = (c: ConsoleUnderTest, id: string) =>
+      JSON.parse(c.api.s3.text(`drafts/${id}.end.json`) ?? "null") as Record<string, unknown>;
+
+    it("confirms by recording the event and closing the draft as confirmed with its id", async () => {
+      const { c, id } = await saved();
+      expect(await c.exec(["draft", "confirm", id, "--yes"])).toBe(EXIT.ok);
+      const written = JSON.parse(ledgerLines(c).at(-1) as string);
+      expect(written).toMatchObject({ type: "buy", fx_rate: "1.1104" });
+      expect(endOf(c, id)).toMatchObject({ outcome: "confirmed", event_id: written.id });
+      await expect(readdir(join(c.ledger, "drafts"))).rejects.toMatchObject({ code: "ENOENT" });
+    });
+
+    it("after a cut with the event already in the ledger, closes as confirmed and writes nothing twice", async () => {
+      const { c, id } = await saved();
+      cutting(c, (method, url) => method === "POST" && url.endsWith("/end"), {
+        reaches: false,
+        times: 1,
+      });
+      await c.exec(["draft", "confirm", id, "--yes"]);
+      const lines = ledgerLines(c);
+      const written = JSON.parse(lines.at(-1) as string);
+      expect(written).toMatchObject({ type: "buy" });
+      expect(c.api.s3.keys()).not.toContain(`drafts/${id}.end.json`);
+      c.out.length = 0;
+      expect(await c.exec(["draft", "confirm", id, "--yes"])).toBe(EXIT.ok);
+      expect(c.out.join("\n")).toContain("ya estaba registrado");
+      expect(ledgerLines(c)).toEqual(lines);
+      expect(endOf(c, id)).toMatchObject({ outcome: "confirmed", event_id: written.id });
+    });
+
+    it("discards by closing the draft as discarded and records nothing", async () => {
+      const { c, id } = await saved();
+      const lines = ledgerLines(c);
+      expect(await c.exec(["draft", "discard", id, "--yes"])).toBe(EXIT.ok);
+      expect(endOf(c, id)).toMatchObject({ outcome: "discarded" });
+      expect(endOf(c, id)).not.toHaveProperty("event_id");
+      expect(ledgerLines(c)).toEqual(lines);
+    });
   });
 
   describe("a settings change that would leave events invalid", () => {

@@ -62,6 +62,11 @@ export const ROUTES: readonly RouteSpec[] = [
   { method: "GET", path: "/api/reference/index", policy: "sync", writes: false },
   { method: "GET", path: "/api/reference/ecb/{name}", policy: "sync", writes: false },
   { method: "GET", path: "/api/reference/prices/{name}", policy: "sync", writes: false },
+  // E6, the drafts in the cloud (`docs/api.md` §6.1): the cookie or the token.
+  { method: "GET", path: "/api/drafts", policy: "sync", writes: false },
+  { method: "POST", path: "/api/drafts", policy: "sync", writes: true },
+  { method: "POST", path: "/api/drafts/{id}/stamp", policy: "sync", writes: true },
+  { method: "POST", path: "/api/drafts/{id}/end", policy: "sync", writes: true },
 ];
 
 /**

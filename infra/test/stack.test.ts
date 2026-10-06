@@ -210,6 +210,29 @@ describe.each(ENVS)("the data bucket of %s", (env) => {
     });
   });
 
+  it("denies drafts/ without If-None-Match, so a draft object is created once and never overwritten", () => {
+    expect(policyOf(stack(env)).find((s) => s.Sid === "DraftsOnlyIfAbsent")).toMatchObject({
+      Effect: "Deny",
+      Principal: "*",
+      Action: "s3:PutObject",
+      Resource: `arn:aws:s3:::${bucket}/drafts/*`,
+      Condition: { Null: { "s3:if-none-match": "true" } },
+    });
+  });
+
+  it("gives the API drafts/ to read, create and list, and never to delete", () => {
+    const onDrafts = roleStatements(stack(env), `atlas-${env}-api`).filter((statement) =>
+      // Get and Put name the objects; List is on the bucket, by prefix.
+      JSON.stringify([statement.Resource, statement.Condition]).includes(`drafts/*`),
+    );
+    const actions = new Set(onDrafts.flatMap((statement) => [statement.Action ?? []].flat()));
+    expect([...actions].sort()).toEqual(["s3:GetObject", "s3:ListBucket", "s3:PutObject"]);
+    expect(onDrafts.every((statement) => statement.Effect === "Allow")).toBe(true);
+    expect([...actions].some((action) => action === "s3:*" || action.includes("Delete"))).toBe(
+      false,
+    );
+  });
+
   it("has no Allow at all: the identity policies grant, the bucket policy only denies", () => {
     expect(policyOf(stack(env)).filter((s) => s.Effect !== "Deny")).toEqual([]);
   });
