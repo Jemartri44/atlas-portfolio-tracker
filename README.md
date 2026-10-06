@@ -55,6 +55,17 @@ npm run build                        # produce apps/web/dist y comprueba el bund
 npm run preview                      # sirve el build de producción en :4173
 ```
 
+**Desarrollo en la nube sin AWS (ADR-0035, E2a).** La web arranca por la sesión y el libro de la nube (`apps/web/src/ledger/mode.ts`). Para trabajar sin AWS, `npm run dev` lleva `/api` (con un *proxy* de Vite, solo en desarrollo) al servidor local de pruebas, que compone el manejador real con dobles de S3, SSM y Google y solo lleva datos sintéticos:
+
+```bash
+npm run build                        # compila también el servidor de pruebas (apps/api/dist-test)
+node apps/api/dist-test/apps/api/test/support/local-server.js --port 8787 --origin http://localhost:5173 \
+  --account allowed --ledger tests/fixtures/ledger/synthetic-v1.jsonl   # terminal 1
+npm run dev                          # terminal 2; abre http://localhost:5173 y entra con Google (el falso)
+```
+
+`ATLAS_API_URL` cambia el destino del *proxy* (por defecto `http://127.0.0.1:8787`).
+
 ### Cómo abrir un libro
 
 **El libro de la web vive siempre en el almacenamiento del navegador** de ese dispositivo, también en el ordenador, y se importa y se exporta con un botón. Hasta la feature 012 la web de escritorio escribía en el mismo `ledger.jsonl` que la CLI; **ya no lo hace**, porque el navegador no puede tomar en exclusiva el cerrojo de la carpeta y dos escritores podrían pisarse una línea (ADR-0019, enmienda del 2026-09-24). Hasta que exista la sincronización, la web y la CLI del mismo ordenador **no comparten un libro vivo**: se pasa de una a otra exportando e importando.

@@ -6,7 +6,9 @@
 //
 //   node apps/api/dist-test/apps/api/test/support/local-server.js --port 0 [--account allowed|stranger|unverified]
 //
-// It prints `http://127.0.0.1:<port>`. The fake provider lives under `/api/`
+// It prints `http://127.0.0.1:<port>` (or its `--origin`). For development with
+// the Vite server (`npm run dev` proxies `/api` here): `--port 8787 --origin
+// http://localhost:5173 --account allowed --ledger tests/fixtures/ledger/synthetic-v1.jsonl`. The fake provider lives under `/api/`
 // (the service worker leaves those navigations alone) and shows three synthetic
 // accounts to choose from, or chooses the one of `--account` by itself. Two
 // hooks of the test move the world from outside, as an admin would:
@@ -61,7 +63,9 @@ const TYPES: Record<string, string> = {
 const server = createServer();
 server.listen(Number(argument("port") ?? 0), "127.0.0.1", () => {
   const { port } = server.address() as { port: number };
-  const origin = `http://127.0.0.1:${port}`;
+  // `--origin`: the origin the browser sees, when something stands in front of
+  // this server (the dev proxy of Vite): cookies and redirects must stay on it.
+  const origin = argument("origin") ?? `http://127.0.0.1:${port}`;
   let now = Date.now();
   const s3 = new TestOnlyFakeS3();
   const ssm = new TestOnlyFakeSsm();
@@ -73,6 +77,11 @@ server.listen(Number(argument("port") ?? 0), "127.0.0.1", () => {
       entries: [{ sub: ACCOUNTS.allowed?.sub, email: ACCOUNTS.allowed?.email }],
     }),
   );
+  // `--ledger <file>`: a synthetic ledger to start from (the bucket begins empty).
+  const seed = argument("ledger");
+  if (seed !== undefined) {
+    s3.seed("ledger/ledger.jsonl", readFileSync(seed, "utf8"));
+  }
   ssm.set(names.clientId, "local-client");
   ssm.set(names.clientSecret, "local-secret");
   ssm.set(names.sessionKey, base64url(randomBytes(32)));
