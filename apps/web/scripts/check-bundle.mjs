@@ -1197,7 +1197,14 @@ const BOOT_BUDGET_GZIP_BYTES = 76_055;
  * the ceiling of 297.500), ceiling 294.800 — measured + 376.** The boot is not
  * touched (ceiling 76.055). The trend: 320.215 → ≈ 296.600 (E2b) → 294.424.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 294_800;
+/*
+ * **Feature 027, E6 of ADR-0035 (2026-10-06): the two sentences of the cloud
+ * drafts' errors (`draft_exists`, `draft_changed`) in the catalogue; measured
+ * ≈ 295.450 (the script prints KB), ceiling 295.800 — measured + ≈ 350.** The
+ * boot is not touched. The web client of the drafts (T4) is not in yet and will
+ * need its own figure.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 295_800;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
