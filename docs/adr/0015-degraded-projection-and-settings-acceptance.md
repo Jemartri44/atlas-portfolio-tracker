@@ -46,3 +46,7 @@ La decisión decía «las demás mutaciones siguen exigiendo un libro válido».
 - **`correctEvent` y `reverseEvent`** solo se niegan por los inválidos que ellos mismos crean (`checkCandidate`, `packages/domain/src/usecases/rectify.ts`): los que ya había no los bloquean.
 
 Las consultas siguen degradando igual. Esta nota describe el código; si alguna de estas reglas debe cambiar, lo decide la dirección (la 015 hereda la pregunta de rehacer con el libro inválido, ADR-0026).
+
+## Nota del 2026-10-06: enmienda parcial por ADR-0035
+
+Con [ADR-0035](0035-cloud-ledger-single-source.md), **`acceptInvalid` vale solo en local**, es decir, en una carpeta de la consola con `ledger.jsonl` y sin identidad remota. **Nunca llega a la nube**, porque la API rechaza una proyección inválida. Lo dicho arriba sobre un libro sincronizado deja de aplicar cuando se entreguen E3 a E5 de ADR-0035 (no habrá libro sincronizado ni cola); hasta entonces, el código sigue como está.

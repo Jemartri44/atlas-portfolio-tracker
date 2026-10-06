@@ -10,6 +10,8 @@ El contrato HTTP de la Lambda de la API (`apps/api`), que se alcanza **solo a tr
 
 **Puesto al día el 2026-09-26 con E3 de la feature 015** (`specs/015-api-access/questions.md` §23 y §24; decisiones de la dirección en §25): §5 está implementado sobre S3 con lo verificado en el bloque 0 (§5.5), y las precisiones de la implementación van marcadas «*(015)*» en §5.1, §5.2, §5.3, §5.5 y §6.
 
+**Enmendado el 2026-10-06 por ADR-0035 (entrega E0, solo documentos).** Atlas pasa a ser siempre en la nube: el libro de S3 es la única fuente de verdad y no hay cola local. Lo que ese cambio retira de este contrato está marcado «**se retira en E4**» (§2.3, §5.3, §5.4, §5.7, §7, §8); la sesión de la web pasa a 24 h (§3); `GET /api/ledger` sigue sin comprimir (§5.1); y §5.8 describe el cliente de escritura directa. **Lo que se retira del código se retira en las entregas E1 a E5 de ADR-0035; hasta entonces, el código y la API siguen como están descritos aquí.**
+
 **Si este documento discrepa de una ADR, manda la ADR**, y la discrepancia se anota en el `questions.md` de la feature que la encuentre.
 
 ## 1. Reglas generales
@@ -67,7 +69,7 @@ Solo pueden cachearse los negativos que no pueden volver a valer (revocado, cadu
 
 | Ruta | Sesión (web) | Token (consola) |
 |---|---|---|
-| §5 Sincronización: leer el libro, añadir líneas, inicializar un remoto vacío (§5.5), publicar el estado de **su** cola | Sí | Sí |
+| §5 Sincronización: leer el libro, añadir líneas, inicializar un remoto vacío (§5.5; con ADR-0035, solo la subida inicial a una nube vacía y la restauración), publicar el estado de **su** cola (**se retira en E4**: ADR-0035 retira la cola) | Sí | Sí |
 | §6 Datos de referencia | Sí | Sí |
 | §4.4 Revocar **el propio** token | — | Sí |
 | §4.5 Listar tokens y revocar uno cualquiera; leer el estado de todos los dispositivos | Sí | **No**: `403 forbidden_for_credential` |
@@ -86,7 +88,7 @@ La **vía c**: la Lambda es el cliente OAuth y el token de Google nunca toca la 
 | `POST /api/auth/logout` | Cuerpo `{}` obligatorio (`415 body_not_json`). Borra la cookie de sesión (`Max-Age=0`) **sin validarla** —cerrar una sesión caducada o firmada con una clave rotada también la borra— y responde `204`. Con cookie, la comprobación de `Origin` de §2. Con el token, `403 forbidden_for_credential`. |
 | `GET /api/session` | Solo cookie. `200 { "signed_in": true, "expires_at": "<Z>", "device_id": "<22>" }`, con `Cache-Control: no-store`: así sabe la SPA si tiene sesión (la cookie es `HttpOnly`) y qué `device_id` le asignó la API. Si no, la misma respuesta que cualquier ruta con cookie (`401 unauthenticated`, `401 session_invalid`, `403 not_allowed`, `403 device_forgotten`, `503 remote_unavailable`). Con el token, `403 forbidden_for_credential`. |
 
-**Duraciones** (decididas el 2026-09-25): la sesión, **8 h absolutas**, sin renovación; la cookie transitoria, **10 min**. Las dos son configuración de la Lambda (§9).
+**Duraciones**: la sesión, **24 h absolutas**, sin renovación (ADR-0035, pregunta 6, 2026-10-06; eran **8 h** desde el 2026-09-25, ADR-0027); la cookie transitoria, **10 min** (2026-09-25). Las dos son configuración de la Lambda (§9). **Antes de abrir un formulario, la web avisa si a la sesión le quedan menos de 15 minutos** (`expires_at` de `GET /api/session`), porque un formulario a medias se pierde si la sesión caduca (ADR-0035, §2 y «Riesgos aceptados»). *Estado:* el valor de 24 h y el aviso se implementan en las entregas E1 a E2b de ADR-0035; hasta entonces el código sigue con 8 h y sin aviso.
 
 **La cookie de sesión** es `__Host-atlas_session`, con `Path=/`, `Secure`, `HttpOnly`, `SameSite=Strict` y sin `Domain`, firmada con HMAC-SHA256 y la subclave HKDF de `info` `atlas session v1`, con `typ: "atlas.session"`. Lleva **solo** `sub`, un identificador de sesión, el `device_id` de la web, la emisión y la caducidad: **ninguna cookie lleva el correo**. La transitoria, `__Host-atlas_login`, con su propia subclave (`atlas login v1`, `typ: "atlas.login"`). Formato exacto: `specs/015-api-access/data-model.md` §1.
 
@@ -166,6 +168,8 @@ Respuesta `200`, **una sola vez**:
 
 ## 5. Sincronización del libro (ADR-0026)
 
+> **Enmendado por ADR-0035 (2026-10-06).** Sigue vigente: la API como único escritor que solo añade y valida cada línea (§5.2), `GET /api/ledger`, `POST /api/ledger/lines` y `PUT /api/ledger` (este, solo para la subida inicial a una nube vacía y la restauración, §5.5). **Se retira la cola por dispositivo**: §5.3 (publicar su estado), la cabecera `x-atlas-expected-device` (§5.4) y la parte del cliente de §5.7 que habla de cola, marcador y lo retenido. La API las retira en **E4** y el código del cliente en **E5**; hasta entonces siguen como están escritas abajo. Las escrituras de la web y de la consola pasan a ser directas con `If-Match` (§5.8).
+
 El remoto es `ledger/ledger.jsonl` del bucket de datos. **La API solo añade**: nunca reescribe ni borra una línea (ADR-0026, Parte A). Las líneas se escriben **tal como las serializó el cliente**, byte a byte, para que la réplica de cada dispositivo sea exactamente el remoto (Parte A, «Réplicas idénticas byte a byte»).
 
 **El etag de la API es el SHA-256 hexadecimal de los bytes del libro.** El cliente nunca ve el ETag de S3; la Lambda traduce el suyo a la condición de S3 (`If-Match` en `PutObject`). Con un libro vacío o inexistente, el etag es el SHA-256 de cero bytes.
@@ -174,6 +178,7 @@ El remoto es `ledger/ledger.jsonl` del bucket de datos. **La API solo añade**: 
 
 `GET /api/ledger`
 
+- **Sin comprimir** (ADR-0035, pregunta 7, 2026-10-06): no se comprime `GET /api/ledger` hasta que el tamaño del libro lo pida (aviso de ADR-0028). Es lo que ya hace CloudFront con `application/x-ndjson`, como dice la viñeta siguiente. Con ADR-0035 la web descarga el libro entero al arrancar y tras cada escritura (§5.8), y toda respuesta de `/api/*` lleva `Cache-Control: no-store`.
 - `200`, cuerpo = **los bytes exactos** del libro, `Content-Type: application/x-ndjson; charset=utf-8`, cabecera `ETag: "<sha256>"`. Sin compresión que cambie los bytes que el cliente hashea (si CloudFront comprime, el cliente hashea lo descomprimido: lo que cuenta son los bytes del fichero).
 - *(015)* **Los bytes viajan como texto si son UTF-8 válido**, porque así se reescriben idénticos, y **en base64 (`isBase64Encoded`) si no lo son**. Exactos en los dos casos. El cliente comprueba que la cabecera `ETag`, fuerte o débil (`W/`, que pone CloudFront al comprimir), dice el SHA-256 de los bytes que recibió, ya descomprimidos. Si no lo dice, o si los bytes no son UTF-8, es `transport_rejected` (bloque 0 de E3, §23.3). **CloudFront no comprime `application/x-ndjson`**, que no está en su lista de tipos.
 - El cliente comprueba con este cuerpo el **hash del prefijo** que sincronizó (ADR-0026, Parte A): si los bytes de sus primeras `synced_lines` líneas no dan el hash de su marcador, el remoto se ha reescrito y no sube nada.
@@ -264,6 +269,8 @@ Respuesta `200` siempre que `If-Match` cuadró:
 
 ### 5.3 Publicar el estado de la cola del dispositivo
 
+> **`PUT /api/sync/devices/self` y los campos `pending` y `held`: se retira en E4** (ADR-0035). Sin cola, `pending` sería siempre cero, y `compact` y la restauración dejan de negarse por pendientes. **Se conservan los objetos `sync/devices/<device_id>.json` como identidad del dispositivo** (olvidar un navegador o una consola, listar los tokens, §2 y §4.5) y `GET /api/sync/devices`, en lo que la identidad necesite. Hasta E4, esta sección describe el comportamiento real. Qué quita E4 exactamente de `GET /api/sync/devices` y de `last_sync_at` (§4.5) no lo fija la ADR: lo decide el plan de E4.
+
 `PUT /api/sync/devices/self`, cuerpo:
 
 ```json
@@ -281,6 +288,8 @@ La API escribe `sync/devices/<device_id>.json` con el `device_id` **de la creden
 `GET /api/sync/devices` (**solo sesión**) → `200 { "devices": [ { "device_id", "type", "state", "pending", "held", "last_sync_at", "published_at" } ] }`. `compact` y la restauración solo cuentan los dispositivos **activos**. *(015)* **Un objeto que no se puede leer** de forma estricta sale como `{ "device_id", "state": "unreadable" }`, sin los demás campos, y **nunca se omite**: sus pendientes no se conocen. Por eso `compact` y la restauración (E5) **se niegan** mientras haya uno, igual que con uno activo con pendientes (revisión de la PR #96, N2). Solo se listan los nombres que son un `device_id`.
 
 ### 5.4 Cómo se liga a su sesión el identificador de dispositivo de la web
+
+> **La cabecera `x-atlas-expected-device` (y sus códigos `expected_device_required` y `sync_device_changed`): se retira en E4** (ADR-0035). Sin un almacén de la web unido a un dispositivo (`sync:device`), ya no protege nada. Se conserva la asignación del `device_id` en el inicio de sesión y su objeto como identidad (§2). La obligación se quita en la API en E4, y si la cabecera sale de la política de origen es un cambio pequeño de `infra/`, solo con `plan`. Hasta entonces, la web sigue enviándola y la API la sigue exigiendo con cookie, como describe esta sección.
 
 **Decidido: la opción (a)** (prompt de la 015, §7 P1, precisado en §7.1 bis, B1, B5 y N8). La API toma el dispositivo de la credencial y **nunca del cuerpo, de la URL ni de una cabecera** (ADR-0033, punto 6).
 
@@ -329,6 +338,8 @@ No es una ruta: es la regla con la que un cliente clasifica lo que retiene al vo
 
 ### 5.7 La parte del cliente *(014)*
 
+> **Histórica, enmendada por ADR-0035.** Todo lo de esta sección (cola, marcador, lo retenido, volver a descargar, unirse, `syncDevice` y sus códigos) describe el motor de sincronización que **ADR-0035 retira**. El motor se borra del código en **E5** (`packages/adapters/src/sync/` salvo `http-remote`; se conserva lo que importa la API, como `acceptAppend`); sus clientes dejan de usarse desde E2b y E3. Hasta entonces el código sigue como está. Lo que lo sustituye es §5.8.
+
 No es una ruta: es lo que el cliente hace con §5.1 a §5.5, fijado por el código de la 014 (`syncDevice`, `initialiseRemote`, `replaceFromRemote` y `joinWithOwnLines` en `packages/adapters/src/sync/client.ts`; `inspect`, `planUpload` y `settle` en `packages/domain/src/sync/client-plan.ts`). Los dos clientes, la consola sobre su carpeta y la web sobre su IndexedDB, comparten esta orquestación. Cada interfaz traduce cada código con su propia frase (`tests/messages.test.ts`).
 
 **Negativas antes de llamar**, sin tocar nada:
@@ -365,6 +376,27 @@ Y un **aviso**, no una parada: `publish_failed` (`details.remote_code`, `details
 - `new_duplicate` y `new_closed_year`: avisos nuevos (D-Q3).
 
 Al volver a descargar un remoto reescrito o al unirse desde el remoto se retiene con `absent_after_rewrite`, `differs_after_rewrite`, `absent_at_join` y `differs_at_join`, en las mismas unidades que la cola. Y al descartar solo la anulación de una pareja, su corrección se retiene otra vez, sola, con `partner_discarded` (`discardHeld`, `packages/domain/src/sync/resolve.ts`): a esa solo se le ofrece descartar, y rehacerla se niega con `redo_partner_discarded`. Mientras quede algo retenido sin resolver, no se sube nada.
+
+### 5.8 El cliente de escritura directa (ADR-0035)
+
+Propuesto por ADR-0035 (aceptada el 2026-10-06) y **sin implementar**: llega en E1 (adaptador), E2a/E2b (web) y E3 (consola). Los nombres `ApiLedgerStore` y `remote_rejected` son los que **propone** la ADR.
+
+- **Un solo almacén, `ApiLedgerStore`**, implementa `LedgerStore` sobre HTTP: `load()` es `GET /api/ledger` (se comprueba que el `ETag` es el SHA-256 de los bytes); `append(events, etag)` serializa cada evento con `encodeLine` y lo envía en `POST /api/ledger/lines` con `If-Match: "<etag>"`. `replace`, `appendLines` y `replaceLines` se niegan. Sin cola local y sin libro guardado en el dispositivo.
+- **Las declaraciones de §5.2 las deduce el adaptador:** `has_correction` y `chain_continues`, de la forma del lote; `confirm_duplicate`, en cada línea cuya huella repite la de un evento no anulado del libro cargado.
+- **Cada escritura de un caso de uso es una unidad** (un evento, una pareja o una cadena): la API la acepta entera o no.
+- **Respuestas:**
+
+| Respuesta | Qué hace el cliente |
+|---|---|
+| `200`, todo aceptado | Recarga y vuelve a proyectar |
+| `200` con `rejected` | Error `remote_rejected` con el código de la API. No se escribió nada. Ni se retiene ni se reintenta solo |
+| `412` | `ConflictError`: recarga, reconstruye la vista previa del mismo formulario y **pide confirmar otra vez**. Nunca reintenta sola ni fusiona |
+| `401` o `403` de credencial | No se escribió nada; lleva al inicio de sesión |
+| Fallo de red, `5xx` o `transport_rejected` tras enviar | Resultado desconocido. El `id` de cada evento se fija **antes** de enviar. Con conexión, recarga y busca ese `id`: si está, se registró; si no, no se escribió y se ofrece reintentar con los mismos datos. Reintentar es seguro: `duplicate_id` |
+
+- **Sin conexión, la web no muestra datos ni deja registrar** («Sin conexión» y «Reintentar»).
+- **`compact` y la restauración** siguen como operaciones de administración sobre el remoto (ADR-0032); sin pendientes que comprobar, tras ellas el siguiente `412` recarga el libro.
+- **La consola** usa `ApiLedgerStore` con su token en una carpeta «de nube» y falla sin conexión. Un libro local no se sincroniza con la nube: para subir, `PUT /api/ledger` sobre una nube vacía o `atlas admin restore`.
 
 ## 6. Datos de referencia
 
@@ -433,6 +465,8 @@ Y los **motivos de rechazo de una línea** (dentro de un `200`, en `rejected.cod
 Fuera de la Lambda: `transport_rejected` es el nombre que da **el cliente** a una respuesta sin este formato (el hash del cuerpo rechazado por AWS, el WAF, un error de CloudFront). Nunca se trata como un rechazo de líneas: la sincronización para y lo dice.
 
 ## 8. Quién implementa qué
+
+> **Enmendado por ADR-0035 (2026-10-06).** La tabla es histórica en lo que toca a la cola. Las entregas de ADR-0035 reparten lo nuevo: **E1** `ApiLedgerStore`; **E2a/E2b** la web; **E3** la consola; **E4** la API (retira `PUT /api/sync/devices/self`, la obligación de `x-atlas-expected-device` y la negativa por pendientes de `compact` y la restauración); **E5** el código muerto; **E6** los borradores en la nube. La fila de **017** sobre `x-atlas-expected-device` en la política de origen queda sujeta a E4. Hasta que se entreguen, el código sigue como está.
 
 | Pieza | Feature |
 |---|---|

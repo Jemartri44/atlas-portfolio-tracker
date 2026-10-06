@@ -45,7 +45,9 @@ Estructura (ADR-0007): `packages/domain` (núcleo puro, sin imports externos; `v
 
 ## La aplicación web
 
-Local-first: **funciona entera en el dispositivo**, sin servidor, sin cuenta y sin conexión (ADR-0019). El *stack* es Solid, con uPlot vendorizada (ADR-0017) y una base de estilos propia: Pico CSS se retiró en ADR-0023 y `docs/design/system.md` la sustituye entera. Seis pantallas: Resumen, Movimientos, Registrar, Cartera, Cubo y Ajustes, más la pantalla fiscal en `/fiscal`, que no ocupa un sitio en la barra porque se abre unas pocas veces al año.
+> **Enmendado por ADR-0035 (2026-10-06): Atlas pasa a ser siempre en la nube.** Se entra con Google y se ve siempre el mismo libro, el de la nube, que es la única fuente de verdad; sin conexión no se registra ni se muestra nada, y no hay cola ni libro guardado en el dispositivo. La web local-first que describe el resto de esta sección **sigue siendo la que hay hasta que se entreguen E1 a E5 de ADR-0035**.
+
+Local-first (ADR-0019, **sustituido por ADR-0035 cuando se entregue E2**): **funciona entera en el dispositivo**, sin servidor, sin cuenta y sin conexión. El *stack* es Solid, con uPlot vendorizada (ADR-0017) y una base de estilos propia: Pico CSS se retiró en ADR-0023 y `docs/design/system.md` la sustituye entera. Seis pantallas: Resumen, Movimientos, Registrar, Cartera, Cubo y Ajustes, más la pantalla fiscal en `/fiscal`, que no ocupa un sitio en la barra porque se abre unas pocas veces al año.
 
 ```bash
 npm run dev                          # http://localhost:5173
@@ -61,6 +63,7 @@ En Chrome y Edge de escritorio se puede **enlazar la carpeta del libro solo para
 
 Una cosa que conviene saber y que la aplicación te recuerda:
 
+- *Con ADR-0035 desaparece este aviso* (el de «una semana sin exportar»), porque el navegador ya no guarda el libro: la copia es el botón «Descargar copia» y, en el ordenador, `atlas backup`, que son las únicas copias fuera de AWS. Hasta entonces, vale lo siguiente.
 - **El almacenamiento del navegador no es un almacén definitivo**: si borras los datos del sitio, el libro se va con ellos. Por eso la aplicación avisa cuando llevas más de una semana sin exportar. En el ordenador, `atlas backup` sigue siendo la copia de referencia.
 
 El modo privacidad está **activado por defecto**: oculta importes y cantidades, y deja a la vista porcentajes, pesos, desviaciones y fechas. Se conmuta desde la cabecera y se recuerda en el dispositivo.

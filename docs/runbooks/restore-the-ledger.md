@@ -1,5 +1,7 @@
 # Restaurar el libro de la nube
 
+> **Enmendado por ADR-0035 (2026-10-06).** Los dispositivos **ya no guardan una réplica ni una cola**, así que, cuando se entregue E4/E5: (a) la restauración **no se niega por pendientes** ni por el marcador; (b) desaparece la copia «réplica de un dispositivo»: **las copias fuera de AWS son «Descargar copia» de la web y `atlas backup`**, y el volcado mensual en `backups/`; (c) el «después, en cada dispositivo» se reduce a que el siguiente `412` recarga el libro, sin «volver a descargar» ni retenidos. **Lo que se retira del código se retira en las entregas E1 a E5 de ADR-0035; hasta entonces el código sigue como está y los pasos de abajo describen su comportamiento actual.** Si la nube desaparece, se trabaja en local con la consola sobre la última copia y después se restaura con `atlas admin restore`.
+
 **Cuándo**: el libro de la nube (`ledger/ledger.jsonl` del bucket de datos) está mal, por ejemplo por una reescritura equivocada o un intruso que añadió operaciones, y quieres volver a una copia buena.
 
 **Qué es** (ADR-0032): una operación de **administración**, desde la consola y con las credenciales de vida corta del rol `atlas-<entorno>-admin`. **Nunca pasa por la API**, que solo sabe añadir.
