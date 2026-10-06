@@ -312,10 +312,9 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "Ningún tipo de esta operación está esperando al BCE: regístrala como siempre, no hace falta borrador.",
   draft_changed: (d) =>
     d.now === "gone"
-      ? "Ese borrador ya no está en este navegador: se ha confirmado o descartado en otra pestaña. No se ha registrado nada; mira tus movimientos y tus borradores."
-      : "Ese borrador se está confirmando en otra pestaña: no se ha registrado nada. Mira tus borradores dentro de un momento.",
-  draft_unreadable: () =>
-    "Un borrador guardado en este navegador no tiene el formato esperado: no se ha tocado.",
+      ? "Ese borrador ya no está pendiente: se ha confirmado o descartado en otro dispositivo, en otra pestaña o en la consola. No se ha registrado nada; mira tus movimientos y tus borradores."
+      : "Ese borrador se está confirmando en otro sitio: no se ha registrado nada. Mira tus borradores dentro de un momento.",
+  draft_unreadable: () => "Un borrador de tu cuenta no tiene el formato esperado: no se ha tocado.",
   ecb_history_empty: () =>
     "El histórico del BCE no trae ninguna publicación: no se ha usado. Descárgalo otra vez con la consola o importa el archivo del BCE.",
   dangling_correction: () => "La corrección apunta a un movimiento que no está anulado.",

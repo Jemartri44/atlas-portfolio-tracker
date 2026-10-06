@@ -8,13 +8,18 @@
 // that is on the device, and a control proves it would see a ledger if one
 // were there.
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { IMPORTED_HISTORY_KEY, saveImportedHistory } from "@atlas/adapters/reference";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { FakeIdbFactory } from "../../../../packages/adapters/test/fake-idb.js";
+import { reloadWebHistory } from "../../src/ecb/history.js";
 import { bootCloud } from "../../src/ledger/cloud.js";
 import { store } from "../../src/ledger/state.js";
 import Ajustes from "../../src/routes/ajustes/index.jsx";
 import Movimientos from "../../src/routes/movimientos/index.jsx";
+import Borradores from "../../src/routes/registrar/borradores.jsx";
 import RegistrarForm from "../../src/routes/registrar/form.jsx";
 import { goldenEvents, goldenText } from "../helpers/golden.js";
 import { choose, press, settle, show, showInShell, text, type, until } from "../helpers/render.jsx";
@@ -134,6 +139,57 @@ describe("what stays on the device after a session of the cloud", () => {
     for (const event of goldenEvents()) {
       expect(everything).not.toContain(event.id);
     }
+    expect(cachesOpened).toEqual([]);
+  });
+
+  it("keeps no draft on the device: saving, counting, listing and discarding go to the cloud", async () => {
+    // The public ECB copy is what lets a draft be offered; it may stay (ALLOWED).
+    await saveImportedHistory({
+      text: readFileSync(
+        join(
+          dirname(fileURLToPath(import.meta.url)),
+          "../../../../tests/fixtures/ecb/eurofxref-hist.csv",
+        ),
+        "utf8",
+      ),
+      source: "zip",
+      file_name: "eurofxref-hist.csv",
+      imported_at: "2026-04-01T10:00:00.000Z",
+    });
+    await reloadWebHistory();
+    const request = await session();
+    await bootCloud(request);
+    await until(() => store.load().phase === "ready", "the ledger");
+    const form = await show("/registrar/buy", RegistrarForm, "/registrar/:tipo");
+    await until(() => form.querySelector("#f-account_id") !== null, "the form");
+    choose(form, "f-account_id", "acc_ibkr");
+    choose(form, "f-asset_id", "ast_gold");
+    await settle();
+    type(form, "f-trade_date", "2026-04-01");
+    type(form, "f-value_date", "2026-04-01");
+    type(form, "f-quantity", "1");
+    type(form, "f-unit_price", "100");
+    await until(
+      () => text(form).includes("El BCE todavía no ha publicado este tipo"),
+      "the waiting notice",
+    );
+    await press(form, "Guardar como borrador");
+    await until(() => window.location.pathname === "/registrar/borradores", "the list");
+    const id = new URLSearchParams(window.location.search).get("guardado") as string;
+    document.body.innerHTML = "";
+    const list = await show("/registrar/borradores", Borradores, "/registrar/borradores");
+    await until(() => text(list).includes("Esperando el tipo"), "the draft in the list");
+    // Not a key, not a byte of the draft on the device.
+    expect(onDevice().entries.filter((entry) => !ALLOWED.has(entry))).toEqual([]);
+    expect(onDevice().values.join("\n")).not.toContain(id);
+    await press(list, "Descartar");
+    const dialog = [...list.querySelectorAll("dialog")].find((node) =>
+      node.hasAttribute("open"),
+    ) as HTMLElement;
+    await press(dialog, "Descartar");
+    await until(() => text(list).includes("No hay borradores pendientes."), "discarded");
+    expect(onDevice().entries.filter((entry) => !ALLOWED.has(entry))).toEqual([]);
+    expect(onDevice().values.join("\n")).not.toContain(id);
     expect(cachesOpened).toEqual([]);
   });
 
