@@ -146,7 +146,6 @@ export default function ConfiguracionRoute(): JSX.Element {
             setInvalidating(undefined);
             discard();
             setSaved(true);
-            // The confirmation is at the top: take the user there to read it.
             window.scrollTo?.({ top: 0 });
             return;
           }
@@ -154,13 +153,7 @@ export default function ConfiguracionRoute(): JSX.Element {
             setInvalidating(result.failure.affected);
             return;
           }
-          /*
-           * The whole `AppError`, not just its text: it carries the action that
-           * fixes the problem — export when the browser storage is full, open
-           * again when the folder permission is gone — and
-           * this screen used to drop it, so the user read what to do and had
-           * nowhere to press (inventory V6).
-           */
+          // The whole `AppError`, not just its text: it carries the action that fixes the problem.
           setSignedOut(result.failure.kind === "signed_out");
           if (result.failure.kind === "conflict") {
             // Read again: the next «Guardar» shows the reach of the change on the new ledger.
