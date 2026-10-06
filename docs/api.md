@@ -379,7 +379,7 @@ Al volver a descargar un remoto reescrito o al unirse desde el remoto se retiene
 
 ### 5.8 El cliente de escritura directa (ADR-0035)
 
-Propuesto por ADR-0035 (aceptada el 2026-10-06) y **sin implementar**: llega en E1 (adaptador), E2a/E2b (web) y E3 (consola). Los nombres `ApiLedgerStore` y `remote_rejected` son los que **propone** la ADR.
+Decidido por ADR-0035 (aceptada el 2026-10-06). **El adaptador está implementado (E1, `specs/021-api-ledger-store`)**: `ApiLedgerStore` sobre `httpRemote`, con los errores `remote_rejected` (`RemoteRejectedError`) y `write_outcome_unknown` (`WriteOutcomeUnknownError`) y `findOutcome(ids)` para resolver el resultado desconocido. Falta su uso en la web (E2a/E2b) y en la consola (E3).
 
 - **Un solo almacén, `ApiLedgerStore`**, implementa `LedgerStore` sobre HTTP: `load()` es `GET /api/ledger` (se comprueba que el `ETag` es el SHA-256 de los bytes); `append(events, etag)` serializa cada evento con `encodeLine` y lo envía en `POST /api/ledger/lines` con `If-Match: "<etag>"`. `replace`, `appendLines` y `replaceLines` se niegan. Sin cola local y sin libro guardado en el dispositivo.
 - **Las declaraciones de §5.2 las deduce el adaptador:** `has_correction` y `chain_continues`, de la forma del lote; `confirm_duplicate`, en cada línea cuya huella repite la de un evento no anulado del libro cargado.
