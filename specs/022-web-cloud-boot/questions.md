@@ -21,3 +21,7 @@ El arranque **cabe** (de hecho baja 86 bytes sobre lo medido antes de la entrega
 ## 3. IndexedDB `atlas` abierta tras iniciar sesión (resuelta)
 
 La abría el contador de borradores del marco (`shell/draft-counter.ts`), que lee el almacén `drafts`. En modo nube ya no se abre (los borradores en la nube llegan con E6); `test/sync/cloud-device.test.tsx` monta el contador antes y después de la carga y comprueba que no hay ninguna base.
+
+## 4. Un dispositivo nuevo por cada inicio de sesión desde la puerta (para E4)
+
+Revisión (M2): cada inicio de sesión desde «Entrar con Google», sin `device_id` que presentar, hace que la API asigne un dispositivo nuevo. Con la web ya sin identidad guardada en el dispositivo, se acumularían objetos de dispositivo. Decidir en E4 si la API reutiliza uno (p. ej. por la cuenta) o los caduca.
