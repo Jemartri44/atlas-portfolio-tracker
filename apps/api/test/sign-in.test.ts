@@ -59,7 +59,7 @@ describe("GET /api/auth/callback, the branch of the web (R06 to R17)", () => {
     const api = setup();
     const { done } = await api.signIn();
     expect(done.statusCode).toBe(302);
-    expect(done.headers.location).toBe(`${SELF}/ajustes#sincronizacion`);
+    expect(done.headers.location).toBe(`${SELF}/`);
     const session = setCookieOf(done.cookies, "__Host-atlas_session");
     expect(attributes(session).slice(1)).toEqual([
       "Path=/",

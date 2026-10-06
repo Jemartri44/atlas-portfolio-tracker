@@ -61,7 +61,7 @@ Es el procedimiento [Revocar todos los tokens](revoke-all-tokens.md), que tiene 
 
 ## 5. Olvidar sus dispositivos, revisar la nube y rectificar
 
-**En este orden.** Con los dispositivos del intruso vivos, uno que haya publicado pendientes bloquea la restauración (`rewrite_refused_pending_devices`).
+**En este orden.** Desde E4 de ADR-0035 la restauración no se niega por pendientes de ningún dispositivo.
 
 **5.1. Olvida primero los dispositivos que no reconozcas.**
 ```sh

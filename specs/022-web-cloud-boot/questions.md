@@ -16,7 +16,7 @@ El arranque **cabe** (de hecho baja 86 bytes sobre lo medido antes de la entrega
 
 ## 2. Tras iniciar sesión, la API redirige a `/ajustes#sincronizacion`
 
-(`docs/api.md` §3.) En modo nube esa tarjeta es la que ADR-0035 retira; lo natural es `/`. Es de la API (E4); lo anoto, no lo toco.
+(`docs/api.md` §3.) En modo nube esa tarjeta es la que ADR-0035 retira; lo natural es `/`. Es de la API (E4); lo anoto, no lo toco. **Resuelta en E4 (feature 025): la redirección es `/`.**
 
 ## 3. IndexedDB `atlas` abierta tras iniciar sesión (resuelta)
 
@@ -24,4 +24,4 @@ La abría el contador de borradores del marco (`shell/draft-counter.ts`), que le
 
 ## 4. Un dispositivo nuevo por cada inicio de sesión desde la puerta (para E4)
 
-Revisión (M2): cada inicio de sesión desde «Entrar con Google», sin `device_id` que presentar, hace que la API asigne un dispositivo nuevo. Con la web ya sin identidad guardada en el dispositivo, se acumularían objetos de dispositivo. Decidir en E4 si la API reutiliza uno (p. ej. por la cuenta) o los caduca.
+Revisión (M2): cada inicio de sesión desde «Entrar con Google», sin `device_id` que presentar, hace que la API asigne un dispositivo nuevo. Con la web ya sin identidad guardada en el dispositivo, se acumularían objetos de dispositivo. Decidir en E4 si la API reutiliza uno (p. ej. por la cuenta) o los caduca. **Trasladada a `specs/025-api-cloud-first/questions.md` (1), abierta.**

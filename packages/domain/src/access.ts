@@ -132,10 +132,7 @@ export {
   splitSigned,
 } from "./access/signed.js";
 export {
-  DEVICE_BOUND_PATHS,
-  expectedDeviceRefusal,
   ifNoneMatchHits,
-  publishedDevice,
   type ReferenceEntry,
   type ReferenceKind,
   referenceContentType,

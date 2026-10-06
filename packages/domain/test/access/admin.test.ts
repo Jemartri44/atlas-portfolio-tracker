@@ -6,10 +6,8 @@ import {
   forgetRefusal,
   forgottenDevice,
   parseAdminConfig,
-  remoteRewritePermission,
 } from "../../src/access/admin.js";
 import { newDevice } from "../../src/access/device.js";
-import { markerFor } from "../../src/sync/marker.js";
 import { SAMPLES } from "../samples.js";
 
 const device = (
@@ -24,48 +22,6 @@ const device = (
     : {}),
 });
 const A = "A".repeat(22);
-const B = "B".repeat(22);
-const synced = { present: true as const, marker: markerFor([], 0) };
-
-describe("remoteRewritePermission", () => {
-  it("refuses with an object that cannot be read, naming it", () => {
-    expect(
-      remoteRewritePermission({ present: false }, 0, [
-        device(A),
-        { device_id: B, unreadable: true },
-      ]),
-    ).toEqual({
-      code: "rewrite_refused_device_unreadable",
-      details: { devices: [B] },
-    });
-  });
-
-  it("refuses with pending lines of a device alive, never of a forgotten one", () => {
-    expect(
-      remoteRewritePermission({ present: false }, 0, [device(A, { pending: 2 })]),
-    ).toMatchObject({
-      code: "rewrite_refused_pending_devices",
-      details: { devices: [A] },
-    });
-    expect(
-      remoteRewritePermission({ present: false }, 0, [device(A, { pending: 2, forgotten: true })]),
-    ).toBeUndefined();
-    // What a device only holds back does not block (§6.3 (V5)).
-    expect(
-      remoteRewritePermission({ present: false }, 0, [device(A, { held: 4 })]),
-    ).toBeUndefined();
-  });
-
-  it("keeps the rules of the folder it runs from", () => {
-    expect(remoteRewritePermission(synced, 3, [])).toMatchObject({
-      code: "rewrite_refused_pending_here",
-    });
-    expect(remoteRewritePermission({ present: true, marker: "missing" }, 0, [])).toMatchObject({
-      code: "rewrite_refused_marker_missing",
-    });
-    expect(remoteRewritePermission(synced, 0, [device(A)])).toBeUndefined();
-  });
-});
 
 describe("forgetRefusal and forgottenDevice", () => {
   it("refuses a missing or unreadable object, and does nothing to a forgotten one", () => {

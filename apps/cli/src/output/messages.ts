@@ -79,10 +79,6 @@ export const describeRemoteFailure = (code: unknown): string => {
       return "la nube no está disponible ahora mismo (un fallo pasajero): inténtalo de nuevo en unos minutos.";
     case "body_too_large":
       return "la petición era demasiado grande para la nube; no se ha escrito nada.";
-    case "expected_device_required":
-      return "la petición no decía con qué dispositivo se sincroniza; es un fallo de la aplicación. No se ha escrito nada.";
-    case "sync_device_changed":
-      return "la credencial es de otro dispositivo que el que esta carpeta tiene en sync/remote.json. No se ha escrito nada.";
     case "transport_rejected":
       return "la petición la ha rechazado la red antes de llegar a la nube (CloudFront o el cortafuegos).";
     case "network_failed":
@@ -389,16 +385,6 @@ export const describeError = (error: DomainError): string => {
       return "No se compacta: el marcador de la sincronización (sync/state.json) no se puede leer, y sin él no se sabe si la carpeta está sincronizada. Sincroniza primero, que lo reconstruye.";
     case "compact_refused_marker_missing":
       return "No se compacta: existe la carpeta sync/ pero falta su marcador (sync/state.json), así que esta carpeta se sincroniza. Sincroniza primero, o desactiva la sincronización de forma explícita.";
-    case "rewrite_refused_pending_here":
-      return `No se reescribe la nube: esta carpeta tiene ${text(d.pending)} líneas pendientes de subir. Sincroniza primero.`;
-    case "rewrite_refused_pending_devices":
-      return `No se reescribe la nube: hay dispositivos con líneas pendientes de subir (${text(d.devices)}). Que sincronicen primero, u olvida un dispositivo perdido.`;
-    case "rewrite_refused_marker_unreadable":
-      return "No se reescribe la nube: el marcador de la sincronización no se puede leer. Sincroniza primero, que lo reconstruye.";
-    case "rewrite_refused_marker_missing":
-      return "No se reescribe la nube: existe sync/ pero falta su marcador. Sincroniza primero.";
-    case "rewrite_refused_device_unreadable":
-      return `No se reescribe la nube: el objeto de ${text(d.devices)} en sync/devices/ no se puede leer, y su cola no se puede conocer. Revísalo antes.`;
     case "forget_device_missing":
       return "Ese dispositivo no existe en sync/devices/: los enseña «atlas admin devices».";
     case "forget_device_unreadable":

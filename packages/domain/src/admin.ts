@@ -12,5 +12,4 @@ export {
   forgottenDevice,
   parseAdminConfig,
   type RestoreComparison,
-  remoteRewritePermission,
 } from "./access/admin.js";

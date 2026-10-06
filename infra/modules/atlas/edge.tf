@@ -144,7 +144,7 @@ resource "aws_cloudfront_distribution" "this" {
 
   # `CachingDisabled` means no compression either (docs/decision-roadmap.md, "Lo que la
   # 015 le deja a la 017"). The origin request policy forwards every header but Host,
-  # so the four of docs/api.md section 8 and `x-amz-content-sha256` reach the Lambda.
+  # so the three of docs/api.md section 8 and `x-amz-content-sha256` reach the Lambda.
   ordered_cache_behavior {
     path_pattern             = "/api/*"
     target_origin_id         = "api"

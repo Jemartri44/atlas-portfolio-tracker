@@ -50,10 +50,6 @@ const Row = (props: {
             {props.row.status === "revoked"
               ? `, revocado el ${formatInstantDate(props.row.revoked_at ?? "")}`
               : `, caduca el ${formatInstantDate(props.row.expires_at ?? "")}`}
-            . Última sincronización:{" "}
-            {props.row.last_sync_at === undefined
-              ? "nunca"
-              : formatInstantDate(props.row.last_sync_at)}
             .
           </span>
         </Show>

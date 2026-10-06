@@ -58,7 +58,6 @@ export const ROUTES: readonly RouteSpec[] = [
   { method: "GET", path: "/api/ledger", policy: "sync", writes: false },
   { method: "POST", path: "/api/ledger/lines", policy: "sync", writes: true },
   { method: "PUT", path: "/api/ledger", policy: "sync", writes: true },
-  { method: "PUT", path: "/api/sync/devices/self", policy: "sync", writes: true },
   { method: "GET", path: "/api/sync/devices", policy: "session", writes: false },
   { method: "GET", path: "/api/reference/index", policy: "sync", writes: false },
   { method: "GET", path: "/api/reference/ecb/{name}", policy: "sync", writes: false },

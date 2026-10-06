@@ -10,7 +10,7 @@ El contrato HTTP de la Lambda de la API (`apps/api`), que se alcanza **solo a tr
 
 **Puesto al día el 2026-09-26 con E3 de la feature 015** (`specs/015-api-access/questions.md` §23 y §24; decisiones de la dirección en §25): §5 está implementado sobre S3 con lo verificado en el bloque 0 (§5.5), y las precisiones de la implementación van marcadas «*(015)*» en §5.1, §5.2, §5.3, §5.5 y §6.
 
-**Enmendado el 2026-10-06 por ADR-0035 (entrega E0, solo documentos).** Atlas pasa a ser siempre en la nube: el libro de S3 es la única fuente de verdad y no hay cola local. Lo que ese cambio retira de este contrato está marcado «**se retira en E4**» (§2.3, §5.3, §5.4, §5.7, §7, §8); la sesión de la web pasa a 24 h (§3); `GET /api/ledger` sigue sin comprimir (§5.1); y §5.8 describe el cliente de escritura directa. **Lo que se retira del código se retira en las entregas E1 a E5 de ADR-0035; hasta entonces, el código y la API siguen como están descritos aquí.**
+**Enmendado el 2026-10-06 por ADR-0035 (entrega E0, solo documentos).** Atlas pasa a ser siempre en la nube: el libro de S3 es la única fuente de verdad y no hay cola local. **E4 entregada (feature 025):** la API ya no ofrece `PUT /api/sync/devices/self` ni exige ni lee `x-atlas-expected-device`, y `compact` y la restauración no se niegan por pendientes (§2.3, §5.3, §5.4, §7, §8); la sesión de la web pasa a 24 h (§3); `GET /api/ledger` sigue sin comprimir (§5.1); y §5.8 describe el cliente de escritura directa. **El código del cliente que sobra (§5.7) se retira en E5.**
 
 **Si este documento discrepa de una ADR, manda la ADR**, y la discrepancia se anota en el `questions.md` de la feature que la encuentre.
 
@@ -69,7 +69,7 @@ Solo pueden cachearse los negativos que no pueden volver a valer (revocado, cadu
 
 | Ruta | Sesión (web) | Token (consola) |
 |---|---|---|
-| §5 Sincronización: leer el libro, añadir líneas, inicializar un remoto vacío (§5.5; con ADR-0035, solo la subida inicial a una nube vacía y la restauración), publicar el estado de **su** cola (**se retira en E4**: ADR-0035 retira la cola) | Sí | Sí |
+| §5 Sincronización: leer el libro, añadir líneas, inicializar un remoto vacío (§5.5; con ADR-0035, solo la subida inicial a una nube vacía y la restauración), sin publicar ninguna cola (retirado en E4) | Sí | Sí |
 | §6 Datos de referencia | Sí | Sí |
 | §4.4 Revocar **el propio** token | — | Sí |
 | §4.5 Listar tokens y revocar uno cualquiera; leer el estado de todos los dispositivos | Sí | **No**: `403 forbidden_for_credential` |
@@ -84,7 +84,7 @@ La **vía c**: la Lambda es el cliente OAuth y el token de Google nunca toca la 
 | Método y ruta | Qué hace |
 |---|---|
 | `GET /api/auth/login[?device_id=<22>]` | Crea el intento (`state`, `nonce`, verificador PKCE y, si la web lo presenta, su `device_id`) en la **cookie transitoria** `__Host-atlas_login` (`SameSite=Lax`, firmada, de un solo uso), y redirige (`302`) a Google con `scope=openid email`, PKCE S256, `state` y `nonce`. Una credencial presente se ignora. Un `device_id` con otro formato se descarta en silencio: no es credencial (§5.4). **El `device_id` solo se tiene en cuenta si el inicio viene del propio sitio** (`Sec-Fetch-Site: same-origin`, u `Origin` propio); desde otro sitio, o sin forma de saberlo, se ignora y el inicio sigue sin él (revisión de seguridad de la PR #90, S2). |
-| `GET /api/auth/callback` | Vuelta de Google. Verifica en el orden de ADR-0027 (`state` contra la cookie transitoria, PKCE, firma, `aud` del entorno, `iss`, `exp`, `nonce`, `email_verified`, par `{sub, email}` en la lista). Si el intento es de la **web**, emite la cookie de sesión y redirige a la SPA (`/ajustes#sincronizacion`). Si es de la **consola**, sigue §4.2. La cookie transitoria **se borra en toda respuesta**. Un par que no está en la lista recibe la **página de acceso denegado**; cualquier otro fallo, la **página de error** (§3.1). |
+| `GET /api/auth/callback` | Vuelta de Google. Verifica en el orden de ADR-0027 (`state` contra la cookie transitoria, PKCE, firma, `aud` del entorno, `iss`, `exp`, `nonce`, `email_verified`, par `{sub, email}` en la lista). Si el intento es de la **web**, emite la cookie de sesión y redirige a la raíz de la SPA (`/`; no hay `return_to`). Si es de la **consola**, sigue §4.2. La cookie transitoria **se borra en toda respuesta**. Un par que no está en la lista recibe la **página de acceso denegado**; cualquier otro fallo, la **página de error** (§3.1). |
 | `POST /api/auth/logout` | Cuerpo `{}` obligatorio (`415 body_not_json`). Borra la cookie de sesión (`Max-Age=0`) **sin validarla** —cerrar una sesión caducada o firmada con una clave rotada también la borra— y responde `204`. Con cookie, la comprobación de `Origin` de §2. Con el token, `403 forbidden_for_credential`. |
 | `GET /api/session` | Solo cookie. `200 { "signed_in": true, "expires_at": "<Z>", "device_id": "<22>" }`, con `Cache-Control: no-store`: así sabe la SPA si tiene sesión (la cookie es `HttpOnly`) y qué `device_id` le asignó la API. Si no, la misma respuesta que cualquier ruta con cookie (`401 unauthenticated`, `401 session_invalid`, `403 not_allowed`, `403 device_forgotten`, `503 remote_unavailable`). Con el token, `403 forbidden_for_credential`. |
 
@@ -162,13 +162,13 @@ Respuesta `200`, **una sola vez**:
 
 ### 4.5 Lista y revocación desde la web (solo con sesión)
 
-- `GET /api/devices/tokens` → `200 { "tokens": [ … ] }`, uno por registro: `token_id`, `device_id`, `device_name`, `issued_at`, `expires_at`, `status` (`active` \| `expired` \| `revoked`), `revoked_at?`, `last_sync_at?` (leído de `sync/devices/<device_id>.json`, §5.3, nunca guardado en el registro) y `recent` (emitido en los últimos **7 días**, decidido el 2026-09-25). Sin correo ni `sub`. Un registro ilegible sale como `{ "token_id": "<del nombre>", "status": "unreadable" }`, nunca se omite.
+- `GET /api/devices/tokens` → `200 { "tokens": [ … ] }`, uno por registro: `token_id`, `device_id`, `device_name`, `issued_at`, `expires_at`, `status` (`active` \| `expired` \| `revoked`), `revoked_at?` y `recent` (emitido en los últimos **7 días**, decidido el 2026-09-25). Sin correo ni `sub`. Un registro ilegible sale como `{ "token_id": "<del nombre>", "status": "unreadable" }`, nunca se omite.
 - `POST /api/devices/tokens/<token_id>/revoke`, cuerpo `{}` → `200 { "token_id": "…", "revoked_at": "…" }`. `<token_id>` pasa la regla de §2.1 **antes** de construir el nombre del parámetro (`400 body_invalid` si no). Revocar uno ya revocado devuelve el mismo `revoked_at`, sin volver a escribir. Un `<token_id>` sin registro, o con un registro ilegible, es `404 not_found` con `details.reason` `token_missing` o `token_unreadable`, **sin escribir nada** (decidido el 2026-09-26).
 - **Revocar todos sin Google** no es una ruta: es una operación de administración con credenciales de AWS (ADR-0028, fila 12), con procedimiento escrito en la 015 (`atlas admin revoke-all-tokens`).
 
 ## 5. Sincronización del libro (ADR-0026)
 
-> **Enmendado por ADR-0035 (2026-10-06).** Sigue vigente: la API como único escritor que solo añade y valida cada línea (§5.2), `GET /api/ledger`, `POST /api/ledger/lines` y `PUT /api/ledger` (este, solo para la subida inicial a una nube vacía y la restauración, §5.5). **Se retira la cola por dispositivo**: §5.3 (publicar su estado), la cabecera `x-atlas-expected-device` (§5.4) y la parte del cliente de §5.7 que habla de cola, marcador y lo retenido. La API las retira en **E4** y el código del cliente en **E5**; hasta entonces siguen como están escritas abajo. Las escrituras de la web y de la consola pasan a ser directas con `If-Match` (§5.8).
+> **Enmendado por ADR-0035 (2026-10-06).** Sigue vigente: la API como único escritor que solo añade y valida cada línea (§5.2), `GET /api/ledger`, `POST /api/ledger/lines` y `PUT /api/ledger` (este, solo para la subida inicial a una nube vacía y la restauración, §5.5). **Se retira la cola por dispositivo**: publicar su estado (§5.3), la cabecera `x-atlas-expected-device` (§5.4) y la parte del cliente de §5.7 que habla de cola, marcador y lo retenido. La API lo retiró en **E4** y el código del cliente se borra en **E5**. Las escrituras de la web y de la consola pasan a ser directas con `If-Match` (§5.8).
 
 El remoto es `ledger/ledger.jsonl` del bucket de datos. **La API solo añade**: nunca reescribe ni borra una línea (ADR-0026, Parte A). Las líneas se escriben **tal como las serializó el cliente**, byte a byte, para que la réplica de cada dispositivo sea exactamente el remoto (Parte A, «Réplicas idénticas byte a byte»).
 
@@ -267,54 +267,30 @@ Respuesta `200` siempre que `If-Match` cuadró:
 - **Una respuesta perdida no pierde nada:** el cliente nunca da una línea por subida con este `200`; vuelve a leer el remoto (§5.1) y comprueba que sus líneas están dentro, byte a byte, antes de quitarlas de su cola (ADR-0026, pasos 2 y 5).
 - `details` puede contener lo que el dominio diga de la línea (un importe, una cantidad): va al cliente del propio usuario, **nunca a un registro**.
 
-### 5.3 Publicar el estado de la cola del dispositivo
+### 5.3 Los objetos de dispositivo (identidad)
 
-> **`PUT /api/sync/devices/self` y los campos `pending` y `held`: se retira en E4** (ADR-0035). Sin cola, `pending` sería siempre cero, y `compact` y la restauración dejan de negarse por pendientes. **Se conservan los objetos `sync/devices/<device_id>.json` como identidad del dispositivo** (olvidar un navegador o una consola, listar los tokens, §2 y §4.5) y `GET /api/sync/devices`, en lo que la identidad necesite. Hasta E4, esta sección describe el comportamiento real. Qué quita E4 exactamente de `GET /api/sync/devices` y de `last_sync_at` (§4.5) no lo fija la ADR: lo decide el plan de E4.
+> **Enmendado en E4 (ADR-0035).** `PUT /api/sync/devices/self` **ya no existe**: responde `404 not_found` con cualquier credencial y no escribe nada. Ya nadie publica `pending`, `held` ni `last_sync_at`, y `compact` y la restauración **no se niegan por pendientes** (ADR-0032). Los objetos se conservan **como identidad del dispositivo**: sirven para olvidar un navegador o una consola y para saber a qué dispositivo pertenece cada token (§2 y §4.5).
 
-`PUT /api/sync/devices/self`, cuerpo:
-
-```json
-{ "pending": 2, "held": 1, "last_sync_at": "2026-10-01T10:00:00Z" }
-```
-
-La API escribe `sync/devices/<device_id>.json` con el `device_id` **de la credencial** (§2.3), esos tres campos y `published_at` (su hora). **El objeto del dispositivo** (decidido el 2026-09-25):
+**El objeto del dispositivo** (decidido el 2026-09-25; formato sin cambios en E4):
 
 ```json
-{ "device_format": 1, "device_id": "<22>", "type": "web", "state": "active", "created_at": "…", "pending": 0, "held": 0, "last_sync_at": "…", "published_at": "…" }
+{ "device_format": 1, "device_id": "<22>", "type": "web", "state": "active", "created_at": "…", "pending": 0, "held": 0 }
 ```
 
-`type` es `web` o `console`; `state`, `active` o `forgotten` (con `forgotten_at`); un objeto `console` lleva además `device_name`. Se lee de forma estricta. **Lo crea la API al asignar el identificador** —la web al iniciar sesión, la consola en el primer canje— con `If-None-Match: *`. **Este `PUT` nunca lo crea**: relee el objeto, se niega con `403 device_forgotten` si falta, es de otro tipo o está olvidado, y reescribe **con `If-Match` sobre lo leído**, conservando `type`, `state`, `created_at`, `device_name` y `forgotten_at`. Si ese `If-Match` falla, relee: olvidado entretanto → `device_forgotten`; si no, `412 precondition_failed`. **Olvidar** lo hace la administración, reescribiéndolo con `state: "forgotten"`, **nunca borrándolo**, después de revocar sus tokens. `pending` y `held` son enteros ≥ 0 (`400 body_invalid` si no). *(015)* `last_sync_at` tiene que ser un instante (`400 body_invalid`, `details.reason: "last_sync_at"`): con otra cosa, el objeto dejaría de poder leerse de forma estricta. Respuesta `200 { "device_id": "…", "published_at": "…" }`. Es lo que miran `compact` y la restauración antes de actuar (ADR-0026, paso 7; ADR-0032): se niegan si algún dispositivo conocido tiene **`pending`** mayor que cero. **`held` no bloquea** (decisión de la dirección, 2026-09-25, como dicen ADR-0026, Parte A, y ADR-0032): lo retenido vive en el dispositivo y nunca se sube solo; se publica para que se vea.
+`type` es `web` o `console`; `state`, `active` o `forgotten` (con `forgotten_at`); un objeto `console` lleva además `device_name`. Se lee de forma estricta. **`pending`, `held`, `last_sync_at` y `published_at` son restos del formato** (`docs/data-schema.md`): los dispositivos nuevos llevan `pending: 0` y `held: 0` y ningún instante, y nada los vuelve a escribir. **Lo crea la API al asignar el identificador** —la web al iniciar sesión, la consola en el primer canje— con `If-None-Match: *`. **Olvidar** lo hace la administración, reescribiéndolo con `state: "forgotten"`, **nunca borrándolo**, después de revocar sus tokens.
 
-`GET /api/sync/devices` (**solo sesión**) → `200 { "devices": [ { "device_id", "type", "state", "pending", "held", "last_sync_at", "published_at" } ] }`. `compact` y la restauración solo cuentan los dispositivos **activos**. *(015)* **Un objeto que no se puede leer** de forma estricta sale como `{ "device_id", "state": "unreadable" }`, sin los demás campos, y **nunca se omite**: sus pendientes no se conocen. Por eso `compact` y la restauración (E5) **se niegan** mientras haya uno, igual que con uno activo con pendientes (revisión de la PR #96, N2). Solo se listan los nombres que son un `device_id`.
+`GET /api/sync/devices` (**solo sesión**) → `200 { "devices": [ { "device_id", "type", "state", … } ] }` con lo que lleve el objeto. Ninguna pantalla lo usa hoy. *(015)* **Un objeto que no se puede leer** de forma estricta sale como `{ "device_id", "state": "unreadable" }`, sin los demás campos, y **nunca se omite**. Solo se listan los nombres que son un `device_id`.
 
 ### 5.4 Cómo se liga a su sesión el identificador de dispositivo de la web
 
-> **La cabecera `x-atlas-expected-device` (y sus códigos `expected_device_required` y `sync_device_changed`): se retira en E4** (ADR-0035). Sin un almacén de la web unido a un dispositivo (`sync:device`), ya no protege nada. Se conserva la asignación del `device_id` en el inicio de sesión y su objeto como identidad (§2). La obligación se quita en la API en E4, y si la cabecera sale de la política de origen es un cambio pequeño de `infra/`, solo con `plan`. Hasta entonces, la web sigue enviándola y la API la sigue exigiendo con cookie, como describe esta sección.
+> **Enmendado en E4 (ADR-0035).** La cabecera `x-atlas-expected-device` y sus códigos `expected_device_required` y `sync_device_changed` **se retiraron**: la API ni la pide ni la lee (con o sin ella, con cookie o con token, la petición se juzga igual), y el cliente HTTP ya no la envía. Protegía que una página pintada con una sesión no publicara la cola de otro dispositivo; sin cola ni almacén unido a un dispositivo (`sync:device`), no protege nada. La política de origen de CloudFront (`AllViewerExceptHostHeader`) reenvía toda cabecera menos `Host`: no hubo cambio de `infra/`.
 
-**Decidido: la opción (a)** (prompt de la 015, §7 P1, precisado en §7.1 bis, B1, B5 y N8). La API toma el dispositivo de la credencial y **nunca del cuerpo, de la URL ni de una cabecera** (ADR-0033, punto 6).
+La API toma el dispositivo de la credencial y **nunca del cuerpo, de la URL ni de una cabecera** (ADR-0033, punto 6).
 
-- La web presenta su `device_id` **solo al iniciar sesión** (`GET /api/auth/login?device_id=…`). La API lo lleva en la cookie transitoria y, tras verificar a Google, lo acepta **solo si ella misma lo emitió para un dispositivo web y no está olvidado**: su objeto `sync/devices/<id>.json` existe, es de tipo `web` y está activo. Si no —y la primera vez, siempre—, **asigna uno nuevo** (22 caracteres aleatorios) y crea su objeto con `If-None-Match: *`.
-- El `device_id` va **firmado dentro de la cookie de sesión**, y cada petición con cookie comprueba su objeto (§2).
-- La web lo lee de `GET /api/session` y lo guarda en IndexedDB, **donde no es credencial**.
-- **Con qué dispositivo se unió la web** (implementado en E4 de la 015). Al inicializar o al unirse, la web guarda el `device_id` de su sesión en la clave `sync:device` de su almacén (`docs/data-schema.md` §1). Lo escribe **primero y en la misma transacción** que el marcador, y lo compara al escribir.
-  - Es el equivalente de `sync/remote.json` de la consola, pero **solo con el id**: el origen de la web es siempre el suyo.
-  - **Antes de cada orden** (sincronizar, volver a descargar, empezar), la web **relee `GET /api/session`**: la página pudo pintarse con otra sesión, iniciada de nuevo en otra pestaña (revisión de la PR #97, B1). Si el dispositivo de la sesión no es el de `sync:device`, **se niega** sin llamar a las rutas de §5:
-    - `sync_device_changed` (`details.joined`, `details.session`) cuando es otro;
-    - `sync_device_unknown` cuando la web se sincroniza y no sabe con cuál se unió.
-  - Inicializar se niega con `sync_already_configured` sobre una sincronización en marcha. **Unirse** («Unirme desde la nube» o «Unirme con mis operaciones») es la salida, y reescribe `sync:device` con el dispositivo nuevo.
-  - Lo decide el dominio: `webSyncRefusal` y `webJoinRefusal`, en `packages/domain/src/sync/web-device.ts`.
-  - **Y lo comprueba también el servidor** (decidido el 2026-09-27, revisión de la PR #97, B1). Cada petición de la web a una ruta de §5 que actúa como dispositivo —`GET` y `PUT /api/ledger`, `POST /api/ledger/lines` y `PUT /api/sync/devices/self`— lleva la cabecera **`x-atlas-expected-device`** con el dispositivo con el que se unió (al empezar, el de la sesión que va a quedar en `sync:device`).
-    - La API la compara con el dispositivo de la credencial **antes de leer ni escribir nada**.
-    - Si es otro, responde `409 sync_device_changed`, con cualquiera de las dos credenciales.
-    - Con la cookie es **obligatoria**: sin ella, `400 expected_device_required`.
-    - El token de la consola ya liga su dispositivo y puede omitirla.
-    - Las rutas de §6 no ligan ningún dispositivo y no la piden.
-    - Así, la sesión que cambia entre la relectura y la petición tampoco publica la cola de un dispositivo como si fuera la de otro.
-    - Lo decide `expectedDeviceRefusal` (`packages/domain/src/access/sync-routes.ts`).
-  - **CloudFront debe reenviar esta cabecera** a la Lambda, como `x-atlas-device-token` (para la 017).
-  - Lo pendiente nunca se pierde y unirse es siempre explícito.
-- **`device_forgotten`** en cualquier respuesta es un fallo remoto más (§5.7, `remote_failed`): la sincronización para sin retener nada. La web dice que hay que volver a iniciar sesión. Con el id nuevo, cae en `sync_device_changed`.
-- **Riesgo aceptado** (decisión del 2026-09-25): copiar la IndexedDB a otro navegador crea dos escritores con el mismo `device_id`; no se detecta, se documenta. Hay un solo usuario y una sola cuenta de Google: presentar el id de otro dispositivo exige ser ya el usuario.
+- Un cliente puede presentar un `device_id` **solo al iniciar sesión** (`GET /api/auth/login?device_id=…`). La API lo lleva en la cookie transitoria y, tras verificar a Google, lo acepta **solo si ella misma lo emitió para un dispositivo web y no está olvidado**. Si no —y desde que la web no guarda ninguno, siempre—, **asigna uno nuevo** (22 caracteres aleatorios) y crea su objeto con `If-None-Match: *`. *Abierta:* que cada inicio de sesión cree un dispositivo (`specs/025-api-cloud-first/questions.md`, 1).
+- El `device_id` va **firmado dentro de la cookie de sesión**, y cada petición con cookie comprueba su objeto (§2): olvidado o ausente es `403 device_forgotten`.
+- La web lo puede leer de `GET /api/session`; no es credencial y no se guarda en el dispositivo (ADR-0035).
+- **`device_forgotten`** en cualquier respuesta es un fallo remoto más (§5.7, `remote_failed`); la web dice que hay que volver a iniciar sesión, y la sesión nueva recibe otro dispositivo.
 
 ### 5.5 Inicializar un remoto vacío
 
@@ -454,10 +430,8 @@ Todo error de la Lambda tiene esta forma, sin mensaje en lenguaje natural (lo po
 | `reissue_device_missing`, `reissue_device_forgotten`, `reissue_device_not_console`, `reissue_device_unreadable` | 403 | La reemisión de §4.3 pide un dispositivo que no existe, está olvidado, no es de consola o cuyo objeto no se lee (el cuarto, decidido el 2026-09-26) |
 | `reference_name_invalid` | 400 | Un nombre de §6 que no cumple su regla |
 | `body_too_large` | 413 | Un cuerpo por encima del tope propio de la Lambda, antes de leerlo (la Function URL admite 6 MB) |
-| `expected_device_required` | 400 | Una ruta de §5 que actúa como dispositivo (`GET` y `PUT /api/ledger`, `POST /api/ledger/lines`, `PUT /api/sync/devices/self`) llamada con la cookie y **sin** la cabecera `x-atlas-expected-device` (§5.4). Nada leído ni escrito. Decidido el 2026-09-27 (revisión de la PR #97, B1) |
-| `sync_device_changed` | 409 | La cabecera `x-atlas-expected-device` nombra otro dispositivo que el de la credencial, con cualquiera de las dos (§5.4). Nada leído ni escrito |
 
-*(014)* **La lista cerrada de los fallos que no son de una línea** es `REMOTE_FAILURE_CODES` (`packages/domain/src/ports/remote-ledger.ts`). Contiene los códigos de esta tabla que pueden responder las rutas de §5, menos los de las rutas de acceso de §4, más `device_forgotten`, `remote_unavailable`, `expected_device_required` y `sync_device_changed` (feature 015), y dos que nombra el cliente para lo que no llegó a la API: `transport_rejected` (abajo) y `network_failed`, un fallo de red. El cliente los lleva tal cual en `remote_failed` (§5.7), nunca retiene por ellos, y cada interfaz tiene una frase para cada uno.
+*(014)* **La lista cerrada de los fallos que no son de una línea** es `REMOTE_FAILURE_CODES` (`packages/domain/src/ports/remote-ledger.ts`). Contiene los códigos de esta tabla que pueden responder las rutas de §5, menos los de las rutas de acceso de §4, más `device_forgotten` y `remote_unavailable` (feature 015), y dos que nombra el cliente para lo que no llegó a la API: `transport_rejected` (abajo) y `network_failed`, un fallo de red. El cliente los lleva tal cual en `remote_failed` (§5.7), nunca retiene por ellos, y cada interfaz tiene una frase para cada uno.
 
 Y los **motivos de rechazo de una línea** (dentro de un `200`, en `rejected.code`, §5.2): `line_unreadable`, `schema_version_unsupported`, `line_invalid`, `recorded_at_in_future`, `domain_rejected`, `duplicate_unconfirmed`, `pair_declaration_invalid`, `pair_incomplete`, `pair_not_contiguous`, `pair_rejected`, `seal_mismatch` y `waiver_not_appendable`.
 
@@ -467,7 +441,7 @@ Fuera de la Lambda: `transport_rejected` es el nombre que da **el cliente** a un
 
 ## 8. Quién implementa qué
 
-> **Enmendado por ADR-0035 (2026-10-06).** La tabla es histórica en lo que toca a la cola. Las entregas de ADR-0035 reparten lo nuevo: **E1** `ApiLedgerStore`; **E2a/E2b** la web; **E3** la consola; **E4** la API (retira `PUT /api/sync/devices/self`, la obligación de `x-atlas-expected-device` y la negativa por pendientes de `compact` y la restauración); **E5** el código muerto; **E6** los borradores en la nube. La fila de **017** sobre `x-atlas-expected-device` en la política de origen queda sujeta a E4. Hasta que se entreguen, el código sigue como está.
+> **Enmendado por ADR-0035 (2026-10-06).** La tabla es histórica en lo que toca a la cola. Las entregas de ADR-0035 reparten lo nuevo: **E1** `ApiLedgerStore`; **E2a/E2b** la web; **E3** la consola; **E4** la API (entregada: retira `PUT /api/sync/devices/self`, `x-atlas-expected-device` y la negativa por pendientes de `compact` y la restauración); **E5** el código muerto; **E6** los borradores en la nube. La fila de **017** ya no necesita `x-atlas-expected-device`. 
 
 | Pieza | Feature |
 |---|---|
@@ -475,7 +449,7 @@ Fuera de la Lambda: `transport_rejected` es el nombre que da **el cliente** a un
 | Las órdenes de administración de la consola contra el almacén remoto: `compact` del remoto, restaurar y olvidar un dispositivo, **fuera de la API** (ADR-0026, Parte A) | **015** |
 | La Lambda: §1 a §7 sobre HTTP, `LedgerStore` sobre S3 con `If-Match`, el registro en SSM, los clientes HTTP de la web y de la consola, `atlas remote login` y `logout`, la pantalla de dispositivos de la web | **015** |
 | El correo mensual con los inicios de sesión de la web y de la consola y los tokens vivos y emitidos; `access/last-web-sign-in.json` (§3); la regla de nombres de `prices/` y los clientes de §6 | **016**, fusionada (PR #104, #106, #108 y #109, 2026-09-28) |
-| El prefijo de SSM y sus permisos, la política de origen que reenvía a `/api/*` `x-atlas-device-token`, **`x-atlas-expected-device`** (sin ella, toda petición con cookie de una ruta de §5 que actúa como dispositivo se rechaza con `400 expected_device_required`, §5.4 y §7; revisión de la PR #97, B1), **`Sec-Fetch-Site` y `Origin`** (sin las dos últimas, la Lambda nunca sabe que un inicio de sesión viene del propio sitio: ignora siempre el `device_id` de §3 y cada inicio de sesión de la web crea un dispositivo nuevo, sin avisar; y sin `Origin`, toda escritura con cookie se rechaza con `origin_rejected`, §2; revisión de la PR #90, ronda 2), la CSP que respeta la `sandbox` de §4.2 | **017** |
+| El prefijo de SSM y sus permisos, la política de origen que reenvía a `/api/*` `x-atlas-device-token`, (`x-atlas-expected-device` se retiró en E4, §5.4), **`Sec-Fetch-Site` y `Origin`** (sin las dos últimas, la Lambda nunca sabe que un inicio de sesión viene del propio sitio: ignora siempre el `device_id` de §3 y cada inicio de sesión de la web crea un dispositivo nuevo, sin avisar; y sin `Origin`, toda escritura con cookie se rechaza con `origin_rejected`, §2; revisión de la PR #90, ronda 2), la CSP que respeta la `sandbox` de §4.2 | **017** |
 
 ## 9. Parámetros de SSM y configuración de la Lambda
 

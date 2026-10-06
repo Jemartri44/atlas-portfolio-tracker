@@ -408,15 +408,6 @@ describe("the log of the API (R25)", () => {
         jar: false,
       });
     }
-    await api.call("PUT", "/api/sync/devices/self", {
-      headers: { ...token, ...json },
-      body: JSON.stringify({ pending: 1, held: 0, last_sync_at: "SENTINEL-ACCOUNT" }),
-      jar: false,
-    });
-    await api.call("PUT", "/api/sync/devices/self", {
-      headers: cookie,
-      body: JSON.stringify({ pending: 1, held: 0, last_sync_at: "2026-10-01T09:00:00Z" }),
-    });
     await api.call("GET", "/api/sync/devices");
     api.s3.seed("prices/SENTINEL.jsonl", `${LINE}\n`);
     await api.call("GET", "/api/reference/index", { headers: token, jar: false });
@@ -444,7 +435,6 @@ describe("the log of the API (R25)", () => {
     for (const route of [
       "/api/ledger",
       "/api/ledger/lines",
-      "/api/sync/devices/self",
       "/api/sync/devices",
       "/api/reference/index",
       "/api/reference/prices/{name}",

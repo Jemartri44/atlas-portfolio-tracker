@@ -1,7 +1,6 @@
 // The routes of the sync and of the reference data (feature 015, E3;
 // `docs/api.md` §5 and §6). They decide nothing: what a line is worth is the
-// domain's `acceptAppend` and `acceptInit`, what a device may publish is
-// `publishedDevice`, what a name of the reference data may be is
+// domain's `acceptAppend` and `acceptInit`, what a name of the reference data may be is
 // `referenceKey`. The remote ledger is reached only through
 // `AppendOnlyLedger`: read and append, never rewrite, never delete.
 
@@ -11,9 +10,7 @@ import {
   type ApiConfig,
   type ApiRefusal,
   type DeviceType,
-  deviceRefusal,
   ifNoneMatchHits,
-  publishedDevice,
   type ReferenceKind,
   referenceContentType,
   referenceIndex,
@@ -31,7 +28,6 @@ import {
   linesOfText,
   parseAppendBody,
   parseInitBody,
-  parsePublishBody,
   RemoteError,
   type RemoteRules,
   textOfLines,
@@ -191,41 +187,6 @@ export const syncRoutes = (context: SyncContext) => {
     }
   };
 
-  /**
-   * `PUT /api/sync/devices/self` (§5.3): on the object the credential names,
-   * **never creating it**, keeping what it is, and only on the ETag it was
-   * read at. If another write crossed it, it is read again: forgotten in
-   * between is `device_forgotten`, anything else `412`.
-   */
-  const publish = async (credential: SyncCredential, body: unknown): Promise<Outcome> => {
-    const state = judged(() => parsePublishBody(body));
-    if (isRefusal(state)) {
-      return fail(state);
-    }
-    const stored = await devices.readForUpdate(credential.deviceId);
-    const reason = deviceRefusal(stored?.device, credential.type);
-    if (reason !== undefined || stored === undefined || typeof stored.device !== "object") {
-      return fail(refusal("device_forgotten", { reason: reason ?? "unreadable" }));
-    }
-    const publishedAt = context.now().toISOString();
-    const next = publishedDevice(stored.device, state, publishedAt);
-    if (isRefusal(next)) {
-      return fail(next);
-    }
-    if ((await devices.replace(next, stored.etag)) === "precondition_failed") {
-      const again = deviceRefusal(await devices.read(credential.deviceId), credential.type);
-      return fail(
-        again === undefined
-          ? refusal("precondition_failed")
-          : refusal("device_forgotten", { reason: again }),
-      );
-    }
-    return {
-      result: json(200, { device_id: credential.deviceId, published_at: publishedAt }),
-      code: "device_published",
-    };
-  };
-
   /** `GET /api/sync/devices` (§5.3, session only): every device, with its type and state. */
   const listDevices = async (): Promise<Outcome> => {
     const rows: Record<string, unknown>[] = [];
@@ -301,7 +262,6 @@ export const syncRoutes = (context: SyncContext) => {
     readLedger,
     appendLines,
     initialise,
-    publish,
     listDevices,
     indexReference,
     readReference,

@@ -1,45 +1,18 @@
 // The rules of the administration of the remote (feature 015, E5; ADR-0026,
-// Part A; ADR-0032; ADR-0033, point 8): who may rewrite the remote, what
+// Part A; ADR-0032; ADR-0033, point 8): what
 // forgetting a device writes, how a candidate to restore compares with the
 // remote, and the local configuration of the administration (`admin.json`).
 // Pure: the console's orders apply them with the role of administration,
 // never through the API (architecture test).
 
 import type { LedgerEvent } from "../schema/events.js";
-import type { SyncPresence } from "../sync/marker.js";
-import { type Refusal, rewritePermission } from "../sync/permission.js";
+import type { Refusal } from "../sync/permission.js";
 import type { DeviceObject } from "./device.js";
 
 /** What the administration reads of each object under `sync/devices/`. */
 export type AdminDeviceRead =
   | DeviceObject
   | { readonly device_id: string; readonly unreadable: true };
-
-const isUnreadable = (
-  read: AdminDeviceRead,
-): read is { readonly device_id: string; readonly unreadable: true } => "unreadable" in read;
-
-/**
- * Whether the remote may be rewritten — compacted or restored — from this
- * folder (ADR-0026, Part A; `rewritePermission`): refused with pending lines
- * here or published by any device, with an object of a device that cannot be
- * read (a queue that cannot be known, `questions.md` §26, N2), and never
- * counting the forgotten ones (§7 P9, amended).
- */
-export const remoteRewritePermission = (
-  presence: SyncPresence,
-  pendingHere: number,
-  devices: readonly AdminDeviceRead[],
-): Refusal | undefined => {
-  const unreadable = devices.filter(isUnreadable).map((device) => device.device_id);
-  if (unreadable.length > 0) {
-    return { code: "rewrite_refused_device_unreadable", details: { devices: unreadable } };
-  }
-  const alive = devices.filter(
-    (device): device is DeviceObject => !isUnreadable(device) && device.state === "active",
-  );
-  return rewritePermission(presence, pendingHere, alive);
-};
 
 /**
  * Forgetting a device (§7 P9, amended in §7.1 bis, B1): refused for an object

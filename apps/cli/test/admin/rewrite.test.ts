@@ -1,7 +1,6 @@
 // Feature 015, E5: the two rewrites of the remote — `atlas admin compact` and
 // `atlas admin restore` (ADR-0026, Part A; ADR-0032) — against the double of
-// S3. Both are refused by the rule of the rewrite (pending here or published
-// by any device, an unreadable device; the forgotten ones do not count), both
+// S3. Neither is refused for a queue (ADR-0035, E4), both
 // archive before writing and never delete, and both write on the condition of
 // the remote they read. The restore walks its six steps in order.
 
@@ -66,40 +65,24 @@ const adminConsole = async (
 const renameNote: Migration = (record) => record;
 const V2: LedgerSchema = { version: 2, migrations: new Map([[1, renameNote]]) };
 
-describe("the rule of the rewrite of the remote", () => {
+describe("no queue to wait for (ADR-0035, E4)", () => {
   it.each([
     ["compact", ["admin", "compact", "--env", "test"]],
     ["restore", ["admin", "restore", "--env", "test", "--from", "backups/2026-09"]],
   ])(
-    "refuses %s with a device that published pending lines, and writes nothing",
+    "does not refuse %s for what a device published or for an unreadable object",
     async (_what, argv) => {
       const api = setup();
       api.s3.seed(LEDGER, text(seeded));
       api.s3.seed("backups/2026-09/ledger.jsonl", text(seeded.slice(0, 2)));
       device(api, `D${"1".repeat(21)}`, { pending: 3 });
-      const before = api.s3.keys();
+      api.s3.seed(`sync/devices/${"U".repeat(22)}.json`, "{");
       const { c } = await adminConsole(api, { schema: V2 });
-      expect(await c.exec(argv)).not.toBe(EXIT.ok);
-      expect(c.text()).toContain("rewrite_refused_pending_devices");
-      expect(api.s3.keys()).toEqual(before);
-      expect(api.s3.text(LEDGER)).toBe(text(seeded));
+      expect(await c.exec(argv)).toBe(EXIT.ok);
+      expect(c.text()).not.toContain("rewrite_refused");
+      expect(api.s3.keys().some((key) => key.startsWith("archive/"))).toBe(true);
     },
   );
-
-  it("refuses with a device that cannot be read, and does not count a forgotten one", async () => {
-    const api = setup();
-    api.s3.seed(LEDGER, text(seeded));
-    api.s3.seed(`sync/devices/${"U".repeat(22)}.json`, "{");
-    const { c } = await adminConsole(api, { schema: V2 });
-    expect(await c.exec(["admin", "compact", "--env", "test"])).not.toBe(EXIT.ok);
-    expect(c.text()).toContain("rewrite_refused_device_unreadable");
-    // Forgotten, with a queue: it does not count.
-    const other = setup();
-    other.s3.seed(LEDGER, text(seeded));
-    device(other, `D${"2".repeat(21)}`, { pending: 5, state: "forgotten" });
-    const again = await adminConsole(other, { schema: V2 });
-    expect(await again.c.exec(["admin", "compact", "--env", "test"])).toBe(EXIT.ok);
-  });
 });
 
 describe("atlas admin compact", () => {

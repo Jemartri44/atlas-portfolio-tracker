@@ -36,9 +36,6 @@ export const API_ERRORS = {
   precondition_failed: 412,
   init_rejected: 422,
   reference_name_invalid: 400,
-  // Review of PR #97, security B1: the device the web expects (`docs/api.md` §5.4).
-  expected_device_required: 400,
-  sync_device_changed: 409,
 } as const;
 
 export type ApiErrorCode = keyof typeof API_ERRORS;

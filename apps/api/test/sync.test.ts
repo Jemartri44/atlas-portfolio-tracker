@@ -33,9 +33,7 @@ const credentials = async (api: Api): Promise<{ token: Credential; session: Cred
     },
     session: {
       deviceId: session.device_id,
-      // The web names the device it joined with on every request of the sync
-      // (review of PR #97, security B1).
-      headers: { origin: SELF, "x-atlas-expected-device": session.device_id },
+      headers: { origin: SELF },
       jar: true,
     },
   };
@@ -379,91 +377,56 @@ describe("text that is not Unicode, and keys twice (review of PR #96, security B
   });
 });
 
-describe("the device the web expects (review of PR #97, security B1; §5.4)", () => {
+describe("the retired device binding (ADR-0035, E4; §5.4)", () => {
   const seeded = async () => {
     const api = setup();
     const both = await credentials(api);
     api.s3.seed(LEDGER, textOf([lineOf(account)]));
     return { api, ...both, etag: sha(textOf([lineOf(account)])) };
   };
-  const without = (as: Credential, name: string): Credential => ({
-    ...as,
-    headers: Object.fromEntries(Object.entries(as.headers).filter(([key]) => key !== name)),
-  });
   const naming = (as: Credential, device: string): Credential => ({
     ...as,
     headers: { ...as.headers, "x-atlas-expected-device": device },
   });
-  const OTHER = "AAAAAAAAAAAAAAAAAAAAAA";
 
-  /** Every route that binds the device, and what it would write. */
-  const routes = (etag: string) =>
-    [
-      ["GET", "/api/ledger", undefined, {}],
-      [
-        "POST",
-        "/api/ledger/lines",
-        { lines: [{ line: lineOf(deposit) }] },
-        { "if-match": `"${etag}"` },
-      ],
-      [
-        "PUT",
-        "/api/ledger",
-        { content: `${lineOf(deposit)}\n`, confirm_duplicate_ids: [] },
-        { "if-match": `"${EMPTY_ETAG}"` },
-      ],
-      ["PUT", "/api/sync/devices/self", { pending: 1, held: 0 }, {}],
-    ] as const;
-
-  const call = (api: Api, as: Credential, route: ReturnType<typeof routes>[number]) => {
-    const [method, path, body, headers] = route;
-    return method === "GET"
-      ? read(api, as, path, headers)
-      : write(api, as, method, path, body, headers);
-  };
-
-  it("asks the cookie for the header (400) on every route of the sync, and writes nothing", async () => {
+  it("serves the cookie of the web without the header, on the reads and the appends of the ledger", async () => {
     const { api, session, etag } = await seeded();
-    const ledger = api.s3.etagOf(LEDGER);
-    const device = api.s3.text(`sync/devices/${session.deviceId}.json`);
-    for (const route of routes(etag)) {
-      const answer = await call(api, without(session, "x-atlas-expected-device"), route);
-      expect(answer.statusCode, route[1]).toBe(400);
-      expect(errorOf(answer).code).toBe("expected_device_required");
-    }
-    expect(api.s3.etagOf(LEDGER)).toBe(ledger);
-    expect(api.s3.text(`sync/devices/${session.deviceId}.json`)).toBe(device);
-  });
-
-  it("refuses another device than the session's (409) on every route, and writes nothing", async () => {
-    const { api, session, etag } = await seeded();
-    const ledger = api.s3.etagOf(LEDGER);
-    const device = api.s3.text(`sync/devices/${session.deviceId}.json`);
-    for (const route of routes(etag)) {
-      const answer = await call(api, naming(session, OTHER), route);
-      expect(answer.statusCode, route[1]).toBe(409);
-      expect(errorOf(answer).code).toBe("sync_device_changed");
-    }
-    expect(api.s3.etagOf(LEDGER)).toBe(ledger);
-    expect(api.s3.text(`sync/devices/${session.deviceId}.json`)).toBe(device);
-  });
-
-  it("lets the token go without it, but never with another device named", async () => {
-    const { api, token } = await seeded();
-    expect((await read(api, token, "/api/ledger")).statusCode).toBe(200);
-    const answer = await read(api, naming(token, OTHER), "/api/ledger");
-    expect(answer.statusCode).toBe(409);
-    expect(errorOf(answer).code).toBe("sync_device_changed");
-  });
-
-  it("does not ask for it on the reference data, which binds no device", async () => {
-    const { api, session } = await seeded();
-    const answer = await read(
+    expect((await read(api, session, "/api/ledger")).statusCode).toBe(200);
+    const appended = await write(
       api,
-      without(session, "x-atlas-expected-device"),
-      "/api/reference/index",
+      session,
+      "POST",
+      "/api/ledger/lines",
+      { lines: [{ line: lineOf(deposit) }] },
+      { "if-match": `"${etag}"` },
     );
-    expect(answer.statusCode).toBe(200);
+    expect(appended.statusCode).toBe(200);
+    expect(JSON.parse(appended.body).accepted).toBe(1);
+  });
+
+  it("ignores the header when it is sent: it neither refuses nor binds anything", async () => {
+    const { api, session, token } = await seeded();
+    for (const as of [session, token]) {
+      const answer = await read(api, naming(as, "A".repeat(22)), "/api/ledger");
+      expect(answer.statusCode).toBe(200);
+    }
+  });
+
+  it("does not answer PUT /api/sync/devices/self any more, and writes nothing", async () => {
+    const { api, session, token } = await seeded();
+    const objects = [session, token].map((as) => api.s3.text(`sync/devices/${as.deviceId}.json`));
+    for (const as of [session, token]) {
+      const answer = await write(api, as, "PUT", "/api/sync/devices/self", {
+        pending: 1,
+        held: 0,
+        last_sync_at: "2026-10-01T09:00:00Z",
+      });
+      expect(answer.statusCode).toBe(404);
+      expect(errorOf(answer).code).toBe("not_found");
+    }
+    expect([session, token].map((as) => api.s3.text(`sync/devices/${as.deviceId}.json`))).toEqual(
+      objects,
+    );
   });
 });
 
@@ -541,84 +504,6 @@ describe("PUT /api/ledger (§5.5)", () => {
     );
     expect(answer.statusCode).toBe(412);
     expect(api.s3.text(LEDGER)).toBe(textOf([lineOf(deposit)]));
-  });
-});
-
-describe("PUT /api/sync/devices/self (§5.3)", () => {
-  const state = { pending: 2, held: 1, last_sync_at: "2026-10-01T09:00:00Z" };
-
-  it("writes the queue on the credential's own object, keeping what it is", async () => {
-    const api = setup();
-    const both = await credentials(api);
-    for (const [as, type] of [
-      [both.token, "console"],
-      [both.session, "web"],
-    ] as const) {
-      const before = JSON.parse(api.s3.text(`sync/devices/${as.deviceId}.json`) as string);
-      const answer = await write(api, as, "PUT", "/api/sync/devices/self", state);
-      expect(answer.statusCode).toBe(200);
-      const published = JSON.parse(answer.body);
-      expect(published.device_id).toBe(as.deviceId);
-      const after = JSON.parse(api.s3.text(`sync/devices/${as.deviceId}.json`) as string);
-      expect(after).toEqual({ ...before, ...state, published_at: published.published_at });
-      expect(after.type).toBe(type);
-    }
-  });
-
-  it("refuses a device_id in the body and a last_sync_at that is not an instant", async () => {
-    const api = setup();
-    const { token } = await credentials(api);
-    for (const body of [
-      { ...state, device_id: token.deviceId },
-      { ...state, last_sync_at: "ayer" },
-    ]) {
-      const answer = await write(api, token, "PUT", "/api/sync/devices/self", body);
-      expect(answer.statusCode).toBe(400);
-      expect(errorOf(answer).code).toBe("body_invalid");
-    }
-  });
-
-  it("never creates the object: a deleted one is device_forgotten, and stays deleted", async () => {
-    const api = setup();
-    const { token } = await credentials(api);
-    api.s3.deleteOutOfBand(`sync/devices/${token.deviceId}.json`);
-    const answer = await write(api, token, "PUT", "/api/sync/devices/self", state);
-    expect(errorOf(answer)).toEqual({ code: "device_forgotten", details: { reason: "missing" } });
-    expect(api.s3.text(`sync/devices/${token.deviceId}.json`)).toBeUndefined();
-  });
-
-  it("answers device_forgotten when a forgetting crosses the write, and 412 when anything else does", async () => {
-    for (const crossing of ["forgotten", "other"] as const) {
-      const api = setup();
-      const { token } = await credentials(api);
-      const key = `sync/devices/${token.deviceId}.json`;
-      api.s3.beforePut = (put) => {
-        if (put === key) {
-          api.s3.beforePut = undefined;
-          const current = JSON.parse(api.s3.text(key) as string);
-          api.s3.seed(
-            key,
-            JSON.stringify(
-              crossing === "forgotten"
-                ? { ...current, state: "forgotten", forgotten_at: "2026-10-01T10:00:00Z" }
-                : { ...current, pending: 7 },
-            ),
-          );
-        }
-      };
-      const answer = await write(api, token, "PUT", "/api/sync/devices/self", state);
-      const written = JSON.parse(api.s3.text(key) as string);
-      if (crossing === "forgotten") {
-        expect(errorOf(answer)).toEqual({
-          code: "device_forgotten",
-          details: { reason: "forgotten" },
-        });
-        expect(written.state).toBe("forgotten");
-      } else {
-        expect(errorOf(answer).code).toBe("precondition_failed");
-        expect(written.pending).toBe(7);
-      }
-    }
   });
 });
 

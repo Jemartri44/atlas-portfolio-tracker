@@ -79,21 +79,9 @@ export const REMOTE_FAILURE_CODES = [
   "device_forgotten",
   "remote_unavailable",
   "body_too_large",
-  // Review of PR #97, security B1 (docs/api.md §5.4): the web names on every
-  // request of the sync the device it joined with; without it, or with
-  // another than the session's, nothing is written.
-  "expected_device_required",
-  "sync_device_changed",
   "transport_rejected",
   "network_failed",
 ] as const;
-
-/**
- * The header in which the web names, on every request of the sync, the device
- * it joined with (`sync:device`; `docs/api.md` §5.4). The API compares it
- * with the device of the credential and writes nothing when they differ.
- */
-export const EXPECTED_DEVICE_HEADER = "x-atlas-expected-device";
 
 /**
  * The codes a line (or a unit) is rejected with inside a successful append

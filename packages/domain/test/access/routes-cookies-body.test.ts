@@ -102,7 +102,6 @@ describe("the routes and what each admits (api §2.3)", () => {
       "POST /api/devices/tokens/{token_id}/revoke",
       "POST /api/ledger/lines",
       "PUT /api/ledger",
-      "PUT /api/sync/devices/self",
     ]);
   });
 
@@ -111,7 +110,6 @@ describe("the routes and what each admits (api §2.3)", () => {
       ["GET", "/api/ledger"],
       ["POST", "/api/ledger/lines"],
       ["PUT", "/api/ledger"],
-      ["PUT", "/api/sync/devices/self"],
       ["GET", "/api/reference/index"],
       ["GET", "/api/reference/ecb/{name}"],
       ["GET", "/api/reference/prices/{name}"],
@@ -120,6 +118,8 @@ describe("the routes and what each admits (api §2.3)", () => {
       expect(findRoute(method, path)?.policy, path).toBe("sync");
     }
     expect(findRoute("GET", "/api/sync/devices")?.policy).toBe("session");
+    // Retired in E4 (ADR-0035): no queue to publish.
+    expect(findRoute("PUT", "/api/sync/devices/self")).toBeUndefined();
     expect(findRoute("GET", "/api/reference/ecb/a/b")).toBeUndefined();
   });
 

@@ -1,15 +1,12 @@
 // The rules of the routes of the sync and of the reference data (feature
 // 015, E3; `docs/api.md` §5 and §6), pure. What a line is worth is
 // `acceptAppend` and `acceptInit` (`@atlas/domain/sync`); this is what the
-// handler needs around them: the etag a write asks for, the object of a
-// device after it publishes, the names of the reference data and the answer
+// handler needs around them: the etag a write asks for, the names of the reference data and the answer
 // of a conditional read. The handler decides nothing of it.
 
-import type { DeviceQueueState, RemoteError } from "../ports/remote-ledger.js";
+import type { RemoteError } from "../ports/remote-ledger.js";
 import { priceFileName } from "../quotes/line.js";
 import { API_ERRORS, type ApiErrorCode, type ApiRefusal, refusal } from "./codes.js";
-import type { DeviceObject, DeviceType } from "./device.js";
-import { isInstant } from "./ids.js";
 
 const STRONG_SHA = /^"([0-9a-f]{64})"$/;
 
@@ -26,29 +23,6 @@ export const requestedEtag = (
     return { absent: true };
   }
   return { etag: STRONG_SHA.exec(header)?.[1] ?? "" };
-};
-
-/**
- * The object a device publishes its queue on (§5.3): **type, state,
- * creation, name and forgetting kept as they were**, the queue and the hour
- * of the API written. A `last_sync_at` that is not an instant would leave an
- * object no request could read again, and is refused.
- */
-export const publishedDevice = (
-  device: DeviceObject,
-  state: DeviceQueueState,
-  publishedAt: string,
-): DeviceObject | ApiRefusal => {
-  if (!isInstant(state.last_sync_at)) {
-    return refusal("body_invalid", { reason: "last_sync_at" });
-  }
-  return {
-    ...device,
-    pending: state.pending,
-    held: state.held,
-    last_sync_at: state.last_sync_at,
-    published_at: publishedAt,
-  };
 };
 
 export type ReferenceKind = "ecb" | "prices";
@@ -176,33 +150,4 @@ export const refusalOfRemote = (error: RemoteError): ApiRefusal => {
     throw new Error(`the API has no answer for ${error.code}`);
   }
   return refusal(error.code as ApiErrorCode, error.details);
-};
-
-/**
- * The routes of the sync that act **as a device** (`docs/api.md` §5.4): they
- * read what it will append over, append, initialise and publish its queue.
- * The reference data binds no device.
- */
-export const DEVICE_BOUND_PATHS: ReadonlySet<string> = new Set([
-  "/api/ledger",
-  "/api/ledger/lines",
-  "/api/sync/devices/self",
-]);
-
-/**
- * The device the client expects against the device of its credential (review
- * of PR #97, security B1). The web names on every request the device it
- * joined with: **without the header** a cookie is refused (`400`), since the
- * session may have changed under an open page; **with another device** than
- * the credential's, either credential is refused (`409`), and nothing is
- * written. The console's token binds its device already, so it may omit it.
- */
-export const expectedDeviceRefusal = (
-  credential: { readonly type: DeviceType; readonly deviceId: string },
-  header: string | undefined,
-): ApiRefusal | undefined => {
-  if (header === undefined) {
-    return credential.type === "web" ? refusal("expected_device_required") : undefined;
-  }
-  return header === credential.deviceId ? undefined : refusal("sync_device_changed");
 };

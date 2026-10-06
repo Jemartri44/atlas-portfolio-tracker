@@ -79,10 +79,6 @@ export const REMOTE_FAILURES: Readonly<Record<string, string>> = {
     "este navegador fue olvidado como dispositivo: vuelve a iniciar sesión y recibirá uno nuevo.",
   remote_unavailable: "la nube no está disponible ahora mismo: inténtalo de nuevo en unos minutos.",
   body_too_large: "la petición era demasiado grande para la nube; no se ha escrito nada.",
-  expected_device_required:
-    "la petición no decía con qué dispositivo se sincroniza; es un fallo de la aplicación. No se ha escrito nada.",
-  sync_device_changed:
-    "tu sesión es ahora de otro dispositivo que el que se unió en este navegador (quizá iniciaste sesión en otra pestaña). No se ha escrito nada: únete otra vez con «Unirme desde la nube» o «Unirme con mis operaciones».",
   transport_rejected: "la red ha rechazado la petición antes de llegar a la nube.",
   network_failed: "no hay conexión con la nube.",
 };
@@ -446,14 +442,6 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "No se compacta: no se puede leer el estado de la sincronización. Sincroniza primero.",
   compact_refused_marker_missing: () =>
     "No se compacta: falta el estado de la sincronización de una carpeta que se sincroniza. Sincroniza primero o desactiva la sincronización.",
-  rewrite_refused_pending_here: () =>
-    "No se reescriben los datos de la nube: aquí hay operaciones pendientes de subir. Sincroniza primero.",
-  rewrite_refused_pending_devices: () =>
-    "No se reescriben los datos de la nube: otros dispositivos tienen operaciones pendientes de subir.",
-  rewrite_refused_marker_unreadable: () =>
-    "No se reescriben los datos de la nube: no se puede leer el estado de la sincronización. Sincroniza primero.",
-  rewrite_refused_marker_missing: () =>
-    "No se reescriben los datos de la nube: falta el estado de la sincronización. Sincroniza primero.",
   import_refused_synced: () =>
     "No se importa: tus datos se sincronizan, e importar otro fichero borraría lo pendiente. Desactiva antes la sincronización.",
   deactivate_refused_pending: () =>
