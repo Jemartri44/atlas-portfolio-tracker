@@ -14,6 +14,6 @@ Copia exacta de `BackupsOnlyIfAbsent` (misma condición, verificada en `iam-perm
 
 Los cerrados no se borran nunca y siguen en el listado de primer nivel. Con un uso real de unas decenas al año es irrelevante; no se pagina hacia el cliente (la API lista todas las páginas de S3).
 
-## 4. La web no está hecha
+## 4. La web (entregada)
 
-La entrega agotó su presupuesto de turnos antes de la parte de la web (T4). El `ApiDraftStore` ya sirve para la cookie (`origin` propio y sin `token`). Falta restaurar de `19538c52^` la interfaz de borradores (`ledger/drafts.ts`, `draft-store.ts`, `routes/registrar/borradores.tsx`, `draft-rows.ts`, `shell/draft-counter.ts`, el botón de `EventForm`) sobre ese almacén, y quitar la guarda de `saveDraft` y de `EventForm`. Además, el commit del adaptador incluyó por error los cambios de `infra/` (se verá en el diff).
+Resuelta: la web de borradores (lista, contador, guardar, confirmar, descartar) está hecha sobre `ApiDraftStore`, con la cookie, y la guarda de `saveDraft` y de `EventForm` ya no existe. Los cambios de `infra/` que entraron en el commit del adaptador se aceptan tal cual.

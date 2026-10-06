@@ -1201,8 +1201,8 @@ const BOOT_BUDGET_GZIP_BYTES = 76_055;
  * **Feature 027, E6 of ADR-0035 (2026-10-06): the two sentences of the cloud
  * drafts' errors (`draft_exists`, `draft_changed`) in the catalogue; measured
  * ≈ 295.450 (the script prints KB), ceiling 295.800 — measured + ≈ 350.** The
- * boot is not touched. The web client of the drafts (T4) is not in yet and will
- * need its own figure.
+ * boot is not touched. The web client of the drafts (T4) came in the next block
+ * with its own figure.
  */
 /*
  * **Feature 027, E6 (2026-10-06): the cloud drafts come back to the web (list,

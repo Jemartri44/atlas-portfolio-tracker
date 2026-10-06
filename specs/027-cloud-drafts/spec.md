@@ -1,6 +1,6 @@
 # Especificación — 027 Borradores en la nube (ADR-0035, E6)
 
-Estado: en curso. Entrega E6 de `docs/adr/0035-cloud-ledger-single-source.md` (pregunta 1) sobre ADR-0029 (opción B).
+Estado: entregada. Entrega E6 de `docs/adr/0035-cloud-ledger-single-source.md` (pregunta 1) sobre ADR-0029 (opción B).
 
 ## Qué
 
