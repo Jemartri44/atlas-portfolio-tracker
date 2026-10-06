@@ -18,4 +18,4 @@ Borrar lo que ya no usa ninguna app, la API ni lo que ADR-0035 manda conservar: 
 
 ## Fuera de alcance
 
-Los borradores en la nube (E6) y el almacén de IndexedDB del libro del navegador (`questions.md` §1).
+Los borradores en la nube (E6, hecha en la feature 027) y el almacén de IndexedDB del libro del navegador (`questions.md` §1).
