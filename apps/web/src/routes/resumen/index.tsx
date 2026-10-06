@@ -30,7 +30,7 @@ import {
 import { bookCashSeries, contributedSeries } from "@atlas/domain/charts";
 import { A } from "@solidjs/router";
 import { createMemo, createResource, For, type JSX, Show } from "solid-js";
-import { Icon, type NoticeItem, NoticeLink, Section } from "../../components/index.js";
+import { Icon, type NoticeItem, Section } from "../../components/index.js";
 import { formatLongDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
@@ -50,7 +50,7 @@ import { netWorthPlot, withBookCash, withContributed } from "../../view-models/s
 import { type SummaryCard, summaryOrder } from "../../view-models/summary-order.js";
 import { RequireLedger } from "../guard.jsx";
 import { EntryLine } from "../movimientos/MovementList.jsx";
-import { AttentionBlock, noticeOf } from "./AttentionBlock.jsx";
+import { AttentionBlock } from "./AttentionBlock.jsx";
 import { EvolutionCard } from "./EvolutionCard.jsx";
 import { FirstSteps } from "./FirstSteps.jsx";
 // The card that leads to the fiscal screen only draws, so it is on the boot

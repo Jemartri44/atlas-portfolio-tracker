@@ -8,18 +8,13 @@
 // that is on the device, and a control proves it would see a ledger if one
 // were there.
 
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { IMPORTED_HISTORY_KEY, saveImportedHistory } from "@atlas/adapters/reference";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { FakeIdbFactory } from "../../../../packages/adapters/test/fake-idb.js";
-import { reloadWebHistory } from "../../src/ecb/history.js";
 import { bootCloud } from "../../src/ledger/cloud.js";
 import { store } from "../../src/ledger/state.js";
-import RegistrarForm from "../../src/routes/registrar/form.jsx";
 import { goldenEvents, goldenText } from "../helpers/golden.js";
-import { choose, settle, show, showInShell, text, type, until } from "../helpers/render.jsx";
+import { showInShell, text, until } from "../helpers/render.jsx";
 import { apiAt, sameOrigin, signedIn } from "./api-support.js";
 
 const holder = globalThis as { indexedDB?: unknown; caches?: unknown };

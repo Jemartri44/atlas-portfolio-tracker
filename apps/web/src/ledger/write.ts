@@ -15,6 +15,9 @@
 //   4. When in doubt, nothing is written. Every path that is not a clean
 //      success leaves the ledger exactly as it was, or says it does not know.
 //
+// LINE BUDGET: the whole write path (ids, conflict, unknown outcome, impacts of
+// a change) stays in one module on purpose; E5 will not split it.
+//
 // Separate from `actions.ts`: opening a ledger is what the boot does, writing
 // to it is what a form does, and keeping them together put the write flows in
 // the boot chunk.

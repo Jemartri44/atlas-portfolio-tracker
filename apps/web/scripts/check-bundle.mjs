@@ -1183,7 +1183,12 @@ const BOOT_BUDGET_GZIP_BYTES = 76_055;
  * room back** (they retire the local ledger and the queue); the ceiling comes
  * back down then. The trend: 315.489 → 320.215.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 320_500;
+/*
+ * **Feature 023, E2b (2026-10-06): the local ledger, import, folder, sync card
+ * and drafts leave the product; measured ≈ 295.2 KB (−25 KB against the 320.215
+ * of E2a), ceiling 295.500.** The boot ceiling is not touched.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 295_500;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,

@@ -207,11 +207,6 @@
 
 /* ---- First screenful by importance (feature 020, M2) ---------------------- */
 
-/* The risk of losing the data: one line across, before anything else. */
-.grid > .summary-loss {
-  grid-column: 1 / -1;
-}
-
 /* Out of the season, the tax card folded to one row that is its own link. */
 .summary-fiscal.is-row {
   padding: 0;

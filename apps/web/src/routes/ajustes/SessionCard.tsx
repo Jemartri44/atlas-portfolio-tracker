@@ -7,7 +7,7 @@ import { Notice, Section } from "../../components/index.js";
 import { formatInstantDate } from "../../format/date.js";
 import { store } from "../../ledger/state.js";
 import { signOut } from "../../sync/session.js";
-import { DevicesCard } from "./sync/DevicesCard.jsx";
+import { DevicesCard } from "./DevicesCard.jsx";
 
 const when = (instant: string): string => {
   const time = new Date(instant).toLocaleTimeString("es-ES", {
