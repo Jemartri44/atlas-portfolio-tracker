@@ -1434,10 +1434,6 @@ const LAZY_ONLY = [
   // the devices and the screens of the sync are a lazy section of Ajustes.
   { path: "/packages/domain/src/access/", what: "las reglas del acceso" },
   { path: "/packages/domain/src/access.ts", what: "la puerta del acceso" },
-  {
-    path: "/packages/adapters/src/ledger-store/browser/web-device.ts",
-    what: "el identificador del dispositivo de la web",
-  },
   { path: "/src/sync/", what: "la sesión y la sincronización de la web" },
   { path: "/src/routes/ajustes/sync/", what: "la sección de sincronización de Ajustes" },
   { path: "/packages/domain/src/sync.ts", what: "la puerta de la sincronización" },
@@ -1447,10 +1443,6 @@ const LAZY_ONLY = [
     what: "el puerto del estado de la sincronización",
   },
   { path: "/packages/adapters/src/sync/", what: "la orquestación de la sincronización" },
-  {
-    path: "/packages/adapters/src/ledger-store/browser/sync-store.ts",
-    what: "el estado de la sincronización en el navegador",
-  },
 ];
 
 /** The modules a chunk is made of, from its source map; empty when it has none. */
