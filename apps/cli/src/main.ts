@@ -503,7 +503,7 @@ const report = async (io: Io, error: unknown, cloud?: CloudLedgerStore): Promise
   // The refusal of `--accept-invalid` on a synced folder (V7) is not a list of
   // dependants to rectify: it has its own sentence.
   if (error instanceof DependentEventsError && error.code !== "accept_invalid_while_synced") {
-    io.err(describeDependants(error));
+    io.err(describeDependants(error, cloud === undefined));
     return EXIT.domain;
   }
   if (error instanceof ConflictError) {

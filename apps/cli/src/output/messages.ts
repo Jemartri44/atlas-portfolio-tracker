@@ -804,13 +804,19 @@ const PARTIAL_BOX: Record<string, string> = {
 export const describeDuplicate = (error: DuplicateFingerprintError): string =>
   `Ya existe un evento con la misma huella (${error.existing.join(", ")}). Si es una repetición legítima, añade --confirm-duplicate.`;
 
-export const describeDependants = (error: DependentEventsError): string => {
+export const describeDependants = (
+  error: DependentEventsError,
+  /** False in a cloud folder: the cloud never accepts an invalid ledger (ADR-0035). */
+  canAcceptInvalid = true,
+): string => {
   const isSettings = error.code === "newly_invalid_events";
   const heading = isSettings
     ? "Eventos que pasan a ser inválidos con la configuración nueva:"
     : "Eventos que dejarían de ser válidos (rectifícalos primero):";
   const footer = isSettings
-    ? "\nLos hechos no cambian, cambia su interpretación (ADR-0015). Repite con --accept-invalid si es lo que quieres."
+    ? canAcceptInvalid
+      ? "\nLos hechos no cambian, cambia su interpretación (ADR-0015). Repite con --accept-invalid si es lo que quieres."
+      : "\nLos hechos no cambian, cambia su interpretación (ADR-0015). En una carpeta de nube no se puede aceptar un libro inválido: repara antes esos eventos."
     : "";
   return `${describeError(error)}\n${heading}\n${table(
     ["id", "tipo", "motivo"],

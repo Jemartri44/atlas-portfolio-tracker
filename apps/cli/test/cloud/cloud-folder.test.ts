@@ -21,11 +21,11 @@ const baseLines = (): string[] => {
   return b.build().map(encodeLine);
 };
 
-/** A cloud folder whose cloud holds `baseLines`. */
-const cloud = async () => {
+/** A cloud folder whose cloud holds `baseLines` (or `lines`). */
+const cloud = async (lines: readonly string[] = baseLines()) => {
   const c = await setupConsole();
   const seed = join(c.root, "seed.jsonl");
-  await writeFile(seed, textOf(baseLines()));
+  await writeFile(seed, textOf(lines));
   expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
   expect(await c.exec(["remote", "upload", "--from", seed, "--yes"])).toBe(0);
   c.out.length = 0;
@@ -226,7 +226,7 @@ describe("a cloud folder reads and writes the cloud's ledger", () => {
     expect(c.api.s3.text(LEDGER_KEY)).not.toContain('"amount":"7"');
   });
 
-  it("refuses compact, --accept-invalid and drafts; compact works in a local folder", async () => {
+  it("refuses compact and drafts; compact works in a local folder", async () => {
     const { c } = await cloud();
     expect(await c.exec(["compact", "--yes"])).toBe(EXIT.domain);
     expect(said(c)).toContain("compact_cloud_folder");
@@ -236,6 +236,55 @@ describe("a cloud folder reads and writes the cloud's ledger", () => {
     const local = await setupConsole();
     await writeFile(join(local.ledger, "ledger.jsonl"), textOf(baseLines()));
     expect(await local.exec(["compact", "--yes"])).toBe(EXIT.ok);
+  });
+
+  describe("a settings change that would leave events invalid", () => {
+    /** A fund bought and sold on dates that swap order when read by trade date. */
+    const reorderable = (): string[] => {
+      const b = new Events();
+      b.settings(CLI_SETTINGS);
+      b.account("acc_fund");
+      b.asset("ast_world", "fund");
+      b.deposit("acc_fund", "2027-01-04", "5000");
+      b.push("buy", {
+        account_id: "acc_fund",
+        asset_id: "ast_world",
+        trade_date: "2027-01-13",
+        value_date: "2027-01-15",
+        quantity: "10",
+        unit_price: "100",
+        currency: "EUR",
+        fx_rate: "1",
+        fx_rate_date: "2027-01-15",
+        fee: "0",
+        source: "manual",
+      });
+      b.sell("acc_fund", "ast_world", "2027-01-20", "10", "100", "2027-01-12");
+      return b.build().map(encodeLine);
+    };
+    const CHANGE = ["settings", "set", "--fiscal-date-rule", "fund=trade_date", "--yes"];
+
+    it("is refused with --accept-invalid in a cloud folder, and nothing is written", async () => {
+      const { c } = await cloud(reorderable());
+      const before = c.api.s3.text(LEDGER_KEY);
+      expect(await c.exec([...CHANGE, "--accept-invalid"])).toBe(EXIT.domain);
+      expect(said(c)).toContain("solo vale en una carpeta local sin nube ni sincronización");
+      expect(c.api.s3.text(LEDGER_KEY)).toBe(before);
+    });
+
+    it("lists the events and does not offer --accept-invalid in a cloud folder", async () => {
+      const { c } = await cloud(reorderable());
+      expect(await c.exec(CHANGE)).toBe(EXIT.domain);
+      expect(said(c)).toContain("Eventos que pasan a ser inválidos");
+      expect(said(c)).not.toContain("--accept-invalid");
+    });
+
+    it("is still offered in a local folder", async () => {
+      const local = await setupConsole();
+      await writeFile(join(local.ledger, "ledger.jsonl"), textOf(reorderable()));
+      expect(await local.exec(CHANGE)).toBe(EXIT.domain);
+      expect(said(local)).toContain("Repite con --accept-invalid");
+    });
   });
 });
 
