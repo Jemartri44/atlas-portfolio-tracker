@@ -2,6 +2,7 @@
 // over the double of S3, with both credentials. Every object is created once
 // and nothing is overwritten or deleted.
 
+import { endObjectText } from "@atlas/domain/ecb";
 import { describe, expect, it } from "vitest";
 import { consoleLogin, errorOf, SELF, setup } from "./harness.js";
 
@@ -138,6 +139,48 @@ describe("the drafts in the cloud (§6.1)", () => {
       `drafts/${A}.json`,
       `drafts/${A}.stamp.json`,
     ]);
+  });
+
+  /** Another client's write lands just before ours reaches S3: `key` is created first, with `text`. */
+  const racing = (api: Api, suffix: string, text: string): void => {
+    const real = api.s3.putIfNoneMatch.bind(api.s3);
+    let done = false;
+    api.s3.putIfNoneMatch = async (key, body) => {
+      if (!done && key.endsWith(suffix)) {
+        done = true;
+        await real(`drafts/${A}.end.json`, new TextEncoder().encode(text));
+      }
+      return real(key, body);
+    };
+  };
+
+  it("never stamps a draft that another client closes while stamping (the race)", async () => {
+    const api = setup();
+    const { token } = await credentials(api);
+    await post(api, token, "/api/drafts", { draft: draft() });
+    racing(api, ".stamp.json", endObjectText(A, { outcome: "discarded" }, new Date()));
+    const stamped = await post(api, token, `/api/drafts/${A}/stamp`, { pending_event_id: E1 });
+    expect(stamped.statusCode).toBe(409);
+    expect(errorOf(stamped)).toEqual({ code: "draft_changed", details: { now: "gone" } });
+  });
+
+  it("answers what the other end says when two clients close at once (the race)", async () => {
+    const api = setup();
+    const { token } = await credentials(api);
+    await post(api, token, "/api/drafts", { draft: draft() });
+    racing(api, ".end.json", endObjectText(A, { outcome: "discarded" }, new Date()));
+    const lost = await post(api, token, `/api/drafts/${A}/end`, { outcome: "discarded" });
+    expect(JSON.parse(lost.body)).toMatchObject({ outcome: "discarded", created: false });
+    const api2 = setup();
+    const { token: token2 } = await credentials(api2);
+    await post(api2, token2, "/api/drafts", { draft: draft() });
+    await post(api2, token2, `/api/drafts/${A}/stamp`, { pending_event_id: E1 });
+    racing(api2, ".end.json", endObjectText(A, { outcome: "discarded" }, new Date()));
+    const other = await post(api2, token2, `/api/drafts/${A}/end`, {
+      outcome: "confirmed",
+      event_id: E1,
+    });
+    expect(errorOf(other)).toEqual({ code: "draft_changed", details: { now: "gone" } });
   });
 
   it("discards without a stamp, and answers a missing draft with 404", async () => {
