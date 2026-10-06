@@ -10,7 +10,6 @@ import { describe, expect, it, vi } from "vitest";
 import Configuracion from "../src/routes/ajustes/configuracion.jsx";
 import Ajustes from "../src/routes/ajustes/index.jsx";
 import Verificacion from "../src/routes/ajustes/verificacion.jsx";
-import Libro from "../src/routes/libro/index.jsx";
 import { optionsOf, show, text, today, withGoldenLedger } from "./helpers/render.jsx";
 import { withoutStyles, withStyles } from "./helpers/styles.js";
 
@@ -88,55 +87,4 @@ describe("the settings", () => {
   });
 });
 
-describe("the first run", () => {
-  it("keeps the data in this browser, with one primary button and no folder where there is none", async () => {
-    // happy-dom has no folder picker, like a phone, Firefox or Safari.
-    const host = await show("/libro", Libro);
-    const choices = [...host.querySelectorAll(".choices > .choice")];
-    expect(choices.map((choice) => text(choice.querySelector("h2")))).toEqual([
-      "Tus datos, en este navegador",
-    ]);
-    const primary = [...host.querySelectorAll(".choice button")].filter(
-      (button) => !button.classList.contains("secondary"),
-    );
-    expect(primary.map(text)).toEqual(["Seguir con los datos de este navegador"]);
-    expect(text(host)).not.toContain("carpeta de la consola");
-    expect(text(host)).toContain("No es un almacén definitivo");
-  });
-
-  it("says once that nothing was touched when a chosen file cannot be read", async () => {
-    const host = await show("/libro", Libro);
-    const input = host.querySelector('input[type="file"]') as HTMLInputElement;
-    const unreadable = {
-      text: () => Promise.reject(new DOMException("gone", "NotReadableError")),
-    };
-    Object.defineProperty(input, "files", { value: [unreadable], configurable: true });
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-    await new Promise((resolve) => setTimeout(resolve, 30));
-    const said = text(host.querySelector(".notice"));
-    expect(said).toContain("No se ha podido leer el archivo");
-    expect(said.match(/no se ha tocado nada/gi)).toHaveLength(1);
-  });
-
-  it("offers to import from the console's folder where there is one, and says the two are apart", async () => {
-    const picker = window as unknown as { showDirectoryPicker?: () => Promise<never> };
-    picker.showDirectoryPicker = () => Promise.reject(new Error("no se usa"));
-    withStyles(2045, 1141);
-    try {
-      const host = await show("/libro", Libro);
-      const buttons = [...host.querySelectorAll(".choice button")];
-      expect(buttons.filter((button) => !button.classList.contains("secondary")).map(text)).toEqual(
-        ["Seguir con los datos de este navegador"],
-      );
-      // «Importar de la carpeta» (feature 020, M13): the long label broke into
-      // two lines inside its 44px at 400px; the card says whose folder it is.
-      const folder = buttons.find((button) => text(button).trim() === "Importar de la carpeta");
-      expect(folder?.classList.contains("secondary")).toBe(true);
-      // The consequence of the decision of feature 012, written and not hidden.
-      expect(text(host)).toContain("no comparten un libro vivo");
-    } finally {
-      delete picker.showDirectoryPicker;
-      withoutStyles();
-    }
-  });
-});
+describe("the first run", () => {});

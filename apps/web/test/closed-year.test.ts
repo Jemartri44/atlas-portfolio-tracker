@@ -79,7 +79,7 @@ const open = async (text: string): Promise<void> => {
     clock: { now: () => new Date("2029-07-01T10:00:00.000Z") },
     random: (target) => target.fill(7),
   };
-  await loadInto({ deps, source: { kind: "browser", persisted: false } });
+  await loadInto({ deps, source: { kind: "cloud", expiresAt: "2099-01-01T00:00:00.000Z" } });
 };
 
 /** A sale of 2027, the year that was filed. */
@@ -111,7 +111,7 @@ const idOfFirstSale = (): string =>
 
 describe("what a write does to a filed return", () => {
   beforeEach(() => {
-    store.setLoad({ phase: "unconfigured" });
+    store.setLoad({ phase: "loading" });
     store.setDeps(undefined);
     store.clearCache();
   });

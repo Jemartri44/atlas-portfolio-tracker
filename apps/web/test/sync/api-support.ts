@@ -3,11 +3,8 @@
 // web sign-in and `Origin` on a write, as the browser sends them; a browser on
 // the double of IndexedDB; and what the cloud holds.
 
-import type { LedgerEvent, UseCaseDeps } from "@atlas/domain";
 import { SESSION_COOKIE } from "@atlas/domain/access";
-import { webDevice } from "../../../../packages/adapters/test/sync/devices.js";
 import { ALLOWED, SELF, setup } from "../../../api/test/harness.js";
-import type { WebSyncEnv } from "../../src/sync/engine.js";
 
 export type Api = ReturnType<typeof setup>;
 
@@ -62,46 +59,6 @@ export const signedIn = async (api: Api): Promise<{ cookie: string; device: stri
   return { cookie, device: (JSON.parse(view.body) as { device_id: string }).device_id };
 };
 
-export const browserOf = async (events: readonly LedgerEvent[], api: Api) => {
-  let session: { cookie: string | undefined; device: string } = await signedIn(api);
-  const web = webDevice(events);
-  let millis = Date.parse("2027-08-30T09:00:00.000Z");
-  const env: WebSyncEnv = {
-    fetch: sameOrigin(api, () => session.cookie),
-    open: web.open,
-    now: () => {
-      millis += 1000;
-      return new Date(millis);
-    },
-  };
-  return {
-    web,
-    env,
-    /** The device of the cookie this browser holds now. */
-    device: () => session.device,
-    /** Another tab signs in again, and the API assigns another device: the cookie changes here too. */
-    signInAgain: async (): Promise<void> => {
-      session = await signedIn(api);
-    },
-    /** The session is closed: no cookie travels any more. */
-    signOut: (): void => {
-      session = { cookie: undefined, device: "" };
-    },
-  };
-};
-
 /** What the cloud holds, read off the double of S3. */
 export const cloudText = async (api: Api): Promise<string> =>
   api.s3.text("ledger/ledger.jsonl") ?? "";
-
-export const depsOf = (web: ReturnType<typeof webDevice>, env: WebSyncEnv): UseCaseDeps => {
-  let counter = 0;
-  return {
-    store: web.store,
-    clock: { now: env.now as () => Date },
-    random: (target) => {
-      counter += 1;
-      target.fill((counter * 7) % 256);
-    },
-  };
-};

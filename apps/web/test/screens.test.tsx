@@ -63,7 +63,10 @@ const text = (host: HTMLElement): string => (host.textContent ?? "").replace(/\s
 
 beforeEach(async () => {
   store.setPrivacy(false);
-  await loadInto({ deps: deps(), source: { kind: "browser", persisted: false } });
+  await loadInto({
+    deps: deps(),
+    source: { kind: "cloud", expiresAt: "2099-01-01T00:00:00.000Z" },
+  });
 });
 
 afterEach(() => {
@@ -331,7 +334,10 @@ const OVERDUE = ledgerOf({
 
 describe("Resumen applies the rule of `transfer_max_days`", () => {
   it("puts an overdue request in the attention list, in Spanish", async () => {
-    await loadInto({ deps: deps(OVERDUE), source: { kind: "browser", persisted: false } });
+    await loadInto({
+      deps: deps(OVERDUE),
+      source: { kind: "cloud", expiresAt: "2099-01-01T00:00:00.000Z" },
+    });
     const shown = text(await show("/", Resumen));
 
     expect(shown).toContain("El traspaso de World Index Fund a Global Bond Index Fund lleva");
@@ -418,7 +424,7 @@ describe("the privacy mode covers the prose of the warnings", () => {
     // silently emptied the block the day it was not (feature 011, P7).
     await loadInto({
       deps: deps(WASH_SALE, "2026-06-01T10:00:00.000Z"),
-      source: { kind: "browser", persisted: false },
+      source: { kind: "cloud", expiresAt: "2099-01-01T00:00:00.000Z" },
     });
   });
 

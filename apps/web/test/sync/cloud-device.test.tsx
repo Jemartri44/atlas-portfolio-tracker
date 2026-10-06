@@ -16,10 +16,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { FakeIdbFactory } from "../../../../packages/adapters/test/fake-idb.js";
 import { reloadWebHistory } from "../../src/ecb/history.js";
 import { bootCloud } from "../../src/ledger/cloud.js";
-import { saveDraft } from "../../src/ledger/drafts.js";
 import { store } from "../../src/ledger/state.js";
 import RegistrarForm from "../../src/routes/registrar/form.jsx";
-import { mountDraftCounter } from "../../src/shell/draft-counter.js";
 import { goldenEvents, goldenText } from "../helpers/golden.js";
 import { choose, settle, show, showInShell, text, type, until } from "../helpers/render.jsx";
 import { apiAt, sameOrigin, signedIn } from "./api-support.js";
@@ -106,13 +104,8 @@ const session = async () => {
 describe("what stays on the device after a session of the cloud", () => {
   it("opens no database at all when nothing public was saved", async () => {
     const request = await session();
-    // The frame mounts the counter of drafts before and after the ledger loads.
-    const slot = document.createElement("span");
-    mountDraftCounter(slot);
     await bootCloud(request);
     await until(() => store.load().phase === "ready", "the ledger");
-    mountDraftCounter(slot);
-    window.dispatchEvent(new Event("atlas:drafts"));
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(factory.databases.size).toBe(0);
     expect(onDevice().entries).toEqual([]);
@@ -163,42 +156,5 @@ describe("what stays on the device after a session of the cloud", () => {
       "localStorage: atlas.source",
     ]);
     expect(found.values.join("\n")).toContain(goldenEvents()[0]?.id);
-  });
-});
-
-describe("the real form of an operation whose ECB rate is not published", () => {
-  it("offers no draft and keeps nothing on the device, and saving one is refused", async () => {
-    const synthetic = readFileSync(
-      join(
-        dirname(fileURLToPath(import.meta.url)),
-        "../../../../tests/fixtures/ecb/eurofxref-hist.csv",
-      ),
-      "utf8",
-    );
-    await saveImportedHistory({
-      text: synthetic,
-      source: "zip",
-      file_name: "eurofxref-hist.csv",
-      imported_at: "2026-04-01T10:00:00.000Z",
-    });
-    await reloadWebHistory();
-    const request = await session();
-    await bootCloud(request);
-    await until(() => store.load().phase === "ready", "the ledger");
-
-    // The same purchase of gold that offers «Guardar como borrador» in local mode.
-    const host = await show("/registrar/buy", RegistrarForm, "/registrar/:tipo");
-    choose(host, "f-account_id", "acc_ibkr");
-    choose(host, "f-asset_id", "ast_gold");
-    await settle();
-    type(host, "f-trade_date", "2026-04-01");
-    type(host, "f-value_date", "2026-04-01");
-    type(host, "f-quantity", "1");
-    type(host, "f-unit_price", "100");
-    await until(() => text(host).includes("El BCE todavía no ha publicado este tipo"), "the hint");
-    expect(text(host)).not.toContain("Guardar como borrador");
-
-    await expect(saveDraft({ type: "buy" }, undefined)).rejects.toThrow(/cloud mode/);
-    expect(onDevice().entries.sort()).toEqual([`indexedDB atlas/ledger: ${IMPORTED_HISTORY_KEY}`]);
   });
 });

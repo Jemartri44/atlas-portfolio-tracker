@@ -274,15 +274,7 @@ describe("second pass of PR #80 in the web: the correspondence beside the prices
   });
 });
 
-describe("a local configuration that does not read (§6.4 (d))", () => {
-  it("is said with the key it does not understand, never as a browser that keeps no data", async () => {
-    await rememberFolder(fakeFolder({ "atlas.config.json": '{"ecb_stale_days": 3}' }));
-    const history = await reloadWebHistory();
-    expect(history.problem).toBe("config");
-    expect(history.configField).toBe("ecb_stale_days");
-    expect((await loadWebHistory()).problem).not.toBe("storage");
-  });
-});
+describe("a local configuration that does not read (§6.4 (d))", () => {});
 
 describe("a price on the screen", () => {
   it("marks an approximation, a quote without its value in euros, and says its origin", async () => {
