@@ -11,8 +11,9 @@ import { PageHeader } from "../../shell/PageHeader.jsx";
 
 export const Reloaded = (): JSX.Element => (
   <Notice severity="caution" title="Tus datos han cambiado">
-    Otra pestaña o la CLI han escrito mientras rellenabas. Se han recargado: vuelve a ver el efecto
-    antes de confirmar. No se ha pisado nada.
+    Otro dispositivo, otra pestaña o la consola han registrado algo mientras rellenabas. Se han
+    vuelto a leer tus datos y el efecto de abajo es el de ahora: revísalo y confirma otra vez. No se
+    ha pisado nada.
   </Notice>
 );
 
