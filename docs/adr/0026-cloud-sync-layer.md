@@ -248,3 +248,22 @@ La feature 014 (PR #83) construyó el núcleo de esta ADR sin desplegar: el caso
 - los huecos de la propiedad «ninguna línea se pierde»;
 - decidir si rehacer debe permitirse con el libro inválido por una pareja retenida (D-Q1, arriba);
 - falta un test de `correctEvent` sobre un libro ya inválido y de rehacer con el libro local inválido.
+
+## Nota del 2026-10-06: enmienda parcial por ADR-0035
+
+**ADR-0035 (Aceptada, 2026-10-06)** desarrolla la decisión de la persona: sin conexión no se registra nada, el libro de S3 es la única fuente de verdad y los clientes escriben directamente contra la API, con `If-Match`. Es la opción 1 de esta ADR, que entonces se descartó.
+
+**Se retiran:**
+
+- de la Parte A, «Capa, no sustituto»;
+- la Parte B entera: la cola por dispositivo, el marcador, lo retenido y lo descartado, unirse, volver a descargar, rehacer y el cerrojo usado por la sincronización;
+- el paso 7, publicar el estado de la cola;
+- la negativa de `compact` y de la restauración por líneas pendientes.
+
+**Siguen:**
+
+- de la Parte A, que la API es el único escritor, solo añade y valida cada línea, y que la pareja y la cadena cuentan como una sola unidad;
+- el sello, el reloj y las operaciones de líneas crudas;
+- la Parte C.
+
+La enmienda está vigente en la decisión; el código cambia con las entregas de ADR-0035 (§7), y hasta que la nube esté desplegada (features 018 y 019) lo construido sigue como está.

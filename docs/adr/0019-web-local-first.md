@@ -54,3 +54,15 @@ Decidida por la dirección al levantar la parada del paso 0 de la feature 012 (d
 **Consecuencia asumida.** Hasta que exista la sincronización (ADR-0026, feature 014), **la web y la consola de escritorio no comparten un libro vivo**: cada una tiene el suyo, y se pasa de una a otra **exportando e importando**. «Una sola fuente de verdad, sin copias», que era lo que esta ADR buscaba en el escritorio, deja de ser cierto hasta entonces. Hoy no cuesta nada real: el usuario no usaba todavía el modo de fichero directo. Lo que sigue vigente: la web funciona entera sin servidor, sin cuenta y sin conexión, y nunca presenta IndexedDB como un almacén definitivo.
 
 **En el código** (feature 012, PR #75): la web pide la carpeta solo para leer; un test de arquitectura impide que vuelva a pedir permiso de escritura o cree un fichero en ella. Toda lectura seguida de escritura del libro en IndexedDB es **una sola transacción** de lectura y escritura (`LedgerBlob.update`), y la fecha de la última exportación vive aparte del texto (`current:meta`).
+
+## Nota del 2026-10-06: enmienda parcial por ADR-0035
+
+**ADR-0035 (Aceptada, 2026-10-06)** desarrolla la decisión de la persona: el libro de S3 pasa a ser la única fuente de verdad y la web escribe directamente contra la API, con `If-Match`. **Dejan de valer de esta ADR:**
+
+- el libro en IndexedDB;
+- «sin conexión no se pierde ninguna funcionalidad»: sin conexión no se registra ni se enseña nada;
+- «no hay autenticación»;
+- importar un libro y el aviso de exportar;
+- la lectura de la carpeta de la consola.
+
+**Sigue valiendo:** el dominio compartido, que proyecta en el navegador sobre el libro descargado, y la caché del *shell* de la PWA. La enmienda está vigente en la decisión; el código de la web cambia con las entregas de ADR-0035 (§7), y hasta que la nube esté desplegada (features 018 y 019) la web actual sigue como está.
