@@ -105,3 +105,12 @@ export const isWeekend = (date: CivilDate): boolean => {
  */
 export const lastWorkingDay = (date: CivilDate): CivilDate =>
   isWeekend(date) ? lastWorkingDay(addDays(date, -1)) : date;
+
+/**
+ * First working day on or after `date`, rolling forward **weekends only**: the
+ * rule of art. 30.5 of the Law 39/2015 for a deadline that ends on a Saturday
+ * or a Sunday. Holidays are not known here (art. 30.6 makes them depend on
+ * where the taxpayer lives).
+ */
+export const nextWorkingDay = (date: CivilDate): CivilDate =>
+  isWeekend(date) ? nextWorkingDay(addDays(date, 1)) : date;

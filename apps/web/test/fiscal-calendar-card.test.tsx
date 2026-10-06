@@ -50,15 +50,15 @@ describe("the fiscal calendar of /fiscal", () => {
     expect(text(host)).toMatch(/Plazo del Modelo 72[01] de 2030: sin verificar/);
   });
 
-  it("marks a deadline nobody verified, and no other", async () => {
+  it("shows a deadline carried off a weekend as a legal extension, and no other", async () => {
     const calendar = fiscalCalendar(events, MAY);
-    const deadline = (verified: boolean) =>
+    const deadline = (moved: boolean) =>
       ({
-        date: "2029-03-31",
+        date: moved ? "2029-04-02" : "2029-03-30",
         kind: "filing_deadline",
         model: "720",
         year: 2028,
-        verified,
+        ...(moved ? { extended_from: "2029-03-31", file_by: "2029-03-30" } : {}),
         sources: [],
       }) as ReturnType<typeof fiscalCalendar>["dates"][number];
     const host = await show("/", () => (
@@ -69,13 +69,10 @@ describe("the fiscal calendar of /fiscal", () => {
       />
     ));
     const rows = [...host.querySelectorAll(".calendar-list li")].map((row) => text(row));
-    expect(rows[0]).toContain("Plazo del Modelo 720 de 2028 · sin verificar");
-    expect(rows[1]).toContain("Plazo del Modelo 721 de 2028");
-    expect(rows[1]).not.toContain("sin verificar");
-    // The strip marks the unverified deadline and says so to a screen reader.
-    const strip = host.querySelector("svg.calendar-strip");
-    expect(strip?.querySelectorAll(":scope > svg text").length).toBe(1);
-    expect(strip?.getAttribute("aria-label")).toContain("2028 · sin verificar");
+    expect(rows[0]).toContain("Plazo del Modelo 720 de 2028");
+    expect(rows[0]).not.toContain("prórroga");
+    expect(rows[1]).toContain("Plazo del Modelo 721 de 2028 · prórroga legal del ");
+    expect(rows[1]).toContain("conviene presentarlo antes del ");
   });
 
   it("names every asset whose window ends the same day", async () => {

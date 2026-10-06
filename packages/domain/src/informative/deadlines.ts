@@ -13,17 +13,19 @@
 // annex). The first year of the Model 720 (2012) had a transitional deadline
 // (1 February to 30 April 2013) that is not in the table.
 //
-// **Verified or not, year by year (read in the BOE and the AEAT on 2026-10-04,
-// `specs/020-visual-refresh/questions.md` §14).** A year is `verified` when its
-// 31 March is a working day, so the literal date of the order is the deadline.
-// When 31 March falls on a Saturday or a Sunday (rows 2017, 2018 and 2023) the
-// deadline is **left at 31 March and marked unverified**: art. 30.5 of the Law
-// 39/2015 carries a deadline that ends on a non-working day to the next
-// working one, and the press of the time says it was done (2 April 2018, 1
-// April 2019, 1 April 2024), but no primary source naming that day for this
-// model was found, and a legal date is not guessed. The AEAT confirms
-// «del 1 de enero al 31 de marzo de 2026» for both models on its pages of
-// filing periods (the 2025 rows), read on 2026-10-04 at
+// **A 31 March on a weekend.** When the last day falls on a Saturday or a
+// Sunday it is carried to the next working day: art. 30.5 of the Law 39/2015,
+// applied in a supplementary way to tax matters (first additional provision,
+// 2.a). The deadline of the row is that day, computed (`nextWorkingDay`), for
+// any year: the fiscal years 2017, 2018 and 2023 (31 March 2018, 2019 and 2024:
+// Saturday, Sunday, Sunday) and, later, 2028, 2029 and 2034. The row keeps the
+// literal day in `extended_from`, so the screen shows it as a **legal
+// extension** and recommends filing by the last working day before it. No
+// AEAT calendar of those years confirming the day was found: it is the legal
+// rule, not an observed fact. Holidays are not modelled (art. 30.6: they
+// depend on the taxpayer's region, so the Monday of Easter may still shift it).
+// The AEAT confirms «del 1 de enero al 31 de marzo de 2026» for both models on
+// its pages of filing periods (the 2025 rows), read on 2026-10-04 at
 // https://sede.agenciatributaria.gob.es/Sede/todas-gestiones/impuestos-tasas/declaraciones-informativas/modelo-720-decla_____sobre-bienes-derechos-extranjero_/plazos-presentacion.html
 // and
 // https://sede.agenciatributaria.gob.es/Sede/todas-gestiones/impuestos-tasas/declaraciones-informativas/modelo-721-decla-sobre-monedas-extranjero/plazos-presentacion.html
@@ -36,19 +38,20 @@
 // 31/10/2023, by the Order HFP/1180/2023, which does not touch art. 7), and the
 // 721 order at https://www.boe.es/buscar/act.php?id=BOE-A-2023-17429.
 
-import type { CivilDate } from "../dates/civil-date.js";
+import { type CivilDate, nextWorkingDay } from "../dates/civil-date.js";
 
 export interface FilingDeadline {
   model: "720" | "721";
   /** The fiscal year the return refers to. */
   year: number;
-  /** The last day to file it. */
+  /** The last day to file it: 31 March, or the next working day when that is a weekend. */
   deadline: CivilDate;
   /**
-   * `false` when nobody has verified the day against a primary source: the
-   * calendar says it, the interface marks it. Never supposed.
+   * Only when 31 March is a Saturday or a Sunday: that literal day, which the
+   * deadline was carried from (art. 30.5, Law 39/2015). The interface shows a
+   * legal extension and recommends filing before it.
    */
-  verified: boolean;
+  extended_from?: CivilDate;
   source: {
     norm: string;
     article: string;
@@ -72,12 +75,6 @@ const ORDER_721 = {
   checked: "2026-10-04",
 } as const;
 
-/**
- * The years whose 31 March is a Saturday or a Sunday: nobody has verified what
- * the day becomes (the question for the advisor is in `fiscal-questions.md`).
- */
-const WEEKEND_YEARS: readonly number[] = [2017, 2018, 2023];
-
 /** One row per year, `first` to `last`: from 1 January to 31 March of the next year. */
 const rows = (
   model: FilingDeadline["model"],
@@ -87,11 +84,13 @@ const rows = (
 ): FilingDeadline[] =>
   Array.from({ length: last - first + 1 }, (_, index) => {
     const year = first + index;
+    const literal = `${year + 1}-03-31`;
+    const deadline = nextWorkingDay(literal);
     return {
       model,
       year,
-      deadline: `${year + 1}-03-31`,
-      verified: !WEEKEND_YEARS.includes(year),
+      deadline,
+      ...(deadline === literal ? {} : { extended_from: literal }),
       source,
     };
   });
