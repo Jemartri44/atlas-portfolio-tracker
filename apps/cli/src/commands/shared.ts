@@ -181,7 +181,9 @@ export const confirmAndRecord = async (
           // Given to the domain (§6.3 (V7), ADR-0035): in a cloud folder
           // `--accept-invalid` is refused in `checkInvalid`, because the cloud
           // never accepts an invalid ledger; a folder of the old queue still
-          // counts as configured.
+          // counts as configured. The mode says it on its own: the `sync/` directory
+          // of a cloud folder would say it too, only by the accident that
+          // `remote.json` is no marker, so no test can tell the two apart.
           syncConfigured:
             ctx.mode.kind === "cloud" ||
             syncConfigured((await folderSyncPresence(dirname(ctx.ledgerPath))).presence),
