@@ -1,6 +1,7 @@
 // Feature 024 (ADR-0035, E3): the console on a cloud folder or a local one,
 // never both. Over the API composed with its doubles; never the network.
 
+import { createHash } from "node:crypto";
 import { chmod, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { encodeLine } from "@atlas/domain";
@@ -302,11 +303,41 @@ describe("backup and export of a cloud folder", () => {
     expect(said(c)).toContain("path_exists");
   });
 
-  it("refuses a body whose hash is not its etag, writing nothing", async () => {
+  it("refuses a body the adapter finds altered on the way, writing nothing", async () => {
     const { c } = await cloud();
     c.hooks.tamper = (path, body) => (path === "/api/ledger" ? `${body}x` : body);
     const to = join(c.root, "copias");
     expect(await c.exec(["backup", "--to", to])).not.toBe(EXIT.ok);
+    expect(said(c)).toContain("transport_rejected");
+    expect(await readdir(to).catch(() => [])).toEqual([]);
+  });
+
+  it("refuses with its own error, not a connection one, a body that arrives whole but is not what its etag says", async () => {
+    const { c } = await cloud();
+    // A byte-order mark: the etag is the hash of the bytes, the text read from them has none.
+    const real = c.remote.fetch;
+    (c.remote as { fetch: typeof fetch }).fetch = (async (
+      input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      const response = await real(input, init);
+      if (!String(input).endsWith("/api/ledger") || (init?.method ?? "GET") !== "GET") {
+        return response;
+      }
+      const bytes = Buffer.concat([
+        Buffer.from([0xef, 0xbb, 0xbf]),
+        Buffer.from(await response.arrayBuffer()),
+      ]);
+      const headers = new Headers(response.headers);
+      headers.set("etag", `"${createHash("sha256").update(bytes).digest("hex")}"`);
+      return new Response(bytes, { status: 200, headers });
+    }) as typeof fetch;
+    const to = join(c.root, "copias");
+    const code = await c.exec(["backup", "--to", to]);
+    expect(code).toBe(EXIT.domain);
+    expect(code).not.toBe(EXIT.offline);
+    expect(said(c)).toContain("backup_mismatch");
+    expect(said(c)).not.toContain("No se ha leído ni registrado nada");
     expect(await readdir(to).catch(() => [])).toEqual([]);
   });
 
