@@ -22,8 +22,10 @@ import {
   DuplicateFingerprintError,
   SchemaTooNewError,
   type UseCaseDeps,
+  WriteOutcomeUnknownError,
 } from "@atlas/domain";
 import type { FxRateSource } from "@atlas/domain/ecb";
+import { RemoteError } from "@atlas/domain/sync";
 import type { AdminAccess } from "./admin/environment.js";
 import { booleanFlag, parseArgs, stringFlag, UsageError } from "./args.js";
 import { addCommand } from "./commands/add.js";
@@ -52,12 +54,27 @@ import {
 } from "./commands/query.js";
 import { deleteCommand, editCommand } from "./commands/rectify.js";
 import { remoteCommand } from "./commands/remote.js";
-import { syncCommand } from "./commands/sync.js";
 import { synthCommand } from "./commands/synth.js";
 import { taxCommand } from "./commands/tax.js";
 import { thesisCommand } from "./commands/thesis.js";
 import { orderCommand, transferCommand } from "./commands/tracking.js";
 import { type Command, ConfirmationRequired, type Context, EXIT, type Io } from "./context.js";
+import {
+  CloudLedgerStore,
+  CloudSessionError,
+  type FolderMode,
+  looksAtMode,
+  resolveFolderMode,
+} from "./folder-mode.js";
+import {
+  describeCloudSession,
+  describeOffline,
+  describeRemoteOther,
+  describeSession,
+  OFFLINE_CODES,
+  SESSION_CODES,
+  UNKNOWN_OUTCOME,
+} from "./output/cloud.js";
 import { describeLock, LOCK_LOST, remedyFor } from "./output/lock.js";
 import { describeDependants, describeDuplicate, describeError } from "./output/messages.js";
 import { describeSecretsError } from "./output/prices.js";
@@ -66,6 +83,14 @@ import { askWithoutEcho } from "./output/secret-prompt.js";
 import type { PriceEnvironment } from "./prices/load.js";
 import { CredentialsError } from "./remote/credentials-file.js";
 import type { RemoteEnvironment } from "./remote/environment.js";
+
+/** `atlas sync` is gone (ADR-0035): there is no queue and no path between a local ledger and the cloud. */
+const syncRetiredCommand: Command = async (ctx) => {
+  ctx.io.err(
+    "Error: `atlas sync` se ha retirado (ADR-0035): el libro de la nube es la única fuente de verdad y no hay cola ni sincronización. Para empezar en la nube: `atlas remote login` en una carpeta nueva y `atlas remote upload --from <ledger.jsonl>` sobre una nube vacía. Para bajar una copia: `atlas backup --to <directorio>`.",
+  );
+  return EXIT.usage;
+};
 
 export const COMMANDS: Record<string, Command> = {
   account: accountCommand,
@@ -105,7 +130,7 @@ export const COMMANDS: Record<string, Command> = {
   prices: pricesCommand,
   remote: remoteCommand,
   admin: adminCommand,
-  sync: syncCommand,
+  sync: syncRetiredCommand,
 };
 
 /**
@@ -151,7 +176,9 @@ export const ARITY: Readonly<Record<string, number | Readonly<Record<string, num
   fx: { update: 2, status: 2, correct: 2 },
   prices: { update: 2, status: 2, symbols: 4, purge: 3 },
   draft: { list: 2, confirm: 3, discard: 3 },
-  remote: { login: 2, logout: 2, status: 2 },
+  remote: { login: 2, logout: 2, status: 2, upload: 2 },
+  // Retired (ADR-0035): any words reach the command, which says where to go.
+  sync: 99,
   admin: {
     devices: 2,
     "revoke-all-tokens": 2,
@@ -159,17 +186,6 @@ export const ARITY: Readonly<Record<string, number | Readonly<Record<string, num
     compact: 2,
     restore: 2,
     prices: 3,
-  },
-  sync: {
-    status: 2,
-    held: 2,
-    confirm: 3,
-    discard: 3,
-    redo: 3,
-    init: 2,
-    join: 2,
-    redownload: 2,
-    deactivate: 2,
   },
 };
 
@@ -208,22 +224,17 @@ comandos:
   lock show|break                el cerrojo de la carpeta del libro: quién lo tiene, y romperlo a petición
   fx update|status               el histórico oficial del BCE junto al libro: descargarlo y ver cuál está en vigor
   prices update|status           los cierres diarios junto al libro (prices/): descargarlos y ver cada fuente y su cupo
-  prices update --from-sources   en una carpeta sincronizada, llamar a las fuentes en vez de bajar de la nube (gasta el cupo compartido)
+  prices update --from-sources   en una carpeta de nube, llamar a las fuentes en vez de bajar de la nube (gasta el cupo compartido)
   prices purge <activo> --source S  quita los cierres guardados en una divisa que su fuente no declara; sus días se vuelven a pedir una vez
   prices symbols [set|remove] <activo> [--eodhd S] [--alpha-vantage S] --currency C [--eodhd-currency C] [--alpha-vantage-currency C] [--accept-currency]
   fx correct [--reason …]        corrige los tipos que no son los de su fecha fiscal (tras cambiar fiscal_date_rule)
   add … --draft                  guarda como borrador una operación cuyo tipo del BCE aún no se ha publicado
   draft list|confirm <id>|discard <id>   los borradores: no cuentan en ninguna cifra hasta registrarlos
-  remote login [--origin <https://…>] [--name <nombre>] [--manual]   inicia sesión con Google y guarda el token de este dispositivo
+  remote login [--origin <https://…>] [--name <nombre>] [--manual]   inicia sesión con Google y guarda el token de este dispositivo; en una carpeta sin libro la hace «de nube»
   remote logout [--device <id>] [--local-only]   revoca el token en el servidor y lo borra de este equipo
   remote status                  las sesiones guardadas de esta carpeta y cuándo caducan
-  sync                           sincroniza esta carpeta con su nube (la que dice sync/remote.json)
-  sync status|held               lo pendiente, lo retenido y la última sincronización; lo retenido con su motivo
-  sync confirm|redo|discard <unidad> [--reversal-only]   resuelve lo retenido
-  sync init [--origin <https://…>] [--device <id>]   sube el libro entero a una nube vacía
-  sync join --from-remote|--with-own-lines [--origin <https://…>] [--device <id>]   se une a una nube con libro
-  sync redownload                vuelve a descargar la nube tras una reescritura (solo si lo pides)
-  sync deactivate                desactiva la sincronización; lo retenido se queda
+                                 una carpeta es «de nube» (sync/remote.json, sin ledger.jsonl: el libro es el de la nube) o «local» (ledger.jsonl); nunca las dos
+  remote upload --from <ledger.jsonl>   la subida inicial: sube un libro entero a una nube vacía (solo en una carpeta de nube)
   admin devices|revoke-all-tokens|forget-device [--] <id>|--device <id> [--force]|compact|restore --from <copia>|prices push|secrets --env <entorno>
                                  la administración de la nube, con el rol de administración y nunca por la API
   --                             termina las opciones: lo que va detrás es posicional (un id que empiece por guion)`;
@@ -304,6 +315,7 @@ const dispatch = async (
   /** Where the reminder of pending drafts looks, once a command is going to run. */
   remindAt: (ledgerPath: string) => void,
 ): Promise<number> => {
+  let cloud: CloudLedgerStore | undefined;
   try {
     const { positionals, flags } = parseArgs(argv);
     const name = positionals[0];
@@ -317,10 +329,20 @@ const dispatch = async (
     }
     assertArity(positionals);
     const ledgerPath = stringFlag(flags, "ledger") ?? "./ledger.jsonl";
+    // Cloud folder or local folder, before anything reads or writes the ledger
+    // (ADR-0035, §4): both at once is refused here.
+    const mode: FolderMode = looksAtMode(positionals)
+      ? await resolveFolderMode(ledgerPath)
+      : { kind: "local" };
+    const base = compose(ledgerPath);
     const ctx: Context = {
-      deps: compose(ledgerPath),
+      deps:
+        mode.kind === "cloud"
+          ? { ...base, store: new CloudLedgerStore(() => ctx, mode.remote, base.store.schema) }
+          : base,
       io,
       ledgerPath,
+      mode,
       yes: booleanFlag(flags, "yes"),
       confirmDuplicate: booleanFlag(flags, "confirm-duplicate"),
       confirmFxRate: booleanFlag(flags, "confirm-fx-rate"),
@@ -331,7 +353,9 @@ const dispatch = async (
       ...(remote === undefined ? {} : { remote }),
       ...(admin === undefined ? {} : { admin }),
     };
-    if (name !== "draft") {
+    cloud = ctx.deps.store instanceof CloudLedgerStore ? ctx.deps.store : undefined;
+    // A cloud folder has no drafts (they come with E6): nothing to remind.
+    if (name !== "draft" && mode.kind === "local") {
       remindAt(ledgerPath);
     }
     await sweepTemporaries(io, ledgerPath);
@@ -352,7 +376,7 @@ const dispatch = async (
       );
       return EXIT.domain;
     }
-    return report(io, error);
+    return await report(io, error, cloud);
   }
 };
 
@@ -396,7 +420,73 @@ const reportLocked = async (io: Io, error: LedgerLockedError): Promise<number> =
   return EXIT.locked;
 };
 
-const report = (io: Io, error: unknown): number => {
+/**
+ * A write was sent and the connection broke: the ids were fixed before sending,
+ * so one reload says whether it was recorded (`ApiLedgerStore.findOutcome`).
+ */
+const reportUnknownOutcome = async (
+  io: Io,
+  cloud: CloudLedgerStore,
+  error: WriteOutcomeUnknownError,
+): Promise<number> => {
+  try {
+    const found = await cloud.findOutcome(error.ids);
+    if (found.outcome === "written") {
+      io.out("La conexión se cortó al guardar, pero la operación SÍ quedó registrada en la nube.");
+      return EXIT.ok;
+    }
+    if (found.outcome === "partial") {
+      io.err(
+        "Error (partial_write): la conexión se cortó y la operación quedó escrita solo en parte. Ejecuta `atlas check` y rectifícala.",
+      );
+      return EXIT.domain;
+    }
+    io.err(
+      "La conexión se cortó al guardar, pero se ha comprobado: la operación NO quedó registrada. Repite la orden.",
+    );
+    return EXIT.offline;
+  } catch (again) {
+    if (again instanceof RemoteError || again instanceof CloudSessionError) {
+      io.err(`Error (write_outcome_unknown): ${UNKNOWN_OUTCOME}`);
+      return EXIT.outcomeUnknown;
+    }
+    throw again;
+  }
+};
+
+/** What went wrong talking to the cloud of a cloud folder, said as it is, with its own exit code. */
+const reportCloud = (
+  io: Io,
+  error: unknown,
+  cloud: CloudLedgerStore | undefined,
+): number | undefined => {
+  if (error instanceof CloudSessionError) {
+    io.err(describeCloudSession(error));
+    return EXIT.session;
+  }
+  if (error instanceof RemoteError && SESSION_CODES.has(error.code)) {
+    io.err(describeSession(error.code));
+    return EXIT.session;
+  }
+  if (error instanceof RemoteError && OFFLINE_CODES.has(error.code)) {
+    io.err(describeOffline(error.code, cloud?.appended ?? 0));
+    return EXIT.offline;
+  }
+  if (error instanceof RemoteError) {
+    io.err(describeRemoteOther(error.code));
+    return EXIT.domain;
+  }
+  return undefined;
+};
+
+const report = async (io: Io, error: unknown, cloud?: CloudLedgerStore): Promise<number> => {
+  if (error instanceof WriteOutcomeUnknownError && cloud !== undefined) {
+    return reportUnknownOutcome(io, cloud, error);
+  }
+  const code = reportCloud(io, error, cloud);
+  if (code !== undefined) {
+    return code;
+  }
   if (error instanceof UsageError) {
     io.err(`Error de uso: ${error.message}`);
     io.err(USAGE);

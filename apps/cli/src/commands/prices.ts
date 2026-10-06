@@ -6,7 +6,7 @@
 // It never writes in the ledger. Without keys it calls nobody and says so:
 // that is not an error, and everything else works the same.
 
-import { FilePriceStore, folderSyncPresence } from "@atlas/adapters";
+import { FilePriceStore } from "@atlas/adapters";
 import { type AssetId, settingsAt, todayInMadrid } from "@atlas/domain";
 import {
   type AssetOutcome,
@@ -84,7 +84,7 @@ const updateText = (report: UpdateReport, failing: readonly QuoteSource[]): stri
   ].join("\n");
 };
 
-/** Said when a synced folder calls the sources: they spend the plans it shares with the cloud. */
+/** Said when a cloud folder calls the sources: they spend the plans it shares with the cloud. */
 const SHARED_QUOTA =
   "la consola llama a las fuentes y gasta el cupo que comparte con la nube: por defecto, 2 llamadas de EODHD y 2 de Alpha Vantage al día, salvo que prices/config.json diga otra cosa.";
 
@@ -114,7 +114,7 @@ const pulledText = (outcome: Extract<PullOutcome, { kind: "pulled" }>, origin: s
 };
 
 const update = async (ctx: Context, flags: Flags): Promise<number> => {
-  // Feature 016, E3, block 1: a synced folder takes its prices from the cloud,
+  // Feature 016, E3, block 1: a cloud folder takes its prices from the cloud,
   // and calls the sources only when asked (mutant 22), sharing the plans (N2).
   const fromSources = booleanFlag(flags, "from-sources");
   const origin = await priceOriginOf(ctx);
@@ -141,7 +141,7 @@ const update = async (ctx: Context, flags: Flags): Promise<number> => {
     }
     ctx.io.err(`La nube todavía no tiene precios: esta vez ${SHARED_QUOTA}`);
   } else if (origin.kind !== "unsynced") {
-    ctx.io.err(`Con --from-sources en una carpeta sincronizada, ${SHARED_QUOTA}`);
+    ctx.io.err(`Con --from-sources en una carpeta de nube, ${SHARED_QUOTA}`);
   }
   const { keys, note } = await keysFor(ctx);
   if (note !== undefined) {
@@ -173,9 +173,10 @@ const status = async (ctx: Context): Promise<number> => {
   const store = new FilePriceStore(folderOf(ctx));
   const today = todayInMadrid(ctx.deps.clock);
   const { state } = await loadForQuery(ctx, today);
-  // A folder that was ever synced shares the plans with the cloud (N2 of §15).
-  const { presence } = await folderSyncPresence(folderOf(ctx));
-  const config = parsePriceConfig(await store.config(), { sharedWithCloud: presence.present });
+  // A cloud folder shares the plans with the cloud (N2 of §15).
+  const config = parsePriceConfig(await store.config(), {
+    sharedWithCloud: ctx.mode.kind === "cloud",
+  });
   const pull = parseCloudPull(await store.cloudPull());
   const symbols = parseSymbols(await store.symbols());
   const ids = [...new Set([...state.assets.keys(), ...Object.keys(symbols.assets)])].sort();

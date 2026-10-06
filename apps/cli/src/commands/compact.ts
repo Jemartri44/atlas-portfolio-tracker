@@ -9,7 +9,13 @@
 
 import { dirname } from "node:path";
 import { folderSyncPresence } from "@atlas/adapters";
-import { type CompactPlan, compactLedger, planCompact, type UnverifiedFiling } from "@atlas/domain";
+import {
+  type CompactPlan,
+  compactLedger,
+  DomainError,
+  planCompact,
+  type UnverifiedFiling,
+} from "@atlas/domain";
 import { compactPermission, RefusedError } from "@atlas/domain/sync";
 import { assertKnownFlags, type Flags, listFlag } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
@@ -54,7 +60,12 @@ export const compactCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["accept-unverified", ...GLOBAL_FLAGS]);
-  // A synced folder is a replica of the remote: compacting it is refused, and
+  // A cloud folder has no ledger to compact: the cloud's is compacted by
+  // `atlas admin compact` (ADR-0035, §4; ADR-0032). Nothing is planned or asked.
+  if (ctx.mode.kind === "cloud") {
+    throw new DomainError("compact_cloud_folder", "a cloud folder has no ledger to compact", {});
+  }
+  // A folder of the old queue is a replica of the remote: compacting it is refused, and
   // so it is with its marker unreadable or missing (ADR-0026, Part A; data-
   // schema.md §5, point 6). Before anything else: nothing is planned or asked.
   const refusal = compactPermission((await folderSyncPresence(dirname(ctx.ledgerPath))).presence);

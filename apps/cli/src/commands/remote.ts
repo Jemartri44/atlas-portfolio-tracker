@@ -1,11 +1,14 @@
-// atlas remote login | logout | status (feature 015, E2; ADR-0033, points 2 to
-// 8; `docs/api.md` §4; contracts `cli-commands.md`). Signing in **writes
-// nothing in the folder of the ledger** — only `credentials.json` (§7 P16) —,
-// and never configures the sync. The token never goes to an argument, an
+// atlas remote login | logout | status | upload (feature 015, E2; ADR-0033,
+// points 2 to 8; `docs/api.md` §4; contracts `cli-commands.md`; feature 024).
+// Signing in writes `credentials.json` (§7 P16) and, in a folder with no
+// ledger and no cloud identity, **makes it a cloud folder** (`sync/remote.json`,
+// ADR-0035, §4); in a folder with a ledger it touches nothing. The token never goes to an argument, an
 // environment variable, a URL, the output or a message: only to its file, 600,
 // and to its header, towards the origin it was issued for.
 
 import { randomBytes } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { readLocalConfig } from "@atlas/adapters";
 import { pkceChallenge } from "@atlas/adapters/access";
 import {
@@ -16,6 +19,7 @@ import {
   isDeviceName,
   isHttpsOrigin,
   replacesAnotherOrigin,
+  serializeRemoteJson,
   withEntry,
   withoutEntry,
 } from "@atlas/domain/access";
@@ -27,11 +31,13 @@ import { type RemoteEnvironment, systemRemote } from "../remote/environment.js";
 import { postJson } from "../remote/http.js";
 import { openLoopback } from "../remote/loopback.js";
 import { expiryText, where } from "../remote/where.js";
+import { uploadCommand } from "./remote-upload.js";
+import { pathExists } from "./synth.js";
 
 const id43 = (): string => randomBytes(32).toString("base64url");
 
 const USAGE_REMOTE =
-  "uso: atlas remote login [--origin <https://…>] [--name <nombre>] [--manual] | atlas remote logout [--device <id>] [--local-only] | atlas remote status";
+  "uso: atlas remote login [--origin <https://…>] [--name <nombre>] [--manual] | atlas remote logout [--device <id>] [--local-only] | atlas remote status | atlas remote upload --from <ledger.jsonl>";
 
 const dateOf = (instant: string): string => instant.slice(0, 10);
 
@@ -40,12 +46,14 @@ const login = async (ctx: Context, flags: Flags, env: RemoteEnvironment): Promis
   const asked = stringFlag(flags, "origin");
   if (asked !== undefined && at.remote !== undefined && asked !== at.remote.origin) {
     throw new UsageError(
-      `esta carpeta se sincroniza con ${at.remote.origin} (sync/remote.json), no con ${asked}`,
+      `esta carpeta es de la nube ${at.remote.origin} (sync/remote.json), no de ${asked}`,
     );
   }
   const origin = asked ?? at.remote?.origin;
   if (origin === undefined) {
-    throw new UsageError("falta --origin: esta carpeta no tiene sync/remote.json que lo diga");
+    throw new UsageError(
+      "falta --origin: esta carpeta no es de nube (no tiene sync/remote.json que lo diga)",
+    );
   }
   if (!isHttpsOrigin(origin)) {
     throw new UsageError(`--origin tiene que ser https:// y un nombre, sin ruta («${origin}»)`);
@@ -133,8 +141,25 @@ const login = async (ctx: Context, flags: Flags, env: RemoteEnvironment): Promis
       );
       return EXIT.domain;
     }
+    // A folder with no ledger and no identity becomes a cloud folder (ADR-0035,
+    // §4); one with a ledger stays local and untouched. Never both.
+    const links = at.remote === undefined && !(await pathExists(ctx.ledgerPath));
+    if (links) {
+      await mkdir(join(at.folder, "sync"), { recursive: true });
+      await writeFile(
+        join(at.folder, "sync", "remote.json"),
+        serializeRemoteJson({ format: 1, origin, device_id: entry.device_id }),
+        { flag: "wx" },
+      );
+    }
     ctx.io.out(
-      `Sesión iniciada: dispositivo «${entry.device_name}» (${entry.device_id}), token ${entry.token_id}, caduca el ${dateOf(entry.expires_at)}. No se ha tocado la carpeta del libro.`,
+      `Sesión iniciada: dispositivo «${entry.device_name}» (${entry.device_id}), token ${entry.token_id}, caduca el ${dateOf(entry.expires_at)}. ${
+        links
+          ? "Esta carpeta es ahora de nube (sync/remote.json): su libro es el de la nube y no se guarda aquí."
+          : at.remote === undefined
+            ? "La carpeta tiene un libro local (ledger.jsonl): sigue siendo local y no se ha tocado; para usar la nube, inicia sesión en una carpeta sin libro."
+            : "No se ha tocado la carpeta del libro."
+      }`,
     );
     return 0;
   } finally {
@@ -197,7 +222,7 @@ const status = async (ctx: Context, env: RemoteEnvironment): Promise<number> => 
   );
   if (at.remote !== undefined) {
     ctx.io.out(
-      `Esta carpeta se sincroniza con ${at.remote.origin} como el dispositivo ${at.remote.device_id}.`,
+      `Esta carpeta es de nube: ${at.remote.origin}, como el dispositivo ${at.remote.device_id}.`,
     );
     if (own === undefined) {
       ctx.io.out(
@@ -236,6 +261,8 @@ export const remoteCommand = async (
     case "status":
       assertKnownFlags(flags, [...GLOBAL_FLAGS]);
       return status(ctx, env);
+    case "upload":
+      return uploadCommand(ctx, positionals, flags);
     default:
       throw new UsageError(USAGE_REMOTE);
   }

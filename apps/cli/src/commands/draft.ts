@@ -13,7 +13,7 @@
 
 import { dirname } from "node:path";
 import { FileDraftStore, readLocalConfig } from "@atlas/adapters";
-import { type CivilDate, loadAndProject } from "@atlas/domain";
+import { type CivilDate, DomainError, loadAndProject } from "@atlas/domain";
 import {
   type DraftStatus,
   draftRecordedAs,
@@ -207,6 +207,9 @@ const discardDraft = async (ctx: Context, id: string | undefined): Promise<numbe
 };
 
 export const draftCommand = async (ctx: Context, positionals: string[]): Promise<number> => {
+  if (ctx.mode.kind === "cloud") {
+    throw new DomainError("drafts_not_in_cloud", "a cloud folder has no drafts", {});
+  }
   switch (positionals[1]) {
     case "list":
       return listDrafts(ctx);
