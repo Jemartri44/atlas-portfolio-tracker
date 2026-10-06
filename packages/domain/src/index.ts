@@ -188,6 +188,7 @@ export {
 export { loadAndProject, type ProjectedLedger } from "./usecases/project-ledger.js";
 export {
   completeDraft,
+  duplicatesOf,
   type RecordOptions,
   type RecordResult,
   recordEvent,

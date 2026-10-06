@@ -30,18 +30,19 @@ import {
   CURRENT_LEDGER_SCHEMA,
   DomainError,
   decodeLines,
+  duplicatesOf,
   encodeLine,
   type LedgerEvent,
   type LedgerSchema,
   type LedgerStore,
   type LoadedLedger,
-  projectLedger,
   RemoteRejectedError,
   WriteOutcomeUnknownError,
 } from "@atlas/domain";
 import {
   type AppendEntry,
   entriesOf,
+  evaluateUnit,
   linesOfText,
   RemoteError,
   type RemoteLedger,
@@ -67,12 +68,6 @@ const UNKNOWN_CODES = new Set(["network_failed", "transport_rejected"]);
 
 const mayHaveWritten = (error: RemoteError): boolean =>
   UNKNOWN_CODES.has(error.code) || (error.status !== undefined && error.status >= 500);
-
-const reversesOf = (event: LedgerEvent): string | undefined =>
-  event.type === "reversal" ? event.reverses_id : undefined;
-
-const fingerprintOf = (event: LedgerEvent): string | undefined =>
-  (event as { fingerprint?: string }).fingerprint;
 
 export class ApiLedgerStore implements LedgerStore {
   private loaded: { etag: string; events: readonly LedgerEvent[] } | undefined;
@@ -160,34 +155,24 @@ export class ApiLedgerStore implements LedgerStore {
     return fresh.events;
   }
 
+  /**
+   * The entries of the request, with the API's own rule for the duplicates
+   * (`judgeUnit`, `docs/api.md` §5.2 row 7): per unit, the fingerprints of the
+   * ledger **plus the whole unit** (later members included), and a line is
+   * confirmed when its fingerprint is repeated there. Units go in order, each on
+   * top of the previous ones. A unit the domain refuses is sent without
+   * confirmations: the API refuses it first, for the same reason.
+   */
   private entriesFor(events: readonly LedgerEvent[], base: readonly LedgerEvent[]): AppendEntry[] {
-    // Fingerprints of the live events, in the order the API sees them.
-    const live = new Map<string, Set<string>>();
-    const add = (fingerprint: string, id: string): void => {
-      live.set(fingerprint, (live.get(fingerprint) ?? new Set<string>()).add(id));
-    };
-    for (const [fingerprint, ids] of projectLedger(base, { collectErrors: true }).fingerprints) {
-      for (const id of ids) {
-        add(fingerprint, id);
-      }
-    }
-    const repeated = events.map((event) => {
-      const reversed = reversesOf(event);
-      if (reversed !== undefined) {
-        for (const ids of live.values()) {
-          ids.delete(reversed);
-        }
-      }
-      const fingerprint = fingerprintOf(event);
-      if (fingerprint === undefined) {
-        return false;
-      }
-      const clash = [...(live.get(fingerprint) ?? [])].some((id) => id !== event.id);
-      add(fingerprint, event.id);
-      return clash;
+    const lines = events.map(encodeLine);
+    let before = base;
+    return unitsOf(lines, events).flatMap((unit) => {
+      const checked = evaluateUnit(before, unit.events);
+      before = [...before, ...unit.events];
+      const repeated = unit.events.map(
+        (event) => checked.ok && duplicatesOf(checked.state.fingerprints, event).length > 0,
+      );
+      return entriesOf(unit, (index) => repeated[index] === true);
     });
-    return unitsOf(events.map(encodeLine), events).flatMap((unit) =>
-      entriesOf(unit, (index) => repeated[unit.start + index] === true),
-    );
   }
 }
