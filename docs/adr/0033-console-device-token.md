@@ -296,3 +296,7 @@ Siguen siendo de la 017 los permisos de KMS para `aws/ssm` y que la función de 
 ## Nota del 2026-09-27 (feature 015, E5): el MFA de la revocación sin Google
 
 Decidida por la dirección el 2026-09-27 (`specs/015-api-access/questions.md` §34). El punto 8, en la nota del 2026-09-25 sobre ADR-0034, dice que revocar todos los tokens sin Google lo hace el rol de administración «asumido con MFA independiente de Google». **Ese MFA lo pide la CLI de AWS, no la consola de Atlas.** La cadena estándar del SDK que usa `atlas admin revoke-all-tokens` no pide el código de un perfil con `mfa_serial`, así que la orden se ejecuta sobre una sesión ya abierta: `aws sso login`, o `aws configure export-credentials` después de que la CLI de AWS pida el código. El procedimiento es `docs/runbooks/revoke-all-tokens.md`, y la nota del mismo día en ADR-0034 da las fuentes.
+
+## Nota del 2026-10-06: enmienda parcial por ADR-0035
+
+Con [ADR-0035](0035-cloud-ledger-single-source.md), **el alcance del token ya no incluye publicar su cola** (`PUT /api/sync/devices/self`, retirado en E4). El token sigue dando acceso al libro, a los datos de referencia y a revocarse a sí mismo. Como la consola de una carpeta «de nube» no guarda réplica, **el token es lo único que le da acceso**, así que la revocación (punto 8) pesa más; ninguna regla cambia. Los objetos de dispositivo se conservan como identidad. Lo que ADR-0035 retira del código se retira en sus entregas E1 a E5; hasta entonces, el código sigue como está.

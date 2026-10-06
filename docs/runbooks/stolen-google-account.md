@@ -1,5 +1,7 @@
 # Recuperar una cuenta de Google robada
 
+> **Enmendado por ADR-0035 (2026-10-06).** (a) La sesión de la web pasa de 8 h a **24 h** (el texto de abajo dice 8 h hasta que el código la cambie); con un teléfono robado sin sesión viva, ya no hay libro en el dispositivo. (b) Con la nube como única fuente de verdad y **sin réplica local**, el token de la consola es lo único que da acceso desde ella, así que la revocación (paso 3) pesa más; ninguna regla cambia. (c) Los pasos que hablan de pendientes, de la réplica propia, de `atlas sync` y de «volver a descargar» (5.1, 5.2, 5.3 y 6) **dejan de aplicar** al entregarse E3 a E5: no habrá cola que publique pendientes, la revisión se hace con el rol de administración y el siguiente `412` recarga el libro. **Lo que se retira del código se retira en las entregas E1 a E5; hasta entonces el código sigue como está y los pasos de abajo valen tal cual.** (d) «El libro no depende de la cuenta de Google» sigue siendo cierto, pero ya no vive en réplicas de dispositivos: vive en el bucket y en las copias de tu disco (`atlas backup`, «Descargar copia»).
+
 **Cuándo**: alguien ha entrado en la cuenta de Google con la que entras en Atlas, o lo sospechas. **Cerrar la sesión en Google no cierra Atlas.** Atlas tiene su propia sesión web, de hasta 8 horas, y quien entró pudo sacar un token de consola que vale hasta 90 días.
 
 **Señal**: en la web de Atlas, Ajustes › Sincronización › «Dispositivos de la consola». Las emisiones recientes van marcadas: **un token que no reconoces es la alarma**.

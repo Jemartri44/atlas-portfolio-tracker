@@ -1,5 +1,7 @@
 # Especificación de la feature: Tipos de referencia del BCE, con el bloque 0 delante (`012-ecb-reference-rates`)
 
+> **Histórica en parte, enmendada por ADR-0035 (2026-10-06).** Lo que dice de la web que lee el histórico del BCE de la carpeta enlazada o de una copia importada, y de «exportar e importar» como vía entre la web y la consola, deja de valer: la web recibe el histórico de la nube por la API y conserva su copia pública en IndexedDB; se retiran vincular la carpeta e importar. Se hace en las entregas E2a/E2b de ADR-0035; **hasta entonces el código sigue como está.** No se reescribe el texto de abajo.
+
 **Rama**: `feature/012-ecb-reference-rates`, creada desde `origin/develop` (`d5dcc13`)
 
 **Creada**: 2026-09-24 (Europe/Madrid)

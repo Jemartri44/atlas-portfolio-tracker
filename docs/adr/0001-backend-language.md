@@ -66,3 +66,7 @@ Monorepo con `packages/domain` (puro, sin dependencias de AWS), `apps/api` (Lamb
 - Tipo `Money` y `Quantity` propios desde el primer commit de dominio; prohibido `number` para importes (regla de lint).
 - Serialización de importes como cadenas en JSON y en la base de datos.
 - `fast-check` como única dependencia de test añadida al runner.
+
+## Nota del 2026-10-06: enmienda parcial por ADR-0035
+
+El motivo de **consultar sin conexión** deja de valer: con [ADR-0035](0035-cloud-ledger-single-source.md) la web no muestra ni registra nada sin conexión. **La decisión se mantiene**, porque tiene sus otros motivos: el dominio puro compartido sigue proyectando, simulando y calculando en el cliente sobre el libro descargado, y la API valida con el mismo código. Lo que ADR-0035 retira del código se retira en sus entregas E1 a E5; hasta entonces, el código sigue como está.

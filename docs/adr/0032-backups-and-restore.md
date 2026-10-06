@@ -95,3 +95,14 @@ Decidida por la dirección en la revisión de la PR #109 (`specs/016-scheduled-j
 - **`positions.json`** es informativo y se lee sin la aplicación: importes redondeados a céntimos y cantidades exactas, núcleo y cubo separados, **cada total con `partial`** y sin total de los dos (constitución III), la procedencia de cada precio (`manual`, `eodhd`, `alpha_vantage` o ninguno) y nunca una cifra fiscal.
 - **La prueba automática trimestral** compara el último volcado cerrado con su libro, **contrastado con el SHA-256 que guardó su registro**, con el libro vivo **cortado en los mismos eventos**: por identificador, contenido y orden, y después por posiciones, efectivo, lotes, ganancias y rendimientos. Sus códigos: `event_missing_in_live`, `event_differs`, `order_differs`, `positions_differ`, `cash_differ`, `lots_differ`, `gains_differ`, `income_differ`, `dump_missing`, `dump_unreadable`, `dump_invalid` y `rehearsal_skipped_invalid` (el libro vivo repite un `id`).
 - **La integridad** son los **errores** de `atlas check --deep` sobre el libro vivo, **sin el contraste de los tipos del BCE**, que solo da avisos: esa función no lee `reference/ecb/`.
+
+## Nota del 2026-10-06: enmienda parcial por ADR-0035
+
+Con [ADR-0035](0035-cloud-ledger-single-source.md), sin cola ni réplicas en los dispositivos:
+
+- **Capa 1 (réplicas de los dispositivos): desaparece.** Las únicas copias fuera de AWS son «Descargar copia» de la web y `atlas backup`; el correo mensual lo recuerda. La tabla de qué falla debe leerse sin la réplica de un dispositivo como copia de seguridad gratuita.
+- **Paso 6 (que cada dispositivo detecte la reescritura): queda sin objeto.** El siguiente `412` recarga el libro.
+- **La negativa de `compact` y de la restauración por pendientes** (`pending` mayor que cero en `sync/devices/`) se retira en E4: `pending` siempre sería cero.
+- **Se conserva:** `compact` y la restauración como operaciones de administración sobre el remoto (pasos 1 a 5), y la prueba anual de restauración. Si la nube desaparece, la consola trabaja en local sobre la última copia y después se usa `atlas admin restore`.
+
+Lo que ADR-0035 retira del código se retira en sus entregas E1 a E5; hasta entonces, el código sigue como está.

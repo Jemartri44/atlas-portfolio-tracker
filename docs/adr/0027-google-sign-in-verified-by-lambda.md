@@ -79,3 +79,12 @@ Rutas, cabeceras y códigos: `docs/api.md`.
 
 Con Atlas en una cuenta de AWS compartida con otros proyectos (ADR-0028, nota del mismo día), **los valores de los secretos nunca pasan por Terraform** (ADR-0034, fila 21). Lo que cambia aquí: **«Terraform crea el parámetro con un valor de relleno e ignora los cambios de valor» deja de valer** para la lista permitida, el secreto del cliente y la clave de sesión. Los **crea y los rota un guion versionado**, ejecutado con el rol de administración del entorno, y Terraform solo referencia sus ARN en las políticas. El motivo: el `sub` de OIDC de un `pull_request` no lleva la rama de destino, así que el rol de `terraform plan` está al alcance de cualquier rama del repositorio, y ni él ni el estado deben contener un secreto.
 
+## Nota del 2026-10-06: enmienda parcial por ADR-0035
+
+[ADR-0035](0035-cloud-ledger-single-source.md) (pregunta 6) cambia dos cosas de esta ADR, sin reescribirla:
+
+- **La sesión de la web pasa de 8 h a 24 h** absolutas, sin renovación (`docs/api.md` §3). Antes de abrir un formulario, la web avisa si a la sesión le quedan menos de 15 minutos. Donde esta ADR dice 8 h, léase 24 h cuando el código lo cambie.
+- **La salida de emergencia «sobre la réplica local»** pasa a ser la **consola en local sobre una copia** (`atlas backup`, «Descargar copia» o el volcado mensual), porque los dispositivos ya no guardan réplica. Además, el cliente OAuth se usa a diario, lo que reduce el riesgo de borrado por seis meses sin uso que esta ADR recoge.
+
+Lo que ADR-0035 retira del código se retira en sus entregas E1 a E5; hasta entonces, el código sigue como está (sesión de 8 h).
+

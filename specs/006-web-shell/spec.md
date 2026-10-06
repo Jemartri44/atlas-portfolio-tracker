@@ -1,5 +1,7 @@
 # Especificación de la feature: Esqueleto de la aplicación web, Resumen y Movimientos (`006-web-shell`)
 
+> **Enmendada por ADR-0035 (2026-10-06), en parte histórica.** La web deja de ser local-first: el libro de la nube es la única fuente de verdad y no hay libro en IndexedDB, ni importar, ni exportación como vía de paso, ni uso sin conexión. Quedan **enmendados** FR-010 (libro en IndexedDB, importar y exportar), FR-013 (la exportación pasa a ser «Descargar copia», que sigue bajando el libro byte a byte), FR-059 y la historia 10 (sin conexión no hay aplicación: solo «Sin conexión» y «Reintentar») y el supuesto A13 (la web tiene autenticación con Google). Se rehacen en E2a y E2b de ADR-0035; **hasta entonces el código sigue como está y esta especificación describe lo construido.** No se reescribe el texto de abajo.
+
 **Rama**: `feature/006-web-shell`
 
 **Creada**: 2026-09-18
@@ -214,6 +216,8 @@ El usuario ajusta un umbral, cambia el porcentaje del cubo o fija los pesos obje
 
 ### Historia 10 — Instalarla y usarla sin conexión (Prioridad: P3)
 
+> *Enmendada por ADR-0035: histórica. Sin conexión la aplicación abre pero solo dice «Sin conexión», con «Reintentar»; no consulta ni registra. La instalación (PWA) y la caché del *shell* se conservan.*
+
 El usuario añade la aplicación a la pantalla de inicio. La abre en el metro, sin cobertura, y funciona: el libro ya está en el dispositivo, así que puede consultar **y registrar**.
 
 **Por qué esta prioridad**: es el remate que convierte la web en la aplicación del día a día, pero no aporta nada si las pantallas anteriores no están.
@@ -269,7 +273,7 @@ El usuario añade la aplicación a la pantalla de inicio. La abre en el metro, s
 - **FR-010**: En el resto de casos el libro DEBE vivir en IndexedDB, con importación y exportación de fichero a un toque, y NO DEBE presentarse nunca como almacén definitivo (ADR-0019).
 - **FR-011**: La aplicación DEBE decir en todo momento y de forma visible **dónde está el libro** que se está viendo: nombre del fichero, o almacenamiento del navegador.
 - **FR-012**: Con el libro en IndexedDB, la aplicación DEBE mostrar **cuándo se exportó por última vez** y avisar si hace más de siete días o nunca.
-- **FR-013**: La exportación DEBE producir un fichero idéntico al contenido almacenado, byte a byte.
+- **FR-013** *(enmendado por ADR-0035: pasa a «Descargar copia», JSONL y CSV; sigue siendo byte a byte)*: La exportación DEBE producir un fichero idéntico al contenido almacenado, byte a byte.
 - **FR-014**: Importar el adaptador del navegador NO DEBE arrastrar `node:fs` al *bundle*; se comprueba sobre el contenido y el tamaño del *bundle*, no se supone.
 - **FR-015**: Toda escritura DEBE hacerse con `append` y el etag como control de concurrencia. Si el libro cambió por fuera, el conflicto se muestra, el libro se recarga y **nunca** se sobrescribe.
 
@@ -342,7 +346,7 @@ El usuario añade la aplicación a la pantalla de inicio. La abre en el metro, s
 
 **PWA**
 
-- **FR-059**: La aplicación DEBE ser instalable y abrir sin conexión con todas sus funciones, incluido el registro.
+- **FR-059** *(enmendado por ADR-0035: sigue instalable, pero sin conexión solo muestra «Sin conexión» y no registra)*: La aplicación DEBE ser instalable y abrir sin conexión con todas sus funciones, incluido el registro.
 - **FR-060**: NO DEBE haber ninguna petición a un origen ajeno en ninguna carga.
 
 ### Entidades clave

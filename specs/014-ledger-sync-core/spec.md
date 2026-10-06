@@ -1,5 +1,7 @@
 # Especificación de la feature: Núcleo de la sincronización del libro (`014-ledger-sync-core`)
 
+> **Histórica, enmendada por ADR-0035 (2026-10-06).** La cola por dispositivo, el marcador, lo retenido, volver a descargar y la sincronización que esta feature construyó **se retiran**: el libro de la nube es la única fuente de verdad y los clientes escriben directamente con `If-Match`. **Se conserva** lo que usa la API (`acceptAppend` y sus dependencias, el rechazo por línea, la parte C de ADR-0026). El motor se borra del código en E5 de ADR-0035; **hasta entonces el código sigue como está.** No se reescribe el texto de abajo.
+
 **Rama**: `feature/014-ledger-sync-core`, creada desde `origin/develop` (`57d0075`; el código es idéntico al de `523abb8`, sobre el que se escribió el encargo: `git diff --stat 523abb8..57d0075 -- packages apps tests` sale vacío)
 
 **Creada**: 2026-09-25 (Europe/Madrid)

@@ -1,14 +1,17 @@
 <!--
 Sync Impact Report
-- Version change: 1.6.1 → 1.6.2
-- Modified principles: none
-- Modified sections: Restricciones técnicas (Plataforma: the exceptions to "nothing created by hand" are declared in ADR-0028 and ADR-0034, the latter adding the bootstrap inside the shared account and the secrets script. ADR-0034, accepted 2026-09-25)
-- Version bump rationale: PATCH, a citation of where already-allowed exceptions are written; no principle added, removed or re-scoped
+- Version change: 1.6.2 → 2.0.0
+- Modified principles: VI (the bullet "Cero servicios de pago de terceros en el camino crítico" is redefined: daily use now depends on AWS, with minimum cost and a budget alarm, and on Google sign-in; survival does not depend on them. ADR-0035, accepted 2026-10-06). V gains a clarification (the ledger is never shown offline; a visible failure, not a silence), without changing its rules.
+- Modified sections: none
+- Version bump rationale: MAJOR, decided by the person (ADR-0035, question 3): the amendment redefines principle VI, so it does not follow the MINOR precedent of 1.6.0. The V clarification would be PATCH on its own and is absorbed by the MAJOR.
 - Added sections: none
 - Removed sections: none
-- Templates requiring updates: none
+- Not contradicted, kept as is: VI "exportable a CSV/JSON en un clic" (met by "Descargar copia"); I "Toda operación se registra en el momento de operar" (tension, not contradiction: without a connection nothing is recorded, but trading on the broker platform needs one too; rule 20 of the plan stands).
+- Templates requiring updates: none (Spec Kit templates under .specify/templates/ stay untouched).
+- Synchronised in the same delivery (E0 of ADR-0035): CLAUDE.md (stack row), docs/specification.md, docs/data-schema.md, docs/api.md, README.md, runbooks, docs/decision-roadmap.md, notes in ADR-0001, 0015, 0027, 0029, 0032, 0033, historical notes in specs 006, 012, 014, 015.
+- Code status: what the amendment retires from the code (offline queue, local ledger in the web, device replicas) is retired in deliveries E1-E5 of ADR-0035; until then the code stays as it is.
 - Follow-up TODOs: advisor answers in docs/fiscal-questions.md may change Settings defaults, not this document.
-- Previous: 1.6.0 → 1.6.1 (2026-09-25) clarified in Restricciones técnicas (Seguridad) where the console's device tokens live (ADR-0033); 1.5.0 → 1.6.0 (2026-09-24) re-scoped IV (configuration outside the ledger) and VI (minimum cost with a budget alarm), and amended Restricciones técnicas for ADR-0027, ADR-0028 and ADR-0031.
+- Previous: 1.6.1 → 1.6.2 (2026-09-25) Restricciones técnicas (Plataforma): the exceptions to "nothing created by hand" are declared in ADR-0028 and ADR-0034 (PATCH); 1.6.0 → 1.6.1 (2026-09-25) clarified in Restricciones técnicas (Seguridad) where the console's device tokens live (ADR-0033); 1.5.0 → 1.6.0 (2026-09-24) re-scoped IV (configuration outside the ledger) and VI (minimum cost with a budget alarm), and amended Restricciones técnicas for ADR-0027, ADR-0028 and ADR-0031.
 -->
 
 # Constitución de Atlas Portfolio Tracker
@@ -70,6 +73,7 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 - El sistema DEBE ser plenamente funcional con cero fuentes automáticas de precios.
 - Registrar dos veces la misma operación se detecta, no se duplica (idempotencia).
 - Los avisos se envían solo cuando hay algo que hacer; el recordatorio mensual siempre.
+- Lo anterior se refiere a las fuentes de precios y de referencia. **El libro sin conexión no se enseña**: la aplicación dice «Sin conexión» y no muestra cifras ni deja registrar. Es un fallo visible, no un silencio (ADR-0035).
 
 *Razón:* un sistema que inventa datos o que envía ruido acaba ignorado; uno que degrada de forma visible sigue siendo fiable.
 
@@ -77,7 +81,8 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 
 - Pocas dependencias, con presupuesto explícito: cada paquete nuevo requiere justificación. Preferir la biblioteca estándar.
 - Formatos abiertos. El libro mayor DEBE ser legible sin la aplicación, y exportable a CSV/JSON en un clic.
-- Cero servicios de pago de terceros en el camino crítico. **Coste mínimo, con alarma de presupuesto** (ADR-0028, Ronda 8, 2026-09-24): sustituye a "coste indefinidamente dentro del *always-free* de AWS", porque la capa en la nube se apoya en créditos que se acaban; cuando se agoten, la cuenta paga el coste mínimo estimado y Budgets avisa si se sale de lo previsto.
+- El uso diario depende de AWS, con coste mínimo y alarma de presupuesto, y del acceso con Google (ADR-0035). La supervivencia no depende de ellos: el libro se descarga en un clic, `atlas backup` hace copias verificadas fuera de AWS y la consola trabaja sobre una copia local sin ningún servicio. Sustituye a «Cero servicios de pago de terceros en el camino crítico» (enmienda 2.0.0).
+- **Coste mínimo, con alarma de presupuesto** (ADR-0028, Ronda 8, 2026-09-24): sustituye a "coste indefinidamente dentro del *always-free* de AWS", porque la capa en la nube se apoya en créditos que se acaban; cuando se agoten, la cuenta paga el coste mínimo estimado y Budgets avisa si se sale de lo previsto.
 - Prueba de restauración anual desde el backup.
 - El esquema de datos y la lógica de transformación de lotes se documentan en el repositorio.
 
@@ -117,4 +122,4 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 - Versionado semántico: MAJOR para eliminar o redefinir principios, MINOR para añadir principios o secciones o ampliar materialmente una guía, PATCH para aclaraciones y redacción.
 - Toda revisión de spec, plan o PR DEBE comprobar el cumplimiento de los principios I–VII. Cualquier complejidad que los contradiga debe justificarse por escrito o rechazarse.
 
-**Version**: 1.6.2 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-09-25
+**Version**: 2.0.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-10-06
