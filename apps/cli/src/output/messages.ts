@@ -331,60 +331,8 @@ export const describeError = (error: DomainError): string => {
       return "Retenida: la declaración ya no cuadra con los movimientos que tendría delante en la nube. Regístrala otra vez sobre el libro actual.";
     case "waiver_not_appendable":
       return "Una renuncia a verificar una huella solo nace dentro de una compactación, y nunca se sube línea a línea. Queda retenida.";
-    case "seals_prefix":
-      return "Retenida: es una declaración (o una renuncia) que sella los movimientos que tiene delante, y en la nube ya no son los mismos. Regístrala otra vez sobre el libro actual; no se mueve de sitio sola.";
-    case "concurrent_settings":
-      return "Retenida: la configuración también cambió en otro dispositivo, y cada cambio guarda la configuración entera. Subirla borraría ese otro cambio: rehazla sobre la configuración actual.";
-    case "concurrent_account":
-      return `Retenida: la cuenta ${text(d.account_id)} también cambió en otro dispositivo, y cada cambio la guarda entera. Rehaz el cambio sobre la cuenta actual.`;
-    case "concurrent_asset":
-      return `Retenida: el activo ${text(d.asset_id)} también cambió en otro dispositivo, y cada cambio lo guarda entero. Rehaz el cambio sobre el activo actual.`;
-    case "new_duplicate":
-      return `Retenida: con lo que ha llegado de otro dispositivo, repite la huella de ${text(d.existing)}. Confírmala si son operaciones distintas, o descártala si es la misma.`;
-    case "new_closed_year":
-      return `Retenida: cae en un ejercicio que otro dispositivo ha marcado como presentado (${text(d.filings)}). Confírmala si de verdad corresponde ahí; puede tocar rectificar la declaración.`;
-    case "settings_leave_invalid":
-      return "Retenida: ese cambio de configuración dejaría inválidas operaciones que ya están en la nube, y la nube nunca recibe un libro inválido. Repara antes esas operaciones y rehaz el cambio.";
-    case "partner_discarded":
-      return "Retenida: descartaste la anulación de esta corrección, y una corrección sin su anulación no corrige nada: ni se sube ni se puede rehacer. Solo queda descartarla también; si el cambio sigue siendo cierto, corrige de nuevo la operación que está en vigor.";
-    case "absent_after_rewrite":
-      return "Retenida tras volver a descargar: la nube se ha reescrito (compactada o restaurada) y ya no tiene esta operación. Nunca se sube sola: regístrala otra vez si sigue siendo cierta, o descártala.";
-    case "differs_after_rewrite":
-      return "Retenida tras volver a descargar: la nube reescrita tiene esta misma operación con otro contenido. Compara las dos y rehaz o descarta la tuya.";
-    case "absent_at_join":
-      return "Retenida al unirte empezando desde la nube: la nube no tiene esta operación de tu libro anterior, que queda archivado. Regístrala si sigue siendo cierta, o descártala.";
-    case "differs_at_join":
-      return "Retenida al unirte empezando desde la nube: la nube tiene esta operación con otro contenido. Compara y rehaz o descarta la tuya.";
-    case "discarded_by_user":
-      return "Descartada por ti: queda en sync/discarded.jsonl, fuera del libro.";
-    case "redone":
-      return "Rehecha: la sustituye la operación registrada otra vez sobre el estado actual.";
     // Why a sync stops: nothing is lost and nothing is held back.
-    case "local_prefix_changed":
-      return "No se sincroniza: lo que este dispositivo tenía por sincronizado ya no es lo que dice su marcador (el libro local se ha reescrito fuera de la sincronización). No se ha subido nada.";
-    case "remote_rewritten":
-      return "No se sincroniza: el libro de la nube se ha reescrito (compactado o restaurado) desde la última vez. No se ha subido nada. Cuando quieras, vuelve a descargarlo: lo que tenías y la nube no quedará retenido para que lo revises.";
-    case "remote_schema_too_new":
-      return `No se sincroniza: el libro de la nube usa un formato (${text(d.found)}) más nuevo que el que entiende esta versión (${text(d.supported)}). Actualiza la aplicación; lo pendiente espera aquí.`;
-    case "remote_unreadable":
-      return `No se sincroniza: no se puede leer el libro de la nube${d.line === undefined ? "" : ` (línea ${text(d.line)})`}. Lo pendiente espera aquí.`;
-    case "remote_ledger_invalid":
-      return "No se sincroniza: el libro de la nube tiene operaciones inválidas, y sobre él no se sube nada hasta repararlo. Lo pendiente espera aquí.";
-    case "remote_failed":
-      return `No se sincroniza: ${describeRemoteFailure(d.remote_code)} Lo pendiente sigue pendiente; vuelve a intentarlo después.`;
-    case "remote_contention":
-      return `No se sincroniza: otro dispositivo ha escrito en la nube ${text(d.attempts)} veces seguidas mientras lo intentábamos. Vuelve a intentarlo.`;
-    case "local_changed":
-      return `No se sincroniza: el libro de esta carpeta ha cambiado ${text(d.attempts)} veces mientras sincronizábamos (otra consola escribe a la vez). Vuelve a intentarlo cuando termine.`;
-    case "publish_failed":
-      return `Sincronizado, pero no se ha podido publicar el estado de la cola de este dispositivo (${describeRemoteFailure(d.remote_code)}). Se publicará en la próxima sincronización.`;
     // What a synced folder or browser refuses.
-    case "compact_refused_folder_synced":
-      return "Esta carpeta está sincronizada: es una réplica de la nube, y compactarla la dejaría sin sentido. La compactación se hace sobre la copia de la nube, como operación de administración.";
-    case "compact_refused_marker_unreadable":
-      return "No se compacta: el marcador de la sincronización (sync/state.json) no se puede leer, y sin él no se sabe si la carpeta está sincronizada. Sincroniza primero, que lo reconstruye.";
-    case "compact_refused_marker_missing":
-      return "No se compacta: existe la carpeta sync/ pero falta su marcador (sync/state.json), así que esta carpeta se sincroniza. Sincroniza primero, o desactiva la sincronización de forma explícita.";
     case "forget_device_missing":
       return "Ese dispositivo no existe en sync/devices/: los enseña «atlas admin devices».";
     case "forget_device_unreadable":
@@ -423,46 +371,10 @@ export const describeError = (error: DomainError): string => {
       return `La copia no pasa la comprobación (eventos inválidos: ${text(d.invalid)}; errores de la verificación a fondo: ${text(d.findings)}): no se ha tocado la nube.`;
     case "bucket_key_unsafe":
       return `La clave ${text(d.key)} del bucket no es una ruta sencilla: no se copia nada fuera del destino.`;
-    case "import_refused_synced":
-      return "No se importa: este libro se sincroniza, y sustituirlo borraría lo pendiente. Desactiva antes la sincronización.";
-    case "deactivate_refused_pending":
-      return `No se desactiva la sincronización: hay ${text(d.pending)} líneas pendientes que nunca llegarían a la nube. Sincroniza primero; lo retenido se queda aquí de todas formas.`;
-    case "deactivate_refused_marker_missing":
-      return "No se desactiva: existe sync/ pero falta su marcador, así que no se sabe qué líneas están pendientes. Sincroniza primero, que lo reconstruye.";
-    case "sync_not_configured":
-      return "Esta carpeta no está sincronizada. Para empezar hay que elegirlo: subir el libro entero a una nube vacía («atlas sync init --origin <https://…>»), o unirse a una que ya tiene libro, empezando desde ella («atlas sync join --from-remote --origin <https://…>») o subiendo tus líneas como pendientes («atlas sync join --with-own-lines --origin <https://…>»).";
-    case "sync_deactivated":
-      return "La sincronización de esta carpeta está desactivada. La única salida es unirse otra vez, de forma explícita: empezando desde la nube («atlas sync join --from-remote»: tu libro queda archivado y lo que la nube no tiene, retenido) o subiendo tus líneas como pendientes («atlas sync join --with-own-lines»).";
-    case "sync_device_changed":
-      return `Este navegador se unió a la nube como el dispositivo ${text(d.joined)}, y su sesión es ahora la del dispositivo ${text(d.session)} (el anterior fue olvidado, o no se aceptó). Lo pendiente sigue aquí. Para seguir hay que unirse otra vez, desde la nube o con las operaciones propias.`;
-    case "sync_device_unknown":
-      return "Este navegador se sincroniza pero no sabe con qué dispositivo se unió. Únete otra vez, desde la nube o con las operaciones propias; lo pendiente sigue aquí.";
-    case "sync_already_configured":
-      return "Ya se sincroniza: no se inicializa ni se une otra vez. Para volver tras desactivarla, únete.";
-    case "remote_empty":
-      return "La nube está vacía y este libro no ha sincronizado nada: no se sube línea a línea. Inicializa la nube con el libro entero, de forma explícita.";
-    case "deactivate_refused_marker_unreadable":
-      return "No se desactiva: el marcador de la sincronización no se puede leer. Sincroniza primero, que lo reconstruye.";
     case "init_refused_invalid_ledger":
       return `No se sube el libro a la nube: tiene operaciones inválidas (${text(d.invalid)}), y la nube nunca recibe un libro inválido. Repáralas primero (atlas check te las enseña).`;
     case "init_remote_not_this_ledger":
       return "La nube ya no tiene exactamente este libro: la inicialización no se termina sobre otra cosa. Únete a ella con «atlas sync join --from-remote» o «atlas sync join --with-own-lines».";
-    case "redo_filing_in_remote":
-      return "Esa declaración ya está en la nube: rehacerla sería registrar otra presentación que no se hizo. Descártala.";
-    case "redo_waits_for_pair":
-      return `Todavía no: esta pareja corrige otra de la misma cadena que sigue retenida. Primero la pareja ${typeof d.pair === "number" ? d.pair : "anterior"}.`;
-    case "redo_waits_for_unit":
-      return `Todavía no: esto corrige una operación que sigue retenida en otra unidad. Primero la unidad ${text(d.unit)} («atlas sync held» la enseña); después, esta.`;
-    case "redo_id_mismatch":
-      return `No se rehace: la operación no lleva el identificador sellado para el rehacer (${text(d.expected)}). Para registrar otra cosa, descarta lo retenido y regístrala de nuevo.`;
-    case "redo_type_mismatch":
-      return `No se rehace: la operación no es del tipo que se retuvo (${text(d.expected)}). Para registrar otra cosa, descarta lo retenido y regístrala de nuevo.`;
-    case "redo_plan_not_recordable":
-      return "Una corrección se rehace con su anulación y su operación corregida juntas, con los identificadores sellados; es un fallo de la aplicación.";
-    case "redo_partner_discarded":
-      return "No se rehace: descartaste su anulación, y una corrección sin su anulación no corrige nada. Descártala.";
-    case "join_required":
-      return `Esta carpeta tiene la sincronización sin su marcador, y el libro tiene ${typeof d.own_lines === "number" ? d.own_lines : 0} líneas que la nube no tiene. Reconstruir el marcador no basta para mezclarlas: la única salida es unirse, de forma explícita, empezando desde la nube («atlas sync join --from-remote») o subiendo tus líneas como pendientes («atlas sync join --with-own-lines»). No se ha tocado nada.`;
     case "accept_invalid_while_synced":
       return `Ese cambio de configuración dejaría inválidos ${Array.isArray(d.affected) ? d.affected.length : 0} eventos, y --accept-invalid solo vale en una carpeta local sin nube ni sincronización (ADR-0035): la nube rechaza siempre un libro inválido. Repara antes esos eventos (atlas check te los enseña).`;
     case "folder_mode_ambiguous":
@@ -481,16 +393,6 @@ export const describeError = (error: DomainError): string => {
       return `No existe el fichero ${text(d.path)}.`;
     case "upload_source_not_utf8":
       return `El fichero ${text(d.path)} no es UTF-8: no es un libro de Atlas.`;
-    case "held_unit_unknown":
-      return "No hay nada retenido con ese identificador: puede que ya se haya resuelto.";
-    case "redo_not_recorded":
-      return `Todavía no están registradas, con los identificadores sellados (${Array.isArray(d.sealed) ? d.sealed.join(", ") : "ninguno"}), las operaciones que rehacen lo retenido: regístralas primero; lo retenido sigue donde estaba. Si registraste a mano lo que había que rehacer, descarta lo retenido («atlas sync discard <unidad>»): lo que registraste se queda en tu libro.`;
-    case "resolution_not_offered":
-      return `Esa resolución no se ofrece para lo retenido por «${text(d.reason)}».`;
-    case "sync_marker_unreadable":
-      return `El marcador de la sincronización (sync/state.json) no se puede leer (${text(d.reason)}).`;
-    case "sync_held_unreadable":
-      return `El fichero de ${d.file === "held" ? "lo retenido (sync/held.jsonl)" : "lo descartado (sync/discarded.jsonl)"} no se puede leer en la línea ${text(d.line)}. No se toca: revísalo antes de seguir.`;
     case "raw_lone_surrogate":
       return `La línea ${text(d.line)} lleva un carácter que no es Unicode (un suplente suelto): sus bytes no serían UTF-8 y el libro no se podría leer. No se ha escrito nada; esa línea no la escribe la aplicación.`;
     case "raw_line_break":

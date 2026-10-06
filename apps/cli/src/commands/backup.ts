@@ -11,9 +11,9 @@
 import { createHash } from "node:crypto";
 import { chmod, constants, copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { FileLedgerStore, HELD_FILE } from "@atlas/adapters";
+import { FileLedgerStore } from "@atlas/adapters";
 import { DomainError, todayInMadrid } from "@atlas/domain";
-import { linesOfText, parseHeld, unresolvedHeld } from "@atlas/domain/sync";
+import { linesOfText } from "@atlas/domain/sync";
 import { assertKnownFlags, booleanFlag, type Flags, requireFlag, UsageError } from "../args.js";
 import { type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { cloudStoreOf } from "../folder-mode.js";
@@ -106,23 +106,6 @@ export const backupCommand = async (
   } else {
     copy = await copyFromCloud(await cloud.remote(), destination);
   }
-  // What the sync holds back, apart and named as such (§6.2 P3, D-Q13): the
-  // whole file with its history, verified as the ledger is; never written
-  // when nothing is held back unresolved, and said.
-  const heldSource = join(dirname(ctx.ledgerPath), HELD_FILE);
-  const heldText =
-    cloud === undefined ? await readFile(heldSource, "utf8").catch(() => undefined) : undefined;
-  let held: { path: string; units: number } | undefined;
-  if (heldText !== undefined && unresolvedHeld(parseHeld(heldText)).length > 0) {
-    const heldDestination = join(directory, `ledger-${todayInMadrid(ctx.deps.clock)}.held.jsonl`);
-    await copyFile(heldSource, heldDestination, constants.COPYFILE_EXCL);
-    if ((await readFile(heldDestination, "utf8")) !== heldText) {
-      throw new DomainError("backup_mismatch", "the copy does not match what is held back", {
-        path: heldDestination,
-      });
-    }
-    held = { path: heldDestination, units: unresolvedHeld(parseHeld(heldText)).length };
-  }
   // The documentary sources the user leaves beside the ledger, verified and
   // never overwritten; then, when asked, the bucket's, only reading.
   const documents = await copyLocalDocuments(dirname(ctx.ledgerPath), directory);
@@ -140,17 +123,16 @@ export const backupCommand = async (
       path: destination,
       lines: copy.lines.length,
       etag: copy.etag,
-      ...(held === undefined ? {} : { held }),
       documents,
       ...(bucket === undefined ? {} : { bucket }),
     },
     [
       `Copia verificada: ${destination} (${copy.lines.length} líneas, etag ${copy.etag}).`,
-      held === undefined
-        ? cloud === undefined
-          ? "No hay nada retenido por la sincronización: no se copia nada más."
-          : "La copia es de solo lectura (0444): si la quieres como libro local, copia el fichero a otra carpeta."
-        : `Lo retenido por la sincronización (${held.units}), aparte y verificado: ${held.path}.`,
+      ...(cloud === undefined
+        ? []
+        : [
+            "La copia es de solo lectura (0444): si la quieres como libro local, copia el fichero a otra carpeta.",
+          ]),
       `documents/ de la carpeta del libro: ${describeCopied(documents)}.`,
       ...(bucket === undefined
         ? []

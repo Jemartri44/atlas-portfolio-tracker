@@ -7,8 +7,6 @@
 // (ADR-0025). Refusing is still what happens by default; the way out is asked
 // for by name, one filing at a time, and it is **recorded in the ledger**.
 
-import { dirname } from "node:path";
-import { folderSyncPresence } from "@atlas/adapters";
 import {
   type CompactPlan,
   compactLedger,
@@ -16,7 +14,6 @@ import {
   planCompact,
   type UnverifiedFiling,
 } from "@atlas/domain";
-import { compactPermission, RefusedError } from "@atlas/domain/sync";
 import { assertKnownFlags, type Flags, listFlag } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
@@ -65,13 +62,8 @@ export const compactCommand = async (
   if (ctx.mode.kind === "cloud") {
     throw new DomainError("compact_cloud_folder", "a cloud folder has no ledger to compact", {});
   }
-  // A folder of the old queue is a replica of the remote: compacting it is refused, and
-  // so it is with its marker unreadable or missing (ADR-0026, Part A; data-
-  // schema.md §5, point 6). Before anything else: nothing is planned or asked.
-  const refusal = compactPermission((await folderSyncPresence(dirname(ctx.ledgerPath))).presence);
-  if (refusal !== undefined) {
-    throw new RefusedError(refusal);
-  }
+  // A `sync/state.json` left by the old queue (ADR-0026) is not read: the
+  // folder is a local one (ADR-0035, E5), and compacts as any local ledger.
   const accepted = listFlag(flags, "accept-unverified");
   const plan = await planCompact(ctx.deps);
   if (plan.outdated === 0) {
