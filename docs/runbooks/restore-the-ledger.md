@@ -10,10 +10,7 @@
 
 **Lo que necesitas**: el rol y `admin.json`, como en [Revocar todos los tokens](revoke-all-tokens.md), apartado «Lo que necesitas».
 
-**Se niega**, y hay que resolverlo antes:
-- si **algún dispositivo tiene operaciones pendientes** publicadas en `sync/devices/`, o las tiene la carpeta desde la que la ejecutas. Que sincronicen antes;
-- si el objeto de algún dispositivo **no se puede leer**: su cola no se puede conocer;
-- si el marcador de esta carpeta falta o no se lee.
+**Ya no se niega por pendientes** (ADR-0035, E4): no hay cola de dispositivos que esperar. Quien tenga Atlas abierto verá «El libro ha cambiado» en su siguiente escritura y recargará.
 
 **Los olvidados no cuentan.**
 
@@ -74,7 +71,7 @@ La cuenta de `prod` es la que compartes con otros proyectos (ADR-0034; ADR-0032,
 Las réplicas y el disco son las capas que no dependen de la cuenta: mantenlas al día.
 
 *Probado* contra los dobles de S3 (`apps/cli/test/admin/rewrite.test.ts`):
-- las negativas antes de leer la copia: un dispositivo con pendientes publicadas, uno ilegible, y un olvidado que no cuenta;
+- que ni un dispositivo con pendientes publicadas ni un objeto ilegible frenan `compact` o `restore`;
 - la copia que no pasa la comprobación, que se niega antes del paso 3;
 - un «no» en el paso 4, que no toca nada;
 - un prefijo, con su cola perdida, y una versión anterior del objeto;

@@ -99,7 +99,7 @@ describe("cloud boot", () => {
     expect(text(host)).toContain("eventos:200");
   });
 
-  it("asks every request with `no-store` and names the device of its cookie", async () => {
+  it("asks every request with `no-store` and names no device (ADR-0035, E4)", async () => {
     const { request, asked } = await rig();
     await bootCloud(request);
     expect(asked.length).toBeGreaterThan(0);
@@ -108,9 +108,8 @@ describe("cloud boot", () => {
       expect(call.init?.redirect, call.url).toBe("error");
     }
     const ledger = asked.find((call) => call.url === "/api/ledger");
-    expect(new Headers(ledger?.init?.headers).get("x-atlas-expected-device")).toMatch(
-      /^[A-Za-z0-9_-]{22}$/,
-    );
+    expect(ledger).toBeDefined();
+    expect(new Headers(ledger?.init?.headers).has("x-atlas-expected-device")).toBe(false);
   });
 
   it("with no session shows only the way in, and no data", async () => {
