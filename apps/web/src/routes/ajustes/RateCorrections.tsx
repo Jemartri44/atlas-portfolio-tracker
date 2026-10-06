@@ -19,7 +19,9 @@ import { eventReferences, inSentence } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
 import { countOf, formatExact } from "../../format/number.js";
 import { toAppError } from "../../ledger/errors.js";
+import { sentenceOf } from "../../ledger/failure-text.js";
 import type { AppError } from "../../ledger/state.js";
+import { SessionNotice } from "../../shell/SessionNotice.jsx";
 
 const propose = async () => (await import("../../ledger/rate-corrections.js")).proposeCorrections();
 
@@ -28,13 +30,14 @@ export const RateCorrections = (props: {
   events: readonly LedgerEvent[];
 }): JSX.Element => {
   // Proposed again whenever the ledger changes (after writing, it is empty).
-  const [proposal] = createResource(
+  const [proposal, { refetch }] = createResource(
     () => props.events,
     () => propose().catch((error: unknown) => ({ error: toAppError(error) })),
   );
   const [asking, setAsking] = createSignal(false);
   const [failure, setFailure] = createSignal<AppError | undefined>(undefined);
   const [written, setWritten] = createSignal(false);
+  const [signedOut, setSignedOut] = createSignal(false);
   const reference = () => eventReferences(props.events, nameIndex(props.state));
 
   const write = async (): Promise<void> => {
@@ -49,15 +52,12 @@ export const RateCorrections = (props: {
       setWritten(true);
       return;
     }
-    setFailure(
-      result.failure.kind === "error"
-        ? result.failure.error
-        : {
-            code: result.failure.kind,
-            message:
-              "Tus datos han cambiado desde que se propuso la corrección: se han recargado y la propuesta se ha rehecho. No se ha escrito nada.",
-          },
-    );
+    setSignedOut(result.failure.kind === "signed_out");
+    if (result.failure.kind === "conflict") {
+      // The ledger was read again: the chain is proposed again on it, and confirmed again.
+      refetch();
+    }
+    setFailure({ code: result.failure.kind, message: sentenceOf(result.failure) });
   };
 
   return (
@@ -66,6 +66,9 @@ export const RateCorrections = (props: {
         <Notice severity="info" title="Corrección escrita">
           Cada línea se anuló y se registró de nuevo con el tipo oficial de su fecha fiscal.
         </Notice>
+      </Show>
+      <Show when={signedOut()}>
+        <SessionNotice expired onRenewed={() => setSignedOut(false)} />
       </Show>
       <Show when={failure()}>
         {(error) => <ErrorView error={error()} title="No se ha escrito la corrección" />}

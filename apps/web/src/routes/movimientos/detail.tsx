@@ -16,8 +16,10 @@ import { EmptyState, Notice, Parts, Tag } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
+import { sentenceOf } from "../../ledger/failure-text.js";
 import { closedYearsOfReversal, reverse } from "../../ledger/write.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
+import { SessionNotice } from "../../shell/SessionNotice.jsx";
 import { detailView } from "../../view-models/index.js";
 import { saleResult } from "../../view-models/sale.js";
 import { movementSentence } from "../../view-models/sentence.js";
@@ -32,6 +34,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
   const [reason, setReason] = createSignal("");
   const [asking, setAsking] = createSignal(false);
   const [error, setError] = createSignal<string | undefined>(undefined);
+  const [signedOut, setSignedOut] = createSignal(false);
   const [closedYears, setClosedYears] = createSignal<readonly ClosedYearImpact[]>([]);
   /** The warning could not be computed at all: said, never skipped in silence. */
   const [closedYearsFailed, setClosedYearsFailed] = createSignal(false);
@@ -82,13 +85,14 @@ export default function MovimientoDetalleRoute(): JSX.Element {
       setAsking(false);
       return;
     }
-    setError(
-      result.failure.kind === "conflict"
-        ? "Tus datos han cambiado desde que se cargaron: se han recargado, vuelve a intentarlo."
-        : result.failure.kind === "error"
-          ? result.failure.error.message
-          : "No se ha podido anular.",
-    );
+    if (result.failure.kind === "signed_out") {
+      setSignedOut(true);
+    }
+    if (result.failure.kind === "conflict") {
+      // Read again in silence: the dialog shows the reach of the annulment on the new ledger.
+      await askToReverse();
+    }
+    setError(sentenceOf(result.failure));
   };
 
   return (
@@ -148,6 +152,9 @@ export default function MovimientoDetalleRoute(): JSX.Element {
 
                   <Rectified />
 
+                  <Show when={signedOut()}>
+                    <SessionNotice expired onRenewed={() => setSignedOut(false)} />
+                  </Show>
                   <Show when={error() !== undefined}>
                     <Notice severity="danger" title="No se ha podido rectificar">
                       {error()}

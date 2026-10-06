@@ -27,10 +27,12 @@ import { formatDate } from "../../format/date.js";
 import { eventReferences, inSentence } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
 import { toAppError } from "../../ledger/errors.js";
+import { sentenceOf } from "../../ledger/failure-text.js";
 import type { AppError } from "../../ledger/state.js";
 import { store, today } from "../../ledger/state.js";
 import { changeSettings, closedYearsOfSettings } from "../../ledger/write.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
+import { SessionNotice } from "../../shell/SessionNotice.jsx";
 import {
   candidateSettings,
   type PerAssetTypeKey,
@@ -58,6 +60,7 @@ export default function ConfiguracionRoute(): JSX.Element {
   const [silenced, setSilenced] = createSignal<readonly Warning[] | undefined>(undefined);
   const [moved, setMoved] = createSignal<readonly FiscalYearImpact[] | undefined>(undefined);
   const [closedYears, setClosedYears] = createSignal<readonly ClosedYearImpact[]>([]);
+  const [signedOut, setSignedOut] = createSignal(false);
   const [invalidating, setInvalidating] = createSignal<readonly InvalidatedEvent[] | undefined>(
     undefined,
   );
@@ -158,16 +161,16 @@ export default function ConfiguracionRoute(): JSX.Element {
            * this screen used to drop it, so the user read what to do and had
            * nowhere to press (inventory V6).
            */
+          setSignedOut(result.failure.kind === "signed_out");
+          if (result.failure.kind === "conflict") {
+            // Read again: the next «Guardar» shows the reach of the change on the new ledger.
+            setMoved(undefined);
+            setClosedYears([]);
+          }
           setError(
             result.failure.kind === "error"
               ? result.failure.error
-              : {
-                  code: result.failure.kind,
-                  message:
-                    result.failure.kind === "conflict"
-                      ? "Tus datos han cambiado desde que se cargaron: se han recargado, vuelve a guardar."
-                      : "No se ha podido guardar.",
-                },
+              : { code: result.failure.kind, message: sentenceOf(result.failure) },
           );
         };
 
@@ -180,6 +183,9 @@ export default function ConfiguracionRoute(): JSX.Element {
               lead={`En vigor el ${formatDate(date)}: ${origin()}. Guardar registra un cambio con la configuración completa.`}
             />
 
+            <Show when={signedOut()}>
+              <SessionNotice expired onRenewed={() => setSignedOut(false)} />
+            </Show>
             <Show when={saved()}>
               <Notice severity="info" title="Configuración guardada">
                 Se ha registrado un cambio de configuración con todos los parámetros.
