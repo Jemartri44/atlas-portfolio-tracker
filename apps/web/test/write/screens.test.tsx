@@ -8,9 +8,10 @@ import { BlobLedgerStore } from "@atlas/adapters/blob";
 import { recordEvent } from "@atlas/domain";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadInto } from "../../src/ledger/actions.js";
-import { copyName, copyText, toCsv } from "../../src/ledger/copy.js";
+import { copyName, copyText, downloadCopy, toCsv } from "../../src/ledger/copy.js";
 import { store } from "../../src/ledger/state.js";
 import RegistrarForm from "../../src/routes/registrar/form.jsx";
+import CloudGate from "../../src/shell/CloudGate.jsx";
 import PendingWrite from "../../src/shell/PendingWrite.jsx";
 import { SessionNotice } from "../../src/shell/SessionNotice.jsx";
 import { goldenLines, goldenText } from "../helpers/golden.js";
@@ -87,9 +88,34 @@ describe("the copy of the ledger", () => {
     expect(csv.length - 2).toBe(goldenLines().length);
     expect(toCsv([{ a: 'x,"y"' }])).toBe('a\n"x,""y"""');
     expect(copyName("csv", "2029-07-01")).toBe("atlas-copia-2029-07-01.csv");
-    expect(window.localStorage.length === 0 || !window.localStorage.getItem("atlas.copy")).toBe(
-      true,
-    );
+  });
+
+  it("an empty ledger is an empty file, and downloading leaves nothing on the device", async () => {
+    await open(new MemoryBlob(""));
+    expect(await copyText("jsonl")).toBe("");
+    await open(new MemoryBlob(goldenText()));
+    const holder = globalThis as { indexedDB?: unknown; caches?: unknown };
+    const before = { indexedDB: holder.indexedDB, caches: holder.caches };
+    const touched = vi.fn();
+    holder.indexedDB = { open: touched };
+    holder.caches = { open: touched, keys: touched, match: touched };
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+    const url = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:copy");
+    vi.spyOn(URL, "revokeObjectURL").mockReturnValue(undefined);
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockReturnValue(undefined);
+    try {
+      expect(await downloadCopy("jsonl", "2029-07-01")).toBe("atlas-copia-2029-07-01.jsonl");
+      expect(click).toHaveBeenCalledTimes(1);
+      expect(url).toHaveBeenCalledTimes(1);
+      expect(window.localStorage.length).toBe(0);
+      expect(window.sessionStorage.length).toBe(0);
+      expect(touched).not.toHaveBeenCalled();
+    } finally {
+      holder.indexedDB = before.indexedDB;
+      holder.caches = before.caches;
+      vi.restoreAllMocks();
+    }
   });
 });
 
@@ -110,6 +136,45 @@ describe("the notice of a session about to end", () => {
     await press(again, "Entrar de nuevo");
     expect(opened).toHaveBeenCalledWith("/api/auth/login", "_blank", "noopener");
     opened.mockRestore();
+  });
+
+  it("says what is true of the form: it is kept, and the minutes are read again with time", async () => {
+    let now = Date.parse(NOW);
+    const timed = { ...deps(new MemoryBlob(goldenText())), clock: { now: () => new Date(now) } };
+    await loadInto({
+      deps: timed,
+      source: { kind: "cloud", expiresAt: "2029-07-01T10:20:00.000Z" },
+    });
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    try {
+      const host = await show("/", SessionNotice);
+      expect(text(host)).not.toContain("caduca");
+      now += 6 * 60_000;
+      vi.advanceTimersByTime(30_000);
+      await settle(10);
+      expect(text(host)).toContain("Quedan 14 minutos");
+      expect(text(host)).not.toContain("se pierde");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("the gate while a write is unresolved", () => {
+  it("warns before leaving for Google, because the pending write is only in memory", async () => {
+    store.setLoad({ phase: "signed_out", reason: "expired" });
+    store.setPending({ ids: ["01J00000000000000000000CH0"], state: "unknown", retry: vi.fn() });
+    const assign = vi.spyOn(window.location, "assign").mockReturnValue(undefined);
+    try {
+      const host = await show("/", CloudGate);
+      await press(host, "Entrar con Google");
+      expect(assign).not.toHaveBeenCalled();
+      expect(text(host)).toContain("compruébalo en Movimientos");
+      await press(host, "Entrar de todos modos");
+      expect(assign).toHaveBeenCalledWith("/api/auth/login");
+    } finally {
+      assign.mockRestore();
+    }
   });
 });
 
