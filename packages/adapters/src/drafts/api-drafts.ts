@@ -128,7 +128,7 @@ export class ApiDraftStore implements PendingDraftStore {
     }
   }
 
-  async remove(id: string, end: DraftEnd = { outcome: "discarded" }): Promise<void> {
+  async remove(id: string, end: DraftEnd): Promise<void> {
     try {
       await this.ok(
         "POST",
@@ -141,7 +141,8 @@ export class ApiDraftStore implements PendingDraftStore {
       // Already gone (or never there): removing it is done, as on the disk.
       if (
         error instanceof RemoteError &&
-        (error.status === 404 || (error.code === "draft_changed" && error.details.now === "gone"))
+        ((error.status === 404 && error.details.reason === "draft_missing") ||
+          (error.code === "draft_changed" && error.details.now === "gone"))
       ) {
         return;
       }
@@ -149,12 +150,16 @@ export class ApiDraftStore implements PendingDraftStore {
     }
   }
 
-  /** A 409 or a 404 of the API is the draft no longer being as it was read. */
+  /** A 409 or the `draft_missing` 404 of the API is the draft no longer being as it was read. */
   private changed(error: unknown, id: string): unknown {
     if (error instanceof RemoteError && error.code === "draft_changed") {
       return new DraftChangedError(id, error.details.now === "gone" ? "gone" : "stamped");
     }
-    if (error instanceof RemoteError && error.status === 404) {
+    if (
+      error instanceof RemoteError &&
+      error.status === 404 &&
+      error.details.reason === "draft_missing"
+    ) {
       return new DraftChangedError(id, "gone");
     }
     return error;

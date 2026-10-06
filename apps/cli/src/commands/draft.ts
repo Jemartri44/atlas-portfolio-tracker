@@ -13,7 +13,7 @@
 
 import { dirname } from "node:path";
 import { FileDraftStore, readLocalConfig } from "@atlas/adapters";
-import { type CivilDate, DomainError, loadAndProject } from "@atlas/domain";
+import { type CivilDate, DomainError, loadAndProject, type Ulid } from "@atlas/domain";
 import {
   type DraftStatus,
   draftRecordedAs,
@@ -163,7 +163,10 @@ const confirmDraft = async (ctx: Context, id: string | undefined): Promise<numbe
   // drafts/): confirming again only removes it — never a second line.
   const recorded = draftRecordedAs(events, draft);
   if (recorded.length > 0) {
-    await (await storeOf(ctx)).remove(draft.id);
+    await (await storeOf(ctx)).remove(draft.id, {
+      outcome: "confirmed",
+      eventId: recorded[0] as Ulid,
+    });
     ctx.io.out(
       `El borrador ${draft.id} ya estaba registrado (${recorded.join(", ")}): se quita de drafts/ sin registrarlo otra vez.`,
     );
@@ -213,7 +216,7 @@ const discardDraft = async (ctx: Context, id: string | undefined): Promise<numbe
     ctx.io.out("Cancelado.");
     return EXIT.ok;
   }
-  await (await storeOf(ctx)).remove(draft.id);
+  await (await storeOf(ctx)).remove(draft.id, { outcome: "discarded" });
   ctx.io.out(`Borrador ${draft.id} descartado.`);
   return EXIT.ok;
 };

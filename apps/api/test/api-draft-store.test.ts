@@ -80,14 +80,34 @@ describe("ApiDraftStore", () => {
     ).toMatchObject({ details: { now: "gone" } });
   });
 
-  it("takes removing a draft that is gone as done, and discards by default", async () => {
+  it("takes removing a draft that is gone as done, and needs its end said", async () => {
     const { store } = await rig();
-    await store.remove(A);
+    const discarded = { outcome: "discarded" } as const;
+    await store.remove(A, discarded);
     await store.save(draft());
-    await store.remove(A);
-    await store.remove(A);
+    await store.remove(A, discarded);
+    await store.remove(A, discarded);
     await store.remove(A, { outcome: "confirmed", eventId: E1 });
     expect((await store.list()).drafts).toEqual([]);
+  });
+
+  it("takes only the draft_missing 404 as gone: any other 404 is an error", async () => {
+    const other = new ApiDraftStore({
+      origin: SELF,
+      fetch: (async () =>
+        new Response(
+          JSON.stringify({ error: { code: "not_found", details: { reason: "route" } } }),
+          {
+            status: 404,
+          },
+        )) as unknown as typeof fetch,
+    });
+    expect(await failure(other.remove(A, { outcome: "discarded" }))).toMatchObject({
+      code: "not_found",
+    });
+    expect(
+      await failure(other.update({ ...draft(), pending_event_id: E1 }, undefined)),
+    ).toMatchObject({ code: "not_found" });
   });
 
   it("refuses to confirm a draft stamped with another id", async () => {

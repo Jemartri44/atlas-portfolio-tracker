@@ -33,8 +33,8 @@ export interface PendingDraftStore {
   update(draft: PendingDraft, readStamp: string | undefined): Promise<void>;
   /**
    * Removing one that is not there is not an error: it is already gone.
-   * `end` says how it ended (`discarded` when absent); a store that deletes
+   * `end` says how it ended, always said by the caller; a store that deletes
    * ignores it.
    */
-  remove(id: string, end?: DraftEnd): Promise<void>;
+  remove(id: string, end: DraftEnd): Promise<void>;
 }
