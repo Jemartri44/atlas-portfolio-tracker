@@ -379,7 +379,7 @@ Al volver a descargar un remoto reescrito o al unirse desde el remoto se retiene
 
 ### 5.8 El cliente de escritura directa (ADR-0035)
 
-Decidido por ADR-0035 (aceptada el 2026-10-06). **El adaptador está implementado (E1, `specs/021-api-ledger-store`)**: `ApiLedgerStore` sobre `httpRemote`, con los errores `remote_rejected` (`RemoteRejectedError`) y `write_outcome_unknown` (`WriteOutcomeUnknownError`) y `findOutcome(ids)` para resolver el resultado desconocido. Falta su uso en la web (E2a/E2b) y en la consola (E3).
+Decidido por ADR-0035 (aceptada el 2026-10-06). **El adaptador está implementado (E1, `specs/021-api-ledger-store`)**: `ApiLedgerStore` sobre `httpRemote`, con los errores `remote_rejected` (`RemoteRejectedError`) y `write_outcome_unknown` (`WriteOutcomeUnknownError`) y `findOutcome(ids)` para resolver el resultado desconocido. La web lo usa desde E2b (feature 023); falta la consola (E3).
 
 - **Un solo almacén, `ApiLedgerStore`**, implementa `LedgerStore` sobre HTTP: `load()` es `GET /api/ledger` (se comprueba que el `ETag` es el SHA-256 de los bytes); `append(events, etag)` serializa cada evento con `encodeLine` y lo envía en `POST /api/ledger/lines` con `If-Match: "<etag>"`. `replace`, `appendLines` y `replaceLines` se niegan. Sin cola local y sin libro guardado en el dispositivo.
 - **Las declaraciones de §5.2 las deduce el adaptador:** `has_correction` y `chain_continues`, de la forma del lote; `confirm_duplicate`, por unidad, con las huellas del libro cargado más la unidad entera (miembros posteriores incluidos), que es la regla de la fila 7 de la tabla de §5.2.
@@ -394,6 +394,7 @@ Decidido por ADR-0035 (aceptada el 2026-10-06). **El adaptador está implementad
 | `401` o `403` de credencial | No se escribió nada; lleva al inicio de sesión |
 | Fallo de red, `5xx` o `transport_rejected` tras enviar | Resultado desconocido. El `id` de cada evento se fija **antes** de enviar. Con conexión, recarga y busca ese `id`: si está, se registró; si no, no se escribió y se ofrece reintentar con los mismos datos. Reintentar es seguro: `duplicate_id` |
 
+- **Lo que la web dice de un rechazo** (`apps/web/src/format/messages/errors.ts`): `remote_rejected` se traduce por `remote_code` con el mapa `REJECTION_REASONS` (`line_invalid`, `domain_rejected`, `duplicate_unconfirmed`, `seal_mismatch`, `recorded_at_in_future`, `partial_write`, etc.); un código que el mapa no conoce da «no la ha aceptado tal como estaba». Si `accepted` es 0 añade «No se ha guardado nada»; si no, «Solo se ha guardado una parte: revisa tus movimientos». Un `RemoteError` antes de enviar (`apps/web/src/ledger/errors.ts`) se dice con `REMOTE_FAILURES` y termina en «No se ha guardado nada».
 - **Sin conexión, la web no muestra datos ni deja registrar** («Sin conexión» y «Reintentar»).
 - **`compact` y la restauración** siguen como operaciones de administración sobre el remoto (ADR-0032); sin pendientes que comprobar, tras ellas el siguiente `412` recarga el libro.
 - **La consola** usa `ApiLedgerStore` con su token en una carpeta «de nube» y falla sin conexión. Un libro local no se sincroniza con la nube: para subir, `PUT /api/ledger` sobre una nube vacía o `atlas admin restore`.
