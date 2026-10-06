@@ -31,6 +31,12 @@ export const saveDraft = async (
   event: Record<string, unknown>,
   web: WebHistory | undefined,
 ): Promise<SavedDraft> => {
+  // Cloud mode keeps nothing of the ledger on the device (ADR-0035): a draft
+  // holds amounts, so it is refused here, whatever the screen did. Cloud drafts
+  // come with E6.
+  if (ledger.source()?.kind === "cloud") {
+    throw new Error("drafts are not kept on the device in cloud mode");
+  }
   const prepared = await preparePendingDraft(
     requireDeps(),
     web?.history,
