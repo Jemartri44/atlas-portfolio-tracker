@@ -139,7 +139,7 @@ export interface PlanRequest {
   vars: string;
 }
 
-const cacheDir = join(tmpdir(), "atlas-infra-plan-cache");
+const cacheDir = join(process.env.ATLAS_TEST_CACHE_ROOT ?? tmpdir(), "atlas-infra-plan-cache");
 
 /** Scratch folders already initialised in this process, by root. */
 const prepared = new Map<string, { scratch: string; rootDir: string }>();

@@ -52,6 +52,8 @@ export default defineConfig({
   },
   test: {
     passWithNoTests: true,
+    // One temporary folder per run, removed at the end (tests/support/tmp-per-run.ts).
+    globalSetup: [local("./tests/support/tmp-per-run.ts")],
     // Every outDir of a tsconfig (tests/test-outputs.test.ts): a compiled test
     // must never run a second time after a build.
     exclude: [
