@@ -12,6 +12,7 @@ export {
 } from "./ecb/history-store.js";
 export { ECB_API_URL, ECB_ZIP_URL, EcbDownloadFailed, EcbFxRateSource } from "./ecb/source.js";
 export { entryOfZip, ZipUnreadable } from "./ecb/zip.js";
+export { ApiLedgerStore, type WriteOutcome } from "./ledger-store/api.js";
 export { BlobArchiveExists, BlobLedgerStore, type LedgerBlob } from "./ledger-store/blob.js";
 export {
   FileLedgerStore,

@@ -51,6 +51,8 @@ export interface HttpRemoteOptions {
   readonly expectedDevice?: string;
 }
 
+const NO_STORE = { cache: "no-store" } as const;
+
 const hex = async (bytes: Uint8Array): Promise<string> =>
   [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes as Uint8Array<ArrayBuffer>))]
     .map((byte) => byte.toString(16).padStart(2, "0"))
@@ -86,6 +88,9 @@ export const httpRemote = (options: HttpRemoteOptions): RemoteLedger => {
         method,
         headers: sent,
         redirect: "error",
+        // Never from the HTTP cache: the ledger is not kept on the device
+        // (ADR-0035). `cache` is a DOM-only member of `RequestInit`.
+        ...NO_STORE,
         credentials: options.token === undefined ? "same-origin" : "omit",
         ...(payload === undefined ? {} : { body: payload as Uint8Array<ArrayBuffer> }),
       });
