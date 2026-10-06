@@ -1445,10 +1445,6 @@ const LAZY_ONLY = [
   { path: "/src/routes/ajustes/sync/", what: "la sección de sincronización de Ajustes" },
   { path: "/packages/domain/src/sync.ts", what: "la puerta de la sincronización" },
   { path: "/packages/domain/src/ports/remote-ledger.ts", what: "el puerto del remoto" },
-  {
-    path: "/packages/domain/src/ports/sync-state-store.ts",
-    what: "el puerto del estado de la sincronización",
-  },
   { path: "/packages/adapters/src/sync/", what: "la orquestación de la sincronización" },
 ];
 

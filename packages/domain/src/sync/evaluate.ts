@@ -6,11 +6,10 @@
 // the buy corrected to 12 is accepted, although the reversal alone would
 // leave the sale without lots.
 //
-// Shared by the client, which decides what it holds back, and by the remote,
-// which decides what it accepts: one definition of "the domain refuses it".
+// Used by the remote (`acceptAppend`), which decides what it accepts: one
+// definition of "the domain refuses it".
 //
-// **The base is valid**: both callers check it before re-applying anything
-// (a remote that is already invalid stops the sync, `remote_ledger_invalid`),
+// **The base is valid**: the caller checks it before re-applying anything,
 // so everything the candidate breaks is the unit's doing.
 
 import type { DomainError } from "../errors.js";

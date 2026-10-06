@@ -307,7 +307,7 @@ describe("Spanish messages: the two interfaces stay level", () => {
       "duplicate_fingerprint",
       "newly_invalid_events",
       // Feature 014 (V7): the third code of DependentEventsError, said by both
-      // interfaces with its own sentence (apps/cli/test/sync/refusals.test.ts
+      // interfaces with its own sentence (apps/cli/test/cloud/cloud-folder.test.ts
       // and apps/web/test/actions.test.ts read it).
       "accept_invalid_while_synced",
       "not_found",

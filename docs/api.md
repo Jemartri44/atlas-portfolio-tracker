@@ -304,6 +304,8 @@ Es como **el primer dispositivo** sube su libro (decisión de la dirección, 202
 
 ### 5.6 Qué es «el mismo evento» tras una reescritura del remoto
 
+> **Histórica, enmendada por ADR-0035 (E5).** Esta regla la usaba el cliente de la cola, que se borró del código junto con su test (`rewrite-join.test.ts`). Se conserva como registro de por qué `compact` reescribe `ledger_fingerprint`; ya no hay clasificación en el cliente ni test que mantener.
+
 No es una ruta: es la regla con la que un cliente clasifica lo que retiene al volver a descargar un remoto reescrito (ADR-0026, Parte A y nota fechada del 2026-09-25; ADR-0032, paso 3). **Detectar** la reescritura es por el hash de los bytes del prefijo (§5.1). **Clasificar** es por `event_id` y forma canónica: los dos eventos, **migrados a la versión de esquema actual**, se comparan en su serialización canónica (`encodeLine`) **ignorando exactamente estos campos, y ninguno más**:
 
 | Tipo | Campo ignorado | Por qué |
@@ -314,7 +316,7 @@ No es una ruta: es la regla con la que un cliente clasifica lo que retiene al vo
 
 ### 5.7 La parte del cliente *(014)*
 
-> **Histórica, enmendada por ADR-0035.** Todo lo de esta sección (cola, marcador, lo retenido, volver a descargar, unirse, `syncDevice` y sus códigos) describe el motor de sincronización que **ADR-0035 retiró**. El motor se borró del código en **E5** (feature 026; `packages/adapters/src/sync/` salvo `http-remote` y `api-ledger-store`; se conserva lo que importa la API, como `acceptAppend`, y `unitsOf` y `entriesOf`, de los que depende `ApiLedgerStore`); sus clientes dejan de usarse desde E2b y E3. Hasta entonces el código sigue como está. Lo que lo sustituye es §5.8.
+> **Histórica, enmendada por ADR-0035.** Todo lo de esta sección (cola, marcador, lo retenido, volver a descargar, unirse, `syncDevice` y sus códigos) describe el motor de sincronización que **ADR-0035 retiró**. El motor se borró del código en **E5** (feature 026; `packages/adapters/src/sync/` salvo `http-remote` y `api-ledger-store`; se conserva lo que importa la API, como `acceptAppend`, y `unitsOf` y `entriesOf`, de los que depende `ApiLedgerStore`); sus clientes dejan de usarse desde E2b y E3.  Lo que lo sustituye es §5.8.
 
 No es una ruta: es lo que el cliente hace con §5.1 a §5.5, fijado por el código de la 014 (`syncDevice`, `initialiseRemote`, `replaceFromRemote` y `joinWithOwnLines` en `packages/adapters/src/sync/client.ts`; `inspect`, `planUpload` y `settle` en `packages/domain/src/sync/client-plan.ts`). Los dos clientes, la consola sobre su carpeta y la web sobre su IndexedDB, comparten esta orquestación. Cada interfaz traduce cada código con su propia frase (`tests/messages.test.ts`).
 
