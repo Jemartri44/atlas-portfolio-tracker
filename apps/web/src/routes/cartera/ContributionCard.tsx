@@ -117,9 +117,8 @@ const Split = (props: { view: ContributionView }): JSX.Element => {
                       {(whole) => (
                         <span data-testid="whole-units">
                           {" "}
-                          · enteras:{" "}
-                          <Amount quantity={whole().units} of="part." one="participación" /> ·
-                          sobran <Amount value={whole().leftover} />
+                          · enteras: <Amount quantity={whole().units} of={row.units} /> · sobran{" "}
+                          <Amount value={whole().leftover} />
                         </span>
                       )}
                     </Show>
