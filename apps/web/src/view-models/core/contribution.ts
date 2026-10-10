@@ -9,7 +9,8 @@
 import { type ContributionPlan, Decimal, Money, type Warning } from "@atlas/domain";
 import { parseDecimalInput } from "../../format/input.js";
 import { valueLabel } from "../../format/labels.js";
-import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
+import { displayName, type NameIndex, NO_NAMES, unitsOf } from "../../format/names.js";
+import { totalLeftover, type WholeUnits, wholeUnitsFor } from "./whole-units.js";
 
 export interface ContributionRowView {
   assetId: string;
@@ -27,6 +28,13 @@ export interface ContributionRowView {
    * the money goes when the amount is hidden. Absent when the core part is zero.
    */
   sharePct?: string;
+  /**
+   * Informative: the whole units that allocation would buy at today's unit
+   * price, and what they leave. Absent without a usable price.
+   */
+  whole?: WholeUnits;
+  /** What a unit of this asset is called: «part.», «acc.», «uds.». */
+  units: string;
   /** Nothing to buy here this month: shown, but quietly. */
   idle: boolean;
 }
@@ -43,6 +51,8 @@ export interface ContributionView {
   bucketPct?: string;
   surplusDistributed: boolean;
   rows: ContributionRowView[];
+  /** What the whole units leave uninvested in total; absent unless every active row has its figure. */
+  wholeLeftover?: Money;
   /** The note of the domain when a weight it used rests on an approximation (P3). */
   approximation?: Warning;
 }
@@ -76,20 +86,23 @@ const approximationOf = (plan: ContributionPlan): { approximation?: Warning } =>
   return note === undefined ? {} : { approximation: note };
 };
 
+/** Unit price in euros per asset, as the core weights projection gives it. */
+export type UnitPrices = ReadonlyMap<string, Money>;
+
+const wholeOf = (
+  allocation: Money,
+  price: Money | undefined,
+): Pick<ContributionRowView, "whole"> => {
+  const whole = wholeUnitsFor(allocation, price);
+  return whole === undefined ? {} : { whole };
+};
+
 export const contributionView = (
   plan: ContributionPlan,
   names: NameIndex = NO_NAMES,
-): ContributionView => ({
-  date: plan.date,
-  amount: plan.amount_eur,
-  fromSettings: plan.amount_origin === "settings",
-  bucketBudget: plan.bucket_budget_eur,
-  coreAmount: plan.core_amount_eur,
-  coreValue: plan.core_value_eur,
-  ...shares(plan),
-  surplusDistributed: plan.surplus_distributed,
-  ...approximationOf(plan),
-  rows: plan.rows.map((row) => ({
+  unitPrices: UnitPrices = new Map(),
+): ContributionView => {
+  const rows: ContributionRowView[] = plan.rows.map((row) => ({
     assetId: row.asset_id,
     name: displayName(names, row.asset_id),
     assetClass: valueLabel(row.asset_class),
@@ -101,9 +114,25 @@ export const contributionView = (
     valueAfter: row.value_after_eur,
     weightAfterPct: row.weight_after_pct.toString(),
     ...rowShare(row.allocation_eur, plan.core_amount_eur),
+    ...wholeOf(row.allocation_eur, unitPrices.get(row.asset_id)),
+    units: unitsOf(names, row.asset_id),
     idle: row.allocation_eur.isZero(),
-  })),
-});
+  }));
+  const leftover = totalLeftover(rows.filter((row) => !row.idle).map((row) => row.whole));
+  return {
+    date: plan.date,
+    amount: plan.amount_eur,
+    fromSettings: plan.amount_origin === "settings",
+    bucketBudget: plan.bucket_budget_eur,
+    coreAmount: plan.core_amount_eur,
+    coreValue: plan.core_value_eur,
+    ...shares(plan),
+    surplusDistributed: plan.surplus_distributed,
+    ...approximationOf(plan),
+    rows,
+    ...(leftover === undefined ? {} : { wholeLeftover: leftover }),
+  };
+};
 
 /**
  * What the user typed in «Importe de este mes»: nothing (the amount of the

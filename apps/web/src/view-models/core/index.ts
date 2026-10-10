@@ -4,6 +4,7 @@ export {
   contributionView,
   type TypedAmount,
   typedAmount,
+  type UnitPrices,
 } from "./contribution.js";
 export {
   type CoreCostRowView,

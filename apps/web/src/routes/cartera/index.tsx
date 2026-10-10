@@ -13,7 +13,7 @@
 // side by side from 1024px, the costs across; the date in force to the right
 // of the title.
 
-import { contributionPlan, coreWeights, costSummary, settingsAt } from "@atlas/domain";
+import { assets, contributionPlan, coreWeights, costSummary, settingsAt } from "@atlas/domain";
 import { createMemo, createSignal, type JSX } from "solid-js";
 import { AsOfPicker, useAsOf } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
@@ -25,8 +25,10 @@ import {
   contributionView,
   costsView,
   typedAmount,
+  type UnitPrices,
   weightsView,
 } from "../../view-models/core/index.js";
+import { unitPricesOf } from "../../view-models/core/whole-units.js";
 import { absorbedAssets } from "../../view-models/weighted.js";
 import { RequireLedger } from "../guard.jsx";
 import { ContributionCard } from "./ContributionCard.jsx";
@@ -46,8 +48,14 @@ export default function CarteraRoute(): JSX.Element {
         const prices = useQuotes(snapshot.state);
         const external = () => prices.external(dated());
 
-        const weights = createMemo(() =>
-          weightsView(coreWeights(dated(), date(), settings(), external()), names),
+        const projection = createMemo(() => coreWeights(dated(), date(), settings(), external()));
+        const weights = createMemo(() => weightsView(projection(), names));
+        /** Unit prices fit for the informative whole units (see `unitPricesOf`). */
+        const unitPrices = createMemo<UnitPrices>(() =>
+          unitPricesOf(
+            projection().rows,
+            new Map(assets(dated()).map((asset) => [asset.asset_id, asset.asset_type])),
+          ),
         );
         // The amount typed for this month lives on the screen only: nothing is
         // persisted, and an invalid text falls back to the settings.
@@ -65,6 +73,7 @@ export default function CarteraRoute(): JSX.Element {
                 ...(quotes === undefined ? {} : { external: quotes }),
               }),
               names,
+              unitPrices(),
             );
           }),
         );
