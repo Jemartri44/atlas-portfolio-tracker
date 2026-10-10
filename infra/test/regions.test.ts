@@ -5,7 +5,7 @@ import { infraRoot } from "./lib/terraform.js";
 
 // Family 19 for the stack: the plan JSON hides which provider a module's resource uses
 // (the address is not in `root_module.resources`), so this reads the HCL. Everything is
-// in eu-west-1 except the certificate, the web ACL, the CSP function and the distribution
+// in eu-west-1 except the certificate, the web ACL, the two CloudFront functions (SPA routes and CSP) and the distribution
 // (CloudFront, ACM and WAF for a distribution are global: us-east-1; ADR-0028 row 4).
 const code = (file: string): string =>
   readFileSync(join(infraRoot, "modules", "atlas", file), "utf8")
@@ -31,8 +31,8 @@ describe("regions of the stack", () => {
       "aws_acm_certificate",
       "aws_acm_certificate_validation",
       "aws_cloudfront_distribution",
-      "aws_cloudfront_function",
-      "aws_cloudfront_function",
+      "aws_cloudfront_function", // spa_routes
+      "aws_cloudfront_function", // csp
       "aws_wafv2_web_acl",
     ]);
     expect(

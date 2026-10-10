@@ -372,22 +372,28 @@ describe("the edge (Z4)", () => {
   it.each(ENVS)(
     "%s rewrites extension-less SPA routes to index.html on the default behaviour only",
     (env) => {
-      const code = String(attrs(stack(env), "aws_cloudfront_function", "spa_routes").code);
-      const handler = new Function(`${code}; return handler;`)() as (e: unknown) => {
+      const fn = String(attrs(stack(env), "aws_cloudfront_function", "spa_routes").code);
+      const handler = new Function(`${fn}; return handler;`)() as (e: unknown) => {
         uri: string;
       };
       const uri = (u: string) => handler({ request: { uri: u } }).uri;
       expect(uri("/cartera")).toBe("/index.html");
       expect(uri("/cartera/detalle")).toBe("/index.html");
-      expect(uri("/")).toBe("/");
+      expect(uri("/")).toBe("/index.html");
+      expect(uri("/cartera/")).toBe("/index.html");
+      expect(uri("/v1.2/cartera")).toBe("/index.html");
       expect(uri("/assets/app.js")).toBe("/assets/app.js");
       expect(uri("/sw.js")).toBe("/sw.js");
       const d = attrs(stack(env), "aws_cloudfront_distribution");
       expect(d.custom_error_response ?? []).toEqual([]);
-      const [api] = d.ordered_cache_behavior as Record<string, unknown>[];
-      expect(api?.function_association).toEqual([]);
-      const [fallback] = d.default_cache_behavior as Record<string, unknown>[];
-      expect(JSON.stringify(fallback?.function_association)).toContain("viewer-request");
+      // The plan hides which function is bound to which event: read the HCL.
+      const edge = code("modules/atlas/edge.tf");
+      expect(edge).toMatch(
+        /event_type\s+=\s+"viewer-request"\s+function_arn\s+=\s+aws_cloudfront_function\.spa_routes\.arn/,
+      );
+      expect(edge).toMatch(
+        /event_type\s+=\s+"viewer-response"\s+function_arn\s+=\s+aws_cloudfront_function\.csp\.arn/,
+      );
     },
   );
 

@@ -1,4 +1,4 @@
-# The edge of one environment: certificate, web ACL, CSP function and distribution.
+# The edge of one environment: certificate, web ACL, the two CloudFront functions (SPA routes and CSP) and distribution.
 # CloudFront, ACM and the web ACL are global: provider `aws.us_east_1`.
 
 resource "aws_acm_certificate" "this" {
@@ -112,7 +112,7 @@ resource "aws_cloudfront_function" "spa_routes" {
     function handler(event) {
       var request = event.request;
       var last = request.uri.split('/').pop();
-      if (last !== '' && last.indexOf('.') === -1) {
+      if (last.indexOf('.') === -1) {
         request.uri = '/index.html';
       }
       return request;
