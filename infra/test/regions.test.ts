@@ -32,6 +32,7 @@ describe("regions of the stack", () => {
       "aws_acm_certificate_validation",
       "aws_cloudfront_distribution",
       "aws_cloudfront_function",
+      "aws_cloudfront_function",
       "aws_wafv2_web_acl",
     ]);
     expect(
