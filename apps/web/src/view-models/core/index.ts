@@ -2,6 +2,8 @@ export {
   type ContributionRowView,
   type ContributionView,
   contributionView,
+  type TypedAmount,
+  typedAmount,
 } from "./contribution.js";
 export {
   type CoreCostRowView,
