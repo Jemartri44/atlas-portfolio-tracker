@@ -6,7 +6,8 @@
 // say every time — that the bucket share is a budget and not an allocation, and
 // that this is a proposal nobody has recorded.
 
-import { type ContributionPlan, Decimal, type Money, type Warning } from "@atlas/domain";
+import { type ContributionPlan, Decimal, Money, type Warning } from "@atlas/domain";
+import { parseDecimalInput } from "../../format/input.js";
 import { valueLabel } from "../../format/labels.js";
 import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
 
@@ -103,3 +104,31 @@ export const contributionView = (
     idle: row.allocation_eur.isZero(),
   })),
 });
+
+/**
+ * What the user typed in «Importe de este mes»: nothing (the amount of the
+ * settings stands), a valid decimal string for `contributionPlan`'s `amount`,
+ * or the sentence that says why it is not one. Never a float: the text goes
+ * through the same reading as every typed number, then through `Money`.
+ */
+export type TypedAmount =
+  | { kind: "none" }
+  | { kind: "amount"; value: string }
+  | { kind: "invalid"; message: string };
+
+export const typedAmount = (raw: string): TypedAmount => {
+  if (raw.trim() === "") {
+    return { kind: "none" };
+  }
+  const parsed = parseDecimalInput(raw);
+  if (!parsed.ok) {
+    return { kind: "invalid", message: parsed.message };
+  }
+  if (/\.\d{3,}$/.test(parsed.value)) {
+    return { kind: "invalid", message: "Como mucho dos decimales." };
+  }
+  if (!Money.parse(parsed.value, "EUR").amount.isPositive()) {
+    return { kind: "invalid", message: "La aportación tiene que ser mayor que cero." };
+  }
+  return { kind: "amount", value: parsed.value };
+};

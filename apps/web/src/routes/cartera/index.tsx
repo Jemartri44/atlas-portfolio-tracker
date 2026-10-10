@@ -14,14 +14,19 @@
 // of the title.
 
 import { contributionPlan, coreWeights, costSummary, settingsAt } from "@atlas/domain";
-import { createMemo, type JSX } from "solid-js";
+import { createMemo, createSignal, type JSX } from "solid-js";
 import { AsOfPicker, useAsOf } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
 import { attempt } from "../../ledger/query.js";
 import { store } from "../../ledger/state.js";
 import { QuotesNotice, useQuotes } from "../../prices/use-quotes.jsx";
 import { PageHeader } from "../../shell/PageHeader.jsx";
-import { contributionView, costsView, weightsView } from "../../view-models/core/index.js";
+import {
+  contributionView,
+  costsView,
+  typedAmount,
+  weightsView,
+} from "../../view-models/core/index.js";
 import { absorbedAssets } from "../../view-models/weighted.js";
 import { RequireLedger } from "../guard.jsx";
 import { ContributionCard } from "./ContributionCard.jsx";
@@ -44,13 +49,19 @@ export default function CarteraRoute(): JSX.Element {
         const weights = createMemo(() =>
           weightsView(coreWeights(dated(), date(), settings(), external()), names),
         );
+        // The amount typed for this month lives on the screen only: nothing is
+        // persisted, and an invalid text falls back to the settings.
+        const [amountText, setAmountText] = createSignal("");
+        const typed = createMemo(() => typedAmount(amountText()));
         const contribution = createMemo(() =>
           attempt(() => {
             const quotes = external();
+            const override = typed();
             return contributionView(
               contributionPlan(dated(), {
                 date: date(),
                 settings: settings(),
+                ...(override.kind === "amount" ? { amount: override.value } : {}),
                 ...(quotes === undefined ? {} : { external: quotes }),
               }),
               names,
@@ -101,7 +112,17 @@ export default function CarteraRoute(): JSX.Element {
                 absorbed={absorbed()}
                 names={names}
               />
-              <ContributionCard view={plan()} error={planError()} names={names} />
+              <ContributionCard
+                view={plan()}
+                error={planError()}
+                names={names}
+                amountText={amountText()}
+                onAmountText={setAmountText}
+                amountError={(() => {
+                  const outcome = typed();
+                  return outcome.kind === "invalid" ? outcome.message : undefined;
+                })()}
+              />
               <CostsCard view={costs()} />
             </div>
           </>
