@@ -178,6 +178,7 @@ export const ContributionCard = (props: {
         <Field
           id="contribution-amount"
           kind="decimal"
+          unit="€"
           label="Importe de este mes"
           placeholder="El de los ajustes"
           hint="Déjalo vacío para usar la aportación mensual de los ajustes. No se guarda."
