@@ -9,7 +9,6 @@ import {
   type CoreWeightRow,
   contributionPlan,
   Money,
-  type PriceLookup,
   projectLedger,
   settingsAt,
 } from "@atlas/domain";
@@ -158,7 +157,7 @@ describe("the card of the contribution, whole units", () => {
   });
 });
 
-const row = (id: string, price: Partial<PriceLookup> | undefined): CoreWeightRow =>
+const row = (id: string, price: Record<string, unknown> | undefined): CoreWeightRow =>
   ({
     asset_id: id,
     ...(price === undefined
