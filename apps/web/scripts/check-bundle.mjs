@@ -1216,12 +1216,13 @@ const BOOT_BUDGET_GZIP_BYTES = 76_055;
  * 380.** The boot is not touched; the field lives in the lazy `cartera` chunk.
  */
 /*
- * **Whole units on the contribution card (2026-10-10): measured 303.866 bytes
- * gzip, ceiling 303.900 — measured + 34.** +546 bytes over the amount field:
- * the decimal floor and its line on each row, in the lazy `cartera` chunk. The
- * boot is not touched.
+ * **Whole units on the contribution card (2026-10-10): measured 304.007 bytes
+ * gzip, ceiling 304.050 — measured + 43.** +687 bytes over the amount field:
+ * the decimal floor, its line on each row and the fail-safe filter of the
+ * prices (fresh, exact, in euros, unit-traded assets), in the lazy `cartera`
+ * chunk. The boot is not touched.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 303_900;
+const TOTAL_BUDGET_GZIP_BYTES = 304_050;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
