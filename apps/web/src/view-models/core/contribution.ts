@@ -124,6 +124,9 @@ export const typedAmount = (raw: string): TypedAmount => {
   if (!parsed.ok) {
     return { kind: "invalid", message: parsed.message };
   }
+  if (/\.\d{3,}$/.test(parsed.value)) {
+    return { kind: "invalid", message: "Como mucho dos decimales." };
+  }
   if (!Money.parse(parsed.value, "EUR").amount.isPositive()) {
     return { kind: "invalid", message: "La aportación tiene que ser mayor que cero." };
   }

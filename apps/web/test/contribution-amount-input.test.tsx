@@ -8,7 +8,8 @@
 import { describe, expect, it } from "vitest";
 import Cartera from "../src/routes/cartera/index.jsx";
 import { typedAmount } from "../src/view-models/core/index.js";
-import { settle, show, text, type, withGoldenLedger } from "./helpers/render.jsx";
+import { goldenText } from "./helpers/golden.js";
+import { openLedger, settle, show, text, type, withGoldenLedger } from "./helpers/render.jsx";
 
 describe("typedAmount", () => {
   it("is nothing when the field is empty or blank", () => {
@@ -26,6 +27,14 @@ describe("typedAmount", () => {
       const outcome = typedAmount(raw);
       expect(outcome.kind).toBe("invalid");
     }
+  });
+
+  it("refuses more than two decimals", () => {
+    expect(typedAmount("100,005")).toEqual({
+      kind: "invalid",
+      message: "Como mucho dos decimales.",
+    });
+    expect(typedAmount("100,50")).toEqual({ kind: "amount", value: "100.50" });
   });
 
   it("refuses zero and negative amounts", () => {
@@ -84,5 +93,29 @@ describe("the contribution card with an amount for this month", () => {
     type(host, "contribution-amount", "0");
     await settle();
     expect(text(host.querySelector("#contribution-amount-error"))).toContain("mayor que cero");
+  });
+});
+
+describe("the card when the settings have no monthly contribution", () => {
+  it("shows the split with the typed amount and says it was typed here", async () => {
+    const stripped = goldenText()
+      .split("\n")
+      .map((line) => {
+        if (line.length === 0) {
+          return line;
+        }
+        const event = JSON.parse(line);
+        delete event.settings?.monthly_contribution_eur;
+        return JSON.stringify(event);
+      })
+      .join("\n");
+    await openLedger(stripped);
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    expect(card(host)?.querySelector('ul[aria-label="Reparto de la aportación"]')).toBeNull();
+    expect(host.querySelector("#contribution-amount")).not.toBeNull();
+    type(host, "contribution-amount", "500");
+    await settle();
+    expect(card(host)?.querySelector('ul[aria-label="Reparto de la aportación"]')).not.toBeNull();
+    expect(origin(host)).toContain("Importe escrito aquí");
   });
 });
