@@ -9,7 +9,7 @@
 import { type ContributionPlan, Decimal, Money, type Warning } from "@atlas/domain";
 import { parseDecimalInput } from "../../format/input.js";
 import { valueLabel } from "../../format/labels.js";
-import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
+import { displayName, type NameIndex, NO_NAMES, unitsOf } from "../../format/names.js";
 import { totalLeftover, type WholeUnits, wholeUnitsFor } from "./whole-units.js";
 
 export interface ContributionRowView {
@@ -33,6 +33,8 @@ export interface ContributionRowView {
    * price, and what they leave. Absent without a usable price.
    */
   whole?: WholeUnits;
+  /** What a unit of this asset is called: «part.», «acc.», «uds.». */
+  units: string;
   /** Nothing to buy here this month: shown, but quietly. */
   idle: boolean;
 }
@@ -113,6 +115,7 @@ export const contributionView = (
     weightAfterPct: row.weight_after_pct.toString(),
     ...rowShare(row.allocation_eur, plan.core_amount_eur),
     ...wholeOf(row.allocation_eur, unitPrices.get(row.asset_id)),
+    units: unitsOf(names, row.asset_id),
     idle: row.allocation_eur.isZero(),
   }));
   const leftover = totalLeftover(rows.filter((row) => !row.idle).map((row) => row.whole));
