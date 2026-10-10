@@ -1210,7 +1210,12 @@ const BOOT_BUDGET_GZIP_BYTES = 76_055;
  * (the script prints KiB, so ±50 bytes), ceiling 303.300.** The boot ceiling is
  * not touched. The way down is E5-like clean-up of the unused browser stores.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 303_300;
+/*
+ * **Contribution card with the amount of the month typed on the screen
+ * (2026-10-10): measured 303.320 bytes gzip, ceiling 303.700 — measured +
+ * 380.** The boot is not touched; the field lives in the lazy `cartera` chunk.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 303_700;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
