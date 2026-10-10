@@ -113,6 +113,16 @@ const Split = (props: { view: ContributionView }): JSX.Element => {
                       {row.assetClass} · peso tras aportar{" "}
                       <Figure value={row.weightAfterPct} unit="percent" decimals={1} />
                     </span>
+                    <Show when={row.whole}>
+                      {(whole) => (
+                        <span data-testid="whole-units">
+                          {" "}
+                          · enteras:{" "}
+                          <Amount quantity={whole().units} of="part." one="participación" /> ·
+                          sobran <Amount value={whole().leftover} />
+                        </span>
+                      )}
+                    </Show>
                   </span>
                 </span>
                 <span class="figs">
@@ -130,6 +140,18 @@ const Split = (props: { view: ContributionView }): JSX.Element => {
           )}
         </For>
       </ul>
+      <Show when={active().some((row) => row.whole !== undefined)}>
+        <p class="card-note" data-testid="whole-leftover">
+          <Show when={props.view.wholeLeftover}>
+            {(leftover) => (
+              <>
+                Con participaciones enteras sobrarían <Amount value={leftover()} /> en total.{" "}
+              </>
+            )}
+          </Show>
+          Es solo una ayuda: los fondos admiten fracciones y la propuesta en euros es la que vale.
+        </p>
+      </Show>
       <Show when={idle().length > 0}>
         <p class="card-note">{idle().join(", ")}: nada este mes.</p>
       </Show>

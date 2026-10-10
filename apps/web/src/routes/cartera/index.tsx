@@ -25,6 +25,7 @@ import {
   contributionView,
   costsView,
   typedAmount,
+  type UnitPrices,
   weightsView,
 } from "../../view-models/core/index.js";
 import { absorbedAssets } from "../../view-models/weighted.js";
@@ -46,8 +47,18 @@ export default function CarteraRoute(): JSX.Element {
         const prices = useQuotes(snapshot.state);
         const external = () => prices.external(dated());
 
-        const weights = createMemo(() =>
-          weightsView(coreWeights(dated(), date(), settings(), external()), names),
+        const projection = createMemo(() => coreWeights(dated(), date(), settings(), external()));
+        const weights = createMemo(() => weightsView(projection(), names));
+        /** The unit prices of the weights projection, for the informative whole units. */
+        const unitPrices = createMemo<UnitPrices>(
+          () =>
+            new Map(
+              projection().rows.flatMap((row) =>
+                row.price?.unit_value_eur === undefined
+                  ? []
+                  : [[row.asset_id, row.price.unit_value_eur] as const],
+              ),
+            ),
         );
         // The amount typed for this month lives on the screen only: nothing is
         // persisted, and an invalid text falls back to the settings.
@@ -65,6 +76,7 @@ export default function CarteraRoute(): JSX.Element {
                 ...(quotes === undefined ? {} : { external: quotes }),
               }),
               names,
+              unitPrices(),
             );
           }),
         );
