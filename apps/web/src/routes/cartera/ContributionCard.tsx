@@ -19,6 +19,7 @@ import {
   DataTable,
   Disclosure,
   ErrorView,
+  Field,
   Figure,
   Icon,
   Notice,
@@ -105,7 +106,7 @@ const Split = (props: { view: ContributionView }): JSX.Element => {
     <>
       <dl class="kpis">
         <div class="kpi">
-          <dt title={props.view.fromSettings ? "La de la configuración" : undefined}>Este mes</dt>
+          <dt>Este mes</dt>
           <dd>
             <Amount value={props.view.amount} />
           </dd>
@@ -129,6 +130,11 @@ const Split = (props: { view: ContributionView }): JSX.Element => {
           </dd>
         </div>
       </dl>
+      <p class="card-note" data-testid="amount-origin">
+        {props.view.fromSettings
+          ? "Importe de los ajustes (aportación mensual)."
+          : "Importe escrito aquí para este mes; no se guarda."}
+      </p>
       <p class="card-note">
         El cubo se lleva su parte antes del reparto: es un presupuesto, no una asignación, y nunca
         entra en los pesos objetivo.
@@ -194,6 +200,11 @@ export const ContributionCard = (props: {
   view: ContributionView | undefined;
   error: AppError | undefined;
   names?: NameIndex;
+  /** What is typed in «Importe de este mes»; empty means the amount of the settings. */
+  amountText?: string;
+  onAmountText?: (text: string) => void;
+  /** Why the typed text was not used, if it was not. */
+  amountError?: string | undefined;
 }): JSX.Element => (
   <Section
     title={
@@ -204,6 +215,20 @@ export const ContributionCard = (props: {
     class="span-5 is-natural"
     aside={props.view === undefined ? undefined : <Tag tone="accent">Propuesta</Tag>}
   >
+    <Show when={props.onAmountText}>
+      {(onInput) => (
+        <Field
+          id="contribution-amount"
+          kind="decimal"
+          label="Importe de este mes"
+          placeholder="El de los ajustes"
+          hint="Déjalo vacío para usar la aportación mensual de los ajustes. No se guarda."
+          value={props.amountText ?? ""}
+          error={props.amountError}
+          onInput={onInput()}
+        />
+      )}
+    </Show>
     <Show
       when={props.view}
       fallback={
