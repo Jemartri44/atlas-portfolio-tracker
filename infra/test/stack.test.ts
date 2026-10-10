@@ -345,7 +345,7 @@ describe("the edge (Z4)", () => {
   it.each(ENVS)(
     "the CSP function of %s is the <meta> of the SPA plus frame-ancestors 'none'",
     (env) => {
-      const code = String(attrs(stack(env), "aws_cloudfront_function").code);
+      const code = String(attrs(stack(env), "aws_cloudfront_function", "csp").code);
       const csp = /value: "([^"]+)"/.exec(code)?.[1] as string;
       expect(directives(csp)).toEqual({ ...directives(meta), "frame-ancestors": "'none'" });
     },
@@ -366,6 +366,28 @@ describe("the edge (Z4)", () => {
       const [fallback] = d.default_cache_behavior as Record<string, unknown>[];
       expect(JSON.stringify(fallback?.function_association)).toContain("viewer-response");
       expect(fallback?.response_headers_policy_id).toBe("67f7725c-6f97-4210-82d7-5512b31e9d03");
+    },
+  );
+
+  it.each(ENVS)(
+    "%s rewrites extension-less SPA routes to index.html on the default behaviour only",
+    (env) => {
+      const code = String(attrs(stack(env), "aws_cloudfront_function", "spa_routes").code);
+      const handler = new Function(`${code}; return handler;`)() as (e: unknown) => {
+        uri: string;
+      };
+      const uri = (u: string) => handler({ request: { uri: u } }).uri;
+      expect(uri("/cartera")).toBe("/index.html");
+      expect(uri("/cartera/detalle")).toBe("/index.html");
+      expect(uri("/")).toBe("/");
+      expect(uri("/assets/app.js")).toBe("/assets/app.js");
+      expect(uri("/sw.js")).toBe("/sw.js");
+      const d = attrs(stack(env), "aws_cloudfront_distribution");
+      expect(d.custom_error_response ?? []).toEqual([]);
+      const [api] = d.ordered_cache_behavior as Record<string, unknown>[];
+      expect(api?.function_association).toEqual([]);
+      const [fallback] = d.default_cache_behavior as Record<string, unknown>[];
+      expect(JSON.stringify(fallback?.function_association)).toContain("viewer-request");
     },
   );
 

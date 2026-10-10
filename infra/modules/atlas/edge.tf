@@ -97,6 +97,29 @@ resource "aws_cloudfront_function" "csp" {
   EOT
 }
 
+# Client-side routes (`/cartera`) have no object in the SPA bucket, and with OAC and no
+# ListBucket S3 answers 403. A distribution-wide `custom_error_response` is NOT used: it
+# would also rewrite the legitimate 403/404 of /api/*. This viewer-request function is
+# attached to the default behaviour only and sends extension-less paths to the shell.
+resource "aws_cloudfront_function" "spa_routes" {
+  provider = aws.us_east_1
+
+  name    = "${local.prefix}-spa-routes"
+  runtime = "cloudfront-js-2.0"
+  comment = "Serves index.html for client-side routes of the SPA."
+  publish = true
+  code    = <<-EOT
+    function handler(event) {
+      var request = event.request;
+      var last = request.uri.split('/').pop();
+      if (last !== '' && last.indexOf('.') === -1) {
+        request.uri = '/index.html';
+      }
+      return request;
+    }
+  EOT
+}
+
 resource "aws_cloudfront_distribution" "this" {
   provider = aws.us_east_1
 
@@ -135,6 +158,11 @@ resource "aws_cloudfront_distribution" "this" {
     compress                   = true
     cache_policy_id            = local.cache_policy_optimized
     response_headers_policy_id = local.response_policy_security
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.spa_routes.arn
+    }
 
     function_association {
       event_type   = "viewer-response"
