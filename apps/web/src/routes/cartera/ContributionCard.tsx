@@ -15,7 +15,6 @@ import { A } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
 import {
   Amount,
-  type DataColumn,
   DataTable,
   Disclosure,
   ErrorView,
@@ -33,6 +32,7 @@ import { type NameIndex, NO_NAMES } from "../../format/names.js";
 import type { AppError } from "../../ledger/state.js";
 import { store } from "../../ledger/state.js";
 import type { ContributionRowView, ContributionView } from "../../view-models/core/index.js";
+import { COLUMNS } from "./contribution-columns.jsx";
 
 /**
  * What fixes each refusal, and where. The button used to be written by hand as
@@ -46,48 +46,6 @@ const REMEDIES: Record<string, { label: string; to: string }> = {
   missing_bucket_pct: { label: "Revisar la configuración", to: "/ajustes/configuracion" },
   missing_amount: { label: "Fijar la aportación mensual", to: "/ajustes/configuracion" },
 };
-
-const COLUMNS: readonly DataColumn<ContributionRowView>[] = [
-  {
-    key: "name",
-    header: "Activo",
-    card: "title",
-    cell: (row) => row.name,
-    hint: (row) => row.name,
-  },
-  {
-    key: "value",
-    header: "Valor hoy",
-    numeric: true,
-    cell: (row) => <Amount value={row.value} />,
-  },
-  {
-    key: "gap",
-    header: "Déficit",
-    numeric: true,
-    card: "sub",
-    cell: (row) => <Amount value={row.gap} />,
-    cardCell: (row) => (
-      <span>
-        déficit <Amount value={row.gap} /> · objetivo{" "}
-        <Figure value={row.targetPct} unit="percent" decimals="auto" />
-      </span>
-    ),
-  },
-  {
-    key: "allocation",
-    header: "Aportar",
-    numeric: true,
-    card: "figure",
-    cell: (row) => <Amount value={row.allocation} />,
-  },
-  {
-    key: "after",
-    header: "Peso tras",
-    numeric: true,
-    cell: (row) => <Figure value={row.weightAfterPct} unit="percent" />,
-  },
-];
 
 /** A refusal with a known remedy is a pending datum, never an error. */
 const Refusal = (props: { error: AppError }): JSX.Element => (
