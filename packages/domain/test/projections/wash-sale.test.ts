@@ -53,6 +53,59 @@ const stockCycle = (repurchase?: string): LedgerState => {
   return projectLedger(b.build());
 };
 
+describe("wash_sale_window_repurchase: a grant with a cost is a purchase too", () => {
+  const grantAfterLoss = (unit_cost: string): LedgerState => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({
+      account_id: "acc_etf",
+      asset_id: "ast_gold",
+      quantity: "10",
+      unit_price: "10",
+      fee: "0",
+      currency: "USD",
+      fx_rate: "1",
+      trade_date: "2027-01-10",
+      value_date: "2027-01-12",
+    });
+    b.sell({
+      account_id: "acc_etf",
+      asset_id: "ast_gold",
+      quantity: "10",
+      unit_price: "8",
+      fee: "0",
+      currency: "USD",
+      fx_rate: "1",
+      trade_date: "2027-03-01",
+    });
+    b.corporateAction({
+      kind: "stock_dividend",
+      asset_id: "ast_gold",
+      effective_date: "2027-03-15",
+      effects: [
+        {
+          op: "grant",
+          per_account: [{ account_id: "acc_etf", quantity: "1" }],
+          unit_cost,
+          currency: "USD",
+          fx_rate: "1",
+          fx_rate_date: "2027-03-15",
+          acquisition_date: "2027-03-15",
+        },
+      ],
+    });
+    return projectLedger(b.build());
+  };
+
+  it("warns when the grant has a cost and lands inside the window of a loss", () => {
+    expect(codes(grantAfterLoss("5"), "wash_sale_window_repurchase")).toHaveLength(1);
+  });
+
+  it("stays silent for a grant at no cost", () => {
+    expect(codes(grantAfterLoss("0"), "wash_sale_window_repurchase")).toEqual([]);
+  });
+});
+
 describe("wash_sale_window_repurchase: buying back after a loss", () => {
   it("warns on the last day of the window and not on the next one (two months, a stock)", () => {
     const inside = codes(stockCycle("2027-04-10"), "wash_sale_window_repurchase");
