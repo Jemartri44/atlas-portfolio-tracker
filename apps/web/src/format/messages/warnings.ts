@@ -263,10 +263,10 @@ const joinAll = (items: readonly string[]): string =>
   items.length <= 1 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} y ${items.at(-1)}`;
 
 /**
- * The age a group of stale prices is past: the limit configured, which the
- * domain puts in each warning. The youngest of their ages is not it — six
- * prices of 10 days and more read «más de 10 días» with a limit of 7; it is only the answer for a warning of an
- * older version, which does not carry the limit.
+ * The age a group of stale prices is past: the limit configured, which the domain puts in each
+ * warning. The youngest of their ages is not it — six prices of 10 days and more read «más de 10
+ * días» with a limit of 7; it is only the answer for a warning of an older version, which does not
+ * carry the limit.
  */
 const limitOf = (warnings: readonly Warning[]): number => {
   const limit = warnings[0]?.details.limit_days;

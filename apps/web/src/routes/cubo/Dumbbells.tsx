@@ -1,7 +1,7 @@
-// Each thesis against the index, on one axis (mockup `indicadores.html`, card D): the dot is the thesis, the ring is the index,
-// the thin line is 0 %, and the difference in points is written in ink with its
-// sign — **the colour does not carry it**, and the shape tells the thesis from
-// the index, so it reads the same without colour.
+// Each thesis against the index, on one axis (mockup `indicadores.html`, card D): the dot is the
+// thesis, the ring is the index, the thin line is 0 %, and the difference in points is written in
+// ink with its sign — **the colour does not carry it**, and the shape tells the thesis from the
+// index, so it reads the same without colour.
 //
 // Drawn from the percentages of the domain (`thesisVsIndexPct`), so it says the
 // same with the privacy mode on. A thesis that cannot be compared is not drawn:

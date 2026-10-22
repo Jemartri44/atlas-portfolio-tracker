@@ -65,8 +65,8 @@ export interface AmountDisplay {
   /** The figure, the mask, or "sin dato": exactly what is written first. */
   text: string;
   /**
-   * The unit written after it — "€", "USD", "part." — or empty. It survives
-   * the mask: it says what kind of figure is hidden, never how big (D2).
+   * The unit written after it — "€", "USD", "part." — or empty. It survives the mask: it says what
+   * kind of figure is hidden, never how big.
    */
   unit: string;
   /** Classes of the `<span>`, the semantic one first. */
@@ -83,7 +83,7 @@ interface AmountInput {
   formatted: string | undefined;
   /** The unit of the figure: a currency already written ("€", "USD"), or a measure. */
   unit?: string | undefined;
-  /** Privacy mode, on by default (FR-021). */
+  /** Privacy mode, on by default. */
   privacy: boolean;
   /** What is being shown, for the accessible label. */
   kind: "importe" | "cantidad";

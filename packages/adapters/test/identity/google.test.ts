@@ -1,6 +1,5 @@
-// Feature 015, E1: Google as identity provider, against a fake `fetch`: the
-// authorisation address, the exchange, and the cache of the keys by its
-// `max-age` (block 0, §1.1).
+// Google as identity provider, against a fake `fetch`: the authorisation address, the
+// exchange, and the cache of the keys by its `max-age`.
 
 import {
   GOOGLE_ISSUERS,

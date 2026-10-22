@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 //
-// The automatic prices in the web (feature 013, block 5): read from the folder
-// the console writes or imported by hand, never downloaded and never written
-// in the folder; shown with their origin, the approximation marked, the quote
-// without an ECB rate said; and on the phone, the truth: no automatic prices
+// The automatic prices in the web: read from the folder the console writes or imported by hand,
+// never downloaded and never written in the folder; shown with their origin, the approximation
+// marked, the quote without an ECB rate said; and on the phone, the truth: no automatic prices
 // until the cloud exists.
 
 import { Decimal, Money } from "@atlas/domain";
@@ -112,7 +111,7 @@ describe("the other files of prices/ and deleting what was imported", () => {
       [...host.querySelectorAll("button")].find((b) =>
         b.textContent?.includes("Borrar los precios importados"),
       );
-    // The condition, not a time (review of PR #96, N4): it failed under load.
+    // The condition, not a time: a fixed wait failed under load.
     await until(() => forget() !== undefined, "the button to delete the imported prices");
     forget()?.click();
     await until(
@@ -120,8 +119,7 @@ describe("the other files of prices/ and deleting what was imported", () => {
       "the notice that they were deleted",
     );
     expect(text(host)).toContain("Precios importados borrados de este navegador");
-    // The other half of the notice comes on its own render: waited for too
-    // (review of PR #96, round 2: N4 was left half done).
+    // The other half of the notice comes on its own render: waited for too.
     await until(
       () => text(host).includes("Sin precios automáticos en este dispositivo"),
       "the notice that there are no automatic prices",

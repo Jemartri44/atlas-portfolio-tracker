@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 //
-// Feature 015, E2, block 4: the devices of the console in Ajustes (ADR-0033,
-// point 8; plan §4.2, T37 and T38): each token with its state and its last
-// sync, the recent issues marked, the name escaped, and revoking one by one,
-// through the `fetch` the card is given.
+// The devices of the console in Ajustes (ADR-0033, point 8): each token with its state and its last
+// sync, the recent issues marked, the name escaped, and revoking one by one, through the `fetch`
+// the card is given.
 
 import { render } from "solid-js/web";
 import { afterEach, describe, expect, it } from "vitest";

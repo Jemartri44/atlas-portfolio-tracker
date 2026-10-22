@@ -1,8 +1,7 @@
-// Feature 016, E4 (plan §9.2; ADR-0032, «La prueba de que se puede
-// restaurar»; mutant 29): the automatic rehearsal of a restore. The last dump
-// is projected in memory and compared with the live ledger **cut at the same
-// events**: what the live ledger added after the dump is not a difference,
-// and anything else is, said by code and by how many — never an amount.
+// The automatic rehearsal of a restore (ADR-0032, «La prueba de que se puede restaurar»). The last
+// dump is projected in memory and compared with the live ledger **cut at the same events**: what
+// the live ledger added after the dump is not a difference, and anything else is, said by code and
+// by how many — never an amount.
 
 import { describe, expect, it } from "vitest";
 import { latestDump, restoreRehearsal } from "../../src/jobs/rehearsal.js";

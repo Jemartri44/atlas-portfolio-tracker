@@ -1,11 +1,9 @@
-// The income tax return of **2025 laid out by box**, worked out by hand
-// (feature 010, §6.4 of `specs/010-tax-output/questions.md (in git history)`).
+// The income tax return of **2025 laid out by box**, worked out by hand.
 //
-// The literals below are copied from that document, which was committed on
-// 2026-09-19, **before a line of this code existed**: the history of git is the
-// proof that the figures were not read off the output. Any discrepancy is
-// investigated and written down there, and the literal is not touched until it
-// is clear who was right.
+// The literals below come from a hand calculation committed on 2026-09-19,
+// **before a line of this code existed**: the history of git is the proof that
+// the figures were not read off the output. Any discrepancy is investigated,
+// and the literal is not touched until it is clear who was right.
 //
 // The configuration is written out in full, family by family and scalar by
 // scalar: a hand calculation whose literals move when a default moves is a
@@ -220,7 +218,7 @@ describe("the 2025 return by box, worked out by hand", () => {
     expect(box(boxes, "0337", at("2025-06-02"))).toBe("-50.00");
     expect(box(boxes, "0338", at("2025-06-02"))).toBe("-50.00");
     // 03/02 is a **gain** of 100,00 on the form: what it released belongs to
-    // the loss of 2024 and is declared there (ficha F5).
+    // the loss of 2024 and is declared there.
     expect(box(boxes, "0328", at("2025-02-03"))).toBe("950.00");
     expect(box(boxes, "0331", at("2025-02-03"))).toBe("850.00");
     expect(box(boxes, "0332", at("2025-02-03"))).toBe("100.00");

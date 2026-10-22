@@ -14,12 +14,11 @@ import {
 } from "./support.js";
 
 /**
- * Feature 009, decision (f): the tax engine converts every amount at the ECB
- * rate **of its own operation**, as published and with its date (ADR-0013).
- * `state.fxRates` is the last rate the ledger knows per currency, a convenience
- * for valuing cash today; reading it from `tax/` would convert a disposal of
- * 2027 at a rate of 2029. And `state.valuations` are prices. Neither may be
- * read there, in either of the two forms a read can take.
+ * The tax engine converts every amount at the ECB rate **of its own operation**, as published and
+ * with its date (ADR-0013). `state.fxRates` is the last rate the ledger knows per currency, a
+ * convenience for valuing cash today; reading it from `tax/` would convert a disposal of 2027 at a
+ * rate of 2029. And `state.valuations` are prices. Neither may be read there, in either of the two
+ * forms a read can take.
  */
 describe("architecture: the tax engine", () => {
   it("reads neither the known FX rates nor the valuations of the state", () => {
@@ -56,12 +55,10 @@ describe("architecture: the tax engine", () => {
   });
 
   /**
-   * Feature 010, block 3: the informative returns (Modelo 720 and 721) are the
-   * **only** fiscal route the law makes value things at market price, and they
-   * live in `informative/` for that reason alone. The income tax may not depend
-   * on a price (constitution II), so the fiscal path —everything
-   * `project-ledger.ts` and every file of `tax/` reach— must not reach a single
-   * file of that folder, at any depth.
+   * The informative returns (Modelo 720 and 721) are the **only** fiscal route the law makes value
+   * things at market price, and they live in `informative/` for that reason alone. The income tax
+   * may not depend on a price (constitution II), so the fiscal path —everything `project-ledger.ts`
+   * and every file of `tax/` reach— must not reach a single file of that folder, at any depth.
    *
    * The other direction is allowed and is the point: `informative/` reads
    * `prices.ts` and the catalogue of criteria. A table of criteria is a table;
@@ -84,12 +81,11 @@ describe("architecture: the tax engine", () => {
   });
 
   /**
-   * And they read it at **level 1**: a registered `valuation`, which is a
-   * decision of the user. The specification makes the photograph of the year
-   * end a manual datum on purpose (§7.1 and §14.1), so an automatic quote of
-   * phase 4 must never walk into a tax return. `priceAt` only returns one when
-   * it is handed an `ExternalPrices`, so the rule is that this folder never
-   * names one — checked on the text, where the mistake would be made.
+   * And they read it at **level 1**: a registered `valuation`, which is a decision of the user. The
+   * specification makes the photograph of the year end a manual datum on purpose
+   * (`docs/specification.md` §7.1 and §14.1), so an automatic quote of phase 4 must never walk into
+   * a tax return. `priceAt` only returns one when it is handed an `ExternalPrices`, so the rule is
+   * that this folder never names one — checked on the text, where the mistake would be made.
    */
   it("never lets an automatic quote into an informative return", () => {
     const offenders = listTsFiles(join(domainSrc, "informative"))
@@ -105,17 +101,14 @@ describe("architecture: the tax engine", () => {
   });
 
   /**
-   * **The rule that closes the 720** (feature 013, §6.5 (a) of its prompt):
-   * by reach, not by names. A rule on what an argument is called is dodged by
-   * a fifth argument called otherwise, and forbidding two names is dodged by
-   * importing `bucketPositions`, `coreWeights`, `netWorth` or `costSummary`,
-   * which take the external source and forward it to the gate. So: from any
-   * file of `informative/`, at any depth, nothing price-aware may be reached —
-   * not `prices.ts`, not a file that imports it (which is every file that
-   * could call `priceAt` or `manualPrices`, under any name), not a port of
-   * prices, not a file of `quotes/` — **except the manual leaf**, which is the
-   * one price the informative returns may read and which imports none of
-   * those.
+   * **The rule that closes the 720**: by reach, not by names. A rule on what an argument is called
+   * is dodged by a fifth argument called otherwise, and forbidding two names is dodged by importing
+   * `bucketPositions`, `coreWeights`, `netWorth` or `costSummary`, which take the external source
+   * and forward it to the gate. So: from any file of `informative/`, at any depth, nothing
+   * price-aware may be reached — not `prices.ts`, not a file that imports it (which is every file
+   * that could call `priceAt` or `manualPrices`, under any name), not a port of prices, not a file
+   * of `quotes/` — **except the manual leaf**, which is the one price the informative returns may
+   * read and which imports none of those.
    */
   it("reaches nothing of prices from an informative return but the manual leaf", () => {
     const graph = importGraph();
@@ -151,16 +144,13 @@ describe("architecture: the tax engine", () => {
   });
 
   /**
-   * Quotes never enter the state of the ledger nor `Settings` (feature 013,
-   * §6.4 (a) and §6.5 (b)), which the 720 reads. Looking for a type of quote
-   * would let a field with the type written inline through, so the keys
-   * themselves are frozen: a new one turns this red until somebody adds it
-   * here by hand, knowingly.
+   * Quotes never enter the state of the ledger nor `Settings`, which the 720 reads. Looking for a
+   * type of quote would let a field with the type written inline through, so the keys themselves
+   * are frozen: a new one turns this red until somebody adds it here by hand, knowingly.
    */
   /**
-   * The reading of keys cannot be dodged by a key it does not see (second
-   * pass of the review of PR #78): an index signature, whatever its form,
-   * lets any key through, so it is a failure of the frozen list.
+   * The reading of keys cannot be dodged by a key it does not see: an index signature, whatever its
+   * form, lets any key through, so it is a failure of the frozen list.
    */
   it("reads an index signature as a key it refuses", () => {
     const probe = join(repoRoot, "tests", "fixtures", "architecture", "index-signature.ts.txt");

@@ -5,11 +5,11 @@
 // original bytes under archive/ next to the ledger before rewriting it. Both
 // writes go through a temporary file that replaces the ledger atomically.
 //
-// Every write happens under the advisory lock of the folder (`folder-lock.ts`,
-// ADR-0026 Part B): taken **before** the etag is compared and released only
-// **after** the rename, so no other Atlas console writer can slip in between.
-// That closes the window ADR-0025 recorded, between console writers and only
-// there: the browser no longer writes in this folder, because it has no way to take the lock exclusively.
+// Every write happens under the advisory lock of the folder (`folder-lock.ts`, ADR-0026 Part B):
+// taken **before** the etag is compared and released only **after** the rename, so no other Atlas
+// console writer can slip in between. That closes the window ADR-0025 recorded, between console
+// writers and only there: the browser no longer writes in this folder, because it has no way to
+// take the lock exclusively.
 //
 // **The lock is not re-entrant** (`open(…, "wx")`): a writer that holds it and
 // calls `append` would lock itself out. So the lock is taken in one place,
@@ -78,7 +78,9 @@ export interface LockedLedgerWriter {
     etag: string,
     archiveName: string,
   ): Promise<{ etag: string }>;
-  /** The bytes of a file of the folder (`sync/state.json`), or `undefined` when it does not exist. */
+  /**
+   * The bytes of a file of the folder (`sync/state.json`), or `undefined` when it does not exist.
+   */
   readFile(relativePath: string): Promise<Buffer | undefined>;
   /**
    * Writes a file of the folder atomically and **durably**: a temporary

@@ -1,10 +1,9 @@
-// The daily task of the closes (ADR-0031): `updatePrices`,
-// the use case — the cascade, never the day in course, one close
-// in force per date, the currency declared and contrasted — over the store of
-// `prices/` in the bucket, with the assets and their priority **of the remote
-// ledger**, `symbols.json` of the bucket **read only** and the configuration of the function. The keys, from SSM on every run; **without them** (the case of
-// `dev`) nothing is called, no failure is counted and nothing is left for the
-// mail. **It sends nothing**: its findings go to its record.
+// The daily task of the closes (ADR-0031): `updatePrices`, the use case — the cascade, never the
+// day in course, one close in force per date, the currency declared and contrasted — over the store
+// of `prices/` in the bucket, with the assets and their priority **of the remote ledger**,
+// `symbols.json` of the bucket **read only** and the configuration of the function. The keys, from
+// SSM on every run; **without them** (the case of `dev`) nothing is called, no failure is counted
+// and nothing is left for the mail. **It sends nothing**: its findings go to its record.
 
 import {
   PriceKeyInvalid,

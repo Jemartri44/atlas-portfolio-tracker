@@ -39,7 +39,10 @@ export const settingsAt = (state: LedgerState, date: CivilDate): SettingsResolut
     : { settings: normalizeSettings(found.settings), origin: found.event_id };
 };
 
-/** Settings used to derive fiscal dates: an explicit override, else the latest change, else the defaults. */
+/**
+ * Settings used to derive fiscal dates: an explicit override, else the latest change, else the
+ * defaults.
+ */
 export const resolveFiscalSettings = (
   history: readonly SettingsEntry[],
   override?: Settings,

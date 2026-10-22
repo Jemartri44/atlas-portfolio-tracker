@@ -1,6 +1,5 @@
-// Feature 016, E1 (R17, R18): the composition of the jobs refuses to start
-// with what it does not understand, saying only the name of why; builds the
-// sender of SES only for the mail family (§8.2 B2).
+// The composition of the jobs refuses to start with what it does not understand, saying only the
+// name of why; builds the sender of SES only for the mail family.
 
 import { JOB_TASKS } from "@atlas/domain/jobs";
 import { describe, expect, it } from "vitest";

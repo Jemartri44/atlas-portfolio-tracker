@@ -1,6 +1,5 @@
-// The ECB rates after a change of `fiscal_date_rule`, from the console
-// (feature 012, block 6; ADR-0029, point 10; criterion 25), over a real folder
-// with the synthetic history. Mutants 15 and 20 of prompt 012 §5.
+// The ECB rates after a change of `fiscal_date_rule`, from the console (ADR-0029, point 10), over a
+// real folder with the synthetic history.
 
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

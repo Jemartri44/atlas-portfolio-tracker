@@ -1,10 +1,9 @@
 // @vitest-environment happy-dom
 //
-// The polish that could be seen (feature 020, M13): the date of a movement in
-// ink with the whole row as its target, the column «Estado» only when a row
-// uses it, and the list of the tax card flush with its title. The button of
-// the folder in one line at 400px and the unit of the bucket's axis are
-// measured in the real browser and in `chart.test.tsx`.
+// The polish that could be seen: the date of a movement in ink with the whole row as its target,
+// the column «Estado» only when a row uses it, and the list of the tax card flush with its title.
+// The button of the folder in one line at 400px and the unit of the bucket's axis are measured in
+// the real browser and in `chart.test.tsx`.
 
 import { afterEach, describe, expect, it } from "vitest";
 import Movimientos from "../src/routes/movimientos/index.jsx";
@@ -76,8 +75,8 @@ describe("the list of the tax card", () => {
   it("sits flush with the title of its card, with no indent", async () => {
     withStyles(400);
     const events = goldenEvents();
-    // In the season, where the card has its list (feature 020, E2).
-    // The list is what is measured: give it a line whatever the golden ledger owes that year.
+    // In the season, where the card has its list. The list is what is measured: give it a line
+    // whatever the golden ledger owes that year.
     const status = { ...fiscalStatus(events, "2029-05-10"), lines: ["Una cifra por declarar."] };
     const host = await show("/", () => (
       <FiscalCard season={true} status={() => status} year={2028} today="2029-05-10" names={{}} />

@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 //
-// M3 (feature 020, E4): the evolution in panels. What was contributed is a
-// step in the main panel; the bucket and the cash are strips with a scale of
-// their own; all of them share the dates and the cursor. The privacy mode
-// takes the figures off the axes and the table, never the shape.
+// The evolution in panels. What was contributed is a step in the main panel; the bucket and the
+// cash are strips with a scale of their own; all of them share the dates and the cursor. The
+// privacy mode takes the figures off the axes and the table, never the shape.
 
 import { type LedgerEvent, netWorthSeries } from "@atlas/domain";
 import { bookCashSeries, contributedSeries } from "@atlas/domain/charts";

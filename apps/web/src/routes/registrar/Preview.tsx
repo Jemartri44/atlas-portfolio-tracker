@@ -1,4 +1,4 @@
-// What is going to happen, before it happens (FR-044).
+// What is going to happen, before it happens.
 //
 // The positions, the cash and the lots **that change**, the gains the event would book and
 // the warnings it raises — all of it from the domain use case the CLI also uses

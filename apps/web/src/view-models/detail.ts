@@ -1,9 +1,8 @@
 // An event, field by field, with legible names.
 //
-// It shows **every** field the line carries, in a sensible order, with amounts
-// and quantities marked so `Amount` paints them and the privacy mode covers
-// them. Nothing is hidden: the detail is where the user checks what was
-// actually written (FR-040).
+// It shows **every** field the line carries, in a sensible order, with amounts and quantities
+// marked so `Amount` paints them and the privacy mode covers them. Nothing is hidden: the detail is
+// where the user checks what was actually written.
 //
 // LINE BUDGET: four sets and one dispatch table that classify **every field of
 // every event type** — which are amounts, which are quantities, which are

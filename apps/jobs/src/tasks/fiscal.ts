@@ -1,8 +1,8 @@
-// The two warnings of January that touch the fiscal path (`docs/specification.md` §9.5), in a module of their own: **nothing here
-// reaches a price**. Each runs over a view of the bucket that reaches only
-// `ledger/` and `reference/ecb/` (`scopedObjects`), and the module takes from the packages only what the guardian of
-// `tests/jobs-access.test.ts` lists. At most once each, and **never for a
-// January gone** (the handler closes it `expired`).
+// The two warnings of January that touch the fiscal path (`docs/specification.md` §9.5), in a
+// module of their own: **nothing here reaches a price**. Each runs over a view of the bucket that
+// reaches only `ledger/` and `reference/ecb/` (`scopedObjects`), and the module takes from the
+// packages only what the guardian of `tests/jobs-access.test.ts` lists. At most once each, and
+// **never for a January gone** (the handler closes it `expired`).
 //
 // - `tax_return_ready`: the report of the year before the period's, from the
 //   ledger alone, said by how many notes and criteria in dispute it carries;
@@ -10,14 +10,12 @@
 //   read it. The notes of the ECB check are the ones `atlas tax` shows, with
 //   the one staleness of the cloud (`CLOUD_ECB_STALE_DAYS`); they move no
 //   figure (ADR-0029, point 8).
-// - `informative_thresholds`: the 720 and the 721 of that year, with the
-//   function the models use, from **manual valuations only**, in a
-//   neutral text (questions §13); only when there is something to do.
+// - `informative_thresholds`: the 720 and the 721 of that year, with the function the models use,
+//   from **manual valuations only**, in a neutral text; only when there is something to do.
 //
-// **A passing failure is never spent on a mail**: a ledger
-// or a history of the ECB that could not be read now closes the run `failed`,
-// and the next day tries again. On the last day of January, what still could
-// not be checked is said neutrally, with its code. Only a ledger with invalid
+// **A passing failure is never spent on a mail**: a ledger or a history of the ECB that could not
+// be read now closes the run `failed`, and the next day tries again. On the last day of January,
+// what still could not be checked is said neutrally, with its code. Only a ledger with invalid
 // events is said as such.
 
 import { checkLedgerRates } from "@atlas/domain/ecb";

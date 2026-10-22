@@ -1,7 +1,6 @@
-// Feature 015, E3: the package of the Lambda (`apps/api/scripts/build-lambda.mjs`).
-// It carries the SDK and the sources of the product, never a test, a double
-// or `tests/`; it is the same bytes twice; and it is a module Node loads —
-// up to the composition, which refuses to start without its configuration.
+// The package of the Lambda (`apps/api/scripts/build-lambda.mjs`). It carries the SDK and the
+// sources of the product, never a test, a double or `tests/`; it is the same bytes twice; and it is
+// a module Node loads — up to the composition, which refuses to start without its configuration.
 
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -87,7 +86,7 @@ describe("the package of the Lambda (E3)", () => {
       delete process.env[name];
     }
     try {
-      // Only a generic error: the reason goes to the log by its name (review of PR #96, N2).
+      // Only a generic error: the reason goes to the log by its name.
       await expect(import(pathToFileURL(file).href)).rejects.toThrow("compose_failed");
     } finally {
       for (const [name, value] of saved) {

@@ -24,8 +24,8 @@ import { inSection, Nav } from "./Nav.jsx";
 import { PrivacyToggle } from "./PrivacyToggle.jsx";
 
 /**
- * The drafts waiting for their ECB rate (in the cloud): on every screen, but of the ECB, so it arrives in a chunk of its
- * own after the first paint. The frame only keeps its place in the bar.
+ * The drafts waiting for their ECB rate (in the cloud): on every screen, but of the ECB, so it
+ * arrives in a chunk of its own after the first paint. The frame only keeps its place in the bar.
  */
 const DraftSlot = (): JSX.Element => (
   <span

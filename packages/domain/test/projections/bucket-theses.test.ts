@@ -96,8 +96,8 @@ describe("bucketTheses: the result against the index (business rule 16)", () => 
     const open = view(b);
     expect(open?.status).toBe("open");
     expect(open?.unrealized_eur?.amount.toString()).toBe("30");
-    // (0 + 30) − (120 − 100) = 10, not 130 − 20 as the literal reading of the
-    // prompt gave (Q1: the prompt was corrected).
+    // (0 + 30) − (120 − 100) = 10, not 130 − 20 as the
+    // literal reading gave.
     expect(open?.result_vs_index_eur?.amount.toString()).toBe("10");
   });
 
@@ -153,7 +153,7 @@ describe("bucketTheses: the result against the index (business rule 16)", () => 
 
   it("has no comparison for a thesis with no linked purchase", () => {
     // A thesis opened after a swap, which only sells what it inherited: the sum
-    // over its purchases is empty, and an empty sum is no data, never zero (Q6).
+    // over its purchases is empty, and an empty sum is no data, never zero.
     const b = new LedgerBuilder();
     catalogue(b);
     b.valuation({ account_id: "acc_fund", asset_id: "ast_world", date: "2027-01-01" });

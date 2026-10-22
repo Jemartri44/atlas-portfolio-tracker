@@ -1,7 +1,6 @@
-// A double of `MailSender` (feature 016, E1), for the tests only: it keeps
-// every mail it was given and can be told to refuse the next one (SES said no:
-// not sent) or to lose it (no answer: it may have been sent). It imitates what
-// `sdk-ses.ts` makes of the answers of SES v2 (`questions.md` §1.5).
+// A double of `MailSender`, for the tests only: it keeps every mail it was given and can be
+// told to refuse the next one (SES said no: not sent) or to lose it (no answer: it may have
+// been sent). It imitates what `sdk-ses.ts` makes of the answers of SES v2.
 
 import {
   MailRefused,

@@ -1,4 +1,4 @@
-// The read-only port of the reference data (review of PR #96, security N1).
+// The read-only port of the reference data: it reads and lists, and has no way to write.
 
 import { describe, expect, it } from "vitest";
 import { referenceReader } from "../../src/aws/reference-reader.js";

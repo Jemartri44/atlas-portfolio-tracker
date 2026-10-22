@@ -1,12 +1,10 @@
-// The clients of the administration (ADR-0026, Part A, ADR-0034, rows 6 and 16), the door `@atlas/adapters/aws-admin`: the data
-// bucket and SSM **with the role of administration**, whose short-lived
-// credentials come from the **standard chain of the SDK**: a session already
-// opened — an IAM Identity Center profile after `aws sso login`, or the
-// variables `aws configure export-credentials` writes once the AWS CLI asked
-// for the MFA code. A profile with `mfa_serial` alone is refused by the chain,
-// which has no way to ask for the code.
-// The console never stores them. Node only; never
-// reached by the API nor by the web (architecture tests).
+// The clients of the administration (ADR-0026, Part A, ADR-0034, rows 6 and 16), the door
+// `@atlas/adapters/aws-admin`: the data bucket and SSM **with the role of administration**, whose
+// short-lived credentials come from the **standard chain of the SDK**: a session already opened —
+// an IAM Identity Center profile after `aws sso login`, or the variables
+// `aws configure export-credentials` writes once the AWS CLI asked for the MFA code. A profile with
+// `mfa_serial` alone is refused by the chain, which has no way to ask for the code. The console
+// never stores them. Node only; never reached by the API nor by the web (architecture tests).
 //
 // What the administration needs and the API must not have: an old version of
 // an object and every object under a prefix,
@@ -160,7 +158,8 @@ export class SdkSecretStore implements SecretStore {
     } catch (error) {
       return rethrowSecret(error);
     }
-    // The value is already in: a failure from here on is "rotated, not tagged", never "not rotated".
+    // The value is already in: a failure from here on is "rotated, not tagged", never
+    // "not rotated".
     try {
       await this.client.send(
         new AddTagsToResourceCommand({

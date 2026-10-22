@@ -80,9 +80,9 @@ describe("Núcleo: weights", () => {
   });
 
   /**
-   * The defence against the blocking defect of feature 004: the quantities have
-   * to come from the ledger **cut at the date**, not from the end of it. Two
-   * different dates must give two different tables.
+   * The defence against the original blocking defect: the quantities have to come from the ledger
+   * **cut at the date**, not from the end of it. Two different dates must give two different
+   * tables.
    */
   it("reads different quantities at different dates", () => {
     const early = at("2026-12-31");

@@ -1,11 +1,10 @@
 // @vitest-environment happy-dom
 //
-// Feature 016, E3, block 2 (R37; mutant 25): the web of the phone downloads
-// the ECB history from its own cloud — the manifest, then the file in force,
-// its SHA-256 checked against the manifest before anything reads it — and
-// keeps it as the imported copy is kept, marked as from the cloud. Only when
-// the card of the ECB opens or the user asks; never at start or on a timer.
-// Over a `fetch` that answers as the API does; never the network.
+// The web of the phone downloads the ECB history from its own cloud — the manifest, then the file
+// in force, its SHA-256 checked against the manifest before anything reads it — and keeps it as the
+// imported copy is kept, marked as from the cloud. Only when the card of the ECB opens or the user
+// asks; never at start or on a timer. Over a `fetch` that answers as the API does; never the
+// network.
 
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";

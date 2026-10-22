@@ -396,7 +396,7 @@ export interface ValuationEvent extends Envelope {
   /**
    * Date of the ECB rate applied. Required since ADR-0021; see the note below.
    *
-   * This is where the hole was found (challenge 3, finding 6): form 720 values
+   * This is why it is required: form 720 values
    * at the 31/12 price **converted at the ECB rate of that day**, and 31/12
    * falls on a weekend two years out of seven, so a valuation in a foreign
    * currency without the date of its rate is not reproducible from the official
@@ -527,7 +527,7 @@ export interface ForcedSaleEntry {
    * said: a forced sale settles account by account and each broker withholds
    * its own, so a single amount would have to be split between accounts and the
    * split would be a figure the system invented. It is the same reason the fee
-   * moved here (challenge 2026-08-31, finding 8).
+   * moved here.
    */
   withholding?: DecimalString;
 }

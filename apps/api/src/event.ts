@@ -1,5 +1,5 @@
-// The event of a Lambda Function URL, payload format 2.0, and its answer. Normalised once: header names in lower case,
-// cookies from `cookies` **and** from a `cookie` header if one came, the body
+// The event of a Lambda Function URL, payload format 2.0, and its answer. Normalised once: header
+// names in lower case, cookies from `cookies` **and** from a `cookie` header if one came, the body
 // decoded from base64 when it says so.
 
 import { decodeUtf8Strict } from "@atlas/adapters/aws";

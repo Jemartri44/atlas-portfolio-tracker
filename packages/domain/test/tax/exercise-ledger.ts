@@ -1,7 +1,6 @@
-// The ledger of the hand-computed exercise (specs/009-tax-engine/questions.md (in git history),
-// "Ejercicio calculado a mano"). Event by event as the table there lists them:
-// E1 … E25. The expected figures live in `exercise.test.ts`, written from the
-// hand calculation and not from the engine.
+// The ledger of the hand-computed exercise, event by event as its table lists
+// them: E1 … E25. The expected figures live in `exercise.test.ts`, written from
+// the hand calculation and not from the engine.
 
 import type { LedgerEvent } from "../../src/schema/events.js";
 import { DEFAULT_SETTINGS, type IncomeCategory } from "../../src/settings/settings.js";
@@ -24,13 +23,12 @@ export interface Exercise {
 export type CategoryReading = IncomeCategory | "from_code";
 
 /**
- * The hand calculation of feature 009 says, in so many words, "everything a
- * capital gain", so the ledger writes it down instead of borrowing whatever
- * the code says today: the default of an ETC changed in feature 010 (criterion
- * #24) and the literals of `exercise.test.ts` have to keep meaning what they
- * were computed to mean (note N17). The same document also works the exercise
- * out with the ETC as movable capital income, and that reading has its own
- * test.
+ * The hand calculation says, in so many words, "everything a capital gain", so
+ * the ledger writes it down instead of borrowing whatever the code says today:
+ * the default of an ETC changed (criterion #24) and the literals of
+ * `exercise.test.ts` have to keep meaning what they were computed to mean. The
+ * same hand calculation also works the exercise out with the ETC as movable
+ * capital income, and that reading has its own test.
  */
 export const exerciseLedger = (reading: CategoryReading = "capital_gain"): Exercise => {
   const b = new LedgerBuilder();
@@ -39,12 +37,12 @@ export const exerciseLedger = (reading: CategoryReading = "capital_gain"): Exerc
   const { income_category: _fromCode, ...withoutCategory } = DEFAULT_SETTINGS;
   const settings = b.settings({
     ...withoutCategory,
-    // Pinned for the same reason as the income category (note N17): the hand
-    // calculation was worked out with a **year** for funds, and feature 010
-    // moved that default to two months (criterion #2). Borrowing whatever the
-    // code says today would make these literals stop being the calculation they
-    // say they encode. The two-month reading has its own money at stake, in the
-    // doubtful section, and that figure is hand-computed too.
+    // Pinned for the same reason as the income category: the hand calculation
+    // was worked out with a **year** for funds, and that default later moved to
+    // two months (criterion #2). Borrowing whatever the code says today would
+    // make these literals stop being the calculation they say they encode. The
+    // two-month reading has its own money at stake, in the doubtful section,
+    // and that figure is hand-computed too.
     wash_sale_window: {
       stock: "2m",
       etf: "2m",
@@ -56,9 +54,9 @@ export const exerciseLedger = (reading: CategoryReading = "capital_gain"): Exerc
     },
     // And the fiscal date rule, the last thing this ledger still borrowed from
     // the code. Twice now a default has moved under a hand calculation
-    // (`income_category` in feature 010's block 0, the wash-sale window in its
-    // criteria lot); a calculation whose literals depend on what the code
-    // believes today is not a hand calculation, it is a mirror.
+    // (`income_category` and the wash-sale window); a calculation whose
+    // literals depend on what the code believes today is not a hand
+    // calculation, it is a mirror.
     fiscal_date_rule: {
       stock: "trade_date",
       etf: "trade_date",

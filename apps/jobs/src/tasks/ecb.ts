@@ -1,18 +1,15 @@
-// The daily task of the ECB (ADR-0029, `docs/specification.md` §9.5): the official history downloaded as the console does it — the ZIP
-// first, the API if it fails — and made the history in force in
-// `reference/ecb/` **only if it keeps every published rate with the same
-// value** (`updateEcbHistory`, not rewritten). It
-// composes and decides nothing, and **it sends nothing**: a rejected
-// update, a TARGET calendar in disagreement or a history damaged beyond
-// undoing are findings in its record, and the mail function sends them.
+// The daily task of the ECB (ADR-0029, `docs/specification.md` §9.5): the official history
+// downloaded as the console does it — the ZIP first, the API if it fails — and made the history in
+// force in `reference/ecb/` **only if it keeps every published rate with the same value**
+// (`updateEcbHistory`, not rewritten). It composes and decides nothing, and **it sends nothing**: a
+// rejected update, a TARGET calendar in disagreement or a history damaged beyond undoing are
+// findings in its record, and the mail function sends them.
 //
-// **A damaged history does not stop the cloud**:
-// it is rebuilt whole from the official ZIP of the ECB, the source of truth,
-// which anyone can download again — **compared first**, as ADR-0029, point 2,
-// asks, with the last generation that still reads: a ZIP that
-// contradicts it is not activated and asks for someone; with nothing left to
-// read it is accepted, unverified, and said. With the API only, it stays
-// damaged and the next run tries again.
+// **A damaged history does not stop the cloud**: it is rebuilt whole from the official ZIP of the
+// ECB, the source of truth, which anyone can download again — **compared first**, as ADR-0029,
+// point 2, asks, with the last generation that still reads: a ZIP that contradicts it is not
+// activated and asks for someone; with nothing left to read it is accepted, unverified, and said.
+// With the API only, it stays damaged and the next run tries again.
 
 import { S3EcbHistoryStore } from "@atlas/adapters/aws-daily";
 import { firstRateDateOf, rebuildEcbHistory, updateEcbHistory } from "@atlas/domain/ecb";

@@ -1,8 +1,6 @@
-// Feature 016, E1 (R1-R3, R8, R13, R14, R20; mutants 1, 4, 8): the monthly
-// reminder, from its facts to its text. Every figure is asserted with its
-// exact value, and every sentinel of an amount, a quantity, a price, an asset
-// name, an ISIN and an account is looked for in the mail with the switch off
-// — also written with thousands and a decimal comma.
+// The monthly reminder, from its facts to its text. Every figure is asserted with its exact value,
+// and every sentinel of an amount, a quantity, a price, an asset name, an ISIN and an account is
+// looked for in the mail with the switch off — also written with thousands and a decimal comma.
 
 import { describe, expect, it } from "vitest";
 import { newTokenRecord, revokedRecord, type TokenRecord } from "../../src/access/token.js";

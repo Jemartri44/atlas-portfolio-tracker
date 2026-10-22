@@ -1,5 +1,4 @@
-// Feature 015, E1: the sign-in of the web with Google by way c, the session
-// and the device of the web (plan §4.1, R06 to R23 and R31), walked end to
+// The sign-in of the web with Google by way c, the session and the device of the web, walked end to
 // end against the doubles of Google, SSM and S3.
 
 import { createHmac } from "node:crypto";
@@ -33,7 +32,7 @@ describe("GET /api/auth/login", () => {
     expect(location.searchParams.get("client_id")).toBe("client-dev");
     expect(location.searchParams.get("redirect_uri")).toBe(`${SELF}/api/auth/callback`);
     const login = setCookieOf(start.cookies, "__Host-atlas_login");
-    // R07: Lax, so that the return from Google brings it; never Strict.
+    // Lax, so that the return from Google brings it; never Strict.
     expect(attributes(login).slice(1)).toEqual([
       "Path=/",
       "Secure",
@@ -289,7 +288,7 @@ describe("the device of the web (R20, R21)", () => {
     expect(Object.keys(body).sort()).toEqual(["device_id", "expires_at", "signed_in"]);
     expect(body.signed_in).toBe(true);
     expect(body.expires_at).toBe("2026-10-01T18:00:00Z");
-    // Feature 016 (§8.1 P6): the date of the last web sign-in, and nothing else.
+    // The date of the last web sign-in, and nothing else.
     expect(api.s3.keys()).toEqual([
       "access/last-web-sign-in.json",
       `sync/devices/${body.device_id}.json`,
@@ -512,7 +511,7 @@ describe("a request with the session (R18, R19, R23, R31)", () => {
     expect(start.statusCode).toBe(503);
     expect(start.body).toContain("<code>remote_unavailable</code>");
     expect(start.headers["content-security-policy"]).toContain("default-src 'none'");
-    // N2 of the review of PR #90: the page says when to try again, as the JSON does.
+    // The page says when to try again, as the JSON does.
     expect(start.headers["retry-after"]).toBe("5");
   });
 
@@ -610,10 +609,9 @@ describe("POST /api/auth/logout", () => {
 });
 
 /**
- * Feature 016, E1 (R16, mutant 9; §8.1 P6): the API records the **date** of
- * each web sign-in for the monthly mail, of Madrid, only moving forward, and
- * with nothing else in it — no `sub`, no mail, no device. The sign-in never
- * fails for it: what happened is the reason of its log line.
+ * The API records the **date** of each web sign-in for the monthly mail, of Madrid, only moving
+ * forward, and with nothing else in it — no `sub`, no mail, no device. The sign-in never fails for
+ * it: what happened is the reason of its log line.
  */
 describe("the date of the last web sign-in (016, R16)", () => {
   it("writes only the date of Madrid, moves it forward, and never back", async () => {

@@ -323,9 +323,8 @@ const WAIVER_REASONS: Record<FingerprintWaiver["reason"], string> = {
 };
 
 /**
- * The text of a finding. The domain speaks English by contract; the CLI still
- * prints most findings in it —a known gap, left for a later round— but **this
- * one is read for twenty years**, so it is said in Spanish with its reason and
+ * The text of a finding. The domain speaks English by contract; the CLI still prints most findings
+ * in it, but **this one is read for twenty years**, so it is said in Spanish with its reason and
  * its date.
  */
 const describeFindingIn = (state: LedgerState | undefined, finding: IntegrityFinding): string => {

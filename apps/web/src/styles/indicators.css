@@ -1,11 +1,10 @@
 /*
- * The small SVG indicators drawn from percentages, which say the same with the
- * privacy mode on (feature 020, E3): the deviation strip of an asset class,
- * and what it shares with the gauges of the bucket and the dumbbells of its
- * theses (`bucket.css` draws the rest of those two).
+ * The small SVG indicators drawn from percentages, which say the same with the privacy mode on: the
+ * deviation strip of an asset class, and what it shares with the gauges of the bucket and the
+ * dumbbells of its theses (`bucket.css` draws the rest of those two).
  */
 
-/* ---- The strip of an asset class: the deviation, in ink (feature 020, M5) -- */
+/* ---- The strip of an asset class: the deviation, in ink -- */
 
 .strip {
   flex: none;

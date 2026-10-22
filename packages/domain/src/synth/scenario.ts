@@ -619,7 +619,7 @@ class Scenario {
       // ADR-0021 it is required whatever the currency. Five of the scenario's
       // valuations fall on 31/12/2028, which is a **Sunday**: the rate that
       // applies is Friday 2028-12-29's, which is the very case that made this
-      // field exist (challenge 3, finding 6).
+      // field necessary.
       fx_rate_date: lastWorkingDay(date),
       source: "manual",
     });

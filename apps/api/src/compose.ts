@@ -45,8 +45,8 @@ export const compose = async (
 };
 
 /**
- * The composition, **saying only the name of what failed**: an error of the SDK carries the ARN of the role and the id of
- * the account in its message, and the runtime would log it whole with its
+ * The composition, **saying only the name of what failed**: an error of the SDK carries the ARN of
+ * the role and the id of the account in its message, and the runtime would log it whole with its
  * trace. The log gets the name; the runtime gets an error that says nothing.
  */
 export const composeOrFail = async (

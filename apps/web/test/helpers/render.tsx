@@ -65,10 +65,9 @@ export const settle = async (ms = 0): Promise<void> => {
 };
 
 /**
- * Waits for a **condition**, never for a fixed time (review of PR #96, N4): a
- * test that asserts after `settle(30)` fails when the machine is loaded. It
- * checks every few milliseconds and fails, saying what it waited for, only
- * after a generous bound.
+ * Waits for a **condition**, never for a fixed time: a test that asserts after `settle(30)` fails
+ * when the machine is loaded. It checks every few milliseconds and fails, saying what it waited
+ * for, only after a generous bound.
  */
 export const until = async (
   condition: () => boolean,

@@ -1,8 +1,9 @@
-// The console of a cloud folder takes the prices from the cloud (ADR-0031, «Una sola clave, un solo presupuesto diario»): the API's index, and each file of closes whose version the
-// folder does not hold yet, with the token of the folder — **all of it before
-// the lock** — and then, **under the lock**, the lines added with the rules of
-// the price use case and `prices/_cloud.json` written. No source is called: the cloud
-// already spent the day's calls of the plans the console shares with it.
+// The console of a cloud folder takes the prices from the cloud (ADR-0031, «Una sola clave, un solo
+// presupuesto diario»): the API's index, and each file of closes whose version the folder does not
+// hold yet, with the token of the folder — **all of it before the lock** — and then, **under the
+// lock**, the lines added with the rules of the price use case and `prices/_cloud.json` written. No
+// source is called: the cloud already spent the day's calls of the plans the console shares with
+// it.
 
 import { FilePriceStore } from "@atlas/adapters";
 import { httpReference } from "@atlas/adapters/reference-http";

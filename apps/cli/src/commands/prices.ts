@@ -187,8 +187,8 @@ const assetsWithPriceFiles = async (ctx: Context): Promise<AssetId[]> => {
 const status = async (ctx: Context): Promise<number> => {
   const store = new FilePriceStore(folderOf(ctx));
   const today = todayInMadrid(ctx.deps.clock);
-  // A cloud folder reads no ledger here (FR-002: no session, no network): its
-  // assets are those the folder holds prices or symbols for.
+  // A cloud folder reads no ledger here (no session, no network): its assets are those the folder
+  // holds prices or symbols for.
   const ledgerAssets: readonly AssetId[] =
     ctx.mode.kind === "cloud"
       ? await assetsWithPriceFiles(ctx)

@@ -1,10 +1,9 @@
 // @vitest-environment happy-dom
 //
-// Feature 022 (ADR-0035, E2a): the web boots from the session and the ledger of
-// the cloud. Over the real handler with the doubles of S3, SSM and Google
-// (`api-support.ts`); only the network is scripted. What is under test is the
-// order (session, ledger, projection), the four stops (no session, no
-// connection, failed read, nothing shown) and that nothing is cached.
+// The web boots from the session and the ledger of the cloud (ADR-0035). Over the real handler with
+// the doubles of S3, SSM and Google (`api-support.ts`); only the network is scripted. What is under
+// test is the order (session, ledger, projection), the four stops (no session, no connection,
+// failed read, nothing shown) and that nothing is cached.
 
 import { createSignal } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -82,7 +81,7 @@ const Probe = () => <p>{`eventos:${store.snapshot()?.events.length ?? "ninguno"}
 
 const shown = async () => showInShell("/", { "*": Probe });
 
-// Every `watchConnection` of a test is removed at its end (M4 of the review).
+// Every `watchConnection` of a test is removed at its end.
 const watchers: (() => void)[] = [];
 const watching = (request: typeof fetch): void => {
   watchers.push(watchConnection(request));

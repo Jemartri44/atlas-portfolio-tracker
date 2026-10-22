@@ -1,17 +1,16 @@
 // "¿Cómo va y hay algo que hacer?" — the screen the application is opened for.
 //
-// Reading order: how much I have → what needs action → what happened lately
-// → how it got here (docs/design/system.md §7.2). On a phone the first
-// screenful holds the total, its three books and the first warnings; on a wide
-// screen the patrimony is a band, attention and the recent movements share a
-// row, and the evolution closes the page (D5).
+// Reading order: how much I have → what needs action → what happened lately → how it got here
+// (docs/design/system.md §7.2). On a phone the first screenful holds the total, its three books and
+// the first warnings; on a wide screen the patrimony is a band, attention and the recent movements
+// share a row, and the evolution closes the page.
 //
 // Every figure comes from a projection of the domain **at today's date**
 // (`asOf`), the same one `atlas networth` uses without `--date`, and the
 // recent movements are cut at that date too: a valuation dated next month is
 // not something that happened lately.
 //
-// An empty ledger shows its first steps (D4) until the first purchase.
+// An empty ledger shows its first steps until the first purchase.
 
 import {
   coreWeights,

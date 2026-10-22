@@ -1,7 +1,7 @@
-// The devices of the console, as the web sees them (`docs/api.md` §4.5): the list of tokens and revoking one, **only with the
-// session** — the API refuses a token on these routes. Every request goes to
-// our own origin, carries no `Authorization`, never follows a redirect, and a
-// POST carries `x-amz-content-sha256` over the exact bytes of its body.
+// The devices of the console, as the web sees them (`docs/api.md` §4.5): the list of tokens and
+// revoking one, **only with the session** — the API refuses a token on these routes. Every request
+// goes to our own origin, carries no `Authorization`, never follows a redirect, and a POST carries
+// `x-amz-content-sha256` over the exact bytes of its body.
 
 import { bodySha256 } from "./session.js";
 

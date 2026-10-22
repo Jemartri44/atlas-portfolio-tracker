@@ -1,5 +1,5 @@
-// The notes of the report about ECB rates (blocks 4 and 6, ADR-0029, points 8 and 10, criterion 25): a line that depends on a rate in
-// doubt, or dated after its fiscal date. The figure is the ledger's and does
+// The notes of the report about ECB rates (ADR-0029, points 8 and 10, criterion 25): a line that
+// depends on a rate in doubt, or dated after its fiscal date. The figure is the ledger's and does
 // not move; what the note says is that it should be checked before declaring.
 
 import type { LedgerEvent, Warning } from "@atlas/domain";

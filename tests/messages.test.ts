@@ -1,4 +1,4 @@
-// Anti-drift test of the Spanish messages (decision (i) of prompt 006).
+// Anti-drift test of the Spanish messages.
 //
 // The domain speaks English by contract (`errors.ts`) and **each interface
 // translates**: the CLI sends you to a command, the web to the screen where it
@@ -24,7 +24,7 @@ const webFindings = join(repoRoot, "apps", "web", "src", "format", "messages", "
 const integrityFiles = [
   join(domainSrc, "projections", "integrity.ts"),
   join(domainSrc, "projections", "deep-check.ts"),
-  // Feature 012: the findings of the ECB check, which both interfaces say.
+  // The findings of the ECB check, which both interfaces say.
   join(domainSrc, "ecb", "check.ts"),
 ];
 const ecbCheck = join(domainSrc, "ecb", "check.ts");
@@ -112,25 +112,24 @@ const NOT_SHOWN: Record<string, string> = {
   archive_exists: "solo lo levanta compact (comando de CLI)",
   missing_migration: "solo ocurre con un libro de una versión sin migración escrita",
   ulid_overflow: "agotar los ids de un milisegundo: prácticamente imposible",
-  // Feature 015: raised only inside the Lambda of the API, which answers with
-  // a code of docs/api.md §7 (remote_unavailable, device_forgotten) or refuses
-  // to start; neither interface ever holds one of these errors.
+  // Raised only inside the Lambda of the API, which answers with a code of docs/api.md §7
+  // (remote_unavailable, device_forgotten) or refuses to start; neither interface ever holds one of
+  // these errors.
   allow_list_unreadable: "solo en la Lambda: responde remote_unavailable",
   api_config_invalid: "solo en la Lambda: no arranca",
   device_id_invalid: "solo en la Lambda: nunca construye la clave de un id que no vale",
-  // E2: guards of the names and the tokens the API and the console build
-  // from values they validated first; they can only fire on a bug.
+  // Guards of the names and the tokens the API and the console build from values they validated
+  // first; they can only fire on a bug.
   token_id_invalid: "solo en la Lambda: nunca construye el nombre de un token_id que no vale",
   device_token_malformed: "nunca se da formato a un token con partes que no valen",
 };
 
 /**
- * Codes only the **scheduled jobs** raise (feature 016, E1): they end in the
- * run record of a job, its log line or its mail, never in front of the
- * console or the web. The mail says each warning with its own sentence
- * (`jobs/mail/`); the rest are codes of a record. `job_frequency_*` and
- * `job_not_available` will be said in Ajustes when E3 shows what a line of
- * `job_frequencies` carries that the jobs ignore, and leave this list then.
+ * Codes only the **scheduled jobs** raise: they end in the run record of a job, its log line or its
+ * mail, never in front of the console or the web. The mail says each warning with its own sentence
+ * (`jobs/mail/`); the rest are codes of a record. `job_frequency_*` and `job_not_available` will be
+ * said in Ajustes once it shows what a line of `job_frequencies` carries that the jobs ignore, and
+ * leave this list then.
  */
 const JOBS_ONLY: Record<string, string> = {
   job_already_done: "solo en el registro de una tarea",
@@ -147,7 +146,7 @@ const JOBS_ONLY: Record<string, string> = {
   jobs_config_invalid: "solo en las tareas: la función no arranca",
   notice_unreadable: "solo en el registro de la función de correo",
   task_failed: "el correo lo dice con su frase (jobs/mail/notice.ts)",
-  // E2: the findings of the ECB and the prices, said by the mail only.
+  // The findings of the ECB and the prices, said by the mail only.
   currency_unchecked: "el correo lo dice con su frase (jobs/mail/notice.ts)",
   ecb_calendar_mismatch: "el correo lo dice con su frase (jobs/mail/notice.ts)",
   ecb_history_damaged: "el correo lo dice con su frase (jobs/mail/notice.ts)",
@@ -158,7 +157,7 @@ const JOBS_ONLY: Record<string, string> = {
   source_failing: "el correo lo dice con su frase (jobs/mail/notice.ts)",
   thesis_horizon_exceeded: "el correo lo dice con su frase (jobs/mail/notice.ts)",
   prices_file_unreadable: "el correo lo dice con su frase (jobs/mail/notice.ts)",
-  // E4: the findings of the dump and the integrity, said by the mail only.
+  // The findings of the dump and the integrity, said by the mail only.
   backup_object_differs: "el correo lo dice con su frase (jobs/mail/notice.ts)",
   backup_ecb_inconsistent: "el correo lo dice con su frase (jobs/mail/notice.ts)",
   backup_positions_missing: "el correo lo dice con su frase (jobs/mail/notice.ts)",
@@ -171,17 +170,16 @@ const JOBS_ONLY: Record<string, string> = {
 };
 
 /**
- * Codes only the **administration** of the console raises (`atlas admin`,
- * feature 015, E5): the web never administers the remote, so only the CLI
- * translates them.
+ * Codes only the **administration** of the console raises (`atlas admin`): the web never
+ * administers the remote, so only the CLI translates them.
  */
 const CLI_ONLY: Record<string, string> = {
   rewrite_refused_device_unreadable: "solo atlas admin compact y restore",
   forget_device_missing: "solo atlas admin forget-device",
   forget_device_unreadable: "solo atlas admin forget-device",
-  // Feature 016, E3: only the console pulls from the cloud and keeps its state.
+  // Only the console pulls from the cloud and keeps its state.
   invalid_cloud_pull: "solo atlas prices update, en una carpeta sincronizada",
-  // Feature 016, E2, block 3.
+  // Only the console pushes the symbols of the prices.
   symbols_push_missing: "solo atlas admin prices push",
   symbols_push_misstored: "solo atlas admin prices push",
   symbols_push_remote_newer: "solo atlas admin prices push",
@@ -229,13 +227,11 @@ describe("Spanish messages: the integrity findings", () => {
 });
 
 /**
- * **The findings of the ECB are said in Spanish in the console too**
- * (decision (z) of prompt 012). The console has no catalogue of findings — it
- * printed the domain's English, a gap noted for a later feature —, so it gets
- * one **limited to the codes of the ECB**, and this test holds it both ways:
- * every code the ECB check can raise is translated there, and nothing else.
- * With it, the blind spot of the `error(`/`warning(` helpers (E2 of feature
- * 011) no longer applies to these codes: `findingCodes` scans the module.
+ * **The findings of the ECB are said in Spanish in the console too.** The console has no catalogue
+ * of findings — it printed the domain's English, a gap noted for a later feature —, so it gets one
+ * **limited to the codes of the ECB**, and this test holds it both ways: every code the ECB check
+ * can raise is translated there, and nothing else. With it, the blind spot of the
+ * `error(`/`warning(` helpers no longer applies to these codes: `findingCodes` scans the module.
  */
 describe("Spanish messages: the findings of the ECB in the console", () => {
   const ecbCodes = (): Set<string> => {
@@ -305,9 +301,8 @@ describe("Spanish messages: the two interfaces stay level", () => {
     const own = new Set([
       "duplicate_fingerprint",
       "newly_invalid_events",
-      // Feature 014 (V7): the third code of DependentEventsError, said by both
-      // interfaces with its own sentence (apps/cli/test/cloud/cloud-folder.test.ts
-      // and apps/web/test/actions.test.ts read it).
+      // The third code of DependentEventsError, said by both interfaces with its own sentence
+      // (apps/cli/test/cloud/cloud-folder.test.ts and apps/web/test/actions.test.ts read it).
       "accept_invalid_while_synced",
       "not_found",
       "invalid_line",
@@ -339,8 +334,8 @@ describe("Spanish messages: the two interfaces stay level", () => {
   });
 
   it("keeps every catalogue inside its own interface", () => {
-    // The web does not import the CLI (`apps/*` never import each other:
-    // ADR-0007), which is the other half of decision (i).
+    // The web does not import the CLI (`apps/*` never import each other: ADR-0007), which is what
+    // keeps each catalogue inside its interface.
     expect(readFileSync(webErrors, "utf8")).not.toContain("@atlas/cli");
     expect(readFileSync(webWarnings, "utf8")).not.toContain("@atlas/cli");
     expect(relative(repoRoot, webErrors)).toBe(
@@ -350,10 +345,9 @@ describe("Spanish messages: the two interfaces stay level", () => {
 });
 
 /**
- * **The failures of the remote** (feature 014; `docs/api.md` §7): the client
- * stops with `remote_failed` and carries the code of the remote as it came, so
- * each interface says each one with its own sentence, never folded into a
- * generic one. Held level with the closed list of the domain, both ways.
+ * **The failures of the remote** (`docs/api.md` §7): the client stops with `remote_failed` and
+ * carries the code of the remote as it came, so each interface says each one with its own sentence,
+ * never folded into a generic one. Held level with the closed list of the domain, both ways.
  */
 describe("Spanish messages: the failures of the remote, one by one", () => {
   const listed = (): string[] => {

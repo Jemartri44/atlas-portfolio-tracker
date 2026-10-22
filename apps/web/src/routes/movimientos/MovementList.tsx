@@ -64,7 +64,8 @@ const COLUMNS: readonly DataColumn<MovementRow>[] = [
 ];
 
 /**
- * The valuations of one day, folded into one row that unfolds, with the same disclosure as everywhere: its summary is a 44px row.
+ * The valuations of one day, folded into one row that unfolds, with the same disclosure as
+ * everywhere: its summary is a 44px row.
  */
 const ValuationGroupLine = (props: { group: ValuationGroup }): JSX.Element => (
   <Disclosure label={`${props.group.rows.length} valoraciones · ${formatDate(props.group.date)}`}>

@@ -81,10 +81,9 @@ export const asChain = (files: readonly string[]): string =>
   files.map((file) => relative(domainSrc, file)).join(" -> ");
 
 /**
- * Everything that **knows about prices** (feature 013, block 1): the gate,
- * the manual leaf, the two ports of prices and every file of `quotes/` with
- * its door — the last read **off the folder**, so a module of prices created
- * tomorrow is covered without anybody writing it down here.
+ * Everything that **knows about prices**: the gate, the manual leaf, the two ports of prices and
+ * every file of `quotes/` with its door — the last read **off the folder**, so a module of prices
+ * created tomorrow is covered without anybody writing it down here.
  */
 export const priceRoots = (): string[] => {
   const projections = join(domainSrc, "projections");
@@ -127,17 +126,16 @@ export const interfaceKeys = (file: string, name: string): string[] => {
   for (let index = source.indexOf("{", start); index < source.length; index += 1) {
     const char = source[index] as string;
     if (depth === 1 && (char === "\n" || char === ";")) {
-      // A key with or without quotes: `"quotes": …` is a key as much as
-      // `quotes: …`, and the quoted form slipped past this (review of PR #78).
+      // A key with or without quotes: `"quotes": …` is a key as much as `quotes: …`, and the quoted
+      // form slipped past this.
       const match = /^\s*(?:readonly\s+)?(?:(["'])([^"']+)\1|([A-Za-z_$][\w$]*))\??\s*:/.exec(line);
       if (match !== null) {
         keys.push((match[2] ?? match[3]) as string);
       }
       line = "";
     }
-    // An index signature lets any key through, whatever its form: it is read
-    // as a key of its own, which no frozen list contains (second pass of the
-    // review of PR #78).
+    // An index signature lets any key through, whatever its form: it is read as a key of its own,
+    // which no frozen list contains.
     if (char === "[" && depth === 1 && /^\s*(?:readonly\s+)?$/.test(line)) {
       keys.push("[index signature]");
     }

@@ -1,9 +1,9 @@
-// The narrow interface of SSM Parameter Store the API needs. The allow list, the client of Google and the session key are
-// **read-only** for the API (ADR-0028, note on row 7). The records of
-// the console tokens are written too: created **without overwriting** and overwritten **only
-// to revoke** (ADR-0033, point 9). There is never a delete nor a label: an
-// implementation that offered them would be a way to bring a revoked token
-// back (architecture test, T26).
+// The narrow interface of SSM Parameter Store the API needs. The allow list, the client of
+// Google and the session key are **read-only** for the API (ADR-0028, note on row 7). The
+// records of the console tokens are written too: created **without overwriting** and
+// overwritten **only to revoke** (ADR-0033, point 9). There is never a delete nor a label: an
+// implementation that offered them would be a way to bring a revoked token back (an
+// architecture test pins it).
 
 export interface ParameterEntry {
   readonly name: string;
@@ -14,8 +14,8 @@ export interface ParameterStore {
   /** The value, decrypted; `undefined` when the parameter does not exist. Never with a selector. */
   get(name: string): Promise<string | undefined>;
   /**
-   * `PutParameter` of a `SecureString` **without `Overwrite`**, with its tags: `exists` on `ParameterAlreadyExists`. A
-   * `TooManyUpdates` is a transient failure (`DependencyUnavailable`).
+   * `PutParameter` of a `SecureString` **without `Overwrite`**, with its tags: `exists` on
+   * `ParameterAlreadyExists`. A `TooManyUpdates` is a transient failure (`DependencyUnavailable`).
    */
   putNew(
     name: string,

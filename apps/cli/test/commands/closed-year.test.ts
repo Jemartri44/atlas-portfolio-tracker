@@ -1,4 +1,4 @@
-// "This touches a tax year you have already filed" (ADR-0020; prompt 010, FR-018).
+// "This touches a tax year you have already filed" (ADR-0020).
 //
 // It never refuses: filing late can be legitimate and is sometimes compulsory.
 // What is not acceptable is doing it in silence, so the warning names the
@@ -136,11 +136,10 @@ describe("a write that reaches a filed return", () => {
   });
 
   /**
-   * **Found by looking at the screen**, which is where the last three defects
-   * of feature 010 came from too. Nobody had seen it because a 720 only
-   * reached this warning when the write fell **by date** inside its year;
-   * since the third outcome exists it reaches it whenever anything is written,
-   * and the first screenshot of the new case read «Afecta a el Modelo 720».
+   * **Found by looking at the screen**, where this kind of defect shows. Nobody had seen it because
+   * a 720 only reached this warning when the write fell **by date** inside its year; since the
+   * third outcome exists it reaches it whenever anything is written, and the first screenshot of
+   * the new case read «Afecta a el Modelo 720».
    */
   it("contracts the preposition: al Modelo 720, never «a el Modelo 720»", async () => {
     // The straddling sale, so the Renta moves too and both articles show.

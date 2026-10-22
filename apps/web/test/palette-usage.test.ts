@@ -1,6 +1,5 @@
-// Where the colours of a gain and a loss may appear (feature 020, E1, block
-// 1). They are the colours of **results** and nothing else: the proposal of
-// 2026-09-25 (§5.4) keeps weights, deviations, prices and balances in ink.
+// Where the colours of a gain and a loss may appear. They are the colours of **results** and
+// nothing else: weights, deviations, prices and balances stay in ink.
 //
 // Recognised by identity, not by resemblance: the exact rules of the exact
 // sheet that paint a result, and no custom property anywhere that carries one
@@ -88,11 +87,10 @@ describe("the colours of a gain and a loss", () => {
   });
 
   it("are not copied by value either: no sheet or code writes their colour, nor the danger's", () => {
-    // Round 1 of the review of PR #105, N4: `.meta { color: #0f6b5c }` was a
-    // gain on a non-result that no guardian saw. Round 2, O3: nor in another
-    // notation — `#0f6b5cff`, `#0f6b5c` shortened, `rgb(15, 107, 92)` — so
-    // every colour written in the sources is normalised before comparing. The
-    // values are read from `tokens.css`, all three blocks.
+    // `.meta { color: #0f6b5c }` was a gain on a non-result that no guardian saw, and so was the
+    // same colour in another notation — `#0f6b5cff`, `#0f6b5c` shortened, `rgb(15, 107, 92)` — so
+    // every colour written in the sources is normalised before comparing. The values are read from
+    // `tokens.css`, all three blocks.
     const tokens = readFileSync(join(src, "styles/tokens.css"), "utf8");
     const values = new Set<string>();
     for (const rule of cssRules(tokens)) {

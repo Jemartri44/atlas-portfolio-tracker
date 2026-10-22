@@ -1,6 +1,5 @@
-// Feature 016, E1 (R10): the records and the streaks of the jobs in the
-// bucket, written conditionally, only under the family's own prefix, and read
-// strictly.
+// The records and the streaks of the jobs in the bucket, written conditionally, only under
+// the family's own prefix, and read strictly.
 
 import { claimRecord, noticeIn, recordIn, serializeRunRecord } from "@atlas/domain/jobs";
 import { describe, expect, it } from "vitest";

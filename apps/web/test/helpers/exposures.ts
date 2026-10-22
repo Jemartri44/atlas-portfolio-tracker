@@ -1,9 +1,7 @@
-// What a screen says with the privacy mode on that it should not: any amount or
-// quantity of the ledger, in its Spanish form, in the **text** or in an
-// **attribute** (`aria-label`, `title`, the `<title>` and the `<desc>` of an
-// SVG, a `data-*`). A screen reader reads an `aria-label`, and so does anybody
-// who opens the DOM; a mask in the text and the figure in the tooltip hides
-// nothing (feature 020, E3, block 1).
+// What a screen says with the privacy mode on that it should not: any amount or quantity of the
+// ledger, in its Spanish form, in the **text** or in an **attribute** (`aria-label`, `title`, the
+// `<title>` and the `<desc>` of an SVG, a `data-*`). A screen reader reads an `aria-label`, and so
+// does anybody who opens the DOM; a mask in the text and the figure in the tooltip hides nothing.
 //
 // Two nets, because each catches what the other lets through:
 //   - the **figures of the ledger** themselves, formatted the way the screens

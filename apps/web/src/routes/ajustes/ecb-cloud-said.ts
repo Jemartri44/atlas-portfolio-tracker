@@ -1,5 +1,6 @@
-// What the card of the ECB says of a download from the cloud: by outcome, and only what the user has to know. When the card
-// opens by itself, «nothing new» is not said; when the user asked, it is.
+// What the card of the ECB says of a download from the cloud: by outcome, and only what the user
+// has to know. When the card opens by itself, «nothing new» is not said; when the user asked, it
+// is.
 
 import type { CloudOutcome } from "../../ecb/cloud.js";
 import { formatDate } from "../../format/date.js";

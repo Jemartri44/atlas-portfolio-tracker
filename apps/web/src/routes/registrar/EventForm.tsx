@@ -1,5 +1,5 @@
-// The generic form: it paints an `EventFormSpec` and walks the flow the CLI
-// wizards use — fill in, **see the effect**, confirm, write (FR-043, FR-044).
+// The generic form: it paints an `EventFormSpec` and walks the flow the CLI wizards use — fill in,
+// **see the effect**, confirm, write.
 //
 // It checks only that the required fields are filled and that a number can be
 // read (`inputErrors`); the rest is the domain's, inside the preview. A refusal

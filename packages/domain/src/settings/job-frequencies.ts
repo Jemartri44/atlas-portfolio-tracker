@@ -31,9 +31,9 @@ export const JOB_FREQUENCY_KEYS = {
 export type JobFrequencyKey = keyof typeof JOB_FREQUENCY_KEYS;
 
 /**
- * Keys that belong to jobs of Round 6 (the importers), not built yet. The
- * synthetic generator writes `reconciliation` (it is in the golden), so it is
- * said apart from a key nobody knows.
+ * Keys that belong to jobs not built yet (the importers). The synthetic
+ * generator writes `reconciliation` (it is in the golden), so it is said apart
+ * from a key nobody knows.
  */
 export const RESERVED_JOB_KEYS: readonly string[] = ["reconciliation"];
 

@@ -94,11 +94,10 @@ export interface FiscalCriterion {
  * be above or below the right one, and so can the figure the proposed
  * correction leaves.
  *
- * #18 to #23 were numbered by the direction on 2026-09-18 (questions Q1, Q2 and
- * Q5 of the feature 009). Where the document gives a criterion two certainties
- * (#21 "media-baja", #22 "alta (orden) / media (redondeo)"), the catalogue
- * keeps the more doubtful one: a figure is never presented as firmer than the
- * weakest part of what it depends on.
+ * Where the document gives a criterion two certainties (#21 "media-baja", #22
+ * "alta (orden) / media (redondeo)"), the catalogue keeps the more doubtful
+ * one: a figure is never presented as firmer than the weakest part of what it
+ * depends on.
  */
 export const FISCAL_CRITERIA = {
   "1": { doc: "1", certainty: "medium", risk: "conservative" },

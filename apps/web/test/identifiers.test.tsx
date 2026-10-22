@@ -1,10 +1,9 @@
 // @vitest-environment happy-dom
 //
-// An identifier of the ledger — `acc_mi`, `ast_world`, the ULID of an order —
-// is shown **only** inside the folded technical record, where the ledger is
-// checked and a repair is written. Everywhere else a thing is named: an
-// account and an asset by their names, an order by what it asked for and
-// when (review of 2026-09-19).
+// An identifier of the ledger — `acc_mi`, `ast_world`, the ULID of an order — is shown **only**
+// inside the folded technical record, where the ledger is checked and a repair is written.
+// Everywhere else a thing is named: an account and an asset by their names, an order by what it
+// asked for and when.
 
 import { describe, expect, it } from "vitest";
 import Detail from "../src/routes/movimientos/detail.jsx";

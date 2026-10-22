@@ -101,10 +101,10 @@ const DASH_HINT =
 const YES_OR_NO = new Set(["true", "false", "sí", "si", "no", "0", "1"]);
 
 /**
- * A boolean flag followed by `false` used to leave `false` loose and set the
- * flag: `--neutrality-regime false` recorded the regime as applying, the
- * opposite of what was written, in a field that decides criteria #7 and #13. Interpreting the word is not safe; refusing it,
- * and saying how the flag is written, is.
+ * A boolean flag followed by `false` used to leave `false` loose and set the flag:
+ * `--neutrality-regime false` recorded the regime as applying, the opposite of what was written, in
+ * a field that decides criteria #7 and #13. Interpreting the word is not safe; refusing it, and
+ * saying how the flag is written, is.
  */
 const booleanWithValue = (flag: string, value: string): UsageError => {
   const opposite = OPPOSITES[flag];

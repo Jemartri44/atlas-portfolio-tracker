@@ -1,4 +1,4 @@
-// Feature 015, E5: the pure rules of the administration of the remote.
+// The pure rules of the administration of the remote.
 
 import { describe, expect, it } from "vitest";
 import {

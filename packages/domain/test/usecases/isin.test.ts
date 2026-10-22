@@ -1,7 +1,7 @@
-// One ISIN, one asset (ADR-0009; feature 009, fiscal review, blocking finding
-// 1). Two assets with the same ISIN are one security to the tax agency and two
-// to FIFO and the wash-sale rule: recording refuses them, and a ledger written
-// before is told by `integrity` and by the tax report, never refused on load.
+// One ISIN, one asset (ADR-0009). Two assets with the same ISIN are one
+// security to the tax agency and two to FIFO and the wash-sale rule: recording
+// refuses them, and a ledger written before is told by `integrity` and by the
+// tax report, never refused on load.
 
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "../../src/errors.js";
@@ -195,7 +195,7 @@ describe("the catalogue in force, not the raw lines (verifier of feature 009)", 
 });
 
 describe("a ledger written before, with two assets on one ISIN", () => {
-  /** The reviewer's case: a loss in the core, a repurchase in the bucket 14 days later. */
+  /** A loss in the core, a repurchase in the bucket 14 days later. */
   const legacy = () => {
     const b = new LedgerBuilder();
     b.settings(DEFAULT_SETTINGS);

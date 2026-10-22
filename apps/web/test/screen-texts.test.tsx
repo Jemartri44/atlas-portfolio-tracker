@@ -33,9 +33,9 @@ const render = (catalogue: typeof ERROR_MESSAGES, code: string, details: Record<
 
 describe("the words", () => {
   /**
-   * Found during this round: the configuration said the transfer limit "hoy no
-   * dispara ningún aviso", and since feature 007 it raises `transfer_overdue`,
-   * which the summary shows. A hint that denies a warning is worse than none.
+   * Found during a review: the configuration said the transfer limit "hoy no dispara ningún aviso",
+   * and it raises `transfer_overdue`, which the summary shows. A hint that denies a warning is
+   * worse than none.
    */
   it("does not deny the warning the transfer limit raises", () => {
     const hint = SETTINGS_NUMBERS.find((setting) => setting.key === "transfer_max_days")?.hint;

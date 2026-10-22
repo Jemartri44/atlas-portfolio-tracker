@@ -62,7 +62,7 @@ describe("Money", () => {
   /*
    * The total the screen prints is the sum of the figures the screen prints.
    * The CLI and the web each had their own copy of this reduce; it is money,
-   * so it lives here (review of 006).
+   * so it lives here.
    */
   it("sums the figures as they are shown, rounding each one first", () => {
     // 0,005 + 0,005 is 0,01 exact, but each figure shows as 0,01, so the

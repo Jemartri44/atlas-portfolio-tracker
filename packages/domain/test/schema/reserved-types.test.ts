@@ -1,7 +1,7 @@
-// The reserved-type mechanism (data-schema.md §3, feature 001 R14) stays in
-// place although the list is empty: a type reserved by a later feature must be
-// accepted by the loader and rejected by the projection. Exercised by mocking
-// the envelope module with a future type.
+// The reserved-type mechanism (data-schema.md §3) stays in place although the
+// list is empty: a type reserved for later must be accepted by the loader and
+// rejected by the projection. Exercised by mocking the envelope module with a
+// future type.
 
 import { describe, expect, it, vi } from "vitest";
 

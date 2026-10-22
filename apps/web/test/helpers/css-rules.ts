@@ -3,10 +3,9 @@
 // palette: comments are dropped, strings do not hold braces in our sheets, and
 // every block is either a rule or an at-rule wrapping rules.
 //
-// The guardians read **which block** a colour is declared in by this path, not
-// by the order in which the values appear in the file: a reader "in order of
-// appearance" cannot see a colour defined in light and forgotten in one of the
-// two dark blocks (feature 020, E1, block 1).
+// The guardians read **which block** a colour is declared in by this path, not by the order in
+// which the values appear in the file: a reader "in order of appearance" cannot see a colour
+// defined in light and forgotten in one of the two dark blocks.
 
 export interface CssRule {
   /** The preludes from the outermost at-rule to the selector, trimmed. */

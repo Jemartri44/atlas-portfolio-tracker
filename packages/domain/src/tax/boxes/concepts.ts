@@ -15,9 +15,8 @@ import type { IncomeCategory } from "../../settings/settings.js";
 
 /**
  * Where a disposal is declared. The section is a **fiscal criterion** and not a
- * detail of the form (criterion of ficha F1): it decides
- * how the disposal is declared, so it is numbered in `docs/fiscal-questions.md`
- * before it is written here.
+ * detail of the form: it decides how the disposal is declared, so it is
+ * numbered in `docs/fiscal-questions.md` before it is written here.
  *
  * `other` is "otros elementos patrimoniales", which in 2025 has **no checked
  * mapping**: the only thing that would land there is an ETC or an ETP the user
@@ -264,7 +263,7 @@ export const SIGNED_CONCEPTS: ReadonlySet<ConceptId> = new Set<ConceptId>([
 ]);
 
 /**
- * Which section a disposal is declared in (criterion of ficha F1, 2025).
+ * Which section a disposal is declared in (2025).
  *
  * The income category decides first: whatever the settings put in
  * `movable_capital` is not a capital gain at all and is declared as income from

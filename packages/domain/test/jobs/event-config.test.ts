@@ -1,6 +1,5 @@
-// Feature 016, E1: the event of EventBridge Scheduler (R12, mutant 7), the
-// configuration of each function (R17), the mail address and the switch of
-// the amounts (R4, mutant 2).
+// The event of EventBridge Scheduler, the configuration of each function, the mail address and the
+// switch of the amounts.
 
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "../../src/errors.js";
@@ -198,7 +197,7 @@ describe("the configuration of a function (R17)", () => {
         { ...MAIL_ENV, ATLAS_DATA_BUCKET: "Bucket" },
         { variable: "ATLAS_DATA_BUCKET", reason: "not_a_bucket_name" },
       ],
-      // Review of PR #106, N1: the bucket of the environment the function says.
+      // The bucket of the environment the function says.
       [
         { ...MAIL_ENV, ATLAS_DATA_BUCKET: "atlas-dev-data-x1" },
         { variable: "ATLAS_DATA_BUCKET", reason: "not_of_the_environment" },
@@ -232,7 +231,7 @@ describe("the configuration of a function (R17)", () => {
       expect(reasonOf(env)).toEqual(details);
     }
     expect(reasonOf({ ...MAIL_ENV, ATLAS_OAUTH_IDLE_WARNING_DAYS: "179" })).toBe("accepted");
-    // The longest a run lasts: the timeout of the Lambda, at most 900 s (N3).
+    // The longest a run lasts: the timeout of the Lambda, at most 900 s.
     expect(reasonOf({ ...MAIL_ENV, ATLAS_JOB_MAX_RUN_SECONDS: undefined })).toEqual({
       variable: "ATLAS_JOB_MAX_RUN_SECONDS",
       reason: "missing",

@@ -1,11 +1,8 @@
-// The hand-computed supplementary return of `specs/010-tax-output/questions.md (in git history)`
-// §6.3, checked against the engine.
+// The hand-computed supplementary return, checked against the engine.
 //
-// **Every literal here comes from that hand calculation**, written and
-// committed before any of this code existed (commit "docs(010): record the
-// answers and the hand-computed returns"); none was copied from the engine's
-// output. A discrepancy is investigated and written down there before a
-// literal is touched.
+// **Every literal here comes from a hand calculation** written before any of
+// this code existed; none was copied from the engine's output. A discrepancy
+// is investigated before a literal is touched.
 //
 // And the ledger is built on `HAND_SETTINGS`, which writes the configuration
 // down in full, instead of on the documented defaults: a calculation whose
@@ -53,7 +50,7 @@ interface Exercise {
 }
 
 /**
- * The ledger of §6.3, event by event as the table lists them. `upTo` cuts it
+ * The ledger of the hand calculation, event by event as its table lists them. `upTo` cuts it
  * where a step needs it, so each step is read on the ledger it had then.
  */
 const exercise = (upTo = "C11", computedBase = "30"): Exercise => {

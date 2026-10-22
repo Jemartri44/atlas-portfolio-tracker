@@ -1,5 +1,5 @@
-// Feature 024 (ADR-0035, E3): the console on a cloud folder or a local one,
-// never both. Over the API composed with its doubles; never the network.
+// The console on a cloud folder or a local one, never both (ADR-0035). Over the API composed with
+// its doubles; never the network.
 
 import { createHash } from "node:crypto";
 import { chmod, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";

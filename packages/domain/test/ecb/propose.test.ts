@@ -1,6 +1,5 @@
-// The rate proposed when recording and when a typed one asks for a
-// confirmation (ADR-0029, points 3 and 7; decisions (e), (p) and (w)).
-// Mutants 6 and 19 of prompt 012 §5.
+// The rate proposed when recording and when a typed one asks for a confirmation (ADR-0029, points 3
+// and 7).
 
 import { describe, expect, it } from "vitest";
 import { readEcbZipCsv } from "../../src/ecb/history.js";
@@ -46,7 +45,7 @@ describe("ratePointsOf", () => {
         basis: "fiscal",
       },
     ]);
-    // A fund in dollars: its fiscal date is the value date (mutant 19: never trade_date).
+    // A fund in dollars: its fiscal date is the value date (never trade_date).
     const fundBuy = { ...goldBuy, asset_id: "ast_usfund" };
     expect(ratePointsOf(state, fundBuy)[0]?.reference).toBe("2026-01-06");
     const fx = {
@@ -174,7 +173,7 @@ describe("proposeRates", () => {
 
 describe("rateConfirmations", () => {
   it("asks only when the typed rate differs from a conclusive official one, by value", () => {
-    // 0.85950 typed from the daily XML is the same rate as 0.8595 (mutant 6).
+    // 0.85950 typed from the daily XML is the same rate as 0.8595.
     const pounds = {
       ...goldBuy,
       currency: "GBP",
@@ -200,8 +199,8 @@ describe("rateConfirmations", () => {
       fx_rate_date: "2026-01-02",
     };
     expect(rateConfirmations(history, state, dated, 30)).toHaveLength(1);
-    // The official value with the wrong date alone still asks (review of PR
-    // #75): Saturday the 3rd takes Friday's 1.1169, dated the 2nd.
+    // The official value with the wrong date alone still asks: Saturday the 3rd takes Friday's
+    // 1.1169, dated the 2nd.
     const saturday = {
       ...goldBuy,
       trade_date: "2026-01-03",

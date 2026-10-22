@@ -1,9 +1,9 @@
 // The forms, described as data.
 //
-// Same idea as `ADD_SPECS` in the CLI: what a form is made of is a list of
-// fields, not a hand-written component per event. A generic renderer paints it,
-// and a test compares each spec against `knownFieldsOf(type)` of the domain, so
-// a field the schema gains and a form forgets makes the suite fail (FR-048).
+// Same idea as `ADD_SPECS` in the CLI: what a form is made of is a list of fields, not a
+// hand-written component per event. A generic renderer paints it, and a test compares each spec
+// against `knownFieldsOf(type)` of the domain, so a field the schema gains and a form forgets makes
+// the suite fail.
 //
 // The specs carry no validation: they say what to ask, with which keyboard and
 // from which list to choose. Whether the value is acceptable is decided by

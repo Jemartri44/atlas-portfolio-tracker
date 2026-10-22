@@ -1,9 +1,8 @@
 // "What needs attention", ordered by importance and with somewhere to go.
 //
-// The order is **presentation**: it decides what the user looks at first, not
-// what is true, and the domain does not order warnings. The texts come from the
-// message catalogue and the destinations from the table below, which is what
-// makes SC-008 checkable — every code shown has a screen where it is fixed.
+// The order is **presentation**: it decides what the user looks at first, not what is true, and the
+// domain does not order warnings. The texts come from the message catalogue and the destinations
+// from the table below, so every code shown has a screen where it is fixed.
 //
 // LINE BUDGET: three tables — where each code is fixed, how important it is
 // and how severe — that have to be read side by side to review the order of the
@@ -359,11 +358,10 @@ export interface FiscalAnswer {
 }
 
 /**
- * The place of the 720 and the 721 in *Atención*. In the season the tax card says it, so nothing here. Out of
- * it, before the engine answers, a row **kept** when the ledger has an account
- * abroad (the domain's `hasForeignAccountsAt`, known on the first paint), so
- * the list does not jump; once it answers, one notice with its way to the
- * fiscal screen, or nothing.
+ * The place of the 720 and the 721 in *Atención*. In the season the tax card says it, so nothing
+ * here. Out of it, before the engine answers, a row **kept** when the ledger has an account abroad
+ * (the domain's `hasForeignAccountsAt`, known on the first paint), so the list does not jump; once
+ * it answers, one notice with its way to the fiscal screen, or nothing.
  */
 export const fiscalSlot = (input: {
   season: boolean;

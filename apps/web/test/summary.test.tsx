@@ -3,7 +3,7 @@
 // The summary as composed in docs/design/system.md §7.2: the proportion of
 // the three books (percentages, visible with the privacy mode on, absent on a
 // partial total), the recent movements cut at the date read, and the first
-// steps of an empty ledger until the first purchase (D4).
+// steps of an empty ledger until the first purchase.
 
 import { describe, expect, it } from "vitest";
 import { store } from "../src/ledger/state.js";
@@ -27,7 +27,7 @@ describe("the patrimony of the summary", () => {
     const shares = [...(hero(host)?.querySelectorAll(".part-share") ?? [])].map(text);
     expect(shares).toEqual(["48 %", "6 %", "46 %"]);
     expect(hero(host)?.querySelectorAll(".shares .share-seg")).toHaveLength(3);
-    // The figure has no cents (D10); the lines of the breakdown keep them.
+    // The figure has no cents; the lines of the breakdown keep them.
     expect(text(hero(host)?.querySelector(".hero-figure"))).not.toMatch(/,\d\d/);
     expect(text(hero(host)?.querySelector(".disclosure"))).toMatch(/,\d\d/);
   });
@@ -59,7 +59,7 @@ describe("the recent movements of the summary", () => {
     today("2027-01-10");
     const host = await show("/", Resumen);
     const card = host.querySelector('[aria-label="Últimos movimientos"]');
-    // Five entries, a gathered day of valuations counting as one (feature 020, M8).
+    // Five entries, a gathered day of valuations counting as one.
     expect(card?.querySelector(".rows")?.children).toHaveLength(5);
     const dates = [...text(card).matchAll(/(\d{2}\/\d{2}\/\d{4})/g)].map((match) =>
       iso(match[1] as string),

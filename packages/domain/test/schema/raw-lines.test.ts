@@ -1,5 +1,5 @@
-// The check of the raw-line operations (feature 014, block 1): what the loader
-// would refuse is refused before a byte is written.
+// The check of the raw-line operations: what the loader would refuse is refused
+// before a byte is written.
 
 import { describe, expect, it } from "vitest";
 import { SchemaTooNewError, ValidationError } from "../../src/errors.js";

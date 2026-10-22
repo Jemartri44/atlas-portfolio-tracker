@@ -6,8 +6,8 @@
 // is the defect of quantities from the end of the ledger
 // read with the prices of another day — made impossible by construction.
 //
-// A block the domain refuses (no prices, no target weights) explains itself and
-// leaves the others standing (FR-013).
+// A block the domain refuses (no prices, no target weights) explains itself and leaves the others
+// standing.
 //
 // Composition (docs/design/system.md §7.5): the weights and the contribution
 // side by side from 1024px, the costs across; the date in force to the right

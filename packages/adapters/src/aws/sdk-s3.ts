@@ -5,7 +5,8 @@
 //
 // What each answer means:
 // - `GetObject` of a key that does not exist is `404 NoSuchKey` → nothing.
-//   A `403` is **not** «does not exist»: it is thrown.
+//   Without `s3:ListBucket` S3 answers `403` instead of `404` for an absent key,
+//   so a `403` is **not** «does not exist»: it is thrown.
 // - `If-None-Match: *`: `412` (it exists) and `409` (a concurrent request)
 //   are `exists`.
 // - `If-Match`: `412` (another ETag), `409` (concurrent) and `404` (no

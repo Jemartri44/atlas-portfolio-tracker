@@ -43,7 +43,7 @@ describe("validateShape: envelope", () => {
     rejects(variant(SAMPLES.buy, { recorded_at: "2026-13-01T00:00:00Z" }), "invalid_envelope");
     rejects(variant(SAMPLES.buy, { corrects_id: "nope" }), "invalid_envelope");
     // `swap` used to be the example of a type nobody knows. It is a type now,
-    // so the example has to be one that really is not (feature 008).
+    // so the example has to be one that really is not.
     rejects(variant(SAMPLES.buy, { type: "barter" }), "unknown_event_type");
     expect(validateShape(variant(SAMPLES.buy, { corrects_id: ID.sell })).corrects_id).toBe(ID.sell);
   });
@@ -407,8 +407,8 @@ describe("validateShape: consistency rules", () => {
 
 describe("ECB rate rules (data-schema.md §4)", () => {
   /**
-   * **The guardian of the one enumeration, pair by pair** (decision (bb) of
-   * prompt 012). It used to gather the field names of every type in a single
+   * **The guardian of the one enumeration, pair by pair.** It used to gather
+   * the field names of every type in a single
    * set, so a type with an undeclared `fx_rate` passed because another type
    * declared a field with the same name — and the check against the ECB would
    * have skipped it without a word. Now each (event type, field) and each
@@ -478,10 +478,10 @@ describe("ECB rate rules (data-schema.md §4)", () => {
   });
 
   /**
-   * Feature 005, challenge 3 finding 6: these four carried the ECB rate without
-   * the date of the rate, so a 31/12 valuation was not reproducible from the
-   * official table. The field is optional (ADR-0018: adding one is compatible),
-   * and what is present plays by the same rules as everywhere else.
+   * These four carried the ECB rate without the date of the rate, so a 31/12
+   * valuation was not reproducible from the official table. The field is
+   * optional (ADR-0018: adding one is compatible), and what is present plays by
+   * the same rules as everywhere else.
    */
   it("accepts the optional rate date of valuations, cash movements and fees, weekends aside", () => {
     for (const sample of [
@@ -752,7 +752,7 @@ describe("validateShape: a filed return (ADR-0020)", () => {
    * after filing it is the ordinary flow —file at the tax agency one day, note
    * it here another— and `as_of` is the day the application computed, so it
    * comes **after** `filed_at` every time. Rejecting that would reject the
-   * ordinary case (feature 011, P6).
+   * ordinary case.
    *
    * There is no third comparison. "`as_of` not in the future" **is** this one.
    */
@@ -1002,9 +1002,8 @@ describe("validateShape: a filed return (ADR-0020)", () => {
 });
 
 /**
- * `broker_settled_eur` (ADR-0030, with the amendment of prompt 012 (n)): what
- * the broker really moved in euros, never computed. Mutants 14 and 18 of
- * prompt 012 §5.
+ * `broker_settled_eur` (ADR-0030): what the broker really moved in euros,
+ * never computed.
  */
 describe("validateShape: broker_settled_eur", () => {
   const inDollars = (sample: SupportedEvent): SupportedEvent =>

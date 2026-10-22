@@ -1,8 +1,7 @@
-// Feature 016, E4 (plan §10.4; Q10; questions §13; mutant 31): the two
-// warnings of January that touch the fiscal path. The income tax says it is
-// ready and how many notes and criteria in dispute it carries — **no figure,
-// ever** (Q10). The 720 and the 721 are decided with the function of the
-// model, which reads **manual valuations only**, and said in a neutral text.
+// The two warnings of January that touch the fiscal path. The income tax says it is ready and how
+// many notes and criteria in dispute it carries — **no figure, ever**. The 720 and the 721 are
+// decided with the function of the model, which reads **manual valuations only**, and said in a
+// neutral text.
 
 import { describe, expect, it } from "vitest";
 import { informativeFacts } from "../../src/jobs/informative.js";

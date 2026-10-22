@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 //
-// A bucket with nothing to compare says why (feature 020, E4, second part): it
-// is not a hole in the prices, and it is not «pending prices» either.
+// A bucket with nothing to compare says why: it is not a hole in the prices, and it is not «pending
+// prices» either.
 
 import { describe, expect, it } from "vitest";
 import Cubo from "../src/routes/cubo/index.jsx";

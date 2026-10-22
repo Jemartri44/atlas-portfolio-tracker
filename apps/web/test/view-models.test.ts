@@ -1,6 +1,6 @@
 // The presentation logic: the order of the attention list, the mapping of a
 // ledger entry to a row, the breakdown of the patrimony and the form specs.
-// All of it pure, so it is tested without painting anything (Q8).
+// All of it pure, so it is tested without painting anything.
 
 import {
   Decimal,
@@ -146,7 +146,7 @@ describe("attentionItems", () => {
   });
 
   it("says the risk of losing the data, and when the export never happened", () => {
-    // Its own line of the summary since feature 020 (E2, M2), not an item of the list.
+    // Its own line of the summary, not an item of the list.
     const never = dataLossItem("never");
     expect(never.code).toBe("export_overdue");
     expect(never.severity).toBe("error");
@@ -436,11 +436,10 @@ describe("detailView", () => {
   });
 
   /**
-   * Four of the original seven. The other three — `transfer`,
-   * `transfer_requested` and `transfer_request_updated` — stopped being dead
-   * ends in feature 007, when the web gained their forms: `editable` is derived
-   * from `FORM_SPECS`, so offering the form and offering "Corregir" cannot drift
-   * apart.
+   * Four of the original seven. The other three — `transfer`, `transfer_requested` and
+   * `transfer_request_updated` — stopped being dead ends when the web gained their forms:
+   * `editable` is derived from `FORM_SPECS`, so offering the form and offering "Corregir" cannot
+   * drift apart.
    */
   it("does not offer it on the four types that are still a dead end", () => {
     const events = goldenEvents();
@@ -597,10 +596,9 @@ describe("the names of the catalogue reach every screen", () => {
 
 describe("the draft of the configuration screen", () => {
   /*
-   * Everything this block covers used to be a closure inside a 517-line `.tsx`,
-   * where no test could reach it (review of 2026-09-18). `mergeSettings` is the
-   * domain's and has its own tests; what is checked here is the bookkeeping
-   * around it, which is where a comma or an emptied field goes wrong.
+   * Everything this block covers used to be a closure inside a 517-line `.tsx`, where no test could
+   * reach it. `mergeSettings` is the domain's and has its own tests; what is checked here is the
+   * bookkeeping around it, which is where a comma or an emptied field goes wrong.
    */
   const base = settingsAt(
     projectLedger(goldenEvents() as SupportedEvent[], { collectErrors: true }),
@@ -670,11 +668,10 @@ describe("the draft of the configuration screen", () => {
   });
 
   /**
-   * "Valor por defecto" used to do nothing at all: an empty field spread an
-   * empty object, so a value already in force could not be taken off from the
-   * screen and the user was told something had changed when nothing had (Q10).
-   * ADR-0018 makes these maps partial, so removing a key is the documented way
-   * of going back to the default.
+   * "Valor por defecto" used to do nothing at all: an empty field spread an empty object, so a
+   * value already in force could not be taken off from the screen and the user was told something
+   * had changed when nothing had. ADR-0018 makes these maps partial, so removing a key is the
+   * documented way of going back to the default.
    */
   /**
    * **End to end, on the `Settings` that gets written** — not on the draft in
@@ -752,8 +749,8 @@ describe("the draft of the configuration screen", () => {
 
 describe("the form specs", () => {
   /**
-   * FR-048: a field the schema gains and a form forgets has to make the suite
-   * fail, or the day `buy` grows a field the web will quietly stop writing it.
+   * A field the schema gains and a form forgets has to make the suite fail, or the day `buy` grows
+   * a field the web will quietly stop writing it.
    */
   it("covers every field of the schema for every form", () => {
     const gaps: string[] = [];
@@ -890,12 +887,11 @@ describe("the form specs", () => {
   });
 
   /**
-   * **The date of the euro rate comes from the fiscal date** (decision (w) of
-   * prompt 012; mutant 19). `ast_world` is a fund: its fiscal date is the value
-   * date. Taking it from `trade_date`, as the form used to, dated the rate of
-   * a fund bought on Friday and settled on Tuesday on the Friday — a date that
-   * is not the last publication on or before the fiscal date, which is the
-   * application provoking its own `fx_rate_date_not_latest`.
+   * **The date of the euro rate comes from the fiscal date.** `ast_world` is a fund: its fiscal
+   * date is the value date. Taking it from `trade_date`, as the form used to, dated the rate of a
+   * fund bought on Friday and settled on Tuesday on the Friday — a date that is not the last
+   * publication on or before the fiscal date, which is the application provoking its own
+   * `fx_rate_date_not_latest`.
    */
   it("dates the euro rate from the fiscal date, never from trade_date", () => {
     const spec = FORM_SPECS.find((candidate) => candidate.slug === "buy");

@@ -207,8 +207,8 @@ describe("atlas ca", () => {
   });
 
   it("refuses --neutrality-regime false instead of recording the regime as applying", async () => {
-    // The verifier's case: `false` was left loose and the flag set, so the
-    // ledger said the regime applied, the opposite of what was written.
+    // `false` was left loose and the flag set, so the ledger said the regime applied, the opposite
+    // of what was written.
     const h = harness({ events: seed() });
     expect(await h.exec(BUY_GOLD)).toBe(0);
     const before = (await h.store.load()).events.length;

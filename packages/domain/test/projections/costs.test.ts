@@ -340,8 +340,8 @@ describe("costSummary", () => {
 
 /**
  * Charges that never touch the fiscal basis (art. 35 LIRPF,
- * `docs/business-rules.md` §5.2). Until this feature they were in the ledger and
- * in **no** view of either interface: the user could not see what custody cost.
+ * `docs/business-rules.md` §5.2). They used to be in the ledger and in **no**
+ * view of either interface: the user could not see what custody cost.
  */
 describe("costSummary: standalone fees", () => {
   it("adds them up per account, with a total per book and never one shared", () => {

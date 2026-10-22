@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 import { listSourceFiles, repoRoot, specifiersOf, webRoot, webSrc } from "./support.js";
 
 // ---------------------------------------------------------------------------
-// The web (feature 006). Three rules that cannot be left to memory: the privacy
-// gate, the isolation of the bundle and the ban on `use:` directives.
+// The web. Three rules that cannot be left to memory: the privacy gate, the isolation of the bundle
+// and the ban on `use:` directives.
 // ---------------------------------------------------------------------------
 
 /*
@@ -204,9 +204,8 @@ const RUNTIME_CLASSES = [
 
 describe("architecture: apps/web", () => {
   /**
-   * Decision (d) of prompt 006 and Q6: **every** amount and **every** quantity
-   * is painted by one component, so the privacy mode cannot be bypassed by a
-   * screen written in two years by someone who never read the prompt.
+   * **Every** amount and **every** quantity is painted by one component, so the privacy mode cannot
+   * be bypassed by a screen written in two years by someone who never read the prompt.
    *
    * It is checked on the **import graph** rather than by rendering: the module
    * that knows how to format a sensitive figure has exactly one legitimate
@@ -218,13 +217,11 @@ describe("architecture: apps/web", () => {
     /*
      * Two consumers, enumerated, each with its reason:
      *
-     * - `Amount.tsx` is the gate of the interface: every figure a screen paints
-     *   goes through it (decision (d) of prompt 006).
-     * - `chart/axis.ts` exists because uPlot asks for functions that take
-     *   numbers and return the labels of an axis and of a tooltip, where there
-     *   is no component to go through. Authorised in feature 007 (Q5) on the
-     *   condition that a rendered test proves the mask applies there too:
-     *   **the axis of a chart is an amount for every purpose**.
+     * - `Amount.tsx` is the gate of the interface: every figure a screen paints goes through it.
+     * - `chart/axis.ts` exists because uPlot asks for functions that take numbers and return the
+     *   labels of an axis and of a tooltip, where there is no component to go through. Authorised
+     *   on the condition that a rendered test proves the mask applies there too: **the axis of a
+     *   chart is an amount for every purpose**.
      */
     const allowed = new Set([
       join(webSrc, "components", "Amount.tsx"),
@@ -253,14 +250,12 @@ describe("architecture: apps/web", () => {
   /**
    * The other half of that gate: the figures a message **says**.
    *
-   * `Amount` covers every figure a screen paints, and none of the warnings and
-   * errors the domain writes as prose goes through it — they are strings. So
-   * the mask on, the table said `••••` and the warning right under it said "el
-   * aporte bruto al cubo (5000 EUR) supera el tope de 6000 EUR" (N11 of the
-   * review of feature 007). The fix is that a template asks `format/privacy.ts`
-   * for its figures instead of writing them, and this is what keeps the next
-   * template from forgetting: it reads the catalogues and refuses a detail that
-   * is an amount or a quantity by name and goes in with `text()`.
+   * `Amount` covers every figure a screen paints, and none of the warnings and errors the domain
+   * writes as prose goes through it — they are strings. So the mask on, the table said `••••` and
+   * the warning right under it said "el aporte bruto al cubo (5000 EUR) supera el tope de 6000
+   * EUR". The fix is that a template asks `format/privacy.ts` for its figures instead of writing
+   * them, and this is what keeps the next template from forgetting: it reads the catalogues and
+   * refuses a detail that is an amount or a quantity by name and goes in with `text()`.
    *
    * Both directions, like the stylesheet rules above: a figure that is not
    * masked, and something masked that is not a figure — masking a percentage
@@ -378,21 +373,18 @@ describe("architecture: apps/web", () => {
   });
 
   /**
-   * FR-014: importing the browser store must not drag `node:fs` into the
-   * bundle. The barrel of `@atlas/adapters` exports `FileLedgerStore`, so the
-   * web imports subpaths only. `scripts/check-bundle.mjs` verifies the same
-   * thing on the built output; this one says it in the source, where the fix is.
+   * Importing the browser store must not drag `node:fs` into the bundle. The barrel of
+   * `@atlas/adapters` exports `FileLedgerStore`, so the web imports subpaths only.
+   * `scripts/check-bundle.mjs` verifies the same thing on the built output; this one says it in the
+   * source, where the fix is.
    */
   /**
-   * **The browser never writes in a folder of the disk** (feature 012,
-   * decision of the direction). The File System Access API cannot create a
-   * file exclusively, so the web cannot take the lock of the console's folder;
-   * without the lock, a write of the web there could overwrite a line of the
-   * console in silence. So the web keeps its ledger in its own storage and
-   * only **reads** from the folder, and every writing primitive of the API is
-   * forbidden here, in the web and in the browser adapters. IndexedDB's own
-   * `"readwrite"` transactions are not this: they are positional, never a
-   * `mode:` option.
+   * **The browser never writes in a folder of the disk.** The File System Access API cannot create
+   * a file exclusively, so the web cannot take the lock of the console's folder; without the lock,
+   * a write of the web there could overwrite a line of the console in silence. So the web keeps its
+   * ledger in its own storage and only **reads** from the folder, and every writing primitive of
+   * the API is forbidden here, in the web and in the browser adapters. IndexedDB's own
+   * `"readwrite"` transactions are not this: they are positional, never a `mode:` option.
    */
   it("never writes in a folder of the disk from the browser", () => {
     const writing = [
@@ -501,9 +493,8 @@ describe("architecture: apps/web", () => {
    */
 
   /**
-   * FR-047: a `catch` that does nothing is a defect. It is how a failure becomes
-   * a screen that does not react — the user presses, nothing happens, and
-   * nothing anywhere says why.
+   * A `catch` that does nothing is a defect. It is how a failure becomes a screen that does not
+   * react — the user presses, nothing happens, and nothing anywhere says why.
    *
    * A `catch` **may** be silent when the thing that failed is a convenience and
    * the code carries on regardless; those are the three reads and writes of
@@ -524,9 +515,8 @@ describe("architecture: apps/web", () => {
   });
 
   /**
-   * Decision (g) of prompt 007: no file of `apps/web/src` above ~250 lines
-   * without a written reason. The user asked for this in so many words — that
-   * the frontend must not turn into a large amount of code that is hard to
+   * No file of `apps/web/src` above ~250 lines without a written reason. The user asked for this in
+   * so many words — that the frontend must not turn into a large amount of code that is hard to
    * change — and a ceiling nobody checks is a wish.
    *
    * The exception exists and is allowed; what is not allowed is an exception
@@ -547,9 +537,9 @@ describe("architecture: apps/web", () => {
   });
 
   /**
-   * The ceiling itself applies to code, not to the cascade (Q8, answer (a)) —
-   * but the exemption was granted **on condition that each stylesheet over the
-   * ceiling carries its reason**, and a condition nobody checks is a wish too.
+   * The ceiling itself applies to code, not to the cascade — but the exemption holds **on condition
+   * that each stylesheet over the ceiling carries its reason**, and a condition nobody checks is a
+   * wish too.
    */
   it("asks the long stylesheets for the same written reason", () => {
     const LIMIT = 250;
@@ -566,10 +556,9 @@ describe("architecture: apps/web", () => {
   });
 
   /**
-   * Nothing that is read goes below 13px (brief §10 and §13): the bottom bar
-   * used to carry its labels at 10px, and a test demanded that token. Now the
-   * scale itself is checked — every `--text-*` step, at every width — and every
-   * `font-size` of our stylesheets has to come from it, or be relative to a
+   * Nothing that is read goes below 13px: the bottom bar used to carry its labels at 10px, and a
+   * test demanded that token. Now the scale itself is checked — every `--text-*` step, at every
+   * width — and every `font-size` of our stylesheets has to come from it, or be relative to a
    * figure that does (the dots of the mask, the euro of a hero figure).
    */
   it("keeps every step of the type scale at 13px or more", () => {

@@ -1,6 +1,5 @@
-// The textual equivalent of a chart, which is not a courtesy: a `<canvas>` is
-// opaque to a screen reader, and the shape of a line is not a number anybody
-// can read off it (FR-028).
+// The textual equivalent of a chart, which is not a courtesy: a `<canvas>` is opaque to a screen
+// reader, and the shape of a line is not a number anybody can read off it.
 //
 // It is folded by default — the chart is the quick answer and the table is the
 // exact one — and it is painted by `DataTable`, like every other list of rows in

@@ -1,5 +1,5 @@
-// One test per case of the definition of what was contributed (feature 020, E4,
-// M3; `docs/business-rules.md`, "Lo aportado").
+// One test per case of the definition of what was contributed (`docs/business-rules.md`, "Lo
+// aportado").
 
 import { describe, expect, it } from "vitest";
 import { contributedSeries } from "../../src/charts.js";

@@ -1,6 +1,6 @@
 // The manual price depends on the valuation date, not on the order the
-// valuations were recorded in (decision (b) of prompt 004). Only a tie on the
-// same date is broken by file position.
+// valuations were recorded in. Only a tie on the same date is broken by file
+// position.
 
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";

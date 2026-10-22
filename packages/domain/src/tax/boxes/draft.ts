@@ -1,10 +1,10 @@
 // The figures of the return, in the order of the form and **before** any box
 // number is attached to them.
 //
-// Splitting it in two is what keeps the promise of decision: this file
-// knows the concepts and the arithmetic the form itself does, and knows nothing
-// at all about which year it is. Attaching the boxes is `boxes.ts`, which reads
-// the table of the year and, when there is none, attaches nothing.
+// Splitting it in two keeps this file to the concepts and the arithmetic the
+// form itself does, with no knowledge at all of which year it is. Attaching the
+// boxes is `boxes.ts`, which reads the table of the year and, when there is none,
+// attaches nothing.
 //
 // Nothing here recomputes a figure of the return. Every amount comes from
 // `TaxYearReport`; the only sums are the ones the form prints inside its own

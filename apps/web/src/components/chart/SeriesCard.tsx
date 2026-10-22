@@ -39,9 +39,9 @@ export interface SeriesCardProps {
   /** The last rows of the card, drawn or not: a disclosure with the detail. */
   tail?: JSX.Element | undefined;
   /**
-   * The series that are drawn as steps, by index (what was contributed), and
-   * the panels of a stack: each with the series it draws and, for a strip, its
-   * name. Each panel has its own scale and they share the dates and the cursor. Without panels, one chart with everything.
+   * The series that are drawn as steps, by index (what was contributed), and the panels of a stack:
+   * each with the series it draws and, for a strip, its name. Each panel has its own scale and they
+   * share the dates and the cursor. Without panels, one chart with everything.
    */
   stepped?: readonly number[] | undefined;
   panels?: readonly { series: readonly number[]; name?: string }[] | undefined;

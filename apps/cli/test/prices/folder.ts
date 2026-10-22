@@ -1,6 +1,6 @@
-// A ledger folder on the disk for the tests of the prices (feature 013), with
-// a file of keys **outside** it, a fixed clock, and sources that are doubles:
-// no test touches the network, and every key is the sentinel.
+// A ledger folder on the disk for the tests of the prices, with a file of keys **outside** it, a
+// fixed clock, and sources that are doubles: no test touches the network, and every key is the
+// sentinel.
 
 import { chmod, mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

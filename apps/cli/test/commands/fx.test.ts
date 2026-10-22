@@ -1,5 +1,5 @@
-// atlas fx update | status (feature 012, block 2): over real folders, with a
-// double of the source — no test touches the network.
+// atlas fx update | status: over real folders, with a double of the source — no test touches the
+// network.
 
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

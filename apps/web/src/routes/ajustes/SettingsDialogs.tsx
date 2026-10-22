@@ -33,7 +33,7 @@ interface DialogsProps {
   /** Defined while the question is open; `undefined` closes it. */
   silenced: readonly Warning[] | undefined;
   moved: readonly FiscalYearImpact[] | undefined;
-  /** Filed returns this change would move, with the figures it moves (FR-018). */
+  /** Filed returns this change would move, with the figures it moves. */
   closedYears: readonly ClosedYearImpact[];
   invalidating: readonly InvalidatedEvent[] | undefined;
   onDismiss: (which: "silenced" | "moved" | "invalidating") => void;
@@ -53,11 +53,10 @@ const IN_MODEL: Record<FilingModel, string> = {
 };
 
 /**
- * The headline of the question about past years, which is the first thing
- * read. It says gains move **only** when a realized gain moves: a change of the fiscal date rule reaches a Modelo 720
- * or 721 too, which declares no gains, and the headline said otherwise. With
- * no gain moving it names the one model reached, or stays neutral when
- * returns of several models are.
+ * The headline of the question about past years, which is the first thing read. It says gains move
+ * **only** when a realized gain moves: a change of the fiscal date rule reaches a Modelo 720 or 721
+ * too, which declares no gains, and the headline said otherwise. With no gain moving it names the
+ * one model reached, or stays neutral when returns of several models are.
  */
 export const movedTitle = (
   moved: readonly FiscalYearImpact[],

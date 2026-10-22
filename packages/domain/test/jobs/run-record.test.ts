@@ -1,5 +1,4 @@
-// Feature 016, E1 (R10, mutant 5): the run record of a job and a period, read
-// strictly, and what a retry does in each state.
+// The run record of a job and a period, read strictly, and what a retry does in each state.
 
 import { describe, expect, it } from "vitest";
 import {
@@ -17,7 +16,7 @@ const AT = "2026-10-01T06:00:00Z";
 const LATER = "2026-10-01T06:00:05.123Z";
 
 const claimed = claimRecord("monthly_reminder", "2026-10", AT);
-/** Fifteen minutes, the longest a Lambda runs (review of PR #104, idempotence N3). */
+/** Fifteen minutes, the longest a Lambda runs. */
 const MAX_RUN = 900_000;
 const LONG_AFTER = Date.parse(AT) + MAX_RUN;
 

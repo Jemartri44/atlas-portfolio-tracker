@@ -8,10 +8,9 @@
 // Three rules it enforces on its own, so no screen can forget them:
 //   1. `undefined` is "sin dato", never a zero (constitution V).
 //   2. The sign and a label carry the meaning too, never colour alone.
-//   3. The mask is always the same four dots in a box of fixed width, so it
-//      measures the same whatever it hides; its **unit** stays — "•••• €",
-//      "•••• part." — because it says what kind of figure is hidden and never
-//      how big it is (D2 of docs/design/system.md).
+//   3. The mask is always the same four dots in a box of fixed width, so it measures the same
+//      whatever it hides; its **unit** stays — "•••• €", "•••• part." — because it says what kind
+//      of figure is hidden and never how big it is (docs/design/system.md).
 //   4. An amount always carries its currency: there is no way to ask for a bare
 //      figure. Tables used to drop it where the header "said EUR" — on a phone
 //      the header is not there, and "coste 199,49" is not an amount.

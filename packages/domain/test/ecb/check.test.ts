@@ -1,5 +1,4 @@
 // The ledger's rates against the official history (ADR-0029, point 8).
-// Mutants 6, 7 and 9 of prompt 012 §5.
 
 import { describe, expect, it } from "vitest";
 import { checkLedgerRates, foreignRatesOf } from "../../src/ecb/check.js";

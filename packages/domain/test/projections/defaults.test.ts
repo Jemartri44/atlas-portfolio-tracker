@@ -1,4 +1,4 @@
-// The cross-cutting acceptance criterion of feature 008 (ADR-0021): **none of
+// The cross-cutting acceptance criterion of ADR-0021: **none of
 // the nine provisions changes a figure the system already computed**.
 //
 // Every one of them is either optional with a default that is today's

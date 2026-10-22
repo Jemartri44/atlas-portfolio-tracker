@@ -229,9 +229,9 @@ export const createHandler = (deps: HandlerDeps): Handler => {
   };
 
   /**
-   * The date of this web sign-in, for the monthly mail (`access/last-web-sign-in.json`): only the date of Madrid, moved forward,
-   * never back. **The sign-in never fails for it**: what happened is only the
-   * reason of the log line.
+   * The date of this web sign-in, for the monthly mail (`access/last-web-sign-in.json`): only the
+   * date of Madrid, moved forward, never back. **The sign-in never fails for it**: what happened is
+   * only the reason of the log line.
    */
   const signInDate = async (): Promise<string> => {
     try {
@@ -533,12 +533,11 @@ export const createHandler = (deps: HandlerDeps): Handler => {
   };
 
   /**
-   * `POST /api/auth/console/token` (§4.3): the code (subkey and `typ`, then
-   * its expiry), the verifier against its challenge, the list again (the e-mail of the one entry of the `sub`); then, to renew, **the
-   * previous token revoked before the new one is created**; to reissue, the
-   * device checked again and **every live token of it revoked first**; and
-   * the record created **without overwriting**, which is what makes the code
-   * single use.
+   * `POST /api/auth/console/token` (§4.3): the code (subkey and `typ`, then its expiry), the
+   * verifier against its challenge, the list again (the e-mail of the one entry of the `sub`);
+   * then, to renew, **the previous token revoked before the new one is created**; to reissue, the
+   * device checked again and **every live token of it revoked first**; and the record created
+   * **without overwriting**, which is what makes the code single use.
    */
   const exchange = async (admission: Admission, body: unknown): Promise<Outcome> => {
     const parsed = parseExchangeBody(body);
@@ -567,8 +566,9 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         refusal("not_allowed", entry === "ambiguous" ? { reason: "ambiguous_subject" } : {}),
       );
     }
-    // A code sent again is answered **before anything is revoked**: its record already exists, and a renewal or a reissue sent
-    // twice would otherwise revoke the token the first exchange handed out.
+    // A code sent again is answered **before anything is revoked**: its record already exists, and
+    // a renewal or a reissue sent twice would otherwise revoke the token the first exchange handed
+    // out.
     if ((await tokens.read(code.tid)) !== undefined) {
       return { ...fail(refusal("console_code_used")), tokenId: code.tid };
     }
@@ -606,9 +606,9 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       // the console proposed.
       deviceName = device.device_name ?? code.dn;
       for (const listed of await tokens.list()) {
-        // Never the record of this very code: an exchange of the same code
-        // running at once may have created it after this one read it, and
-        // revoking it would leave the device with no live token. The create below answers that one with 409.
+        // Never the record of this very code: an exchange of the same code running at once may have
+        // created it after this one read it, and revoking it would leave the device with no live
+        // token. The create below answers that one with 409.
         if (
           typeof listed.read === "object" &&
           listed.read.device_id === code.rdid &&

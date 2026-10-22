@@ -7,8 +7,9 @@
 // does, and a return that has already been filed may stop matching the ledger.
 //
 // The warning does not block: it is information, like the one about a threshold
-// that silences a live alert. And it is emitted for **any** previous year,
-// because the ledger does not yet know which ones were filed.
+// that silences a live alert. And it is emitted for **any** previous year: the
+// ledger records filed returns (`tax_return_filed`), but this projection does not
+// consult them, so it cannot tell which of those years were actually filed.
 
 import { type CivilDate, yearOf } from "../dates/civil-date.js";
 import { EUR, Money } from "../money/money.js";

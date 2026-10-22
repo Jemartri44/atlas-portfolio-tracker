@@ -1,10 +1,9 @@
 // @vitest-environment happy-dom
 //
-// A fund merged into another, or a share class that no longer exists, is not
-// bought and no order is placed on it: its units became another asset, though
-// the catalogue still calls it active (review of 2026-09-19). With no position
-// left there is nothing of it to sell, value or transfer either (second pass).
-// The rule is the one of the configuration (`view-models/weighted.ts`).
+// A fund merged into another, or a share class that no longer exists, is not bought and no order is
+// placed on it: its units became another asset, though the catalogue still calls it active. With no
+// position left there is nothing of it to sell, value or transfer either. The rule is the one of
+// the configuration (`view-models/weighted.ts`).
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Cartera from "../src/routes/cartera/index.jsx";

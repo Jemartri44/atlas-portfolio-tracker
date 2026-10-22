@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 //
-// The movements as composed in docs/design/system.md §7.3: grouped by day on a
-// phone and on a small laptop, the filters folded there and in a column beside the table from 1280px
-// (D12), and a detail that opens with one sentence whose figures the privacy
-// mode masks with their unit.
+// The movements as composed in docs/design/system.md §7.3: grouped by day on a phone and on a small
+// laptop, the filters folded there and in a column beside the table from 1280px, and a detail that
+// opens with one sentence whose figures the privacy mode masks with their unit.
 
 import { ledgerEntries, projectLedger } from "@atlas/domain";
 import { afterEach, describe, expect, it } from "vitest";
@@ -52,8 +51,7 @@ const drafted = (type: string): string => plain(draftSentence(current(type).even
 
 describe("the list of movements", () => {
   it("puts the rows under one heading per month, in the order given (feature 020, M8)", () => {
-    // It replaces the grouping by day of feature 007: a heading per day cost
-    // one more row per movement on a phone.
+    // It replaces the grouping by day: a heading per day cost one more row per movement on a phone.
     const rows = movementRows(entries.slice(0, 30), names);
     const months = byMonth(rows.map((row) => ({ kind: "row" as const, row })));
     expect(

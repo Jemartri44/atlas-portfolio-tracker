@@ -1,13 +1,12 @@
 // Going to the fragment of the address once its target is there.
 //
-// The browser looks for `#sincronizacion` when the page loads, and the card
-// that carries it is painted later, when its screen arrives: at 400px the
-// page did not move at all (measured). So after entering by an address with a fragment, or following a link
-// of the application to one, this waits for the target, a frame at a time and
-// up to a bound, and brings it to the top. Under the fixed bar, not behind it:
-// `scrollIntoView` honours the `scroll-padding-top` of the document, which
-// follows the height of the bar (`--header-h`). Then the focus goes to the
-// title that was reached, so the next Tab starts there and not at the top.
+// The browser looks for `#sincronizacion` when the page loads, and the card that carries it is
+// painted later, when its screen arrives: at 400px the page did not move at all (measured). So
+// after entering by an address with a fragment, or following a link of the application to one, this
+// waits for the target, a frame at a time and up to a bound, and brings it to the top. Under the
+// fixed bar, not behind it: `scrollIntoView` honours the `scroll-padding-top` of the document,
+// which follows the height of the bar (`--header-h`). Then the focus goes to the title that was
+// reached, so the next Tab starts there and not at the top.
 //
 // Never when coming back through the history: the browser restores where the
 // user was, and the back button wins. And the wait stops as soon as the

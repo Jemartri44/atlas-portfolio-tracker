@@ -1,7 +1,7 @@
-// The adapter of the administration (feature 015, E5) against a **simulated
-// client of the same calls**, like `sdk.test.ts`: no test reaches AWS. What
-// the administration needs and the API must not have — an older version of an
-// object, and every object under a prefix at any depth — and still no delete.
+// The adapter of the administration against a **simulated client of the same calls**, like
+// `sdk.test.ts`: no test reaches AWS. What the administration needs and the API must not have
+// — an older version of an object, and every object under a prefix at any depth — and still
+// no delete.
 
 import {
   GetObjectCommand,

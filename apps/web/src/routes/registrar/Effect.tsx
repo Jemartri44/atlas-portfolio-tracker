@@ -1,7 +1,7 @@
-// The effect of a record, before it is written (FR-044): one sentence saying
-// what is about to be recorded, what changes and the button that writes it. On a phone it replaces the form and offers the way
-// back; from 1024px it sits beside the form, and while there is nothing to show
-// yet it says where the effect will appear (docs/design/system.md §7.4).
+// The effect of a record, before it is written: one sentence saying what is about to be recorded,
+// what changes and the button that writes it. On a phone it replaces the form and offers the way
+// back; from 1024px it sits beside the form, and while there is nothing to show yet it says where
+// the effect will appear (docs/design/system.md §7.4).
 
 import type { EventPreview } from "@atlas/domain";
 import type { ClosedYearImpact } from "@atlas/domain/fiscal";
@@ -24,7 +24,7 @@ interface EffectProps {
   problem: string | undefined;
   failure: AppError | undefined;
   confirmLabel: string;
-  /** Filed returns this write would reach, said before the question (FR-018). */
+  /** Filed returns this write would reach, said before the question. */
   closedYears: readonly ClosedYearImpact[];
   onBack: () => void;
   onConfirm: () => void;

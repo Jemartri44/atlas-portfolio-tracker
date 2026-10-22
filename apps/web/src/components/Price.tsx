@@ -111,8 +111,8 @@ export const PriceDetail = (props: { price: PriceInfo; withAge?: boolean }): JSX
 );
 
 /**
- * Where a price comes from and of which day, for a column of a wide table: «EODHD · 24/09/2026», «manual · 15/09/2026». On a phone the
- * same is said by `PriceDetail`.
+ * Where a price comes from and of which day, for a column of a wide table: «EODHD · 24/09/2026»,
+ * «manual · 15/09/2026». On a phone the same is said by `PriceDetail`.
  */
 export const PriceSource = (props: { price: PriceInfo }): JSX.Element => (
   <Show when={props.price.priceDate}>

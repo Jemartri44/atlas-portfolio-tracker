@@ -100,10 +100,9 @@ describe("ScenarioBuilder", () => {
 });
 
 /**
- * The reason this exists (prompt §3.8): before it, adding one event reshuffled
- * the ids and the amounts of everything recorded after it, and the golden file
- * diff became unreadable. A side stream must leave the main one byte for byte
- * as it was.
+ * The reason this exists: before it, adding one event reshuffled the ids and
+ * the amounts of everything recorded after it, and the golden file diff became
+ * unreadable. A side stream must leave the main one byte for byte as it was.
  */
 describe("ScenarioStream: a side stream does not move what was already recorded", () => {
   const main = (seed: number) => {

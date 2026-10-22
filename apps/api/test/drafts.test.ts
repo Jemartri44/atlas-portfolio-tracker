@@ -1,6 +1,5 @@
-// Feature 027, E6: the routes of the drafts in the cloud (`docs/api.md` §6.1)
-// over the double of S3, with both credentials. Every object is created once
-// and nothing is overwritten or deleted.
+// The routes of the drafts in the cloud (`docs/api.md` §6.1) over the double of S3, with both
+// credentials. Every object is created once and nothing is overwritten or deleted.
 
 import { endObjectText } from "@atlas/domain/ecb";
 import { describe, expect, it } from "vitest";

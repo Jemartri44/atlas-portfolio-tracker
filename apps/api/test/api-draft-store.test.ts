@@ -1,5 +1,5 @@
-// Feature 027 (ADR-0035, E6): `ApiDraftStore` against the real handler with
-// the doubles of S3, SSM and Google. `fetch` is a bridge to `api.call`.
+// `ApiDraftStore` against the real handler with the doubles of S3, SSM and Google (ADR-0035).
+// `fetch` is a bridge to `api.call`.
 
 import { ApiDraftStore } from "@atlas/adapters/drafts-http";
 import { DraftChangedError, type PendingDraft } from "@atlas/domain/ecb";

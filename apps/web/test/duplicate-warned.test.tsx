@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 //
-// The yes to «Ya existe un movimiento igual» is a yes to that movement
-// (review of PR #97, security N5): the dialog does not freeze the form, so a
-// movement changed with the warning open is written without the
-// confirmation — and warns again, since it repeats too.
+// The yes to «Ya existe un movimiento igual» is a yes to that movement: the dialog does not freeze
+// the form, so a movement changed with the warning open is written without the confirmation — and
+// warns again, since it repeats too.
 
 import { BlobLedgerStore } from "@atlas/adapters/blob";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -85,8 +84,8 @@ describe("the duplicate question of the registration form", () => {
     expect(recorded()).toBe(once + 1);
   });
 
-  // Round 2 of the review of PR #97, N1: the corporate form follows the same
-  // rule, and a repeated corporate action transforms the lots twice.
+  // The corporate form follows the same rule, and a repeated corporate action transforms the lots
+  // twice.
   it("confirms a repeated corporate action only as it was when the warning was shown", async () => {
     const recorded = () => store.snapshot()?.events.length ?? 0;
     const split = async (host: HTMLElement): Promise<void> => {

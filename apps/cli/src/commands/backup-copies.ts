@@ -1,10 +1,9 @@
-// The copies `atlas backup` adds (ADR-0032, layer 4): the local folder `documents/` — where the user leaves by hand the
-// documentary source of a corporate action — and, with `--from-bucket`, the
-// objects of `documents/` and `imports/` of the data bucket, read **with the
-// role of administration** and never written nor deleted there. Every file is
-// verified once written, and **nothing is ever overwritten**: a destination
-// that already holds the same bytes is left as it is; one with other bytes is
-// refused.
+// The copies `atlas backup` adds (ADR-0032, layer 4): the local folder `documents/` — where the
+// user leaves by hand the documentary source of a corporate action — and, with `--from-bucket`, the
+// objects of `documents/` and `imports/` of the data bucket, read **with the role of
+// administration** and never written nor deleted there. Every file is verified once written, and
+// **nothing is ever overwritten**: a destination that already holds the same bytes is left as it
+// is; one with other bytes is refused.
 
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";

@@ -1,11 +1,11 @@
-// The two invariants the wash-sale rule promised (feature 009, plan §7), on
-// random ledgers with transfers, conversions, carve-outs, splits, reverse
-// splits with cash in lieu, swaps and grants:
+// The two invariants the wash-sale rule promised, on random ledgers with
+// transfers, conversions, carve-outs, splits, reverse splits with cash in lieu,
+// swaps and grants:
 //
 // - **conservation**: every euro deferred is, at the end, either released by a
 //   later transmission or still pending on a lot or on a repurchase. Nothing
 //   is lost and nothing is created on the way;
-// - **each repurchased unit defers once** (#19): the units an acquisition lends
+// - **each repurchased unit defers once**: the units an acquisition lends
 //   to deferrals never add up to more than it bought.
 
 import fc from "fast-check";

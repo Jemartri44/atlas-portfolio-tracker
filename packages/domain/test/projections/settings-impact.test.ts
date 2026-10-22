@@ -7,7 +7,7 @@ import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 /**
  * The 30th of December sold, settled on the 2nd of January: by trade date the
  * gain is of 2027, by value date it is of 2028. Changing the rule moves it, and
- * a return already filed stops matching (prompt 005 §3.5 bis).
+ * a return already filed stops matching.
  */
 const straddling = () => {
   const b = new LedgerBuilder();

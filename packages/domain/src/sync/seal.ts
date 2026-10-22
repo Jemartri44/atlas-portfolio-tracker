@@ -1,4 +1,4 @@
-// What seals the prefix does not move (ADR-0026, Part B, amendment; case 9).
+// What seals the prefix does not move (ADR-0026, Part B, amendment).
 //
 // A **closed classification** of every event type of the catalogue, written
 // by hand: a type that is added tomorrow without deciding whether it seals

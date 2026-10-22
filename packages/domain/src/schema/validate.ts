@@ -230,7 +230,7 @@ const FX_EFFECT_DATES: Partial<Record<EffectOp, readonly string[]>> = {
   grant: ["fx_rate_date"],
 };
 
-/** The euro is its own reference: the ECB publishes 1, not 1.0000 (challenge 2026-08-31, finding 5). */
+/** The euro is its own reference: the ECB publishes 1, not 1.0000. */
 const checkFxPairs = (
   raw: UnknownRecord,
   pairs: readonly (readonly [string, string])[],

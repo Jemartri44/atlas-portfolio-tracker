@@ -66,8 +66,8 @@ describe("atlas m720", () => {
   });
 
   it("refuses to be called as a year of atlas tax", async () => {
-    // `atlas tax 720` would read 720 as the tax year, which is why the models
-    // have commands of their own (prompt 010, block 5).
+    // `atlas tax 720` would read 720 as the tax year, which is why the models have commands of
+    // their own.
     const h = harness({ events: abroad().build() });
     expect(await h.exec(["tax", "720"])).not.toBe(0);
     expect(h.text()).toContain("2018");

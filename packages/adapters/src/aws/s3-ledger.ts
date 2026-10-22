@@ -1,10 +1,10 @@
-// The remote ledger in the data bucket, `ledger/ledger.jsonl` (ADR-0026, Part A). A `LedgerBlob` over the narrow
-// `ObjectStore`, so the six operations of the port are `BlobLedgerStore`'s —
-// the same code the browser runs — and the contract tests are the same.
+// The remote ledger in the data bucket, `ledger/ledger.jsonl` (ADR-0026, Part A). A `LedgerBlob`
+// over the narrow `ObjectStore`, so the six operations of the port are `BlobLedgerStore`'s — the
+// same code the browser runs — and the contract tests are the same.
 //
-// The etag of the store is the SHA-256 of the bytes; the ETag of S3 is only
-// the condition of the write, taken from the read that gave those bytes. A write with a stale condition fails
-// as S3 says (412, 409 or, with no object, 404: §23.1) and is a ConflictError.
+// The etag of the store is the SHA-256 of the bytes; the ETag of S3 is only the condition of the
+// write, taken from the read that gave those bytes. A write with a stale condition fails as S3 says
+// (412, 409 or, with no object, 404: §23.1) and is a ConflictError.
 //
 // **One difference with IndexedDB, said here**: saving the archive and
 // writing the ledger are two conditional writes, not one atomic step. If

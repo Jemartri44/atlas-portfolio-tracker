@@ -1,4 +1,4 @@
-// The validation of a unit, as the application writes it (§6.3 (V1)).
+// The validation of a unit, as the application writes it.
 
 import { describe, expect, it } from "vitest";
 import type {

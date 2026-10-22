@@ -1,19 +1,17 @@
 // The **default** repurchase window of a fund: two months (criterion #2,
-// `2:fund_2m`), worked out by hand in §6.5 of
-// `specs/010-tax-output/questions.md (in git history)` and committed there before this file
-// existed.
+// `2:fund_2m`), worked out by hand before this file existed.
 //
-// Why it exists: the seven hand calculations of features 009 and 010 all fix
-// the window of funds at **one year**, which was the default when they were
-// written. On 2026-09-22 the document changed the reading and the default of
-// the product became two months — and from that day no hand calculation backed
-// the value the application actually applies. This is the smallest ledger that
-// tells the two readings apart: a loss on a fund, one subscription **inside**
-// the two months and another **outside**.
+// Why it exists: the other hand calculations all fix the window of funds at
+// **one year**, which was the default when they were written. On 2026-09-22
+// the reading changed and the default of the product became two months — and
+// from that day no hand calculation backed the value the application actually
+// applies. This is the smallest ledger that tells the two readings apart: a
+// loss on a fund, one subscription **inside** the two months and another
+// **outside**.
 //
-// The literals below are copied from that document. Any discrepancy is
-// investigated and written down there, and the literal is not touched until it
-// is clear who was right.
+// The literals below come from that hand calculation. Any discrepancy is
+// investigated, and the literal is not touched until it is clear who was
+// right.
 
 import { describe, expect, it } from "vitest";
 import type { LedgerEvent } from "../../src/schema/events.js";
@@ -34,7 +32,7 @@ const ONE_YEAR: Settings = {
 
 const TODAY = "2028-01-01";
 
-/** The ledger of §6.5, event by event. */
+/** The hand-calculated ledger, event by event. */
 const ledger = (settings: Settings): LedgerEvent[] => {
   const b = taxBuilder(settings);
   b.deposit({ account_id: "acc_a", value_date: "2026-01-04", amount: "2000" });

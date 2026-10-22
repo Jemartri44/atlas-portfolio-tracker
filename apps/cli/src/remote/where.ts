@@ -1,5 +1,6 @@
-// Where the console stands before an order of `atlas remote` or `atlas sync`: the folder of the ledger, its `sync/remote.json` and the
-// credentials — once the two folders are known to be apart (ADR-0033, point 3).
+// Where the console stands before an order of `atlas remote` or `atlas sync`: the folder of the
+// ledger, its `sync/remote.json` and the credentials — once the two folders are known to be apart
+// (ADR-0033, point 3).
 
 import { dirname } from "node:path";
 import {

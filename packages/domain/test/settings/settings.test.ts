@@ -34,9 +34,9 @@ describe("DEFAULT_SETTINGS", () => {
     expect(DEFAULT_SETTINGS.fiscal_date_rule.etc).toBe("trade_date");
     expect(DEFAULT_SETTINGS.fiscal_date_rule.fund).toBe("value_date");
     expect(DEFAULT_SETTINGS.wash_sale_window.stock).toBe("2m");
-    // Two months for a fund since the correction of criterion #2 (2026-09-22):
-    // a fund that publishes its net asset value daily is a security admitted to
-    // trading. A monetary fund stays on a year, which is a noted inconsistency.
+    // Two months for a fund (criterion #2): a fund that publishes its net asset
+    // value daily is a security admitted to trading. A monetary fund stays on a
+    // year, which is a noted inconsistency.
     expect(DEFAULT_SETTINGS.wash_sale_window.fund).toBe("2m");
     expect(DEFAULT_SETTINGS.wash_sale_window.money_market).toBe("2m");
     expect(DEFAULT_SETTINGS.wash_sale_window.crypto).toBe("1y");
@@ -46,8 +46,8 @@ describe("DEFAULT_SETTINGS", () => {
 
   /**
    * ADR-0021 left the income category as configuration so that criterion #24
-   * could be answered with a value instead of a migration, and feature 010
-   * answered it: an ETC and an ETP are movable capital income (binding ruling
+   * could be answered with a value instead of a migration, and it has been
+   * answered: an ETC and an ETP are movable capital income (binding ruling
    * V0267-25), everything else is a capital gain.
    */
   it("makes an ETC and an ETP movable capital income, and everything else a capital gain (#24)", () => {
@@ -506,10 +506,9 @@ describe("mergeSettings: a per-asset-type map replaces, it does not merge", () =
 });
 
 /**
- * Feature 009, Q3 and Q4: the 25 % and the four years of article 49, and the
- * treaty rates of the double taxation deduction, are configuration. The first
- * two have documented defaults resolved where they are read; the rates have no
- * default at all, on purpose.
+ * The 25 % and the four years of article 49, and the treaty rates of the double
+ * taxation deduction, are configuration. The first two have documented defaults
+ * resolved where they are read; the rates have no default at all, on purpose.
  */
 describe("the tax engine settings", () => {
   it("resolve the offset limit and the carry-forward period to their defaults", () => {

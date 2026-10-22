@@ -1,7 +1,6 @@
-// The counter of drafts in the frame: visible on every screen while one is pending, and a way to the
-// list. It is of the ECB, so it arrives in a chunk of its own, **after** the
-// first paint: the frame keeps an empty place and
-// imports this lazily.
+// The counter of drafts in the frame: visible on every screen while one is pending, and a way to
+// the list. It is of the ECB, so it arrives in a chunk of its own, **after** the first paint: the
+// frame keeps an empty place and imports this lazily.
 //
 // Plain DOM and not a Solid component, on purpose: a lazily loaded component
 // here made the bundler move Solid itself into a chunk of its own on the boot

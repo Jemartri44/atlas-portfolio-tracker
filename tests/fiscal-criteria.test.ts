@@ -1,4 +1,4 @@
-// Anti-drift test of the fiscal criteria (feature 009, FR-030).
+// Anti-drift test of the fiscal criteria.
 //
 // The tax engine tags every figure with the criteria of
 // `docs/fiscal-questions.md` and their certainty and direction of risk. The
@@ -12,11 +12,9 @@
 // per-variant comments of the catalogue — not because two files say the same
 // thing. Asking it for more than that is asking it for what it does not give.
 //
-// **What it guarantees**, since feature 011, block 7: an **exact pairing**.
-// Every identifier of the catalogue has exactly one row of the document, every
-// row has an identifier of the catalogue, and the certainty and the risk of
-// each one are **the** certainty and **the** risk its row declares — not one
-// of a set.
+// **What it guarantees**: an **exact pairing**. Every identifier of the catalogue has exactly one
+// row of the document, every row has an identifier of the catalogue, and the certainty and the risk
+// of each one are **the** certainty and **the** risk its row declares — not one of a set.
 //
 // That used to be weaker, and the weakness was structural: the document had
 // one row per **criterion** and the cells of the rows that name several
@@ -94,9 +92,8 @@ describe("the fiscal criteria of the code and of docs/fiscal-questions.md", () =
   it("finds the table of variants, with a word of the vocabulary in every cell", () => {
     const rows = variants();
     expect(rows.length).toBe(Object.keys(FISCAL_CRITERIA).length);
-    // An empty cell, or one the vocabulary does not name, is not expressible:
-    // the silence of a cell used to be a state, and now it is an assertion
-    // somebody signs (feature 011, decision (k)).
+    // An empty cell, or one the vocabulary does not name, is not expressible: the silence of a cell
+    // used to be a state, and now it is an assertion somebody signs.
     const unreadable = rows.filter((row) => row.certainty === undefined || row.risk === undefined);
     expect(unreadable.map((row) => row.id)).toEqual([]);
     expect(rows.map((row) => row.id)).toEqual(expect.arrayContaining(["1", "2:other", "24:etc"]));

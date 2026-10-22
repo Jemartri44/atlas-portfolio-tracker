@@ -1,7 +1,6 @@
-// Feature 016, E2 (R21-R33; mutants 11-21): the daily tasks of the cloud end
-// to end over the doubles — the ECB and the closes into the bucket, with
-// the network of the sources simulated address by address — and their
-// findings sent by the mail function only, once per streak.
+// The daily tasks of the cloud end to end over the doubles — the ECB and the closes into the
+// bucket, with the network of the sources simulated address by address — and their findings sent by
+// the mail function only, once per streak.
 
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -53,7 +52,7 @@ const SYMBOLS = JSON.stringify({
       currencies: { eodhd: "EUR" },
       confirmed_at: "2026-09-01T00:00:00.000Z",
     },
-    // In the correspondence and not in the ledger: never downloaded (R33, mutant 21).
+    // In the correspondence and not in the ledger: never downloaded.
     ast_stranger: {
       eodhd: "STRANGER.XETRA",
       currencies: { eodhd: "EUR" },
@@ -149,7 +148,7 @@ describe("the daily task of the ECB (R31; ADR-0029)", () => {
     await next.run(["ecb_update"]);
     expect(s3.text("reference/ecb/api-exr.csv")).toBe(csv);
     expect(recordOf(s3, "jobs/ecb/ecb_update/2026-10-02.json").outcome.counts.undone).toBe(1);
-    // Never in silence (review of PR #109, round 2, R2-N1): a finding, and one mail.
+    // Never in silence: a finding, and one mail.
     expect(recordOf(s3, "jobs/ecb/ecb_update/2026-10-02.json").findings).toEqual([
       { code: "ecb_update_undone", subject: "ecb" },
     ]);
@@ -181,7 +180,7 @@ describe("a damaged history of the ECB (review of PR #106, B1 (b))", () => {
         : text("not used", 500);
   };
 
-  /** The reviewer's mixed state: the manifest records one file, the bucket holds another. */
+  /** A mixed state: the manifest records one file, the bucket holds another. */
   const damagedBucket = async (csv: string) => {
     const s3 = new TestOnlyFakeS3();
     const ssm = new TestOnlyFakeSsm();
@@ -211,7 +210,7 @@ describe("a damaged history of the ECB (review of PR #106, B1 (b))", () => {
     const record = recordOf(s3, "jobs/ecb/ecb_update/2026-10-02.json");
     expect(record).toMatchObject({
       state: "done",
-      // Compared with the file in force, which still reads (R2-N1).
+      // Compared with the file in force, which still reads.
       outcome: { code: "ecb_history_rebuilt", counts: { days: 127, verified: 1 } },
       findings: [{ code: "ecb_history_rebuilt", subject: "ecb", counts: { days: 127 } }],
     });

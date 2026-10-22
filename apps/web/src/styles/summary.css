@@ -4,10 +4,9 @@
  * list, the first screenful by importance and the 8+4 of the monitor. The
  * first steps of an empty ledger are in `steps.css`.
  *
- * LINE BUDGET: the one screen whose shape changes with the season and with
- * the width (feature 020, M2 and M4); its rules read together, and a sheet of
- * its own for the placement would split the one card that moves from where
- * it moves.
+ * LINE BUDGET: the one screen whose shape changes with the season and with the width; its rules
+ * read together, and a sheet of its own for the placement would split the one card that moves from
+ * where it moves.
  */
 
 /* ---- Hero: the one big figure, always broken down ------------------------ */
@@ -196,7 +195,7 @@
 
 /* ---- The card of the summary -------------------------------------------- */
 
-/* Flush with the title of the card: no indent (feature 020, M13). */
+/* Flush with the title of the card: no indent. */
 .fiscal-todo {
   color: var(--c-text);
   display: grid;
@@ -205,7 +204,7 @@
   padding-left: 0;
 }
 
-/* ---- First screenful by importance (feature 020, M2) ---------------------- */
+/* ---- First screenful by importance ---------------------- */
 
 /* Out of the season, the tax card folded to one row that is its own link. */
 .summary-fiscal.is-row {
@@ -239,7 +238,7 @@
   gap: var(--space-1);
 }
 
-/* ---- The monitor: the summary in 8+4 (feature 020, M4) ------------------- */
+/* ---- The monitor: the summary in 8+4 ------------------- */
 
 /*
  * From the monitor's step the net worth takes 8 columns with the tax card at

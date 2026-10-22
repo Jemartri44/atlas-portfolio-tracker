@@ -1,7 +1,6 @@
-// The bytes of a ledger in memory, for the tests of the web: one double for
-// every file that needs one (they used to carry six copies). It honours the
-// one write the store has since feature 012 — compare and write in one step —
-// so a test cannot pass by writing over a stale etag.
+// The bytes of a ledger in memory, for the tests of the web: one double for every file that needs
+// one (they used to carry six copies). It honours the one write the store has — compare and write
+// in one step — so a test cannot pass by writing over a stale etag.
 
 import { BlobArchiveExists, type LedgerBlob } from "@atlas/adapters/blob";
 import { ConflictError, sha256Hex } from "@atlas/domain";

@@ -127,10 +127,9 @@ export default function ConfiguracionRoute(): JSX.Element {
               return;
             }
             const movedResult = movedFiscalYears(snapshot.events, current(), next, yearOf(date));
-            // A filed return can move without a single realized gain moving:
-            // the window, the transfer criterion and the income category change
-            // the base on their own (FR-018). So the question is asked for
-            // either of the two, and it names the return.
+            // A filed return can move without a single realized gain moving: the window, the
+            // transfer criterion and the income category change the base on their own. So the
+            // question is asked for either of the two, and it names the return.
             const declaredResult = await closedYearsOfSettings(next);
             if ((movedResult.length > 0 || declaredResult.length > 0) && moved() === undefined) {
               setMoved(movedResult);

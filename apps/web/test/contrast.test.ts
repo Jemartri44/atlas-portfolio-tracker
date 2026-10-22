@@ -1,7 +1,6 @@
-// The outline of a field has to be seen against what it sits on: WCAG 1.4.11
-// asks 3:1 for the parts of a control that say it is one. It sits on the
-// paper of the page and on the surface of a card, in both themes. The first
-// value missed the paper by a hair (2,997:1, review of 2026-09-19).
+// The outline of a field has to be seen against what it sits on: WCAG 1.4.11 asks 3:1 for the parts
+// of a control that say it is one. It sits on the paper of the page and on the surface of a card,
+// in both themes. The first value missed the paper by a hair (2,997:1).
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

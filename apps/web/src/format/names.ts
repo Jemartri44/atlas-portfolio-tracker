@@ -45,10 +45,9 @@ export const NO_NAMES: NameIndex = {};
 const thesisKey = (id: string): string => `tesis:${id}`;
 
 /**
- * What the units of an asset are called, beside a quantity: "12,5 part." and,
- * masked, "•••• part." (D2 of docs/design/system.md). In the same index under
- * its own namespace, like the theses, because it is the catalogue read for the
- * screen.
+ * What the units of an asset are called, beside a quantity: "12,5 part." and, masked, "•••• part."
+ * (docs/design/system.md). In the same index under its own namespace, like the theses, because it
+ * is the catalogue read for the screen.
  */
 const unitsKey = (id: string): string => `unidades:${id}`;
 

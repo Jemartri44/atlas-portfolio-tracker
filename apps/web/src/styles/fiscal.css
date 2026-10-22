@@ -1,10 +1,9 @@
 /*
- * The fiscal screen (feature 010, block 4). Nothing new is invented here: the
- * card, the disclosure, the tag, the notice, the pending block and the strip
- * of figures are the ones of the system. What this sheet adds is the four
- * shapes the screen needs and no other screen has — the head of a total that
- * opens, a criterion with what it puts at stake, a box of the form beside its
- * label, and a figure declared next to the one computed today.
+ * The fiscal screen. Nothing new is invented here: the card, the disclosure, the tag, the notice,
+ * the pending block and the strip of figures are the ones of the system. What this sheet adds is
+ * the four shapes the screen needs and no other screen has — the head of a total that opens, a
+ * criterion with what it puts at stake, a box of the form beside its label, and a figure declared
+ * next to the one computed today.
  *
  * LINE BUDGET: the four shapes above belong to one screen and are read
  * together; the last of them grew a line of its own when the box row stopped
@@ -28,7 +27,7 @@
   white-space: nowrap;
 }
 
-/* ---- The anchor of what was filed, origin by origin (feature 011) -------- */
+/* ---- The anchor of what was filed, origin by origin -------- */
 
 /* A line per origin: the name on one side and its figures on the other,
    wrapping as a whole on a narrow phone instead of pushing the page wider. */

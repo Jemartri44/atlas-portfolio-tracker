@@ -23,7 +23,7 @@ import { sealHolds } from "./seal.js";
 export interface RemoteRules {
   readonly schema: LedgerSchema;
   readonly now: Date;
-  /** How far ahead of the remote's clock a `recorded_at` may be (case 8; the value is the API's). */
+  /** How far ahead of the remote's clock a `recorded_at` may be (the value is the API's). */
   readonly clockToleranceMs: number;
 }
 

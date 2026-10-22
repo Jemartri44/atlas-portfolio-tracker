@@ -8,10 +8,9 @@
 /* ---- Tiles: one tap for what happens every month ------------------------ */
 
 /*
- * On a phone the seven tiles are three columns of 64px (feature 020, M11): the
- * word alone, centred, so the seven fit in three rows and «Otros registros»
- * stays on the first screenful. The round icon comes back from 640px, where
- * there is room for it.
+ * On a phone the seven tiles are three columns of 64px: the word alone, centred, so the seven fit
+ * in three rows and «Otros registros» stays on the first screenful. The round icon comes back from
+ * 640px, where there is room for it.
  */
 .tiles {
   display: grid;

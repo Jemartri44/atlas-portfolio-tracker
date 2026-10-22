@@ -1,7 +1,7 @@
-// Feature 015, E3: what an HTTP client of the sync accepts as an answer of
-// the API (`docs/api.md` §5 and §7). Anything without the shape is
-// `transport_rejected` for the client — never a line held back (V4) — and
-// only a `rejected.code` of the closed list of §7 holds a line.
+// What an HTTP client of the sync accepts as an answer of the API
+// (`docs/api.md` §5 and §7). Anything without the shape is
+// `transport_rejected` for the client — never a line held back — and only a
+// `rejected.code` of the closed list of §7 holds a line.
 
 import { describe, expect, it } from "vitest";
 import { LINE_REJECTION_CODES, REMOTE_FAILURE_CODES } from "../../src/ports/remote-ledger.js";

@@ -1,7 +1,6 @@
-// Feature 016, E1: the mail of a streak. A code the redaction does not know,
-// or a subject that is not one of the producing tasks, is never sent: nothing
-// of what a record says reaches a mail but through a closed list (review of
-// PR #104, privacy B1, N1 and N2).
+// The mail of a streak. A code the redaction does not know, or a subject that is not one of the
+// producing tasks, is never sent: nothing of what a record says reaches a mail but through a closed
+// list.
 
 import { describe, expect, it } from "vitest";
 import { NOTICE_CODES, noticeMail } from "../../src/jobs/mail/notice.js";

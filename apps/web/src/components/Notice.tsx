@@ -1,5 +1,5 @@
-// **The** notice (docs/design/system.md §5.6). It used to be drawn three ways — a bordered card in Atención, a
-// coloured callout in the forms, a plain paragraph in Cubo — and now it is one
+// **The** notice (docs/design/system.md §5.6). It used to be drawn three ways — a bordered card in
+// Atención, a coloured callout in the forms, a plain paragraph in Cubo — and now it is one
 // component with one look, in a list or on its own:
 //
 // - its gravity is an icon with its own **shape** (triangle, octagon, circle),

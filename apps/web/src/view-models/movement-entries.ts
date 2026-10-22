@@ -6,10 +6,10 @@
 import { hasState, type MovementRow } from "./movements.js";
 
 /**
- * The valuations of one day, gathered into one row that unfolds: «7 valoraciones · 31/12/2028» said once instead of seven rows that
- * say one thing. Only valuations, only of the same day, and never one that is
- * not current: an annulled or invalid valuation keeps its own row, with its
- * state, because gathered it would read as one more of the day.
+ * The valuations of one day, gathered into one row that unfolds: «7 valoraciones · 31/12/2028» said
+ * once instead of seven rows that say one thing. Only valuations, only of the same day, and never
+ * one that is not current: an annulled or invalid valuation keeps its own row, with its state,
+ * because gathered it would read as one more of the day.
  */
 export interface ValuationGroup {
   kind: "valuations";

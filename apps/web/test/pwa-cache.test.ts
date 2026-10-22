@@ -1,6 +1,5 @@
-// Feature 022 (ADR-0035, §3): the service worker keeps the shell of the
-// application and nothing of the API. The options are the ones `vite.config.ts`
-// hands to the plugin, read as they are, not a copy.
+// The service worker keeps the shell of the application and nothing of the API (ADR-0035, §3). The
+// options are the ones `vite.config.ts` hands to the plugin, read as they are, not a copy.
 
 import { describe, expect, it } from "vitest";
 import { WORKBOX_OPTIONS } from "../vite.config.js";

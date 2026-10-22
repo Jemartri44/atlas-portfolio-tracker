@@ -1,8 +1,7 @@
-// The two thin adapters of the AWS SDK against **simulated clients of the
-// same calls** (feature 015, E3): no test reaches AWS. Each answer of S3 and
-// SSM is built as the SDK builds it (a `ServiceException` with its name and
-// its HTTP status), and each translation is the one block 0 verified
-// (questions.md §18 and §23.1).
+// The two thin adapters of the AWS SDK against **simulated clients of the same calls**: no
+// test reaches AWS. Each answer of S3 and SSM is built as the SDK builds it (a
+// `ServiceException` with its name and its HTTP status), and each translation is the one
+// the services document.
 
 import {
   GetObjectCommand,

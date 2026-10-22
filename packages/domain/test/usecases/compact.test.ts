@@ -345,7 +345,7 @@ describe("compact and the fingerprints of the filings (ADR-0020)", () => {
     // A line before the filing written at a version its fingerprint does not
     // know: the prefix cannot be **read**, which is not an edit, and no backup
     // fixes it. Refusing under the same code as "edited by hand" would accuse
-    // the user of something that did not happen (feature 011, decision (g)).
+    // the user of something that did not happen.
     const { store, filingId } = withFiling();
     const plan = await planCompact({ store, clock });
     const newer = TestStore.fromLines(
@@ -369,12 +369,12 @@ describe("compact and the fingerprints of the filings (ADR-0020)", () => {
   });
 
   /**
-   * **Nobody is locked out for any reason, `lines` included** (review of
-   * feature 011, blocking 2). Adding or removing a line before a filing is the
-   * most likely hand edit there is, and with the filing in force it had no way
-   * out: the console said it would record the waiver and then failed with a
-   * `projection_changed` that explained nothing, because resealing moves the
-   * count of lines the snapshot carries for that filing.
+   * **Nobody is locked out for any reason, `lines` included.** Adding or
+   * removing a line before a filing is the most likely hand edit there is, and
+   * with the filing in force it had no way out: the console said it would
+   * record the waiver and then failed with a `projection_changed` that
+   * explained nothing, because resealing moves the count of lines the snapshot
+   * carries for that filing.
    *
    * And the waiver records **the real reason**: it used to fold everything
    * that was not `unreadable` into `digest`, writing for ever a reason that was

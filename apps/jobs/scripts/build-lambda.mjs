@@ -1,6 +1,5 @@
-// The package of the scheduled jobs (feature 016, E1; §8.1 P4): one artefact
-// for the five functions, `apps/jobs/src/lambda.ts` bundled by the common builder of the
-// Lambdas (`scripts/lambda-package.mjs`, feature 016, P-H) into
+// The package of the scheduled jobs: one artefact for the five functions, `apps/jobs/src/lambda.ts`
+// bundled by the common builder of the Lambdas (`scripts/lambda-package.mjs`) into
 // `apps/jobs/dist-lambda/jobs.zip`.
 
 import { mkdir, rm, writeFile } from "node:fs/promises";

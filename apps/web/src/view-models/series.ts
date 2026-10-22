@@ -161,8 +161,8 @@ export const withContributed = (plot: PlottedSeries, series: ContributedSeries):
 });
 
 /**
- * The bucket against the index **in percent** of what was contributed. The values are numbers only to place the line: what is shown
- * is the decimal string of the domain, formatted once.
+ * The bucket against the index **in percent** of what was contributed. The values are numbers only
+ * to place the line: what is shown is the decimal string of the domain, formatted once.
  */
 export const bucketIndexPlot = (full: BucketIndexPctSeries): PlottedSeries => {
   // A date with a reason (nothing invested yet, or nothing contributed) is not a

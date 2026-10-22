@@ -1,7 +1,6 @@
-// The ECB adapters (feature 012, block 2): the ZIP read with node:zlib, the
-// source with the ZIP first and the API as fallback — never touching the
-// network: `fetch` is a double —, and `reference/ecb/` on the disk under the
-// lock of the folder.
+// The ECB adapters: the ZIP read with node:zlib, the source with the ZIP first and the API as
+// fallback — never touching the network: `fetch` is a double —, and `reference/ecb/` on the
+// disk under the lock of the folder.
 
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

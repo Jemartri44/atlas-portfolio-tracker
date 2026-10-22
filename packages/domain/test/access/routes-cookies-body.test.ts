@@ -1,5 +1,5 @@
-// Feature 015, E1: which credential a request brings, which route admits it,
-// the Origin of a write and the JSON body (plan §4.1, R02 to R05).
+// Which credential a request brings, which route admits it, the Origin of a write and the JSON
+// body.
 
 import { describe, expect, it } from "vitest";
 import {
@@ -93,7 +93,7 @@ describe("the routes and what each admits (api §2.3)", () => {
     expect(findRoute("GET", "/api/session/")).toBeUndefined();
     expect(findRoute("POST", "/api/session")).toBeUndefined();
     expect(findRoute("GET", "/API/session")).toBeUndefined();
-    // The writes of E1, E2 and E3, each with a JSON body.
+    // The writes, each with a JSON body.
     expect(
       ROUTES.filter((spec) => spec.writes).map((spec) => `${spec.method} ${spec.path}`),
     ).toEqual([
@@ -103,7 +103,7 @@ describe("the routes and what each admits (api §2.3)", () => {
       "POST /api/devices/tokens/{token_id}/revoke",
       "POST /api/ledger/lines",
       "PUT /api/ledger",
-      // E6, the drafts in the cloud.
+      // The drafts in the cloud.
       "POST /api/drafts",
       "POST /api/drafts/{id}/stamp",
       "POST /api/drafts/{id}/end",
@@ -139,7 +139,7 @@ describe("the routes and what each admits (api §2.3)", () => {
       expect(findRoute(method, path)?.policy, path).toBe("sync");
     }
     expect(findRoute("GET", "/api/sync/devices")?.policy).toBe("session");
-    // Retired in E4 (ADR-0035): no queue to publish.
+    // Retired (ADR-0035): no queue to publish.
     expect(findRoute("PUT", "/api/sync/devices/self")).toBeUndefined();
     expect(findRoute("GET", "/api/reference/ecb/a/b")).toBeUndefined();
   });

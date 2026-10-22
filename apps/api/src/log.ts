@@ -24,10 +24,9 @@ export interface LogEntry {
 }
 
 /**
- * What a value of the log may be made of. `{` and `}` are there for the
- * template of a route (`/api/devices/tokens/{token_id}/revoke`): without them
- * that route was logged with no `route` at all — found by the test of the
- * sentinels on the routes of the console.
+ * What a value of the log may be made of. `{` and `}` are there for the template of a route
+ * (`/api/devices/tokens/{token_id}/revoke`): without them that route was logged with no `route` at
+ * all.
  */
 const SAFE = /^[A-Za-z0-9_./{}-]{1,64}$/;
 

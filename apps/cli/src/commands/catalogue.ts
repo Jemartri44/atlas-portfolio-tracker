@@ -390,9 +390,8 @@ const confirmMovedYears = async (
       );
     }
   }
-  // "A past year" and "a year you filed" are not the same thing, and only the
-  // second one may need a supplementary return (FR-018). The impact
-  // names the filing and says which declared figure moves.
+  // "A past year" and "a year you filed" are not the same thing, and only the second one may need a
+  // supplementary return. The impact names the filing and says which declared figure moves.
   const declared = closedYearLines(
     closedYearImpact(
       { events, settings: current },

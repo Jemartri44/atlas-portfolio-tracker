@@ -372,7 +372,7 @@ describe("every write says which filed return it reaches (ADR-0020)", () => {
       description: "custodia",
     });
     expect(nothing.closed).toEqual([]);
-    // 2027 has figures and no return recorded: a note, not a warning (Q8).
+    // 2027 has figures and no return recorded: a note, not a warning.
     expect(nothing.unfiledPastYears).toEqual([2027]);
     expect(alone.id).toBeTruthy();
   });
@@ -438,7 +438,7 @@ describe("every write says which filed return it reaches (ADR-0020)", () => {
     );
     expect(corrected.closed.map((entry) => [entry.year, entry.by_date])).toEqual([[2027, true]]);
 
-    // And a past year with figures and nothing filed is a note here too (Q8).
+    // And a past year with figures and nothing filed is a note here too.
     const b = new LedgerBuilder();
     catalogue(b);
     b.buy({ account_id: "acc_fund", asset_id: "ast_world", value_date: "2027-01-11" });
@@ -468,7 +468,7 @@ describe("every write says which filed return it reaches (ADR-0020)", () => {
 
 /**
  * **The pair of reversal and correction is written in one write or not at all**
- * (ADR-0003; prompt 012 §5, mutant 4). Written in two, a failure between them
+ * (ADR-0003). Written in two, a failure between them
  * leaves the original annulled with no new version: the operation disappears
  * from the ledger. The store here fails on its **second** write, so a split
  * pair is caught with the reversal alone.

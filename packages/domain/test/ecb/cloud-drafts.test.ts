@@ -1,5 +1,5 @@
-// The drafts in the cloud (ADR-0035, E6; `docs/api.md` §6.1): names, bodies
-// read to the letter, and the fold of the names under `drafts/`.
+// The drafts in the cloud (ADR-0035; `docs/api.md` §6.1): names, bodies read to the letter, and the
+// fold of the names under `drafts/`.
 
 import { describe, expect, it } from "vitest";
 import {

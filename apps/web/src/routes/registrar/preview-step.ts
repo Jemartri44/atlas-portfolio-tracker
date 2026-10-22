@@ -1,10 +1,9 @@
 // What "Ver el efecto" asks the domain, in one place.
 //
-// Two questions, not one, and both before the confirmation: **what this write
-// does** (the preview of the candidate, or of the pair a correction writes)
-// and **which filed returns it reaches** (FR-018). The second one used to live
-// inside the form; it is here because it is the same pair of calls whether the
-// form is recording or correcting, and because a form is long enough already.
+// Two questions, not one, and both before the confirmation: **what this write does** (the preview
+// of the candidate, or of the pair a correction writes) and **which filed returns it reaches**. The
+// second one used to live inside the form; it is here because it is the same pair of calls whether
+// the form is recording or correcting, and because a form is long enough already.
 
 import type { EventPreview } from "@atlas/domain";
 import type { ClosedYearImpact } from "@atlas/domain/fiscal";

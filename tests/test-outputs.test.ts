@@ -1,7 +1,6 @@
-// Every folder a `tsconfig` compiles into is out of the reach of vitest: the
-// compiled twin of a test (`dist-test-browser/browser.test.js`) would run a
-// second time after `npm run build`, and the counts of two runs would differ
-// for no reason (review of PR #95, round 2).
+// Every folder a `tsconfig` compiles into is out of the reach of vitest: the compiled twin of a
+// test (`dist-test-browser/browser.test.js`) would run a second time after `npm run build`, and the
+// counts of two runs would differ for no reason.
 
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -40,12 +39,10 @@ describe("vitest leaves out every compiled folder", () => {
 });
 
 /**
- * The domain's 100 % is measured **in a pass of its own** (feature 015, E5;
- * `specs/015-api-access/questions.md (in git history)` §33.5 and §34): merging the coverage of
- * several projects once lost the hits of a whole test file of the domain, and
- * made the 100 % depend on tests of other projects. `npm run test:coverage`,
- * which the CI calls, runs both passes; the second one, with every other
- * project, carries no threshold of the domain.
+ * The domain's 100 % is measured **in a pass of its own**: merging the coverage of several projects
+ * once lost the hits of a whole test file of the domain, and made the 100 % depend on tests of
+ * other projects. `npm run test:coverage`, which the CI calls, runs both passes; the second one,
+ * with every other project, carries no threshold of the domain.
  */
 describe("the coverage of the domain is measured on its own", () => {
   const scripts = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8"))

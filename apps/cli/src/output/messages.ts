@@ -23,10 +23,10 @@ export const fxMissingText = (reason: unknown): string => {
 };
 
 /**
- * The safe way out of a ledger with Windows line endings: `compact` does not normalise, so the message gives the exact
- * order, with nothing but the Node the console already runs on. It copies the
- * file first, refusing to overwrite a copy, and only then rewrites `\r\n` as
- * `\n`. Exported so that a test runs it for real.
+ * The safe way out of a ledger with Windows line endings: `compact` does not normalise, so the
+ * message gives the exact order, with nothing but the Node the console already runs on. It copies
+ * the file first, refusing to overwrite a copy, and only then rewrites `\r\n` as `\n`. Exported so
+ * that a test runs it for real.
  */
 export const RAW_LINE_BREAK_FIX = `node -e "const fs=require('fs'),f='ledger.jsonl';fs.copyFileSync(f,f+'.crlf',fs.constants.COPYFILE_EXCL);fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace(/\\r\\n/g,'\\n'))"`;
 

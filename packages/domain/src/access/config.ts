@@ -14,11 +14,10 @@ import { ValidationError } from "../errors.js";
 export const TOKEN_CEILING_DAYS = 120;
 
 /**
- * The ceilings of the other durations and caches, **fixed in the code** too: a
- * typo of zeros in Terraform must stop the Lambda, not issue sessions of years or keep a withdrawn entry of the allow
- * list alive for days in every warm instance. ADR-0027 asks for a short
- * session and a cache of a few minutes; these are the outer limits, not the
- * settings (`docs/api.md` §9).
+ * The ceilings of the other durations and caches, **fixed in the code** too: a typo of zeros in
+ * Terraform must stop the Lambda, not issue sessions of years or keep a withdrawn entry of the
+ * allow list alive for days in every warm instance. ADR-0027 asks for a short session and a cache
+ * of a few minutes; these are the outer limits, not the settings (`docs/api.md` §9).
  */
 export const API_CONFIG_CEILINGS = {
   ATLAS_SESSION_TTL_SECONDS: 24 * 3600,

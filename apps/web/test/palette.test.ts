@@ -1,4 +1,4 @@
-// The palette, checked the way the eye cannot (feature 020, E1, block 1).
+// The palette, checked the way the eye cannot.
 //
 // `tokens.css` defines every colour three times: the light theme, the dark one
 // under the system preference and the dark one forced by the switch. A reader
@@ -272,7 +272,7 @@ describe("gain, loss and a problem are told apart (M6)", () => {
   });
 
   it.each(blocks)("%s: a loss is not the red of a problem, ΔE ≥ 7 with normal vision", (block) => {
-    // Q1, answered 2026-09-27: 7 in both themes, with a dark loss chosen to reach it.
+    // 7 in both themes, with a dark loss chosen to reach it.
     expect(deltaE(colour(block, "--c-loss"), colour(block, "--c-danger"))).toBeGreaterThanOrEqual(
       7,
     );

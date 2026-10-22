@@ -1,9 +1,8 @@
-// The session of this browser with the API (`docs/api.md` §3). The cookie is `HttpOnly`: the web learns whether it is signed in, and
-// which device id the API assigned it, from `GET /api/session`.
-// Signing in is a **navigation** to `/api/auth/login` — our own origin, so
-// the CSP does not change — and the token of Google never reaches this page
-// (ADR-0027, way c). Nothing here configures the sync: signing in only serves
-// to sync later, explicitly.
+// The session of this browser with the API (`docs/api.md` §3). The cookie is `HttpOnly`: the web
+// learns whether it is signed in, and which device id the API assigned it, from `GET /api/session`.
+// Signing in is a **navigation** to `/api/auth/login` — our own origin, so the CSP does not change
+// — and the token of Google never reaches this page (ADR-0027, way c). Nothing here configures the
+// sync: signing in only serves to sync later, explicitly.
 //
 // Every request goes to our own origin, carries no `Authorization` and never
 // follows a redirect; every `POST` carries `x-amz-content-sha256` over the

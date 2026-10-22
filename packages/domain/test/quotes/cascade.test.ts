@@ -386,7 +386,7 @@ describe("updatePrices", () => {
   });
 
   it("never keeps the value of the day in course, which in the afternoon is a price of mid-session", async () => {
-    // The case of the reviewer: a download on Wednesday afternoon gets a
+    // A download on Wednesday afternoon gets a
     // Wednesday "close" that is not one yet. Nothing of today is stored.
     const { store, input } = setup(() => closes(["2027-01-05", "10"], [TODAY, "10.40"]));
     await updatePrices(input);
@@ -723,11 +723,11 @@ describe("the recent days asked again by asset type", () => {
 });
 
 /**
- * Feature 016, E2 (Q1, accepted on 2026-09-27): the cloud reads `symbols.json`
- * and **never writes it** — one writer per object, `atlas admin prices push`
- * (§8.1 P18) — and **never contrasts** a currency: a source without
- * `currency_check` is not downloaded, and says so (`currency_unchecked`), and
- * the days a local purge asked for again are the console's to chase.
+ * The cloud reads `symbols.json` and **never writes it** — one writer per
+ * object, `atlas admin prices push` — and **never contrasts** a currency: a
+ * source without `currency_check` is not downloaded, and says so
+ * (`currency_unchecked`), and the days a local purge asked for again are the
+ * console's to chase.
  */
 describe("updatePrices with the correspondence read only (016, Q1)", () => {
   it("never contrasts a source nobody contrasted, and says it unchecked", async () => {

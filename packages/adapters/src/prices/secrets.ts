@@ -1,8 +1,7 @@
-// The keys of the sources of prices (ADR-0031, second amendment): `~/.config/atlas/secrets.json`, or
-// `$XDG_CONFIG_HOME/atlas/secrets.json`, **outside the folder of the ledger**,
-// with permissions `600`. Only the console reads it; the web never does, and it
-// enters no backup, export or sync. **The application never writes it**: the
-// user does.
+// The keys of the sources of prices (ADR-0031, second amendment): `~/.config/atlas/secrets.json`,
+// or `$XDG_CONFIG_HOME/atlas/secrets.json`, **outside the folder of the ledger**, with permissions
+// `600`. Only the console reads it; the web never does, and it enters no backup, export or sync.
+// **The application never writes it**: the user does.
 //
 // Every way a key could leak through here is closed:
 // a file that does not parse says so **without its content** — not the text,

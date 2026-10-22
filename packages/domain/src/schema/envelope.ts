@@ -1,6 +1,6 @@
 // Line envelope (data-schema.md §2). The type discriminator is open: a later
 // feature can list its types as "reserved" — accepted by the loader, rejected by
-// the projection — until it implements them. The list is empty today.
+// the projection — until it implements them. The list is empty.
 
 import type { Ulid } from "../ids/ulid.js";
 
@@ -35,7 +35,7 @@ export const SUPPORTED_EVENT_TYPES = [
   "reversal",
 ] as const;
 
-/** Types defined by data-schema.md but implemented later. Empty today. */
+/** Types defined by data-schema.md but implemented later. Empty. */
 export const RESERVED_EVENT_TYPES = [] as const;
 
 export type SupportedEventType = (typeof SUPPORTED_EVENT_TYPES)[number];

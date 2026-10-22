@@ -29,12 +29,12 @@ export const text = (money: Money | undefined): string =>
  * lowering the offset limit from 25 % to 30 broke six.
  *
  * The model is `tests/fixtures/ledger/tax-hand-v1.jsonl`, which pins exactly
- * this and is immune to the same mutations. What the exercise of
- * `specs/010-tax-output/questions.md (in git history)` §6.3 depends on it **names itself**: two
- * months for a listed security and the 25 % limit. The rest is written down at
- * the reading in force on 2026-09-22 so that nothing rides a default; the
- * exercise has no loss on a fund and no dividend, so those values do not enter
- * a single one of its literals.
+ * this and is immune to the same mutations. What the supplementary-return
+ * exercise depends on it **names itself**: two months for a listed security
+ * and the 25 % limit. The rest is written down at the reading in force on
+ * 2026-09-22 so that nothing rides a default; the exercise has no loss on a
+ * fund and no dividend, so those values do not enter a single one of its
+ * literals.
  */
 export const HAND_SETTINGS: Settings = {
   ...DEFAULT_SETTINGS,
@@ -158,7 +158,7 @@ export const transfer = (
   });
 
 /**
- * The invariant of the rows by origin of the loss (ficha F5): the gains of the
+ * The invariant of the rows by origin of the loss: the gains of the
  * form, less the losses it declares imputable, less what earlier years bring
  * into this one, is the balance of capital gains the engine computed.
  *

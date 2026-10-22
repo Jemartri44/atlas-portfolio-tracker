@@ -41,10 +41,9 @@ describe("atlas check --deep", () => {
     };
     expect(report.findings).toEqual([]);
     expect(report.deep).toEqual([]);
-    // No errors, and only the warnings the scenario provokes on purpose: the ETC
-    // held in two accounts and the two directions of the wash-sale window, which
-    // the loss-making sale of the fund followed by the monthly contributions has
-    // been triggering since the ledger was written (feature 005).
+    // No errors, and only the warnings the scenario provokes on purpose: the ETC held in two
+    // accounts and the two directions of the wash-sale window, which the loss-making sale of the
+    // fund followed by the monthly contributions has been triggering since the ledger was written.
     const codes = new Set((report.warnings as { code: string }[]).map((warning) => warning.code));
     expect([...codes].sort()).toEqual([
       "same_asset_two_accounts",

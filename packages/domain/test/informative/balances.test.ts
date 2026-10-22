@@ -1,5 +1,4 @@
-// The average balance of the fourth quarter, and the two things that change
-// its divisor (feature 010, block 3; ficha F3, question Q4).
+// The average balance of the fourth quarter, and the two things that change its divisor.
 //
 // The direction that has consequences is the one that lowers the average: an
 // account that opened in November and is divided by 92 days looks smaller than

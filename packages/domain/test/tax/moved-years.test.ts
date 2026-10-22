@@ -1,4 +1,4 @@
-// The warning of a settings change, now reading the savings base (Q12).
+// The warning of a settings change, now reading the savings base .
 
 import { describe, expect, it } from "vitest";
 import { DEFAULT_SETTINGS } from "../../src/settings/settings.js";
@@ -27,7 +27,7 @@ describe("movedTaxYears", () => {
     // 500 − 200 = 300 as capital gains; with the ETC as movable capital income
     // the −200 only offsets 25 % of the 500, so the base is 375 and **−75 stay
     // pending**: 2028 keeps its base of 0 and inherits a different balance,
-    // which is why it is listed too (feature 010, §1.5).
+    // which is why it is listed too.
     expect(
       moved.map((m) => [
         m.year,

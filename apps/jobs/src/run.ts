@@ -88,8 +88,8 @@ export interface TaskResult {
 export type TaskRunner = (context: TaskContext) => Promise<TaskResult>;
 
 /**
- * A run that could not finish and says what it wrote before: its record keeps those objects, so the retry keeps them as
- * its own and nothing else. Only the name of the cause is said.
+ * A run that could not finish and says what it wrote before: its record keeps those objects, so the
+ * retry keeps them as its own and nothing else. Only the name of the cause is said.
  */
 export class TaskInterrupted extends Error {
   override readonly name = "TaskInterrupted";

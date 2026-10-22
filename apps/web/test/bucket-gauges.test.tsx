@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 //
-// M10 and the bucket side of M1 (feature 020, E3): the three gauges of the
-// bucket and the dumbbell of each thesis. Every figure and every mark is the
-// domain's or `Settings`'s; the screen places them. They are drawn from
-// percentages, so they say the same with the privacy mode on.
+// The three gauges of the bucket and the dumbbell of each thesis. Every figure and every mark is
+// the domain's or `Settings`'s; the screen places them. They are drawn from percentages, so they
+// say the same with the privacy mode on.
 
 import { NEAR_LIMIT_PCT } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
@@ -268,7 +267,7 @@ describe("what the cards of E3 say with the privacy mode on", () => {
     );
 
   it("has at least as many percentages as masks in the budget, and more in the theses", async () => {
-    // The page as a whole closes with M7 (E4), which turns the chart table into percentages.
+    // The page as a whole closes with the chart table turned into percentages.
     store.setPrivacy(true);
     const host = await show("/cubo?fecha=2027-01-10", Cubo);
     const budget = counts(cardOf(host, "Presupuesto y control"));

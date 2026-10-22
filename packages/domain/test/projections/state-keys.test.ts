@@ -1,8 +1,7 @@
-// The keys of the state **as it is built** (feature 013, review of PR #78):
-// the architecture test reads them off the source, and a key the reading of
-// the source missed — written with quotes, or any other form — is still here.
-// Quotes never enter the state (§6.4 (a) of prompt 013): a new key turns this
-// red until somebody adds it here by hand, knowingly.
+// The keys of the state **as it is built**: the architecture test reads them
+// off the source, and a key the reading of the source missed — written with
+// quotes, or any other form — is still here. Quotes never enter the state: a
+// new key turns this red until somebody adds it here by hand, knowingly.
 
 import { describe, expect, it } from "vitest";
 import { createEmptyState } from "../../src/projections/state.js";

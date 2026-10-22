@@ -214,7 +214,8 @@ export const hasState = (row: MovementRow): boolean =>
   row.status !== "current" || row.invalidReason !== undefined;
 
 /**
- * The column «Estado» only when some row of the page uses it: on a ledger with nothing reversed it was twenty empty cells in a row.
+ * The column «Estado» only when some row of the page uses it: on a ledger with nothing reversed it
+ * was twenty empty cells in a row.
  */
 export const showsStateColumn = (rows: readonly MovementRow[]): boolean => rows.some(hasState);
 

@@ -1,6 +1,5 @@
-// Feature 016, E1 (R19; mutants 18, 18 bis): the warnings the other jobs
-// leave in their records, sent by the mail function once per streak, never
-// twice after a cut, and closed when the condition is gone.
+// The warnings the other jobs leave in their records, sent by the mail function once per streak,
+// never twice after a cut, and closed when the condition is gone.
 
 import {
   claimRecord,

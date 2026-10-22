@@ -1,7 +1,7 @@
-// The pages of the Lambda (`docs/api.md` §3.1): **no script, nothing external**,
-// `no-store` and `no-referrer`. The access-denied page shows **only the `sub`
-// of the account that has just signed in, in this very request** — never the
-// e-mail —, escaped, and it goes to no URL and to no log (ADR-0027). Plain HTML: prose in Spanish, as the interfaces.
+// The pages of the Lambda (`docs/api.md` §3.1): **no script, nothing external**, `no-store` and
+// `no-referrer`. The access-denied page shows **only the `sub` of the account that has just signed
+// in, in this very request** — never the e-mail —, escaped, and it goes to no URL and to no log
+// (ADR-0027). Plain HTML: prose in Spanish, as the interfaces.
 
 import type { LoginPageError } from "@atlas/domain/access";
 

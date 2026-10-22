@@ -1,5 +1,5 @@
-// Feature 017, E4: `atlas admin secrets` against doubles of SSM; never AWS. A value is
-// typed with no echo and goes into SSM and nowhere else: not the screen, not an error.
+// `atlas admin secrets` against doubles of SSM; never AWS. A value is typed with no echo and goes
+// into SSM and nowhere else: not the screen, not an error.
 
 import { readFileSync } from "node:fs";
 import { PassThrough } from "node:stream";

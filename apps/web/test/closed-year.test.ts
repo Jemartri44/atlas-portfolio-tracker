@@ -1,11 +1,9 @@
-// The web half of the closed-year warning (ADR-0020, amended; prompt 010,
-// FR-018): before writing, which filed return the change reaches and how much
-// of what was declared it moves.
+// The web half of the closed-year warning (ADR-0020, amended): before writing, which filed return
+// the change reaches and how much of what was declared it moves.
 //
-// Without a DOM, like the rest of `ledger/` (decision (k) of the 006): what is
-// checked here is that each of the four write flows —record, correct, annul
-// and change the settings— can ask, and that a ledger with nothing filed says
-// nothing at all. What the screens do with it belongs to the screen tests.
+// Without a DOM, like the rest of `ledger/`: what is checked here is that each of the four write
+// flows —record, correct, annul and change the settings— can ask, and that a ledger with nothing
+// filed says nothing at all. What the screens do with it belongs to the screen tests.
 
 import { BlobLedgerStore } from "@atlas/adapters/blob";
 import {

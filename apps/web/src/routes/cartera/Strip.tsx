@@ -1,5 +1,6 @@
-// The deviation of an asset class as a strip (mockup `indicadores.html`, card A): a track of ±5 pp, the mark of the target in the
-// middle, and a dot where the weight is, joined to the middle by a stem.
+// The deviation of an asset class as a strip (mockup `indicadores.html`, card A): a track of ±5 pp,
+// the mark of the target in the middle, and a dot where the weight is, joined to the middle by a
+// stem.
 //
 // **In ink and without a band.** Whether a class is off target is the domain's
 // to say, per asset (`deviation_above_threshold`), so the strip of a class

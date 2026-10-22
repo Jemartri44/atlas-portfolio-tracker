@@ -1,5 +1,5 @@
 // Every row of data-schema.md §8.5 with its numeric example (10 shares, 1,000 €,
-// 2027-01-11) and the mandatory edge cases of the prompt §3.7.
+// 2027-01-11) and the mandatory edge cases.
 
 import { describe, expect, it } from "vitest";
 import { ProjectionError } from "../../src/errors.js";
@@ -620,7 +620,7 @@ describe("mandatory edge cases (prompt §3.7)", () => {
     expect(gains(collected)).toEqual(["acc_a:10@1200-1000=200"]);
     expect(positionOf(collected, "acc_a", "ast_old").toString()).toBe("0");
     expect(collected.lotCounts.has(action.id)).toBe(false);
-    // The lot journal is rolled back with the lots it describes (feature 009).
+    // The lot journal is rolled back with the lots it describes.
     expect(
       collected.lotJournal.filter((entry) => "event_id" in entry && entry.event_id === action.id),
     ).toEqual([]);
@@ -651,9 +651,9 @@ describe("mandatory edge cases (prompt §3.7)", () => {
   });
 
   it("rolls back the acquisitions and the income in kind a grant noted before a later effect failed", () => {
-    // Q14 of the feature 009: the grant of rights with a cost noted an
-    // acquisition for the wash-sale rule and a line of income in kind, and the
-    // failed sale that followed rolled back everything except those two.
+    // The grant of rights with a cost noted an acquisition for the wash-sale
+    // rule and a line of income in kind, and the failed sale that followed
+    // rolled back everything except those two.
     const b = new LedgerBuilder();
     catalogueOf(b);
     ten(b, "ast_old");

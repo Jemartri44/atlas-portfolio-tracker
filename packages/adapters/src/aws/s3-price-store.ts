@@ -8,10 +8,9 @@
 // `_status.json` stay counted — never fewer than were made — and a file of
 // closes is written whole or not at all (one `PutObject`).
 //
-// Two refusals: the cloud never writes
-// `prices/symbols.json`, whose one writer is `atlas admin prices push`, and never purges a file. And `prices/config.json` does not
-// exist in the cloud: `config()` gives the configuration of the
-// function, and never reads the bucket.
+// Two refusals: the cloud never writes `prices/symbols.json`, whose one writer is
+// `atlas admin prices push`, and never purges a file. And `prices/config.json` does not exist in
+// the cloud: `config()` gives the configuration of the function, and never reads the bucket.
 
 import type { AssetId } from "@atlas/domain";
 import { type PriceStore, type PriceTransaction, priceFileName } from "@atlas/domain/quotes";

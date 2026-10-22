@@ -1,5 +1,4 @@
-// The anchor of what was filed, as the screen reads it (feature 011, block 6
-// and its review).
+// The anchor of what was filed, as the screen reads it.
 //
 // Two things the first version lost. **The origin**: it added the balances of a
 // substitution into one total, and the origin —the year a loss comes from— is
@@ -74,10 +73,9 @@ describe("the anchor of what was filed, on the screen", () => {
   });
 
   /**
-   * Oldest origin first, and within one year the category, whatever order the
-   * engine and the return list them in: the origin is what decides until
-   * when a loss can be offset, so it is what the eye reads down the list
-   * (second review of feature 011: dropping the sort passed the suite).
+   * Oldest origin first, and within one year the category, whatever order the engine and the return
+   * list them in: the origin is what decides until when a loss can be offset, so it is what the eye
+   * reads down the list. Dropping the sort must fail the suite.
    */
   it("orders the rows by origin, then by category, whatever order they arrive in", () => {
     const view = yearView(

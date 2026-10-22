@@ -1,10 +1,8 @@
-// The hand-computed exercise of feature 009, read with the ETC as movable
-// capital income — the reading criterion #24 documents (binding ruling
-// V0267-25) and, since feature 010, the **default**.
+// The hand-computed exercise, read with the ETC as movable capital income — the
+// reading criterion #24 documents (binding ruling V0267-25) and the **default**.
 //
-// Every literal here comes from `specs/009-tax-engine/questions.md (in git history)`, section
-// "Dinero en juego de los dudosos", where the same year is worked out by hand
-// under that reading: gains 462,50; movable capital income 64,00 − 90,00 =
+// Every literal here comes from the hand calculation of the same year under
+// that reading: gains 462,50; movable capital income 64,00 − 90,00 =
 // −26,00; phase 1 offsets the 26,00 against 25 % of 462,50 = 115,63; phase 2
 // takes the −260,80 carried from 2027; base **175,70**, the same as the other
 // reading. Nothing here was copied from the engine.
@@ -70,9 +68,9 @@ describe("the hand-computed year of feature 009 with the ETC as movable capital 
   });
 
   /**
-   * The mutant this kills is the one that puts `etc` or `etp` back on
-   * `capital_gain` in `DEFAULT_INCOME_CATEGORY`: a ledger that says nothing
-   * about the income category has to read exactly as the documented one.
+   * Guards against putting `etc` or `etp` back on `capital_gain` in
+   * `DEFAULT_INCOME_CATEGORY`: a ledger that says nothing about the income
+   * category has to read exactly as the documented one.
    */
   it("is what a ledger that says nothing about the income category reads", () => {
     const fromCode = taxYear(exerciseLedger("from_code").events, 2028, { today: TODAY });

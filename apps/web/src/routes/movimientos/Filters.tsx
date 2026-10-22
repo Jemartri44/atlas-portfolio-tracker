@@ -1,11 +1,10 @@
-// Filters that live **in the URL** (FR-029): sharing the address or reloading
-// restores them, and the back button undoes the last one instead of jumping out
-// of the section.
+// Filters that live **in the URL**: sharing the address or reloading restores them, and the back
+// button undoes the last one instead of jumping out of the section.
 //
-// Two shapes (docs/design/system.md §7.3, D12): on a phone, the search across
-// the width and the rest folded in «Filtros · N», with the active ones as
-// chips; from 1280px, all of them always in sight in a column beside the table.
-// One or the other is drawn, never both, so every control keeps one id.
+// Two shapes (docs/design/system.md §7.3): on a phone, the search across the width and the rest
+// folded in «Filtros · N», with the active ones as chips; from 1280px, all of them always in sight
+// in a column beside the table. One or the other is drawn, never both, so every control keeps one
+// id.
 
 import { type LedgerState, SUPPORTED_EVENT_TYPES } from "@atlas/domain";
 import { useSearchParams } from "@solidjs/router";

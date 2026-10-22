@@ -1,8 +1,7 @@
-// The theme on the document: the tokens read `data-theme` both ways
-// (styles/tokens.css), and the bar of the phone's browser reads the
-// `theme-color` meta tags, one per system scheme (index.html). A theme forced
-// against the system left that bar white over a dark page, so a forced theme sets both tags to its own colour,
-// and «Sistema» gives each back the one it was written with.
+// The theme on the document: the tokens read `data-theme` both ways (styles/tokens.css), and the
+// bar of the phone's browser reads the `theme-color` meta tags, one per system scheme (index.html).
+// A theme forced against the system left that bar white over a dark page, so a forced theme sets
+// both tags to its own colour, and «Sistema» gives each back the one it was written with.
 //
 // No colour is written here: each tag remembers its own, and a forced theme
 // borrows the colour of the tag written for that scheme.

@@ -89,7 +89,7 @@ describe("prices/config.json", () => {
       ['{"refetch_recent_days":{"coin":2}}', "refetch_recent_days.coin"],
       ['{"refetch_recent_days":{"crypto":-1}}', "refetch_recent_days.crypto"],
       ['{"refetch_recent_days":{"crypto":1.5}}', "refetch_recent_days.crypto"],
-      // At most a month (round 1 of PR #102): a huge value broke the dates mid-run.
+      // At most a month: a huge value broke the dates mid-run.
       ['{"refetch_recent_days":{"crypto":32}}', "refetch_recent_days.crypto"],
       ['{"refetch_recent_days":{"crypto":1000000000}}', "refetch_recent_days.crypto"],
     ];

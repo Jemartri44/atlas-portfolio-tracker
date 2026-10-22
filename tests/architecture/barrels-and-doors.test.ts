@@ -12,7 +12,7 @@ import {
 } from "./support.js";
 
 // ---------------------------------------------------------------------------
-// Feature 010, block 5. Nobody writes over a filed return in silence.
+// Nobody writes over a filed return in silence.
 // ---------------------------------------------------------------------------
 
 /**
@@ -70,10 +70,9 @@ describe("architecture: the fiscal output is not in the barrel", () => {
 
 describe("architecture: the ECB is not in the barrel", () => {
   /**
-   * Feature 012, decision (r): nothing of the ECB on the boot path of the web.
-   * The barrel is on it, so the ECB lives behind a door of its own
-   * (`@atlas/domain/ecb`), like the fiscal output; `check-bundle.mjs` checks
-   * the real output, and this checks the source.
+   * Nothing of the ECB on the boot path of the web. The barrel is on it, so the ECB lives behind a
+   * door of its own (`@atlas/domain/ecb`), like the fiscal output; `check-bundle.mjs` checks the
+   * real output, and this checks the source.
    */
   it("keeps the ECB and the local configuration out of index.ts", () => {
     const barrel = readFileSync(join(domainSrc, "index.ts"), "utf8");
@@ -88,11 +87,10 @@ describe("architecture: the ECB is not in the barrel", () => {
 
 describe("architecture: the tools of the screens on demand are not in the barrel", () => {
   /**
-   * Feature 015, E5 (decision of the direction on Q12, §33): the draft of a
-   * corporate action, the deep check and the simulation of a transfer live
-   * behind `@atlas/domain/tools`. They rode in the barrel onto the boot path of
-   * the web for screens opened now and then (2.166 B gzip of boot); the barrel
-   * never exports them again, and no other module of the domain imports them.
+   * The draft of a corporate action, the deep check and the simulation of a transfer live behind
+   * `@atlas/domain/tools`. They rode in the barrel onto the boot path of the web for screens opened
+   * now and then (2.166 B gzip of boot); the barrel never exports them again, and no other module
+   * of the domain imports them.
    */
   const TOOLS =
     /\.\/(projections\/)?(corporate-action-draft|deep-check|simulate-transfer)\.js$|\.\/tools\.js$/;
@@ -125,11 +123,9 @@ describe("architecture: the tools of the screens on demand are not in the barrel
 
 describe("architecture: the charts of the screens on demand are not in the barrel", () => {
   /**
-   * Feature 020, E3 (contracts/domain-doors.md): the gauges of the bucket and
-   * the percentages of its theses live behind `@atlas/domain/charts`, from
-   * their first commit. The barrel never exports them, no other module of the
-   * domain imports them, and `check-bundle.mjs` keeps the door and its folder
-   * off the boot path (LAZY_ONLY).
+   * The gauges of the bucket and the percentages of its theses live behind `@atlas/domain/charts`.
+   * The barrel never exports them, no other module of the domain imports them, and
+   * `check-bundle.mjs` keeps the door and its folder off the boot path (LAZY_ONLY).
    */
   const CHARTS = /(?:^|\/)charts(?:\.js|\/)/;
 
@@ -166,9 +162,9 @@ describe("architecture: the charts of the screens on demand are not in the barre
 
 describe("architecture: the automatic prices are not in the barrel", () => {
   /**
-   * Feature 013: nothing of the automatic prices on the boot path of the web.
-   * They live behind a door of their own (`@atlas/domain/quotes`), like the
-   * ECB; `check-bundle.mjs` checks the real output, and this the source.
+   * Nothing of the automatic prices on the boot path of the web. They live behind a door of their
+   * own (`@atlas/domain/quotes`), like the ECB; `check-bundle.mjs` checks the real output, and this
+   * the source.
    */
   it("keeps the quotes and the ports of prices out of index.ts", () => {
     const barrel = readFileSync(join(domainSrc, "index.ts"), "utf8");
@@ -186,14 +182,12 @@ describe("architecture: the ECB and the prices are downloaded by the console onl
   const adaptersSrc = join(adapters, "src");
 
   /**
-   * Every file of the adapters the web can bundle: what each subpath of
-   * `exports` points at, **read off `package.json`, excluding `"."`** (the
-   * barrel of Node), and everything those files import, at any depth. A
-   * subpath added tomorrow is looked at without anybody writing it here
-   * (feature 013, §6.4 (c)).
+   * Every file of the adapters the web can bundle: what each subpath of `exports` points at, **read
+   * off `package.json`, excluding `"."`** (the barrel of Node), and everything those files import,
+   * at any depth. A subpath added tomorrow is looked at without anybody writing it here.
    */
   const webReachableAdapters = (): string[] => {
-    // Every condition of each export, one module or a failure (review of PR #106, R2-N3).
+    // Every condition of each export, one module or a failure.
     const pending = [...sharedExportsOf(adapters)]
       .filter(([subpath]) => subpath !== ".")
       .map(([, source]) => source);
@@ -214,14 +208,12 @@ describe("architecture: the ECB and the prices are downloaded by the console onl
   };
 
   /**
-   * The web downloads nothing from a third party (ADR-0028, ADR-0029,
-   * ADR-0031): **the addresses of the ECB and of the APIs of prices live in
-   * `@atlas/adapters`, outside every subpath the web imports, and never in the
-   * domain**, which the web bundles whole. The check of origins of the bundle
-   * catches a URL that reaches the output; this catches it in the source,
-   * before, and also without its scheme. The hosts of the four sources ADR-0031
-   * names are all here, the two that left the feature included (D-Q5, D-Q6):
-   * none of them may reach the web.
+   * The web downloads nothing from a third party (ADR-0028, ADR-0029, ADR-0031): **the addresses of
+   * the ECB and of the APIs of prices live in `@atlas/adapters`, outside every subpath the web
+   * imports, and never in the domain**, which the web bundles whole. The check of origins of the
+   * bundle catches a URL that reaches the output; this catches it in the source, before, and also
+   * without its scheme. The hosts of the four sources ADR-0031 names are all here, the two that
+   * were dropped included: none of them may reach the web.
    */
   it("keeps the addresses of the ECB and of the sources of prices out of what the web bundles", () => {
     const reachable = webReachableAdapters();

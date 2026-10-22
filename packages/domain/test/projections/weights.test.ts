@@ -228,7 +228,7 @@ describe("coreWeights", () => {
 
 describe("coreWeights as of a date", () => {
   /**
-   * The reviewer's scenario: 10 of each fund in 2027 and 90 more of ast_world
+   * 10 of each fund in 2027 and 90 more of ast_world
    * in 2028. Read at a 2027 date, the table must be the portfolio of 2027, not
    * the one of 2028 valued with the prices of 2027.
    */
@@ -331,8 +331,8 @@ describe("coreWeights with a quote that has no rate (feature 013)", () => {
       settings({ target_weights: TARGETS }),
       noRate013("ast_gold"),
     );
-    // Review of PR #78: a quote in pence of every day must not leave the whole
-    // core without weights while the ledger has a valuation with its rate.
+    // A quote in pence of every day must not leave the whole core without
+    // weights while the ledger has a valuation with its rate.
     expect(result.partial).toBe(false);
     const gold = result.rows.find((row) => row.asset_id === "ast_gold");
     expect(gold?.price).toMatchObject({ origin: "manual", currency: "USD" });

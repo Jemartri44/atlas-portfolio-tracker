@@ -1,5 +1,5 @@
-// The arithmetic of the palette test (feature 020, E1, block 0), written here
-// with no dependency, each formula from its published source:
+// The arithmetic of the palette test, written here with no dependency, each formula from its
+// published source:
 //
 //   - sRGB ↔ linear: IEC 61966-2-1, the curve every browser applies.
 //   - Colour vision deficiency: Machado, Oliveira & Fernandes, "A
@@ -11,7 +11,7 @@
 //   - OKLab: Björn Ottosson, "A perceptual color space for image processing",
 //     https://bottosson.github.io/posts/oklab/ (23 December 2020, read
 //     2026-09-27). ΔE is the Euclidean distance in OKLab ×100, the unit of
-//     docs/design/system.md §3.2 and of the proposal of 2026-09-25.
+//     docs/design/system.md §3.2.
 //   - Contrast: WCAG 2.x relative luminance, as `contrast.test.ts`.
 //
 // This is test code: the geometry and the colour of a chart may use `number`,

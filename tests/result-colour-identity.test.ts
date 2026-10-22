@@ -1,10 +1,8 @@
-// The colour of a result, recognised by identity (feature 020, E1; round 2 of
-// the review of PR #105). `apps/web/test/result-colour.test.ts` reads the
-// markup as text: a `class="positive"` written by hand, or `signOf(` by name.
-// Two detours walked past it, `import { signOf as toneOf }` and `const tone =
-// "positive"` used in a class. Here the web is **parsed** with the parser
-// every static guardian shares (`support/source-graph.ts`), so the import is
-// recognised by what it imports and the word by being a string of the code.
+// The colour of a result, recognised by identity. `apps/web/test/result-colour.test.ts` reads the
+// markup as text: a `class="positive"` written by hand, or `signOf(` by name. Two detours walked
+// past it, `import { signOf as toneOf }` and `const tone = "positive"` used in a class. Here the
+// web is **parsed** with the parser every static guardian shares (`support/source-graph.ts`), so
+// the import is recognised by what it imports and the word by being a string of the code.
 
 import { relative } from "node:path";
 import { describe, expect, it } from "vitest";

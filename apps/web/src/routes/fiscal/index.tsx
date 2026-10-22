@@ -33,9 +33,9 @@ import { RateNotes } from "./RateNotes.jsx";
 import { useYear, type YearChoice, YearPicker } from "./YearPicker.jsx";
 
 /**
- * What sets a ledger up without moving anything. A ledger that only has these
- * has nothing to declare and nothing to say about it, so the screen is **one**
- * empty state with the next step and not six cards of zeros (un único estado vacío con el siguiente paso").
+ * What sets a ledger up without moving anything. A ledger that only has these has nothing to
+ * declare and nothing to say about it, so the screen is **one** empty state with the next step and
+ * not six cards of zeros (un único estado vacío con el siguiente paso").
  */
 const SETUP = new Set([
   "account_created",

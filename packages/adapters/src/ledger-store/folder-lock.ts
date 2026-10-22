@@ -1,9 +1,9 @@
 // The advisory lock of a ledger folder (ADR-0026, Part B).
 //
-// **One lock per ledger folder**, covering every write inside it: the ledger,
-// `archive/`, `drafts/`, `reference/ecb/` and, when it exists, `sync/`. It is built around "write bytes in a folder"
-// and not around `append` and `replace`, so the raw-line operations of the sync
-// take it as they are.
+// **One lock per ledger folder**, covering every write inside it: the ledger, `archive/`,
+// `drafts/`, `reference/ecb/` and, when it exists, `sync/`. It is built around "write bytes in a
+// folder" and not around `append` and `replace`, so the raw-line operations of the sync take it as
+// they are.
 //
 // What it guarantees, and what it does not, said where it is read:
 //
@@ -26,7 +26,10 @@ import { basename, dirname, join } from "node:path";
 
 export const LOCK_FILE = "ledger.lock";
 
-/** What the lock file says. `holder` is only ever `cli` today; the field is kept for other holders. */
+/**
+ * What the lock file says. `holder` is only ever `cli` today; the field is kept for other
+ * holders.
+ */
 export interface FolderLockInfo {
   holder: string;
   token: string;
@@ -42,7 +45,10 @@ export interface FolderLockInfo {
  */
 export const BEING_WRITTEN = "being_written";
 
-/** What a lock file says: who holds it, that it is being written, or `undefined` when unreadable. */
+/**
+ * What a lock file says: who holds it, that it is being written, or `undefined` when
+ * unreadable.
+ */
 export type FolderLockState = FolderLockInfo | typeof BEING_WRITTEN | undefined;
 
 const hasCode = (error: unknown, code: string): boolean =>
@@ -203,12 +209,11 @@ export const withFolderLock = async <T>(
 };
 
 /**
- * Removes the temporary files a write of the ledger left behind when it was
- * killed before its rename (`ledger.jsonl.tmp-<pid>-<time>`), and those of `sync/`, `drafts/`, `prices/` and `reference/ecb/`. Only under the lock: every
- * writer creates its temporary holding it,
- * so while this holds it, any temporary is an orphan. If somebody holds the
- * lock, nothing is touched — their temporary may be the write in progress.
- * Returns the names removed.
+ * Removes the temporary files a write of the ledger left behind when it was killed before its
+ * rename (`ledger.jsonl.tmp-<pid>-<time>`), and those of `sync/`, `drafts/`, `prices/` and
+ * `reference/ecb/`. Only under the lock: every writer creates its temporary holding it, so while
+ * this holds it, any temporary is an orphan. If somebody holds the lock, nothing is touched — their
+ * temporary may be the write in progress. Returns the names removed.
  */
 export const sweepOrphanTemporaries = async (ledgerPath: string): Promise<string[]> => {
   const folder = dirname(ledgerPath);

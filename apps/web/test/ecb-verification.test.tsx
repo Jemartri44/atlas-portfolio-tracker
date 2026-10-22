@@ -1,8 +1,7 @@
 // @vitest-environment happy-dom
 //
-// «Tipos del BCE» in the verification (feature 012, block 4): «sin
-// contrastar» without a history, never «sin hallazgos»; and with one, the
-// findings of the domain in Spanish. Mutants 9 and 25 of prompt 012 §5.
+// «Tipos del BCE» in the verification: «sin contrastar» without a history, never «sin hallazgos»;
+// and with one, the findings of the domain in Spanish.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

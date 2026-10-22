@@ -1,5 +1,5 @@
-// Feature 016, E1 (R11, §8.1 P15): the periods of the jobs in Europe/Madrid,
-// with their borders: the changes of time, the end of a month, New Year's Eve.
+// The periods of the jobs in Europe/Madrid, with their borders: the changes of time, the end of a
+// month, New Year's Eve.
 
 import { describe, expect, it } from "vitest";
 import { madridDateOf } from "../../src/dates/madrid.js";

@@ -1,6 +1,5 @@
-// The lists a form chooses from. No identifier is ever typed by hand when it
-// can be picked (FR-046), and the lists come from the catalogue of the ledger,
-// so they cannot drift from what exists.
+// The lists a form chooses from. No identifier is ever typed by hand when it can be picked, and the
+// lists come from the catalogue of the ledger, so they cannot drift from what exists.
 
 import {
   accounts,

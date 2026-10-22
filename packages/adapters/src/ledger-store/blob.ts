@@ -4,11 +4,11 @@
 // `replace` (compact only) saves the original bytes under an archive name that
 // is never overwritten, and a line written by a newer schema aborts the load.
 //
-// It knows nothing about IndexedDB: that is the whole point. The two
-// byte-level methods of `LedgerBlob` are the only thing that changes with the
-// medium, and the comparison of the etag lives **inside** the one that writes,
-// so it happens in the same atomic step as the write. This class is exercised by the same contract tests
-// that `MemoryLedgerStore` and `FileLedgerStore` pass.
+// It knows nothing about IndexedDB: that is the whole point. The two byte-level methods of
+// `LedgerBlob` are the only thing that changes with the medium, and the comparison of the etag
+// lives **inside** the one that writes, so it happens in the same atomic step as the write. This
+// class is exercised by the same contract tests that `MemoryLedgerStore` and `FileLedgerStore`
+// pass.
 
 import {
   ArchiveExistsError,
@@ -95,7 +95,7 @@ export class BlobLedgerStore implements LedgerStore {
     readonly schema: LedgerSchema = CURRENT_LEDGER_SCHEMA,
   ) {}
 
-  /** What the interface shows when it says where the ledger is (FR-011). */
+  /** What the interface shows when it says where the ledger is. */
   get label(): string {
     return this.blob.label;
   }

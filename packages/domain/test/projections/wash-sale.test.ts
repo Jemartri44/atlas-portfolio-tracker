@@ -114,7 +114,7 @@ describe("wash_sale_window_repurchase: buying back after a loss", () => {
       asset_id: "ast_spec",
       buy_date: "2027-04-10",
       // What was bought back: it used to be the quantity sold, under a name
-      // that did not say which (feature 009, quality review).
+      // that did not say which.
       buy_quantity: "10",
       sale_date: "2027-02-10",
       window_end: "2027-04-10",
@@ -163,9 +163,8 @@ describe("wash_sale_window_repurchase: buying back after a loss", () => {
       });
       return projectLedger(b.build());
     };
-    // A fund is taxed by value date, and since the correction of criterion #2
-    // (2026-09-22) its window is **two months**: the sale of 10 February warns
-    // until 10 April and not on the 11th.
+    // A fund is taxed by value date and its window is **two months** (criterion
+    // #2): the sale of 10 February warns until 10 April and not on the 11th.
     expect(codes(fundCycle("2027-04-10"), "wash_sale_window_repurchase")).toHaveLength(1);
     expect(codes(fundCycle("2027-04-11"), "wash_sale_window_repurchase")).toEqual([]);
     // With a year written into the ledger, eleven months still warn and
@@ -487,8 +486,8 @@ describe("wash_sale_window_prior_buy: selling at a loss after buying", () => {
       trade_date: "2026-01-12",
       value_date: "2026-01-12",
     });
-    // Inside the two months of a fund, which is its window since the correction
-    // of criterion #2: what this pins is one warning per purchase.
+    // Inside the two months of a fund, which is its window (criterion #2): what
+    // this pins is one warning per purchase.
     for (const date of ["2027-04-10", "2027-04-20", "2027-05-01"]) {
       b.buy({
         account_id: "acc_fund",
@@ -586,8 +585,8 @@ describe("wash_sale_transfer_counts: a transfer in as an acquisition", () => {
         // 10 came in, the sale took 6: 4 are still held.
         held_quantity: "4",
         loss_eur: "-24",
-        // Two months for a fund since the correction of criterion #2: the
-        // transfer of 3 May is still well inside the window of a sale of 1 June.
+        // Two months for a fund (criterion #2): the transfer of 3 May is still
+        // well inside the window of a sale of 1 June.
         window_start: "2027-04-01",
         window: "2m",
       });
@@ -832,10 +831,9 @@ describe("wash_sale_window_prior_buy: a forced sale warns like a sell", () => {
 
 /**
  * A swap is a disposal and an acquisition at once, so the rule has to see it
- * from **four** sides. That is the gap PR #40 had to close for transfers — the
- * warning was wired in one direction only and the central case of the core went
- * three weeks without saying anything — and it is written out here one
- * direction at a time so the next person can see all four are covered.
+ * from **four** sides. Transfers once had the warning wired in one direction
+ * only, and the central case of the core went without saying anything; it is
+ * written out here one direction at a time so all four are visibly covered.
  */
 describe("a swap counts on both sides of the wash-sale window", () => {
   /**

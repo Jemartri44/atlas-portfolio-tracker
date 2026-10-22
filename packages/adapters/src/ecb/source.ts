@@ -1,6 +1,6 @@
-// The ECB as an `FxRateSource` (ADR-0029, points 1 and 3). **The ZIP is the preferred source and the API only the
-// fallback**; what comes from the API is stored as it came and named as the
-// API, never rebuilt in the shape of the ZIP.
+// The ECB as an `FxRateSource` (ADR-0029, points 1 and 3). **The ZIP is the preferred source and
+// the API only the fallback**; what comes from the API is stored as it came and named as the API,
+// never rebuilt in the shape of the ZIP.
 //
 // **The addresses of the ECB live here and nowhere else**: in
 // `@atlas/adapters`, outside the subpaths the web imports (`./blob`,

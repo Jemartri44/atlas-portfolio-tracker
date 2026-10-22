@@ -1,5 +1,4 @@
-// The rows of the form against the lines of the engine (ficha F5, question Q10
-// of feature 010).
+// The rows of the form against the lines of the engine.
 //
 // The engine folds what a repurchase released **into the disposal that releases
 // it** and applies the rule again to the total (#21). The form of 2025 wants
@@ -27,7 +26,7 @@ const amountOf = (boxes: TaxBoxes, concept: string, event?: string): string => {
 };
 
 /**
- * The three years of the test the direction asked for (Q10): a loss deferred
+ * The three years of the test: a loss deferred
  * whole, a disposal with a gain of its own that releases it and **defers it
  * again** (#21), and the sale that finally brings it back.
  *

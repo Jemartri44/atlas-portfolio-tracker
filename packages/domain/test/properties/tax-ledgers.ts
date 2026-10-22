@@ -1,4 +1,4 @@
-// Random valid ledgers for the lot journal and the tax engine (feature 009).
+// Random valid ledgers for the lot journal and the tax engine.
 //
 // Richer than `ledgers.ts` on purpose: the wash-sale rule lives in the gaps
 // between dates (two months, one year), and a deferral travels through
@@ -8,10 +8,10 @@
 // transfers are capped to the running position, which is tracked through the
 // corporate actions too.
 //
-// It also carries what a price could leak through (feature 009 review): a
-// security in dollars at a rate that moves, valuations in both currencies,
-// swaps with and without a fee, grants with a cost and without one, forced
-// sales in several accounts and reverse splits with cash in lieu.
+// It also carries what a price could leak through: a security in dollars at a
+// rate that moves, valuations in both currencies, swaps with and without a fee,
+// grants with a cost and without one, forced sales in several accounts and
+// reverse splits with cash in lieu.
 
 import fc from "fast-check";
 import { addDays, lastWorkingDay } from "../../src/dates/civil-date.js";

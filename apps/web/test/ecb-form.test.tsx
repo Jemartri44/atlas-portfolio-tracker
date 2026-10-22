@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 //
-// The ECB rate in the form (feature 012, block 3): proposed from the history
-// imported into this browser for the fiscal date, never invented, and a typed
-// rate that is not the official one asks for its yes before the write. The
-// browser storage is the IndexedDB double of the adapters.
+// The ECB rate in the form: proposed from the history imported into this browser for the fiscal
+// date, never invented, and a typed rate that is not the official one asks for its yes before the
+// write. The browser storage is the IndexedDB double of the adapters.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

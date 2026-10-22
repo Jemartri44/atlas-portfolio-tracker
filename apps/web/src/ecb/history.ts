@@ -5,7 +5,8 @@
 // (`./cloud.ts`). Without one there is no history: nothing is proposed, and
 // the rates are typed as always.
 //
-// Everything here is loaded lazily: nothing of the ECB is on the boot path, and the build fails if it ever is.
+// Everything here is loaded lazily: nothing of the ECB is on the boot path, and the build fails if
+// it ever is.
 
 import {
   forgetImportedHistory,

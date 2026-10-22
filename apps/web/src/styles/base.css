@@ -14,7 +14,7 @@
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
-  /* An anchor stops under the fixed bar, whatever its height (feature 020). */
+  /* An anchor stops under the fixed bar, whatever its height. */
   scroll-padding-top: calc(var(--header-h) + var(--space-3));
 }
 
@@ -107,9 +107,9 @@
 }
 
 /*
- * A title that receives the focus from a script (`tabindex="-1"`, the target
- * of an anchor) is where the next Tab starts, not something to press: no ring
- * (PR #105, round 2, O2). Only headings: anything interactive keeps it.
+ * A title that receives the focus from a script (`tabindex="-1"`, the target of an anchor) is where
+ * the next Tab starts, not something to press: no ring. Only headings: anything interactive keeps
+ * it.
  */
 :where(h1, h2, h3)[tabindex="-1"]:focus {
   outline: none;
@@ -147,16 +147,14 @@
 }
 
 /*
- * The privacy mask (D2): always the same four dots, so it measures the same
- * whatever the amount it hides, and the unit, which says what kind of figure
- * is hidden (euros, participations) without saying how big it is. The dots are
- * drawn smaller than the digits, so a masked hero figure reads as a quiet
- * placeholder and not as four billiard balls.
+ * The privacy mask: always the same four dots, so it measures the same whatever the amount it
+ * hides, and the unit, which says what kind of figure is hidden (euros, participations) without
+ * saying how big it is. The dots are drawn smaller than the digits, so a masked hero figure reads
+ * as a quiet placeholder and not as four billiard balls.
  *
- * No box wider than the dots: its slack, right-aligned, pushed the mask ~20px
- * off the left edge of a hero figure and of a line of the detail (review of
- * 2026-09-19). The trailing letter-spacing is taken back, so the unit keeps
- * the same gap as after a figure.
+ * No box wider than the dots: its slack, right-aligned, pushed the mask ~20px off the left edge of
+ * a hero figure and of a line of the detail. The trailing letter-spacing is taken back, so the unit
+ * keeps the same gap as after a figure.
  */
 .mask {
   color: var(--c-text-3);

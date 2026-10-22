@@ -66,7 +66,7 @@ export interface ReleaseLine {
   amount_eur: Money;
   /** It travelled through a transfer, a conversion or a carve-out (#15). */
   travelled: boolean;
-  /** The category of the loss it came from, which is where it is integrated (FR-015). */
+  /** The category of the loss it came from, which is where it is integrated. */
   category: IncomeCategory;
 }
 

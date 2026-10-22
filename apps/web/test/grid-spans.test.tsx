@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 //
-// Every child of a grid says how many of its twelve columns it takes. One that
-// did not — the folded filters of Movimientos — took one column of twelve from
-// 1024px and squeezed every field in it to ~100px. Nothing overflowed, so no
-// measure of overflow saw it (second pass of the review of 2026-09-19).
+// Every child of a grid says how many of its twelve columns it takes. One that did not — the folded
+// filters of Movimientos — took one column of twelve from 1024px and squeezed every field in it to
+// ~100px. Nothing overflowed, so no measure of overflow saw it.
 
 import type { JSX } from "solid-js";
 import { afterEach, describe, expect, it } from "vitest";
@@ -33,11 +32,10 @@ const SCREENS: readonly [string, () => JSX.Element, string?][] = [
 ];
 
 /**
- * Eight whole screens rendered with the styles, twice: under coverage on a
- * loaded machine it went past the five seconds Vitest gives by default (review
- * of PR #90, round 2) with nothing wrong in it, so it gets a budget of its own:
- * six times what it measures, enough for the load and still a warning if it
- * ever becomes much slower (round 3).
+ * Eight whole screens rendered with the styles, twice: under coverage on a loaded machine it went
+ * past the five seconds Vitest gives by default with nothing wrong in it, so it gets a budget of
+ * its own: six times what it measures, enough for the load and still a warning if it ever becomes
+ * much slower.
  */
 const RENDER_BUDGET_MS = 30_000;
 

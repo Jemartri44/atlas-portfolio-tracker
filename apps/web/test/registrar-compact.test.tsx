@@ -1,11 +1,10 @@
 // @vitest-environment happy-dom
 //
-// Registrar in one screenful of the phone (feature 020, M11): the seven tiles
-// of the day to day in three columns of 64px, the word alone; and the short
-// fields in pairs — the two dates, quantity and price — only where both fit.
-// Measured in Chromium at 360px a date needs 169px and half the row gives it
-// 158, so the pair starts at 384px. The first screenful itself, «Otros
-// registros» included, is measured in the real browser (`medidas.json`).
+// Registrar in one screenful of the phone: the seven tiles of the day to day in three columns of
+// 64px, the word alone; and the short fields in pairs — the two dates, quantity and price — only
+// where both fit. Measured in Chromium at 360px a date needs 169px and half the row gives it 158,
+// so the pair starts at 384px. The first screenful itself, «Otros registros» included, is measured
+// in the real browser (`medidas.json`).
 
 import { afterEach, describe, expect, it } from "vitest";
 import RegistrarForm from "../src/routes/registrar/form.jsx";

@@ -290,8 +290,8 @@ describe("atlas settings set: a change that moves a past tax year", () => {
   });
 
   /**
-   * Feature 009, Q12: the income category moves the savings base without
-   * moving a single realized gain. The warning used to stay silent here.
+   * The income category moves the savings base without moving a single realized gain. The warning
+   * used to stay silent here.
    */
   it("also lists the years whose savings base moves when no realized gain does", async () => {
     const h = harness({ events: seed(), confirm: true, instant: "2029-03-01T10:00:00.000Z" });
@@ -636,11 +636,10 @@ describe("atlas settings set: a change that reinterprets the past (ADR-0015)", (
 /**
  * The one place of the four where the user is **writing** and not consulting.
  *
- * `atlas settings set` computes the warning of a closed year with **two
- * different configurations**, which is exactly the mechanism that drags the
- * chain below the first supported year. There is no report to lose here:
- * before feature 011 the command died —exit code 1, before the question— and
- * the setting never reached the ledger.
+ * `atlas settings set` computes the warning of a closed year with **two different configurations**,
+ * which is exactly the mechanism that drags the chain below the first supported year. There is no
+ * report to lose here: the command used to die —exit code 1, before the question— and the setting
+ * never reached the ledger.
  */
 describe("atlas settings set: a change whose other reading predates the regime", () => {
   /** A sale traded in 2017 and settled in 2018, with the Renta of 2018 filed. */

@@ -1,4 +1,4 @@
-// "Esto toca un ejercicio que ya declaraste" (ADR-0020, amended; FR-018).
+// "Esto toca un ejercicio que ya declaraste" (ADR-0020, amended).
 //
 // It **never refuses**: filing late can be legitimate and is sometimes
 // compulsory. What is never acceptable is doing it in silence, so the notice

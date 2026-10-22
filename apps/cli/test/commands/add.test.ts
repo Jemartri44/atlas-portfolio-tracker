@@ -186,8 +186,8 @@ describe("atlas add", () => {
       ]),
     ).toBe(1);
     expect(h.text()).toContain("unit_price");
-    // `swap` used to be the example of a subcommand that does not exist. It
-    // does now (feature 008), so the example has to be one that really does not.
+    // `swap` used to be the example of a subcommand that does not exist. It does now, so the
+    // example has to be one that really does not.
     expect(await h.exec(["add", "barter"])).toBe(64);
     expect(await h.exec(["add", "buy", "--bogus", "1", "--yes"])).toBe(64);
   });
@@ -335,8 +335,8 @@ describe("atlas add", () => {
         "USD",
         "--fx-rate",
         "1.09",
-        // Feature 005: the date of the rate, without which a 31/12 valuation is
-        // not reproducible from the ECB table (31/12/2026 was a Thursday).
+        // The date of the rate, without which a 31/12 valuation is not reproducible from the ECB
+        // table (31/12/2026 was a Thursday).
         "--fx-rate-date",
         "2026-12-31",
       ],

@@ -1,4 +1,4 @@
-// Feature 016, E1: how the mail writes a figure, Spanish style.
+// How the mail writes a figure, Spanish style.
 
 import { describe, expect, it } from "vitest";
 import { count, euros, monthName, percent } from "../../src/jobs/mail/format.js";

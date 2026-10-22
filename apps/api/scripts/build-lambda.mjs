@@ -1,6 +1,5 @@
-// The package of the Lambda of the API (feature 015, E3; `docs/dependencies.md`,
-// esbuild): `apps/api/src/lambda.ts` bundled by the common builder of the
-// Lambdas (`scripts/lambda-package.mjs`, feature 016, P-H) into
+// The package of the Lambda of the API (`docs/dependencies.md`, esbuild): `apps/api/src/lambda.ts`
+// bundled by the common builder of the Lambdas (`scripts/lambda-package.mjs`) into
 // `apps/api/dist-lambda/lambda.zip`.
 
 import { mkdir, rm, writeFile } from "node:fs/promises";

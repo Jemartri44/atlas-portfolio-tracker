@@ -1,4 +1,4 @@
-// Round 2 of the review of PR #106, R2-B1: `JSON.parse` keeps the last of two
+// `JSON.parse` keeps the last of two
 // equal keys without a word, so a file can say one thing to the reader of the
 // cloud and another to a person, and `atlas admin prices push` would upload
 // bytes the difference never shows. Every JSON of `prices/` read strictly in

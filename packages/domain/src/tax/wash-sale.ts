@@ -105,7 +105,7 @@ export interface WashSaleOutcome {
   released_eur: Money;
   /**
    * Releases of a loss of the **other** income category: they are integrated
-   * where the loss came from (FR-015) and stay out of what the rule looks at.
+   * where the loss came from and stay out of what the rule looks at.
    * Only possible when a conversion joins two asset types of different category.
    */
   foreign_released: Release[];

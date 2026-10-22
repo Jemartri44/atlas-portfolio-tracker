@@ -2,10 +2,10 @@
 // `./browser`: the browser store is on the boot path of the web, and nothing
 // of the ECB may be.
 //
-// The ECB history **imported by hand** into this browser, or **downloaded from the cloud** with the session of this browser
-// — never from a third party (ADR-0028, ADR-0029, point 3). Kept as text, exactly as imported, next to the ledger in the same
-// database, under a key of its own. Losing it loses nothing of the ledger: it
-// is imported again.
+// The ECB history **imported by hand** into this browser, or **downloaded from the cloud** with the
+// session of this browser — never from a third party (ADR-0028, ADR-0029, point 3). Kept as text,
+// exactly as imported, next to the ledger in the same database, under a key of its own. Losing it
+// loses nothing of the ledger: it is imported again.
 
 import { idbDelete, idbGet, idbPut, LEDGER_STORE } from "./idb.js";
 

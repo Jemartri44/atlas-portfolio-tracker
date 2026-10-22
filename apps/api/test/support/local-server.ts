@@ -1,18 +1,17 @@
-// TEST ONLY — the API and the web on one local origin, **without AWS and
-// without Google** (plan §11), for the captures of the verifier. The handler
-// is the real one, composed with the doubles of S3, SSM and Google; the web is
-// the real `apps/web/dist`. Nothing of the product reaches this file
-// (architecture test). Run from the scratchpad:
+// TEST ONLY — the API and the web on one local origin, **without AWS and without Google**, for
+// visual captures. The handler is the real one, composed with the doubles of S3, SSM and Google;
+// the web is the real `apps/web/dist`. Nothing of the product reaches this file (architecture
+// test). Run from the scratchpad:
 //
 //   node apps/api/dist-test/apps/api/test/support/local-server.js --port 0 [--account allowed|stranger|unverified]
 //
-// It prints `http://127.0.0.1:<port>` (or its `--origin`). For development with
-// the Vite server (`npm run dev` proxies `/api` here): `--port 8787 --origin
-// http://localhost:5173 --account allowed --ledger tests/fixtures/ledger/synthetic-v1.jsonl`. The fake provider lives under `/api/`
-// (the service worker leaves those navigations alone) and shows three synthetic
-// accounts to choose from, or chooses the one of `--account` by itself. Two
-// hooks of the test move the world from outside, as an admin would:
-// `/__test/forget-this-device?id=` and `/__test/advance?ms=` (the clock).
+// It prints `http://127.0.0.1:<port>` (or its `--origin`). For development with the Vite server
+// (`npm run dev` proxies `/api` here): `--port 8787 --origin http://localhost:5173 --account
+// allowed --ledger tests/fixtures/ledger/synthetic-v1.jsonl`. The fake provider lives under `/api/`
+// (the service worker leaves those navigations alone) and shows three synthetic accounts to choose
+// from, or chooses the one of `--account` by itself. Two hooks of the test move the world from
+// outside, as an admin would: `/__test/forget-this-device?id=` and `/__test/advance?ms=` (the
+// clock).
 
 import { randomBytes } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
@@ -185,7 +184,7 @@ server.listen(Number(argument("port") ?? 0), "127.0.0.1", () => {
               http: { method: request.method ?? "GET" },
             },
           });
-          // Over plain http on 127.0.0.1, Chromium keeps `Secure` cookies (questions.md §2).
+          // Over plain http on 127.0.0.1, Chromium keeps `Secure` cookies.
           response
             .writeHead(result.statusCode, { ...result.headers, "set-cookie": result.cookies ?? [] })
             .end(result.body);

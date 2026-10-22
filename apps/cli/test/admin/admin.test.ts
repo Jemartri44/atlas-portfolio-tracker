@@ -1,7 +1,6 @@
-// Feature 015, E5: the orders of administration against the doubles of S3 and
-// SSM — the same world the API of the tests runs on (`apps/api/test/harness.ts`),
-// so that what the administration writes is read by the API as it would be:
-// a forgotten device refused with `device_forgotten`, a revoked token refused.
+// The orders of administration against the doubles of S3 and SSM — the same world the API of the
+// tests runs on (`apps/api/test/harness.ts`), so that what the administration writes is read by the
+// API as it would be: a forgotten device refused with `device_forgotten`, a revoked token refused.
 // Never AWS, never Google.
 
 import { mkdtemp } from "node:fs/promises";
@@ -151,8 +150,8 @@ describe("atlas admin revoke-all-tokens (§7 P4)", () => {
     const name = `${tokenParameterPath(CONFIG.ssmPrefix)}${"U".repeat(22)}`;
     api.ssm.set(name, "{");
     const c = await adminConsole(api);
-    // Revoking all is not done while a record could not be read (review of
-    // PR #98, N2): the order fails, naming it, and leaves it as it is.
+    // Revoking all is not done while a record could not be read: the order fails, naming it, and
+    // leaves it as it is.
     expect(await c.exec(["admin", "revoke-all-tokens", "--env", "test"])).toBe(EXIT.domain);
     expect(c.text()).toContain("U".repeat(22));
     expect(c.text()).toContain("No se puede asegurar que estén revocados");

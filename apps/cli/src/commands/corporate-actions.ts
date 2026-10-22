@@ -323,9 +323,9 @@ export const corporateActionCommand = async (
   aside(ctx, keyValue(draft));
   aside(ctx, renderPreview(preview));
   adviseAfter(ctx, params, preview);
-  // A corporate action lands on a date of its own and rewrites lots: it moves a
-  // filed return as surely as a sale does. This path does not go through
-  // `confirmAndRecord`, so it asks for the warning itself (FR-018).
+  // A corporate action lands on a date of its own and rewrites lots: it moves a filed return as
+  // surely as a sale does. This path does not go through `confirmAndRecord`, so it asks for the
+  // warning itself.
   for (const line of await closedYearNotes(ctx, draft)) {
     aside(ctx, line);
   }

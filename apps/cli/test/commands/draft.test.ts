@@ -1,6 +1,5 @@
-// Drafts from the console (feature 012, block 5; ADR-0029, point 9): over a
-// real folder with the synthetic history, and a double of the ECB source —
-// no test touches the network. Mutants 12 and 23 of prompt 012 §5.
+// Drafts from the console (ADR-0029, point 9): over a real folder with the synthetic history, and a
+// double of the ECB source — no test touches the network.
 
 import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -226,13 +225,13 @@ describe("a pending draft (mutant 12)", () => {
     const copy = JSON.parse(await readFile(file, "utf8"));
     await atlas({ fx: source(await laterCsv()) }, "fx", "update");
     await atlas({}, "draft", "confirm", id, "--yes");
-    // The cut: the ledger has the line and the draft is still there, with the
-    // id its confirmation stamped before writing (second review of PR #75).
+    // The cut: the ledger has the line and the draft is still there, with the id its confirmation
+    // stamped before writing.
     const written = JSON.parse((await ledgerText()).trimEnd().split("\n").at(-1) as string);
     await writeFile(file, JSON.stringify({ ...copy, pending_event_id: written.id }));
     const lines = (await ledgerText()).split("\n").length;
     expect((await atlas({}, "draft", "list")).out).toContain("Ya está registrado");
-    // Confirming again only removes the draft: never a second line (review of PR #75).
+    // Confirming again only removes the draft: never a second line.
     const again = await atlas({}, "draft", "confirm", id, "--yes");
     expect(again.code).toBe(0);
     expect(again.out).toContain("ya estaba registrado");

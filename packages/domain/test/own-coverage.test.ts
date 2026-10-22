@@ -1,7 +1,6 @@
-// What only tests of **other** projects used to cover in the domain (feature
-// 015, E5; `questions.md` §33.5 and §34) — ten branches, two functions and
-// the lines in them —: the domain's 100 % is now measured in a pass of its
-// own, so each one is covered here, by the domain's own tests.
+// What only tests of **other** projects used to cover in the domain — ten branches, two functions
+// and the lines in them —: the domain's 100 % is now measured in a pass of its own, so each one is
+// covered here, by the domain's own tests.
 
 import { describe, expect, it } from "vitest";
 import { DraftChangedError } from "../src/ecb/drafts.js";
@@ -53,10 +52,9 @@ describe("ruleChangeRates (ecb/rule-change.ts)", () => {
     const events = b.build();
     const impact = ruleChangeRates(history, events, DEFAULT_SETTINGS, next, 30);
     expect(impact.lines.some((line) => line.event_id === dividend.id)).toBe(false);
-    // Where the branch matters (review of PR #98, N2; §35): the chain of
-    // `atlas fx correct` reads the same fiscal points, and a rate of business
-    // date is never one to correct — here its date, the 2nd, is not the one of
-    // the official rate of its value date, the 6th, and it is left alone.
+    // Where the branch matters: the chain of `atlas fx correct` reads the same fiscal points, and a
+    // rate of business date is never one to correct — here its date, the 2nd, is not the one of the
+    // official rate of its value date, the 6th, and it is left alone.
     const state = projectLedger(events, { collectErrors: true });
     expect(rateCorrections(history, state, events, 30).map((line) => line.event_id)).not.toContain(
       dividend.id,

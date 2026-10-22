@@ -1,5 +1,5 @@
-// Feature 016, E1 (R6, R7; mutant 3): the `Notifier` of SES puts the recipient
-// of SSM itself, validates it, and says every failure with its own code.
+// The `Notifier` of SES puts the recipient of SSM itself, validates it, and says every failure
+// with its own code.
 
 import { SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { describe, expect, it } from "vitest";

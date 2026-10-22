@@ -1,7 +1,6 @@
-// Where the data lives, on every screen (FR-011): in the cloud of Atlas, and
-// nothing else (ADR-0035). The device keeps no copy, so there is no age and no
-// reminder to export: the chip only says where the ledger is, and leads to
-// Ajustes, where the copy can be downloaded.
+// Where the data lives, on every screen: in the cloud of Atlas, and nothing else (ADR-0035). The
+// device keeps no copy, so there is no age and no reminder to export: the chip only says where the
+// ledger is, and leads to Ajustes, where the copy can be downloaded.
 
 import { type JSX, Show } from "solid-js";
 import { Icon } from "../components/Icon.jsx";

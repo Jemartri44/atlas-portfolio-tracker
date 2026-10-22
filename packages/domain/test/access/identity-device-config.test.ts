@@ -1,6 +1,5 @@
-// Feature 015, E1: the ID token of Google, the allow list, the object of a
-// device and the configuration of the Lambda (plan §4.1, R11 to R18, R20,
-// R21, R30).
+// The ID token of Google, the allow list, the object of a device and the configuration of the
+// Lambda.
 
 import { describe, expect, it } from "vitest";
 import { isAllowed, parseAllowList, subjectAllowed } from "../../src/access/allow-list.js";

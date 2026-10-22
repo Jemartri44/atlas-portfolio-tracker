@@ -111,12 +111,11 @@ describe("the fiscal screen", () => {
   });
 
   /**
-   * Four things the screen decided and nothing checked: a mutant of each one
-   * survived the whole suite, and every one of them is something the reader
-   * sees.
+   * Four things the screen decided and nothing checked: mutating any of them left the whole suite
+   * green, and every one of them is something the reader sees.
    */
   it("says plainly which data the ledger does not hold, instead of a blank", () => {
-    // The NIF of a fund is not in the ledger and is never invented (#F2).
+    // The NIF of a fund is not in the ledger and is never invented.
     return open(2027).then((host) => {
       expect(text(host)).toContain("No está en tus datos");
     });
@@ -155,15 +154,13 @@ describe("the fiscal screen", () => {
   });
 
   /**
-   * **What the engine substitutes, the screen says** (ADR-0024, feature 011,
-   * block 6). With a return on record the chain replaces the pending losses it
-   * computed with the ones that return declared, so the figure on the screen
-   * is **not** the one the application calculated — and the console said so
-   * while the screen said it nowhere at all: `anchor` was not read once in
-   * `apps/web/src`.
+   * **What the engine substitutes, the screen says** (ADR-0024). With a return on record the chain
+   * replaces the pending losses it computed with the ones that return declared, so the figure on
+   * the screen is **not** the one the application calculated — and the console said so while the
+   * screen said it nowhere at all: `anchor` was not read once in `apps/web/src`.
    *
-   * It goes beside the figure it affects, in the card of the pending losses,
-   * and not in a note at the end.
+   * It goes beside the figure it affects, in the card of the pending losses, and not in a note at
+   * the end.
    */
   it("says beside the pending losses when they come from what was filed", async () => {
     await openLedger(goldenText() + filedTwice());
@@ -250,19 +247,18 @@ describe("the fiscal screen", () => {
   });
 
   /**
-   * The mask is the most fragile invariant of this application and the one
-   * that is easiest to break without anybody noticing: it lives in the **call**
-   * that renders a figure, not in a formatting function, so only a rendered
-   * screen sees it. Two mutants of this screen survived the whole suite —
-   * dropping the guard on the share of the threshold, and printing the moved
-   * figures of a filed year as raw strings — and these are what kill them.
+   * The mask is the most fragile invariant of this application and the one that is easiest to break
+   * without anybody noticing: it lives in the **call** that renders a figure, not in a formatting
+   * function, so only a rendered screen sees it. Dropping the guard on the share of the threshold,
+   * or printing the moved figures of a filed year as raw strings, passed the whole suite; these
+   * tests are what kill those mutations.
    */
   it("does not show how much of the threshold with privacy on", async () => {
     store.setPrivacy(true);
     const host = await open();
     await settle();
-    // The threshold is a **public** figure, so a percentage of it is the
-    // user's own amount said another way (decision (k)).
+    // The threshold is a **public** figure, so a percentage of it is the user's own amount said
+    // another way.
     expect(text(host)).toContain("Modelo 720");
     expect(text(host)).not.toContain("Del umbral");
     // Without the strip of the calendar, whose coordinates are written in
@@ -272,8 +268,7 @@ describe("the fiscal screen", () => {
   });
 
   it("shows how much of the threshold with privacy off", async () => {
-    // The other half of the mutant: a guard that hides it always would pass
-    // the test above and lose the figure.
+    // The other half: a guard that hides it always would pass the test above and lose the figure.
     const host = await open();
     await settle();
     expect(text(host)).toContain("Del umbral");

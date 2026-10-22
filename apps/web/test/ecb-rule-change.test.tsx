@@ -1,10 +1,8 @@
 // @vitest-environment happy-dom
 //
-// The ECB rates after a change of `fiscal_date_rule`, in the browser (feature
-// 012, block 6; ADR-0029, point 10; criterion 25): said in Configuración
-// **before** the change is written, and the correction proposed whole in
-// «Verificación» and written in one write after a yes. Mutants 15 and 20 of
-// prompt 012 §5.
+// The ECB rates after a change of `fiscal_date_rule`, in the browser (ADR-0029, point 10): said in
+// Configuración **before** the change is written, and the correction proposed whole in
+// «Verificación» and written in one write after a yes.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

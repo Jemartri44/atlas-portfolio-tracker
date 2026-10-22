@@ -1,7 +1,6 @@
 // @vitest-environment happy-dom
 //
-// How a figure says its sign and its unit (feature 020, E1, block 2; proposal
-// of 2026-09-25 §5.4). The colour goes with the sign and never replaces it:
+// How a figure says its sign and its unit. The colour goes with the sign and never replaces it:
 //
 //   - a negative carries the typographic minus, U+2212, never the hyphen;
 //   - a zero carries no sign («0,0 pp»): a signed zero reads as a tiny gain or

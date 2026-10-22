@@ -1,8 +1,8 @@
-// Q12, option (b) (decision of the direction, §29 and §33): a line with a key
-// twice — which only a hand edit writes — still loads, as `JSON.parse` reads
-// it (the last value), but the degraded projection (ADR-0015) marks it
-// **invalid**, with `duplicate_key` and its id; `atlas check`, the web and the
-// sync see it as such, and the sync holds it back before uploading it.
+// A line with a key twice — which only a hand edit writes — still loads, as
+// `JSON.parse` reads it (the last value), but the degraded projection
+// (ADR-0015) marks it **invalid**, with `duplicate_key` and its id; `atlas
+// check`, the web and the sync see it as such, and the sync holds it back
+// before uploading it.
 
 import { describe, expect, it } from "vitest";
 import { ProjectionError } from "../../src/errors.js";
@@ -54,9 +54,9 @@ describe("a line with a key twice (Q12, (b))", () => {
     expect(state.accounts.size).toBe(1);
   });
 
-  // The remedy the messages give (review of PR #98, B1; §35): a live reversal
-  // of the line annuls it, and it stops being invalid — the ledger is
-  // append-only, and otherwise only another hand edit would get it out.
+  // The remedy the messages give: a live reversal of the line annuls it, and it
+  // stops being invalid — the ledger is append-only, and otherwise only another
+  // hand edit would get it out.
   it("stops being invalid once a live reversal annuls it", () => {
     const reversal = { ...SAMPLES.reversal, reverses_id: SAMPLES.account_created.id };
     const state = projectLedger([decodeLine(twice).event, decodeLine(encodeLine(reversal)).event], {
@@ -84,7 +84,7 @@ describe("a line with a key twice (Q12, (b))", () => {
     expect(state.invalid.map((entry) => [entry.event.id, entry.error.code])).toEqual([
       [reversal.id, "duplicate_key"],
     ]);
-    // With its type: the interfaces send an annulment to the file (R2-B1).
+    // With its type: the interfaces send an annulment to the file.
     expect(state.invalid[0]?.error.details).toMatchObject({ id: reversal.id, type: "reversal" });
     expect(state.reversed.has(SAMPLES.account_created.id)).toBe(false);
     expect(state.accounts.size).toBe(1);

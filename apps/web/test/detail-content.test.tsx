@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 //
-// What the detail of a movement puts in sight and what it folds (review of
-// 2026-09-19): the bookkeeping of an operation in euros — a rate of 1, its
-// date, «EUR», where the line came from — goes to the technical record, and a
-// sale says what it produced.
+// What the detail of a movement puts in sight and what it folds: the bookkeeping of an operation in
+// euros — a rate of 1, its date, «EUR», where the line came from — goes to the technical record,
+// and a sale says what it produced.
 
 import { projectLedger } from "@atlas/domain";
 import { describe, expect, it } from "vitest";

@@ -1,8 +1,7 @@
-// The currency of a quote is declared **per source**, not per asset (fix of
-// feature 013): a London share quotes in pounds at EODHD and in pence at Alpha
-// Vantage, and one currency for the asset made one of the two sources ask for
-// a confirmation forever, or stored the closes of the fallback a hundred times
-// too high.
+// The currency of a quote is declared **per source**, not per asset: a London
+// share quotes in pounds at EODHD and in pence at Alpha Vantage, and one
+// currency for the asset made one of the two sources ask for a confirmation
+// forever, or stored the closes of the fallback a hundred times too high.
 
 import { describe, expect, it } from "vitest";
 import { readEcbZipCsv } from "../../src/ecb/history.js";
@@ -264,10 +263,6 @@ describe("London with its two sources, end to end", () => {
     expect(inEur("1000", "GBX", "alpha_vantage")).toBe("12.5");
   });
 });
-
-// ---------------------------------------------------------------------------
-// Review of PR #80.
-// ---------------------------------------------------------------------------
 
 const legacyConfirmed = (currency: string, over: Record<string, string>) =>
   JSON.stringify({

@@ -1,5 +1,5 @@
 import type { AnchorDifference, TaxYearReport } from "../../src/tax/report.js";
-// The tax year as a whole (feature 009): the year a disposal falls in, the
+// The tax year as a whole: the year a disposal falls in, the
 // carry-forward and its anchor, the refusals, the doubtful criteria and the
 // notes. The wash-sale rule has its own file.
 

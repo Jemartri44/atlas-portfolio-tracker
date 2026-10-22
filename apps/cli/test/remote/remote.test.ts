@@ -1,8 +1,6 @@
-// Feature 015, E2: `atlas remote login | logout | status` end to end (plan
-// §4.2, T27 to T36), against the API composed with its doubles of Google,
-// SSM and S3 (`apps/api/test/harness.ts`). The browser of the user is a
-// function that walks the start, the provider and the return; the loopback is
-// a real socket on 127.0.0.1.
+// `atlas remote login | logout | status` end to end, against the API composed with its doubles of
+// Google, SSM and S3 (`apps/api/test/harness.ts`). The browser of the user is a function that walks
+// the start, the provider and the return; the loopback is a real socket on 127.0.0.1.
 
 import { chmod, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";

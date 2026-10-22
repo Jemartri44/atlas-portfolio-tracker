@@ -1,5 +1,5 @@
-// `drafts/` on the disk (feature 012, block 5): one file per draft, every write
-// under the lock of the ledger folder (mutant 23 of prompt 012 §5).
+// `drafts/` on the disk: one file per draft, every write under the lock of the ledger
+// folder.
 
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

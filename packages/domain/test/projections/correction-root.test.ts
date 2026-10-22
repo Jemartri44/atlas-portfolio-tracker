@@ -1,4 +1,4 @@
-// The root of a correction chain (review of PR #75, feature 012).
+// The root of a correction chain.
 
 import { describe, expect, it } from "vitest";
 import { correctionRoots } from "../../src/projections/correction-root.js";

@@ -1,4 +1,5 @@
-// `drafts/` next to the ledger, on the disk (ADR-0029, point 9): one file per draft, `drafts/<ULID>.json`, outside the ledger.
+// `drafts/` next to the ledger, on the disk (ADR-0029, point 9): one file per draft,
+// `drafts/<ULID>.json`, outside the ledger.
 //
 // **Every write goes under the lock of the ledger folder**: one
 // lock for every write in the folder, the drafts included. A draft is written

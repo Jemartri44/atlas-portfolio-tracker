@@ -1,5 +1,5 @@
 // A reading the engine cannot compute is information **about that reading**,
-// not a reason to deny the report that can be computed (feature 011, block 4).
+// not a reason to deny the report that can be computed.
 //
 // `taxChain` throws `tax_year_unsupported` when the chain would have to start
 // before the first supported year, and the chain starts at the earliest of
@@ -130,7 +130,7 @@ describe("an alternative reading that predates the supported regime", () => {
    * `atlas settings set`, which is the one place the user is writing and not
    * consulting: there it did not lose a report, it killed the command before
    * it could ask. Here it only has to stop throwing — **saying** that it could
-   * not compare is the third outcome of block 5.
+   * not compare is covered elsewhere.
    */
   it("lets the warning of a closed year through instead of killing the caller", () => {
     const events = straddling({ filed: true });

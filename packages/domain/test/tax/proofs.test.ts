@@ -1,9 +1,9 @@
-// The three proofs of feature 009 (plan §7 and §8):
+// The three proofs of the tax engine:
 //
-// 1. **No figure of the return depends on a price** (constitution II, decision
-//    (f)): delete every price of a ledger and the report is identical byte for
-//    byte; add random valuations and it does not move either.
-// 2. **The defaults change nothing that already existed** (decision (g)).
+// 1. **No figure of the return depends on a price** (constitution II): delete
+//    every price of a ledger and the report is identical byte for byte; add
+//    random valuations and it does not move either.
+// 2. **The defaults change nothing that already existed.**
 // 3. **The report of the synthetic ledger is frozen** in a fixture of its own,
 //    next to the snapshot of the projection and without touching it.
 
@@ -123,10 +123,10 @@ const json = (events: readonly LedgerEvent[], year: number): string =>
   JSON.stringify(taxReportJson(taxYear(events, year, { today: TODAY })));
 
 /**
- * The same for the layout by box (feature 010, block 2). It is a layer over the
- * report and reads no price of its own, but saying so is not proving it: the
- * proof is that deleting every price of the ledger leaves it identical byte for
- * byte, exactly as for the report underneath.
+ * The same for the layout by box. It is a layer over the report and reads no
+ * price of its own, but saying so is not proving it: the proof is that deleting
+ * every price of the ledger leaves it identical byte for byte, exactly as for
+ * the report underneath.
  */
 const boxesJson = (events: readonly LedgerEvent[], year: number): string =>
   JSON.stringify(taxBoxesJson(taxBoxes(events, year, { today: TODAY })));
@@ -139,9 +139,9 @@ const YEARS = [2026, 2027, 2028, 2029];
 /**
  * Sixteen whole reports of the synthetic ledger: about five seconds under
  * coverage on a loaded machine, the default budget of Vitest. It timed out
- * once in the full suite (review of PR #90, round 2) with nothing wrong in it,
- * so it gets a budget of its own: six times what it measures, enough for the
- * load and still a warning if it ever becomes much slower (round 3).
+ * once in the full suite with nothing wrong in it, so it gets a budget of its
+ * own: six times what it measures, enough for the load and still a warning if
+ * it ever becomes much slower.
  */
 const SYNTHETIC_BUDGET_MS = 30_000;
 
@@ -246,10 +246,10 @@ describe("proof 1: no figure of the return depends on a price", () => {
 });
 
 /**
- * Feature 010, decision (d): the figures a Modelo 720 declares are **market
- * values stored in the ledger**. Letting them reach the savings base would be
- * putting a price into the income tax without touching `prices.ts` at all, and
- * no architecture test would see it, because a filing is an ordinary event.
+ * The figures a Modelo 720 declares are **market values stored in the ledger**.
+ * Letting them reach the savings base would be putting a price into the income
+ * tax without touching `prices.ts` at all, and no architecture test would see
+ * it, because a filing is an ordinary event.
  *
  * So the proof by deletion grows: deleting every price **and every 720 and 721
  * filed** leaves the report and the layout by box identical byte for byte. And
@@ -349,7 +349,7 @@ describe("proof 1 bis: the return reads no price, with the 720 inside", () => {
    * return, and deleting four lines of the ledger necessarily moves them: the
    * fingerprint of a filed return covers the lines that precede it, so it stops
    * verifying, and with it goes the decomposition of the difference into its
-   * causes, which needs that prefix to be readable (plan §1.7).
+   * causes, which needs that prefix to be readable.
    *
    * They are normalised here and **only** here, and what they hide is checked
    * separately below: the three figures of the comparison —what was declared,
@@ -367,7 +367,7 @@ describe("proof 1 bis: the return reads no price, with the 720 inside", () => {
     return JSON.stringify({
       ...report,
       // And the note that says **why** the prefix is not verified, which is
-      // the same file fact seen from the report (feature 011, block 8).
+      // the same file fact seen from the report.
       notes: (report.notes as { code: string }[]).filter(
         (entry) => entry.code !== "tax_filing_prefix_unverified",
       ),

@@ -1,10 +1,9 @@
-// The web of the phone downloads the ECB history **from the cloud**: an origin next to the copy imported by
-// hand. With the session of this browser it reads
-// `manifest.json` from our own API — `If-None-Match` on the version it holds
-// — and the file in force, **checks its SHA-256 against the manifest**, and
-// keeps it as the imported copy is kept, marked as from the cloud. A file
-// that does not match is **not used**, and said; one that changes a rate the
-// copy held already is **not kept** (ADR-0029, point 2), as with an import.
+// The web of the phone downloads the ECB history **from the cloud**: an origin next to the copy
+// imported by hand. With the session of this browser it reads `manifest.json` from our own API —
+// `If-None-Match` on the version it holds — and the file in force, **checks its SHA-256 against the
+// manifest**, and keeps it as the imported copy is kept, marked as from the cloud. A file that does
+// not match is **not used**, and said; one that changes a rate the copy held already is **not
+// kept** (ADR-0029, point 2), as with an import.
 //
 // **Only when the user asks or opens the card of the ECB**: nothing here runs
 // at start or on a timer. It travels in the lazy section of

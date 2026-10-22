@@ -1,11 +1,9 @@
-// What the orders of administration need from outside the process, replaced
-// in tests: the clients of the data bucket and of SSM of one
-// environment, **with the role of administration** from the standard chain of
-// the SDK, and the configuration of `~/.config/atlas/admin.json` that names
-// where each environment lives. No credential is read or
-// written here: the chain of the SDK takes them from a session of
-// `atlas-<env>-admin` already opened with MFA (`aws sso login`, or `aws configure export-credentials`), and the console never keeps
-// them.
+// What the orders of administration need from outside the process, replaced in tests: the clients
+// of the data bucket and of SSM of one environment, **with the role of administration** from the
+// standard chain of the SDK, and the configuration of `~/.config/atlas/admin.json` that names where
+// each environment lives. No credential is read or written here: the chain of the SDK takes them
+// from a session of `atlas-<env>-admin` already opened with MFA (`aws sso login`, or `aws configure
+// export-credentials`), and the console never keeps them.
 
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";

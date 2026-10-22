@@ -26,7 +26,8 @@ const compact = (value: number): string => {
   if (abs >= 1_000) {
     return `${formatDecimalString((value / 1_000).toFixed(0), { decimals: 0 })} k€`;
   }
-  // With its unit, as every amount: «400, 0, −200» alone did not say euros. The space before it does not break.
+  // With its unit, as every amount: «400, 0, −200» alone did not say euros. The space before it
+  // does not break.
   return `${formatDecimalString(value.toFixed(0), { decimals: 0 })}${NBSP}€`;
 };
 

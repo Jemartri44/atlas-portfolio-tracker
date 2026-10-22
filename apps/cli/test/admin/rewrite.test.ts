@@ -1,8 +1,7 @@
-// Feature 015, E5: the two rewrites of the remote — `atlas admin compact` and
-// `atlas admin restore` (ADR-0026, Part A; ADR-0032) — against the double of
-// S3. Neither is refused for a queue (ADR-0035, E4), both
-// archive before writing and never delete, and both write on the condition of
-// the remote they read. The restore walks its six steps in order.
+// The two rewrites of the remote — `atlas admin compact` and `atlas admin restore` (ADR-0026, Part
+// A; ADR-0032) — against the double of S3. Neither is refused for a queue (ADR-0035), both archive
+// before writing and never delete, and both write on the condition of the remote they read. The
+// restore walks its six steps in order.
 
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

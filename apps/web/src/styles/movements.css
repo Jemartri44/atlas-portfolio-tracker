@@ -1,7 +1,6 @@
 /*
- * The movements (docs/design/system.md §7.3): the filters in two shapes (D12),
- * the list grouped by day, and the detail that opens with one sentence and
- * sets its data in two columns.
+ * The movements (docs/design/system.md §7.3): the filters in two shapes, the list grouped by day,
+ * and the detail that opens with one sentence and sets its data in two columns.
  */
 
 /* ---- Filters: folded on a phone, a column beside the table on a desk ---- */
@@ -40,9 +39,8 @@
 }
 
 /*
- * The folded bar on a wide row (a tablet, 1024–1279px): the filters side by
- * side in columns of a readable width, never one select stretched to the whole
- * row — they measured 1.000px at 1100 (third pass of the review of 2026-09-19).
+ * The folded bar on a wide row (a tablet, 1024–1279px): the filters side by side in columns of a
+ * readable width, never one select stretched to the whole row — they measured 1.000px at 1100.
  */
 @media (min-width: 40rem) {
   .filters-bar > .field {

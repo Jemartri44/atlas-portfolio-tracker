@@ -1,7 +1,7 @@
-// The reference data of the bucket, read only (`docs/api.md` §6): `reference/ecb/` and `prices/`, and
-// nothing else. The routes of the API get this and never the whole
-// `ObjectStore`, so no route can write, or read outside those two prefixes,
-// even by mistake: a key elsewhere is refused before S3 is asked.
+// The reference data of the bucket, read only (`docs/api.md` §6): `reference/ecb/` and `prices/`,
+// and nothing else. The routes of the API get this and never the whole `ObjectStore`, so no route
+// can write, or read outside those two prefixes, even by mistake: a key elsewhere is refused before
+// S3 is asked.
 
 import type { ListedObject, ObjectStore, StoredObject } from "./object-store.js";
 

@@ -41,8 +41,8 @@ export interface WebQuotes {
    */
   readonly mismatched: readonly MismatchedCloses[];
   /**
-   * Why the currency of the closes could not be checked, said and never silent: no `symbols.json` beside them
-   * (the closes are used as they are), or one that does not read (none used).
+   * Why the currency of the closes could not be checked, said and never silent: no `symbols.json`
+   * beside them (the closes are used as they are), or one that does not read (none used).
    */
   readonly symbols?: SymbolsProblem;
   /** What the screens say of `symbols`, here and not in a module of its own (the boot). */
@@ -127,7 +127,7 @@ export const loadWebQuotes = async (assetIds: readonly AssetId[]): Promise<WebQu
   }
 };
 
-/** The quotes of `state` for the gate; without closes, the ECB rates of the cash (2026-09-27). */
+/** The quotes of `state` for the gate; without closes, the ECB rates of the cash. */
 export const externalOf = (
   quotes: WebQuotes | undefined,
   state: LedgerState,

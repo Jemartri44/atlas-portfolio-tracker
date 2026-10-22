@@ -1,8 +1,7 @@
 // @vitest-environment happy-dom
 //
-// The condition the direction attached to Q5: **the axis of a chart is an
-// amount for every purpose**, so with the privacy mode on there can be no
-// absolute figure anywhere on it.
+// **The axis of a chart is an amount for every purpose**, so with the privacy mode on there can be
+// no absolute figure anywhere on it.
 //
 // What is rendered here is everything of a chart that is DOM — the legend and
 // the equivalent table — plus the two formatters the canvas asks for, which is

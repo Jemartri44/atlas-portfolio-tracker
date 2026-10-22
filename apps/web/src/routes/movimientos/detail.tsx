@@ -1,12 +1,11 @@
 // "¿Qué dice exactamente este movimiento y sigue vigente?"
 //
-// It opens with one sentence — what happened, for how much, when and where —
-// and then every field with a legible name, the state in words, the linked
-// movements as rows and the identifier ready to copy in the folded technical
-// record, which is what `atlas edit` or `atlas delete` need from a terminal
-// (FR-040, docs/design/system.md §7.3). Rectifying lives here too, because this
-// is where the user realises something is wrong: «Corregir» is secondary and
-// «Anular» destructive, never the look of a main action.
+// It opens with one sentence — what happened, for how much, when and where — and then every field
+// with a legible name, the state in words, the linked movements as rows and the identifier ready to
+// copy in the folded technical record, which is what `atlas edit` or `atlas delete` need from a
+// terminal (docs/design/system.md §7.3). Rectifying lives here too, because this is where the user
+// realises something is wrong: «Corregir» is secondary and «Anular» destructive, never the look of
+// a main action.
 
 import { ledgerEntries } from "@atlas/domain";
 import type { ClosedYearImpact } from "@atlas/domain/fiscal";
@@ -45,13 +44,12 @@ export default function MovimientoDetalleRoute(): JSX.Element {
   >([]);
 
   /**
-   * Which filed returns this annulment would reach, computed **before** the
-   * dialog opens: it is the only moment it is useful (FR-018), and a warning
-   * that arrives a tick after the question is a warning the user has already
-   * read past. It used to be fired with `void … .then(…)`, so at the instant
-   * the dialog appeared it was not there yet, and a rejection that was not a
-   * `DomainError` ended in a broken promise with nothing on screen. The other
-   * three writes of the application await it; this one does too now.
+   * Which filed returns this annulment would reach, computed **before** the dialog opens: it is the
+   * only moment it is useful, and a warning that arrives a tick after the question is a warning the
+   * user has already read past. It used to be fired with `void … .then(…)`, so at the instant the
+   * dialog appeared it was not there yet, and a rejection that was not a `DomainError` ended in a
+   * broken promise with nothing on screen. The other three writes of the application await it; this
+   * one does too now.
    *
    * The reason does not change a figure, so the candidate is built with a
    * placeholder when the field is still empty.

@@ -1,5 +1,5 @@
-// The bucket against the index in percent (feature 020, E4, M7): the points of
-// `bucketIndexSeries` over what was contributed to the bucket by each date.
+// The bucket against the index in percent: the points of `bucketIndexSeries` over what was
+// contributed to the bucket by each date.
 
 import { describe, expect, it } from "vitest";
 import { bucketIndexPctSeries } from "../../src/charts.js";

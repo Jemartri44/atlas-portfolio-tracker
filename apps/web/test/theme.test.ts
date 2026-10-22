@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 //
-// A theme forced against the system paints the phone's browser bar too: it
-// stayed white over a dark page (second pass of the review of 2026-09-19).
+// A theme forced against the system paints the phone's browser bar too: it stayed white over a dark
+// page.
 
 import { afterEach, describe, expect, it } from "vitest";
 import { applyTheme } from "../src/shell/theme.js";

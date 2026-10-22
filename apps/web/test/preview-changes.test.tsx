@@ -115,7 +115,7 @@ describe("what changes, on the preview of a purchase", () => {
     const cash = section("Efectivo");
     expect(text(cash?.querySelector(".change-name"))).toContain("Fondos indexados · EUR");
     expect(cash?.querySelectorAll(".change .mask")).toHaveLength(2);
-    // A masked quantity keeps its unit (D2): what kind of figure, never how big.
+    // A masked quantity keeps its unit: what kind of figure, never how big.
     const units = [...(section("Posiciones")?.querySelectorAll(".mask .unit") ?? [])].map(text);
     expect(units).toEqual(["part.", "part."]);
     // Not one quantity of the data with the mask on: they were painted raw

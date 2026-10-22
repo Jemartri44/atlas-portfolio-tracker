@@ -1,5 +1,4 @@
-// When the fiscal card of the summary goes to the top (feature 010, blocks 3
-// and 4; prompt P1, question Q11).
+// When the fiscal card of the summary goes to the top.
 //
 // Two independent triggers and not one: the income tax season **or** something
 // of the 720 or the 721 to do. The deadline of the 720 is January to March,
@@ -102,10 +101,9 @@ describe("the income tax season", () => {
 
 describe("something of the informative returns to do", () => {
   it("says in January that there is nothing to value it with, and no longer raises the card", () => {
-    // Out of season, and with securities abroad that cannot be valued: the
-    // verdict is "cannot be determined" and that **is** something to do. Since
-    // feature 020 (E2, M2) it is said in *Atención*, not by raising the card:
-    // what is pending still comes out, only the place changes.
+    // Out of season, and with securities abroad that cannot be valued: the verdict is "cannot be
+    // determined" and that **is** something to do. It is said in *Atención*, not by raising the
+    // card: what is pending still comes out, only the place changes.
     const attention = fiscalAttention(abroad(false).build(), "2028-01-20");
     expect(attention.season).toBe(false);
     expect(attention.todo).toEqual([

@@ -1,5 +1,4 @@
-// The verdict of a category of the Modelo 720, edge by edge (feature 010,
-// block 3; decision (h) of the prompt).
+// The verdict of a category of the Modelo 720, edge by edge.
 //
 // The rule that governs all of it: **never "not obliged" with incomplete
 // data**. Saying there is nothing to file when there is has consequences;
@@ -165,9 +164,9 @@ describe("what happens when a value is not there", () => {
   });
 
   it("does not blame a marked value for a verdict that did not need it", () => {
-    // 30.000,00 dated the 30th, and 60.000,00 of a security valued on the 31st:
-    // the category obliges on the second alone, so the marked one decided
-    // nothing and the output must not say it did (S16).
+    // 30.000,00 dated the 30th, and 60.000,00 of a security valued on the 31st: the category
+    // obliges on the second alone, so the marked one decided nothing and the output must not say it
+    // did.
     const category = categoryOf(
       report({ unit: "300", date: "2027-12-30", second: "600" }),
       "securities",

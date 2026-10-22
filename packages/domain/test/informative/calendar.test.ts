@@ -1,5 +1,4 @@
-// The fiscal calendar (feature 020, E4, M12): what it asks of the domain and
-// what it must never say.
+// The fiscal calendar: what it asks of the domain and what it must never say.
 
 import { describe, expect, it } from "vitest";
 import { nextWorkingDay } from "../../src/dates/civil-date.js";

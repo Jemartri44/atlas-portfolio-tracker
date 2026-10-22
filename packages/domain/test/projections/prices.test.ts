@@ -110,9 +110,9 @@ describe("manualPrices", () => {
 });
 
 /**
- * The single gate (prompt §3.0 ter). Phase 4 will pass `external`; today nobody
- * does, and the precedence is written here so it cannot drift: the manual price
- * is a decision of the user, the automatic one a convenience (constitution I).
+ * The single gate. Phase 4 will pass `external`; today nobody does, and the
+ * precedence is written here so it cannot drift: the manual price is a decision
+ * of the user, the automatic one a convenience (constitution I).
  */
 describe("priceAt: the single gate", () => {
   const quotes: ExternalPrices = {
@@ -161,10 +161,10 @@ describe("priceAt: the single gate", () => {
   });
 
   /**
-   * P2 (ADR-0031, second amendment; it replaces decision (j) of prompt 005 for
-   * showing a value only): the more recent date wins, and an old valuation no
-   * longer hides every close after it. The Modelo 720 does not come through
-   * here (`informative/valuation.test.ts` and the fiscal-output test hold it).
+   * ADR-0031 (second amendment, for showing a value only): the more recent date
+   * wins, and an old valuation no longer hides every close after it. The Modelo
+   * 720 does not come through here (`informative/valuation.test.ts` and the
+   * fiscal-output test hold it).
    */
   it("lets a more recent quote win over an older valuation, and not the other way round", () => {
     const b = withPrices();
@@ -210,9 +210,9 @@ describe("priceAt: the single gate", () => {
   });
 
   /**
-   * Review of PR #78: among the prices with a value in euros. A newer quote
-   * without one never covers a valuation that has it; it travels as
-   * information. And a quote that brings its own usable fallback keeps it.
+   * Among the prices with a value in euros, a newer quote without one never
+   * covers a valuation that has it; it travels as information. And a quote that
+   * brings its own usable fallback keeps it.
    */
   it("never lets a newer quote without euros cover a price that has them", () => {
     const b = withPrices();
@@ -272,8 +272,8 @@ describe("priceAt: the single gate", () => {
   });
 
   it("carries the newest quote even when the one with euros is older than the valuation", () => {
-    // The case of the reviewer: a valuation on 2027-01-04, the last close that
-    // converts on 2026-12-31 and a close without a rate on 2027-01-06.
+    // A valuation on 2027-01-04, the last close that converts on 2026-12-31 and
+    // a close without a rate on 2027-01-06.
     const b = withPrices();
     b.valuation({
       account_id: "acc_fund",
@@ -333,8 +333,8 @@ describe("priceAt: the single gate", () => {
   });
 
   /**
-   * §6.4 (i): a quote whose ECB rate could not be resolved is shown in its
-   * currency, without a value in euros, and nothing adds it up.
+   * A quote whose ECB rate could not be resolved is shown in its currency,
+   * without a value in euros, and nothing adds it up.
    */
   it("keeps a quote without a rate, in its currency and without a value in euros", () => {
     const withoutRate: ExternalPrices = {
@@ -400,7 +400,7 @@ describe("the date of the rate, which is not the date of the price", () => {
     // 31 December 2028 falls on a Sunday, so the ECB rate a valuation of that
     // day applies is the one of Friday the 29th. The gate used to date the
     // rate with the day of the price, and the Modelo 720 has to be able to say
-    // which rate was applied (feature 010, block 3).
+    // which rate was applied.
     const b = withPrices();
     b.valuation({
       account_id: "acc_etf",

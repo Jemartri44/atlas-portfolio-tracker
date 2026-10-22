@@ -1,6 +1,6 @@
-// "¿Hay algo que hacer?" — every active warning, ordered by importance, each
-// one saying what happens and leading to where it is fixed (FR-034). When there
-// is nothing, it says so calmly instead of inventing a card.
+// "¿Hay algo que hacer?" — every active warning, ordered by importance, each one saying what
+// happens and leading to where it is fixed. When there is nothing, it says so calmly instead of
+// inventing a card.
 //
 // The order and the grouping are decided in `view-models/attention.ts`; here
 // they are only painted, with the one notice of the whole application and its

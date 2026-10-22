@@ -1,5 +1,5 @@
 // What the engine **substitutes**, the engine says — and it says **all** of it
-// (ADR-0020, ADR-0024; feature 011, block 6).
+// (ADR-0020, ADR-0024).
 //
 // When a return is on record the chain replaces the pending losses it computed
 // with the ones that return declared, and carries on from there. That is the

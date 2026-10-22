@@ -1,10 +1,7 @@
-// The Modelo 720 at 31/12/2027, **worked out by hand** (feature 010, §6.1 of
-// `specs/010-tax-output/questions.md (in git history)`).
+// The Modelo 720 at 31/12/2027, **worked out by hand**.
 //
-// The literals below are copied from that document, which was committed on
-// 2026-09-19, before a line of this module existed. Any discrepancy is
-// investigated and written down there, and the literal is not touched until it
-// is clear who was right.
+// The literals below were calculated before the module existed. Any discrepancy is investigated,
+// and the literal is not touched until it is clear who was right.
 //
 // The configuration is written out in full — the three thresholds of the model
 // among them — because a hand calculation that borrows a default from the code
@@ -44,7 +41,7 @@ const itemOf = (category: InformativeCategory, account: string, asset?: string) 
     (item) => item.account_id === account && item.asset_id === asset,
   ) as InformativeCategory["items"][number];
 
-/** The ledger of §6.1: two Irish accounts, one Spanish, and 31/12/2027 a Friday. */
+/** The ledger: two Irish accounts, one Spanish, and 31/12/2027 a Friday. */
 const ledger = (): LedgerBuilder => {
   const b = new LedgerBuilder();
   b.settings(SETTINGS);

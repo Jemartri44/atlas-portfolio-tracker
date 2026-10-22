@@ -1,9 +1,8 @@
-// The alternative of `docs/runbooks/revoke-all-tokens.md` with the AWS CLI
-// (feature 015, E5; review of PR #98, N3): its two blocks, **exactly as the
-// runbook has them**, run by `dash` — the `sh` of Ubuntu, whose `echo` reads
-// `\` and `\n` — against a simulated `aws` on the PATH. No AWS is reached.
-// What it writes must be the bytes the API writes (`revokedRecord`,
-// `serializeTokenRecord`), and what cannot be read must be counted.
+// The alternative of `docs/runbooks/revoke-all-tokens.md` with the AWS CLI: its two blocks,
+// **exactly as the runbook has them**, run by `dash` — the `sh` of Ubuntu, whose `echo` reads `\`
+// and `\n` — against a simulated `aws` on the PATH. No AWS is reached. What it writes must be the
+// bytes the API writes (`revokedRecord`, `serializeTokenRecord`), and what cannot be read must be
+// counted.
 
 import { execFileSync } from "node:child_process";
 import {

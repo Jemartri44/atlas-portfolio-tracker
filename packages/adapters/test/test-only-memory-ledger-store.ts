@@ -96,7 +96,7 @@ export class MemoryLedgerStore implements LedgerStore {
   /**
    * The archive name is checked as the file and browser stores check it: a
    * name with a separator would write outside `archive/` there, and the three
-   * stores pass the same contract (feature 014, V13).
+   * stores pass the same contract.
    */
   private put(lines: string[], etag: string, archiveName: string): { etag: string } {
     if (archiveName.length === 0 || /[/\\]/.test(archiveName)) {

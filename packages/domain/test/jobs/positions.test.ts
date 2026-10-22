@@ -1,8 +1,6 @@
-// Feature 016, E4 (plan §8; data-model §4): `positions.json` of the monthly
-// dump — the valued projection, readable without the application. The two
-// books apart and never added up (constitution III), amounts as decimal
-// strings (ADR-0005), and a position without a price said as such, never as
-// a zero (constitution V).
+// `positions.json` of the monthly dump — the valued projection, readable without the application.
+// The two books apart and never added up (constitution III), amounts as decimal strings (ADR-0005),
+// and a position without a price said as such, never as a zero (constitution V).
 
 import { describe, expect, it } from "vitest";
 import { positionsDocument, serializePositions } from "../../src/jobs/positions.js";

@@ -1,8 +1,8 @@
-// The parameters of SSM `atlas admin secrets` creates and rotates (ADR-0034, row 21, `docs/api.md` §9): every `SecureString` of `/atlas/<env>/` except the
-// records of the device tokens (the API writes those), and the `String` of the
-// client of Google. **Never `mail/recipient` nor `mail/amounts`**: those are
-// Terraform's (ADR-0034, row 12). The pure part: names, kinds, how each value
-// is checked. Nothing here reads or prints a value.
+// The parameters of SSM `atlas admin secrets` creates and rotates (ADR-0034, row 21, `docs/api.md`
+// §9): every `SecureString` of `/atlas/<env>/` except the records of the device tokens (the API
+// writes those), and the `String` of the client of Google. **Never `mail/recipient` nor
+// `mail/amounts`**: those are Terraform's (ADR-0034, row 12). The pure part: names, kinds, how each
+// value is checked. Nothing here reads or prints a value.
 
 import type { SecretKind } from "@atlas/adapters/aws";
 import { DomainError } from "@atlas/domain";

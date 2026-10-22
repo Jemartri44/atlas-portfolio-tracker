@@ -1,8 +1,8 @@
-// How the tasks of the mail function send: the `Notifier` of
-// the function — only the mail family has one — and its origin, the
-// one link a mail may carry. And **at most once** for a periodic warning: the record is marked `sending` right before the mail goes, so a
-// cut after that is closed as unknown and never sent again. Nothing here
-// reads the switch of the amounts nor reaches a price.
+// How the tasks of the mail function send: the `Notifier` of the function — only the mail family
+// has one — and its origin, the one link a mail may carry. And **at most once** for a periodic
+// warning: the record is marked `sending` right before the mail goes, so a cut after that is closed
+// as unknown and never sent again. Nothing here reads the switch of the amounts nor reaches a
+// price.
 
 import type { MailMessage, Notifier } from "@atlas/domain/jobs";
 import type { TaskContext, TaskResult } from "../run.js";

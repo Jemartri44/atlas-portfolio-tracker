@@ -271,14 +271,13 @@ export const dispatchFindings: TaskRunner = async (context): Promise<TaskResult>
 };
 
 /**
- * The weekly review (`docs/specification.md` §9.5): the deviations of the
- * core above `deviation_threshold_pp` and rules 17 and 18 of the bucket,
- * valued with the closes of the cloud as the web values them (informative:
- * nothing fiscal). **Only when a threshold is passed**; at most
- * once, and never for a week gone (the handler closes it `expired`). A ledger that could not be read now closes the run
- * `failed` and the next day tries again; on the last day of the period it is
- * said, with its code. A ledger that is wrong sends nothing here:
- * the monthly reminder and the integrity say it.
+ * The weekly review (`docs/specification.md` §9.5): the deviations of the core above
+ * `deviation_threshold_pp` and rules 17 and 18 of the bucket, valued with the closes of the cloud
+ * as the web values them (informative: nothing fiscal). **Only when a threshold is passed**; at
+ * most once, and never for a week gone (the handler closes it `expired`). A ledger that could not
+ * be read now closes the run `failed` and the next day tries again; on the last day of the period
+ * it is said, with its code. A ledger that is wrong sends nothing here: the monthly reminder and
+ * the integrity say it.
  */
 export const weeklyReview: TaskRunner = async (context): Promise<TaskResult> => {
   const last = lastDayOfWindow(

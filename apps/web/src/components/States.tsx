@@ -1,7 +1,6 @@
-// The states that are not a list of data (docs/design/system.md §5.7–5.8,
-// §5.16): what cannot be computed **yet**, what is empty, and what is loading.
-// None of them is ever a blank page (FR-019), and none of them wears the tone
-// of an error: a price that has not been recorded is the normal state of a
+// The states that are not a list of data (docs/design/system.md §5.7–5.8, §5.16): what cannot be
+// computed **yet**, what is empty, and what is loading. None of them is ever a blank page, and none
+// of them wears the tone of an error: a price that has not been recorded is the normal state of a
 // ledger priced by hand.
 
 import { A } from "@solidjs/router";

@@ -2,10 +2,9 @@
 // `jobs/<family>/<task>/<period>.json`, written **only** by the function of its
 // family. A job runs more than once: EventBridge Scheduler retries an
 // invocation, Lambda retries an asynchronous one that fails and may deliver the
-// same event twice. So each job **claims** its period
-// with `If-None-Match: *` before doing anything and **closes** it with
-// `If-Match`, and what a retry does in each state is decided here, by the
-// delivery of the job:
+// same event twice. So each job **claims** its period with `If-None-Match: *`
+// before doing anything and **closes** it with `If-Match`, and what a retry
+// does in each state is decided here:
 //
 //   none          claim, do
 //   claimed       do again (nothing was sent, or it is the reminder) — unless

@@ -7,8 +7,8 @@
 // build if they land there). The card paints its skeleton, this arrives, and
 // the card fills in.
 //
-// **The domain decides what is pending and whether it is urgent**: a rule about when a return is due is a fiscal rule, not a rule of the
-// web. What is added here is the Spanish.
+// **The domain decides what is pending and whether it is urgent**: a rule about when a return is
+// due is a fiscal rule, not a rule of the web. What is added here is the Spanish.
 
 import type { LedgerEvent } from "@atlas/domain";
 import {

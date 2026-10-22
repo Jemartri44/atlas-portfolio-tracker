@@ -9,7 +9,7 @@ describe("the local configuration (atlas.config.json)", () => {
       lock_stale_minutes: 10,
       token_expiry_warning_days: 14,
     });
-    // Feature 015, E2: when the console warns that its token expires (plan §6.2 (e)).
+    // When the console warns that its token expires.
     expect(parseLocalConfig('{"token_expiry_warning_days": 3}').token_expiry_warning_days).toBe(3);
     expect(parseLocalConfig('{"lock_stale_minutes": 3}')).toEqual({
       ...DEFAULT_LOCAL_CONFIG,

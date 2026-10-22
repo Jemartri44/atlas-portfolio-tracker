@@ -1,9 +1,8 @@
-// atlas admin devices | revoke-all-tokens | forget-device | compact | restore
-// | prices push --env <e> (ADR-0026, Part A, ADR-0032, ADR-0033, point 8): operations of administration **over the copy
-// of reference**, with the short-lived credentials of the role
-// `atlas-<env>-admin` (the standard chain of the SDK) — **never with the
-// token of a device and never through the API**, which only appends. Nothing
-// of this is reachable from `apps/api` (architecture test).
+// atlas admin devices | revoke-all-tokens | forget-device | compact | restore | prices push --env
+// <e> (ADR-0026, Part A, ADR-0032, ADR-0033, point 8): operations of administration **over the copy
+// of reference**, with the short-lived credentials of the role `atlas-<env>-admin` (the standard
+// chain of the SDK) — **never with the token of a device and never through the API**, which only
+// appends. Nothing of this is reachable from `apps/api` (architecture test).
 
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -155,7 +154,8 @@ const revokeAllOrder = async (ctx: Context, clients: AdminClients): Promise<numb
           ]),
     ].join("\n"),
   );
-  // Revoking **all** is not done while a record could not be read: a console older than the API may not understand a live one.
+  // Revoking **all** is not done while a record could not be read: a console older than the API may
+  // not understand a live one.
   return done.unreadable.length === 0 ? EXIT.ok : EXIT.domain;
 };
 
@@ -460,7 +460,8 @@ const pricesPushOrder = async (
     );
     return EXIT.ok;
   }
-  // What it replaces, to recover it from the versions of the bucket: its ETag, and its version when the bucket says it.
+  // What it replaces, to recover it from the versions of the bucket: its ETag, and its version when
+  // the bucket says it.
   const replaced =
     remote === undefined
       ? []

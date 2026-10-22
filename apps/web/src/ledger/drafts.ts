@@ -1,5 +1,5 @@
-// Saving an operation as a draft, and confirming one, from the forms. Apart from `draft-store.ts` so that the counter of the
-// frame does not carry the write flows with it.
+// Saving an operation as a draft, and confirming one, from the forms. Apart from `draft-store.ts`
+// so that the counter of the frame does not carry the write flows with it.
 //
 // The rules are the domain's (`preparePendingDraft`, `recordPendingDraft`): only
 // an operation whose ECB rate is not published yet, checked by the ledger's own

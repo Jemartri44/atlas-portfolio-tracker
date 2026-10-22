@@ -117,9 +117,9 @@ export const warnRepurchase = (
  * so "still held" is "still has an open lot of this asset".
  *
  * And it says **how much of it** is still held, in today's units: the sum of
- * those open lots (fiscal review 7a). What was bought is not what
- * is left after a reverse split, nor after a sale that consumed part of it. A
- * purchase noted once per account (a grant with a cost) is named once.
+ * those open lots. What was bought is not what is left after a reverse split,
+ * nor after a sale that consumed part of it. A purchase noted once per account
+ * (a grant with a cost) is named once.
  */
 export const warnPriorBuys = (
   state: LedgerState,

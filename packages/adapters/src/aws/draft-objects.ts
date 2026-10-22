@@ -1,6 +1,6 @@
-// The drafts of the cloud, as the API reaches them (ADR-0035, `docs/api.md` §6.1): `drafts/` and nothing else, **read, create and list —
-// never overwrite, never delete**. The routes get this and never the whole
-// `ObjectStore`, so no route can touch another key, or write a key twice, by
+// The drafts of the cloud, as the API reaches them (ADR-0035, `docs/api.md` §6.1): `drafts/` and
+// nothing else, **read, create and list — never overwrite, never delete**. The routes get this and
+// never the whole `ObjectStore`, so no route can touch another key, or write a key twice, by
 // mistake. Every key is one of the three a draft has (`ecb/cloud-drafts.ts`).
 
 import { DRAFTS_PREFIX, parseDraftName } from "@atlas/domain/ecb";

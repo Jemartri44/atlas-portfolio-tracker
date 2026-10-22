@@ -1,7 +1,6 @@
-// atlas tax <año>: a console that only formats what the domain computed
-// (feature 009, decision (h)). The figures it prints are checked against
-// hand-worked literals in tax-figures.test.ts; here, that every section is
-// there, that nothing is lost in --json, and that the refusals speak Spanish.
+// atlas tax <año>: a console that only formats what the domain computed. The figures it prints are
+// checked against hand-worked literals in tax-figures.test.ts; here, that every section is there,
+// that nothing is lost in --json, and that the refusals speak Spanish.
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -65,11 +64,10 @@ describe("atlas tax", () => {
   });
 
   /**
-   * "Checked and it moves nothing" is information, and it is the same argument
-   * that split the settled criteria from the doubtful ones instead of
-   * filtering them (feature 010, block 2). A year where no settled criterion
-   * moves anything has to **say so**, in both interfaces; what it printed was
-   * the headings of a table with no rows under them.
+   * "Checked and it moves nothing" is information, and it is the same argument that split the
+   * settled criteria from the doubtful ones instead of filtering them. A year where no settled
+   * criterion moves anything has to **say so**, in both interfaces; what it printed was the
+   * headings of a table with no rows under them.
    */
   it("says that no settled criterion moves anything, instead of empty headings", async () => {
     const h = golden();

@@ -174,8 +174,8 @@ describe("FileLedgerStore", () => {
   });
 });
 
-// The advisory lock of the folder (ADR-0026, Part B; prompt 012, block 0).
-// Each case names the mutant of prompt 012 §5 it kills.
+// The advisory lock of the folder (ADR-0026, Part B). Each case title says the fault it
+// catches.
 describe("FileLedgerStore: the folder lock", () => {
   const lockPath = (dir: string): string => join(dir, LOCK_FILE);
   const foreignLock = (since: string): string =>

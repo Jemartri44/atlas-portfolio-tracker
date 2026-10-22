@@ -9,10 +9,10 @@
 // but not the Tab key. Settings are not a destination: they live in the status
 // area of the header, touched once a month.
 //
-// A destination is current on its own page **and on every page under it**: the
-// detail of a movement, its correction or a form of Registrar still belong to
-// their section, and the bar has to say where the user is. The router only marks the exact page, so the mark is ours. The
-// links are plain anchors, which the router still handles.
+// A destination is current on its own page **and on every page under it**: the detail of a
+// movement, its correction or a form of Registrar still belong to their section, and the bar has to
+// say where the user is. The router only marks the exact page, so the mark is ours. The links are
+// plain anchors, which the router still handles.
 
 import { useLocation } from "@solidjs/router";
 import { For, type JSX } from "solid-js";

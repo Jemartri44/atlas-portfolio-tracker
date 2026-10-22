@@ -1,8 +1,8 @@
-// The ECB history of the bucket as the jobs read it: its
-// manifest and the file in force, read **only** through the `ReferenceReader`, and the file used **only if its bytes are the ones its manifest
-// records** — never as if they were (`EcbHistoryDamaged`). Nothing of
-// `prices/`: the income tax of January reads this (the notes of the ECB check,
-// as `atlas tax` does) and must not reach a price (`tests/jobs-access.test.ts`).
+// The ECB history of the bucket as the jobs read it: its manifest and the file in force, read
+// **only** through the `ReferenceReader`, and the file used **only if its bytes are the ones its
+// manifest records** — never as if they were (`EcbHistoryDamaged`). Nothing of `prices/`: the
+// income tax of January reads this (the notes of the ECB check, as `atlas tax` does) and must not
+// reach a price (`tests/jobs-access.test.ts`).
 
 import {
   decodeUtf8Strict,
@@ -30,11 +30,11 @@ export const textOf = (bytes: Uint8Array): string | undefined => {
 };
 
 /**
- * What the bucket holds of the history of the ECB: **none at all** (no manifest), a history in force whose bytes are
- * the ones its manifest records, or one that is **damaged** — a manifest that
- * does not read, a file that is missing, does not match it or is not a
- * history, as an update cut halfway leaves it until the next run undoes it.
- * Damaged is never «none». **A read that fails throws**: it is neither.
+ * What the bucket holds of the history of the ECB: **none at all** (no manifest), a history in
+ * force whose bytes are the ones its manifest records, or one that is **damaged** — a manifest that
+ * does not read, a file that is missing, does not match it or is not a history, as an update cut
+ * halfway leaves it until the next run undoes it. Damaged is never «none». **A read that fails
+ * throws**: it is neither.
  */
 export type CloudEcbRead =
   | { readonly kind: "absent" }

@@ -2,10 +2,9 @@
 // §7.3): «Compraste 31,2343 participaciones de Money Market Fund por 3.100,00 €
 // el 03/09/2026 · Fondos indexados».
 //
-// Told from the fields of the event as recorded, never computed: the amount is
-// the one written, not a quantity times a price. Its figures are parts for
-// `Amount`, so the privacy mode masks them inside the sentence and keeps their
-// unit, as everywhere else (D2).
+// Told from the fields of the event as recorded, never computed: the amount is the one written, not
+// a quantity times a price. Its figures are parts for `Amount`, so the privacy mode masks them
+// inside the sentence and keeps their unit, as everywhere else.
 //
 // The same switch tells what is about to be recorded, over the effect of a
 // form: «Vas a registrar la compra de…».

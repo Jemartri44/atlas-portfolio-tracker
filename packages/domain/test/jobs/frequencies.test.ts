@@ -1,5 +1,5 @@
-// Feature 016, E1 (R9, §8.1 P5): `job_frequencies`, read tolerantly and
-// written strictly, with the monthly reminder that cannot be switched off.
+// `job_frequencies`, read tolerantly and written strictly, with the monthly reminder that cannot be
+// switched off.
 
 import { describe, expect, it } from "vitest";
 import { frequencyOf, JOB_TASKS, type JobTask } from "../../src/jobs/catalog.js";
