@@ -92,6 +92,19 @@ describe("GET /api/ledger (§5.1)", () => {
     expect(answer.headers.etag).toBe(`"${sha(bytes)}"`);
   });
 
+  it("keeps a leading byte-order mark, so the ETag still matches the body", async () => {
+    const api = setup();
+    const { token } = await credentials(api);
+    const bytes = new Uint8Array([0xef, 0xbb, 0xbf, ...Buffer.from(textOf([lineOf(account)]))]);
+    api.s3.seedBytes(LEDGER, bytes);
+    const answer = await read(api, token, "/api/ledger");
+    const served = answer.isBase64Encoded
+      ? Buffer.from(answer.body, "base64")
+      : Buffer.from(answer.body);
+    expect([...served]).toEqual([...bytes]);
+    expect(answer.headers.etag).toBe(`"${sha(bytes)}"`);
+  });
+
   it("logs the public id of the token on a route of the sync, and nothing of the session", async () => {
     const api = setup();
     const both = await credentials(api);

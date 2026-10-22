@@ -86,7 +86,7 @@ export const bytes = (
 ): FunctionUrlResult => {
   let text: string | undefined;
   try {
-    text = decodeUtf8Strict(body, false);
+    text = decodeUtf8Strict(body, true);
   } catch {
     text = undefined;
   }
