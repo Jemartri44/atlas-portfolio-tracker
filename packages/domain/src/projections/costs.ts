@@ -8,7 +8,7 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
-import { Money } from "../money/money.js";
+import { EUR, Money } from "../money/money.js";
 import { Price } from "../money/price.js";
 import { Quantity } from "../money/quantity.js";
 import type {
@@ -29,8 +29,6 @@ import type { LedgerState } from "./state.js";
 import { coreAccountIds, coreQuantityOf } from "./weights.js";
 
 const HUNDRED = Decimal.parse("100");
-const EUR = "EUR";
-
 export interface CoreCostRow {
   asset_id: AssetId;
   asset_class: AssetClass;

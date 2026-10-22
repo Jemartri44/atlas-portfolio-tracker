@@ -7,7 +7,7 @@
 // The next run **undoes** it when `previous/` holds exactly what the manifest
 // records, and says the history damaged otherwise, writing nothing.
 
-import type { ActiveHistory } from "./ecb-manifest.js";
+import type { ActiveHistory } from "../ecb/manifest.js";
 
 export type EcbRecovery =
   | { readonly kind: "none" }

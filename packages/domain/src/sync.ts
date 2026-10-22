@@ -32,7 +32,6 @@ export {
 export { initRefusal } from "./sync/init-refusal.js";
 export { EMPTY_ETAG, linesOfText, textOfLines } from "./sync/lines.js";
 export { type Refusal, RefusedError } from "./sync/permission.js";
-export { type ReapplyBase, type ReapplyOutcome, reapplyUnits } from "./sync/reapply.js";
 export {
   type AppendAcceptance,
   acceptAppend,

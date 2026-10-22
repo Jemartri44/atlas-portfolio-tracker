@@ -11,7 +11,7 @@ import { type CivilDate, compareCivilDates } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
 import { Decimal } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
-import { Money } from "../money/money.js";
+import { EUR, Money } from "../money/money.js";
 import { swapValuation } from "../projections/operations.js";
 import type {
   FiscalLot,
@@ -47,8 +47,6 @@ import type {
   WithholdingLine,
 } from "./report.js";
 import type { Deferral, Release, WashSaleOutcome, WashSaleResult } from "./wash-sale.js";
-
-const EUR = "EUR";
 
 export interface LineContext {
   state: LedgerState;

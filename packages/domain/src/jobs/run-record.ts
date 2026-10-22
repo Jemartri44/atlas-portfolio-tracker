@@ -23,6 +23,7 @@
 // that **never** is an asset, a symbol, an ISIN, an account nor an amount.
 
 import { type CivilDate, isCivilDate } from "../dates/civil-date.js";
+import { SHA256_HEX } from "../guards.js";
 import type { IgnoredFrequency } from "../settings/job-frequencies.js";
 import { type Delivery, JOB_TASKS, type JobTask } from "./catalog.js";
 import {
@@ -43,7 +44,7 @@ export const RUN_STATES = [
   "done",
   "failed",
   "send_unknown",
-  // A past period of a warning nobody sent: closed without sending (review of PR #109, avisos B1).
+  // A past period of a warning nobody sent: closed without sending.
   "expired",
 ] as const;
 export type RunState = (typeof RUN_STATES)[number];
@@ -132,7 +133,7 @@ const isDumpObject = (value: unknown, period: string): value is DumpObject =>
   hasKeys(value, ["key", "sha256"], ["kept_from_earlier_attempt"]) &&
   isDumpKey(value.key, period) &&
   typeof value.sha256 === "string" &&
-  /^[0-9a-f]{64}$/.test(value.sha256) &&
+  SHA256_HEX.test(value.sha256) &&
   (value.kept_from_earlier_attempt === undefined || value.kept_from_earlier_attempt === true);
 
 const isIgnored = (value: unknown): value is IgnoredFrequency =>
@@ -251,7 +252,7 @@ export const claimRecord = (
   claimed_at: at,
   attempts: previous === undefined ? 1 : previous.attempts + 1,
   // What earlier attempts of a dump wrote is carried, so a retry tells its own
-  // objects from anybody else's even after a run that died (review of PR #109, copias N3).
+  // objects from anybody else's even after a run that died.
   ...(previous?.objects === undefined ? {} : { objects: previous.objects }),
 });
 

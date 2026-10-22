@@ -18,7 +18,8 @@ import type { CivilDate } from "../dates/civil-date.js";
 import { yearOf } from "../dates/civil-date.js";
 import { DomainError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
-import { Money } from "../money/money.js";
+import { zero } from "../money/eur.js";
+import { EUR, Money } from "../money/money.js";
 import { type Filing, filingInForce } from "../projections/filings.js";
 import {
   businessDateOf,
@@ -45,8 +46,6 @@ import type {
 } from "./report.js";
 import { type PendingDeferral, type WashSaleResult, walkWashSales } from "./wash-sale.js";
 
-const EUR = "EUR";
-
 /** The regime of compensation the engine implements is the one in force since 2018 (A13). */
 export const FIRST_SUPPORTED_YEAR = 2018;
 
@@ -62,8 +61,6 @@ export interface TaxOptions {
    */
   rateFindings?: readonly { event_id: string; code: string }[];
 }
-
-const zero = (): Money => Money.zero(EUR);
 
 const zeroBalances = (): YearBalances => ({ capital_gain: zero(), movable_capital: zero() });
 

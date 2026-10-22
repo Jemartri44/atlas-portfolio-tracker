@@ -58,7 +58,7 @@ export const remedyFor = (info: FolderLockState): string =>
     : LOCK_REMEDY;
 
 /** The remedy, always the same two options, and the honest limit of the second. */
-export const LOCK_REMEDY =
+const LOCK_REMEDY =
   "Espera a que termine y repite. Si sabes que ese proceso ya no existe, rompe el cerrojo con `atlas lock break`: si su dueño siguiera vivo, romperlo reduce el riesgo de que escriban los dos, pero no lo elimina.";
 
 export const LOCK_LOST =

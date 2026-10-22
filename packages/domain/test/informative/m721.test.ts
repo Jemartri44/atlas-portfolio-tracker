@@ -11,7 +11,7 @@
 // over-declaring an informative return is the prudent direction.
 
 import { describe, expect, it } from "vitest";
-import { model720, model721 } from "../../src/informative/m721.js";
+import { model720, model721 } from "../../src/informative/m720.js";
 import type { InformativeCategory, InformativeReturn } from "../../src/informative/report.js";
 import type { Settings } from "../../src/settings/settings.js";
 import { LedgerBuilder } from "../ledger-builder.js";

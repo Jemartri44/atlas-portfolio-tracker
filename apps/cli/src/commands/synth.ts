@@ -1,7 +1,6 @@
 // atlas synth --out <ruta> [--seed <n>]: writes a deterministic synthetic ledger
 // to a new file, after verifying it the way `check --deep` would.
 
-import { access } from "node:fs/promises";
 import { FileLedgerStore } from "@atlas/adapters";
 import {
   DomainError,
@@ -15,18 +14,10 @@ import {
 import { deepCheck } from "@atlas/domain/tools";
 import { assertKnownFlags, type Flags, requireFlag, stringFlag, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
+import { pathExists } from "../fs.js";
 import { table } from "../output/table.js";
 import { assertNoLedgerInCloudFolder } from "../remote/credentials-file.js";
 import { render } from "./shared.js";
-
-export const pathExists = async (path: string): Promise<boolean> => {
-  try {
-    await access(path);
-    return true;
-  } catch {
-    return false;
-  }
-};
 
 const describe = (path: string, seed: number, summary: LedgerSummary): string =>
   [

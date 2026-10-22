@@ -5,21 +5,13 @@
 // the WAF, CloudFront, a hash of the body AWS refused — is
 // `transport_rejected`, and never holds a line (V4).
 
-import { isRecord } from "../guards.js";
+import { isCount, isRecord, onlyKeys, SHA256_HEX } from "../guards.js";
 import {
   type AppendResult,
   LINE_REJECTION_CODES,
   type LineRejection,
 } from "../ports/remote-ledger.js";
 import { parseErrorAnswer } from "../remote/answers.js";
-
-const SHA = /^[0-9a-f]{64}$/;
-
-const isCount = (value: unknown): value is number =>
-  typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
-
-const onlyKeys = (value: Readonly<Record<string, unknown>>, keys: readonly string[]): boolean =>
-  Object.keys(value).every((key) => keys.includes(key));
 
 const readRejection = (value: unknown): LineRejection | undefined => {
   if (
@@ -41,7 +33,7 @@ export const parseAppendAnswer = (value: unknown): AppendResult | undefined => {
     !isRecord(value) ||
     !onlyKeys(value, ["etag", "lines", "accepted", "rejected"]) ||
     typeof value.etag !== "string" ||
-    !SHA.test(value.etag) ||
+    !SHA256_HEX.test(value.etag) ||
     !isCount(value.lines) ||
     !isCount(value.accepted)
   ) {
@@ -61,7 +53,7 @@ export const parseInitAnswer = (value: unknown): { etag: string; lines: number }
   isRecord(value) &&
   onlyKeys(value, ["etag", "lines"]) &&
   typeof value.etag === "string" &&
-  SHA.test(value.etag) &&
+  SHA256_HEX.test(value.etag) &&
   isCount(value.lines)
     ? { etag: value.etag, lines: value.lines }
     : undefined;

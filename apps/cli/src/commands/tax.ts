@@ -27,7 +27,7 @@ import { eur } from "../output/format.js";
 import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
 import { rateFindingsOf } from "./rates.js";
-import { render } from "./shared.js";
+import { render, yearArgument } from "./shared.js";
 import { renderBoxes } from "./tax-boxes.js";
 
 const USAGE = "uso: atlas tax <año> [--lots] [--boxes] [--json]";
@@ -249,7 +249,7 @@ const filingText = (report: TaxYearReport): string => {
   return lines.filter((line) => line !== "").join("\n");
 };
 
-export const renderTaxReport = (report: TaxYearReport, withLots: boolean): string => {
+const renderTaxReport = (report: TaxYearReport, withLots: boolean): string => {
   const out: string[] = [
     `TOTAL FISCAL ${report.year} — núcleo y cubo agregados por contribuyente (constitución III).`,
     "Esto es la BASE del ahorro, no la cuota ni lo que se paga.",
@@ -511,8 +511,8 @@ export const taxCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["lots", "boxes", ...GLOBAL_FLAGS]);
-  const year = Number(positionals[1]);
-  if (positionals[1] === undefined || !Number.isInteger(year)) {
+  const year = yearArgument(positionals[1]);
+  if (year === undefined) {
     throw new UsageError(USAGE);
   }
   const { events } = await ctx.deps.store.load();

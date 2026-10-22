@@ -1,0 +1,13 @@
+import type { Warning } from "../projections/state.js";
+
+/** The key of a transmission line: its event and its account. */
+export const lineKey = (line: { event_id: string; account_id: string }): string =>
+  `${line.event_id}|${line.account_id}`;
+
+/** A warning that belongs to no single event. */
+export const note = (code: string, message: string, details: Record<string, unknown>): Warning => ({
+  code,
+  event_id: "",
+  message,
+  details,
+});

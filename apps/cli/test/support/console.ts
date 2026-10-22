@@ -178,7 +178,7 @@ export const setupConsole = async (
     random: (target) => target.fill(7),
   });
   const exec = (argv: string[]) =>
-    run(["--ledger", join(ledger, "ledger.jsonl"), ...argv], io, deps, undefined, prices, remote);
+    run(["--ledger", join(ledger, "ledger.jsonl"), ...argv], io, { compose: deps, prices, remote });
   const credentials = join(config, "atlas", "credentials.json");
   const readCredentialsFile = async () => JSON.parse(await readFile(credentials, "utf8"));
   return {

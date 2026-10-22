@@ -23,12 +23,11 @@
 // report is checked on these amounts, and a division that lost a cent would
 // turn it into an approximation nobody could tell from a defect.
 
-import { Money } from "../../money/money.js";
+import { zero } from "../../money/eur.js";
+import type { Money } from "../../money/money.js";
 import type { RealizedGain } from "../../projections/state.js";
 import { type ChainCore, deferredAt } from "../chain.js";
 import type { PendingDeferral, WashSaleOutcome } from "../wash-sale.js";
-
-const EUR = "EUR";
 
 /** A share of a deferral, in magnitude: which original loss it belongs to, and how much. */
 interface Part {
@@ -36,8 +35,6 @@ interface Part {
   origin: number;
   weight: Money;
 }
-
-const zero = (): Money => Money.zero(EUR);
 
 /**
  * The one closer to zero. Every amount here is a loss, so it is negative, and

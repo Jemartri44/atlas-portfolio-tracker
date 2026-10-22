@@ -144,7 +144,7 @@ export const closedYearNotes = async (
  * (ADR-0030), said before confirming — the one moment the console shows a
  * single movement whole. Informative, and said so: no figure uses it.
  */
-export const brokerNote = (draft: Record<string, unknown>): string[] => {
+const brokerNote = (draft: Record<string, unknown>): string[] => {
   const settlement = brokerSettlementOf(draft);
   if (settlement === undefined) {
     return [];
@@ -209,6 +209,12 @@ export const draftOf = (event: LedgerEvent): Record<string, unknown> => {
     ...rest
   } = event as LedgerEvent & { fingerprint?: string };
   return rest;
+};
+
+/** A year given as an argument: an integer, or `undefined` for anything else (a missing word included). */
+export const yearArgument = (raw: string | undefined): number | undefined => {
+  const year = Number(raw);
+  return Number.isInteger(year) ? year : undefined;
 };
 
 export const render = (ctx: Context, data: unknown, text: string): void => {
@@ -281,7 +287,7 @@ export const originOf = (
  * inside the repository is how private data ends up in a commit, so the CLI
  * asks first. No `git` process involved.
  */
-export const insideGitWorktree = async (path: string): Promise<string | undefined> => {
+const insideGitWorktree = async (path: string): Promise<string | undefined> => {
   let current = resolve(path);
   let parent = dirname(current);
   while (true) {

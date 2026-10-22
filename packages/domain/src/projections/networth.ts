@@ -18,15 +18,13 @@ import { type CivilDate, daysBetween } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
 import type { Currency } from "../money/money.js";
-import { Money } from "../money/money.js";
+import { EUR, Money } from "../money/money.js";
 import type { AccountId, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import { type BucketPosition, bucketPositions, warn } from "./bucket.js";
 import type { ExternalPrices } from "./prices.js";
 import type { LedgerState, Warning } from "./state.js";
 import { type ClassSubtotal, coreWeights } from "./weights.js";
-
-const EUR = "EUR";
 
 export interface NetWorthAssetRow {
   account_id?: AccountId;
@@ -133,7 +131,7 @@ const cashBlockOf = (
       continue;
     }
     // The more recent of the two ECB rates at hand, the history's and the
-    // ledger's; on the same date the history's (round 1 of PR #102). Small on
+    // ledger's; on the same date the history's. Small on
     // purpose: this file is on the boot path of the web.
     const ecb = external?.latestRate?.(currency, date);
     const ledger = state.fxRates.get(currency);

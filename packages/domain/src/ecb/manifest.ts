@@ -4,6 +4,7 @@
 // that is not one of the two of the ECB, gives no history — and a file whose
 // bytes do not match its SHA-256 is never used as if it did (`EcbHistoryDamaged`).
 
+import { SHA256_HEX } from "../guards.js";
 import { repeatedKey } from "../schema/json-keys.js";
 import type { EcbSource } from "./history.js";
 
@@ -56,7 +57,7 @@ export const activeHistoryOf = (manifestText: string): ActiveHistory | undefined
   return (source === "zip" || source === "api") &&
     file === FILE_OF[source] &&
     typeof sha256 === "string" &&
-    /^[0-9a-f]{64}$/.test(sha256)
+    SHA256_HEX.test(sha256)
     ? { file: FILE_OF[source], source, sha256 }
     : undefined;
 };
@@ -88,7 +89,7 @@ export const previousHistoryOf = (manifestText: string): PreviousHistory | undef
   return (source === "zip" || source === "api") &&
     file === `previous/${FILE_OF[source]}` &&
     typeof sha256 === "string" &&
-    /^[0-9a-f]{64}$/.test(sha256)
+    SHA256_HEX.test(sha256)
     ? { file: `previous/${FILE_OF[source]}`, source, sha256 }
     : undefined;
 };

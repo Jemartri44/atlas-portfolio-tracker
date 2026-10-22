@@ -166,7 +166,7 @@ describe("atlas lock", () => {
       clock: systemClock,
       random: webCryptoRandom,
     });
-    expect(await run(["--ledger", ledger, ...account], io, compose)).toBe(6);
+    expect(await run(["--ledger", ledger, ...account], io, { compose })).toBe(6);
     expect(lines.join("\n")).toContain("no se ha escrito nada");
   });
 });

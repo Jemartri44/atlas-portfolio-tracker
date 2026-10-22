@@ -1,7 +1,7 @@
 // Money = amount + ISO 4217 currency. Operating across currencies is rejected;
 // conversion only exists through an FxRate (ADR-0005).
 
-import { CurrencyMismatchError, ValidationError } from "../errors.js";
+import { CurrencyMismatchError } from "../errors.js";
 import { Decimal } from "./decimal.js";
 
 export type Currency = string;
@@ -12,16 +12,6 @@ export const EUR: Currency = "EUR";
 
 export const isCurrency = (value: unknown): value is Currency =>
   typeof value === "string" && CURRENCY_PATTERN.test(value);
-
-export const assertCurrency = (value: unknown, field: string): Currency => {
-  if (!isCurrency(value)) {
-    throw new ValidationError("invalid_currency", `${field} must be an ISO 4217 code`, {
-      field,
-      value,
-    });
-  }
-  return value;
-};
 
 export class Money {
   private constructor(

@@ -41,11 +41,10 @@
 // negative income; base 200) is a test of this file, as it is.
 
 import { Decimal } from "../money/decimal.js";
-import { Money } from "../money/money.js";
+import { positive } from "../money/eur.js";
+import { EUR, Money } from "../money/money.js";
 import { sortCriteria } from "./criteria.js";
 import type { BalanceCategory, Compensation, CompensationStep, PendingLoss } from "./report.js";
-
-const EUR = "EUR";
 
 export interface YearBalances {
   /** Sum of the rounded figures of the year, per category. */
@@ -62,8 +61,6 @@ export interface CompensationRules {
 
 const min = (...values: Money[]): Money =>
   values.reduce((least, value) => (value.cmp(least) < 0 ? value : least));
-
-const positive = (money: Money): Money => (money.isNegative() ? Money.zero(EUR) : money);
 
 const OTHER: Record<BalanceCategory, BalanceCategory> = {
   capital_gain: "movable_capital",

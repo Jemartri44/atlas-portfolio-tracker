@@ -9,18 +9,12 @@
 // comes out of the same engine as the text.
 
 import { readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { harness } from "../harness.js";
+import { LEDGER_FIXTURES } from "../support/fixtures.js";
 
-const HAND = readFileSync(
-  join(
-    resolve(dirname(fileURLToPath(import.meta.url)), "../../../../tests/fixtures/ledger"),
-    "tax-hand-v1.jsonl",
-  ),
-  "utf8",
-)
+const HAND = readFileSync(join(LEDGER_FIXTURES, "tax-hand-v1.jsonl"), "utf8")
   .split("\n")
   .filter((line) => line !== "");
 
