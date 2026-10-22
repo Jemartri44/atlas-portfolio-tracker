@@ -152,6 +152,68 @@ describe("comparing what was filed", () => {
     ]).toEqual(["0", "0", "0", "-500"]);
   });
 
+  /**
+   * A year filed while direct crypto still deferred a loss for a purchase made
+   * *before* the sale (art. 33.5.e looks only at the year after). Nothing in the
+   * ledger or the settings changed since: the same lines read by the engine of
+   * today give another figure, and the whole difference has to be charged to
+   * the engine, not to the user's configuration or to later events.
+   */
+  it("charges to the engine a year whose crypto loss is no longer deferred by an earlier purchase", () => {
+    const b = taxBuilder(HAND_SETTINGS);
+    b.buy({
+      account_id: "acc_a",
+      asset_id: "coin_c",
+      value_date: "2027-01-10",
+      quantity: "10",
+      unit_price: "100",
+    });
+    // The purchase *before* the sale that the earlier reading took for a repurchase.
+    b.buy({
+      account_id: "acc_a",
+      asset_id: "coin_c",
+      value_date: "2027-02-01",
+      quantity: "10",
+      unit_price: "100",
+    });
+    b.sell({
+      account_id: "acc_a",
+      asset_id: "coin_c",
+      value_date: "2027-06-01",
+      quantity: "10",
+      unit_price: "60",
+    });
+    // What the application said then: the −400,00 deferred, nothing pending.
+    const then = { savings_base_eur: "0", pending_losses: [], deferred_losses_eur: "400" };
+    b.filed({
+      tax_year: 2027,
+      filed_at: "2028-06-18",
+      declared: then,
+      computed: {
+        as_of: "2028-06-01",
+        settings_origin: "default",
+        settings: normalizeSettings(HAND_SETTINGS),
+        ...then,
+      },
+    });
+    const report = taxYear(b.build(), 2027, { today: TODAY });
+    const figure = (name: string) => report.filing?.figures.find((entry) => entry.figure === name);
+    const causes = (name: string) => [
+      text(figure(name)?.causes?.at_filing),
+      text(figure(name)?.causes?.engine),
+      text(figure(name)?.causes?.settings),
+      text(figure(name)?.causes?.later_events),
+    ];
+    expect(report.filing?.fingerprint_ok).toBe(true);
+    expect([text(figure("deferred")?.declared), text(figure("deferred")?.now)]).toEqual([
+      "400",
+      "0",
+    ]);
+    expect(causes("deferred")).toEqual(["0", "-400", "0", "0"]);
+    expect([text(figure("pending:2027:capital_gain")?.now)]).toEqual(["-400"]);
+    expect(causes("pending:2027:capital_gain")).toEqual(["0", "-400", "0", "0"]);
+  });
+
   it("orders two returns filed the same day by the line they were written on", () => {
     const b = taxBuilder();
     buy(b, "stock_s", "2027-01-11", "10", "100");
