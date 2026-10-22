@@ -8,7 +8,14 @@ import {
   settingsAt,
   type ThesisLeg,
 } from "@atlas/domain";
-import { assertKnownFlags, booleanFlag, type Flags, requireFlag, UsageError } from "../args.js";
+import {
+  assertKnownFlags,
+  booleanFlag,
+  type Flags,
+  requireFlag,
+  UsageError,
+  wholeNumber,
+} from "../args.js";
 import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
 import { eur } from "../output/format.js";
 import { keyValue, table } from "../output/table.js";
@@ -148,8 +155,8 @@ export const thesisCommand = async (
   const [, action] = positionals;
   if (action === "open") {
     assertKnownFlags(flags, [...OPEN_FLAGS, ...GLOBAL_FLAGS]);
-    const horizon = Number(requireFlag(flags, "horizon-days"));
-    if (!Number.isInteger(horizon) || horizon <= 0) {
+    const horizon = wholeNumber("horizon-days", requireFlag(flags, "horizon-days"));
+    if (horizon <= 0) {
       throw new UsageError("--horizon-days debe ser un entero positivo (días)");
     }
     await confirmAndRecord(ctx, {

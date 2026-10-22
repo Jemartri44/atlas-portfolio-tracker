@@ -169,6 +169,14 @@ export const parseArgs = (
   return { positionals, flags };
 };
 
+/** A flag that is a whole number written in plain digits: «1e1», «0x4», «9,5» and «-3» are not. */
+export const wholeNumber = (name: string, text: string): number => {
+  if (!/^\d{1,9}$/.test(text)) {
+    throw new UsageError(`--${name} debe ser un entero sin signo ni decimales`);
+  }
+  return Number(text);
+};
+
 export const stringFlag = (flags: Flags, name: string): string | undefined => {
   const value = flags.get(name);
   if (value === undefined) {

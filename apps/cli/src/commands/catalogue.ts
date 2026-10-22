@@ -24,6 +24,7 @@ import {
   requireFlag,
   stringFlag,
   UsageError,
+  wholeNumber,
 } from "../args.js";
 import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
 import { closedYearLines } from "../output/closed-years.js";
@@ -488,7 +489,7 @@ export const settingsCommand = async (
     for (const flag of SETTINGS_INTEGERS) {
       const value = stringFlag(flags, flag);
       if (value !== undefined) {
-        patch[fieldOf(flag)] = Number(value);
+        patch[fieldOf(flag)] = wholeNumber(flag, value);
       }
     }
     const benchmark = stringFlag(flags, "bucket-benchmark-asset");
