@@ -2,6 +2,7 @@
 // of §3.1, redirects only where the sign-in needs them, and the cookies with
 // the attributes ADR-0027 fixes. Nothing here is stored by any cache.
 
+import { gzipSync } from "node:zlib";
 import { decodeUtf8Strict } from "@atlas/adapters/aws";
 import { type ApiRefusal, LOGIN_COOKIE, SESSION_COOKIE } from "@atlas/domain/access";
 import type { FunctionUrlResult } from "./event.js";
@@ -95,6 +96,31 @@ export const bytes = (
     headers: { ...base, ...headers },
     body: text ?? Buffer.from(body).toString("base64"),
     isBase64Encoded: text === undefined,
+  };
+};
+
+/** The size from which a file is worth compressing: the histories of the ECB are megabytes, the rest bytes. */
+const GZIP_FROM_BYTES = 256 * 1024;
+
+/**
+ * `bytes`, compressed when the client accepts it and the file is large. The Function URL
+ * answers at most 6 MB (base64 included) and `api-exr.csv` weighs some 12 MB; gzip leaves it
+ * under 2 MB. The caller keeps the same `etag`: it names the file, not its encoding.
+ */
+export const bytesCompressed = (
+  status: number,
+  body: Uint8Array,
+  headers: Record<string, string>,
+  acceptEncoding: string | undefined,
+): FunctionUrlResult => {
+  if (body.length < GZIP_FROM_BYTES || !/\bgzip\b/i.test(acceptEncoding ?? "")) {
+    return bytes(status, body, headers);
+  }
+  return {
+    statusCode: status,
+    headers: { ...base, ...headers, "content-encoding": "gzip", vary: "accept-encoding" },
+    body: gzipSync(body).toString("base64"),
+    isBase64Encoded: true,
   };
 };
 

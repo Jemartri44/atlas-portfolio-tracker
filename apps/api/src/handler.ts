@@ -422,6 +422,7 @@ export const createHandler = (deps: HandlerDeps): Handler => {
           path === "/api/reference/ecb/{name}" ? "ecb" : "prices",
           params.name as string,
           request.headers.get("if-none-match"),
+          request.headers.get("accept-encoding"),
         );
     }
   };
