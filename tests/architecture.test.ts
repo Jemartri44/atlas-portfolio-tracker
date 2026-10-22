@@ -569,7 +569,7 @@ describe("architecture: the tax engine", () => {
     // The state as it is built is contrasted too, in the domain's own tests
     // (`test/projections/state-keys.test.ts`), which no reading of the source
     // can dodge.
-    const settings = interfaceKeys(join(domainSrc, "settings", "settings.ts"), "Settings");
+    const settings = interfaceKeys(join(domainSrc, "settings", "defaults.ts"), "Settings");
     expect(settings).toEqual([
       "fiscal_date_rule",
       "wash_sale_window",
