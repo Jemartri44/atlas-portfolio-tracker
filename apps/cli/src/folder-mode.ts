@@ -24,8 +24,8 @@ import {
 import { entryForRemote, type RemoteJson } from "@atlas/domain/access";
 import type { PendingDraftStore } from "@atlas/domain/ecb";
 import type { RemoteLedger } from "@atlas/domain/sync";
-import { pathExists } from "./commands/synth.js";
 import type { Context } from "./context.js";
+import { pathExists } from "./fs.js";
 import { readRemoteJson } from "./remote/credentials-file.js";
 import { systemRemote } from "./remote/environment.js";
 import { where } from "./remote/where.js";

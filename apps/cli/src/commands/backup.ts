@@ -17,6 +17,7 @@ import { linesOfText } from "@atlas/domain/sync";
 import { assertKnownFlags, booleanFlag, type Flags, requireFlag, UsageError } from "../args.js";
 import { type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { cloudStoreOf } from "../folder-mode.js";
+import { pathExists } from "../fs.js";
 import { adminClientsOf, translateAwsFailure } from "./admin.js";
 import {
   type Copied,
@@ -25,7 +26,6 @@ import {
   copyLocalDocuments,
 } from "./backup-copies.js";
 import { confirmOutsideRepository, render } from "./shared.js";
-import { pathExists } from "./synth.js";
 
 const describeCopied = (copied: Copied): string =>
   copied.written + copied.unchanged === 0
