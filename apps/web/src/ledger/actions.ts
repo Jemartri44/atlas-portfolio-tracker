@@ -13,7 +13,7 @@ import type { LedgerSource } from "./source.js";
 import { type LoadPhase, store } from "./state.js";
 
 /** What the boot opens: the dependencies of the use cases and where the ledger comes from. */
-export interface OpenedLedger {
+interface OpenedLedger {
   deps: UseCaseDeps;
   source: LedgerSource;
 }

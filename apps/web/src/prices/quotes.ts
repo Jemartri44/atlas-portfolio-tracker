@@ -53,7 +53,7 @@ export interface WebQuotes {
   readonly history: WebHistory;
 }
 
-export type SymbolsProblem =
+type SymbolsProblem =
   | { readonly problem: "missing" }
   | { readonly problem: "unreadable"; readonly code: string };
 
@@ -152,7 +152,7 @@ export const externalOf = (
 const COMPANIONS = ["_status.json", "config.json"];
 const SYMBOLS = "symbols.json";
 
-export type PricesImport =
+type PricesImport =
   | {
       readonly kind: "imported";
       readonly assets: readonly AssetId[];

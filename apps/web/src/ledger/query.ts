@@ -11,7 +11,7 @@ import { DomainError } from "@atlas/domain";
 import { toAppError } from "./errors.js";
 import type { AppError } from "./state.js";
 
-export type Attempt<T> = { ok: true; value: T } | { ok: false; error: AppError };
+type Attempt<T> = { ok: true; value: T } | { ok: false; error: AppError };
 
 /**
  * Runs a projection and turns its refusal into something paintable. Only a

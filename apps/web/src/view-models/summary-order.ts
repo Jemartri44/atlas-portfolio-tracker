@@ -17,7 +17,7 @@
 
 export type SummaryCard = "loss" | "worth" | "attention" | "moves" | "fiscal" | "evolution";
 
-export interface SummaryShape {
+interface SummaryShape {
   /** From the monitor's step (1800px) on. */
   monitor: boolean;
   /** The date read falls in the income tax season (the domain's `inRentaSeason`). */

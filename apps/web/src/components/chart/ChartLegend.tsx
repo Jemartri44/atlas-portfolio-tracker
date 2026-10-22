@@ -8,7 +8,7 @@ import { For, type JSX } from "solid-js";
 import type { ChartSeries } from "./Chart.jsx";
 
 /** The class of a series, from its colour token: `--c-series-core` → `is-core`. */
-export const keyClass = (colour: string): string => `is-${colour.replace("--c-series-", "")}`;
+const keyClass = (colour: string): string => `is-${colour.replace("--c-series-", "")}`;
 
 /** A short piece of the line: its colour from the token, its dash from the series. */
 export const LineKey = (props: { colour: string; dash?: readonly number[] | undefined }) => (

@@ -85,7 +85,7 @@ export const reloadWebHistory = (): Promise<WebHistory> => {
   return loadWebHistory();
 };
 
-export type ImportOutcome =
+type ImportOutcome =
   | { kind: "imported"; latest: string; source: EcbSource }
   | { kind: "rejected"; total: number; conflicts: HistoryConflict[] };
 

@@ -44,7 +44,7 @@ const draftFor = async (
  * hundred bytes, and the list is not the boot's (review of PR #75).
  */
 const Borradores = lazy(() => import("./borradores.jsx"));
-export const DRAFTS_SLUG = "borradores";
+const DRAFTS_SLUG = "borradores";
 
 export default function RegistrarFormRoute(): JSX.Element {
   const params = useParams<{ tipo: string }>();

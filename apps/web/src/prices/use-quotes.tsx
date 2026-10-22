@@ -14,7 +14,7 @@ import type { WebQuotes } from "./quotes.js";
 // (+33 bytes measured, review of PR #78).
 const quotesModule = () => import("./quotes.js");
 
-export interface ScreenQuotes {
+interface ScreenQuotes {
   readonly quotes: Accessor<WebQuotes | undefined>;
   /** The quotes for the ledger cut at a date (`asOf`): the gate takes them as they are. */
   readonly external: (state: LedgerState) => ExternalPrices | undefined;
