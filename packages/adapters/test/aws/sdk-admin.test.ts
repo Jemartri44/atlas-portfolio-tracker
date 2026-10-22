@@ -74,6 +74,13 @@ describe("SdkAdminObjectStore.getVersion", () => {
     });
   });
 
+  it("never takes a missing bucket for a missing version", async () => {
+    const { client } = s3Client(() => s3Error("NoSuchBucket", 404));
+    await expect(new SdkAdminObjectStore(client, "b").getVersion("k", "v")).rejects.toMatchObject({
+      name: "NoSuchBucket",
+    });
+  });
+
   it("reads a bare 404 as nothing, and never a 403", async () => {
     const bare = s3Client(() => s3Error("NotFound", 404));
     expect(await new SdkAdminObjectStore(bare.client, "b").getVersion("k", "v")).toBeUndefined();

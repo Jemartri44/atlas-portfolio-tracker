@@ -331,12 +331,12 @@ describe("a token on every request (§2.2; T01 to T10)", () => {
       errorOf(await withToken(api, "/api/auth/console/revoke", `atlasdt1.${other}.${secret}`)),
     ).toEqual({
       code: "device_token_invalid",
-      details: { reason: "unreadable" },
+      details: {},
     });
     const wrong = `atlasdt1.${tokenId}.${"x".repeat(43)}`;
     expect(errorOf(await withToken(api, "/api/auth/console/revoke", wrong))).toEqual({
       code: "device_token_invalid",
-      details: { reason: "secret" },
+      details: {},
     });
   });
 
@@ -495,6 +495,15 @@ describe("the reissue (§4.2 and §4.3; T23, mutant 29 sexies)", () => {
     const manual = await consoleReturn(api, { reissue_device_id: ID, mode: "manual" });
     const before = manual.done.body.split("<details>")[0] as string;
     expect(before).not.toContain(codeOfPage(manual.done.body));
+  });
+
+  it("does not claim a device never published when the server holds no instant", async () => {
+    const api = setup();
+    seedConsole(api, ID, { published_at: undefined });
+    const { done } = await consoleReturn(api, { reissue_device_id: ID });
+    expect(done.body).toContain("sobremesa");
+    expect(done.body).not.toContain("Última publicación");
+    expect(done.body).not.toContain("nunca");
   });
 
   it("escapes the name the server keeps, whatever it holds (mutant 29)", async () => {

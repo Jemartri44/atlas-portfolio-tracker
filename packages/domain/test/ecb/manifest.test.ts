@@ -40,6 +40,8 @@ describe("the manifest of the ECB history", () => {
       manifest({ file: "eurofxref-hist.csv", source: "zip", sha256: 7 }),
       // Read strictly, as the web reads it too (feature 016, E3).
       "[]",
+      // No `rejected` list: the stores append to it.
+      JSON.stringify({ active: { file: "api-exr.csv", source: "api", sha256: SHA } }),
       `{"active":${JSON.stringify({ file: "eurofxref-hist.csv", source: "zip", sha256: SHA })},"active":{}}`,
       `{"active":{"file":"eurofxref-hist.csv","source":"zip","sha256":"${SHA}"},"x":"\ud800"}`,
     ]) {

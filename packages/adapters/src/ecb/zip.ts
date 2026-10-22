@@ -11,6 +11,9 @@ const EOCD = 0x06054b50;
 const CENTRAL = 0x02014b50;
 const LOCAL = 0x04034b50;
 
+/** The most an entry may inflate to: a ZIP that claims more is a bomb, not the ECB's. */
+export const MAX_ENTRY_BYTES = 64 * 1024 * 1024;
+
 /** A ZIP that cannot be read, with what is wrong. */
 export class ZipUnreadable extends Error {
   constructor(message: string) {
@@ -64,7 +67,7 @@ export const entryOfZip = (
       bytes = data;
     } else if (method === 8) {
       try {
-        bytes = inflateRawSync(data);
+        bytes = inflateRawSync(data, { maxOutputLength: MAX_ENTRY_BYTES });
       } catch (error) {
         throw new ZipUnreadable(`${name} does not inflate: ${(error as Error).message}`);
       }

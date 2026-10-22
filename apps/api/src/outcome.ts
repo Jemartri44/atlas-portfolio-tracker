@@ -17,5 +17,9 @@ export interface Outcome {
 export const fail = (value: ApiRefusal): Outcome => ({
   result: refused(value),
   code: value.code,
-  ...(typeof value.details.reason === "string" ? { reason: value.details.reason } : {}),
+  ...(typeof value.details.reason === "string"
+    ? { reason: value.details.reason }
+    : value.logReason === undefined
+      ? {}
+      : { reason: value.logReason }),
 });

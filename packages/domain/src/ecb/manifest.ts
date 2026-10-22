@@ -49,8 +49,10 @@ const FILE_OF: Readonly<Record<EcbSource, ActiveHistory["file"]>> = {
 };
 
 export const activeHistoryOf = (manifestText: string): ActiveHistory | undefined => {
-  const active = manifestObject(manifestText)?.active;
-  if (!isPlainObject(active)) {
+  const manifest = manifestObject(manifestText);
+  const active = manifest?.active;
+  // `rejected` is a list the stores append to: a manifest without it is damaged.
+  if (!isPlainObject(active) || !Array.isArray(manifest?.rejected)) {
     return undefined;
   }
   const { file, source, sha256 } = active;

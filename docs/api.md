@@ -65,6 +65,8 @@ En este orden, rechazando al primer fallo (ADR-0033, punto 5):
 6. Su par `{sub, email}` sigue en la lista permitida → `403 not_allowed`.
 7. El objeto de su dispositivo existe, es de tipo `console` y está activo → `403 device_forgotten` (§2).
 
+Los pasos 2 y 3 dan la **misma respuesta** (`device_token_invalid` sin `details`): el cliente no averigua qué `token_id` existen.
+
 Solo pueden cachearse los negativos que no pueden volver a valer (revocado, caducado); un «no existe» no se cachea.
 
 ### 2.3 Alcance de cada credencial
@@ -129,7 +131,7 @@ Cualquier parámetro que no cumpla es `400 console_start_invalid`, con el nombre
 - **`mfa_required` no se emite** (decidido el 2026-09-25, tras el bloque 0 de la 015): Google solo entrega `amr` a una aplicación publicada y verificada con una función en Beta activada, y aun así puede no venir; Google no admite forzar la reautenticación. La verificación en dos pasos sigue siendo un requisito operativo del usuario (ADR-0033, nota del 2026-09-25).
 - **`mode=loopback`:** `302` a `http://127.0.0.1:<port>/callback?code=<código>&state=<state>`. El destino es el **literal** `127.0.0.1`, fijado en el código, y el puerto, el número validado en §4.1: la ruta no puede redirigir a ningún otro sitio. La página que la consola sirve en ese puerto no carga nada externo y lleva `Referrer-Policy: no-referrer`; un `state` erróneo se ignora y el puerto sigue esperando.
 - **`mode=manual`:** una página propia de la Lambda **sin script**, con `Content-Security-Policy: sandbox`, `Cache-Control: no-store` y `Referrer-Policy: no-referrer`. Primero pide **confirmar expresamente el nombre del dispositivo**; después enseña el código, la hora del intento y el aviso de que el código solo se teclea en una consola que el usuario acaba de abrir él mismo. La confirmación, sin *script* y sin formulario (la `sandbox` los bloquea), es un `<details>` cuyo `<summary>` la dice: **el código solo aparece al desplegarlo**. La consola lo lee sin mostrarlo.
-- **Reemisión** (§4.3): tras verificar a Google, la Lambda lee `sync/devices/<reissue_device_id>.json`; si falta, está olvidado, es de tipo `web` o no se lee, responde con la página de error (`reissue_device_missing`, `reissue_device_forgotten`, `reissue_device_not_console`, `reissue_device_unreadable`). Si es aceptable, sirve **una página de confirmación** con los datos **del servidor** —el nombre del dispositivo y su última publicación, si se saben—: con `loopback`, un enlace «Sí, es este dispositivo: continuar» al literal `http://127.0.0.1:<port>/callback?code=…&state=…`; con `manual`, el mismo `<details>`. Sin esa confirmación no hay código.
+- **Reemisión** (§4.3): tras verificar a Google, la Lambda lee `sync/devices/<reissue_device_id>.json`; si falta, está olvidado, es de tipo `web` o no se lee, responde con la página de error (`reissue_device_missing`, `reissue_device_forgotten`, `reissue_device_not_console`, `reissue_device_unreadable`). Si es aceptable, sirve **una página de confirmación** con los datos **del servidor** —el nombre del dispositivo y su última publicación, solo si el objeto la lleva (resto del formato, §5.3)—: con `loopback`, un enlace «Sí, es este dispositivo: continuar» al literal `http://127.0.0.1:<port>/callback?code=…&state=…`; con `manual`, el mismo `<details>`. Sin esa confirmación no hay código.
 
 ### 4.3 Canje
 

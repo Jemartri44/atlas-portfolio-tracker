@@ -5,6 +5,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { AllowEntry } from "../../src/access/allow-list.js";
+import type { ApiRefusal } from "../../src/access/codes.js";
 import {
   checkToken,
   DEVICE_TOKEN,
@@ -157,18 +158,22 @@ describe("the check of a token, in the order of docs/api.md §2.2", () => {
 
   it("lets in an active token of the list, and nothing that fails a step", () => {
     expect(checkToken(record(), facts)).toEqual({ ok: record() });
-    expect(checkToken(undefined, facts)).toMatchObject({
-      code: "device_token_invalid",
-      details: { reason: "missing" },
-    });
-    expect(checkToken("unreadable", facts)).toMatchObject({
-      code: "device_token_invalid",
-      details: { reason: "unreadable" },
-    });
-    expect(checkToken(record(), { ...facts, secretMatches: false })).toMatchObject({
-      code: "device_token_invalid",
-      details: { reason: "secret" },
-    });
+    // The same answer for a token that does not exist, one that does not read
+    // and a wrong secret: the client learns nothing about which token ids exist.
+    // The log keeps the difference (`logReason`), which is never part of the answer.
+    const answers = [
+      checkToken(undefined, facts),
+      checkToken("unreadable", facts),
+      checkToken(record(), { ...facts, secretMatches: false }),
+    ];
+    expect(answers.map((answer) => ("logReason" in answer ? answer.logReason : undefined))).toEqual(
+      ["missing", "unreadable", "secret"],
+    );
+    for (const answer of answers) {
+      expect(answer).toMatchObject({ code: "device_token_invalid", status: 401, details: {} });
+      const { logReason: _kept, ...sent } = answer as ApiRefusal;
+      expect(sent).toEqual({ code: "device_token_invalid", status: 401, details: {} });
+    }
     expect(checkToken(revokedRecord(record(), T0), facts)).toMatchObject({
       code: "device_token_revoked",
       status: 401,

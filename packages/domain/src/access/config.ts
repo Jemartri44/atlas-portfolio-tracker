@@ -102,6 +102,10 @@ export const parseApiConfig = (env: Readonly<Record<string, string | undefined>>
   if (!/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(dataBucket)) {
     throw invalid("ATLAS_DATA_BUCKET", "not_a_bucket_name");
   }
+  // As the jobs do: a function of one environment never starts on the bucket of the other.
+  if (!dataBucket.startsWith(`atlas-${environment}-`)) {
+    throw invalid("ATLAS_DATA_BUCKET", "not_of_the_environment");
+  }
   const number = (variable: keyof typeof NUMBERS): number => {
     const text = required(env, variable);
     if (!/^[1-9]\d{0,8}$/.test(text)) {

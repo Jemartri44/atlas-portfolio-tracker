@@ -11,7 +11,7 @@ import { crc32, deflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { EcbHistoryDamaged, FileEcbHistoryStore, fileOfSource } from "../src/ecb/history-store.js";
 import { ECB_API_URL, ECB_ZIP_URL, EcbDownloadFailed, EcbFxRateSource } from "../src/ecb/source.js";
-import { entryOfZip, ZipUnreadable } from "../src/ecb/zip.js";
+import { entryOfZip, MAX_ENTRY_BYTES, ZipUnreadable } from "../src/ecb/zip.js";
 import { LedgerLockedError, LOCK_FILE, LockLostError } from "../src/ledger-store/folder-lock.js";
 
 const fixtures = resolve(dirname(fileURLToPath(import.meta.url)), "../../../tests/fixtures/ecb");
@@ -55,6 +55,12 @@ describe("entryOfZip", () => {
     expect(Buffer.from(entryOfZip(zipOf("eurofxref-hist.csv", content, 0), ".csv").bytes)).toEqual(
       content,
     );
+  });
+
+  it("refuses an entry that inflates beyond the cap", () => {
+    const bomb = zipOf("big.csv", Buffer.alloc(MAX_ENTRY_BYTES + 1));
+    expect(bomb.length).toBeLessThan(1024 * 1024);
+    expect(() => entryOfZip(bomb, ".csv")).toThrow(ZipUnreadable);
   });
 
   it("refuses what is not a ZIP, a truncated one and a damaged one", async () => {
@@ -142,6 +148,17 @@ describe("EcbFxRateSource", () => {
     const error = await source.download().catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(EcbDownloadFailed);
     expect(error).toMatchObject({ zip: "sin red", api: "cortado" });
+  });
+
+  it("stops a download that exceeds the cap, and falls back to the API", async () => {
+    const source = new EcbFxRateSource(
+      async (url) => response(200, url === ECB_ZIP_URL ? "x".repeat(11) : "ok"),
+      () => new Date("2026-09-24T10:00:00Z"),
+      10,
+    );
+    const history = await source.download();
+    expect(history.source).toBe("api");
+    expect(history.zip_failure).toContain("more than 10 bytes");
   });
 
   it("uses the global fetch and the system clock by default", () => {
@@ -259,6 +276,36 @@ describe("FileEcbHistoryStore", () => {
     const folder = await mkdtemp(join(tmpdir(), "atlas-ecb-"));
     await new FileEcbHistoryStore(folder).activate(downloaded(await csv()));
     await writeFile(join(folder, "reference", "ecb", "manifest.json"), "{");
-    await expect(new FileEcbHistoryStore(folder).manifest()).rejects.toBeInstanceOf(SyntaxError);
+    await expect(new FileEcbHistoryStore(folder).manifest()).rejects.toBeInstanceOf(
+      EcbHistoryDamaged,
+    );
+  });
+
+  it("refuses a manifest that names a file outside reference/ecb/ or has no rejected list", async () => {
+    const folder = await mkdtemp(join(tmpdir(), "atlas-ecb-"));
+    const store = new FileEcbHistoryStore(folder);
+    await store.activate(downloaded(await csv()));
+    const path = join(folder, "reference", "ecb", "manifest.json");
+    const good = JSON.parse(await readFile(path, "utf8"));
+    for (const bad of [
+      { ...good, active: { ...good.active, file: "../../x" } },
+      { active: good.active },
+    ]) {
+      await writeFile(path, JSON.stringify(bad));
+      await expect(store.active()).rejects.toBeInstanceOf(EcbHistoryDamaged);
+      await expect(store.activate(downloaded(await csv()))).rejects.toBeInstanceOf(
+        EcbHistoryDamaged,
+      );
+      await expect(store.keepRejected(downloaded(await csv()))).rejects.toBeInstanceOf(
+        EcbHistoryDamaged,
+      );
+    }
+  });
+
+  it("refuses to keep a rejected download when there is no manifest", async () => {
+    const folder = await mkdtemp(join(tmpdir(), "atlas-ecb-"));
+    await expect(
+      new FileEcbHistoryStore(folder).keepRejected(downloaded(await csv())),
+    ).rejects.toBeInstanceOf(EcbHistoryDamaged);
   });
 });
