@@ -407,6 +407,8 @@ export const describeError = (error: DomainError): string => {
       return `La ruta ${text(d.path)} ya existe: no se sobrescribe nada.`;
     case "export_over_ledger":
       return `La ruta ${text(d.path)} es el propio libro: la exportación nunca lo sustituye. Elige otra ruta.`;
+    case "export_in_ledger_folder":
+      return `La ruta ${text(d.path)} es un fichero de la carpeta del libro: la exportación nunca lo sustituye. Elige otra ruta.`;
     case "synthetic_invalid":
       return `El libro generado no supera la verificación (${text(d.invalid)}, ${text(d.findings)}): es un error del generador.`;
     case "missing_basis":

@@ -32,7 +32,8 @@ describe("atlas export", () => {
       const dir = await mkdtemp(join(tmpdir(), "atlas-export-"));
       const ledger = join(dir, "ledger.jsonl");
       await writeFile(ledger, "LEDGER\n");
-      const other = join(dir, "other.csv");
+      const elsewhere = await mkdtemp(join(tmpdir(), "atlas-export-other-"));
+      const other = join(elsewhere, "other.csv");
       await writeFile(other, "OTHER\n");
       const h = harness({
         events: seed(),
@@ -53,6 +54,35 @@ describe("atlas export", () => {
         expect(h.text()).toContain("es el propio libro");
         expect(await readFile(ledger, "utf8")).toBe("LEDGER\n");
       }
+    });
+
+    it("never replaces any file of the ledger folder, not even with --yes, and still writes new ones", async () => {
+      const { h, ledger } = await setup(true);
+      const dir = dirname(ledger);
+      await mkdir(join(dir, "sync"));
+      const guarded = [join(dir, "credentials.json"), join(dir, "sync", "state.json")];
+      for (const file of guarded) {
+        await writeFile(file, "KEEP\n");
+      }
+      await symlink(guarded[0] as string, join(dir, "alias.csv"));
+      const outside = await mkdtemp(join(tmpdir(), "atlas-export-other-"));
+      await symlink(join(outside, "gone.csv"), join(dir, "dangling.csv"));
+      await symlink(outside, join(dir, "linked"));
+      for (const target of [
+        ...guarded,
+        join(dir, "alias.csv"),
+        join(dir, "sync", "..", "credentials.json"),
+      ]) {
+        h.reset();
+        expect(await h.exec(["--yes", "export", "--format", "csv", "--out", target])).toBe(1);
+        expect(h.text()).toContain("carpeta del libro");
+        expect(await readFile(guarded[0] as string, "utf8")).toBe("KEEP\n");
+        expect(await readFile(guarded[1] as string, "utf8")).toBe("KEEP\n");
+      }
+      h.reset();
+      expect(
+        await h.exec(["--yes", "export", "--format", "csv", "--out", join(dir, "fresh.csv")]),
+      ).toBe(0);
     });
 
     it("refuses a directory and leaves no temporary behind", async () => {

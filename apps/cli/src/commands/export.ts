@@ -1,6 +1,7 @@
 // atlas export --format jsonl|csv [--out <ruta>]: the whole ledger, reversed events included.
 
-import { readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { lstat, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import {
   DomainError,
   decodeLines,
@@ -31,6 +32,34 @@ const csvCell = (value: unknown): string => {
   }
   const text = typeof value === "string" ? defused(value) : JSON.stringify(value);
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+};
+
+/**
+ * Whether `file` is an entry of the ledger folder (credentials, sync state,
+ * config, backups): the entry itself, even a link pointing elsewhere or a
+ * dangling one, or whatever it resolves to. `rename` replaces the entry.
+ */
+const inLedgerFolder = async (file: string, ledgerPath: string): Promise<boolean> => {
+  const inside = (folder: string, target: string): boolean => {
+    const path = relative(folder, target);
+    return path !== "" && !path.startsWith("..") && !isAbsolute(path);
+  };
+  try {
+    const folder = await realpath(dirname(ledgerPath));
+    const entry = join(await realpath(dirname(resolve(file))), basename(file));
+    if (
+      inside(folder, entry) &&
+      (await lstat(entry).then(
+        () => true,
+        () => false,
+      ))
+    ) {
+      return true;
+    }
+    return inside(folder, await realpath(file));
+  } catch {
+    return false;
+  }
 };
 
 export const toCsv = (rows: readonly Record<string, unknown>[]): string => {
@@ -107,6 +136,11 @@ export const exportCommand = async (
   // Before any question: this one has no «yes».
   if (exists && (await sameFile(out, ctx.ledgerPath))) {
     throw new DomainError("export_over_ledger", `${out} is the ledger`, { path: out });
+  }
+  if (exists && (await inLedgerFolder(out, ctx.ledgerPath))) {
+    throw new DomainError("export_in_ledger_folder", `${out} is a file of the ledger folder`, {
+      path: out,
+    });
   }
   if (exists && (await stat(out)).isDirectory()) {
     throw new DomainError("path_exists", `${out} is a directory`, { path: out });
