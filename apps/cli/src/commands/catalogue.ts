@@ -30,7 +30,15 @@ import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
 import { closedYearLines } from "../output/closed-years.js";
 import { table } from "../output/table.js";
 import { confirmRuleChangeRates } from "./rule-change.js";
-import { confirm, confirmAndRecord, fieldOf, loadForQuery, renderQuery } from "./shared.js";
+import {
+  aside,
+  cancelled,
+  confirm,
+  confirmAndRecord,
+  fieldOf,
+  loadForQuery,
+  renderQuery,
+} from "./shared.js";
 
 const ACCOUNT_FLAGS = ["id", "name", "platform", "book", "base-currency", "country", "inactive"];
 const ASSET_FLAGS = [
@@ -296,7 +304,8 @@ const confirmSilencedWarnings = async (
   const date = todayInMadrid(ctx.deps.clock);
   const { silenced, evaluated, missing_prices } = silencedWarnings(state, date, current, next);
   if (!evaluated) {
-    ctx.io.out(
+    aside(
+      ctx,
       `No se han podido evaluar los avisos (faltan precios de ${missing_prices.join(", ")}); se continúa.`,
     );
     return true;
@@ -304,9 +313,9 @@ const confirmSilencedWarnings = async (
   if (silenced.length === 0) {
     return true;
   }
-  ctx.io.out("Este cambio silencia avisos activos:");
+  aside(ctx, "Este cambio silencia avisos activos:");
   for (const line of describeWarnings(silenced)) {
-    ctx.io.out(line);
+    aside(ctx, line);
   }
   return confirm(ctx, "¿Continuar? [s/N] ");
 };
@@ -341,14 +350,16 @@ const confirmMovedYears = async (
       ]),
     );
   if (moved.length > 0) {
-    ctx.io.out("Este cambio mueve las ganancias realizadas de ejercicios anteriores:");
-    ctx.io.out(rows(moved));
+    aside(ctx, "Este cambio mueve las ganancias realizadas de ejercicios anteriores:");
+    aside(ctx, rows(moved));
   }
   if (bases.length > 0) {
-    ctx.io.out(
+    aside(
+      ctx,
       "Este cambio mueve la base del ahorro de ejercicios anteriores (`atlas tax <año>`):",
     );
-    ctx.io.out(
+    aside(
+      ctx,
       table(
         [
           "ejercicio",
@@ -373,7 +384,8 @@ const confirmMovedYears = async (
     // A year can keep its base and leave a different balance pending, which is
     // what moves the years after it.
     if (bases.every((impact) => impact.before.eq(impact.after))) {
-      ctx.io.out(
+      aside(
+        ctx,
         "La base no cambia en ninguno, pero sí lo que dejan pendiente de compensar: eso mueve los ejercicios siguientes.",
       );
     }
@@ -389,10 +401,10 @@ const confirmMovedYears = async (
     ),
   );
   for (const line of declared) {
-    ctx.io.out(line);
+    aside(ctx, line);
   }
   if (declared.length === 0) {
-    ctx.io.out("Ninguno de esos ejercicios consta como declarado.");
+    aside(ctx, "Ninguno de esos ejercicios consta como declarado.");
   }
   return confirm(ctx, "¿Continuar? [s/N] ");
 };
@@ -508,21 +520,22 @@ export const settingsCommand = async (
     }
     const settings = mergeSettings(current, patch as Partial<Settings>);
     if (!(await confirmSilencedWarnings(ctx, state, current, settings))) {
-      ctx.io.out("Cancelado.");
+      cancelled(ctx);
       return 0;
     }
     const rates = await confirmRuleChangeRates(ctx, events, current, settings);
     if (!rates.go) {
-      ctx.io.out("Cancelado.");
+      cancelled(ctx);
       return 0;
     }
     if (!(await confirmMovedYears(ctx, events, current, settings))) {
-      ctx.io.out("Cancelado.");
+      cancelled(ctx);
       return 0;
     }
     const recorded = await confirmAndRecord(ctx, { type: "settings_changed", settings });
     if (recorded !== undefined && rates.lines > 0) {
-      ctx.io.out(
+      aside(
+        ctx,
         "Los tipos de esas líneas no se han tocado. Para proponer su corrección: `atlas fx correct`.",
       );
     }

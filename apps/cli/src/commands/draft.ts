@@ -29,7 +29,7 @@ import { type Context, EXIT } from "../context.js";
 import { cloudStoreOf } from "../folder-mode.js";
 import { day } from "../output/ecb.js";
 import { historyOf } from "./rates.js";
-import { confirm, confirmAndRecord, preview, render } from "./shared.js";
+import { answer, aside, cancelled, confirm, confirmAndRecord, preview, render } from "./shared.js";
 
 /** The drafts of the cloud for a cloud folder (ADR-0035, E6), the folder's own `drafts/` otherwise. */
 const storeOf = async (ctx: Context): Promise<PendingDraftStore> => {
@@ -81,14 +81,17 @@ export const saveAsDraft = async (
   const prepared = await preparePendingDraft(ctx.deps, history, staleDays, draft);
   preview(ctx, "Borrador a guardar (sin tipo; no es un movimiento del libro):", draft);
   if (prepared.duplicates.length > 0) {
-    ctx.io.out(
+    aside(
+      ctx,
       `Aviso: ya hay ${prepared.duplicates.length === 1 ? "un movimiento registrado" : `${prepared.duplicates.length} movimientos registrados`} con la misma huella (${prepared.duplicates.join(", ")}). Si es el mismo, no hace falta el borrador.`,
     );
   }
   await (await storeOf(ctx)).save(prepared.draft);
-  ctx.io.out(
+  aside(
+    ctx,
     `Guardado el borrador ${prepared.draft.id} en drafts/. No cuenta en ninguna cifra y no se registra solo: cuando el BCE publique el tipo, \`atlas fx update\` y \`atlas draft confirm ${prepared.draft.id}\`.`,
   );
+  answer(ctx, { status: "draft_saved", draft_id: prepared.draft.id, draft: prepared.draft.event });
   return EXIT.ok;
 };
 
@@ -167,14 +170,16 @@ const confirmDraft = async (ctx: Context, id: string | undefined): Promise<numbe
       outcome: "confirmed",
       eventId: recorded[0] as Ulid,
     });
-    ctx.io.out(
+    aside(
+      ctx,
       `El borrador ${draft.id} ya estaba registrado (${recorded.join(", ")}): se quita de drafts/ sin registrarlo otra vez.`,
     );
+    answer(ctx, { status: "already_recorded", draft_id: draft.id, event_ids: recorded });
     return EXIT.ok;
   }
   const status = pendingDraftStatus(history, state, draft, staleDays);
   if (status.kind !== "confirmable") {
-    ctx.io.out(describeStatus(status));
+    aside(ctx, describeStatus(status));
     return EXIT.domain;
   }
   const notes = status.proposed.flatMap((official) =>
@@ -185,19 +190,26 @@ const confirmDraft = async (ctx: Context, id: string | undefined): Promise<numbe
       : [],
   );
   let removed = true;
-  const result = await confirmAndRecord(ctx, status.event, notes, async (options) => {
-    const recorded = await recordPendingDraft(
-      ctx.deps,
-      await storeOf(ctx),
-      draft,
-      status.event,
-      options,
-    );
-    removed = recorded.draftRemoved;
-    return recorded;
-  });
+  const result = await confirmAndRecord(
+    ctx,
+    status.event,
+    notes,
+    async (options) => {
+      const recorded = await recordPendingDraft(
+        ctx.deps,
+        await storeOf(ctx),
+        draft,
+        status.event,
+        options,
+      );
+      removed = recorded.draftRemoved;
+      return recorded;
+    },
+    () => ({ draft_id: draft.id, draft_removed: removed }),
+  );
   if (result !== undefined) {
-    ctx.io.out(
+    aside(
+      ctx,
       removed
         ? `Borrador ${draft.id} registrado y quitado de drafts/.`
         : `Borrador ${draft.id} registrado, pero no se ha podido quitar de drafts/: \`atlas draft confirm ${draft.id}\` lo quitará sin registrarlo otra vez.`,
@@ -211,13 +223,14 @@ const discardDraft = async (ctx: Context, id: string | undefined): Promise<numbe
   if (draft === undefined) {
     return EXIT.domain;
   }
-  ctx.io.out(summaryOf(draft));
+  aside(ctx, summaryOf(draft));
   if (!(await confirm(ctx, "¿Descartar el borrador? No se registra nada. [s/N] "))) {
-    ctx.io.out("Cancelado.");
+    cancelled(ctx);
     return EXIT.ok;
   }
   await (await storeOf(ctx)).remove(draft.id, { outcome: "discarded" });
-  ctx.io.out(`Borrador ${draft.id} descartado.`);
+  aside(ctx, `Borrador ${draft.id} descartado.`);
+  answer(ctx, { status: "discarded", draft_id: draft.id });
   return EXIT.ok;
 };
 
