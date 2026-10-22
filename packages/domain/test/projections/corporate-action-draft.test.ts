@@ -242,6 +242,93 @@ describe("corporateActionDraft: the fractional shares", () => {
     ]);
   });
 
+  describe("works with the positions of the day of the event, not the ones the ledger ends with", () => {
+    const withLaterBuy = () => {
+      const b = new LedgerBuilder();
+      b.account("acc_a");
+      b.account("acc_b", { platform: "ibkr", country: "IE" });
+      b.asset("ast_old", stock);
+      const buy = (account_id: string, quantity: string, date: string) =>
+        b.buy({
+          account_id,
+          asset_id: "ast_old",
+          quantity,
+          unit_price: "100",
+          fee: "0",
+          trade_date: date,
+          value_date: date,
+        });
+      buy("acc_a", "10", "2027-01-05");
+      buy("acc_a", "0.3", "2027-06-10");
+      buy("acc_b", "7", "2027-06-10");
+      const events = b.build();
+      return { events, state: projectLedger(events) };
+    };
+
+    it("rounds a reverse split on the position of its date, not on a purchase of June", () => {
+      const { events, state } = withLaterBuy();
+      const result = corporateActionDraft(state, events, {
+        ...base,
+        kind: "reverse_split",
+        ratio: "1/4",
+        effective_date: "2027-05-03",
+        cash: CASH,
+      });
+      // 10 / 4 = 2,5 on the day; the 0,3 bought afterwards is not part of it.
+      expect(result.fractional).toEqual([{ account_id: "acc_a", quantity: "0.5" }]);
+    });
+
+    it("still drafts over a ledger that holds an invalid event", () => {
+      const b = new LedgerBuilder();
+      b.account("acc_a");
+      b.asset("ast_old", stock);
+      b.buy({
+        account_id: "acc_a",
+        asset_id: "ast_old",
+        quantity: "10",
+        unit_price: "100",
+        trade_date: "2027-01-05",
+        value_date: "2027-01-05",
+      });
+      // Sells what it never had, before the event: invalid, and the reader has to tolerate it.
+      b.sell({
+        account_id: "acc_a",
+        asset_id: "ast_old",
+        quantity: "99",
+        unit_price: "100",
+        trade_date: "2027-02-01",
+        value_date: "2027-02-01",
+      });
+      const events = b.build();
+      const state = projectLedger(events, { collectErrors: true });
+      expect(state.invalid).toHaveLength(1);
+      expect(() =>
+        corporateActionDraft(state, events, {
+          ...base,
+          kind: "reverse_split",
+          ratio: "1/4",
+          cash: CASH,
+        }),
+      ).not.toThrow();
+      expect(() =>
+        corporateActionDraft(state, events, { ...base, kind: "issuer_liquidation", cash: CASH }),
+      ).not.toThrow();
+    });
+
+    it("liquidates only the accounts that held the asset on the date", () => {
+      const { events, state } = withLaterBuy();
+      const result = corporateActionDraft(state, events, {
+        ...base,
+        kind: "issuer_liquidation",
+        effective_date: "2027-05-03",
+        cash: CASH,
+      });
+      expect(effectsOf(result)).toEqual([
+        { op: "forced_sale", per_account: [{ account_id: "acc_a", quantity: "all" }], ...CASH },
+      ]);
+    });
+  });
+
   it("says so, and generates no sale, when the split leaves nobody with a fraction", () => {
     const result = compose({ ...base, kind: "reverse_split", ratio: "1/2", cash: CASH }, [
       { account: "acc_a", quantity: "10" },
