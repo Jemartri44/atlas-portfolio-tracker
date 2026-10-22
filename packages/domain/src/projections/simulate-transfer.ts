@@ -78,7 +78,11 @@ export const simulateTransfer = (
   const toAsset = requireTransferable(state, to_asset_id, "to");
   const block = transferBlock(fromAsset, toAsset, settings.tax_residence);
   if (block !== undefined) {
-    fail(block.code, block.message, block.details);
+    fail(
+      block.code === "transfer_not_between_funds" ? "not_transferable" : block.code,
+      block.message,
+      block.details,
+    );
   }
 
   const table = coreWeights(state, date, settings);

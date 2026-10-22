@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ValidationError } from "../../src/errors.js";
+import type { ValidationError } from "../../src/errors.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { simulateTransfer } from "../../src/projections/simulate-transfer.js";
 import { DEFAULT_SETTINGS, mergeSettings } from "../../src/settings/settings.js";
@@ -165,10 +165,18 @@ describe("transfers only defer tax between funds (art. 94.1.a LIRPF)", () => {
       date: "2027-12-31",
       settings: DEFAULT_SETTINGS,
     };
-    expect(() => simulateTransfer(state, input)).toThrowError(ValidationError);
-    expect(() =>
-      simulateTransfer(state, { ...input, from_asset_id: "ast_etf_a", to_asset_id: "ast_world" }),
-    ).toThrowError(/not a fund/);
+    const codeOf = (extra: object): unknown => {
+      try {
+        simulateTransfer(state, { ...input, ...extra });
+      } catch (error) {
+        return (error as ValidationError).code;
+      }
+      return undefined;
+    };
+    expect(codeOf({})).toBe("not_transferable");
+    expect(codeOf({ from_asset_id: "ast_etf_a", to_asset_id: "ast_world" })).toBe(
+      "not_transferable",
+    );
     expect(() =>
       simulateTransfer(state, {
         ...input,

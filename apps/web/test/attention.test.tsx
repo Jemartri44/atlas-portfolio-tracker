@@ -125,6 +125,24 @@ describe("the list, as data", () => {
   });
 });
 
+describe("a transfer that cannot defer tax", () => {
+  it("reaches the list in Spanish, with the way out: a sell and a buy", () => {
+    const items = attention([
+      warning("transfer_not_between_funds", {
+        from_asset_id: "ast_world",
+        to_asset_id: "ast_bonds",
+        asset_id: "ast_world",
+      }),
+      warning("transfer_not_resident", { tax_residence: "PT" }, "01ARYZ6S41TSV4RRFFQ6900002"),
+    ]);
+    expect(items.map((item) => item.severity)).toEqual(["warning", "warning"]);
+    expect(items[0]?.message).toMatch(/no puede diferir impuestos/);
+    expect(items[0]?.message).toMatch(/una venta y una compra/);
+    expect(items[1]?.message).toMatch(/residencia fiscal fuera de España/);
+    expect(items[0]?.action.to).toBe("/movimientos");
+  });
+});
+
 describe("the rules whose repeats are one thing to do", () => {
   it("say several stale prices in one sentence, with the assets", () => {
     const stale = (asset_id: string, age_days: number, id: string) =>
