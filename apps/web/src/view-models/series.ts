@@ -211,7 +211,7 @@ export const bucketIndexPlot = (full: BucketIndexPctSeries): PlottedSeries => {
  * as the band the chart draws over it. Presentation, not a rule of the
  * domain: nothing is estimated, the stretch is simply the last one known.
  */
-export type HoleRule = undefined | "pending" | { from: number; to: number };
+type HoleRule = undefined | "pending" | { from: number; to: number };
 
 export const gapRule = (
   x: readonly number[],

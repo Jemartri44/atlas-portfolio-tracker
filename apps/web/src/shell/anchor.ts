@@ -18,7 +18,7 @@
 // Nothing is animated: `behavior: "auto"`, whatever the user's motion setting.
 
 /** About two seconds at sixty frames: a lazy screen is there long before. */
-export const FRAMES = 120;
+const FRAMES = 120;
 
 /**
  * The target of a fragment: decoded when it can be, as written when it
@@ -68,7 +68,7 @@ export const historyGate = () => {
   };
 };
 
-export interface FollowOptions {
+interface FollowOptions {
   find?: (id: string) => Element | null;
   frame?: () => Promise<void>;
   frames?: number;

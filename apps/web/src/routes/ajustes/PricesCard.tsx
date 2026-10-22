@@ -1,11 +1,7 @@
-// «Precios automáticos» in Ajustes (feature 013, block 5): where the web gets
-// the daily closes — the folder the console writes, or files imported by
-// hand —, how many assets have one, and what is wrong when something is.
-//
-// The web never downloads a price: on the desktop the console does
-// (`atlas prices update`); **on the phone there are no automatic prices until
-// the cloud exists**, only the import by hand. And the console downloads the
-// prices of the assets of **its** ledger (P5). All of it said as it is.
+// «Precios automáticos» in Ajustes (feature 013, block 5): the daily closes the
+// web uses are the files imported by hand into this browser; the card says how
+// many assets have one and what is wrong when something is. The web never
+// downloads a price.
 
 import { createResource, createSignal, type JSX, Show } from "solid-js";
 import { Icon, Notice, Section } from "../../components/index.js";
@@ -16,8 +12,6 @@ import { store } from "../../ledger/state.js";
 const prices = () => import("../../prices/quotes.js");
 
 const PROBLEMS = {
-  permission:
-    "Hay una carpeta enlazada, pero el navegador ha perdido el permiso para leerla. Vuelve a enlazarla en «Tipos del BCE».",
   storage:
     "Este navegador no permite guardar datos del sitio: no puede guardar precios importados.",
 } as const;

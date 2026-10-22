@@ -13,7 +13,7 @@ import { useSearchParams } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
 import { Notice } from "../../components/index.js";
 
-export type Done = "registrado" | "corregido" | "anulado";
+type Done = "registrado" | "corregido" | "anulado";
 
 /** Where to go after a write: the movement written, with what was done. */
 export const doneUrl = (id: string, done: Done, priorYear: boolean): string =>

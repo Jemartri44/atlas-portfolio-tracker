@@ -35,7 +35,7 @@ export interface CashRow {
   short: boolean;
 }
 
-export interface PreviewChanges {
+interface PreviewChanges {
   positions: ChangeRow[];
   /** Only the accounts and currencies whose balance moves (`previewEvent`). */
   cash: CashRow[];

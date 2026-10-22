@@ -14,7 +14,7 @@ import { displayName, type NameIndex } from "../format/names.js";
 export const resultWord = (result: Money): string =>
   result.isNegative() ? "Pérdida" : result.isZero() ? "Resultado" : "Ganancia";
 
-export interface SaleLine {
+interface SaleLine {
   /** Where it was sold: the account, and the asset when the event touched several. */
   where: string;
   proceeds: Money;
