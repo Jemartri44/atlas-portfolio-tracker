@@ -1,6 +1,6 @@
 # Plan de implementación: `016-scheduled-jobs`
 
-**Rama**: `feature/016-scheduled-jobs` | **Fecha**: 2026-09-27 | **Spec**: [spec.md](spec.md) | **Preguntas y bloque 0**: [questions.md](questions.md)
+**Rama**: `feature/016-scheduled-jobs` | **Fecha**: 2026-09-27 | **Spec**: [spec.md](spec.md) | **Preguntas y bloque 0**: questions.md (en el historial de git)
 
 **Entrada**: `docs/prompts/016-scheduled-jobs.md` (§8.1 y §8.2 aplicadas), la spec, y lo comprobado en `questions.md` §1 y §3.
 

@@ -1,4 +1,4 @@
-// The hand-computed exercise of specs/009-tax-engine/questions.md, checked
+// The hand-computed exercise of specs/009-tax-engine/questions.md (in git history), checked
 // against the engine. **Every literal here comes from the hand calculation**,
 // committed before the engine existed (commit "docs(009): hand-computed tax
 // year"); none was copied from the engine's output. A discrepancy is

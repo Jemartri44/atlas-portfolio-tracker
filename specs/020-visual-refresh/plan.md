@@ -1,7 +1,7 @@
 # Plan de implementación: `020-visual-refresh`
 
 **Rama**: `feature/020-visual-refresh` · **Fecha**: 2026-09-27 (Europe/Madrid) · **Especificación**: [`spec.md`](spec.md)
-**Entrada**: `docs/prompts/020-visual-refresh.md`, con su §8.1. Anexos: [`research.md`](research.md) (bloque 0 y fuentes), [`data-model.md`](data-model.md) (lo que el dominio y la web calculan), [`contracts/`](contracts/) (puertas del dominio y reglas de la interfaz), [`quickstart.md`](quickstart.md) (cómo se comprueba) y [`questions.md`](questions.md).
+**Entrada**: `docs/prompts/020-visual-refresh.md`, con su §8.1. Anexos: `research.md` (en el historial de git) (bloque 0 y fuentes), [`data-model.md`](data-model.md) (lo que el dominio y la web calculan), [`contracts/`](contracts/) (puertas del dominio y reglas de la interfaz), `quickstart.md` (en el historial de git) (cómo se comprueba) y `questions.md` (en el historial de git).
 
 **Estado: el alto del plan.** No hay código de producción. **Hay una parada del bloque 0 del color (Q1)** que no bloquea el alto, pero sí el bloque 2 de E1; el resto de E1 puede empezar con el visto bueno.
 
@@ -69,7 +69,7 @@ Trece mejoras de la propuesta (M1-M13) y el ancla de `#sincronizacion`, en cuatr
 
 ### 3.1 Bloque 0 del color
 
-Entero en [`research.md`](research.md) R1-R4: fuentes con dirección y fecha, mi recálculo (coincide con la propuesta en todas sus cifras) y los contrastes (pasan todos). **La parada**: pérdida frente a peligro con visión normal **en oscuro mide 5,05**, por debajo del suelo de 7 del encargo; la propuesta solo midió el claro. → **Q1**.
+Entero en `research.md` (en el historial de git) R1-R4: fuentes con dirección y fecha, mi recálculo (coincide con la propuesta en todas sus cifras) y los contrastes (pasan todos). **La parada**: pérdida frente a peligro con visión normal **en oscuro mide 5,05**, por debajo del suelo de 7 del encargo; la propuesta solo midió el claro. → **Q1**.
 
 ### 3.2 La prueba del color (bloque 1)
 

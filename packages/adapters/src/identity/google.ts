@@ -1,6 +1,6 @@
 // Google as the identity provider (ADR-0027). The addresses and the issuers
 // are **fixed here**, from the documentation consulted on 2026-09-25 (block 0
-// of E1, `specs/015-api-access/questions.md` §1.1): the discovery document of
+// of E1, `specs/015-api-access/questions.md (in git history)` §1.1): the discovery document of
 // `accounts.google.com`, its `jwks_uri`, and «the iss claim … is equal to
 // https://accounts.google.com or accounts.google.com». This is the **only**
 // file of the product allowed to name Google (architecture test).

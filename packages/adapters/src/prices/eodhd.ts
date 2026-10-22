@@ -1,5 +1,5 @@
 // EODHD as a `PriceSource` (ADR-0031: the primary source), verified on
-// 2026-09-24 (`specs/013-daily-close-prices/questions.md` §1.1):
+// 2026-09-24 (`specs/013-daily-close-prices/questions.md (in git history)` §1.1):
 //
 // - end of day: `GET /api/eod/{SYMBOL}?api_token=…&fmt=json&from=&to=`, one
 //   call whatever the range; `close` is the close **as traded**, never

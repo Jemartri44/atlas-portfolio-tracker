@@ -1,6 +1,6 @@
 # Plan de implementación: Núcleo, Cubo, gráficas y los asistentes que faltan (`007-web-analytics`)
 
-**Rama**: `feature/007-web-analytics` · **Spec**: [`spec.md`](spec.md) · **Mediciones**: [`research.md`](research.md) · **Contrato del dominio**: [`contracts/domain.md`](contracts/domain.md) · **Preguntas**: [`questions.md`](questions.md)
+**Rama**: `feature/007-web-analytics` · **Spec**: [`spec.md`](spec.md) · **Mediciones**: `research.md` (en el historial de git) · **Contrato del dominio**: [`contracts/domain.md`](contracts/domain.md) · **Preguntas**: `questions.md` (en el historial de git)
 
 ---
 
@@ -192,7 +192,7 @@ Cifras de partida, medidas: `apps/web/src` tiene **59 ficheros y 7.171 líneas**
 
 ## Mediciones
 
-Las de partida están en [`research.md`](research.md). Todas las de abajo están medidas en este worktree: las del dominio con Node, las del navegador con el Chromium del entorno conducido por el protocolo DevTools desde el *scratchpad* (nada de Playwright en el repositorio).
+Las de partida están en `research.md` (en el historial de git). Todas las de abajo están medidas en este worktree: las del dominio con Node, las del navegador con el Chromium del entorno conducido por el protocolo DevTools desde el *scratchpad* (nada de Playwright en el repositorio).
 
 ### Coste de calcular
 
@@ -417,7 +417,7 @@ Cifras de partida, medidas: `apps/web/src` tiene **59 ficheros y 7.171 líneas**
 
 ## Mediciones
 
-Las de partida están en [`research.md`](research.md). Se repiten al terminar y se anotan aquí:
+Las de partida están en `research.md` (en el historial de git). Se repiten al terminar y se anotan aquí:
 
 | Qué | Antes (medido) | Después | Criterio |
 |---|---|---|---|

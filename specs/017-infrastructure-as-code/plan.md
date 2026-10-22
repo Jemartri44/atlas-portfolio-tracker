@@ -62,7 +62,7 @@ specs/017-infrastructure-as-code/
 
 | Entrega | Bloques | Depende de | Zonas de revisión (propuesta) |
 |---|---|---|---|
-| **E1** | 0 verificar (10 puntos, [research.md](research.md)); 1 arnés sobre raíz vacía, cada guardián visto fallar; 2 *bootstrap* de la cuenta; 3 *bootstrap* de entorno; 4 casilla de la plantilla de PR | P1 contestada (Terraform ya instalado) | **Z1** aislamiento: `infra/bootstrap/env/*` (límite, roles, confianzas), políticas de los buckets del estado y de artefactos. **Z2** cuenta y arnés: `infra/bootstrap/account/*` (presupuesto, etiqueta, compartidos, `prevent_destroy`), `infra/test/harness/*`, `.gitignore`, plantilla de PR |
+| **E1** | 0 verificar (10 puntos, research.md (en el historial de git)); 1 arnés sobre raíz vacía, cada guardián visto fallar; 2 *bootstrap* de la cuenta; 3 *bootstrap* de entorno; 4 casilla de la plantilla de PR | P1 contestada (Terraform ya instalado) | **Z1** aislamiento: `infra/bootstrap/env/*` (límite, roles, confianzas), políticas de los buckets del estado y de artefactos. **Z2** cuenta y arnés: `infra/bootstrap/account/*` (presupuesto, etiqueta, compartidos, `prevent_destroy`), `infra/test/harness/*`, `.gitignore`, plantilla de PR |
 | **E2** | 0 verificar (6 puntos); 1 bucket de datos; 2 roles de la API y de administración; 3 CloudFront, SPA y Function URL; 4 Lambda de la API, parámetros `String` y registros | E1 | **Z3** datos e identidad: bucket de datos y su política, roles API/admin contra la tabla, SSM, KMS. **Z4** borde: CloudFront, WAF, función de CSP, Function URL, SPA, `dev_active` |
 | **E3** | 0 verificar (3 puntos); 1 cinco funciones; 2 Scheduler | E2 | **Z5** tareas: roles contra la tabla, SES, Scheduler. **Z6** configuración: `ATLAS_*` y `Input` contra los analizadores del código |
 | **E4** | 0 verificar (3 puntos); 1 `atlas admin secrets`; 2 guion del plan de tarifa plana; 3 flujos de Actions; 4 procedimientos y `cost.md` cerrado | E1-E3 | **Z7** CI y promoción. **Z8** guiones, procedimientos y coste |
@@ -181,9 +181,9 @@ Lista viva en `questions.md` (§prompt 10): ADR-0028 (PR del proveedor, KMS para
 
 ## Artefactos de diseño de esta fase
 
-- [research.md](research.md): las verificaciones del bloque 0 de cada entrega, con cuándo se harán.
+- research.md (en el historial de git): las verificaciones del bloque 0 de cada entrega, con cuándo se harán.
 - [contracts/permissions-table.md](contracts/permissions-table.md): tabla de permisos por rol.
 - [contracts/variables.md](contracts/variables.md): variables de Terraform.
-- [quickstart.md](quickstart.md): cómo recorrer la verificación sin AWS.
-- [questions.md](questions.md): preguntas abiertas para la dirección.
+- quickstart.md (en el historial de git): cómo recorrer la verificación sin AWS.
+- questions.md (en el historial de git): preguntas abiertas para la dirección.
 - `data-model.md`: no aplica (no hay datos de dominio nuevos; las entidades están en `spec.md`).

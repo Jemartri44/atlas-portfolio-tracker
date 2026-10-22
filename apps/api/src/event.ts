@@ -1,5 +1,5 @@
 // The event of a Lambda Function URL, payload format 2.0 (block 0 of E1,
-// `specs/015-api-access/questions.md` §1.4: «The request and response event
+// `specs/015-api-access/questions.md (in git history)` §1.4: «The request and response event
 // formats follow the same schema as the Amazon API Gateway payload format
 // version 2.0»), and its answer. Normalised once: header names in lower case,
 // cookies from `cookies` **and** from a `cookie` header if one came, the body

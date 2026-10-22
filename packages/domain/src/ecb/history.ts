@@ -11,7 +11,7 @@
 //   day of publication, newest first, a column per currency, `N/A` where a
 //   currency had no value that day, and a trailing comma on every row
 //   (verified on the real file of 2026-09-24,
-//   `specs/012-ecb-reference-rates/questions.md` §4).
+//   `specs/012-ecb-reference-rates/questions.md (in git history)` §4).
 // - **The API's CSV** (`format=csvdata`), the fallback: one row per series and
 //   day, oldest first. On a closing day of 1999-2012 it returns a row **with
 //   no value** (`OBS_STATUS` `H`), which is **not** a publication and is read

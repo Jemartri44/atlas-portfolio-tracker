@@ -30,7 +30,7 @@ export const text = (money: Money | undefined): string =>
  *
  * The model is `tests/fixtures/ledger/tax-hand-v1.jsonl`, which pins exactly
  * this and is immune to the same mutations. What the exercise of
- * `specs/010-tax-output/questions.md` §6.3 depends on it **names itself**: two
+ * `specs/010-tax-output/questions.md (in git history)` §6.3 depends on it **names itself**: two
  * months for a listed security and the 25 % limit. The rest is written down at
  * the reading in force on 2026-09-22 so that nothing rides a default; the
  * exercise has no loss on a fund and no dividend, so those values do not enter

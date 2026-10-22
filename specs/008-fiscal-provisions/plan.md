@@ -1,6 +1,6 @@
 # Plan de implementación: Previsiones del esquema para la Fase 5 (`008-fiscal-provisions`)
 
-**Rama**: `feature/008-fiscal-provisions` · **Spec**: [`spec.md`](spec.md) · **Preguntas**: [`questions.md`](questions.md)
+**Rama**: `feature/008-fiscal-provisions` · **Spec**: [`spec.md`](spec.md) · **Preguntas**: `questions.md` (en el historial de git)
 
 **Fecha**: 2026-09-18 · **Estado**: **aprobado por la dirección el 2026-09-18** (doce respuestas en `questions.md`; dos cambian el plan: Q0 y Q3) · **Entrada**: `docs/prompts/008-fiscal-provisions.md`, ADR-0021, ADR-0018, ADR-0022, ADR-0013, ADR-0011, ADR-0009, ADR-0005, ADR-0003
 

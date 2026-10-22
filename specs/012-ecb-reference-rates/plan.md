@@ -1,6 +1,6 @@
 # Plan de implementación: `012-ecb-reference-rates`
 
-**Rama**: `feature/012-ecb-reference-rates` | **Fecha**: 2026-09-24 (Europe/Madrid) | **Especificación**: [`spec.md`](spec.md) | **Preguntas**: [`questions.md`](questions.md)
+**Rama**: `feature/012-ecb-reference-rates` | **Fecha**: 2026-09-24 (Europe/Madrid) | **Especificación**: [`spec.md`](spec.md) | **Preguntas**: `questions.md` (en el historial de git)
 
 **Estado**: **aprobado por la dirección el 2026-09-24** con la decisión D1 (`questions.md` §8): la web guarda el libro en IndexedDB y **nunca escribe en la carpeta compartida**; solo la lee (histórico del BCE, importación de un libro con confirmación). El único escritor de la carpeta es la consola, con el cerrojo `"wx"`. Tabla de §5 confirmada (D3).
 

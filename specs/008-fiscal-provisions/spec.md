@@ -4,7 +4,7 @@
 
 **Creada**: 2026-09-18
 
-**Estado**: **Aprobada por la dirección el 2026-09-18**, con dos cambios sobre el borrador: `valuation` **entra** en el endurecimiento (Q3) y el defecto del formulario de la web se arregla aquí, en el primer commit (Q0). Las doce respuestas están en [`questions.md`](questions.md).
+**Estado**: **Aprobada por la dirección el 2026-09-18**, con dos cambios sobre el borrador: `valuation` **entra** en el endurecimiento (Q3) y el defecto del formulario de la web se arregla aquí, en el primer commit (Q0). Las doce respuestas están en `questions.md` (en el historial de git).
 
 **Entrada**: `docs/prompts/008-fiscal-provisions.md`, ADR-0021 (las nueve previsiones), ADR-0018 (la ventana que se cierra), ADR-0022 (la configuración se registra entera)
 
@@ -190,7 +190,7 @@ El usuario da de alta un ETC de oro domiciliado en Jersey que cotiza en Xetra. D
 
 ## Supuestos
 
-**Todos resueltos por la dirección el 2026-09-18.** Diez confirmaron la recomendación; **dos la cambiaron** (A4 y el alcance de Q0). Las respuestas completas, con su razonamiento, están en [`questions.md`](questions.md).
+**Todos resueltos por la dirección el 2026-09-18.** Diez confirmaron la recomendación; **dos la cambiaron** (A4 y el alcance de Q0). Las respuestas completas, con su razonamiento, están en `questions.md` (en el historial de git).
 
 - **A0** *(nuevo, Q0)* — El defecto del formulario de la web se arregla **en el primer commit de la feature**, con el test que lo congelaba reescrito para exigir que el borrador resultante sea válido para el dominio.
 - **A1** *(confirmado, Q1)* — `income_category` sigue **el patrón real** de `fiscal_date_rule` en el código: constante `DEFAULT_INCOME_CATEGORY` completa, lector `incomeCategoryOf`, entrada en `DEFAULT_SETTINGS` y relleno en `normalizeSettings`. El *golden* no se mueve porque el escenario sintético escribe sus propios mapas y **no** hereda `DEFAULT_SETTINGS` (`scenario.ts`, `SCENARIO_FISCAL_DATE_RULE`).

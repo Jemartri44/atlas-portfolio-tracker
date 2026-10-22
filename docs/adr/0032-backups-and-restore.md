@@ -77,7 +77,7 @@ No habrá cuentas miembro dedicadas: Atlas se despliega en una cuenta de AWS que
 
 ## Nota del 2026-09-27 (feature 015, E5): la confirmación del paso 4 se escribe
 
-Decidida por la dirección el 2026-09-27 tras la revisión de seguridad de la PR #98 (N1; `specs/015-api-access/questions.md` §35). El paso 4 pide una «confirmación explícita, con esa lista delante», y un `--yes` no la cumple: se escribe antes de ver la lista, y basta recuperar la orden del historial del shell para devolver la nube a una copia antigua sin ninguna pregunta. Por eso:
+Decidida por la dirección el 2026-09-27 tras la revisión de seguridad de la PR #98 (N1; `specs/015-api-access/questions.md (en el historial de git)` §35). El paso 4 pide una «confirmación explícita, con esa lista delante», y un `--yes` no la cumple: se escribe antes de ver la lista, y basta recuperar la orden del historial del shell para devolver la nube a una copia antigua sin ninguna pregunta. Por eso:
 
 - `atlas admin restore`, `atlas admin compact` y `atlas admin forget-device` **se niegan con `--yes`**;
 - se confirman **escribiendo el nombre del entorno** (`prod`), con lo que está en juego delante. Un «sí» no vale, y cualquier otra respuesta no toca nada;
@@ -88,7 +88,7 @@ El paso 5 lee además la copia como UTF-8 estricto: un byte que no lo es se nieg
 
 ## Nota del 2026-09-28 (cierre de la feature 016): el volcado y la prueba trimestral, construidos
 
-Decidida por la dirección en la revisión de la PR #109 (`specs/016-scheduled-jobs/questions.md` §20 a §22). El detalle del formato está en `docs/data-schema.md` §1 y en `specs/016-scheduled-jobs/data-model.md` §1 y §4; qué hacer con cada aviso, en [`docs/runbooks/scheduled-warnings.md`](../runbooks/scheduled-warnings.md).
+Decidida por la dirección en la revisión de la PR #109 (`specs/016-scheduled-jobs/questions.md (en el historial de git)` §20 a §22). El detalle del formato está en `docs/data-schema.md` §1 y en `specs/016-scheduled-jobs/data-model.md` §1 y §4; qué hacer con cada aviso, en [`docs/runbooks/scheduled-warnings.md`](../runbooks/scheduled-warnings.md).
 
 - **Qué vuelca la capa 3**, en `backups/<YYYY-MM>/` del mes de Madrid y en este orden: el libro byte a byte; `positions.json`, del libro **del mismo volcado**; el histórico del BCE en vigor, `eurofxref-hist.csv` o `api-exr.csv`, y después su manifiesto; y el primer nivel de `prices/`. **`previous/` no se vuelca.** Sin histórico que cuadre con su manifiesto va sin BCE, y lo dice `backup_ecb_missing`; con un libro que no se proyecta va sin `positions.json` (`backup_positions_missing`).
 - **Un volcado nunca se sobrescribe.** Cada objeto se escribe con `If-None-Match: *`, y la política del bucket lo impone (ADR-0034, nota del 2026-09-28). Un reintento del mismo mes solo guarda como suyo (`kept_from_earlier_attempt`) un objeto con los bytes que un intento anterior **anotó en su registro antes de escribirlo**; cualquier otro es `backup_object_differs`, el volcado para y se trata como un incidente.

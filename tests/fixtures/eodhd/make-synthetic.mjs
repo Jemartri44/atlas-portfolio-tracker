@@ -1,6 +1,6 @@
 // Writes the synthetic EODHD responses of the tests (feature 013): the **real
 // format** of each endpoint, verified on 2026-09-24
-// (`specs/013-daily-close-prices/questions.md` §1.1), with **invented symbols
+// (`specs/013-daily-close-prices/questions.md (in git history)` §1.1), with **invented symbols
 // and round values**. No real response enters the repository, not even one of
 // the public demo key (CLAUDE.md, rule 7).
 //

@@ -10,3 +10,5 @@ Un fichero por feature mientras está abierta, numerado igual que `specs/NNN-<na
 | [review](review-challenge-decisions.md) | Agente revisor: *challenge* de las decisiones tomadas (reutilizable antes de cada fase) | Tres *challenges*: 2026-08-30 (10 hallazgos, aplicados), 2026-08-31 (8, PR #20) y 2026-09-18 (7, PR #27), todos aceptados |
 
 Los procedimientos que dejan las features (restaurar el libro, revocar todos los tokens, la cuenta de Google robada, las claves de precios…) tienen su índice en [`docs/runbooks/`](../runbooks/README.md).
+
+Los cuadernos de trabajo de las features fusionadas (`questions.md`, `research.md`, `quickstart.md` de cada `specs/NNN-*/`) se borraron al fusionarse: las citas a ellos que quedan en ADR, documentos y comentarios se recuperan con `git log --all -- 'specs/NNN-*/questions.md'` y `git show <commit>^:<ruta>`.

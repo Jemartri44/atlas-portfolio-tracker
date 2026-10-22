@@ -4,7 +4,7 @@
 
 **Entrada**: `docs/prompts/011-fail-safe-gaps.md` y la especificación de esta carpeta.
 
-**Estado**: **aprobado por la dirección el 2026-09-23**, con las dos comprobaciones previas hechas y reportadas en [`questions.md`](questions.md). P6 y P7, levantados al implementar el bloque 1, **retiraron dos instrucciones del encargo** y **ampliaron el alcance** con el reloj de la web; los dos están resueltos y aplicados. P1 resuelta con una regla que no era ninguna de las dos que propuse (§1); P4 aprobada con cuatro exigencias sobre el evento nuevo (§8); P2, P3 y P5 conformes. **Dos correcciones de la dirección a este plan**: la forma del ancla pasa a lista siempre presente (§6) y el ternario del bloque 0 queda prohibido (§0).
+**Estado**: **aprobado por la dirección el 2026-09-23**, con las dos comprobaciones previas hechas y reportadas en `questions.md` (en el historial de git). P6 y P7, levantados al implementar el bloque 1, **retiraron dos instrucciones del encargo** y **ampliaron el alcance** con el reloj de la web; los dos están resueltos y aplicados. P1 resuelta con una regla que no era ninguna de las dos que propuse (§1); P4 aprobada con cuatro exigencias sobre el evento nuevo (§8); P2, P3 y P5 conformes. **Dos correcciones de la dirección a este plan**: la forma del ancla pasa a lista siempre presente (§6) y el ternario del bloque 0 queda prohibido (§0).
 
 ---
 
@@ -125,7 +125,7 @@ Con la 2 en su forma buena, «no futura» **es** la 2 y no una tercera. Y la mue
 
 ## §2. Bloque 2 — Las dos de un párrafo *(pendiente 10 y la asimetría)*
 
-**La nota N17.** `specs/010-tax-output/questions.md`, una frase. La cadena buena se **copia** de la cabecera de `packages/domain/test/tax/income-category-default.test.ts`, que la tiene entera: ganancias 462,50; rendimientos 64,00 − 90,00 = −26,00; fase 1 compensa los 26,00 contra el 25 % de 462,50 = 115,63; **fase 2** toma los −260,80 arrastrados de 2027; base 175,70. No se rederiva nada.
+**La nota N17.** `specs/010-tax-output/questions.md (en el historial de git)`, una frase. La cadena buena se **copia** de la cabecera de `packages/domain/test/tax/income-category-default.test.ts`, que la tiene entera: ganancias 462,50; rendimientos 64,00 − 90,00 = −26,00; fase 1 compensa los 26,00 contra el 25 % de 462,50 = 115,63; **fase 2** toma los −260,80 arrastrados de 2027; base 175,70. No se rederiva nada.
 
 **La asimetría.** Primer caso de ADR-0024 de la ronda, y el commit lo dice con esas palabras.
 

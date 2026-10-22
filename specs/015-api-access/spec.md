@@ -8,7 +8,7 @@
 
 **Creada**: 2026-09-25 (Europe/Madrid)
 
-**Estado**: **borrador para el alto del plan**. Espera el visto bueno de la dirección junto con [`plan.md`](plan.md) y [`questions.md`](questions.md). No hay ni una línea de código de producción.
+**Estado**: **borrador para el alto del plan**. Espera el visto bueno de la dirección junto con [`plan.md`](plan.md) y `questions.md` (en el historial de git). No hay ni una línea de código de producción.
 
 **Entrada**: `docs/prompts/015-api-access.md` entero, con sus respuestas de §7 (P1-P16) y las enmiendas de §7.1 bis (B1-B5, N1-N12, R2-B1, R2-B2, R2-N1, R2-N2). Además: ADR-0027, ADR-0033, ADR-0026, ADR-0032 y ADR-0034, las cinco enteras y con sus notas; ADR-0028 con sus notas; ADR-0015 y sus tres notas; ADR-0003, ADR-0012, ADR-0018, ADR-0019, ADR-0025, ADR-0029 y ADR-0031. También `docs/api.md` entero, `docs/data-schema.md` §1 y §5, `docs/decision-roadmap.md` (Ronda 8 y «Etapas pendientes»), `docs/specification.md` §9.2, §9.5, §9.6, §10, §11.7 y §11.8, y `specs/014-ledger-sync-core/` (`questions.md` y `deferred/`). Constitución 1.6.2. **Si el encargo y una ADR discrepan, manda la ADR**, y la discrepancia va a `questions.md`.
 

@@ -1,6 +1,6 @@
 // TEST ONLY — a double of SSM Parameter Store for the narrow `ParameterStore`,
 // never reachable from the product. It imitates what block 0 of E2 verified
-// (`specs/015-api-access/questions.md` §18):
+// (`specs/015-api-access/questions.md (in git history)` §18):
 //
 // - **every version is kept**, and `GetParameter` resolves `name:version` and
 //   `name:label` like SSM («To query by parameter label, use "Name":

@@ -1,4 +1,4 @@
-// The ledger of the hand-computed exercise (specs/009-tax-engine/questions.md,
+// The ledger of the hand-computed exercise (specs/009-tax-engine/questions.md (in git history),
 // "Ejercicio calculado a mano"). Event by event as the table there lists them:
 // E1 … E25. The expected figures live in `exercise.test.ts`, written from the
 // hand calculation and not from the engine.

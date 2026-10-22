@@ -1,5 +1,5 @@
 // Alpha Vantage as a `PriceSource` (ADR-0031: the fallback), verified on
-// 2026-09-24 (`specs/013-daily-close-prices/questions.md` §1.4):
+// 2026-09-24 (`specs/013-daily-close-prices/questions.md (in git history)` §1.4):
 //
 // - `TIME_SERIES_DAILY`, `outputsize=compact` (the free plan sees the last
 //   100 market days), closes **as traded** and **as strings** (`"4. close"`),

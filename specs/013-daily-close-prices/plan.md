@@ -1,6 +1,6 @@
 # Plan de implementación: `013-daily-close-prices`
 
-**Rama**: `feature/013-daily-close-prices` | **Fecha**: 2026-09-24 (Europe/Madrid) | **Especificación**: [`spec.md`](spec.md) | **Preguntas y bloque 0**: [`questions.md`](questions.md)
+**Rama**: `feature/013-daily-close-prices` | **Fecha**: 2026-09-24 (Europe/Madrid) | **Especificación**: [`spec.md`](spec.md) | **Preguntas y bloque 0**: `questions.md` (en el historial de git)
 
 **Estado**: **aprobado por la dirección el 2026-09-24**, con las decisiones de `questions.md` §6. CoinGecko y OpenFIGI fuera (D-Q5, D-Q6); un solo cierre vigente por activo y fecha (D-Q10); techo del arranque con tope de +0,3 KB (D-Q7).
 

@@ -1,6 +1,6 @@
 // The **default** repurchase window of a fund: two months (criterion #2,
 // `2:fund_2m`), worked out by hand in §6.5 of
-// `specs/010-tax-output/questions.md` and committed there before this file
+// `specs/010-tax-output/questions.md (in git history)` and committed there before this file
 // existed.
 //
 // Why it exists: the seven hand calculations of features 009 and 010 all fix

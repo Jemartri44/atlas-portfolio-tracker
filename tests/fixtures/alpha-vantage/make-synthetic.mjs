@@ -1,6 +1,6 @@
 // Writes the synthetic Alpha Vantage responses of the tests (feature 013):
 // the **real format**, verified on 2026-09-24
-// (`specs/013-daily-close-prices/questions.md` §1.4), with **invented symbols
+// (`specs/013-daily-close-prices/questions.md (in git history)` §1.4), with **invented symbols
 // and round values**. Every one of them arrives with HTTP 200: success and
 // failure are told apart only by the key of the body.
 //

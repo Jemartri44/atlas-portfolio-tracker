@@ -1,4 +1,4 @@
-// The hand-computed supplementary return of `specs/010-tax-output/questions.md`
+// The hand-computed supplementary return of `specs/010-tax-output/questions.md (in git history)`
 // §6.3, checked against the engine.
 //
 // **Every literal here comes from that hand calculation**, written and

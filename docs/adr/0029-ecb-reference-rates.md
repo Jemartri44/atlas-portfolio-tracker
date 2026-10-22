@@ -66,7 +66,7 @@ Decidida por la dirección al contestar las preguntas del prompt 012 (`docs/prom
 
 ## Tercera enmienda del 2026-09-24 (cierre de la feature 012)
 
-Escrita por la dirección al cerrar la feature 012 (PR #75). Recoge lo que el paso 0 verificó, lo que la implementación añadió y la ADR no tenía, y una decisión sobre los borradores que corrige otra anterior de la propia dirección. Fuente de todo: `specs/012-ecb-reference-rates/questions.md` (§4, §5, §8, §9 y §10-§12).
+Escrita por la dirección al cerrar la feature 012 (PR #75). Recoge lo que el paso 0 verificó, lo que la implementación añadió y la ADR no tenía, y una decisión sobre los borradores que corrige otra anterior de la propia dirección. Fuente de todo: `specs/012-ecb-reference-rates/questions.md (en el historial de git)` (§4, §5, §8, §9 y §10-§12).
 
 **1. Lo verificado en el paso 0** (descarga del 2026-09-24; `questions.md` §4 y §5).
 
@@ -97,7 +97,7 @@ Todos son **avisos**: un tipo distinto del oficial pudo confirmarse a sabiendas 
 
 ## Nota del 2026-09-28: reconstruir en la nube un histórico dañado (feature 016, E2)
 
-Decisión de la dirección en las rondas 1 y 2 de la revisión de la PR #106 (`specs/016-scheduled-jobs/questions.md` §15 y §16). No cambia el punto 2: añade un caso que no tenía, el del bucket.
+Decisión de la dirección en las rondas 1 y 2 de la revisión de la PR #106 (`specs/016-scheduled-jobs/questions.md (en el historial de git)` §15 y §16). No cambia el punto 2: añade un caso que no tenía, el del bucket.
 
 **El caso.** En `reference/ecb/` del bucket no hay cerrojo ni `rename`. Una activación son tres escrituras condicionales: `previous/`, el fichero y el manifiesto. Hay dos casos que acaban con el fichero en vigor sin cuadrar con su manifiesto:
 
@@ -119,7 +119,7 @@ La consola no tiene este caso: su carpeta se escribe bajo cerrojo.
 
 ## Nota del 2026-09-28 (cierre de la feature 016): `previous/` y el móvil
 
-Decidida por la dirección en la revisión de las PR #106 a #109 (`specs/016-scheduled-jobs/questions.md` §15, §18, §20 y §22).
+Decidida por la dirección en la revisión de las PR #106 a #109 (`specs/016-scheduled-jobs/questions.md (en el historial de git)` §15, §18, §20 y §22).
 
 - **`previous/` solo vale si cuadra con su manifiesto** (N3). Un corte entre los dos primeros pasos de una activación deja en `previous/` otros bytes que los que dice el manifiesto. Quien lo use lo comprueba antes: la reconstrucción de la nota anterior compara con `previous/` **solo si sus bytes tienen el SHA-256 que dice `manifest.previous`**, y toma su nombre de ahí; el procedimiento [`docs/runbooks/ecb-history-in-the-cloud.md`](../runbooks/ecb-history-in-the-cloud.md) manda lo mismo. Sin manifiesto legible no hay con qué comprobarlo: eso solo puede hacer que la reconstrucción rechace un ZIP, nunca que lo acepte. El volcado mensual no copia `previous/`.
 - **Una actualización cortada que se deshace se dice.** Si el fichero en vigor no cuadra con su manifiesto y `previous/` lo deshace, la ejecución siguiente vuelve al anterior y deja el hallazgo **`ecb_update_undone`**, con su aviso. Para la Renta de enero, un histórico dañado o recién deshecho es un fallo pasajero (`ecb_unavailable`): se reintenta al día siguiente, y solo la ausencia real de histórico cuenta como «sin histórico».

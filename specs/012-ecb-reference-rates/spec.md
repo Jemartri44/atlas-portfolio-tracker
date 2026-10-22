@@ -10,7 +10,7 @@
 
 **Entrada**: `docs/prompts/012-ecb-reference-rates.md` entero (§0–§6, decisiones (a)–(bb)); ADR-0026 (Partes B y C, con sus tres enmiendas), ADR-0029 (con sus dos enmiendas), ADR-0030 (con su enmienda); ADR-0003, ADR-0005, ADR-0006, ADR-0013, ADR-0016, ADR-0018 (enmienda del 2026-09-24), ADR-0019, ADR-0024, ADR-0025 (enmienda); ADR-0027, ADR-0028, ADR-0031 y ADR-0032 para saber dónde acaba el encargo; `docs/data-schema.md` §1, §2, §4, §5, §6.2, §6.3; `docs/fiscal-questions.md` #1, #4, #5 y sus dos tablas; `docs/decision-roadmap.md`, Ronda 8.
 
-**Preguntas**: [`questions.md`](questions.md). El paso 0 con sus fuentes, la parada, las opciones que se le abren a la dirección (sin elegir ninguna) y lo que se ha encontrado de paso.
+**Preguntas**: `questions.md` (en el historial de git). El paso 0 con sus fuentes, la parada, las opciones que se le abren a la dirección (sin elegir ninguna) y lo que se ha encontrado de paso.
 
 ---
 
