@@ -16,6 +16,7 @@
 
 import { type CivilDate, isCivilDate } from "../dates/civil-date.js";
 import { ValidationError } from "../errors.js";
+import { isRecord } from "../guards.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
 import { repeatedKey } from "../schema/json-keys.js";
@@ -108,15 +109,12 @@ const wrong = (field: string): ValidationError =>
     field,
   });
 
-const isObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
 const bySource = <T>(
   value: unknown,
   field: string,
   valid: (item: unknown) => item is T,
 ): Partial<Record<QuoteSource, T>> => {
-  if (!isObject(value)) {
+  if (!isRecord(value)) {
     throw wrong(field);
   }
   for (const [source, item] of Object.entries(value)) {
@@ -128,7 +126,7 @@ const bySource = <T>(
 };
 
 const isCheck = (item: unknown): item is CurrencyCheck =>
-  isObject(item) &&
+  isRecord(item) &&
   typeof item.at === "string" &&
   (item.found === undefined || isSaid(item.found)) &&
   Object.keys(item).every((key) => key === "at" || key === "found");
@@ -163,7 +161,7 @@ const currenciesOf = (
       ]),
     );
   }
-  if (!isObject(value.currencies)) {
+  if (!isRecord(value.currencies)) {
     throw wrong(`${assetId}.currencies`);
   }
   for (const [source, currency] of Object.entries(value.currencies)) {
@@ -213,7 +211,7 @@ const withoutLegacyConfirmations = (entry: SymbolEntry): SymbolEntry => {
 };
 
 const entryOf = (assetId: string, value: unknown, legacy: boolean): SymbolEntry => {
-  if (!isObject(value)) {
+  if (!isRecord(value)) {
     throw wrong(assetId);
   }
   // Format 1 has `currency` where format 2 has `currencies`, never both; and
@@ -266,7 +264,7 @@ const TOP_LEVEL_KEYS: readonly string[] = ["symbols_format", "assets"];
  * is not an object. Only the name: the value is never read.
  */
 export const unknownSymbolsKey = (raw: unknown): string | undefined =>
-  isObject(raw)
+  isRecord(raw)
     ? Object.keys(raw)
         .find((key) => !TOP_LEVEL_KEYS.includes(key))
         ?.slice(0, 64)
@@ -308,7 +306,7 @@ export const parseSymbols = (text: string | undefined): SymbolsFile => {
     throw repeatedKeyError("prices/symbols.json", repeated);
   }
   if (
-    isObject(raw) &&
+    isRecord(raw) &&
     typeof raw.symbols_format === "number" &&
     raw.symbols_format > SYMBOLS_FORMAT
   ) {
@@ -332,9 +330,9 @@ export const parseSymbols = (text: string | undefined): SymbolsFile => {
     );
   }
   if (
-    !isObject(raw) ||
+    !isRecord(raw) ||
     (raw.symbols_format !== SYMBOLS_FORMAT && raw.symbols_format !== LEGACY_FORMAT) ||
-    !isObject(raw.assets)
+    !isRecord(raw.assets)
   ) {
     throw wrong("symbols_format");
   }
