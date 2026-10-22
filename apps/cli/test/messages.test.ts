@@ -1,6 +1,6 @@
 // The Spanish texts of the CLI: what the user reads has to be true.
 
-import { ValidationError } from "@atlas/domain";
+import { RemoteRejectedError, ValidationError } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { describeError, describeWarning } from "../src/output/messages.js";
 
@@ -83,5 +83,20 @@ describe("describeError: the remedy of a key twice, by the kind of line", () => 
   it("sends an annulment to the file, since it cannot be annulled", () => {
     expect(of("reversal")).toContain("corrígela a mano en el fichero");
     expect(of("reversal")).not.toContain("atlas delete");
+  });
+});
+
+describe("describeError: a write the API refused", () => {
+  const refused = (details: Record<string, unknown>) =>
+    describeError(new RemoteRejectedError("domain_rejected", 0, details));
+
+  it("says why the domain refused it, so the user knows what to change", () => {
+    expect(refused({ index: 0, domain_code: "insufficient_quantity" })).toContain(
+      "insufficient_quantity",
+    );
+  });
+
+  it("still reads without a reason", () => {
+    expect(refused({})).toContain("no se ha escrito nada");
   });
 });

@@ -289,7 +289,9 @@ export const describeError = (error: DomainError): string => {
     case "conflict":
       return "El libro ha cambiado desde que se cargó: repite el comando.";
     case "remote_rejected":
-      return `La API ha rechazado la escritura (${text(d.remote_code)}): ${
+      return `La API ha rechazado la escritura (${text(d.remote_code)}${
+        d.domain_code === undefined ? "" : `, ${text(d.domain_code)}`
+      }): ${
         d.accepted === 0
           ? "no se ha escrito nada"
           : "solo se ha escrito una parte; recarga el libro"
