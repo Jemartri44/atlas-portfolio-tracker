@@ -7,18 +7,16 @@
 // that already holds the same bytes is left as it is; one with other bytes is
 // refused.
 
-import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { DomainError } from "@atlas/domain";
 import type { AdminClients } from "../admin/environment.js";
+import { sha256 } from "../fs.js";
 
 export interface Copied {
   readonly written: number;
   readonly unchanged: number;
 }
-
-const sha = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 
 /** Writes one file **without overwriting**, and reads it back to verify it. */
 const copyVerified = async (
@@ -27,7 +25,7 @@ const copyVerified = async (
 ): Promise<"written" | "unchanged"> => {
   const existing = await readFile(destination).catch(() => undefined);
   if (existing !== undefined) {
-    if (sha(existing) === sha(bytes)) {
+    if (sha256(existing) === sha256(bytes)) {
       return "unchanged";
     }
     throw new DomainError("path_exists", `${destination} already exists with other bytes`, {
@@ -36,7 +34,7 @@ const copyVerified = async (
   }
   await mkdir(dirname(destination), { recursive: true });
   await writeFile(destination, bytes, { flag: "wx" });
-  if (sha(await readFile(destination)) !== sha(bytes)) {
+  if (sha256(await readFile(destination)) !== sha256(bytes)) {
     throw new DomainError("backup_mismatch", "the copy does not match its source", {
       path: destination,
     });

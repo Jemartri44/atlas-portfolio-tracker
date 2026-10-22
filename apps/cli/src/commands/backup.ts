@@ -8,7 +8,6 @@
 // with the device token, is checked against its etag, and is written dated,
 // never over another, read-only (`0444`).
 
-import { createHash } from "node:crypto";
 import { chmod, constants, copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { FileLedgerStore } from "@atlas/adapters";
@@ -18,7 +17,7 @@ import { adminClientsOf, translateAwsFailure } from "../admin/clients.js";
 import { assertKnownFlags, booleanFlag, type Flags, requireFlag, UsageError } from "../args.js";
 import { type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { cloudStoreOf } from "../folder-mode.js";
-import { pathExists } from "../fs.js";
+import { pathExists, sha256 } from "../fs.js";
 import {
   type Copied,
   type CopiedFromBucket,
@@ -50,15 +49,14 @@ const copyFromCloud = async (
       etag: found,
       expected_etag: snapshot.etag,
     });
-  const sha = (data: Uint8Array): string => createHash("sha256").update(data).digest("hex");
-  if (sha(bytes) !== snapshot.etag) {
-    throw mismatch(sha(bytes));
+  if (sha256(bytes) !== snapshot.etag) {
+    throw mismatch(sha256(bytes));
   }
   await writeFile(destination, bytes, { flag: "wx", mode: 0o444 });
   await chmod(destination, 0o444);
   const written = await readFile(destination);
-  if (sha(written) !== snapshot.etag) {
-    throw mismatch(sha(written));
+  if (sha256(written) !== snapshot.etag) {
+    throw mismatch(sha256(written));
   }
   return { etag: snapshot.etag, lines: linesOfText(snapshot.text) };
 };
