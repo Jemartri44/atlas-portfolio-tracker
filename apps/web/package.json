@@ -2,7 +2,7 @@
   "name": "@atlas/web",
   "version": "0.1.0",
   "private": true,
-  "description": "Atlas web application: local-first SPA over the same ledger.jsonl the CLI uses.",
+  "description": "Atlas web application: cloud-only SPA over the ledger served by the API.",
   "license": "MIT",
   "type": "module",
   "scripts": {

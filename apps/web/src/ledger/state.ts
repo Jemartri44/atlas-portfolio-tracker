@@ -219,8 +219,6 @@ export type Store = ReturnType<typeof createStore>;
 export const store: Store = createRoot(createStore);
 
 export const usePrivacy = (): (() => boolean) => store.privacy;
-export const useLoad = (): (() => LoadPhase) => store.load;
-export const useSnapshot = (): (() => LedgerSnapshot | undefined) => store.snapshot;
 
 /**
  * Today in Europe/Madrid, from the clock the use cases use — which is what

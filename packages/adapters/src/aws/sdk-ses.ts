@@ -18,7 +18,7 @@ import { MailRefused, type MailSender, MailUnknown, type OutgoingMail } from "./
 import { factsOf } from "./sdk-errors.js";
 
 /** What the adapter sends: the client of the SDK, or a simulated one with the same call. */
-export interface SesSender {
+interface SesSender {
   send(command: SendEmailCommand): Promise<unknown>;
 }
 

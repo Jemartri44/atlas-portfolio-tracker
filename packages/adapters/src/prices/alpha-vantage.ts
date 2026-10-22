@@ -29,9 +29,9 @@ const isObject = (value: unknown): value is Body =>
  * word it says about it is «1 request per second» (questions.md §1.4; review
  * of PR #78). A call waits for the second to pass instead of being refused.
  */
-export const ALPHA_VANTAGE_SPACING_MS = 1000;
+const ALPHA_VANTAGE_SPACING_MS = 1000;
 
-export interface Pace {
+interface Pace {
   readonly now: () => number;
   readonly sleep: (ms: number) => Promise<void>;
 }

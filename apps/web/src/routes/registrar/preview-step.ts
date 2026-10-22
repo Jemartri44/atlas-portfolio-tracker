@@ -16,7 +16,7 @@ import {
 } from "../../ledger/write.js";
 import type { toDraft } from "../../view-models/forms/index.js";
 
-export interface PreviewStep {
+interface PreviewStep {
   preview: EventPreview;
   closedYears: readonly ClosedYearImpact[];
 }

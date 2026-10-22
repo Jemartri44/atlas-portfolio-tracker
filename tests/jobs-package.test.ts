@@ -31,11 +31,9 @@ interface Script {
 
 const load = async (): Promise<Script> => (await import(pathToFileURL(script).href)) as Script;
 
-/** A double by its name: a fake, a stub, a simulated or file notifier, anything `test-only-`. */
+/** A double by its name: a fake, a stub, a simulated one, anything `test-only-`. */
 const looksLikeDouble = (input: string): boolean =>
-  /test-only-|(^|\/)(tests?|test-support)\/|(fake|stub|simulated|file-notifier)[^/]*\.[jt]s$/.test(
-    input,
-  );
+  /test-only-|(^|\/)(tests?|test-support)\/|(fake|stub|simulated)[^/]*\.[jt]s$/.test(input);
 
 describe("the package of the scheduled jobs (016, E1)", () => {
   it("bundles the jobs, the SDK of SES and nothing of the tests", async () => {

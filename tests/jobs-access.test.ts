@@ -180,10 +180,13 @@ describe("architecture (016): the warnings of January reach no price (E4, mutant
       .sort();
     expect(values).toEqual(
       [
+        "apps/jobs/src/ecb-history.ts @atlas/adapters/aws decodeUtf8Strict",
         "apps/jobs/src/ecb-history.ts @atlas/adapters/aws referenceReader",
+        "apps/jobs/src/ecb-history.ts @atlas/adapters/aws sha256Bytes",
         "apps/jobs/src/ecb-history.ts @atlas/domain/ecb DEFAULT_LOCAL_CONFIG",
         "apps/jobs/src/ecb-history.ts @atlas/domain/ecb readEcbHistory",
         "apps/jobs/src/ecb-history.ts @atlas/domain/jobs activeHistoryOf",
+        "apps/jobs/src/ledger.ts @atlas/adapters/aws decodeUtf8Strict",
         "apps/jobs/src/ledger.ts @atlas/adapters/aws DependencyUnavailable",
         "apps/jobs/src/ledger.ts @atlas/adapters/aws appendOnlyLedger",
         "apps/jobs/src/ledger.ts @atlas/domain CURRENT_LEDGER_SCHEMA",

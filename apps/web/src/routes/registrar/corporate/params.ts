@@ -16,7 +16,7 @@ import type { FormValues } from "../../../view-models/forms/index.js";
 import { normaliseDecimal } from "../../../view-models/forms/index.js";
 
 /** The accounts a fee line may name: by their name, which is what the user knows. */
-export interface NamedAccount {
+interface NamedAccount {
   account_id: string;
   name: string;
 }

@@ -27,13 +27,13 @@ import { signedOutReason } from "./session-errors.js";
 import { type AppError, store as ledger, requireDeps, type SignedOutReason } from "./state.js";
 import { runWrite, type WriteFailure, type WriteResult } from "./write.js";
 
-export interface SavedDraft {
+interface SavedDraft {
   id: string;
   /** Recorded events with the same fingerprint, said before the user leaves. */
   duplicates: string[];
 }
 
-export type SaveFailure =
+type SaveFailure =
   /** Sent, and the answer never came whole: the same draft is sent again to settle it. */
   | { kind: "unknown"; draft: PendingDraft }
   | { kind: "signed_out"; reason: SignedOutReason }

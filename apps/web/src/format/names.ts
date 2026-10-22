@@ -61,7 +61,7 @@ const UNITS: Readonly<Record<string, string>> = {
 };
 
 /** Units nobody has a better word for: ETC, ETP, crypto, an unknown asset. */
-export const GENERIC_UNITS = "uds.";
+const GENERIC_UNITS = "uds.";
 
 /** Builds the index from a projected ledger. */
 export const nameIndex = (state: LedgerState | undefined): NameIndex => {

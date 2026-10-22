@@ -34,7 +34,7 @@ const deps = (blob: MemoryBlob) => {
 };
 
 const open = async (blob: MemoryBlob, expiresAt = "2099-01-01T00:00:00.000Z") =>
-  loadInto({ deps: deps(blob), source: { kind: "cloud", expiresAt } });
+  loadInto({ deps: deps(blob), source: { expiresAt } });
 
 afterEach(() => store.setPending(undefined));
 
@@ -143,7 +143,7 @@ describe("the notice of a session about to end", () => {
     const timed = { ...deps(new MemoryBlob(goldenText())), clock: { now: () => new Date(now) } };
     await loadInto({
       deps: timed,
-      source: { kind: "cloud", expiresAt: "2029-07-01T10:20:00.000Z" },
+      source: { expiresAt: "2029-07-01T10:20:00.000Z" },
     });
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     try {
