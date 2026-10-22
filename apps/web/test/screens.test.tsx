@@ -65,7 +65,7 @@ beforeEach(async () => {
   store.setPrivacy(false);
   await loadInto({
     deps: deps(),
-    source: { kind: "cloud", expiresAt: "2099-01-01T00:00:00.000Z" },
+    source: { expiresAt: "2099-01-01T00:00:00.000Z" },
   });
 });
 
@@ -336,7 +336,7 @@ describe("Resumen applies the rule of `transfer_max_days`", () => {
   it("puts an overdue request in the attention list, in Spanish", async () => {
     await loadInto({
       deps: deps(OVERDUE),
-      source: { kind: "cloud", expiresAt: "2099-01-01T00:00:00.000Z" },
+      source: { expiresAt: "2099-01-01T00:00:00.000Z" },
     });
     const shown = text(await show("/", Resumen));
 
@@ -424,7 +424,7 @@ describe("the privacy mode covers the prose of the warnings", () => {
     // silently emptied the block the day it was not (feature 011, P7).
     await loadInto({
       deps: deps(WASH_SALE, "2026-06-01T10:00:00.000Z"),
-      source: { kind: "cloud", expiresAt: "2099-01-01T00:00:00.000Z" },
+      source: { expiresAt: "2099-01-01T00:00:00.000Z" },
     });
   });
 
