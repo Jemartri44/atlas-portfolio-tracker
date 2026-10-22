@@ -124,6 +124,7 @@ export const applyAssetUpdated = (state: LedgerState, event: AssetUpdatedEvent):
       { asset_id: event.asset_id, from: current.currency, to: event.currency },
     );
   }
+  const warnsAgain = event.transferable && !current.transferable;
   const history = [...current.identifier_history];
   if (current.isin !== event.isin || current.ticker !== event.ticker) {
     history.push({
@@ -140,7 +141,9 @@ export const applyAssetUpdated = (state: LedgerState, event: AssetUpdatedEvent):
     ...fields
   } = event;
   state.assets.set(event.asset_id, { ...fields, identifier_history: history });
-  warnTransferableType(state, event);
+  if (warnsAgain) {
+    warnTransferableType(state, event);
+  }
 };
 
 /** Core and bucket never mix (constitution III, ADR-0009). */

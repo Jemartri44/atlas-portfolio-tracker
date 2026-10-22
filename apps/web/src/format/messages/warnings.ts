@@ -164,6 +164,10 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     `La fecha del tipo de cambio (${day(d.fx_rate_date)}) es posterior a la fecha fiscal (${day(d.fiscal_date)}).`,
   same_asset_two_accounts: (d, n) =>
     `${n.one(d.asset_id)} está ahora en ${count(d.accounts)} cuentas; el FIFO sigue siendo global, entre todas ellas.`,
+  transfer_not_between_funds: (d, n) =>
+    `Un traspaso con ${n.one(d.from_asset_id)} y ${n.one(d.to_asset_id)} no puede diferir impuestos: ${n.one(d.asset_id)} no es un fondo. Hacienda lo trata como una venta y una compra; regístralo así para que la renta lo cuente.`,
+  transfer_not_resident: () =>
+    "Un traspaso se registró con la residencia fiscal fuera de España: sin residencia en España no hay diferimiento. Regístralo como una venta y una compra.",
   transferable_not_fund: (d, n) =>
     `${n.one(d.asset_id)} está marcado como traspasable, pero el diferimiento solo existe entre fondos: esa marca no tiene efecto.`,
   sell_without_thesis: (d, n) =>

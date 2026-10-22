@@ -78,6 +78,8 @@ const DESTINATIONS: Record<string, { label: string; to: string }> = {
   // The rest are read on the event itself.
   wash_sale_window_repurchase: { label: "Ver movimientos", to: "/movimientos" },
   wash_sale_window_prior_buy: { label: "Ver movimientos", to: "/movimientos" },
+  transfer_not_between_funds: { label: "Ver movimientos", to: "/movimientos" },
+  transfer_not_resident: { label: "Ver movimientos", to: "/movimientos" },
   currency_mismatch: { label: "Ver movimientos", to: "/movimientos" },
   fx_rate_date_after_fiscal_date: { label: "Ver movimientos", to: "/movimientos" },
   same_asset_two_accounts: { label: "Ver movimientos", to: "/movimientos" },
@@ -107,6 +109,8 @@ const RANKS: readonly string[] = [
   "transfer_overdue",
   "wash_sale_window_repurchase",
   "wash_sale_window_prior_buy",
+  "transfer_not_between_funds",
+  "transfer_not_resident",
   "thesis_size_exceeded",
   "sell_without_thesis",
   "thesis_closed_with_position",
@@ -145,6 +149,8 @@ const SEVERITIES: Record<string, AttentionSeverity> = {
   bucket_contribution_near_limit: "warning",
   wash_sale_window_repurchase: "warning",
   wash_sale_window_prior_buy: "warning",
+  transfer_not_between_funds: "warning",
+  transfer_not_resident: "warning",
   stale_price: "warning",
   stale_fx_rate: "warning",
 };

@@ -34,7 +34,7 @@ import { completeRequest, fillOrder, lookupOpenOrder, lookupOpenRequest } from "
 import { accountsHolding, adjustPosition, positionOf } from "./positions.js";
 import { type Account, type Asset, addWarning, type LedgerState, type Thesis } from "./state.js";
 import { linkBuy, linkSell, requireOpenThesis } from "./theses.js";
-import { residenceAt, transferBlock } from "./transfer-rule.js";
+import { enforceTransfer } from "./transfer-rule.js";
 import { noteAcquisition, warnPriorBuys, warnRepurchase } from "./wash-sale.js";
 
 export interface Priced {
@@ -460,15 +460,8 @@ export const applyTransfer = (state: LedgerState, event: TransferEvent): void =>
   const quantityIn = Quantity.parse(event.quantity_in);
   const request =
     event.request_id === undefined ? undefined : lookupOpenRequest(state, event.request_id, event);
-  const block = custody
-    ? undefined
-    : transferBlock(fromAsset, toAsset, residenceAt(state, event.recorded_at));
-  if (block !== undefined) {
-    throw new ProjectionError(block.code, event.id, block.message, {
-      from_asset_id: event.from_asset_id,
-      to_asset_id: event.to_asset_id,
-      ...block.details,
-    });
+  if (!custody) {
+    enforceTransfer(state, event.id, fromAsset, toAsset, event.recorded_at);
   }
   requireAvailable(state, event.from_account_id, event.from_asset_id, quantityOut, event.id);
 

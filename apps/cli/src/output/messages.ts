@@ -610,6 +610,10 @@ export const describeWarning = (warning: Warning): string => {
       return `fx_rate_date (${text(d.fx_rate_date)}) es posterior a la fecha fiscal (${text(d.fiscal_date)}).`;
     case "same_asset_two_accounts":
       return `El activo ${text(d.asset_id)} está ahora en ${(d.accounts as string[]).length} cuentas; el FIFO sigue siendo global.`;
+    case "transfer_not_between_funds":
+      return `Un traspaso entre ${text(d.from_asset_id)} y ${text(d.to_asset_id)} no difiere impuestos: ${text(d.asset_id)} no es un fondo. Hacienda lo trata como una venta y una compra; regístralo así (transfer_not_between_funds).`;
+    case "transfer_not_resident":
+      return `Un traspaso se registró con tax_residence ${text(d.tax_residence)}: sin residencia en España no hay diferimiento; regístralo como venta y compra (transfer_not_resident).`;
     case "transferable_not_fund":
       return `El activo ${text(d.asset_id)} es de tipo ${text(d.asset_type)} y está marcado como traspasable: el diferimiento solo existe entre fondos, así que esa marca no tiene efecto.`;
     case "sell_without_thesis":

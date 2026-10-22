@@ -16,6 +16,7 @@ import { createUlidGenerator } from "../ids/ulid.js";
 import { normalizeIsin } from "../projections/isin.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import type { LedgerState, Warning } from "../projections/state.js";
+import { RECORD_ONLY_BLOCKS } from "../projections/transfer-rule.js";
 import { CURRENT_SCHEMA_VERSION } from "../schema/envelope.js";
 import type { Draft, LedgerEvent, SupportedEvent } from "../schema/events.js";
 import { fingerprintOf } from "../schema/fingerprint.js";
@@ -160,6 +161,23 @@ export const checkIsinUnique = (
 };
 
 /**
+ * A transfer that cannot defer tax is tolerated when a ledger is replayed (a
+ * warning) but never recorded: the book may predate the rule, the entry may not.
+ */
+const refuseNonFundTransfer = (state: LedgerState, event: SupportedEvent): void => {
+  const blocked = state.warnings.find(
+    (warning) => warning.event_id === event.id && RECORD_ONLY_BLOCKS.includes(warning.code),
+  );
+  if (blocked !== undefined) {
+    throw new ValidationError(
+      blocked.code === "transfer_not_between_funds" ? "not_transferable" : blocked.code,
+      blocked.message,
+      blocked.details,
+    );
+  }
+};
+
+/**
  * Decides whether the candidate ledger may be written (ADR-0015). Everything
  * but `settings_changed` still demands a valid ledger, exactly as before; a
  * `settings_changed` only has to leave no *new* invalid event, unless the
@@ -181,6 +199,7 @@ export const checkInvalid = (
     throw own.error;
   }
   checkIsinUnique(state, event, () => projectLedger(events, { collectErrors: true }));
+  refuseNonFundTransfer(state, event);
   if (event.type !== "settings_changed") {
     /*
      * An event that was already invalid before this mutation blocks it, but it
