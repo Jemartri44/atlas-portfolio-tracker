@@ -9,6 +9,7 @@
 // Numbers are read like every other number of the application
 // (`format/input.ts`): `1.200,50` is twelve hundred, `1.5` is refused.
 
+import { isCivilDate, lastWorkingDay } from "@atlas/domain";
 import type { CorporateActionParams } from "@atlas/domain/tools";
 import { parseDecimalInput } from "../../../format/input.js";
 import type { CorporateForm } from "../../../view-models/forms/corporate.js";
@@ -101,6 +102,10 @@ const feesOf = (
   return Object.keys(fees).length === 0 ? undefined : fees;
 };
 
+/** The ECB publishes nothing on weekends: an empty rate date follows the operation back to the last working day. */
+const rateDateOf = (effectiveDate: string): string =>
+  isCivilDate(effectiveDate) ? lastWorkingDay(effectiveDate) : effectiveDate;
+
 export const toCorporateParams = (
   form: CorporateForm,
   values: FormValues,
@@ -131,7 +136,7 @@ export const toCorporateParams = (
             unit_price: price,
             currency: values.cash_currency ?? "EUR",
             fx_rate: decimal(values, "cash_fx_rate") ?? "1",
-            fx_rate_date: values.cash_fx_rate_date || (values.effective_date ?? ""),
+            fx_rate_date: values.cash_fx_rate_date || rateDateOf(values.effective_date ?? ""),
           },
         }),
   };
