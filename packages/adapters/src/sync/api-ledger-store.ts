@@ -132,6 +132,10 @@ export class ApiLedgerStore implements LedgerStore {
           if (mayHaveWritten(error)) {
             throw new WriteOutcomeUnknownError(events.map((event) => event.id));
           }
+          if (sent > 0) {
+            // Any other refusal after the first batch: the earlier batches are in.
+            throw new RemoteRejectedError("partial_write", accepted);
+          }
         }
         throw error;
       }

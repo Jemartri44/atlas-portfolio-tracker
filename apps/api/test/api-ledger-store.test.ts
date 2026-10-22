@@ -58,6 +58,8 @@ interface Net {
   badGatewayAfter?: boolean;
   /** Answers a POST without serving it: the API never saw it. */
   instead?: Response | undefined;
+  /** How many POSTs are served normally before `instead` applies. */
+  insteadAfterPosts?: number;
   /** Serves a POST and then hands back this answer instead of the API's. */
   after?: Response | undefined;
 }
@@ -75,7 +77,10 @@ const rig = async (lines: readonly string[] = [lineOf(account)]) => {
       throw new TypeError("network down");
     }
     if (init.method === "POST" && net.instead !== undefined) {
-      return net.instead;
+      if ((net.insteadAfterPosts ?? 0) <= 0) {
+        return net.instead;
+      }
+      net.insteadAfterPosts = (net.insteadAfterPosts ?? 0) - 1;
     }
     const result = await api.call(init.method ?? "GET", url.replace(SELF, ""), {
       headers: init.headers as Record<string, string>,
@@ -431,6 +436,47 @@ describe("ApiLedgerStore: more units than one request admits", () => {
     expect(stored()).toBe(
       textOf([lineOf(account), ...events.slice(0, MAX_APPEND_UNITS + 1).map(lineOf)]),
     );
+  });
+
+  const answerLater = (status: number, code: string) =>
+    new Response(JSON.stringify({ error: { code, details: {} } }), {
+      status,
+      headers: { "content-type": "application/json" },
+    });
+
+  it("a refusal of another kind after the first request is a partial write, not 'nothing written'", async () => {
+    const { store, net, stored } = await rig();
+    const { etag } = await store.load();
+    net.instead = answerLater(401, "device_token_invalid");
+    net.insteadAfterPosts = 1;
+    const events = Array.from({ length: MAX_APPEND_UNITS + 2 }, (_, n) => numbered(n));
+    const error = (await failureOf(store.append(events, etag))) as RemoteRejectedError;
+    expect(error).toBeInstanceOf(RemoteRejectedError);
+    expect(error.remoteCode).toBe("partial_write");
+    expect(error.accepted).toBe(MAX_APPEND_UNITS);
+    expect(stored()).toBe(
+      textOf([lineOf(account), ...events.slice(0, MAX_APPEND_UNITS).map(lineOf)]),
+    );
+  });
+
+  it("a conflict after the first request is a partial write too", async () => {
+    const { store, net } = await rig();
+    const { etag } = await store.load();
+    net.instead = answerLater(412, "precondition_failed");
+    net.insteadAfterPosts = 1;
+    const events = Array.from({ length: MAX_APPEND_UNITS + 2 }, (_, n) => numbered(n));
+    const error = (await failureOf(store.append(events, etag))) as RemoteRejectedError;
+    expect(error.remoteCode).toBe("partial_write");
+    expect(error.accepted).toBe(MAX_APPEND_UNITS);
+  });
+
+  it("a gateway failure after the first request is an unknown outcome", async () => {
+    const { store, net } = await rig();
+    const { etag } = await store.load();
+    net.instead = answerLater(502, "internal");
+    net.insteadAfterPosts = 1;
+    const events = Array.from({ length: MAX_APPEND_UNITS + 2 }, (_, n) => numbered(n));
+    expect(await failureOf(store.append(events, etag))).toBeInstanceOf(WriteOutcomeUnknownError);
   });
 
   it("the API refuses a request with more units than the bound, writing nothing", async () => {
