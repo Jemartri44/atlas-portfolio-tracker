@@ -67,6 +67,14 @@ describe("transfers only defer tax between funds (art. 94.1.a LIRPF)", () => {
     b.asset("ast_mm", { asset_class: "fixed_income", asset_type: "money_market" });
     b.transfer(transferFields("ast_world", "ast_mm"));
     b.transfer({ ...transferFields("ast_etf_a", "ast_etf_a"), to_account_id: "acc_etf" });
+    b.transferRequested({
+      from_account_id: "acc_fund",
+      from_asset_id: "ast_etf_a",
+      to_account_id: "acc_etf",
+      to_asset_id: "ast_etf_a",
+      quantity_out: "1",
+      requested_date: "2027-03-01",
+    });
     expect(() => projectLedger(b.build())).not.toThrow();
   });
 
