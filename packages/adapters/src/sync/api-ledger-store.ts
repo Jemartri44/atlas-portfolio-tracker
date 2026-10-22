@@ -21,8 +21,9 @@
 // - A refusal inside a `200` is `RemoteRejectedError` (nothing held back,
 //   nothing retried). A cut after sending is `WriteOutcomeUnknownError`:
 //   the ids were fixed before sending, and `findOutcome` looks for them in the
-//   reloaded ledger. Retrying with the same ids is safe: the API refuses a
-//   repeated id (`duplicate_id`).
+//   reloaded ledger. Retrying with the same events is safe: the ones already
+//   in the ledger, byte for byte, are skipped here; a repeated id with other
+//   content is refused by the API (`duplicate_id`).
 // - `replace`, `appendLines` and `replaceLines` are refused: the web never
 //   compacts or restores (administration goes through the admin routes).
 //
@@ -108,7 +109,15 @@ export class ApiLedgerStore implements LedgerStore {
       return { etag };
     }
     const base = await this.baseFor(etag);
-    const batches = batchesOf(this.entriesFor(events, base));
+    // Sent again after a partial write: what the ledger already holds, byte for
+    // byte, is recognised and skipped. A same id with other content goes to the
+    // API, which refuses it (`duplicate_id`).
+    const held = new Map(base.map((event) => [event.id, encodeLine(event)]));
+    const pending = events.filter((event) => held.get(event.id) !== encodeLine(event));
+    if (pending.length === 0) {
+      return { etag };
+    }
+    const batches = batchesOf(this.entriesFor(pending, base));
     let current = etag;
     let accepted = 0;
     let sent = 0;
@@ -130,7 +139,7 @@ export class ApiLedgerStore implements LedgerStore {
             throw new RemoteRejectedError("partial_write", accepted);
           }
           if (mayHaveWritten(error)) {
-            throw new WriteOutcomeUnknownError(events.map((event) => event.id));
+            throw new WriteOutcomeUnknownError(pending.map((event) => event.id));
           }
           if (sent > 0) {
             // Any other refusal after the first batch: the earlier batches are in.

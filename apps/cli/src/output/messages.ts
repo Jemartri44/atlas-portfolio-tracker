@@ -298,7 +298,7 @@ export const describeError = (error: DomainError): string => {
       }): ${
         d.accepted === 0
           ? "no se ha escrito nada"
-          : "solo se ha escrito una parte; recarga el libro"
+          : `se han escrito ${text(d.accepted)} líneas y el resto no; repite la operación: lo ya escrito se reconoce y no se duplica`
       }.`;
     case "write_outcome_unknown":
       return "La conexión se cortó al guardar y no se sabe si la operación quedó registrada: cuando vuelva la conexión, comprueba el libro antes de repetirla.";
