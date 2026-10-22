@@ -30,12 +30,12 @@ export const GRID = "(min-width: 64rem)";
 /**
  * Where a side column fits beside a table (the filters of the movements): at
  * 1024px the column and the table together did not, and the table spilled
- * past its card (review of 2026-09-19).
+ * past its card.
  */
 export const SIDE_COLUMN = "(min-width: 80rem)";
 
 /**
- * The step of the monitor (styles/tokens.css, feature 020 M4): from here the
+ * The step of the monitor (styles/tokens.css): from here the
  * summary is laid out in 8+4, and its reading order changes with it — CSS can
  * place a card, not the order the keyboard walks through the cards.
  */

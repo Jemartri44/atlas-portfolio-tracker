@@ -1,10 +1,9 @@
-// The monthly reminder (feature 016; `contracts/mail.md` §1): plain text,
-// Spanish, no HTML and nothing remote; the subject in ASCII with its period
-// (Q5; §8.1 P10), so a duplicate is recognised. **Without amounts unless the
-// switch is on** (ADR-0028, row 18; §8.1 P9): the classes of the core,
-// percentages, counts, dates and codes; with the switch on, the euros of the
-// split and nothing else — never an account, an ISIN, a symbol or the name of
-// an asset, which the facts do not even carry.
+// The monthly reminder: plain text, Spanish, no HTML
+// and nothing remote; the subject in ASCII with its period, so a duplicate is
+// recognised. **Without amounts unless the switch is on** (ADR-0028, row 18):
+// the classes of the core, percentages, counts, dates and codes; with the
+// switch on, the euros of the split and nothing else — never an account, an
+// ISIN, a symbol or the name of an asset, which the facts do not even carry.
 
 import type { MailMessage } from "../../ports/notifier.js";
 import type { AmountsSwitch } from "../amounts.js";

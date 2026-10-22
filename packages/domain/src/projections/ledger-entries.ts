@@ -1,4 +1,4 @@
-// The ledger as a list a person can read (decision (h) of prompt 006).
+// The ledger as a list a person can read.
 //
 // Ordering and grouping are domain, not interface: it is the reason ADR-0017
 // rejected a table library. And the order is not cosmetic — it is the **inverse
@@ -7,7 +7,7 @@
 // Resolving the business date needs `settingsAt` and `fiscalDateOf`, so doing it
 // in a component would be a second implementation of a fiscal rule.
 //
-// Catalogue, settings, theses and reversals have **no** business date (§7.1):
+// Catalogue, settings, theses and reversals have **no** business date:
 // they are ordered by their administrative date (`recorded_at` in
 // Europe/Madrid) and the rule is written here instead of left to chance.
 //

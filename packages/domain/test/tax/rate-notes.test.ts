@@ -1,6 +1,6 @@
 // A line of the report that depends on an ECB rate in doubt carries a note
-// with its code (ADR-0029, point 8; ADR-0024; feature 012, block 4) — and the
-// note moves **no** figure. Mutant 13 of prompt 012 §5.
+// with its code (ADR-0029, point 8; ADR-0024) — and the note moves **no**
+// figure.
 
 import { describe, expect, it } from "vitest";
 import { boxesOf } from "../../src/tax/boxes/boxes.js";

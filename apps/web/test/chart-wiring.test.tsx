@@ -121,9 +121,9 @@ describe("a hole is a hole", () => {
   });
 
   /**
-   * `spanGaps: true` makes uPlot join the two ends of a gap with a straight
-   * line — the interpolation the whole feature exists to refuse. It is the
-   * central rule of prompt 007 §3.3 and it had no test at all.
+   * `spanGaps: true` makes uPlot join the two ends of a gap with a straight line — the
+   * interpolation the whole feature exists to refuse. It is the central rule of the charts and it
+   * had no test at all.
    */
   it("never lets uPlot span a gap", () => {
     const options = chartOptions({ x: X, series: SERIES, width: 320, height: 220 }, false);

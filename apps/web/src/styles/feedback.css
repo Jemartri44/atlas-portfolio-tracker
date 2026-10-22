@@ -3,9 +3,9 @@
  * §5.16): the one notice, what cannot be computed yet, what is empty and what
  * is loading. None of them is a blank page; only a real problem is red.
  *
- * LINE BUDGET: four states that share their well, their spacing and their
- * icon column, and since feature 020 a row kept for a late notice and a
- * pending of one line; split, each half would repeat the other's measures.
+ * LINE BUDGET: four states that share their well, their spacing and their icon column, and a row
+ * kept for a late notice and a pending of one line; split, each half would repeat the other's
+ * measures.
  */
 
 /* ---- Notice: the one warning component ---------------------------------- */
@@ -27,7 +27,7 @@ a.notice:hover {
   border-top: var(--border) solid var(--c-border);
 }
 
-/* A row kept for a notice that arrives after the first paint (feature 020, M2). */
+/* A row kept for a notice that arrives after the first paint. */
 .notice-reserved {
   align-content: start;
   border-top: var(--border) solid var(--c-border);
@@ -165,7 +165,7 @@ a.notice:hover .notice-action {
   margin: 0;
 }
 
-/* One datum missing: one line, no well (feature 020, M2). */
+/* One datum missing: one line, no well. */
 .pending.is-line {
   align-items: center;
   background-color: transparent;

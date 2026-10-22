@@ -1,7 +1,6 @@
-// Feature 016, E4 (plan §9; Q7; mutants 29 and 30): what the quarterly
-// integrity leaves for the mail. The errors of the check, the differences of
-// the rehearsal and the size of the ledger above its threshold — each by code
-// and by count, from closed lists, and nothing when there is nothing to do.
+// What the quarterly integrity leaves for the mail. The errors of the check, the differences of the
+// rehearsal and the size of the ledger above its threshold — each by code and by count, from closed
+// lists, and nothing when there is nothing to do.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

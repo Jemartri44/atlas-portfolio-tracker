@@ -4,7 +4,7 @@
 // chooses **which recorded figure is the main one** for each type and wraps it
 // in `Money`/`Quantity` so `Amount` can paint it. Nothing is computed here: a
 // quantity times a price would be arithmetic, and arithmetic belongs to the
-// domain (decision (c)).
+// domain.
 
 import { type LedgerEntry, Money, Quantity } from "@atlas/domain";
 import { type EventReferences, inSentence } from "../format/events.js";
@@ -114,7 +114,7 @@ interface Parts {
  *
  * With names, not identifiers: "Beta Biotech · Cubo especulativo" is an
  * application and "ast_delta · acc_bucket" is a debug dump, and this line is
- * repeated on every row of the ledger (review of 2026-09-18). The thesis and
+ * repeated on every row of the ledger. The thesis and
  * the reversed event have no name, so they are said by what they are: "tesis
  * sobre Alpha Robotics (abierta el 01/09/2026)", "anula Dividendo del
  * 12/03/2027" — never by their identifier.
@@ -214,8 +214,8 @@ export const hasState = (row: MovementRow): boolean =>
   row.status !== "current" || row.invalidReason !== undefined;
 
 /**
- * The column «Estado» only when some row of the page uses it (feature 020,
- * M13): on a ledger with nothing reversed it was twenty empty cells in a row.
+ * The column «Estado» only when some row of the page uses it: on a ledger with nothing reversed it
+ * was twenty empty cells in a row.
  */
 export const showsStateColumn = (rows: readonly MovementRow[]): boolean => rows.some(hasState);
 

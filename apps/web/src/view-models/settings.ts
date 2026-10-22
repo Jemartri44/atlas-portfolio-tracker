@@ -5,12 +5,12 @@
 // decimal of the domain and never with `Number.parseFloat`, which is precisely
 // the door ADR-0005 closes (trap 3 of `CLAUDE.md`). And the rule "do they add
 // up to 100?" lives here, where a test reaches it, instead of inside a `.tsx`
-// where nothing could (decision (c)).
+// where nothing could.
 //
 // The rest of the file is the draft that screen edits: which fields exist, what
 // each one shows, and what the patch looks like after a keystroke. It used to
 // live inside `routes/ajustes/configuracion.tsx`, where 517 lines hid four
-// closures no test could reach (review of 2026-09-18). Everything here is a
+// closures no test could reach. Everything here is a
 // pure function over plain objects: no signal, no DOM.
 //
 // LINE BUDGET: same reason as `forms/specs.ts`. Most of this file is the two
@@ -173,7 +173,7 @@ export const SETTINGS_TEXTS: readonly TextSetting[] = [
     label: "Fin de la temporada de Renta",
     hint: "Mes y día, como 06-30.",
   },
-  // `notification_email` is no longer offered (feature 016, E3; §8.1 P12): the
+  // `notification_email` is no longer offered: the
   // recipient of the mail lives outside the ledger, and a new snapshot never
   // carries it (`mergeSettings`).
 ];
@@ -209,7 +209,7 @@ export const settingValue = (
  * What a **text** field shows: exactly what is in force or was typed. The
  * decimal comma is for figures only: applied to every setting, it turned
  * `atlas@example.invalid` into `atlas@example,invalid`, and editing one letter
- * would have saved the comma (review of 2026-09-19).
+ * would have saved the comma.
  */
 export const settingText = (
   current: Settings,
@@ -274,7 +274,7 @@ export const withOption = (
  * it from what is in force plus what has been typed — so a key missing from it
  * means "removed", not "not touched". Falling back to the value in force here
  * would put the old value back on screen the moment the field was emptied,
- * which is the same lie the control used to tell (Q10).
+ * which is the same lie the control used to tell.
  */
 export const perAssetTypeValue = (
   current: Settings,
@@ -298,7 +298,7 @@ export const perAssetTypeValue = (
  * ("Valor por defecto") has always promised and never did: the old version
  * spread an empty object, so a value already set could not be removed from the
  * screen and the user was told something had changed when nothing had. A
- * control that lies about what it did is worse than no control (Q10).
+ * control that lies about what it did is worse than no control.
  *
  * Removing is legitimate and its meaning is written down: ADR-0018 makes these
  * maps **partial**, and an absent type takes the default documented in ADR-0013

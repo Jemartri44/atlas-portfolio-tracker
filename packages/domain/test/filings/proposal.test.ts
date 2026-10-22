@@ -1,5 +1,4 @@
-// What a return proposes to declare, and the event that records what was
-// actually filed (ADR-0020, decision (l) of prompt 010).
+// What a return proposes to declare, and the event that records what was actually filed (ADR-0020).
 //
 // It lives in the domain because **which figures a return declares** is a
 // fiscal question: the console and the web propose the same ones, name them
@@ -95,8 +94,8 @@ describe("what a return proposes to declare", () => {
     expect(declared.deferred_losses_eur).toBe("0.00");
     const computed = draft.computed as { savings_base_eur: string; settings: Settings };
     expect(computed.savings_base_eur).toBe("0.00");
-    // The whole configuration of the day travels with it, not only the line in
-    // force: without it the figure cannot be computed again (S13).
+    // The whole configuration of the day travels with it, not only the line in force: without it
+    // the figure cannot be computed again.
     expect(computed.settings.wash_sale_window.fund).toBe(SETTINGS.wash_sale_window.fund);
     // A key the return does not have changes nothing at all.
     const same = proposal.draft(new Map([["nope", "1"]]), {

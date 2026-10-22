@@ -5,14 +5,13 @@
 // the target and the deviation. From 1024px the same answer is a table. The
 // bars above are the shape for the glance; the figures are for the decision.
 //
-// The mark of a deviation above the threshold is a **badge with a word in it**
-// and, in the table of assets, the gauge (D7) whose dot turns to the colour of
-// a warning — both from the warning the domain raised for that asset, never
-// from comparing the figures here (decision (c)). The rule is per asset, so
-// the gauge lives where the assets are.
+// The mark of a deviation above the threshold is a **badge with a word in it** and, in the table of
+// assets, the gauge whose dot turns to the colour of a warning — both from the warning the domain
+// raised for that asset, never from comparing the figures here. The rule is per asset, so the gauge
+// lives where the assets are.
 //
-// The transfer simulator folds at the foot of this card (D6): it answers "how
-// would these weights change", so it lives next to them.
+// The transfer simulator folds at the foot of this card: it answers "how would these weights
+// change", so it lives next to them.
 
 import type { LedgerState, Settings } from "@atlas/domain";
 import { For, type JSX, Show } from "solid-js";
@@ -75,7 +74,7 @@ const assetColumns = (threshold: string | undefined): readonly DataColumn<Weight
     numeric: true,
     card: "figure",
     // Nothing held is said in words: «0,00 €» beside prices that are missing
-    // read as a zero value, not as no position (third pass of the review).
+    // read as a zero value, not as no position.
     cell: (row) => (
       <Show when={!row.quantity.isZero()} fallback={<span class="meta">sin posición</span>}>
         <Amount value={row.value} missingReason="sin precio a esa fecha" />

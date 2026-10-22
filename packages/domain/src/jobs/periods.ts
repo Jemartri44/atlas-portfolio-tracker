@@ -1,4 +1,4 @@
-// The period of a job (feature 016, §8.1 P15): **the taxpayer's**, of
+// The period of a job: **the taxpayer's**, of
 // `Europe/Madrid`. The day comes from the injected clock (`todayInMadrid`),
 // never from the machine nor from UTC: at 23:30 of the 31st of December in
 // Madrid (22:30 UTC) the month is December and the year the one that ends;
@@ -79,8 +79,7 @@ export const inWindow = (frequency: JobFrequency, date: CivilDate): boolean =>
  * Whether `date` is the last day a job of this frequency may run in its
  * period: Sunday of the ISO week, the last day of the month or the quarter,
  * and the 31st of January for a yearly one (its window). A warning that could
- * not be checked until then says so on that day, and never later (review of
- * PR #109, avisos B2).
+ * not be checked until then says so on that day, and never later.
  */
 export const lastDayOfWindow = (frequency: JobFrequency, date: CivilDate): boolean =>
   frequency === "yearly"

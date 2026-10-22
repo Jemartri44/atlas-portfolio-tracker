@@ -1,4 +1,4 @@
-// A line typed with no echo (feature 017, E4; ADR-0034, row 21): what the user
+// A line typed with no echo (ADR-0034, row 21): what the user
 // types for `atlas admin secrets` never reaches the screen, the history of the
 // shell nor a log. The prompt goes to the real output; what is typed is read
 // through a readline whose own output is swallowed, so nothing of it is echoed.

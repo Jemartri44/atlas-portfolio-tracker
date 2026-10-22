@@ -1,8 +1,7 @@
 // @vitest-environment happy-dom
 //
-// The note of the tax report on a line whose ECB rate is in doubt, on the
-// fiscal screen (feature 012, blocks 4 and 6; ADR-0029, point 8; criterion
-// 25). The report carried it; the screen did not say it (mutant 13, web).
+// The note of the tax report on a line whose ECB rate is in doubt, on the fiscal screen (ADR-0029,
+// point 8). The report carried it; the screen did not say it.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

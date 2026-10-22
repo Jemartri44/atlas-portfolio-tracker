@@ -1,5 +1,4 @@
-// "This touches a tax year you have already filed" (ADR-0020, amended;
-// prompt 010, block 5).
+// "This touches a tax year you have already filed" (ADR-0020, amended).
 //
 // It **never refuses**: filing late can be legitimate and is sometimes
 // compulsory. What is not acceptable is doing it in silence, so the warning
@@ -11,7 +10,7 @@
 //
 //   - a **filed** year the write reaches: a warning, with its figures;
 //   - a **past** year with figures and no return recorded: a note, not a
-//     warning (S8, question Q8). Saying "careful, you filed this" of a year
+//     warning. Saying "careful, you filed this" of a year
 //     nobody filed is the warning that gets ignored.
 
 import type { FilingModel } from "@atlas/domain";

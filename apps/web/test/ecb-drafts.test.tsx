@@ -1,11 +1,10 @@
 // @vitest-environment happy-dom
 //
-// Drafts in the cloud (feature 027, E6 of ADR-0035; ADR-0029, point 9): an
-// operation whose ECB rate is not published yet is kept **in the cloud** without
-// a rate, through the real handler with the doubles of S3, SSM and Google. It
-// counts in no figure, the frame counts it, and it is recorded only when the
-// user opens it and says yes — with the official rate proposed as for any other
-// operation. Nothing of a draft stays on the device (`sync/cloud-device.test`).
+// Drafts in the cloud (ADR-0035; ADR-0029, point 9): an operation whose ECB rate is not published
+// yet is kept **in the cloud** without a rate, through the real handler with the doubles of S3, SSM
+// and Google. It counts in no figure, the frame counts it, and it is recorded only when the user
+// opens it and says yes — with the official rate proposed as for any other operation. Nothing of a
+// draft stays on the device (`sync/cloud-device.test`).
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

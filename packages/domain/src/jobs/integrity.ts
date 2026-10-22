@@ -1,14 +1,13 @@
-// What the quarterly integrity leaves for the mail (feature 016, E4; plan
-// §9; Q7). «Recompute everything from scratch and compare» is the deep check
-// of `atlas check --deep` on the live ledger — its **errors** are a finding —
-// and the rehearsal of a restore with the last dump (`rehearsal.ts`). And the
-// size of the ledger (ADR-0028, «Revisión del plazo de las versiones»): above
-// its threshold the lifetime of the non-current versions of ADR-0006 has to
-// be looked at again.
+// What the quarterly integrity leaves for the mail. «Recompute everything from
+// scratch and compare» is the deep check of `atlas check --deep` on the live
+// ledger — its **errors** are a finding — and the rehearsal of a restore with
+// the last dump (`rehearsal.ts`). And the size of the ledger (ADR-0028,
+// «Revisión del plazo de las versiones»): above its threshold the lifetime of
+// the non-current versions of ADR-0006 has to be looked at again.
 //
-// **Each by code and by count, from closed lists** (review of PR #104,
-// privacy B1): a code the lists do not know is counted as `other`, never
-// written as it came. The size and its threshold are bytes, not amounts.
+// **Each by code and by count, from closed lists**: a code the lists do not
+// know is counted as `other`, never written as it came. The size and its
+// threshold are bytes, not amounts.
 
 import type { Rehearsal } from "./rehearsal.js";
 import type { Finding } from "./run-record.js";
@@ -42,7 +41,7 @@ export const REHEARSAL_CODES = [
   "dump_missing",
   /** The ledger of the dump is not the one its record says, or does not load. */
   "dump_unreadable",
-  /** The live ledger repeats an id: its cut is not projected (review of PR #109, copias B1). */
+  /** The live ledger repeats an id: its cut is not projected. */
   "rehearsal_skipped_invalid",
 ] as const;
 

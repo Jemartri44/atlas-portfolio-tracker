@@ -1,6 +1,5 @@
-// A sentence made of words and figures, the way a movement is told: the words
-// as they are, each figure through `Amount`, so the privacy mode masks it inside
-// the sentence and keeps its unit (D2).
+// A sentence made of words and figures, the way a movement is told: the words as they are, each
+// figure through `Amount`, so the privacy mode masks it inside the sentence and keeps its unit.
 
 import { For, type JSX, Match, Switch } from "solid-js";
 import type { Part } from "../view-models/structured.js";

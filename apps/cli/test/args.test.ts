@@ -166,10 +166,9 @@ describe("parseArgs: a value that begins with a dash", () => {
 });
 
 /**
- * A way out that is not in the help is a way out nobody finds the day it is
- * needed: `compact` offered `--accept-unverified` and the usage line said only
- * `compact [--yes]` (second review of feature 011). A flag that can be given
- * several times is always a deliberate one, so each of them has to be named.
+ * A way out that is not in the help is a way out nobody finds the day it is needed: `compact`
+ * offered `--accept-unverified` and the usage line said only `compact [--yes]`. A flag that can be
+ * given several times is always a deliberate one, so each of them has to be named.
  */
 describe("the usage line", () => {
   it("names every repeatable flag, and compact names its way out", () => {

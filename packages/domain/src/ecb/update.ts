@@ -2,7 +2,7 @@
 //
 // A new history replaces the previous one **only** if it holds, with the same
 // numeric value, every rate of the previous one. If not, both are kept and the
-// previous one **stays in force** (decision (o) of prompt 012): a file that
+// previous one **stays in force**: a file that
 // contradicts what was already published cannot be the reference until
 // somebody knows why — the ECB changed a published rate, or the download is
 // wrong. Either way it has to be known.

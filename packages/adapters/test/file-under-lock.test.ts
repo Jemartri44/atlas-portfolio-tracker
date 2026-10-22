@@ -1,6 +1,6 @@
-// One hold of the folder lock for a sequence of writes (feature 014, plan
-// §2.1): the lock is not re-entrant, so `underLock` hands a writer that never
-// takes it again, and every write of the writer happens with it held.
+// One hold of the folder lock for a sequence of writes: the lock is not re-entrant, so
+// `underLock` hands a writer that never takes it again, and every write of the writer happens
+// with it held.
 
 import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

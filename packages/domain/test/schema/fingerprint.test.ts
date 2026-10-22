@@ -60,7 +60,7 @@ describe("fingerprintOf", () => {
    * date each entry carries. With `filed_at` in the tuple the second one did
    * not even ask for confirmation, and two filings stayed in the ledger for
    * one — both feeding the chain of supplementary returns and the anchor of
-   * the year (feature 011, block 3).
+   * the year.
    */
   it("identifies a filing by model, year and receipt, not by the date it was filed", () => {
     const filed = SAMPLES.tax_return_filed;

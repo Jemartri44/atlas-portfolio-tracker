@@ -2,7 +2,7 @@
 // lineage back to the acquisition that created them, each dividend and
 // interest, each deductible fee and each withholding — every one with its
 // original amount, the ECB rate as published and its date (ADR-0013), and the
-// fiscal criteria it depends on (feature 009, decisions (b) and (c)).
+// fiscal criteria it depends on.
 //
 // Nothing here reads a price: every amount is the consideration the operation
 // itself recorded.
@@ -143,8 +143,7 @@ const saleFacts = (event: LedgerEvent, gain: RealizedGain): SaleFacts => {
     withholding?: string;
   };
   // The cash of an exchange, before the conversion (a cash component of the old
-  // shares) or after it (the fractions of the new ones): #13 either way
-  // (feature 009 review).
+  // shares) or after it (the fractions of the new ones): #13 either way.
   const exchanges = action.effects.some((other) => other.op === "convert");
   return {
     event_type: "forced_sale",

@@ -36,7 +36,7 @@ const eventDateOf = (event: LedgerEvent): string => {
 /**
  * "Compra del 03/09/2026". An order is named by what it asked for too —
  * "Orden de compra de World Index Fund del 02/09/2026" —, because a day can
- * hold several and the user remembers them by the asset (review of 2026-09-19).
+ * hold several and the user remembers them by the asset.
  */
 const describeEvent = (event: LedgerEvent, names: NameIndex = NO_NAMES): string => {
   const date = formatDate(eventDateOf(event));
@@ -50,7 +50,7 @@ const describeEvent = (event: LedgerEvent, names: NameIndex = NO_NAMES): string 
 
 /**
  * A reference said inside a sentence: «Anulaste valoración del 31/12/2026»,
- * not «Anulaste Valoración…» (final pass of the review of 2026-09-19). Only
+ * not «Anulaste Valoración…». Only
  * the first letter, which is always the type's — a common noun — so the name of
  * an asset further on keeps its capitals, where `toLowerCase` wrote «world
  * index fund».

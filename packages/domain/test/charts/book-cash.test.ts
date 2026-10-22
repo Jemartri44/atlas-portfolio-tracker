@@ -1,5 +1,5 @@
-// What each book is worth with the cash of its own accounts (feature 020, E4,
-// second part; ADR-0004): the line the contributions are read against.
+// What each book is worth with the cash of its own accounts (ADR-0004): the line the contributions
+// are read against.
 
 import { describe, expect, it } from "vitest";
 import { bookCashSeries } from "../../src/charts.js";

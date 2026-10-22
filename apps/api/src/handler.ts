@@ -1,4 +1,4 @@
-// The handler of the Function URL (feature 015; `docs/api.md`). It **composes
+// The handler of the Function URL (`docs/api.md`). It **composes
 // and decides nothing**: which route admits which credential, how a signed
 // payload is read, what an ID token must say, who is allowed and which device
 // is alive are `@atlas/domain/access`; the signatures and the reads are the
@@ -126,7 +126,7 @@ export const createHandler = (deps: HandlerDeps): Handler => {
   const { config } = deps;
   const secrets: AccessSecretsType = new AccessSecrets(deps.parameters, deps.now, config);
   const devices = new DeviceStore(deps.objects);
-  /** The errors after which a new token stayed alive, with its public id (R2-2). */
+  /** The errors after which a new token stayed alive, with its public id. */
   const leftAlive = new WeakMap<object, string>();
   const tokens = new TokenRegistry(deps.parameters, config.ssmPrefix, {
     project: "atlas",
@@ -229,10 +229,9 @@ export const createHandler = (deps: HandlerDeps): Handler => {
   };
 
   /**
-   * The date of this web sign-in, for the monthly mail (feature 016, §8.1 P6;
-   * `access/last-web-sign-in.json`): only the date of Madrid, moved forward,
-   * never back. **The sign-in never fails for it**: what happened is only the
-   * reason of the log line.
+   * The date of this web sign-in, for the monthly mail (`access/last-web-sign-in.json`): only the
+   * date of Madrid, moved forward, never back. **The sign-in never fails for it**: what happened is
+   * only the reason of the log line.
    */
   const signInDate = async (): Promise<string> => {
     try {
@@ -534,13 +533,11 @@ export const createHandler = (deps: HandlerDeps): Handler => {
   };
 
   /**
-   * `POST /api/auth/console/token` (§4.3): the code (subkey and `typ`, then
-   * its expiry), the verifier against its challenge, the list again (the
-   * e-mail of the one entry of the `sub`, Q8 (a)); then, to renew, **the
-   * previous token revoked before the new one is created**; to reissue, the
-   * device checked again and **every live token of it revoked first**; and
-   * the record created **without overwriting**, which is what makes the code
-   * single use.
+   * `POST /api/auth/console/token` (§4.3): the code (subkey and `typ`, then its expiry), the
+   * verifier against its challenge, the list again (the e-mail of the one entry of the `sub`);
+   * then, to renew, **the previous token revoked before the new one is created**; to reissue, the
+   * device checked again and **every live token of it revoked first**; and the record created
+   * **without overwriting**, which is what makes the code single use.
    */
   const exchange = async (admission: Admission, body: unknown): Promise<Outcome> => {
     const parsed = parseExchangeBody(body);
@@ -569,9 +566,9 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         refusal("not_allowed", entry === "ambiguous" ? { reason: "ambiguous_subject" } : {}),
       );
     }
-    // A code sent again is answered **before anything is revoked** (review of
-    // PR #95, N1): its record already exists, and a renewal or a reissue sent
-    // twice would otherwise revoke the token the first exchange handed out.
+    // A code sent again is answered **before anything is revoked**: its record already exists, and
+    // a renewal or a reissue sent twice would otherwise revoke the token the first exchange handed
+    // out.
     if ((await tokens.read(code.tid)) !== undefined) {
       return { ...fail(refusal("console_code_used")), tokenId: code.tid };
     }
@@ -606,13 +603,12 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         return fail(refusal(refused ?? "reissue_device_missing"));
       }
       // The name the user confirmed on the page is the device's, not the one
-      // the console proposed (review of PR #95, N7).
+      // the console proposed.
       deviceName = device.device_name ?? code.dn;
       for (const listed of await tokens.list()) {
-        // Never the record of this very code: an exchange of the same code
-        // running at once may have created it after this one read it, and
-        // revoking it would leave the device with no live token (review of
-        // PR #95, round 2, R2-1). The create below answers that one with 409.
+        // Never the record of this very code: an exchange of the same code running at once may have
+        // created it after this one read it, and revoking it would leave the device with no live
+        // token. The create below answers that one with 409.
         if (
           typeof listed.read === "object" &&
           listed.read.device_id === code.rdid &&
@@ -653,7 +649,7 @@ export const createHandler = (deps: HandlerDeps): Handler => {
           }),
         );
       } catch (error) {
-        // S3 failed after the record was created (review of PR #95, N3): the
+        // S3 failed after the record was created: the
         // token is revoked — tried a few times, as much as can be — and
         // nothing is handed out; the failure answers as what it is (503).
         await revokeOrMark(record, nowMs, error);
@@ -700,8 +696,7 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       }
     }
     // Every try failed: the record stays alive, and the log of this 5xx names
-    // it — its public id, the most a log may say of a token (ADR-0033, point
-    // 10; review of PR #95, round 2, R2-2).
+    // it — its public id, the most a log may say of a token (ADR-0033, point 10).
     if (typeof error === "object" && error !== null) {
       leftAlive.set(error, record.token_id);
     }
@@ -874,7 +869,7 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         };
       }
       default:
-        // A route of the table with no branch here: not served (E2 and E3 add theirs).
+        // A route of the table with no branch here: not served.
         return { outcome: fail(refusal("not_found")), route: at };
     }
   };
@@ -899,8 +894,7 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       };
       entry = base;
       // The start and the return of a sign-in are navigations of the browser:
-      // whatever fails there is a page, and it clears the attempt (N1 and S1
-      // of the review of PR #90). Everywhere else, the JSON of §7.
+      // whatever fails there is a page, and it clears the attempt. Everywhere else, the JSON of §7.
       const signIn =
         base.route === "/api/auth/callback" ||
         base.route === "/api/auth/login" ||

@@ -1,11 +1,10 @@
-// The payloads the API signs (`specs/015-api-access/data-model.md` §1): the
-// cookie of the session, the transient cookie of an attempt and, from E2, the
-// one-time code of the console. **Each purpose has its own subkey, derived
-// with HKDF from the session key, and its own `typ`**, and every reader
-// rejects the foreign one (ADR-0033, point 2, blocking B3). The MAC is the
+// The payloads the API signs: the cookie of the session, the transient cookie
+// of an attempt and the one-time code of the console. **Each purpose has its
+// own subkey, derived with HKDF from the session key, and its own `typ`**, and
+// every reader rejects the foreign one (ADR-0033, point 2). The MAC is the
 // adapter's (`node:crypto`); the order and the reading of the payload are here.
 //
-// No cookie carries the e-mail (decision of 2026-09-25): only the `sub` and
+// No cookie carries the e-mail: only the `sub` and
 // what is indispensable. That is why signing without encrypting is enough.
 
 import { isRecord } from "../guards.js";
@@ -41,7 +40,7 @@ export interface SessionPayload {
   readonly sub: string;
   /** Session id: 128 random bits. Never logged. */
   readonly sid: string;
-  /** The device id of the web, signed here (§7 P1): never taken from anywhere else. */
+  /** The device id of the web, signed here: never taken from anywhere else. */
   readonly did: string;
   readonly iat: number;
   readonly exp: number;
@@ -50,7 +49,7 @@ export interface SessionPayload {
 export interface LoginPayload {
   readonly typ: "atlas.login";
   readonly v: 1;
-  /** Who opened the attempt: the web, or `atlas remote login` (E2). */
+  /** Who opened the attempt: the web, or `atlas remote login`. */
   readonly flow: "web" | "console";
   readonly iat: number;
   readonly exp: number;
@@ -67,7 +66,7 @@ export interface LoginPayload {
 /**
  * The one-time code of the console (`data-model.md` §1.4), signed with the
  * subkey `console_code` and its `typ`: the `token_id` the token will have, the
- * `code_challenge` of the console, the `sub` — **no e-mail** (Q8 (a)) —, the
+ * `code_challenge` of the console, the `sub` — **no e-mail** —, the
  * name, and the device to reissue, if it is a reissue.
  */
 export interface ConsoleCodePayload {
@@ -96,11 +95,11 @@ const exactKeys = (
   Object.keys(value).every((key) => required.includes(key) || optional.includes(key));
 
 /**
- * Reads a payload whose MAC was already checked with **this purpose's**
- * subkey: strict JSON, then `typ`, then `v`, then the expiry. A payload of
- * another purpose never gets here (other subkey), and if a broken
- * implementation shared the subkey it would still fail on `typ`: the two
- * barriers of B3, each with its own mutant.
+ * Reads a payload whose MAC was already checked with **this purpose's** subkey:
+ * strict JSON, then `typ`, then `v`, then the expiry. A payload of another
+ * purpose never gets here (other subkey), and if a broken implementation shared
+ * the subkey it would still fail on `typ`: the two barriers, each with its own
+ * test.
  */
 const readPayload = <P>(
   json: string,

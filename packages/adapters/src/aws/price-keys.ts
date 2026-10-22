@@ -1,12 +1,10 @@
-// The keys of the price sources in the cloud (feature 016, E2; ADR-0031,
-// «Claves de API»; ADR-0034, row 21): two `SecureString` of SSM that the
-// secrets script creates — `/atlas/<env>/prices/eodhd-key` and
-// `/atlas/<env>/prices/alpha-vantage-key` — read on **every run**, never kept
-// in a variable of the function, never logged, never in a message: an error
-// says the name of the source, never the value. A parameter that is not there
-// is a source without a key (the case of `dev`, ADR-0034, row 2); one that is
-// empty or has spaces is `price_key_invalid`. **Only the prices function
-// reaches this module** (`tests/jobs-access.test.ts`, §8.2 B2).
+// The keys of the price sources in the cloud (ADR-0031, «Claves de API», ADR-0034, row 21): two
+// `SecureString` of SSM that the secrets script creates — `/atlas/<env>/prices/eodhd-key` and
+// `/atlas/<env>/prices/alpha-vantage-key` — read on **every run**, never kept in a variable of the
+// function, never logged, never in a message: an error says the name of the source, never the
+// value. A parameter that is not there is a source without a key (the case of `dev`, ADR-0034, row
+// 2); one that is empty or has spaces is `price_key_invalid`. **Only the prices function reaches
+// this module** (`tests/jobs-access.test.ts`).
 
 import type { ParameterStore } from "./parameter-store.js";
 

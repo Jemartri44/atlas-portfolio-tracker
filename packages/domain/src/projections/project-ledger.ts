@@ -60,7 +60,7 @@ import { createEmptyState, type LedgerState } from "./state.js";
 import { applyThesisClosed, applyThesisOpened, thesisWarnings } from "./theses.js";
 
 export interface ProjectOptions {
-  /** Settings used to derive fiscal dates; defaults to the latest `settings_changed` (Q3). */
+  /** Settings used to derive fiscal dates; defaults to the latest `settings_changed`. */
   settings?: Settings;
   /** Record invalid events in `state.invalid` and continue instead of throwing. */
   collectErrors?: boolean;
@@ -69,7 +69,7 @@ export interface ProjectOptions {
    * after it is ignored, so the state is the portfolio as it stood that day and
    * not the latest one read with old prices (data-schema.md §7). Pass A is
    * unaffected: the catalogue, the settings and the theses are applied whole,
-   * because a reference is resolved against the complete catalogue (§7.1).
+   * because a reference is resolved against the complete catalogue.
    */
   asOf?: CivilDate;
 }
@@ -175,8 +175,8 @@ export const businessDateOf = (state: LedgerState, event: OperationEvent): Civil
     }
     case "swap": {
       // Ordered by the fiscal date of the leg **handed over**, which is the one
-      // of the taxable event. The lot received is born on its own (§7.1 and
-      // `applySwap`), and when the two differ the projection says so.
+      // of the taxable event. The lot received is born on its own
+      // (`applySwap`), and when the two differ the projection says so.
       const from = state.assets.get(event.from_asset_id);
       return from === undefined
         ? event.value_date
@@ -374,7 +374,7 @@ export const projectLedger = (
   const repeated: LedgerEvent[] = [];
   for (const event of events) {
     if (REPEATED_KEY.has(event)) {
-      // Q12 (b): a line with a key twice is read, never trusted. A reversal
+      // A line with a key twice is read, never trusted. A reversal
       // with one annuls nothing; any other waits for the reversals below.
       if (event.type === "reversal") {
         reject(event, duplicateKey(event));
@@ -403,18 +403,18 @@ export const projectLedger = (
   // Corrections. A correction needs its original reversed (anywhere in the
   // file: `dangling_correction`), and **an annulled operation has at most one
   // live correction** (ADR-0026, Part C). That second rule is judged **in file
-  // order** (prompt 012, decision (k)), unlike the first: a correction is valid
+  // order**, unlike the first: a correction is valid
   // only if, at its own position, every earlier correction of the same
   // original is already reversed. It is how the engine projects, line after
   // line, and it says the same over a local ledger as over a queue replayed by
-  // the synchronisation (feature 014), which adds lines one at a time. It is a
+  // the synchronisation, which adds lines one at a time. It is a
   // hardening of the projection that no ledger written by the application can
   // fail: correcting the same original again requires reversing it again,
   // which `already_reversed` has always refused.
   //
   // "The same original" is the **root** of the chain (`correction-root.ts`):
   // a correction of a correction corrects the same fact, and judging by
-  // `corrects_id` alone let `O, R(O), C1→O, R(C1), C2→C1, C3→O` keep two live
+  // `corrects_id` alone let `O, R(O), C1→O, R, C2→C1, C3→O` keep two live
   // corrections of O.
   const roots = correctionRoots(events);
   const accepted = new Map<Ulid, Ulid[]>();
@@ -538,7 +538,7 @@ export const projectLedger = (
   // A correction is the same economic fact as its original, so it takes the
   // original's place: the position of the **root** of its chain orders it
   // among the operations of its date and breaks the FIFO tie between lots of
-  // the same date (decision of the direction on the review of PR #75). Its
+  // the same date. Its
   // own position, at the end of the file, would make a rate correction change
   // which lot a sale consumes.
   const inPlace = active.filter(isOperation).map((entry) => ({

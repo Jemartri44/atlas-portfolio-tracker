@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 //
-// Feature 023 (ADR-0035, E2b), the screens of writing: the form that survives a
-// `412` and shows its effect again, the notice of a session about to end, the
-// notice of a write whose answer was lost, and the copy that is only a download.
+// The screens of writing (ADR-0035): the form that survives a `412` and shows its effect again, the
+// notice of a session about to end, the notice of a write whose answer was lost, and the copy that
+// is only a download.
 
 import { BlobLedgerStore } from "@atlas/adapters/blob";
 import { recordEvent } from "@atlas/domain";

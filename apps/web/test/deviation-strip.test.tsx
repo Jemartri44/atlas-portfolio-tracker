@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 //
-// M5 of feature 020 (E3): the deviation of each asset class as a strip, in ink
-// and without a band, with «N activos fuera de umbral» taken from the warnings
-// of the domain and never from comparing figures; the full strip, with its
-// band and its coloured dot, stays per asset (the `Gauge`).
+// The deviation of each asset class as a strip, in ink and without a band, with «N activos fuera de
+// umbral» taken from the warnings of the domain and never from comparing figures; the full strip,
+// with its band and its coloured dot, stays per asset (the `Gauge`).
 
 import { describe, expect, it } from "vitest";
 import Cartera from "../src/routes/cartera/index.jsx";

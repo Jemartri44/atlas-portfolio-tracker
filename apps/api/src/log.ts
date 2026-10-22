@@ -3,7 +3,7 @@
 // result**, and nothing else. Never a token, a hash, a secret, an e-mail, a
 // `sub`, a session id, a code, a verifier, a line of the ledger, an amount or
 // an account — and never the message of a foreign error (`JSON.parse`, the
-// SDK, `fetch`): those copy what they were given (N3). The fields are a closed
+// SDK, `fetch`): those copy what they were given. The fields are a closed
 // list; a value that is not one of ours does not get in.
 
 export interface LogEntry {
@@ -24,10 +24,9 @@ export interface LogEntry {
 }
 
 /**
- * What a value of the log may be made of. `{` and `}` are there for the
- * template of a route (`/api/devices/tokens/{token_id}/revoke`): without them
- * that route was logged with no `route` at all — found by the test of the
- * sentinels on the routes of the console (review of PR #95, B1).
+ * What a value of the log may be made of. `{` and `}` are there for the template of a route
+ * (`/api/devices/tokens/{token_id}/revoke`): without them that route was logged with no `route` at
+ * all.
  */
 const SAFE = /^[A-Za-z0-9_./{}-]{1,64}$/;
 

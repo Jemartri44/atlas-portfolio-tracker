@@ -1,6 +1,6 @@
 // The criteria a figure leans on, and what each one puts at stake.
 //
-// Two rules of the prompt are enforced here, in one place, so no card of the
+// Two rules are enforced here, in one place, so no card of the
 // screen can get them wrong:
 //
 //   1. A figure that depends on a criterion **in dispute** carries a warning

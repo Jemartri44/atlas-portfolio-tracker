@@ -1,10 +1,10 @@
-// The handler of the scheduled jobs (feature 016, E1): it **composes and
-// decides nothing** (§2 bis). EventBridge Scheduler wakes each function once a
+// The handler of the scheduled jobs: it **composes and
+// decides nothing**. EventBridge Scheduler wakes each function once a
 // day with its event; for each task the event names, the domain says its
 // frequency (`job_frequencies`, read tolerantly), whether it may run today
 // and its period in `Europe/Madrid`; the record of that period says what a
 // retry does. A period left open before — a reminder claimed and never sent
-// at the turn of a month — is finished first (Q6), for the tasks that send.
+// at the turn of a month — is finished first, for the tasks that send.
 
 import type { CivilDate } from "@atlas/domain";
 import { madridDateOf } from "@atlas/domain";
@@ -87,7 +87,7 @@ export const createJobsHandler = (
             frequencies,
             runner,
             ...(finishing ? { onlyUnfinished: true } : {}),
-            // A warning of a period gone is closed, never sent (review of PR #109, avisos B1).
+            // A warning of a period gone is closed, never sent.
             ...(finishing && JOB_TASKS[task].delivery === "at_most_once" ? { expire: true } : {}),
           });
         } catch (error) {

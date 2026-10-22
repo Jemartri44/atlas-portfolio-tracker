@@ -2,7 +2,7 @@
 // chart, the legend (colour **and** dash), the sentence about what is missing
 // and the equivalent table.
 //
-// It is one component and not three copies because both charts of feature 007
+// It is one component and not three copies because both charts
 // need exactly this, and the next one will too.
 
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
@@ -39,16 +39,15 @@ export interface SeriesCardProps {
   /** The last rows of the card, drawn or not: a disclosure with the detail. */
   tail?: JSX.Element | undefined;
   /**
-   * The series that are drawn as steps, by index (what was contributed), and
-   * the panels of a stack: each with the series it draws and, for a strip, its
-   * name. Each panel has its own scale and they share the dates and the cursor
-   * (feature 020, E4, M3). Without panels, one chart with everything.
+   * The series that are drawn as steps, by index (what was contributed), and the panels of a stack:
+   * each with the series it draws and, for a strip, its name. Each panel has its own scale and they
+   * share the dates and the cursor. Without panels, one chart with everything.
    */
   stepped?: readonly number[] | undefined;
   panels?: readonly { series: readonly number[]; name?: string }[] | undefined;
   /** What the values are: euros, or a percentage (axis and table without a mask). */
   unit?: "eur" | "pct" | undefined;
-  /** Past half a range of holes, jump to the last stretch with data and say so (M7). */
+  /** Past half a range of holes, jump to the last stretch with data and say so. */
   jump?: boolean | undefined;
 }
 
@@ -89,7 +88,7 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
   );
 
   // With a lead figure between the title and the chart, the range goes with the
-  // chart it changes, not above the figure it does not (review of 2026-09-19).
+  // chart it changes, not above the figure it does not.
   return (
     <Section
       title={props.title}

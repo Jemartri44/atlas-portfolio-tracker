@@ -1,7 +1,6 @@
-// "Guardar como borrador" from a form (feature 012, block 5; in the cloud since
-// feature 027): the check is the domain's, the draft goes to the cloud, and the
-// three ways it can end are said — saved, refused (a refusal of the operation, in
-// its field or by the button), or not known because the answer was lost.
+// "Guardar como borrador" from a form: the check is the domain's, the draft goes to the cloud, and
+// the three ways it can end are said — saved, refused (a refusal of the operation, in its field or
+// by the button), or not known because the answer was lost.
 //
 // A lost answer is retried with the **same** draft: its id is fixed before
 // sending and kept here while the form does not change, so a retry is never a

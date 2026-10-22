@@ -1,5 +1,5 @@
-// The rule of `Settings.transfer_max_days` (ADR-0010, decision (c) of prompt
-// 007). It had existed since phase 1 with nobody reading it.
+// The rule of `Settings.transfer_max_days` (ADR-0010). It had existed since
+// phase 1 with nobody reading it.
 
 import { describe, expect, it } from "vitest";
 import { pendingTransfers, transferWatch } from "../../src/projections/pending.js";

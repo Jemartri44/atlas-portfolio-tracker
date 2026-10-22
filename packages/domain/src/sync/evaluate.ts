@@ -1,5 +1,5 @@
 // The validation of one unit on top of a base, **as the application writes
-// it** (ADR-0026, Part A and Part B, step 3; §6.3 (V1) of prompt 014): every
+// it** (ADR-0026, Part A and Part B, step 3): every
 // member added together — a pair is its reversal **and** its correction, a
 // chain all its pairs, like `checkCandidate` in `rectify.ts` and
 // `rule-change.ts` —, never the reversal alone. A buy of 10, a sale of 10 and

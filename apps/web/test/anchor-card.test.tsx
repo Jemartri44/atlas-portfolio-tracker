@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 //
-// The anchor of what was filed, painted: origin by origin, and saying so when
-// it matches what the engine computed (review of feature 011).
+// The anchor of what was filed, painted: origin by origin, and saying so when it matches what the
+// engine computed.
 
 import { Money } from "@atlas/domain";
 import { render } from "solid-js/web";

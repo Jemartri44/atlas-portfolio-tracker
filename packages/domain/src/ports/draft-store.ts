@@ -3,8 +3,8 @@ import type { Ulid } from "../ids/ulid.js";
 
 /**
  * How a draft ends. The local stores just take it away; the cloud store
- * (ADR-0035, E6) cannot delete anything, so it records the way it ended.
- * `eventId` is the id the draft was stamped with: the event it became.
+ * (ADR-0035) cannot delete anything, so it records the way it ended. `eventId`
+ * is the id the draft was stamped with: the event it became.
  */
 export type DraftEnd =
   | { readonly outcome: "confirmed"; readonly eventId: Ulid }
@@ -15,8 +15,8 @@ export type DraftEnd =
  * point 9): `drafts/` next to the ledger on the desktop, a store of IndexedDB
  * in the browser. **Outside the ledger**: nothing here is a fact.
  *
- * On the disk every write goes under the lock of the ledger folder (decision
- * (t) of prompt 012): the console and the web share the folder.
+ * On the disk every write goes under the lock of the ledger folder: the console
+ * and the web share the folder.
  */
 export interface PendingDraftStore {
   /** Every draft, oldest first, and the names of the ones that cannot be read. */

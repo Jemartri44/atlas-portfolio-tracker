@@ -1,5 +1,5 @@
-// The simulated price source of `dev` (feature 016, E2; §8.1 P14, §8.2 m3):
-// fixed answers, so that the 018 can wake a schedule of `dev` once and see the
+// The simulated price source of `dev`:
+// fixed answers, so that the deployment can wake a schedule of `dev` once and see the
 // chain Scheduler → role → Lambda work without the keys of the user, which
 // `dev` never has (ADR-0034, row 2). **The one declared exception to the
 // guardian of the doubles**: it travels in `jobs.zip`, built once and

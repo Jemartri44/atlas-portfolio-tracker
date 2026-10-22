@@ -1,15 +1,12 @@
-// Feature 016, block 1 of E1: the package of the scheduled jobs
-// (`apps/jobs/scripts/build-lambda.mjs`), one artefact for the five functions
-// (§8.1 P4). Like the package of the API (`tests/lambda-package.test.ts`) it
-// carries the SDK and the sources of the product, never a test or a double —
-// the file notifier of the captures included (mutant 10) — it is the same
-// bytes twice, and it is a module Node loads, up to the composition, which
-// refuses to start without its configuration.
+// The package of the scheduled jobs (`apps/jobs/scripts/build-lambda.mjs`), one artefact for the
+// five functions. Like the package of the API (`tests/lambda-package.test.ts`) it carries the SDK
+// and the sources of the product, never a test or a double — the file notifier of the captures
+// included — it is the same bytes twice, and it is a module Node loads, up to the composition,
+// which refuses to start without its configuration.
 //
-// **The one declared exception to the guardian of the doubles** (§8.2 m3) is
-// the simulated price source of `dev`, which travels in the artefact because
-// it is built once and promoted, and which the composition refuses in `prod`.
-// It is named here, and nothing else may be.
+// **The one declared exception to the guardian of the doubles** is the simulated price source of
+// `dev`, which travels in the artefact because it is built once and promoted, and which the
+// composition refuses in `prod`. It is named here, and nothing else may be.
 
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -21,7 +18,7 @@ import { describe, expect, it } from "vitest";
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const script = join(repoRoot, "apps", "jobs", "scripts", "build-lambda.mjs");
 
-/** The doubles that may travel in the artefact: only the simulated source of `dev` (m3). */
+/** The doubles that may travel in the artefact: only the simulated source of `dev`. */
 const DECLARED_DOUBLES = ["packages/adapters/src/aws/simulated-prices.ts"] as const;
 
 interface Script {

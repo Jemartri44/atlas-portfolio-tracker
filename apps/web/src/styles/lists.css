@@ -153,9 +153,8 @@ a.row:hover {
 }
 
 /*
- * A row whose link is its date (feature 020, M13): the date in ink and the
- * whole row the target. What the row says besides it stays above the link,
- * so its title shows and its text selects (PR #105, round 1, N1).
+ * A row whose link is its date: the date in ink and the whole row the target. What the row says
+ * besides it stays above the link, so its title shows and its text selects.
  */
 .table tr:has(.row-link) {
   position: relative;
@@ -206,13 +205,11 @@ a.row:hover {
 }
 
 /*
- * Rows in a narrow box, a table where it fits: the same data, twice, one
- * shown. The switch reads the width of the **card** that holds them (a
- * container), not of the window: a table in a card of five columns out of
- * twelve does not fit where the same table across the page does, and at
- * 1024px that difference was a table spilling out of its card (review of
- * 2026-09-19). Each table says how much room it needs: `is-sm`, the default,
- * `is-lg`.
+ * Rows in a narrow box, a table where it fits: the same data, twice, one shown. The switch reads
+ * the width of the **card** that holds them (a container), not of the window: a table in a card of
+ * five columns out of twelve does not fit where the same table across the page does, and at 1024px
+ * that difference was a table spilling out of its card. Each table says how much room it needs:
+ * `is-sm`, the default, `is-lg`.
  */
 .only-wide {
   display: none;

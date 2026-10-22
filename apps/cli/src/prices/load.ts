@@ -1,13 +1,12 @@
-// What the views of the console read of the automatic prices (feature 013,
-// block 4): the closes of `prices/` next to the ledger, converted by the gate
-// with the ECB history of the same folder. Only views of presentation call
-// this; the fiscal commands never do, and their output is compared byte for
-// byte with and without `prices/` (the test of the fiscal output).
+// What the views of the console read of the automatic prices: the closes of `prices/` next to the
+// ledger, converted by the gate with the ECB history of the same folder. Only views of presentation
+// call this; the fiscal commands never do, and their output is compared byte for byte with and
+// without `prices/` (the test of the fiscal output).
 //
-// Everything here degrades: without `prices/` there is no external source and
-// every view works as before; a file of prices that does not read leaves its
-// asset without an automatic price, **and is said**; a damaged ECB history
-// leaves every quote not in euros without a value in euros, and is said too.
+// Everything here degrades: without `prices/` there is no external source and every view works as
+// before; a file of prices that does not read leaves its asset without an automatic price, **and is
+// said**; a damaged ECB history leaves every quote not in euros without a value in euros, and is
+// said too.
 
 import { homedir } from "node:os";
 import { dirname } from "node:path";
@@ -61,7 +60,7 @@ export const sourcesFor = (ctx: Context, keys: Keys): Partial<Record<QuoteSource
 /**
  * The keys, and what to say about them. A file readable by others is not used
  * — no source is called — and the console says the `chmod` that fixes it;
- * everything else goes on (questions.md §2.4, accepted). Any other problem of
+ * everything else goes on (accepted). Any other problem of
  * the file, or the two folders one inside the other, is an error: thrown.
  */
 export const keysFor = async (ctx: Context): Promise<{ keys: Keys; note?: string }> => {
@@ -124,10 +123,9 @@ export const loadQuotes = async (ctx: Context, state: LedgerState): Promise<Load
   try {
     config = await readLocalConfig(folder);
   } catch (error) {
-    // A local configuration that does not read degrades the automatic prices,
-    // it does not bring down the view (review of PR #78, the same defect the
-    // web had): said with the key it does not understand, and the view goes on
-    // with the manual prices.
+    // A local configuration that does not read degrades the automatic prices, it does not bring
+    // down the view (the same defect the web had): said with the key it does not understand, and
+    // the view goes on with the manual prices.
     if (error instanceof DomainError) {
       return {
         notes: [`Aviso: ${describeError(error)} Mientras tanto no se usan precios automáticos.`],
@@ -139,11 +137,9 @@ export const loadQuotes = async (ctx: Context, state: LedgerState): Promise<Load
   try {
     symbols = parseSymbols(await store.symbols());
   } catch (error) {
-    // A correspondence that does not read — or of a newer format — cannot say
-    // which closes are stored in the wrong currency: the views go on with the
-    // manual prices and say why, like a configuration that does not read
-    // (second pass of the review of PR #80), never falling to reading the
-    // closes as they are.
+    // A correspondence that does not read — or of a newer format — cannot say which closes are
+    // stored in the wrong currency: the views go on with the manual prices and say why, like a
+    // configuration that does not read, never falling to reading the closes as they are.
     if (error instanceof DomainError) {
       return {
         notes: [`Aviso: ${describeError(error)} Mientras tanto no se usan precios automáticos.`],

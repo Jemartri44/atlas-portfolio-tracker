@@ -1,5 +1,5 @@
 // atlas remote upload --from <ledger.jsonl>: the initial upload to an **empty**
-// cloud (ADR-0035, §4; `docs/api.md` §5.5; feature 024). The whole bytes of a
+// cloud (ADR-0035, §4, `docs/api.md` §5.5). The whole bytes of a
 // ledger go in one `PUT /api/ledger` on the etag of nothing, with the token of
 // the cloud folder: the cloud refuses anything else. It is not a sync: the file
 // stays as it is, the folder gets no copy of the ledger, and a cloud that
@@ -60,7 +60,7 @@ export const uploadCommand = async (
     throw new UsageError(`${from} no tiene ninguna línea: no hay nada que subir`);
   }
   // The same checks the cloud makes, before calling: it never has to refuse the
-  // normal path (V7). A newer schema or an unreadable line stops the decoding.
+  // normal path. A newer schema or an unreadable line stops the decoding.
   const events = decodeLines(lines, ctx.deps.store.schema);
   const refusal = initRefusal(events);
   if (refusal !== undefined) {

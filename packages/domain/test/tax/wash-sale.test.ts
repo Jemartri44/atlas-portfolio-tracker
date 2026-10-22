@@ -1,5 +1,5 @@
-// The wash-sale rule, computed (feature 009): the mandatory edge cases of the
-// prompt §5 and of constitution VII, one test each, with its name.
+// The wash-sale rule, computed: the mandatory edge cases of constitution VII,
+// one test each, with its name.
 
 import { describe, expect, it } from "vitest";
 import { Decimal } from "../../src/money/decimal.js";
@@ -54,9 +54,9 @@ describe("the window, counted date to date, at its four edges", () => {
   });
 
   /**
-   * The year is no longer the default of a fund (criterion #2, corrected on
-   * 2026-09-22), so the ledger says so: what this pins is the **arithmetic of
-   * a year from a 29 February**, not which asset takes a year.
+   * The year is no longer the default of a fund (criterion #2), so the ledger
+   * says so: what this pins is the **arithmetic of a year from a 29 February**,
+   * not which asset takes a year.
    */
   it("one year, from 29 February: the window ends on 28 February", () => {
     expect(windowCase("fund_f", "2028-02-29", "2029-02-28", "1y")).toBe("-100");
@@ -252,9 +252,9 @@ describe("mandatory edge cases", () => {
 
   /**
    * The mandatory edge case of constitution VII, now under the two windows: the
-   * default of a fund is two months since the correction of criterion #2, and
-   * the case is worth pinning under both, because which contributions fall
-   * inside is exactly what the change moves.
+   * default of a fund is two months (criterion #2), and the case is worth
+   * pinning under both, because which contributions fall inside is exactly what
+   * the window moves.
    */
   it("a fund loss followed by the monthly contribution: the nearest purchases inside the window carry it", () => {
     const monthly = (window?: "1y") => {
@@ -304,7 +304,7 @@ describe("mandatory edge cases", () => {
     // The criterion is named on the line and it is **not** doubtful: the
     // Manual práctico de Renta of the AEAT says in so many words that the
     // repurchased securities have to remain in the estate after the sale
-    // (certainty high since 2026-09-23), so no alternative reading is offered.
+    // (certainty high), so no alternative reading is offered.
     expect(report.doubtful.map((entry) => entry.criterion)).not.toContain("18");
   });
 
@@ -334,8 +334,7 @@ describe("mandatory edge cases", () => {
     // −200 in all, and the other reading could put 5 of the 10 units on the
     // free shares. It is not offered: the criterion is of high certainty, and
     // **that is what it costs** — a reading that moves money stops being shown
-    // because we stopped doubting it. Written down with the same case of #19,
-    // to be decided in block 2.
+    // because we stopped doubting it.
     expect(lineOf(report, loss.id).criteria).toContain("18");
     expect(report.doubtful.map((entry) => entry.criterion)).not.toContain("18");
   });
@@ -352,7 +351,7 @@ describe("mandatory edge cases", () => {
     expect(lineOf(report, second.id).criteria).toContain("19");
     // The criterion is still named on the line, and it is **not** doubtful: the
     // binding ruling V3282-18 resolves this very question, so the report does
-    // not offer an alternative reading of it (certainty high, feature 009 Q8).
+    // not offer an alternative reading of it (certainty high).
     expect(report.doubtful.map((entry) => entry.criterion)).not.toContain("19");
   });
 
@@ -567,8 +566,8 @@ describe("mandatory edge cases", () => {
       buy(b, "fund_g", "2027-01-11", "10", "100");
       const loss = sell(b, "fund_g", "2027-03-01", "10", "90");
       buy(b, "fund_f", "2027-01-12", "10", "100");
-      // Inside the two months of a fund, which is its window since the
-      // correction of criterion #2: what this pins is #2b, not the window.
+      // Inside the two months of a fund, which is its window (criterion #2):
+      // what this pins is #2b, not the window.
       transfer(b, "fund_f", "fund_g", "2027-04-03", "10", "10");
       const report = reportOf(b.build(), 2027);
       return { line: lineOf(report, loss.id), report };

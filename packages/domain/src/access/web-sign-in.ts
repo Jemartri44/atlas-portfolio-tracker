@@ -1,12 +1,11 @@
-// The date of the last sign-in of the web (feature 016, §8.1 P6; Q3):
-// `access/last-web-sign-in.json`, `{"web_sign_in_format":1,"last_web_sign_in":"YYYY-MM-DD"}`,
-// **exactly those two keys** — no `sub`, no mail, no device — with the date of
-// `Europe/Madrid`, not the instant: the monthly mail counts days, and an
-// instant would say at what time the user signs in, which nobody needs.
-// The API writes it after each web sign-in, and **it only moves forward**: an
-// equal or earlier date writes nothing. Google counts a pass through it as the
-// use of the OAuth client (ADR-0027, «Riesgo»); the console counts by the
-// issue of its tokens.
+// The date of the last sign-in of the web: `access/last-web-sign-in.json`,
+// `{"web_sign_in_format":1,"last_web_sign_in":"YYYY-MM-DD"}`, **exactly those
+// two keys** — no `sub`, no mail, no device — with the date of `Europe/Madrid`,
+// not the instant: the monthly mail counts days, and an instant would say at
+// what time the user signs in, which nobody needs. The API writes it after each
+// web sign-in, and **it only moves forward**: an equal or earlier date writes
+// nothing. Google counts a pass through it as the use of the OAuth client
+// (ADR-0027, «Riesgo»); the console counts by the issue of its tokens.
 
 import { type CivilDate, isCivilDate } from "../dates/civil-date.js";
 import { repeatsKey } from "../schema/json-keys.js";

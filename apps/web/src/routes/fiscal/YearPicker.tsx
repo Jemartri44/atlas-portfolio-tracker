@@ -4,7 +4,7 @@
 //
 // The default is the calendar year before the day of the query, which is the
 // one there is to declare. "Cerrado" is never used for "past": it is reserved
-// for a year with a return recorded (block 1).
+// for a year with a return recorded.
 
 import { useSearchParams } from "@solidjs/router";
 import { For, type JSX } from "solid-js";

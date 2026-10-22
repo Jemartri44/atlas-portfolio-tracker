@@ -1,6 +1,6 @@
-// The views that show a price, with prices/ next to the ledger (feature 013,
-// block 4): origin, source and age in sight, the approximation marked, the
-// quote without an ECB rate said — and the fiscal views not moving a byte.
+// The views that show a price, with prices/ next to the ledger: origin, source and age in sight,
+// the approximation marked, the quote without an ECB rate said — and the fiscal views not moving a
+// byte.
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -73,7 +73,7 @@ describe("the views with automatic prices", () => {
     const f = await folder(ledger());
     await writePrices(f.dir, { fund_a: line("2027-06-08", "130", "USD") });
     const weights = await f.atlas("weights", "--date", "2027-06-09");
-    // Review of PR #78: the valuation in euros is used, never covered.
+    // The valuation in euros is used, never covered.
     expect(weights.text).toMatch(/fund_a\s+equity\s+10\s+110\s+EUR\s+1\s+2027-05-31/);
     expect(weights.text).toContain(
       "fund_a: hay una cotización más reciente (130 USD del 2027-06-08) sin valor en euros (no hay histórico del BCE",
@@ -124,8 +124,8 @@ describe("the views with automatic prices", () => {
     expect(weights.text).toMatch(
       /fund_a\s+equity\s+10\s+220\s+EUR\s+1\s+2027-06-08\s+1\s+EODHD ≈ aprox\./,
     );
-    // The weights mark it on the row; the calculator of the contribution says
-    // it, from the domain (ADR-0024, review of PR #78).
+    // The weights mark it on the row; the calculator of the contribution says it, from the domain
+    // (ADR-0024).
     const contribute = await f.atlas("contribute", "--amount", "100", "--date", "2027-06-09");
     expect(contribute.code).toBe(0);
     expect(contribute.text).toContain("el reparto de la aportación depende de una estimación");
@@ -158,7 +158,7 @@ describe("the views with automatic prices", () => {
 });
 
 // ---------------------------------------------------------------------------
-// The fiscal output does not move (feature 013, §5 and §6.4 (c)).
+// The fiscal output does not move.
 // ---------------------------------------------------------------------------
 
 const fixtures = LEDGER_FIXTURES;
@@ -208,8 +208,8 @@ const sameFiscalOutput = async (
 
 describe("the fiscal output with prices/ next to the ledger", () => {
   it("is identical byte for byte, with closes after the valuations of the 720 that win in a view", async () => {
-    // An asset abroad valued by hand on 28 December, and automatic closes on
-    // the 29th, 30th and 31st, much higher: they are the ones P2 would show.
+    // An asset abroad valued by hand on 28 December, and automatic closes on the 29th, 30th and
+    // 31st, much higher: they are the ones a view of the latest price would show.
     const b = new Events();
     b.settings(CLI_SETTINGS);
     b.account("acc_ib", "IE");
@@ -342,15 +342,13 @@ describe("the cash in a foreign currency in the net worth", () => {
 
 describe("the fiscal output with the ECB history next to the ledger", () => {
   it("does not move a byte with a rate that moves the net worth", async () => {
-    // The prediction, written before running it: nothing fiscal moves. The
-    // fiscal commands read the history to contrast the rates of the ledger,
-    // so both folders publish on the same days and differ only in the dollar
-    // of days that no event of the fixture uses: one after every event, and
-    // one inside each year, before its 31 December (round 1 of PR #102). A
-    // fiscal output that valued the cash with the history's rate "as of"
-    // the year-end — the m720 with `latestRate` — would move with them. The
-    // 31 December itself cannot be the day: the fixture has valuations with
-    // rates of 2027-12-31 and 2028-12-29, which the history contrasts.
+    // The prediction, written before running it: nothing fiscal moves. The fiscal commands read the
+    // history to contrast the rates of the ledger, so both folders publish on the same days and
+    // differ only in the dollar of days that no event of the fixture uses: one after every event,
+    // and one inside each year, before its 31 December. A fiscal output that valued the cash with
+    // the history's rate "as of" the year-end — the m720 with `latestRate` — would move with them.
+    // The 31 December itself cannot be the day: the fixture has valuations with rates of 2027-12-31
+    // and 2028-12-29, which the history contrasts.
     const events = await synthetic();
     const inYear = ["2027-12-28", "2028-12-27"];
     const used = JSON.stringify(events);

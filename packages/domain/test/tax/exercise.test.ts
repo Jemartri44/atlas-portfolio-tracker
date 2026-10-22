@@ -1,8 +1,7 @@
-// The hand-computed exercise of specs/009-tax-engine/questions.md (in git history), checked
-// against the engine. **Every literal here comes from the hand calculation**,
-// committed before the engine existed (commit "docs(009): hand-computed tax
-// year"); none was copied from the engine's output. A discrepancy is
-// investigated and written down in that document before a literal is touched.
+// The hand-computed exercise, checked against the engine. **Every literal here
+// comes from the hand calculation**, committed before the engine existed; none
+// was copied from the engine's output. A discrepancy is investigated before a
+// literal is touched.
 
 import { describe, expect, it } from "vitest";
 import type { Money } from "../../src/money/money.js";
@@ -314,10 +313,8 @@ describe("hand-computed exercise, 2028: the doubtful criteria", () => {
   });
 
   /**
-   * The other reading of the window of a fund (criterion #2, corrected on
-   * 2026-09-22). Hand-computed in
-   * `specs/010-tax-output/fund-window-expectation.md` §3: with two months, E11
-   * defers nothing —its only repurchase, E15 of 1 June 2028, falls outside
+   * The other reading of the window of a fund (criterion #2), hand-computed:
+   * with two months, E11 defers nothing —its only repurchase, E15 of 1 June 2028, falls outside
    * [01/01/2028, 01/05/2028]— so its computable goes from −40,00 to −80,00 and
    * E20 stops releasing the −30,00 that travelled to it, going from +135,00 to
    * +165,00. Gains 372,50 − 40,00 + 30,00 = 362,50; base 362,50 − 260,80 +

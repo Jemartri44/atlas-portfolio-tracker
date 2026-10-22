@@ -1,7 +1,6 @@
-// Feature 024: the copy of a cloud ledger is read back from the disk and its
-// SHA-256 compared with the etag. A disk that returns other bytes than were
-// written cannot be provoked from outside, so the read of the copy is the one
-// double here; everything else is the console over the API with its doubles.
+// The copy of a cloud ledger is read back from the disk and its SHA-256 compared with the etag. A
+// disk that returns other bytes than were written cannot be provoked from outside, so the read of
+// the copy is the one double here; everything else is the console over the API with its doubles.
 
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";

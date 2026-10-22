@@ -64,8 +64,8 @@ describe("describeError: the per-asset-type settings name the type and the value
   });
 });
 
-// Round 2 of the review of PR #98, R2-B1: an annulment with a key twice cannot
-// be annulled, so its remedy is the file; any other line, annulling.
+// An annulment with a key twice cannot be annulled, so its remedy is the file; any other line,
+// annulling.
 describe("describeError: the remedy of a key twice, by the kind of line", () => {
   const of = (type: string) =>
     describeError(

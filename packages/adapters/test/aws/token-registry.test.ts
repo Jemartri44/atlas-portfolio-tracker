@@ -1,6 +1,5 @@
-// Feature 015, E2: the records of the console tokens over the narrow
-// interface of SSM (plan §4.2, T01, T02, T09, T21, T25, T26), against a double
-// that keeps every version and resolves selectors as SSM does (§18.3).
+// The records of the console tokens over the narrow interface of SSM, against a double that
+// keeps every version and resolves selectors as SSM does.
 
 import { createHash } from "node:crypto";
 import { sameSecret, sha256Hex } from "@atlas/adapters/access";
@@ -51,7 +50,7 @@ describe("TokenRegistry", () => {
     expect(ssm.writes).toEqual([`putNew ${NAME}`, `overwrite ${NAME}`]);
     expect(await registry.read(TID)).toEqual(revoked);
     // SSM keeps the version before the revocation: only a selector reaches it,
-    // and the registry never builds a name with one (B1).
+    // and the registry never builds a name with one.
     expect(await ssm.get(`${NAME}:1`)).not.toContain("revoked_at");
     await expect(registry.read(`${TID}:1`)).rejects.toMatchObject({ code: "token_id_invalid" });
     expect(ssm.reads.some((read) => read.includes(":"))).toBe(true);

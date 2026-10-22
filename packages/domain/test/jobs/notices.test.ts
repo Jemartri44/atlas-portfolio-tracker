@@ -1,5 +1,4 @@
-// Feature 016, E1 (R19, mutant 18): the warnings of the other jobs, once per
-// streak, and never twice after a cut.
+// The warnings of the other jobs, once per streak, and never twice after a cut.
 
 import { describe, expect, it } from "vitest";
 import {

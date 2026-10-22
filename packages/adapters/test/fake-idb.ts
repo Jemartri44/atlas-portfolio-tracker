@@ -1,6 +1,6 @@
-// A small double of IndexedDB, for the tests of `BrowserLedgerBlob` in Node
-// (feature 012, block 0). No dependency: it models only what the ledger needs,
-// and it models the three things that decide whether a line can be lost.
+// A small double of IndexedDB, for the tests of `BrowserLedgerBlob` in Node. No dependency: it
+// models only what the ledger needs, and it models the three things that decide whether a line
+// can be lost.
 //
 // 1. **Transactions on the same store run one after the other**, in the order
 //    they were created. Real IndexedDB lets read-only transactions overlap;
@@ -9,9 +9,9 @@
 //    and no request is pending, and a request made after that throws
 //    `TransactionInactiveError`. A read and a write separated by anything that
 //    is not an IndexedDB callback land in two transactions, or fail: that is
-//    the trap of the prompt (§3, block 0), and here it bites. It is stricter
-//    than browsers, which also allow promise continuations during the event
-//    dispatch; the code under test uses plain callbacks.
+//    the classic trap, and here it bites. It is stricter than browsers, which
+//    also allow promise continuations during the event dispatch; the code
+//    under test uses plain callbacks.
 // 3. **A failed request aborts the transaction** unless its handler calls
 //    `preventDefault()`, and an abort rolls back everything it wrote.
 //
@@ -130,7 +130,7 @@ export class FakeTransaction {
       throw new DOMException("read-only transaction", "ReadOnlyError");
     }
     if (this.db.takeCut()) {
-      // The tab dies in the middle of a write (feature 015, E3, point 7): the
+      // The tab dies in the middle of a write: the
       // request fails, the transaction aborts and rolls back everything.
       throw new DOMException("cut at web write", "AbortError");
     }
@@ -239,7 +239,7 @@ export class FakeDatabase {
   readonly commits: Commit[] = [];
   /** Every transaction ever created, with its mode: what a test counts. */
   readonly created: IDBTransactionMode[] = [];
-  /** The durability each transaction asked for, in the same order (feature 014). */
+  /** The durability each transaction asked for, in the same order. */
   readonly durability: IDBTransactionDurability[] = [];
   private readonly stores = new Map<string, Values>();
   private readonly pending: FakeTransaction[] = [];

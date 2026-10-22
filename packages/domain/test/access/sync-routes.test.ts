@@ -1,7 +1,6 @@
-// Feature 015, E3: the rules of the routes of the sync and of the reference
-// data (`docs/api.md` §5 and §6), pure: the etag a request asks for, the
-// names and types of the
-// reference data, the index and the conditional read.
+// The rules of the routes of the sync and of the reference data (`docs/api.md` §5 and §6), pure:
+// the etag a request asks for, the names and types of the reference data, the index and the
+// conditional read.
 
 import { describe, expect, it } from "vitest";
 import { API_ERRORS, refusal } from "../../src/access/codes.js";
@@ -64,11 +63,10 @@ describe("the reference data (§6)", () => {
   });
 
   /**
-   * Feature 016, E2 (§8.2 M1, amending P6 bis; Q4): a name of `prices/` is
-   * served when it is **exactly what `priceFileName` writes** for some asset
-   * — decoding and encoding it again gives the same name — at most 255
-   * characters, and `symbols.json`; never `_status.json` nor `config.json`.
-   * The whole list of the reviewer of PR #99, with what each gives.
+   * A name of `prices/` is served when it is **exactly what `priceFileName` writes** for some
+   * asset — decoding and encoding it again gives the same name — at most 255 characters, and
+   * `symbols.json`; never `_status.json` nor `config.json`. The list below covers every shape of
+   * name that matters, with what each gives.
    */
   it("serves the price files by the round trip with priceFileName, at most 255 characters", () => {
     for (const name of [

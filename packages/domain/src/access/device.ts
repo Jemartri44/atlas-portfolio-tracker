@@ -1,9 +1,8 @@
 // The record of each device, `sync/devices/<device_id>.json` in the bucket
-// (`docs/api.md` §5.3 and §5.4; decisions B1, N8, R2-B2 and Q3 of the prompt
-// of feature 015). **The API creates it when it assigns the id** and every
-// request checks it: it has to exist, be of the type of the credential and be
-// active. A missing object is **never** alive — deciding "not forgotten" by
-// absence is the recognition by resemblance B1 and R2-B2 closed.
+// (`docs/api.md` §5.3 and §5.4). **The API creates it when it assigns the id**
+// and every request checks it: it has to exist, be of the type of the
+// credential and be active. A missing object is **never** alive — deciding "not
+// forgotten" by absence would be recognition by resemblance.
 
 import { ValidationError } from "../errors.js";
 import { isRecord } from "../guards.js";
@@ -28,7 +27,7 @@ export interface DeviceObject {
   readonly forgotten_at?: string;
 }
 
-/** Why a credential's device does not let it in (Q3; the fourth, `unreadable`, confirmed in Q9). */
+/** Why a credential's device does not let it in. */
 export type DeviceRefusalReason = "missing" | "wrong_type" | "forgotten" | "unreadable";
 
 /**
@@ -126,7 +125,7 @@ export const deviceRefusal = (
 };
 
 /**
- * The id the web presented at sign-in (§7 P1): kept **only** if the API
+ * The id the web presented at sign-in: kept **only** if the API
  * issued it for a web device that is not forgotten; otherwise a new one is
  * assigned. In IndexedDB it is not a credential; here it is only a wish.
  */

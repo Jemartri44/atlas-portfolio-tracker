@@ -78,7 +78,7 @@ const TRACKING: ReadonlySet<string> = new Set([
  * 720 and the 721), whose figures are the holdings and the cash on 31 December
  * and the daily balances of the fourth quarter, all projected with `asOf`,
  * which cuts by business date: a change can only move them if it reaches a date
- * **on or before** the close of that year (review of feature 011). A reversal
+ * **on or before** the close of that year. A reversal
  * reaches the date of what it annuls; tracking reaches nothing it values; and
  * an event with no business date reaches no date at all.
  */
@@ -141,7 +141,7 @@ export const closedYearsTouched = (
 /**
  * Past tax years with figures in the ledger and **no** filing recorded.
  *
- * Not a warning: a note (Q8). A past year without a filing may simply not have
+ * Not a warning: a note. A past year without a filing may simply not have
  * been filed yet, or the user may not have recorded it, and saying "careful,
  * you filed this" of a year nobody filed would be the warning that gets
  * ignored. The years are listed so the interfaces can say it calmly.

@@ -1,7 +1,6 @@
-// Review of PR #109 (avisos B2 and N1): what a ledger that does not load
-// means for a warning. A passing failure to read it is retried the next day;
-// a ledger with invalid events is said as such; content that does not decode
-// is said by its code; and no ledger at all is nothing to do.
+// What a ledger that does not load means for a warning. A passing failure to read it is retried the
+// next day; a ledger with invalid events is said as such; content that does not decode is said by
+// its code; and no ledger at all is nothing to do.
 
 import { describe, expect, it } from "vitest";
 import { ledgerFailureKind } from "../../src/jobs/ledger-failure.js";

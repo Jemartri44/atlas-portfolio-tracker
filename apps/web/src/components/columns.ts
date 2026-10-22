@@ -1,4 +1,4 @@
-// The columns of a table, with the privacy mode in mind (feature 020, E3, M9).
+// The columns of a table, with the privacy mode in mind.
 //
 // With the mode on, the columns that would only hold masks are fused into one,
 // "importes ocultos", and the percentages that stand for them go in front. It

@@ -1,6 +1,4 @@
-// What a change of `fiscal_date_rule` does to the ECB rates of the ledger
-// (ADR-0029, point 10; block 6 of prompt 012; criterion 25). Mutants 15 and
-// 20 of prompt 012 §5.
+// What a change of `fiscal_date_rule` does to the ECB rates of the ledger (ADR-0029, point 10).
 
 import { describe, expect, it } from "vitest";
 import { readEcbZipCsv } from "../../src/ecb/history.js";

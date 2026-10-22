@@ -1,15 +1,15 @@
 // The figures of the return, in the order of the form and **before** any box
-// number is attached to them (feature 010, block 2).
+// number is attached to them.
 //
-// Splitting it in two is what keeps the promise of decision (e): this file
-// knows the concepts and the arithmetic the form itself does, and knows nothing
-// at all about which year it is. Attaching the boxes is `boxes.ts`, which reads
-// the table of the year and, when there is none, attaches nothing.
+// Splitting it in two keeps this file to the concepts and the arithmetic the
+// form itself does, with no knowledge at all of which year it is. Attaching the
+// boxes is `boxes.ts`, which reads the table of the year and, when there is none,
+// attaches nothing.
 //
 // Nothing here recomputes a figure of the return. Every amount comes from
 // `TaxYearReport`; the only sums are the ones the form prints inside its own
 // labels ("suma de las casillas [0320]"), and the rows by origin of the loss,
-// which are a **reordering** of what the engine already computed (ficha F5).
+// which are a **reordering** of what the engine already computed.
 
 import { positive, sum, zero } from "../../money/eur.js";
 import type { Money } from "../../money/money.js";
@@ -98,7 +98,7 @@ interface RowTotals {
  *
  * The value of a row is the **own** result of the operation, never what the
  * engine integrated: what a repurchase released belongs to the loss it came
- * from and is declared there (ficha F5). So a sale with a gain of its own that
+ * from and is declared there. So a sale with a gain of its own that
  * releases an earlier loss is a gain here, exactly as Renta WEB expects.
  */
 const disposalRows = (
@@ -142,7 +142,7 @@ const disposalRows = (
             : { exact: amount as Money }),
         // The form subtracts the two rounded values itself, and the engine
         // rounds the result once (#6): they can differ by a cent, and the one
-        // the user will see on screen is the form's (ficha F2).
+        // the user will see on screen is the form's.
         ...((field === "gain" || field === "loss") && !rounding.isZero()
           ? { form: own.roundToCents().add(rounding) }
           : {}),
@@ -168,8 +168,8 @@ const disposalRows = (
  *
  * Only losses whose income category is a capital gain: a deferral of movable
  * capital income has no "earlier years" section, and what is released of it is
- * already inside the figure of the disposal that releases it (ficha F5, added
- * after Q2). Counting it here too would declare it twice.
+ * already inside the figure of the disposal that releases it. Counting it here
+ * too would declare it twice.
  */
 const priorYearRows = (
   chain: ChainCore,
@@ -377,7 +377,7 @@ const deductions = (report: TaxYearReport, categories: Map<string, IncomeCategor
   // used to build `{ event_id } as BoxRow` and hand that over as a whole row:
   // the cast compiled, the other three fields were undefined at run time, and
   // both interfaces printed "undefined undefined" beside the deduction of a
-  // foreign dividend (found rendering the screen of block 4, 2026-09-23).
+  // foreign dividend.
   const deduction = new Map(report.double_taxation.lines.map((line) => [line.event_id, line]));
   for (const income of report.movable_capital.dividends.filter(
     (line): line is IncomeLine & { asset_id: AssetId } => line.asset_id !== undefined,
@@ -403,7 +403,7 @@ const deductions = (report: TaxYearReport, categories: Map<string, IncomeCategor
       { concept: "ddi.first_limit", exact: report.double_taxation.deductible_eur, criteria },
       // The box holds the **lesser** of two limits, and the engine knows only
       // the first one: the second needs the whole return. So the box is named
-      // and left without a figure (prompt: never as the amount of the box).
+      // and left without a figure.
       { concept: "ddi.deduction", partial: "treaty_limit_only", criteria },
     );
   }
@@ -485,7 +485,7 @@ export const draftEntries = (report: TaxYearReport, chain: ChainCore): Draft[] =
     .sub(offsets.againstMovable);
   drafts.push(
     { concept: "base.savings", exact: base, criteria: sortCriteria(["10", "22"]) },
-    // 0460 less two remainders of reductions the ledger cannot see (N8).
+    // 0460 less two remainders of reductions the ledger cannot see.
     { concept: "base.savings_taxable", partial: "reductions_unknown", criteria: [] },
   );
   drafts.push(...annexC3(report, year));

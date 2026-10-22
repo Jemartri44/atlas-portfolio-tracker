@@ -1,8 +1,6 @@
-// Writes the synthetic EODHD responses of the tests (feature 013): the **real
-// format** of each endpoint, verified on 2026-09-24
-// (`specs/013-daily-close-prices/questions.md (in git history)` §1.1), with **invented symbols
-// and round values**. No real response enters the repository, not even one of
-// the public demo key (CLAUDE.md, rule 7).
+// Writes the synthetic EODHD responses of the tests: the **real format** of each endpoint, verified
+// on 2026-09-24, with **invented symbols and round values**. No real response enters the
+// repository, not even one of the public demo key (CLAUDE.md, rule 7).
 //
 //   node tests/fixtures/eodhd/make-synthetic.mjs
 //
@@ -15,9 +13,9 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const write = (name, text) => writeFileSync(join(here, name), text);
 
-// End of day, `fmt=json`: an array, one object per day, the fields in the
-// order the endpoint gives them, and **numbers as JSON numbers** — which is
-// why the adapter reads their text and never a float (decision D-Q1).
+// End of day, `fmt=json`: an array, one object per day, the fields in the order the endpoint gives
+// them, and **numbers as JSON numbers** — which is why the adapter reads their text and never a
+// float.
 const day = (date, close) =>
   `{"date":"${date}","open":${close - 1},"high":${close + 1.5},"low":${close - 2},"close":${close},"adjusted_close":${close - 0.25},"volume":1000}`;
 write(

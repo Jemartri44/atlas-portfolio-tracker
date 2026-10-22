@@ -1,5 +1,5 @@
-// atlas prices update | status | symbols (feature 013, block 4), over real
-// folders, with doubles of the sources: no test touches the network.
+// atlas prices update | status | symbols, over real folders, with doubles of the sources: no test
+// touches the network.
 
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";

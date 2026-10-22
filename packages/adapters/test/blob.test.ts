@@ -1,7 +1,7 @@
 // The browser store enters the project with the same level of proof as the file
 // one: it runs the port contract of specs/001-ledger-core (ADR-0019). The bytes
 // live in a `MemoryBlob` here; the real IndexedDB handle runs the same contract
-// over a double of IndexedDB in `browser.test.ts` (feature 012).
+// over a double of IndexedDB in `browser.test.ts`.
 
 import { ArchiveExistsError, ConflictError, sha256Hex, ValidationError } from "@atlas/domain";
 import { describe, expect, it } from "vitest";

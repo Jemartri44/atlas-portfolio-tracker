@@ -1,13 +1,13 @@
-// The deviation of an asset class as a strip (feature 020, E3, M5; mockup
-// `indicadores.html`, card A): a track of ±5 pp, the mark of the target in the
-// middle, and a dot where the weight is, joined to the middle by a stem.
+// The deviation of an asset class as a strip (mockup `indicadores.html`, card A): a track of ±5 pp,
+// the mark of the target in the middle, and a dot where the weight is, joined to the middle by a
+// stem.
 //
 // **In ink and without a band.** Whether a class is off target is the domain's
 // to say, per asset (`deviation_above_threshold`), so the strip of a class
 // carries neither the band of the threshold nor a coloured dot: the full
 // strip, with both, is the `Gauge` of each asset. What a class says about its
 // assets is a count taken from those warnings, never a comparison of figures
-// here (decision (c) of docs/design/system.md).
+// here.
 //
 // Positions are SVG attributes, in percent, with radii in pixels: the page
 // serves `style-src 'self'`, so a position written as a style would be blocked.

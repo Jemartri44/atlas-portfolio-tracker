@@ -10,7 +10,7 @@ import type { DeviceObject } from "./device.js";
 import { isId22, isId43 } from "./ids.js";
 
 /**
- * The name of a device (decided on 2026-09-25, contracts §B): 1 to 40 code
+ * The name of a device 1 to 40 code
  * points **in NFC**, of a closed Latin alphabet, the space, `.`, `_` and `-`,
  * with no space at either end and never two together. It is what the user
  * confirms on the manual page and on the reissue page: an open alphabet
@@ -33,7 +33,7 @@ export interface ConsoleStart {
   readonly state: string;
   readonly code_challenge: string;
   readonly device_name: string;
-  /** Only to reissue for a device without a credential (§4.3, N5). */
+  /** Only to reissue for a device without a credential. */
   readonly reissue_device_id?: string;
 }
 
@@ -110,7 +110,7 @@ export const parseConsoleStart = (
 /**
  * Where the loopback return goes: **the literal `127.0.0.1`**, written here,
  * and the port validated at the start — never a host of anybody's choosing,
- * never `localhost` (ADR-0033, point 4; mutant 20).
+ * never `localhost` (ADR-0033, point 4).
  */
 export const loopbackCallback = (port: number, code: string, state: string): string => {
   // Both are base64url (the signed code, the console's `state`): nothing to
@@ -125,7 +125,7 @@ export const loopbackCallback = (port: number, code: string, state: string): str
 export const isPkceVerifier = (value: unknown): value is string =>
   typeof value === "string" && /^[A-Za-z0-9._~-]{43,128}$/.test(value);
 
-/** `{ "code", "code_verifier" }` and nothing else (§4.3): the device is never the client's. */
+/** `{ "code", "code_verifier" }` and nothing else: the device is never the client's. */
 export const parseExchangeBody = (
   value: unknown,
 ): { readonly code: string; readonly code_verifier: string } | ApiRefusal => {
@@ -145,7 +145,7 @@ export const parseExchangeBody = (
 };
 
 /**
- * The entry of the allow list a code's `sub` stands for (Q8 (a)): the code
+ * The entry of the allow list a code's `sub` stands for: the code
  * carries no e-mail, so the exchange takes it from the one entry of that
  * `sub` and checks the pair whole. Two entries for one `sub` choose nothing.
  */
@@ -167,7 +167,7 @@ export type ReissueRefusal =
   | "reissue_device_unreadable";
 
 /**
- * Whether a device may be reissued (N5; R2-B1): **it exists, it is not
+ * Whether a device may be reissued: **it exists, it is not
  * forgotten and it is a console**. Each failure with its own code; none is
  * folded into another.
  */

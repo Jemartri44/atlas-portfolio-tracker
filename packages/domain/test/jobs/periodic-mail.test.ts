@@ -1,7 +1,6 @@
-// Feature 016, E4 (`contracts/mail.md` §2; §8.1 P9; Q10; questions §13): the
-// mails of the periodic warnings. Plain text, an ASCII subject with its
-// period, no amount with the switch off and only the euros of rule 17 with it
-// on; the income tax never with a figure; the 720 and 721 in a neutral text.
+// The mails of the periodic warnings. Plain text, an ASCII subject with its period, no amount with
+// the switch off and only the euros of rule 17 with it on; the income tax never with a figure; the
+// 720 and 721 in a neutral text.
 
 import { describe, expect, it } from "vitest";
 import type { InformativeFacts } from "../../src/jobs/informative.js";

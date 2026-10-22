@@ -140,7 +140,7 @@ const costEurOf = (event: BuyEvent): Money => {
 /**
  * Commissions of a corporate action: a `forced_sale` is a sale for every
  * purpose (ADR-0011) and each broker's charge is recorded per account, so it
- * counts like the fee of a `sell` (Q2, resolved).
+ * counts like the fee of a `sell` (resolved).
  */
 const forcedSaleFees = (
   event: CorporateActionEvent,
@@ -361,7 +361,7 @@ export const costSummary = (
     const invested = totals.invested.get(assetId) ?? Money.zero(EUR);
     const price = prices.get(assetId);
     const value = positionValueOf(price, quantity);
-    // Without a price, or with a quote that has no value in euros (feature 013).
+    // Without a price, or with a quote that has no value in euros.
     if (quantity.isPositive() && value === undefined) {
       partial = true;
     }

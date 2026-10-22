@@ -92,7 +92,7 @@ describe("a fingerprint the user accepted as unverifiable", () => {
 });
 
 /**
- * **A waiver cannot be reversed** (review of feature 011, blocking 1).
+ * **A waiver cannot be reversed**.
  *
  * It records something that already happened —the ledger was compacted
  * without verifying that fingerprint— and what happened is not undone by

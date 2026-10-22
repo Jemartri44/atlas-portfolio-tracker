@@ -1,8 +1,6 @@
-// TEST ONLY — a double of Amazon S3 for the narrow `ObjectStore`, **never
-// reachable from the product** (architecture test). It imitates what the
-// documentation of S3 says of conditional writes (block 0 of E3,
-// `specs/015-api-access/questions.md (in git history)` §23.1, consulted 2026-09-26:
-// `docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html` and
+// TEST ONLY — a double of Amazon S3 for the narrow `ObjectStore`, **never reachable from the
+// product** (architecture test). It imitates what the documentation of S3 says of conditional
+// writes (`docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html` and
 // `…/API/API_PutObject.html`):
 // - `If-None-Match`: «If there's an existing object, the write operation
 //   fails, resulting in a 412 Precondition Failed response», and in a race
@@ -14,7 +12,7 @@
 //   the narrow interface, as the adapter of the SDK translates them.
 // The ETag is opaque, never the SHA-256 of the bytes. There is no delete.
 // The bucket is versioned, as the data bucket is (ADR-0032): every write keeps
-// the one before as a version, which the administration reads (E5).
+// the one before as a version, which the administration reads.
 
 import {
   type AdminObjectStore,

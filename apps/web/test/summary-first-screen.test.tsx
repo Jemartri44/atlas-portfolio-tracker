@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 //
-// The first screenful of the summary by importance (feature 020, E2, M2):
+// The first screenful of the summary by importance:
 //
 //   - the risk of losing the data goes first and in one line, always, and is
 //     not repeated inside *Atención*;

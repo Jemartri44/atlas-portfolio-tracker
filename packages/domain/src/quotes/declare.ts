@@ -1,8 +1,8 @@
-// Declaring the symbols of an asset (decisions D-Q2 and D-Q6 of the
-// direction): the user says the symbol in each source and the currency of the
-// quote; the application **asks each source's metadata** for the currency —
-// one call of the budget each, reserved under the lock like any other — and
-// writes nothing until every disagreement has been confirmed explicitly.
+// Declaring the symbols of an asset: the user says the symbol in each source
+// and the currency of the quote; the application **asks each source's
+// metadata** for the currency — one call of the budget each, reserved under the
+// lock like any other — and writes nothing until every disagreement has been
+// confirmed explicitly.
 //
 // Two steps on purpose, so that confirming a disagreement never spends the
 // calls twice: `checkSymbols` asks (network, outside the lock), and
@@ -162,7 +162,7 @@ const misstoredPending = (assetId: AssetId, source: QuoteSource): ValidationErro
 
 /**
  * Refuses to drop a source — or the whole asset, without `declaration` — that
- * still has closes stored wrong (third pass of the review of PR #80): they
+ * still has closes stored wrong: they
  * would count again in euros without any notice. `misstored` leaves only
  * through a purge. Called before spending any call; the writes check it again
  * under the lock.
@@ -197,13 +197,12 @@ export const removeSymbols = (store: PriceStore, assetId: AssetId): Promise<bool
 
 /**
  * Purges the closes of `assetId` from `source` whose currency is not the one
- * that source declares now (review of PR #80): feature 013 stored the pence of
- * Alpha Vantage as pounds. Only on an explicit request of the user, under the
- * lock, and only those lines. **The next download asks for their days again,
- * once** (second and third passes of the review): they are written down for
- * that source (`refetch_days`), because the last close of the asset — of
- * another source, maybe of a later day — would otherwise leave them out for
- * good; a day no source serves then is left as a hole, and said.
+ * that source declares now: e.g. the pence of Alpha Vantage stored as pounds.
+ * Only on an explicit request of the user, under the lock, and only those
+ * lines. **The next download asks for their days again, once**: they are
+ * written down for that source (`refetch_days`), because the last close of the
+ * asset — of another source, maybe of a later day — would otherwise leave them
+ * out for good; a day no source serves then is left as a hole, and said.
  * Returns how many were removed.
  */
 export const purgeMismatched = (

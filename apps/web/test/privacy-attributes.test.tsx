@@ -1,13 +1,11 @@
 // @vitest-environment happy-dom
 //
-// The guardian of E3 (feature 020, prompt §3, E3, block 1): every screen this
-// delivery touches, rendered with the privacy mode **on**, says no amount and
-// no quantity of the synthetic ledger — not in its text and not in any
-// attribute, the `<title>` and the `<desc>` of an SVG included. It fails with a
-// single appearance.
+// The guardian of the privacy mode: every screen it touches, rendered with the privacy mode **on**,
+// says no amount and no quantity of the synthetic ledger — not in its text and not in any
+// attribute, the `<title>` and the `<desc>` of an SVG included. It fails with a single appearance.
 //
-// A percentage next to a mask is the point of the delivery, so the net lets
-// percentages and points through and nothing else (`helpers/exposures.ts`).
+// A percentage next to a mask is the point of the mode, so the net lets percentages and points
+// through and nothing else (`helpers/exposures.ts`).
 
 import { describe, expect, it } from "vitest";
 import { store } from "../src/ledger/state.js";

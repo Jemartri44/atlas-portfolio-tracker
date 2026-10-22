@@ -1,9 +1,9 @@
-// What an HTTP client of the sync accepts as an answer of the API (feature
-// 015, E3; `docs/api.md` §5 and §7), read **strictly**. The rule of §7: only a
+// What an HTTP client of the sync accepts as an answer of the API
+// (`docs/api.md` §5 and §7), read **strictly**. The rule of §7: only a
 // `rejected.code` of the closed list holds a line; an error of the closed list
 // stops the sync and leaves everything pending; anything without the shape —
 // the WAF, CloudFront, a hash of the body AWS refused — is
-// `transport_rejected`, and never holds a line (V4).
+// `transport_rejected`, and never holds a line.
 
 import { isCount, isRecord, onlyKeys, SHA256_HEX } from "../guards.js";
 import {

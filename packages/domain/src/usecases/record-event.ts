@@ -28,14 +28,14 @@ interface RecordBase {
   /**
    * The id the event is written with, chosen beforehand: a draft stamps it
    * before its confirmation writes, so that a retry knows **exactly** whether
-   * the line is in the ledger already (review of PR #75). Nobody else passes
+   * the line is in the ledger already. Nobody else passes
    * it; without it a fresh id is generated.
    */
   id?: string;
   /**
    * In a correction, the ids of its reversal and of the corrected event, in
    * that order, chosen beforehand: the redo of a held pair seals both before
-   * recording them (second review of PR #83). Otherwise fresh ones.
+   * recording them. Otherwise fresh ones.
    */
   ids?: UlidGenerator;
   /** Write even if another event carries the same fingerprint. */
@@ -71,7 +71,7 @@ export interface RecordResult<E extends SupportedEvent = SupportedEvent> {
    * would put it in the boot path of the web, measured at 4,9 KB gzip.
    */
   closed: ClosedYear[];
-  /** Past years with figures and no filing recorded: a note, not a warning (Q8). */
+  /** Past years with figures and no filing recorded: a note, not a warning. */
   unfiledPastYears: number[];
 }
 
@@ -107,7 +107,7 @@ export const duplicatesOf = (
 };
 
 /**
- * One ISIN, one asset (ADR-0009, feature 009 review): FIFO and the wash-sale
+ * One ISIN, one asset (ADR-0009): FIFO and the wash-sale
  * rule work on homogeneous securities, and the system knows them by
  * `asset_id`. Two assets with the same ISIN — the same ETF in the core and in
  * the bucket, say — are one security to the tax agency and two to the engine:
@@ -123,7 +123,7 @@ export const duplicatesOf = (
  *
  * Against the **catalogue in force** of the candidate ledger, not the raw
  * lines: a reversed `asset_created` holds no ISIN, and neither does a reversed
- * change (verifier of feature 009). And the ISIN compared as the tax agency
+ * change. And the ISIN compared as the tax agency
  * reads it, upper case and without spaces. `before` is only projected when
  * there is a clash, to tell an update that keeps its own ISIN from one that
  * takes another's; collecting errors, so that an invalid event elsewhere in

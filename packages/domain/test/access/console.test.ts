@@ -1,7 +1,6 @@
-// Feature 015, E2: the sign-in of the console as rules (plan §4.2, T13 to
-// T23): the start and each of its parameters, the name of a device, the
-// literal loopback, the exchange, the attempt and the code signed apart, the
-// entry of a `sub`, the reissue and the routes of the token.
+// The sign-in of the console as rules: the start and each of its parameters, the name of a device,
+// the literal loopback, the exchange, the attempt and the code signed apart, the entry of a `sub`,
+// the reissue and the routes of the token.
 
 import { describe, expect, it } from "vitest";
 import {

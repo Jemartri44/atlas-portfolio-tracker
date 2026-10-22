@@ -1,12 +1,10 @@
 // @vitest-environment happy-dom
 //
-// Feature 022 (ADR-0035, §3 and §6): what is left **on the device** after a
-// session of the cloud mode. The ledger is not: no IndexedDB store holds it,
-// no `localStorage` key names it, no cache entry holds a response of the API.
-// Only the public copy of the ECB history (the same for anyone) and the
-// preferences of the interface may remain. The walker below lists everything
-// that is on the device, and a control proves it would see a ledger if one
-// were there.
+// What is left **on the device** after a session of the cloud mode (ADR-0035, §3 and §6). The
+// ledger is not: no IndexedDB store holds it, no `localStorage` key names it, no cache entry holds
+// a response of the API. Only the public copy of the ECB history (the same for anyone) and the
+// preferences of the interface may remain. The walker below lists everything that is on the device,
+// and a control proves it would see a ledger if one were there.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

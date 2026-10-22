@@ -1,6 +1,5 @@
 // A correction is the same economic fact: its lot keeps the place of the
-// original (decision of the direction on the adversarial review of PR #75,
-// feature 012). The FIFO tie-break between lots of the same date is the file
+// original. The FIFO tie-break between lots of the same date is the file
 // position — **of the root of the correction chain**, not of the correction,
 // which is appended at the end of the file.
 
@@ -20,7 +19,7 @@ import { testDeps } from "../usecases/helpers.js";
 const history = readEcbZipCsv(ecbFixture("eurofxref-hist.csv"));
 
 /**
- * The reviewer's case: two purchases of the same day, 2 at 100 USD and 2 at
+ * Two purchases of the same day, 2 at 100 USD and 2 at
  * 200 USD, and a sale of 2 — which consumes the first, the cheap one.
  */
 const ledger = (changedRule = false) => {

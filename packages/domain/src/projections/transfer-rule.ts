@@ -1,6 +1,6 @@
 // The deferral of a transfer exists only between investment funds (article
-// 94.1.a LIRPF, business-rules.md §5.2) and only for a Spanish tax resident
-// (§5.9). The free `transferable` flag alone never grants it.
+// 94.1.a LIRPF, business-rules.md §5.2) and only for a Spanish tax resident.
+// The free `transferable` flag alone never grants it.
 
 import { madridDateOf } from "../dates/madrid.js";
 import { ProjectionError } from "../errors.js";

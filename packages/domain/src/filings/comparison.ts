@@ -1,5 +1,4 @@
-// What was filed against what the ledger says today (ADR-0020, prompt 010
-// block 1).
+// What was filed against what the ledger says today (ADR-0020).
 //
 // Recomputing a year that was already filed and **comparing** it is not a
 // mistake: it is exactly the information the user needs to decide whether a
@@ -110,16 +109,14 @@ const declaredFigures = (figures: FiledRentaFigures): Map<string, Money> => {
  * A reading of the prefix of the ledger the fingerprint names, or nothing when
  * it cannot be computed.
  *
- * **There are two ways it can fail and only one of them is impossible here.**
- * A prefix of a valid ledger is itself valid —what makes an event invalid is
- * always something *before* it, and the report refused an invalid ledger
- * before getting here— so `Invalid` never happens. What does happen is the
- * other one: the settings this reading uses are **not** the ones in force, and
- * a different `fiscal_date_rule` can move an operation into a year earlier
- * than the engine can compute. That threw, and took the whole report with it,
- * until feature 011; the old comment ruled out the first failure and said
- * nothing about the second, which is how a comment that is true about what it
- * covers makes you believe it covers everything.
+ * **There are two ways it can fail and only one of them is impossible here.** A
+ * prefix of a valid ledger is itself valid —what makes an event invalid is
+ * always something *before* it, and the report refused an invalid ledger before
+ * getting here— so `Invalid` never happens. What does happen is the other one:
+ * the settings this reading uses are **not** the ones in force, and a different
+ * `fiscal_date_rule` can move an operation into a year earlier than the engine
+ * can compute. Unguarded, that would throw and take the whole report with it:
+ * ruling out the first failure says nothing about the second.
  */
 const readingOf = (
   prefix: readonly LedgerEvent[],

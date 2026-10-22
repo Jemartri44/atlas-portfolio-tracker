@@ -1,5 +1,5 @@
 // The correction of the ECB rates that a change of `fiscal_date_rule` left
-// behind (feature 012, block 6; ADR-0029, point 10; criterion 25): proposed by
+// behind (ADR-0029, point 10, criterion 25): proposed by
 // the domain, shown whole with the filed returns it reaches, and written **in
 // one write** after the user's yes. Loaded lazily with «Verificación».
 

@@ -2,8 +2,7 @@
 //
 // Apart from `year.ts` because it answers a different question: that one says
 // what the return holds, this one says where the engine stopped computing and
-// took what a filed return declared, origin by origin (feature 011, block 6
-// and its review).
+// took what a filed return declared, origin by origin.
 
 import { Money } from "@atlas/domain";
 import type { AnchorDifference, PendingLoss } from "@atlas/domain/fiscal";
@@ -13,13 +12,13 @@ import type { AnchorDifference, PendingLoss } from "@atlas/domain/fiscal";
  * filed return declared (ADR-0020). The screen says it **where the figure it
  * affects is** —the pending losses— because a note at the bottom is a note
  * nobody reads, and what the user is looking at is not what the engine
- * computed (feature 011, block 6).
+ * computed.
  */
 /**
  * One balance of a substitution, **by its origin**: the year it comes from and
  * its category, which is what decides until when it can be offset. A total
  * would lose it, and two substitutions with the same total and different
- * origins would read the same (review of feature 011).
+ * origins would read the same.
  */
 export interface AnchorRow {
   key: string;

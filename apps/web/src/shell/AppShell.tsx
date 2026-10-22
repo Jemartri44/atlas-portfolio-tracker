@@ -24,9 +24,8 @@ import { inSection, Nav } from "./Nav.jsx";
 import { PrivacyToggle } from "./PrivacyToggle.jsx";
 
 /**
- * The drafts waiting for their ECB rate (feature 012, block 5; in the cloud,
- * feature 027): on every screen, but of the ECB, so it arrives in a chunk of its
- * own after the first paint. The frame only keeps its place in the bar.
+ * The drafts waiting for their ECB rate (in the cloud): on every screen, but of the ECB, so it
+ * arrives in a chunk of its own after the first paint. The frame only keeps its place in the bar.
  */
 const DraftSlot = (): JSX.Element => (
   <span
@@ -58,8 +57,7 @@ const DegradedBand = (): JSX.Element => (
  *
  * Without this, `<main>` came out **empty** — nothing, no message, no way back —
  * whenever a lazily loaded screen could not be fetched, which is what happens
- * to an installed PWA that lost the network before its chunk was cached
- * (measured in the review of 2026-09-18: 0 characters inside `<main>`). The
+ * to an installed PWA that lost the network before its chunk was cached. The
  * navigation is outside the boundary on purpose: whatever broke, the other
  * destinations still work.
  */
@@ -140,7 +138,7 @@ const FollowFragment = (): JSX.Element => {
   // on its second visit. The path too: the same fragment on another page is
   // another target.
   // The query too: the back button after a filter only changes it, and a
-  // gate shut by it has to see that address to open again (PR #105, round 2).
+  // gate shut by it has to see that address to open again.
   const address = createMemo(() => location.pathname + location.search + location.hash);
   createEffect(() => {
     const here = address();
@@ -150,7 +148,7 @@ const FollowFragment = (): JSX.Element => {
     // Decided once the event that moved the address has been dispatched to
     // everyone: in Chromium the router hears `popstate` before the frame does
     // and moves the location at once, so deciding here, synchronously, met a
-    // gate nobody had shut yet (measured, round 1 of PR #105).
+    // gate nobody had shut yet (measured).
     setTimeout(() => {
       if (control.signal.aborted || !gate.follows(here)) {
         return;

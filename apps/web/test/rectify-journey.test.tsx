@@ -1,11 +1,10 @@
 // @vitest-environment happy-dom
 //
-// The whole journey of correcting a movement of a past tax year. The write was
-// right, but the reload of the ledger that follows it mounted the form again
-// with the original values and without the notice: the user saw «8.700» once
-// more, tried again, and was told «Ese evento ya está anulado» (third pass of
-// the review of 2026-09-19). Now the write leads to the movement it wrote, with
-// the confirmation and the warning, and the corrected original offers no form.
+// The whole journey of correcting a movement of a past tax year. The write was right, but the
+// reload of the ledger that follows it mounted the form again with the original values and without
+// the notice: the user saw «8.700» once more, tried again, and was told «Ese evento ya está
+// anulado». Now the write leads to the movement it wrote, with the confirmation and the warning,
+// and the corrected original offers no form.
 
 import { BlobLedgerStore } from "@atlas/adapters/blob";
 import type { UseCaseDeps } from "@atlas/domain";

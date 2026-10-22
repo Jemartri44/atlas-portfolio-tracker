@@ -1,4 +1,4 @@
-// «Corrección propuesta» (feature 012, block 6; criterion 25): the lines whose
+// «Corrección propuesta» (criterion 25): the lines whose
 // ECB rate is of another day than their fiscal date — what a change of
 // `fiscal_date_rule` leaves behind —, each to be reversed and recorded again
 // with the official rate. The chain is shown **whole**, with every filed

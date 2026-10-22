@@ -1,4 +1,4 @@
-// Feature 015, E1: the primitives of the API (R08, R10, R11).
+// The primitives of the API: PKCE, the signed session and the RS256 check.
 
 import { createHmac, generateKeyPairSync, sign } from "node:crypto";
 import {

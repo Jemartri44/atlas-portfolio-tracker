@@ -1,10 +1,8 @@
-// Feature 016, block 1 of E1 (G7, R15; mutant 9): **the log of the jobs never
-// carries** the recipient, the sender, the subject or the body of a mail, an
-// amount, an `asset_id`, an account, a key, a token, a mail address or a `sub`,
-// nor the message of a foreign error — on the happy path **and on every path
-// of failure**: SSM that throttles, SES that refuses or does not answer, S3
-// that denies, a function without configuration, an event with a sentinel in
-// it. `stdout` and `stderr` are captured too, not only the logger.
+// **The log of the jobs never carries** the recipient, the sender, the subject or the body of a
+// mail, an amount, an `asset_id`, an account, a key, a token, a mail address or a `sub`, nor the
+// message of a foreign error — on the happy path **and on every path of failure**: SSM that
+// throttles, SES that refuses or does not answer, S3 that denies, a function without configuration,
+// an event with a sentinel in it. `stdout` and `stderr` are captured too, not only the logger.
 
 import { claimRecord, recordIn, serializeRunRecord } from "@atlas/domain/jobs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -28,8 +26,8 @@ beforeEach(() => {
     });
   }
 });
-// The console of Node too: vitest takes it before it reaches a stream, so a
-// `console.log` would never be seen above (mutant 15 of E2 survived that way).
+// The console of Node too: vitest takes it before it reaches a stream, so a `console.log` would
+// never be seen above.
 beforeEach(() => {
   for (const method of ["log", "info", "warn", "error", "debug"] as const) {
     vi.spyOn(console, method).mockImplementation((...args: unknown[]) => {

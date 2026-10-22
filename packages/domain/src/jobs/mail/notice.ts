@@ -1,10 +1,9 @@
-// The warnings of the other jobs (feature 016; `contracts/mail.md` §2), sent
-// by `dispatch_findings` once per streak. **Nothing of what a record says
-// reaches a mail but through a closed list** (review of PR #104, privacy B1,
-// N1 and N2): the subject must be one of the producing tasks, looked up with
-// `Object.hasOwn`, the period must have the shape of a period and the code of
-// the outcome must be one of ours; anything else is said as unknown, or no
-// mail is sent at all. No amounts, ever.
+// The warnings of the other jobs, sent by
+// `dispatch_findings` once per streak. **Nothing of what a record says reaches
+// a mail but through a closed list**: the subject must be one of the producing
+// tasks, looked up with `Object.hasOwn`, the period must have the shape of a
+// period and the code of the outcome must be one of ours; anything else is said
+// as unknown, or no mail is sent at all. No amounts, ever.
 
 import type { MailMessage } from "../../ports/notifier.js";
 import { INTEGRITY_ERROR_CODES, REHEARSAL_CODES } from "../integrity.js";
@@ -26,7 +25,7 @@ const CODES: readonly string[] = [
   "job_record_unreadable",
   "job_record_newer_format",
   "not_utf8",
-  // Why the dump or the integrity could not read the ledger (E4).
+  // Why the dump or the integrity could not read the ledger.
   "ledger_absent",
   "ledger_unavailable",
   "ledger_unreadable",

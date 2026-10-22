@@ -1,12 +1,12 @@
 // The **average balance of the fourth quarter** of a cash account, which the
-// Modelo 720 asks for next to the balance at 31 December (prompt 010, P2).
+// Modelo 720 asks for next to the balance at 31 December.
 //
 // Both figures decide: there is an obligation when **either** of the two joint
 // balances is above the threshold, and the rule of the 20.000 € is measured on
 // each of them. With one balance alone the application could say "not obliged"
 // in a year whose average did oblige.
 //
-// The method is ficha F3 (question Q4): the average of the closing balance of
+// The method: the average of the closing balance of
 // every **calendar day** of the period, converted at the rate of 31 December —
 // the FAQ of the AEAT says the same rate values the average— and the period
 // runs from 1 October, or from the day the account appears if that is later
@@ -91,7 +91,7 @@ const activeAt = (changes: readonly [CivilDate, boolean][], date: CivilDate): bo
  *
  * A **closed** account counts with a balance of zero from the day it was marked
  * inactive: its days are part of the period and its balance is not there to
- * inflate anything (ficha F3).
+ * inflate anything.
  */
 export const quarterAverages = (
   events: readonly LedgerEvent[],

@@ -87,8 +87,8 @@ describe("atlas compact", () => {
  */
 describe("atlas compact and a fingerprint that cannot be verified", () => {
   /**
-   * When the compaction does **not** go through, nothing may have announced
-   * that the waiver is recorded: it is not (review of feature 011).
+   * When the compaction does **not** go through, nothing may have announced that the waiver is
+   * recorded: it is not.
    */
   it("says nothing is recorded when the compaction does not go through", async () => {
     const h = harness({
@@ -139,9 +139,9 @@ describe("atlas compact and a fingerprint that cannot be verified", () => {
   });
 
   /**
-   * **The review found it by trying**: `atlas delete <waiver> --reason limpiar`
-   * returned 0, and afterwards `atlas check` answered "Libro íntegro: sin
-   * hallazgos". The way out had become a way of cleaning the record.
+   * **Found by trying it**: `atlas delete <waiver> --reason limpiar` returned 0, and afterwards
+   * `atlas check` answered "Libro íntegro: sin hallazgos". The way out had become a way of cleaning
+   * the record.
    */
   it("refuses to annul the waiver, and check keeps saying it", async () => {
     const h = harness({

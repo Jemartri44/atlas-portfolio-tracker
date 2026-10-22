@@ -1,7 +1,5 @@
-// Feature 016, E2 (§8.2 M5, §8.1 P14 and §8.2 m3; mutants 13 and 17): the
-// download of the cloud is configured by variables of the function, never by
-// a `prices/config.json` of the bucket; the simulated source of `dev` stops
-// the function in `prod`.
+// The download of the cloud is configured by variables of the function, never by a
+// `prices/config.json` of the bucket; the simulated source of `dev` stops the function in `prod`.
 
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "../../src/errors.js";

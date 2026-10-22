@@ -1,7 +1,5 @@
-// The tasks, by name (feature 016). A function configured with a task that has
-// no runner does not start (`task_not_available`). E1 built the reminder and
-// the dispatch of the findings, E2 the ECB and the prices, E4 the dump, the
-// integrity and the periodic warnings: every task of the catalog has one.
+// The tasks, by name. A function configured with a task that has
+// no runner does not start (`task_not_available`). Every task of the catalog has one.
 
 import type { JobTask } from "@atlas/domain/jobs";
 import type { TaskRunner } from "../run.js";

@@ -64,7 +64,7 @@ export const computeCore = (
 /**
  * The same, for a reading that is **not** the main one: it may reach below the
  * first supported year, and that is information about the reading, never a
- * reason to deny the report the user asked for (feature 011, block 4).
+ * reason to deny the report the user asked for.
  */
 export const tryComputeCore = (
   events: readonly LedgerEvent[],

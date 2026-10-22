@@ -129,7 +129,7 @@ export const editCommand = async (
   preview(ctx, `Evento original ${summarize(target)}:`, draftOf(target));
   preview(ctx, "Evento corregido (se anula el original y se registra este):", draft);
   // The corrected line carries its rate like a new one: if it is not the
-  // official one, it asks the same explicit yes (feature 012, block 3).
+  // official one, it asks the same explicit yes.
   if (!(await confirmRates(ctx, (await rateDraft(ctx, draft)).mismatches))) {
     cancelled(ctx);
     return 0;
@@ -178,10 +178,9 @@ export const deleteCommand = async (
 ): Promise<number> => {
   const id = requireId(positionals, 1, "uso: atlas delete <id> --reason …");
   const reason = requireFlag(flags, "reason");
-  // A degraded ledger still refuses every other mutation, but annulling one of
-  // its invalid events is the repair the messages give (ADR-0015; review of
-  // PR #98, B1): that one is read in degraded mode, and `reverseEvent` refuses
-  // only what it would itself leave invalid.
+  // A degraded ledger still refuses every other mutation, but annulling one of its invalid events
+  // is the repair the messages give (ADR-0015): that one is read in degraded mode, and
+  // `reverseEvent` refuses only what it would itself leave invalid.
   const degraded = await loadAndProject(ctx.deps, { collectErrors: true });
   const repairs = degraded.state.invalid.some((entry) => entry.event.id === id);
   const { events } = repairs ? degraded : await loadAndProject(ctx.deps);

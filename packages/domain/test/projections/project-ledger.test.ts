@@ -248,7 +248,7 @@ describe("projectLedger: rectification", () => {
 
   /**
    * **An annulled operation has at most one live correction** (ADR-0026, Part
-   * C), judged **in file order** (decision (k) of prompt 012): a correction is
+   * C), judged **in file order**: a correction is
    * valid only if, at that point of the file, every earlier correction of the
    * same original is reversed. It is not how `dangling_correction` works, which
    * looks at the final set of reversals.

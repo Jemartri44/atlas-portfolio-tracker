@@ -1,5 +1,5 @@
 // What the card of the summary says in the income tax season once the tax
-// engine has answered (feature 020, E4): what is pending, the short calendar
+// engine has answered: what is pending, the short calendar
 // and the note of the invalid movements. Lazy, apart from the card, so the boot
 // keeps only the shell that holds its place (see `FiscalCard.tsx`).
 

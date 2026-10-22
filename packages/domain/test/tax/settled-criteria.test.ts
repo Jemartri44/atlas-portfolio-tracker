@@ -1,5 +1,4 @@
-// The two lists of criteria of the report: `doubtful` and `settled`
-// (feature 010, block 2; decision of the direction of 2026-09-23).
+// The two lists of criteria of the report: `doubtful` and `settled`.
 //
 // What these guard is a **partition**, not a filter. The function used to end
 // in `.filter(isDoubtful)`, and the day criteria #18 and #19 rose to high

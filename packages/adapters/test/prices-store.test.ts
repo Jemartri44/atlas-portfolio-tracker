@@ -1,5 +1,4 @@
-// `prices/` on the disk (feature 013, block 3), under the lock of the folder,
-// and the file of the keys outside it.
+// `prices/` on the disk, under the lock of the folder, and the file of the keys outside it.
 
 import { chmod, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -263,10 +262,9 @@ describe("two consoles downloading at once, on the disk", () => {
         settings: DEFAULT_SETTINGS,
         today: "2027-01-06",
         now: () => new Date("2027-01-06T08:00:00.000Z"),
-        // Asks for the lock again until it is free, with a budget far above
-        // the second the third writer holds it, and still finite (round 1 of
-        // PR #102): a lock never released must fail the test, not leave a
-        // console polling after the temporary folder is removed.
+        // Asks for the lock again until it is free, with a budget far above the second the
+        // third writer holds it, and still finite: a lock never released must fail the test,
+        // not leave a console polling after the temporary folder is removed.
         store: new FilePriceStore(ledger, { lockWaitMs: 2, lockAttempts: 2_000 }),
         sources: { eodhd: source },
       });

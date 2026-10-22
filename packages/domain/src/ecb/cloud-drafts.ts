@@ -1,4 +1,4 @@
-// The drafts in the cloud (ADR-0035, E6; `docs/api.md` §6.1 and
+// The drafts in the cloud (ADR-0035, `docs/api.md` §6.1 and
 // `docs/data-schema.md` §1): a draft is up to **three immutable objects**,
 // each created once with `If-None-Match: *` and never overwritten or deleted
 // (the role of the API has no delete):

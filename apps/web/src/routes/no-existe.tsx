@@ -1,4 +1,4 @@
-// A sober "it does not exist": never a blank page (FR-019).
+// A sober "it does not exist": never a blank page.
 
 import { A } from "@solidjs/router";
 import type { JSX } from "solid-js";

@@ -1,4 +1,4 @@
-// The Modelo 721 (feature 010, block 3; decision (j) and prompt P6).
+// The Modelo 721.
 //
 // The same machinery as the 720 with a single category, because with this
 // portfolio —crypto through an ETP— it will be zero almost always and does not

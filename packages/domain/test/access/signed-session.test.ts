@@ -1,5 +1,4 @@
-// Feature 015, E1: the signed payloads and what the SPA learns of its session
-// (plan §4.1, R08, R19, R23; data-model §1).
+// The signed payloads and what the SPA learns of its session.
 
 import { describe, expect, it } from "vitest";
 import { instantOf, isId22, isId43, isInstant } from "../../src/access/ids.js";

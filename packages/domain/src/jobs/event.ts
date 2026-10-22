@@ -1,8 +1,7 @@
-// The event EventBridge Scheduler hands each function (feature 016;
-// `specs/016-scheduled-jobs/contracts/scheduler-event.md`): the `Input` of its
+// The event EventBridge Scheduler hands each function: the `Input` of its
 // schedule, `{ "event_format": 1, "tasks": [...] }`, and nothing else. Read
 // strictly: anything else is `job_event_invalid` with its reason, and **does
-// nothing** — neither the ledger is read nor a record written (mutant 7).
+// nothing** — neither the ledger is read nor a record written.
 //
 // The runtime of Lambda parses the payload before the handler sees it, so a
 // repeated key or a lone surrogate of the raw text cannot be seen here; the

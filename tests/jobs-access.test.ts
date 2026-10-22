@@ -1,10 +1,7 @@
-// Feature 016, block 1 of E1: the guardians of the scheduled jobs, written
-// **before** the jobs exist and seen failing against empty modules
-// (`specs/016-scheduled-jobs/questions.md (in git history)`, E1). They walk the real import
-// graph (`tests/support/source-graph.ts`: static imports, re-exports and
-// literal `import()`, across packages through `exports`), never a list of
-// names; the authoritative check of the web is still the graph of its bundle
-// (`apps/web/scripts/check-bundle.mjs`, `FORBIDDEN_IN_WEB`).
+// The guardians of the scheduled jobs. They walk the real import graph
+// (`tests/support/source-graph.ts`: static imports, re-exports and literal `import()`, across
+// packages through `exports`), never a list of names; the authoritative check of the web is still
+// the graph of its bundle (`apps/web/scripts/check-bundle.mjs`, `FORBIDDEN_IN_WEB`).
 
 import { mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -39,14 +36,14 @@ const TASK_CODE = new RegExp(
 const MAIL = new RegExp(
   `${sep}adapters${sep}src${sep}aws${sep}(sdk-ses|mail)\\.ts$|${sep}domain${sep}src${sep}ports${sep}notifier\\.ts$`,
 );
-/** What reads the keys of the price sources in the cloud (E2), and the sources themselves. */
+/** What reads the keys of the price sources in the cloud, and the sources themselves. */
 const PRICE_KEYS = new RegExp(
   `${sep}adapters${sep}src${sep}aws${sep}price-keys\\.ts$|${sep}adapters${sep}src${sep}prices${sep}(eodhd|alpha-vantage|secrets)\\.ts$`,
 );
 
 /**
- * What writes the history of the ECB and the closes in the bucket, and the
- * simulated source of `dev` (E2): only the daily tasks of the jobs use them.
+ * What writes the history of the ECB and the closes in the bucket, and the simulated source of
+ * `dev`: only the daily tasks of the jobs use them.
  */
 const DAILY_WRITERS = new RegExp(
   `${sep}adapters${sep}src${sep}aws${sep}(daily|s3-ecb-store|s3-price-store|simulated-prices)\\.ts$`,
@@ -124,13 +121,12 @@ describe("architecture (016): the jobs are reached by nothing that faces a user"
 
 describe("architecture (016): the warnings of January reach no price (E4, mutant 31)", () => {
   /**
-   * No price reaches the fiscal path, not even a warning (§0 of the prompt;
-   * ADR-0031, second amendment). The income tax and the thresholds of the 720
-   * and 721 are decided in the domain by functions that take the ledger and
-   * the day, and reach nothing price-aware — the same rule that closes the
-   * 720 (`tests/architecture.test.ts`). The task composes them in a module of
-   * its own that reads no close: not `reference.ts`, not the door of the
-   * quotes, not a projection that takes the external prices.
+   * No price reaches the fiscal path, not even a warning (ADR-0031, second amendment). The income
+   * tax and the thresholds of the 720 and 721 are decided in the domain by functions that take the
+   * ledger and the day, and reach nothing price-aware — the same rule that closes the 720
+   * (`tests/architecture.test.ts`). The task composes them in a module of its own that reads no
+   * close: not `reference.ts`, not the door of the quotes, not a projection that takes the external
+   * prices.
    */
   const PRICE_AWARE = new RegExp(
     `${sep}domain${sep}src${sep}(projections${sep}prices\\.ts$|quotes(\\.ts$|${sep}))`,
@@ -150,14 +146,12 @@ describe("architecture (016): the warnings of January reach no price (E4, mutant
   });
 
   /**
-   * **The graph of the fiscal task, name by name** (review of PR #109, avisos
-   * N3): a list of forbidden names is dodged by one more name of a barrel that
-   * values with the closes (`reviewFacts`, `positionsDocument`…). So every
-   * module of the application the task reaches is listed, and every **value**
-   * each of them takes from a package is listed too: a new one fails here
-   * until somebody looks at it. Types run nothing and are left alone. And the
-   * store of the bucket reaches the task only through its scope (`ledger/`
-   * and `reference/ecb/`), which the behaviour test holds.
+   * **The graph of the fiscal task, name by name** a list of forbidden names is dodged by one more
+   * name of a barrel that values with the closes (`reviewFacts`, `positionsDocument`…). So every
+   * module of the application the task reaches is listed, and every **value** each of them takes
+   * from a package is listed too: a new one fails here until somebody looks at it. Types run
+   * nothing and are left alone. And the store of the bucket reaches the task only through its scope
+   * (`ledger/` and `reference/ecb/`), which the behaviour test holds.
    */
   it("composes them in a module whose graph takes from the packages only what it lists", () => {
     expect(exists(fiscal)).toBe(true);
@@ -378,14 +372,12 @@ describe("architecture (016): one reader of the switch of amounts (M2)", () => {
 
 describe("architecture (016): the clock is injected", () => {
   /**
-   * Nothing of this feature reads the real time outside the adapter of the
-   * clock (§2 bis): a job that did would take its period from the machine,
-   * and a test that did would fail one day a year. **Whole folders**, not a
-   * list of files (review of PR #104, idempotence N2): the application of the
-   * jobs, the rules of the jobs, every `jobs*` adapter of AWS, and every file
-   * the feature adds or touches elsewhere — the API included. And not only
-   * `new Date()` and `Date.now()`: `globalThis.Date`, `Reflect.construct(Date`
-   * and taking `Date` apart or aside reach the same clock.
+   * Nothing of this feature reads the real time outside the adapter of the clock: a job that did
+   * would take its period from the machine, and a test that did would fail one day a year. **Whole
+   * folders**, not a list of files: the application of the jobs, the rules of the jobs, every
+   * `jobs*` adapter of AWS, and every file the feature adds or touches elsewhere — the API
+   * included. And not only `new Date()` and `Date.now()`: `globalThis.Date`,
+   * `Reflect.construct(Date` and taking `Date` apart or aside reach the same clock.
    */
   const FOLDERS = [
     "apps/jobs/src",
@@ -431,7 +423,7 @@ describe("architecture (016): the clock is injected", () => {
           return /\.(ts|tsx|mjs)$/.test(path) && !path.endsWith(".d.ts") ? [path] : [];
         })
       : [];
-  /** Every `jobs*` adapter of AWS, and its tests (round 2 of the review, R2-N1). */
+  /** Every `jobs*` adapter of AWS, and its tests. */
   const awsJobsTests = (): string[] =>
     sourcesOf(join(adaptersRoot, "test", "aws")).filter((file) =>
       /[/\\]jobs[^/\\]*\.ts$/.test(file),

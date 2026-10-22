@@ -1,7 +1,7 @@
-// The privacy mode, one tap away from every screen (FR-023). A **pressed or
-// unpressed button**, not a switch: a pill with the crossed eye and "Oculto"
-// when it hides, the open eye and "Visible" when it does not. The whole button
-// is the 44px target; the pill it shows is 32px, so the bar stays light.
+// The privacy mode, one tap away from every screen. A **pressed or unpressed button**, not a
+// switch: a pill with the crossed eye and "Oculto" when it hides, the open eye and "Visible" when
+// it does not. The whole button is the 44px target; the pill it shows is 32px, so the bar stays
+// light.
 //
 // Its accessible name does not change with the state — the pressed state is
 // what a screen reader announces — so the words inside are for the eye.

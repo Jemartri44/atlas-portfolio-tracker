@@ -1,6 +1,5 @@
-// "¿Cómo quedarían los pesos si traspaso?" — folded at the foot of the weights
-// card (D6), because it is used on purpose and not consulted in passing, and
-// because what it changes are those weights.
+// "¿Cómo quedarían los pesos si traspaso?" — folded at the foot of the weights card, because it is
+// used on purpose and not consulted in passing, and because what it changes are those weights.
 //
 // The sentence about a transfer not being a taxable event is printed **every
 // time**, not once in a help page: modelling a transfer as a sale plus a

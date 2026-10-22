@@ -1,5 +1,5 @@
 // What a return **proposes** to declare, and the event that records what was
-// actually filed (ADR-0020, prompt 010 block 1, decision (l)).
+// actually filed (ADR-0020).
 //
 // The application starts from what it computes, because nobody wants to type a
 // dozen figures by hand, and then lets the user replace any of them with what
@@ -80,7 +80,7 @@ export interface FilingProposal {
   /**
    * A return of this model and year already in force. Recording another one is
    * a **supplementary** return, which replaces it and never annuls it: the
-   * first filing happened (decision (b) of the prompt).
+   * first filing happened.
    */
   supersedes?: Ulid;
   /**

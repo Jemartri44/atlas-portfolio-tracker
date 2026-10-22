@@ -1,4 +1,4 @@
-// The warning of a closed tax year (ADR-0020, amended; prompt 010, P4).
+// The warning of a closed tax year (ADR-0020, amended).
 //
 // It warns in the two ways, and the second is the one that is easy to get
 // wrong: an event whose own date belongs to another year, but which moves a
@@ -168,8 +168,7 @@ describe("what a change does to a year already filed", () => {
   });
 
   /**
-   * **The hole the header of this module used to deny**, and the worse half of
-   * it (feature 011, block 5).
+   * **The worse half of the warning.**
    *
    * If the earlier reading cannot be computed there is nothing to compare, and
    * if the change does not fall **by date** inside the filed year either,
@@ -215,10 +214,9 @@ describe("what a change does to a year already filed", () => {
   });
 
   /**
-   * **When a write can affect an informative return, and only then** (review of
-   * feature 011, blocking 3). With a 720 of 2027 on record, a purchase of 2029
-   * or a plain `asset_created` said «Puede que toque una complementaria»: a
-   * warning that fires always is learnt to be ignored, and with it the one of
+   * **When a write can affect an informative return, and only then.** With a 720 of 2027 on
+   * record, a purchase of 2029 or a plain `asset_created` must not say «Puede que toque una
+   * complementaria»: a warning that fires always is learnt to be ignored, and with it the one of
    * the Renta, which is the one that matters.
    *
    * The horizon is derived from how the 720 and the 721 are really valued:
@@ -316,7 +314,7 @@ describe("what a change does to a year already filed", () => {
      * Annulling a change of the fiscal date rule moves it back, and moves the
      * operations back across 31 December with it: the warning must compare
      * the settings **in force** on each side, not the last line written, which
-     * after a reversal is still the annulled change (second review of 011).
+     * after a reversal is still the annulled change.
      */
     it("warns for the reversal of a change of the fiscal date rule", () => {
       const b = with720();

@@ -1,8 +1,6 @@
-// The colour of a gain or a loss goes **only on results** (feature 020, E1,
-// block 1; proposal of 2026-09-25 §5.4): a gain or a loss realised or latent,
-// the result against the index, the averages of the theses and the fiscal
-// results built from them. Never on a weight, a deviation, a price, a balance
-// or what a fiscal criterion puts at stake (Q6, answered 2026-09-27).
+// The colour of a gain or a loss goes **only on results**: a gain or a loss realised or latent, the
+// result against the index, the averages of the theses and the fiscal results built from them.
+// Never on a weight, a deviation, a price, a balance or what a fiscal criterion puts at stake.
 //
 // `Amount` and `Figure` colour by sign only when asked with `coloured`; this
 // is the closed list of who asks, file by file and with what each one is. A
@@ -112,8 +110,8 @@ describe("the colour of a result goes only on results", () => {
   });
 
   it("is never written as a sign class by hand, outside the two components that paint by sign", () => {
-    // Round 1 of the review of PR #105, B2: a `class="positive"` on attention
-    // went through every guardian, because they only looked at `coloured`.
+    // A `class="positive"` on attention went through every guardian, because they only looked at
+    // `coloured`.
     const written = files(src)
       .map((path) => [relative(src, path), readFileSync(path, "utf8")] as const)
       .filter(([name]) => !PAINTERS.has(name))

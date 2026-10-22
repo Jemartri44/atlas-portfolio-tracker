@@ -1,5 +1,4 @@
-// Which **original loss** each deferred amount belongs to (ficha F5, question
-// Q10 of feature 010).
+// Which **original loss** each deferred amount belongs to.
 //
 // The engine integrates what a repurchase released **into the disposal that
 // releases it** and applies the rule again to the total (#20, #21). The form of
@@ -10,8 +9,7 @@
 // **gain** on the form and a loss in the engine.
 //
 // So the layout needs something the engine never had to write down: of what is
-// still deferred at 31/12, how much belongs to each original loss. The rule the
-// direction numbered:
+// still deferred at 31/12, how much belongs to each original loss. The rule:
 //
 //   - a deferral produced by a disposal whose **own** result was negative is
 //     its own, up to the size of that own loss;

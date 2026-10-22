@@ -1,10 +1,9 @@
-// The closes the console takes from the cloud (feature 016, E3, block 1;
-// §8.1 P7): in a folder synced with a remote whose cloud has prices, `atlas
-// prices update` downloads them from the API and calls no source. What comes
-// down is added to the local files **with the rules of the 013**, line by
-// line of the cloud and keeping its `source` and `fetched_at`: a date with no
-// close, a correction of the same source, or a source before the one in
-// force. Never a byte of the local file rewritten.
+// The closes the console takes from the cloud: in a folder synced with a remote
+// whose cloud has prices, `atlas prices update` downloads them from the API and
+// calls no source. What comes down is added to the local files **with the rules
+// of the 013**, line by line of the cloud and keeping its `source` and
+// `fetched_at`: a date with no close, a correction of the same source, or a
+// source before the one in force. Never a byte of the local file rewritten.
 //
 // Which files it asks for comes from the index of the API and from what the
 // folder keeps of the last pull, `prices/_cloud.json`: the version of each
@@ -124,7 +123,7 @@ export interface CloudMerge {
   readonly added: CloseLine[];
   /**
    * Closes of today or of a day to come, or taken on
-   * the day of their own session (R2-B1): never taken.
+   * the day of their own session: never taken.
    */
   readonly future: number;
   /**
@@ -135,19 +134,18 @@ export interface CloudMerge {
 }
 
 /**
- * The lines of the cloud to append to the local file (mutant 23): each line
+ * The lines of the cloud to append to the local file: each line
  * of the cloud, in its order, is decided with the rules of the 013 against
  * the local file **and what was added before it**, keeping the source and the
  * time the cloud gave it. What is local is never rewritten.
  *
- * **Never the day in course** (review of PR #108, B1): the 013 keeps that
- * rule in the range it asks the sources for, and what comes down from the
- * cloud does not pass through it — a close of today, or of a day to come,
- * would stay for ever in a file that only grows. **Nor a close taken on the
- * day of its session** (R2-B1): a date not before the day in Madrid of its
- * `fetched_at` is a value of mid-session, the day after as much as today. And **the currency the
- * folder declares** for the source of a line (its `symbols.json`), when it
- * declares one, is the only one taken (N5).
+ * **Never the day in course**: the 013 keeps that rule in the range it asks the
+ * sources for, and what comes down from the cloud does not pass through it — a
+ * close of today, or of a day to come, would stay for ever in a file that only
+ * grows. **Nor a close taken on the day of its session**: a date not before the
+ * day in Madrid of its `fetched_at` is a value of mid-session, the day after as
+ * much as today. And **the currency the folder declares** for the source of a
+ * line (its `symbols.json`), when it declares one, is the only one taken.
  */
 export const cloudLinesToAppend = (
   existing: readonly CloseLine[],
@@ -163,7 +161,7 @@ export const cloudLinesToAppend = (
   let future = 0;
   let mismatched = 0;
   for (const line of cloud) {
-    // Nor a close taken on the day of its own session, or before it (R2-B1):
+    // Nor a close taken on the day of its own session, or before it:
     // the 013 never asks for the day in course, so no line of its own is
     // like that, and the day of whoever downloads would only delay it a day.
     if (line.date >= options.today || line.date >= madridDateOf(line.fetched_at)) {

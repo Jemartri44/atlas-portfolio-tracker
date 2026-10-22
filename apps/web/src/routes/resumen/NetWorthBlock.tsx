@@ -3,11 +3,10 @@
 // the number at the top, and the partial mark says when something is missing
 // instead of quietly showing a smaller total.
 //
-// On a phone: the figure, the proportion bar and the three books as rows; on
-// a wide screen, a band with the figure on the left and the books as columns
-// (docs/design/system.md §5.2). The figure has no cents (D10). The shares are
-// percentages and stay visible with the privacy mode on; with a partial total
-// there are none, because they would be shares of an incomplete total.
+// On a phone: the figure, the proportion bar and the three books as rows; on a wide screen, a band
+// with the figure on the left and the books as columns (docs/design/system.md §5.2). The figure has
+// no cents. The shares are percentages and stay visible with the privacy mode on; with a partial
+// total there are none, because they would be shares of an incomplete total.
 
 import { For, type JSX, Show } from "solid-js";
 import { LineKey } from "../../components/chart/ChartLegend.jsx";

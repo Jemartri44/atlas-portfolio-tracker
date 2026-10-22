@@ -1,4 +1,4 @@
-// The cryptographic primitives of the API (feature 015), with `node:crypto`
+// The cryptographic primitives of the API, with `node:crypto`
 // and nothing else: HKDF subkeys per purpose, HMAC-SHA256 signatures compared
 // in constant time, PKCE S256 and RS256 over a JWK. **The rules** — which
 // purpose, which `typ`, in which order — are the domain's (`@atlas/domain/access`);
@@ -29,7 +29,7 @@ export const sha256Hex = (text: string): string =>
 
 /**
  * Whether a secret is the one a record keeps the hash of, **in constant time**
- * (`docs/api.md` §2.2, step 3; `timingSafeEqual`, T03).
+ * (`docs/api.md` §2.2, step 3; `timingSafeEqual`).
  */
 export const sameSecret = (secret: string, secretSha256: string): boolean => {
   const given = Buffer.from(sha256Hex(secret), "ascii");

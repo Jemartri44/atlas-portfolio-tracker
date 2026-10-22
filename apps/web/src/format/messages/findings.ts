@@ -1,4 +1,4 @@
-// The integrity findings, in Spanish (Q11 of prompt 007).
+// The integrity findings, in Spanish.
 //
 // The verification screen used to print a Spanish title and then the domain's
 // **English** message underneath. A check whose whole purpose is to be read when
@@ -41,7 +41,7 @@ export const FINDING_TEXTS: Record<string, FindingText> = {
     what: "Un activo apunta a un ETF de referencia que no existe en el catálogo.",
     todo: "Da de alta el activo al que apunta, o quítale la referencia desde la configuración del activo.",
   },
-  // --- The ECB rates against the official history (feature 012) ---------
+  // --- The ECB rates against the official history ---------
   fx_rate_mismatch: {
     what: "Un tipo del BCE del libro no es el oficial de su fecha.",
     todo: "Si es un error, corrige el movimiento: se anula y se registra de nuevo con el tipo bueno. Si lo confirmaste a sabiendas, no hay nada que hacer.",

@@ -1,6 +1,6 @@
 // The layout by box moves figures between rows and **never creates or loses
-// one** (feature 010, ficha F5), on random ledgers with transfers, conversions,
-// carve-outs, splits, reverse splits with cash in lieu, swaps and grants.
+// one**, on random ledgers with transfers, conversions, carve-outs, splits,
+// reverse splits with cash in lieu, swaps and grants.
 //
 // The engine folds what a repurchase released into the disposal that releases
 // it; the form wants every operation with its own result and what comes back

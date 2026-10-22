@@ -1,7 +1,7 @@
-// "¿Qué tengo que declarar?" — the fiscal screen (feature 010, block 4).
+// "¿Qué tengo que declarar?" — the fiscal screen.
 //
 // It is opened a handful of times a year, so it is **not** a sixth destination
-// of the navigation (P1): it has its own address and is reached from a card of
+// of the navigation: it has its own address and is reached from a card of
 // the summary and from Ajustes. Everything it shows comes from the domain —
 // the base, the boxes, the informative returns and what each figure leans on —
 // and the whole of it is a lazily loaded chunk: the tax engine never reaches
@@ -33,10 +33,9 @@ import { RateNotes } from "./RateNotes.jsx";
 import { useYear, type YearChoice, YearPicker } from "./YearPicker.jsx";
 
 /**
- * What sets a ledger up without moving anything. A ledger that only has these
- * has nothing to declare and nothing to say about it, so the screen is **one**
- * empty state with the next step and not six cards of zeros (prompt 010, block
- * 4: "libro vacío, un único estado vacío con el siguiente paso").
+ * What sets a ledger up without moving anything. A ledger that only has these has nothing to
+ * declare and nothing to say about it, so the screen is **one** empty state with the next step and
+ * not six cards of zeros (un único estado vacío con el siguiente paso").
  */
 const SETUP = new Set([
   "account_created",

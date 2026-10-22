@@ -1,5 +1,4 @@
-// An update never overwrites the past in silence (ADR-0029, point 2; decision
-// (o) of prompt 012). Mutants 6 and 10.
+// An update never overwrites the past in silence (ADR-0029, point 2).
 
 import { describe, expect, it } from "vitest";
 import { readEcbZipCsv } from "../../src/ecb/history.js";

@@ -1,20 +1,20 @@
-// The automatic closes as the `ExternalPrices` the gate takes (feature 013):
+// The automatic closes as the `ExternalPrices` the gate takes:
 // the close in force on or before the date, converted when the gate reads it
 // with the ECB rate **of the quote's date** — or not converted at all.
 //
-// Only `euro` and `resolved` convert (decision §6.1 (f) of prompt 013).
+// Only `euro` and `resolved` convert.
 // `not_yet_published`, `currency_not_published` and `currency_stale` do not:
 // the quote is never converted with the rate of the day before (the option C
 // that ADR-0029 rules out, just as invented here) nor with the rate of a
 // currency that looks alike (`GBX` is not `GBP`). The quote then reaches the
 // view in its own currency, and the view says the value in euros is missing.
 //
-// And the approximation through the reference ETF (decision P3): for an asset
+// And the approximation through the reference ETF: for an asset
 // with a `reference_etf_id`, **the last real net asset value known ×
 // (close of the ETF on the day / close of the ETF on the day of that value)**.
 // A real value is a registered `valuation` of the asset or a close of its own
 // (an `EUFUND` close, for a fund) — never another approximation, and never the
-// `unit_price` of an operation (questions.md §2.1, accepted). Without a close
+// `unit_price` of an operation (accepted). Without a close
 // of the ETF **exactly** on the day of the anchor there is no approximation,
 // and the nearest one is not looked for. It reaches the views and the weights,
 // always marked; never anything fiscal.
@@ -61,7 +61,7 @@ const inUnit = (close: EffectiveClose): { currency: string; value: Decimal } => 
     : { currency: subunit.of, value: Decimal.parse(close.close).div(Decimal.parse(subunit.per)) };
 };
 
-/** The approximation of `assetId` on `date` (P3), or why there is none. */
+/** The approximation of `assetId` on `date`, or why there is none. */
 export const approximationAt = (
   state: LedgerState,
   closes: ReadonlyMap<AssetId, readonly EffectiveClose[]>,
@@ -104,7 +104,7 @@ export const approximationAt = (
     return "no_etf_close_at_anchor";
   }
   // Pounds from one source and pence from the other are the same currency in
-  // two units (review of PR #80): both are brought to the unit before the
+  // two units: both are brought to the unit before the
   // ratio, and only a real change of currency has no approximation.
   const nowValue = inUnit(now);
   const thenValue = inUnit(then);
@@ -132,7 +132,7 @@ export interface QuoteBook {
 
 /**
  * The subunits the ECB does not publish and that are **an exact unit of a
- * currency it does** (review of PR #78): a quote in pence converts at the rate
+ * currency it does**: a quote in pence converts at the rate
  * of the pound times one hundred. That is a change of unit, not an estimate —
  * what is never done is treating `GBX` **as** `GBP`, which would read a close
  * of 5.000 pence as 5.000 pounds. A table, not a rule: a subunit not listed
@@ -175,7 +175,7 @@ const converted = (
 /**
  * The close in force on or before `date` as a quote and, when it has no value
  * in euros, **the last earlier close that has one**, carrying the newer one as
- * information (review of PR #78): a close of today, whose ECB rate is not out
+ * information: a close of today, whose ECB rate is not out
  * yet, does not leave the weights without the close of yesterday, which has.
  */
 const closeQuoteAt = (
@@ -199,7 +199,7 @@ const closeQuoteAt = (
       return newest === undefined ? quote : { ...quote, newer: newest };
     }
     // On, whatever the reason: an earlier close may be of another currency,
-    // one that converts (second pass of the review of PR #78).
+    // one that converts.
     newest ??= quote;
   }
   return newest;
@@ -258,6 +258,6 @@ export const externalPricesOf = (state: LedgerState, book: QuoteBook): ExternalP
   latestRate: latestOf(book.history),
 });
 
-/** Every date with an automatic close, for the time series of the views (§6.4 (h)). */
+/** Every date with an automatic close, for the time series of the views. */
 export const quoteDates = (closes: ReadonlyMap<AssetId, readonly EffectiveClose[]>): CivilDate[] =>
   [...new Set([...closes.values()].flatMap((list) => list.map((close) => close.date)))].sort();

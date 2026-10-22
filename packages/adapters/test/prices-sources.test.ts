@@ -1,8 +1,7 @@
-// The adapters of the sources of prices (feature 013, block 3): each answer
-// and each status of its source translated to one of the six failures, one to
-// one, with synthetic answers in the **real format** (`tests/fixtures/eodhd/`
-// and `tests/fixtures/alpha-vantage/`). No test touches the network: `fetch`
-// is a double. And the sentinel key never comes out of anything.
+// The adapters of the sources of prices: each answer and each status of its source translated
+// to one of the six failures, one to one, with synthetic answers in the **real format**
+// (`tests/fixtures/eodhd/` and `tests/fixtures/alpha-vantage/`). No test touches the network:
+// `fetch` is a double. And the sentinel key never comes out of anything.
 
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";

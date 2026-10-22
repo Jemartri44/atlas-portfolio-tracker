@@ -1,7 +1,6 @@
-// The first steps of an empty ledger, each with its state (D4 of
-// docs/design/system.md): an account, an asset, the target weights and the
-// first purchase. They are shown until the first purchase; after it the
-// summary has figures of its own to say.
+// The first steps of an empty ledger, each with its state (docs/design/system.md): an account, an
+// asset, the target weights and the first purchase. They are shown until the first purchase; after
+// it the summary has figures of its own to say.
 //
 // Every state is read from the ledger, never remembered: a step is done
 // because the data is there, and it goes back to pending if the event that

@@ -19,7 +19,7 @@ export interface ChartSeries {
    * Drawn as a step, holding its value until the next date (what was
    * contributed: a deposit moves it on its day and not before). A series of
    * this kind has no holes by construction, so it takes no part in where the
-   * bands of the holes go (feature 020, E4, M3).
+   * bands of the holes go.
    */
   step?: boolean | undefined;
 }
@@ -122,7 +122,7 @@ export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options =
         font: axisFont(),
         grid: { stroke: cssValue("--c-chart-grid"), width: 1 },
         ticks: { show: false },
-        // No figure with the mask (brief §7); off, «0 €» clear of the plot (PR #105).
+        // No figure with the mask; off, «0 €» clear of the plot.
         size: masked ? 8 : 60,
         gap: masked ? 0 : 10,
         values: (_plot, splits) =>

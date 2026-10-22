@@ -1,8 +1,7 @@
-// Feature 016, E4 (plan §9; ADR-0032; mutants 29 and 30): the quarterly
-// integrity end to end over the doubles — the checks of `atlas check --deep`,
-// the rehearsal of a restore with the last dump, cut at the same events, and
-// the size of the ledger against the threshold of its configuration. It only
-// writes its record; the mail function says what it found, once.
+// The quarterly integrity (ADR-0032) end to end over the doubles — the checks of `atlas check
+// --deep`, the rehearsal of a restore with the last dump, cut at the same events, and the size of
+// the ledger against the threshold of its configuration. It only writes its record; the mail
+// function says what it found, once.
 
 import { createHash } from "node:crypto";
 import { encodeLine } from "@atlas/domain";

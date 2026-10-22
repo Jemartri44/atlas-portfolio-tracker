@@ -1,10 +1,10 @@
-// The identity provider as the API sees it (feature 015; ADR-0027, way c):
+// The identity provider as the API sees it (ADR-0027, way c):
 // build the address of the authorisation, exchange a code for an ID token,
 // and give the public key of a `kid`. Google implements it (`google.ts`); the
 // tests and the local server of the captures, with a double that signs with
 // keys generated in the test. **The addresses of Google are not a setting**:
 // a double is another implementation of this port, never Google's code
-// pointed elsewhere (plan §11).
+// pointed elsewhere.
 
 import type { JsonWebKey } from "node:crypto";
 

@@ -1,10 +1,10 @@
 // What the API and its clients share about the remote ledger (ADR-0026,
-// feature 014; ADR-0035), as a **separate entry point** of the domain, like
-// `ecb.ts` and `quotes.ts`: the rules the API applies to a line it appends
-// (`acceptAppend`, `acceptInit`), the units a correction travels in, the
-// answers a client reads and the port of the remote. There is no queue and no
-// client-side sync any more (ADR-0035, E5). The barrel never re-exports any of
-// it, and the architecture test holds that.
+// ADR-0035), as a **separate entry point** of the domain, like `ecb.ts` and
+// `quotes.ts`: the rules the API applies to a line it appends (`acceptAppend`,
+// `acceptInit`), the units a correction travels in, the answers a client reads
+// and the port of the remote. There is no queue and no client-side sync any
+// more (ADR-0035). The barrel never re-exports any of it, and the architecture
+// test holds that.
 
 export {
   type AppendEntry,

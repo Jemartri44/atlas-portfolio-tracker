@@ -1,7 +1,6 @@
 // `prices/` next to the ledger, on the disk (ADR-0031, «Almacén»; data-schema
 // §1): `<asset_id>.jsonl`, `symbols.json`, `_status.json`, the `config.json`
-// the user writes and, in a folder that pulls from the cloud, `_cloud.json`
-// (feature 016, E3).
+// the user writes and, in a folder that pulls from the cloud, `_cloud.json`.
 //
 // **Every write under the lock of the ledger folder** (ADR-0026, Part B,
 // amended: one lock covers every write in the folder), atomic: a temporary
@@ -42,7 +41,7 @@ const readOrUndefined = async (path: string): Promise<string | undefined> => {
 
 /**
  * What the transaction of the folder adds for the console that pulls from the
- * cloud (feature 016, E3): `prices/_cloud.json`, written under the same lock
+ * cloud: `prices/_cloud.json`, written under the same lock
  * as the closes it describes.
  */
 interface FilePriceTransaction extends PriceTransaction {

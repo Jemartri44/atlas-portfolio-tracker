@@ -1,4 +1,4 @@
-// Each thesis against the index, in percent (feature 020, E3, M1 and M10): the
+// Each thesis against the index, in percent: the
 // two percentages a dumbbell draws and the difference between them in points.
 //
 // The denominator is the one of business rule 16, "that same money": what was

@@ -31,7 +31,7 @@ export interface ReverseResult {
    * the tax engine loaded (`closedYearImpact`).
    */
   closed: ClosedYear[];
-  /** Past years with figures and no filing recorded: a note, not a warning (Q8). */
+  /** Past years with figures and no filing recorded: a note, not a warning. */
   unfiledPastYears: number[];
   warnings: Warning[];
   etag: string;
@@ -122,7 +122,7 @@ export interface PreparedCorrection<E extends SupportedEvent = SupportedEvent> {
  * **the** definition of what a correction does, shared by `correctEvent`, which
  * writes it, and by `previewCorrection`, which shows it: a preview that added
  * the corrected event on top of the original counted a corrected deposit of
- * 8.000 € on top of the 8.700 € it replaced (review of 2026-09-19).
+ * 8.000 € on top of the 8.700 € it replaced.
  */
 export const prepareCorrection = <E extends SupportedEvent>(
   deps: UseCaseDeps,

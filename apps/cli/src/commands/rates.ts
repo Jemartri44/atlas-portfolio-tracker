@@ -1,5 +1,4 @@
-// The ECB rate of an operation being recorded from the console (ADR-0029,
-// points 3 and 7; decisions (p) and (w) of prompt 012).
+// The ECB rate of an operation being recorded from the console (ADR-0029, points 3 and 7).
 //
 // - With the history next to the ledger, an operation in a foreign currency
 //   **without** `--fx-rate` gets the official rate of its reference date — the

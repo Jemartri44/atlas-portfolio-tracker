@@ -1,7 +1,7 @@
 // A ceiling of `check-bundle.mjs` never passes what the direction authorised
-// (feature 020, E1, block 1). The script refuses to build green with one over
-// it; this reads the same constants, so the rule shows up in the suite too,
-// before anyone waits for a build to find it.
+// A ceiling of `check-bundle.mjs` never passes what the direction authorised. The script refuses to
+// build green with one over it; this reads the same constants, so the rule shows up in the suite
+// too, before anyone waits for a build to find it.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -27,8 +27,7 @@ const constant = (name: string): number => {
 describe("the ceilings of the bundle and what the direction authorised", () => {
   it("names the two authorisations of the direction, and nothing else moves them", () => {
     expect(constant("BOOT_AUTHORISED_GZIP_BYTES")).toBe(76_069);
-    // 500.000 since 2026-10-04 (decisión de la persona, 04/10; before, 312.000
-    // since 2026-09-28, feature 016, questions §18, Q19).
+    // 500.000 since 2026-10-04 (decisión de la persona, 04/10); before, 312.000.
     expect(constant("TOTAL_AUTHORISED_GZIP_BYTES")).toBe(500_000);
   });
 

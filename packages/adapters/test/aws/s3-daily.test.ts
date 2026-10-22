@@ -1,9 +1,7 @@
-// Feature 016, E2 (R22, R23, R31, R32; mutants 12, 13, 19 and 20): the stores
-// of `reference/ecb/` and `prices/` in the bucket, with a conditional write
-// per object and no lock: a cut between two writes of an activation of the
-// ECB is never read as if it matched, and the next run undoes it; a conflict
-// stops the run without retrying; a call reserved is never given back; the
-// cloud never writes `symbols.json` nor purges.
+// The stores of `reference/ecb/` and `prices/` in the bucket, with a conditional write per
+// object and no lock: a cut between two writes of an activation of the ECB is never read as
+// if it matched, and the next run undoes it; a conflict stops the run without retrying; a
+// call reserved is never given back; the cloud never writes `symbols.json` nor purges.
 
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -205,7 +203,7 @@ describe("reference/ecb/ in the bucket (R31)", () => {
         },
       };
     };
-    // The reviewer's order: A and B read M0 and verify the file in force; A
+    // The racing order: A and B read M0 and verify the file in force; A
     // writes previous/ and its file; B reads again and writes its own; A
     // writes the manifest; B writes its own.
     const b = new S3EcbHistoryStore(
@@ -287,7 +285,7 @@ describe("reference/ecb/ in the bucket (R31)", () => {
     const writes = s3.conditions.length;
     await expect(store.rebuild(download(old))).rejects.toBeInstanceOf(EcbStoreConflict);
     expect(s3.conditions.length).toBe(writes);
-    // The reviewer's mixed state: the manifest records A, the file holds B,
+    // A mixed state: the manifest records A, the file holds B,
     // previous/ holds the history before both.
     await store.activate(download(withNewDay(text), "zip", "2026-10-02T15:30:00.000Z"));
     s3.seed(

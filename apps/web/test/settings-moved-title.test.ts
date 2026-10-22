@@ -2,12 +2,10 @@
 //
 // The headline of the question a configuration change asks about past years.
 //
-// It said «mueve ganancias de ejercicios anteriores» whatever moved. Before the
-// review of feature 011 only a Renta reached that dialog; since then a change
-// of the fiscal date rule reaches a Modelo 720 or 721 too, which declares no
-// gains at all, and the headline —the first thing read— said something false
-// about it. It now says what really moves, or stays neutral when several
-// things do.
+// It said «mueve ganancias de ejercicios anteriores» whatever moved. At first only a Renta reached
+// that dialog; now a change of the fiscal date rule reaches a Modelo 720 or 721 too, which declares
+// no gains at all, and the headline —the first thing read— said something false about it. It now
+// says what really moves, or stays neutral when several things do.
 
 import type { FilingModel, FiscalYearImpact } from "@atlas/domain";
 import { Money } from "@atlas/domain";

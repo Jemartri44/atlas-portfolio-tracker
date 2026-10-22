@@ -79,7 +79,7 @@ const hiddenValue = (field: FieldSpec): string => field.initial ?? "";
  * are dropped when they are not.
  *
  * **The date of the euro rate**, which is hidden and has no `initial`, is
- * filled from the operation's **fiscal date** (decision (w) of prompt 012):
+ * filled from the operation's **fiscal date**:
  * the last working day on or before it, by `fiscal_date_rule` of the asset —
  * which is why the projected `state` is needed. It used to be taken from
  * `trade_date`, and for a fund, whose fiscal date is the value date, that was

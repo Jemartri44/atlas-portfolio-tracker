@@ -1,10 +1,9 @@
 // @vitest-environment happy-dom
 //
 // The portfolio as composed in docs/design/system.md §7.5: the date in force
-// beside the title, the gauge of each asset (D7) marked off target only where
-// the domain said so, the targets alone on a partial total, and the
-// contribution as a proposal with the transfer simulator at the foot of the
-// weights (D6).
+// beside the title, the gauge of each asset marked off target only where the domain said so, the
+// targets alone on a partial total, and the contribution as a proposal with the transfer simulator
+// at the foot of the weights.
 
 import { afterEach, describe, expect, it } from "vitest";
 import { gaugeX } from "../src/routes/cartera/Gauge.jsx";

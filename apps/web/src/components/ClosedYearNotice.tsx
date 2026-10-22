@@ -1,4 +1,4 @@
-// "Esto toca un ejercicio que ya declaraste" (ADR-0020, amended; FR-018).
+// "Esto toca un ejercicio que ya declaraste" (ADR-0020, amended).
 //
 // It **never refuses**: filing late can be legitimate and is sometimes
 // compulsory. What is never acceptable is doing it in silence, so the notice
@@ -26,7 +26,7 @@ import { Notice } from "./Notice.jsx";
  * nobody had seen because a 720 only reached this notice when the write fell
  * **by date** in its year; since the third outcome exists it reaches it
  * whenever anything is written, and the first screenshot of the new case
- * showed it (feature 011).
+ * showed it.
  *
  * Keyed by `FilingModel`: with an open key a model added tomorrow would fall
  * through to the `??` and the notice would name it `721` in the middle of a
@@ -62,7 +62,7 @@ const euros = (amount: string): Money => Money.parse(amount, "EUR");
  * on it. **Never «no mueve ninguna cifra declarada»**: that is what an empty
  * list used to be read as, and saying it without having compared is an
  * affirmation the application had not checked — on the strength of which one
- * supplementary return fewer gets filed (feature 011, block 5).
+ * supplementary return fewer gets filed.
  */
 const NOT_COMPARED: Record<ClosedYearNotCompared, string> = {
   invalid_reading:

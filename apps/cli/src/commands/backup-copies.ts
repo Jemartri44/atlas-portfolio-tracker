@@ -1,11 +1,9 @@
-// The copies `atlas backup` adds in feature 015, E5 (ADR-0032, layer 4; §7
-// P5): the local folder `documents/` — where the user leaves by hand the
-// documentary source of a corporate action — and, with `--from-bucket`, the
-// objects of `documents/` and `imports/` of the data bucket, read **with the
-// role of administration** and never written nor deleted there. Every file is
-// verified once written, and **nothing is ever overwritten**: a destination
-// that already holds the same bytes is left as it is; one with other bytes is
-// refused.
+// The copies `atlas backup` adds (ADR-0032, layer 4): the local folder `documents/` — where the
+// user leaves by hand the documentary source of a corporate action — and, with `--from-bucket`, the
+// objects of `documents/` and `imports/` of the data bucket, read **with the role of
+// administration** and never written nor deleted there. Every file is verified once written, and
+// **nothing is ever overwritten**: a destination that already holds the same bytes is left as it
+// is; one with other bytes is refused.
 
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
@@ -87,7 +85,7 @@ export interface CopiedFromBucket extends Copied {
 /**
  * `documents/` and `imports/` of the bucket, into `<to>/bucket/…`, only
  * reading. A key that is not a plain path is **skipped**, said, and the copy
- * goes on (review of PR #98, preference accepted by the direction): one odd
+ * goes on: one odd
  * key does not leave every other document without its copy.
  */
 export const copyBucketFolders = async (

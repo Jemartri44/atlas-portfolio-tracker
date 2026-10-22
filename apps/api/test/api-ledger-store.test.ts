@@ -1,7 +1,6 @@
-// Feature 021 (ADR-0035, E1): `ApiLedgerStore` against the real handler with
-// the doubles of S3, SSM and Google. `fetch` is a bridge to `api.call`, so
-// what is under test is the adapter, `httpRemote` and the API as they are
-// composed; only the network is scripted (cuts before and after the request).
+// `ApiLedgerStore` against the real handler with the doubles of S3, SSM and Google (ADR-0035).
+// `fetch` is a bridge to `api.call`, so what is under test is the adapter, `httpRemote` and the API
+// as they are composed; only the network is scripted (cuts before and after the request).
 
 import { createHash } from "node:crypto";
 import { ApiLedgerStore } from "@atlas/adapters";

@@ -1,7 +1,7 @@
 // Minimal promise wrapper over IndexedDB. One database (`atlas`, version 2)
 // with three stores: `ledger` (the ledger text and its archives), `handles`
 // (the directory handle of the File System Access path, which is
-// structured-cloneable) and, since version 2 (feature 012, block 5), `drafts`
+// structured-cloneable) and, since version 2, `drafts`
 // (operations recorded before their ECB rate, outside the ledger). No
 // dependency: it is thirty lines of callbacks.
 

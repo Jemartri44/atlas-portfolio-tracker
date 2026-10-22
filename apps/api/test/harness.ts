@@ -160,8 +160,8 @@ export const errorOf = (
   (JSON.parse(result.body) as { error: { code: string; details: Record<string, unknown> } }).error;
 
 /**
- * A whole `atlas remote login` by loopback, as the console walks it: the
- * token it keeps and what the exchange answered (E2; used by the tests of E3).
+ * A whole `atlas remote login` by loopback, as the console walks it: the token it keeps and what
+ * the exchange answered.
  */
 export const consoleLogin = async (
   api: ReturnType<typeof setup>,

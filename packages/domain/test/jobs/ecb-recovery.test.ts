@@ -1,5 +1,5 @@
-// Feature 016, E2 (R31, mutant 19): an activation of the ECB history cut
-// between the file and the manifest is undone, never used as if it matched.
+// An activation of the ECB history cut between the file and the manifest is undone, never used as
+// if it matched.
 
 import { describe, expect, it } from "vitest";
 import { ecbRecovery } from "../../src/jobs/ecb-recovery.js";

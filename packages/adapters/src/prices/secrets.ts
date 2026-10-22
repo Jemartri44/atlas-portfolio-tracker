@@ -1,11 +1,9 @@
-// The keys of the sources of prices (decision P1; ADR-0031, second
-// amendment): `~/.config/atlas/secrets.json`, or
-// `$XDG_CONFIG_HOME/atlas/secrets.json`, **outside the folder of the ledger**,
-// with permissions `600`. Only the console reads it; the web never does, and it
-// enters no backup, export or sync. **The application never writes it**: the
-// user does.
+// The keys of the sources of prices (ADR-0031, second amendment): `~/.config/atlas/secrets.json`,
+// or `$XDG_CONFIG_HOME/atlas/secrets.json`, **outside the folder of the ledger**, with permissions
+// `600`. Only the console reads it; the web never does, and it enters no backup, export or sync.
+// **The application never writes it**: the user does.
 //
-// Every way a key could leak through here is closed (§6.4 (e) of prompt 013):
+// Every way a key could leak through here is closed:
 // a file that does not parse says so **without its content** — not the text,
 // not the `SyntaxError` of `JSON.parse`, which quotes it —; an error names the
 // key, never its value; and the console refuses to run when the folder of the
@@ -25,7 +23,7 @@ export type SecretsErrorCode =
 /**
  * Never carries a value: only the code, the path and, at most, **a known key**
  * or **the position** of an unknown one — never its name, because a user who
- * swapped name and value would see the key on the screen (review of PR #78).
+ * swapped name and value would see the key on the screen.
  */
 export class SecretsError extends Error {
   constructor(

@@ -1,12 +1,9 @@
-// What the orders of administration need from outside the process, replaced
-// in tests (feature 015, E5): the clients of the data bucket and of SSM of one
-// environment, **with the role of administration** from the standard chain of
-// the SDK, and the configuration of `~/.config/atlas/admin.json` that names
-// where each environment lives (`data-model.md` §9). No credential is read or
-// written here: the chain of the SDK takes them from a session of
-// `atlas-<env>-admin` already opened with MFA (`aws sso login`, or `aws
-// configure export-credentials`; block 0 of E5), and the console never keeps
-// them.
+// What the orders of administration need from outside the process, replaced in tests: the clients
+// of the data bucket and of SSM of one environment, **with the role of administration** from the
+// standard chain of the SDK, and the configuration of `~/.config/atlas/admin.json` that names where
+// each environment lives. No credential is read or written here: the chain of the SDK takes them
+// from a session of `atlas-<env>-admin` already opened with MFA (`aws sso login`, or `aws configure
+// export-credentials`), and the console never keeps them.
 
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -18,7 +15,7 @@ import { type AdminEnvironment, parseAdminConfig } from "@atlas/domain/admin";
 export interface AdminClients {
   readonly objects: AdminObjectStore;
   readonly parameters: ParameterStore;
-  /** The parameters `atlas admin secrets` writes (feature 017, E4): exists, create, rotate. */
+  /** The parameters `atlas admin secrets` writes: exists, create, rotate. */
   readonly secrets: SecretStore;
   /** `/atlas/<env>/`, where the records of the tokens live. */
   readonly ssmPrefix: string;
@@ -44,7 +41,7 @@ export const environmentOf = async (path: string, name: string): Promise<AdminEn
     throw new DomainError("admin_config_unreadable", `${path} cannot be read`, { path });
   }
   // Its own key only: never `toString`, `constructor` or `__proto__` of the
-  // prototype (review of PR #98, N6).
+  // prototype.
   const environment = Object.hasOwn(config.environments, name)
     ? config.environments[name]
     : undefined;

@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 //
-// M7 (feature 020, E4): the bucket against the index in percent of what was
-// contributed, and the rule of the holes. A share does not give the size of
-// the money away, so it is drawn with the privacy on, axis included.
+// The bucket against the index in percent of what was contributed, and the rule of the holes. A
+// share does not give the size of the money away, so it is drawn with the privacy on, axis
+// included.
 
 import { Decimal } from "@atlas/domain";
 import type { BucketIndexPctSeries } from "@atlas/domain/charts";

@@ -1,13 +1,11 @@
-// The procedures of feature 016 (E4, block 4; §5 family 9; mutant 33): their
-// blocks, **exactly as the runbooks have them**, run by `dash` — the `sh` of
-// Ubuntu — one after the other **in the state the previous one left**,
-// against an `aws` simulated on the PATH. No AWS is reached. What needs AWS
-// for real is said as such in each runbook, for the 018.
+// The procedures of the scheduled jobs: their blocks, **exactly as the runbooks have them**, run by
+// `dash` — the `sh` of Ubuntu — one after the other **in the state the previous one left**, against
+// an `aws` simulated on the PATH. No AWS is reached. What needs AWS for real is said as such in
+// each runbook.
 //
-// - `ecb-history-in-the-cloud.md`, steps 1 and 5: the schedule of the ECB is
-//   stopped changing **only** its state, and left afterwards exactly as it
-//   was — its time zone too — with the fields `update-schedule` does not take
-//   left out (review of PR #108, round 2).
+// - `ecb-history-in-the-cloud.md`, steps 1 and 5: the schedule of the ECB is stopped changing
+//   **only** its state, and left afterwards exactly as it was — its time zone too — with the fields
+//   `update-schedule` does not take left out.
 // - `scheduled-warnings.md`: a monthly dump checked against its record, each
 //   object `bien` or `MAL`.
 
@@ -28,7 +26,7 @@ import { describe, expect, it } from "vitest";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-/** A runbook of the 016, in `docs/runbooks/`. */
+/** A runbook of the scheduled jobs, in `docs/runbooks/`. */
 const runbook = (name: string): string =>
   readFileSync(join(repoRoot, "docs", "runbooks", name), "utf8");
 
@@ -100,8 +98,8 @@ const world = () => {
         stdio: ["ignore", "pipe", "ignore"],
       });
   /**
-   * `-e`, so a step that fails stops the rehearsal; and `interactive`, as it
-   * runs when pasted into a shell, which never stops (review of PR #109, copias N2).
+   * `-e`, so a step that fails stops the rehearsal; and `interactive`, as it runs when pasted into
+   * a shell, which never stops.
    */
   return { dir, work, run: shell(["-e"]), interactive: shell([]) };
 };

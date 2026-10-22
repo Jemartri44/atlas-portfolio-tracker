@@ -1,8 +1,8 @@
-// What is going to happen, before it happens (FR-044).
+// What is going to happen, before it happens.
 //
 // The positions, the cash and the lots **that change**, the gains the event would book and
 // the warnings it raises — all of it from the domain use case the CLI also uses
-// (`previewEvent`, decision (h)), so the preview cannot disagree with the
+// (`previewEvent`), so the preview cannot disagree with the
 // write. What does not move is counted, not listed (`previewChanges`).
 //
 // Every quantity goes through `Amount`: the preview printed them raw, so with
@@ -104,7 +104,7 @@ export const Preview = (props: {
    * The warnings the candidate raises, grouped by the same rule as Atención
    * (`attentionItems`): a sale with ten purchases inside the window of its loss
    * is one line with how many, and each purchase waits folded under it. They
-   * used to be ten notices saying the same thing (third pass of the review).
+   * used to be ten notices saying the same thing.
    * No notice links anywhere: leaving would lose what was typed.
    */
   const notices = (): NoticeItem[] =>
@@ -197,7 +197,7 @@ export const Preview = (props: {
       {/*
         On a phone what a sale books comes first, and its lots wait folded: a
         sale of a hundred units listed some twenty closed lots before its
-        result (final pass of the review). On a desk, beside the form, they fit.
+        result. On a desk, beside the form, they fit.
       */}
       <Show when={!wide()}>
         <Result />

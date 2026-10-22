@@ -1,6 +1,6 @@
-// The shape of the tax report of one year (feature 009). Every figure opens
-// into the events that produce it (decision (c)), and every figure says which
-// fiscal criteria it depends on (decision (b)).
+// The shape of the tax report of one year. Every figure opens
+// into the events that produce it, and every figure says which
+// fiscal criteria it depends on.
 //
 // Amounts are `Money` in euros, **exact** and, where a figure enters the
 // return, also rounded half-up to cents once per operation (criterion #6,
@@ -66,7 +66,7 @@ export interface ReleaseLine {
   amount_eur: Money;
   /** It travelled through a transfer, a conversion or a carve-out (#15). */
   travelled: boolean;
-  /** The category of the loss it came from, which is where it is integrated (FR-015). */
+  /** The category of the loss it came from, which is where it is integrated. */
   category: IncomeCategory;
 }
 
@@ -223,7 +223,7 @@ export interface Compensation {
   base_eur: Money;
 }
 
-/** What was declared for a year, as far as the carry-forward is concerned (ADR-0020, Q9). */
+/** What was declared for a year, as far as the carry-forward is concerned (ADR-0020). */
 export interface FiledAnchor {
   year: number;
   pending: { origin_year: number; category: BalanceCategory; amount_eur: Money }[];
@@ -236,7 +236,7 @@ export interface AnchorDifference {
   /**
    * The anchored year is earlier than the first year with figures: the ledger
    * computes nothing for it, so what it declares is not a difference but what
-   * the user carried from before the application (prompt 010, P5).
+   * the user carried from before the application.
    */
   before_ledger?: boolean;
 }
@@ -287,7 +287,7 @@ export interface CriterionStake {
     | "regime_not_recorded"
     | "no_carrier_left";
   invalid_count?: number;
-  /** Markets of the listed securities involved (#2, Q15). */
+  /** Markets of the listed securities involved (#2). */
   markets?: string[];
 }
 
@@ -302,7 +302,7 @@ export interface SettingsDiff {
   /**
    * The previous settings reach below the first supported year, so there is no
    * figure to compare either — the sibling of `invalid_before` for the other
-   * way a reading can fail (feature 011, block 4).
+   * way a reading can fail.
    */
   unsupported_before?: boolean;
   changes: {
@@ -377,7 +377,7 @@ export interface TaxYearReport {
   in_kind: InKindLine[];
   /**
    * Criteria whose **reading is open**: anything the document does not hold at
-   * high certainty (feature 009, Q8). What is at stake here is at stake because
+   * high certainty. What is at stake here is at stake because
    * nobody knows which way the law is read.
    */
   doubtful: CriterionStake[];

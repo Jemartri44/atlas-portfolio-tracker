@@ -1,6 +1,4 @@
-// Feature 015, E1, block 2: the skeleton of the handler — routing, the shape
-// of an error, the credentials, Origin, the body (plan §4.1, R01 to R05, R24,
-// R29).
+// The skeleton of the handler — routing, the shape of an error, the credentials, Origin, the body.
 
 import { describe, expect, it } from "vitest";
 import { ALLOWED, errorOf, SELF, setup } from "./harness.js";
@@ -15,7 +13,7 @@ describe("routing and the shape of an error (R29)", () => {
       ["GET", "/api/session/"],
       ["POST", "/api/session"],
       ["DELETE", "/api/auth/logout"],
-      // E3 serves /api/ledger; its neighbours stay unknown.
+      // `/api/ledger` is served; its neighbours stay unknown.
       ["DELETE", "/api/ledger"],
       ["GET", "/api/ledger/"],
       ["GET", "/api/reference/ecb"],

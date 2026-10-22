@@ -53,7 +53,7 @@ export interface ContributionView {
   rows: ContributionRowView[];
   /** What the whole units leave uninvested in total; absent unless every active row has its figure. */
   wholeLeftover?: Money;
-  /** The note of the domain when a weight it used rests on an approximation (P3). */
+  /** The note of the domain when a weight it used rests on an approximation. */
   approximation?: Warning;
 }
 

@@ -1,4 +1,4 @@
-// The door `@atlas/adapters/aws` (feature 015): the narrow interfaces of S3
+// The door `@atlas/adapters/aws`: the narrow interfaces of S3
 // and SSM and what the API builds on them. Node only, never in the barrel,
 // never reached by the web (architecture test).
 

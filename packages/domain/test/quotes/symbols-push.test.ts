@@ -1,5 +1,5 @@
-// `atlas admin prices push` (feature 016, E2, block 3; R24): the difference
-// with the remote and the refusals, before the console writes anything.
+// `atlas admin prices push`: the difference with the remote and the refusals,
+// before the console writes anything.
 
 import { describe, expect, it } from "vitest";
 import { DomainError, ValidationError } from "../../src/errors.js";

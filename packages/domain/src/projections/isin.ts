@@ -1,4 +1,4 @@
-// One ISIN, one asset (ADR-0009, feature 009 review). The tax agency reads an
+// One ISIN, one asset (ADR-0009). The tax agency reads an
 // ISIN without caring how it was typed, so the system compares it the same way:
 // `ie00b0000001` and `IE00B0000001` are one security.
 

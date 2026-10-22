@@ -1,6 +1,6 @@
-// The heading of a screen: an `<h1>` aligned left, as content, with one quiet
-// line under it when it helps (a date, what the screen shows) and the actions
-// of the screen to its right. Never a band of chrome (FR-028).
+// The heading of a screen: an `<h1>` aligned left, as content, with one quiet line under it when it
+// helps (a date, what the screen shows) and the actions of the screen to its right. Never a band of
+// chrome.
 
 import { type JSX, Show } from "solid-js";
 

@@ -1,10 +1,8 @@
-// Feature 016, E3, block 1 (R34-R36; mutants 22, 23 and 24): in a folder
-// synced with a remote whose cloud has prices, `atlas prices update` takes
-// them from the API and calls no source; what comes down is added with the
-// rules of the 013, never rewriting a local byte, with the network outside
-// the lock. `--from-sources` calls the sources, says it spends the quota the
-// folder shares with the cloud, and spends by default the leftover of the
-// plans (N2 of §15). Over the API composed with its doubles; never the network.
+// In a folder synced with a remote whose cloud has prices, `atlas prices update` takes them from
+// the API and calls no source; what comes down is added with the rules of the price use case, never
+// rewriting a local byte, with the network outside the lock. `--from-sources` calls the sources,
+// says it spends the quota the folder shares with the cloud, and spends by default the leftover of
+// the plans. Over the API composed with its doubles; never the network.
 
 import { existsSync } from "node:fs";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";

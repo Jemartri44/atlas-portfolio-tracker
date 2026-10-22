@@ -1,6 +1,5 @@
-// The barrier of the log (`apps/api/src/log.ts`), on its refusing side: a
-// value that is not one of ours never gets into a line, whatever field it
-// is put in (review of PR #95, round 2, R2-3).
+// The barrier of the log (`apps/api/src/log.ts`), on its refusing side: a value that is not one of
+// ours never gets into a line, whatever field it is put in.
 
 import { describe, expect, it } from "vitest";
 import { logLine } from "../src/log.js";

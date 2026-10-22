@@ -1,7 +1,7 @@
-// The console of the tests of feature 015 (E2 and E3): `atlas` run with the
-// API composed with its doubles of Google, SSM and S3 (`apps/api/test/harness.ts`)
-// as its network. The browser of the user is a function that walks the start,
-// the provider and the return; the loopback is a real socket on 127.0.0.1.
+// The console of the remote and admin tests: `atlas` run with the API composed with its doubles of
+// Google, SSM and S3 (`apps/api/test/harness.ts`) as its network. The browser of the user is a
+// function that walks the start, the provider and the return; the loopback is a real socket on
+// 127.0.0.1.
 
 import { mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -132,7 +132,7 @@ export const setupConsole = async (
   options: Parameters<typeof browser>[1] = {},
   /** Another console's API: two consoles over one remote. */
   shared?: Api,
-  /** The sources of prices and the file of the keys (feature 016, E3); never the network. */
+  /** The sources of prices and the file of the keys; never the network. */
   prices?: PriceEnvironment,
 ): Promise<ConsoleUnderTest> => {
   const api = shared ?? setup();

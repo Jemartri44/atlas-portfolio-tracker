@@ -1,6 +1,5 @@
-// The lists a form chooses from. No identifier is ever typed by hand when it
-// can be picked (FR-046), and the lists come from the catalogue of the ledger,
-// so they cannot drift from what exists.
+// The lists a form chooses from. No identifier is ever typed by hand when it can be picked, and the
+// lists come from the catalogue of the ledger, so they cannot drift from what exists.
 
 import {
   accounts,
@@ -139,7 +138,7 @@ export const openTransferOptions = (state: LedgerState, at: CivilDate): Option[]
 
 /**
  * Open theses of that (account, asset). A bucket purchase demands one (rule 15),
- * and since feature 007 the form that creates one lives in the web too.
+ * and the form that creates one lives in the web too.
  */
 export const openThesisOptions = (
   state: LedgerState,

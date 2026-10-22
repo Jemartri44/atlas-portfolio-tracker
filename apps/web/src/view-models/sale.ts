@@ -3,7 +3,7 @@
 // A sale books one gain; a corporate action can book several — the reverse
 // split of Physical Gold ETC sells fractions in two accounts, one gain each.
 // Showing the first one alone put an incomplete fiscal figure on screen as if
-// it were the whole (second pass of the review of 2026-09-19). So every gain
+// it were the whole. So every gain
 // of the event is a line, and the total is the sum of the lines **as shown**
 // (`Money.sumShown`), the one a reader gets adding up the column.
 
@@ -30,7 +30,7 @@ export interface SaleResultView {
    * once per operation, as they are declared. Amounts and costs are **not**
    * added up across operations: rounded one by one they do not subtract to the
    * total (717,35 − 724,87 = −7,52 against −7,51), and a screen that does not
-   * add up to the eye sows distrust (third pass of the review of 2026-09-19).
+   * add up to the eye sows distrust.
    */
   total?: Money;
   /** A single sale whose rounded result is a cent off its amount minus its cost, as shown. */

@@ -59,8 +59,8 @@ describe("generateLedger: the scenario contains every rare case", () => {
   /**
    * Every type but two, and both absences are deliberate.
    *
-   * `swap` (feature 008) is not here because the scenario has no crypto asset
-   * to swap, so adding one would mean new asset, purchase and valuation events
+   * `swap` is not here because the scenario has no crypto asset to swap, so
+   * adding one would mean new asset, purchase and valuation events
    * — and a side stream protects the ids but **not** the snapshot: an event
    * dated in the middle of the scenario moves lots, gains and warnings of
    * everything after it. It is covered in `projections/swap.test.ts` instead.
@@ -264,7 +264,7 @@ describe("generateLedger: the scenario contains every rare case", () => {
     const valuations = ofType("valuation");
     // Year ends for the Modelo 720 and the phase-2 views, plus the half-yearly
     // prices of the benchmark and the price of the open bucket position, which
-    // the phase-3 metrics need (feature 005).
+    // the phase-3 metrics need.
     expect([...new Set(valuations.map((v) => v.date))].sort()).toEqual([
       "2026-09-01",
       "2026-12-31",
@@ -281,7 +281,7 @@ describe("generateLedger: the scenario contains every rare case", () => {
     // have no P(d_i) to compare against.
     expect(benchmark.some((v) => v.date <= "2026-09-04")).toBe(true);
     // Foreign accounts for the Modelo 720, and the fund account so the phase-2
-    // projections have a price for every core asset held (feature 004).
+    // projections have a price for every core asset held.
     expect(new Set(valuations.map((v) => v.account_id))).toEqual(
       new Set(["acc_ibkr", "acc_ibkr2", "acc_bucket", "acc_mi"]),
     );
@@ -294,8 +294,8 @@ describe("generateLedger: the scenario contains every rare case", () => {
     expect(valuations.every((v) => v.fx_rate_date !== undefined)).toBe(true);
     // 31/12/2028 is a Sunday, and the ECB publishes nothing: the rate that
     // applies to those nine valuations is Friday 2028-12-29's. It is the case
-    // that made the field exist (challenge 3, finding 6), and six of the nine
-    // only got the date when ADR-0021 made it required in euros too.
+    // that made the field exist, and six of the nine only got the date when
+    // ADR-0021 made it required in euros too.
     const yearEnd2028 = valuations.filter((v) => v.date === "2028-12-31");
     expect(yearEnd2028).toHaveLength(9);
     expect(yearEnd2028.every((v) => v.fx_rate_date === "2028-12-29")).toBe(true);
@@ -337,13 +337,13 @@ describe("the settings the scenario writes: a second table, on purpose", () => {
    * reads the documented default for all seven types.
    *
    * That is not something this test can fix by pinning it: the settings line
-   * lives in the frozen `.jsonl` (prompt 003, decision (i)) and writing a
-   * family into it would rewrite the fixture. What it can do is **say it out
-   * loud and hold it**, because the consequence is real and already happened:
-   * moving `DEFAULT_INCOME_CATEGORY.etc` in block 0 of feature 010 moved the
-   * golden report, and the only thing standing between that and a silent
-   * rewrite is the prediction written before regenerating. If somebody ever
-   * writes a partial family here, this fails and the prediction gets written.
+   * lives in the frozen `.jsonl` and writing a family into it would rewrite
+   * the fixture. What it can do is **say it out loud and hold it**, because
+   * the consequence is real and already happened: moving
+   * `DEFAULT_INCOME_CATEGORY.etc` once moved the golden report, and the only
+   * thing standing between that and a silent rewrite is the prediction written
+   * before regenerating. If somebody ever writes a partial family here, this
+   * fails and the prediction gets written.
    */
   it("writes no income category, so the golden reads the documented default for all seven", () => {
     const settings = generateLedger({ seed: 1 }).find(

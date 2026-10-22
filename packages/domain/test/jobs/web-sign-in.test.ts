@@ -1,5 +1,4 @@
-// Feature 016, E1 (R16, mutant 9): the date of the last web sign-in, only
-// that date, and only moving forward.
+// The date of the last web sign-in, only that date, and only moving forward.
 
 import { describe, expect, it } from "vitest";
 import {

@@ -1,7 +1,7 @@
-// `drafts/` next to the ledger, on the disk (ADR-0029, point 9; block 5 of
-// prompt 012): one file per draft, `drafts/<ULID>.json`, outside the ledger.
+// `drafts/` next to the ledger, on the disk (ADR-0029, point 9): one file per draft,
+// `drafts/<ULID>.json`, outside the ledger.
 //
-// **Every write goes under the lock of the ledger folder** (decision (t)): one
+// **Every write goes under the lock of the ledger folder**: one
 // lock for every write in the folder, the drafts included. A draft is written
 // to a temporary name, synced and renamed, so it is never seen in half; the
 // lock is checked as still ours right before the rename, as the ledger does.
@@ -74,7 +74,7 @@ export class FileDraftStore implements PendingDraftStore {
   /**
    * The same draft again, with the id its confirmation stamped — only if it is
    * still there, without a stamp or with exactly `readStamp`: checked and
-   * written **under the same lock** (third review of PR #75). A console that
+   * written **under the same lock**. A console that
    * read the draft before another confirmed it never re-creates it.
    */
   update(draft: PendingDraft, readStamp: string | undefined): Promise<void> {

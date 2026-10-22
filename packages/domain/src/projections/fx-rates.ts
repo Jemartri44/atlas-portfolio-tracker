@@ -1,4 +1,4 @@
-// The last ECB rate the ledger knows for each currency (feature 005, §3.1).
+// The last ECB rate the ledger knows for each currency.
 //
 // Cash in a foreign currency has to be shown in euros somewhere, and the only
 // honest rate is one the ledger actually carries. It is kept **per currency,

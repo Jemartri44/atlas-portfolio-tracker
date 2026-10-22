@@ -2,10 +2,9 @@
 // §7.3): «Compraste 31,2343 participaciones de Money Market Fund por 3.100,00 €
 // el 03/09/2026 · Fondos indexados».
 //
-// Told from the fields of the event as recorded, never computed: the amount is
-// the one written, not a quantity times a price. Its figures are parts for
-// `Amount`, so the privacy mode masks them inside the sentence and keeps their
-// unit, as everywhere else (D2).
+// Told from the fields of the event as recorded, never computed: the amount is the one written, not
+// a quantity times a price. Its figures are parts for `Amount`, so the privacy mode masks them
+// inside the sentence and keeps their unit, as everywhere else.
 //
 // The same switch tells what is about to be recorded, over the effect of a
 // form: «Vas a registrar la compra de…».
@@ -235,7 +234,7 @@ const DATE_FIELDS = ["trade_date", "date", "value_date", "requested_date", "effe
  * 2,5 participaciones de World Index Fund por 300,00 € el 19/09/2026 ·
  * MyInvestor». Told from the event the form built, before it exists, so the
  * figures are the ones just typed; each carries its field, for the form to
- * reveal what the user typed (review of 2026-09-19).
+ * reveal what the user typed.
  */
 export const draftSentence = (
   candidate: { type: string } & object,
@@ -257,7 +256,7 @@ export const draftSentence = (
   const date = DATE_FIELDS.map((field) => event[field]).find(
     (value): value is string => typeof value === "string",
   );
-  // A correction replaces an event: it is not one more (third pass of the review).
+  // A correction replaces an event: it is not one more.
   const corrects = typeof event.corrects_id === "string";
   return [
     text(corrects ? "Vas a rectificarlo: en su lugar, " : "Vas a registrar "),

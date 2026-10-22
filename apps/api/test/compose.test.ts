@@ -1,7 +1,6 @@
-// Feature 015, E3: the composition of production (`apps/api/src/compose.ts`),
-// with simulated stores instead of the SDK: it reads the configuration and the
-// session key **before** it hands out a handler, and refuses to start with a
-// configuration it does not understand or a key that is not 32 bytes.
+// The composition of production (`apps/api/src/compose.ts`), with simulated stores instead of the
+// SDK: it reads the configuration and the session key **before** it hands out a handler, and
+// refuses to start with a configuration it does not understand or a key that is not 32 bytes.
 
 import { base64url } from "@atlas/adapters/access";
 import { describe, expect, it } from "vitest";

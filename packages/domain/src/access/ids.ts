@@ -1,6 +1,6 @@
 // The identifiers of the access (`docs/api.md` §2.1 and §4): random values in
 // base64url without padding, of a **fixed length** and a closed alphabet, so
-// that none of them can carry a `:` or a `/` into a name built from it (B1).
+// that none of them can carry a `:` or a `/` into a name built from it.
 
 import { INSTANT_PATTERN } from "../guards.js";
 

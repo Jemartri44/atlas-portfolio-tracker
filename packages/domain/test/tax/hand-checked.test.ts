@@ -1,4 +1,4 @@
-// Five years computed by hand (feature 009, fiscal review): the ledger of
+// Five years computed by hand: the ledger of
 // `tests/fixtures/ledger/tax-hand-v1.jsonl`, with compensation inside the year
 // and across years, releases, an expiry, a transfer chain, a reverse split
 // with cash in lieu, a swap, a dividend and a sale in dollars and a custody fee
@@ -6,10 +6,10 @@
 //
 // `synthetic-v1.tax.json` is written by the engine itself: it says that
 // something changed, not that it is right. Here every figure is a literal
-// worked out by hand, and the working is in the comment above it. The
-// fiscal reviewer computed the first version by hand and the engine matched it
-// to the cent; the custody fee of 2024 was added afterwards, and its effect on
-// 2024 is worked out below.
+// worked out by hand, and the working is in the comment above it. The first
+// version was computed by hand and the engine matched it to the cent; the
+// custody fee of 2024 was added afterwards, and its effect on 2024 is worked
+// out below.
 
 import { describe, expect, it } from "vitest";
 import type { Money } from "../../src/money/money.js";

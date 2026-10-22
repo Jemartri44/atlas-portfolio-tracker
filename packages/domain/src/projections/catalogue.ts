@@ -1,4 +1,4 @@
-// Accounts and assets (data-schema.md §6.1, §7). `*_updated` events carry the
+// Accounts and assets (data-schema.md §6.1). `*_updated` events carry the
 // full resulting state; previous identifiers go to `identifier_history`.
 
 import { ProjectionError } from "../errors.js";

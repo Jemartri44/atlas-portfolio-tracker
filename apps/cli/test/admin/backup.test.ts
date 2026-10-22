@@ -1,8 +1,7 @@
-// `atlas backup` in feature 015, E5 (ADR-0032, layer 4; §7 P5): the local
-// `documents/` beside the ledger and, with `--from-bucket`, `documents/` and
-// `imports/` of the data bucket with the role of administration — against
-// the double of S3, **only reading** there, every file verified and nothing
-// ever overwritten on disk.
+// `atlas backup` (ADR-0032, layer 4): the local `documents/` beside the ledger and, with
+// `--from-bucket`, `documents/` and `imports/` of the data bucket with the role of administration —
+// against the double of S3, **only reading** there, every file verified and nothing ever
+// overwritten on disk.
 
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

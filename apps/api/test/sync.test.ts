@@ -1,8 +1,7 @@
-// Feature 015, E3: the routes of the sync (`docs/api.md` §5) over the double
-// of S3, with both credentials. The API only appends: the valid stretch up to
-// the first rejected line, in one conditional write, decided by the domain's
-// `acceptAppend`; a stale `If-Match` writes nothing; the device publishes on
-// its own object and never brings it back.
+// The routes of the sync (`docs/api.md` §5) over the double of S3, with both credentials. The API
+// only appends: the valid stretch up to the first rejected line, in one conditional write, decided
+// by the domain's `acceptAppend`; a stale `If-Match` writes nothing; the device publishes on its
+// own object and never brings it back.
 
 import { createHash } from "node:crypto";
 import { gunzipSync } from "node:zlib";
@@ -524,8 +523,8 @@ describe("GET /api/sync/devices (§5.3, session only)", () => {
     const api = setup();
     const both = await credentials(api);
     api.s3.seed("sync/devices/unreadable-not-an-id.json", "{");
-    // A device whose object cannot be read is listed as such, never left out
-    // (review of PR #96, N2): compact and the restore must see it.
+    // A device whose object cannot be read is listed as such, never left out: compact and the
+    // restore must see it.
     const broken = "BROKENBROKENBROKENBROK";
     api.s3.seed(`sync/devices/${broken}.json`, "{");
     const answer = await read(api, both.session, "/api/sync/devices");
@@ -683,7 +682,7 @@ describe("the reference data (§6)", () => {
       code: "not_found",
       details: { reason: "type" },
     });
-    // Feature 016, E2 (§8.2 M1): in prices/ only what priceFileName writes, and symbols.json.
+    // In prices/ only what priceFileName writes, and symbols.json.
     api.s3.seed("prices/notes.txt", "x");
     api.s3.seed("prices/_status.json", "{}");
     for (const name of ["notes.txt", "_status.json", "config.json"]) {

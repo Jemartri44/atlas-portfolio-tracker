@@ -1,6 +1,6 @@
-// The two time series (decision (f) of prompt 007) and, above all, the rule
-// that decides what is a hole: a figure exists only when all of its components
-// have a price, and a partial total is never drawn (Q1).
+// The two time series and, above all, the rule that decides what is a hole: a
+// figure exists only when all of its components have a price, and a partial
+// total is never drawn.
 
 import { describe, expect, it } from "vitest";
 import { netWorth } from "../../src/projections/networth.js";
@@ -74,7 +74,7 @@ describe("netWorthSeries", () => {
   });
 
   /**
-   * The point of Q1: a partial block is **absent**, not a smaller number. Here
+   * A partial block is **absent**, not a smaller number. Here
    * the ledger holds two core assets and only one of them is ever valued.
    */
   it("leaves a hole instead of drawing a partial core total", () => {

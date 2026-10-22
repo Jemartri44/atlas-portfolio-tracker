@@ -1,9 +1,7 @@
-// The thin adapter of `MailSender` over `@aws-sdk/client-sesv2` (feature 016,
-// E1; §8.1 P8, authorised by the user). **The only file with the SES client**
-// (architecture test), and it sends **one** command, `SendEmail`, with simple
-// content: a subject and a plain-text body, both in UTF-8, to one recipient
-// (`questions.md` §1.5). The IAM condition of ADR-0034, row 12, applies to it
-// (`ses:SendEmail`, `ses:FromAddress`, `ses:Recipients`; §1.1).
+// The thin adapter of `MailSender` over `@aws-sdk/client-sesv2`. **The only file with the SES
+// client** (architecture test), and it sends **one** command, `SendEmail`, with simple content: a
+// subject and a plain-text body, both in UTF-8, to one recipient. The IAM condition of ADR-0034,
+// row 12, applies to it (`ses:SendEmail`, `ses:FromAddress`, `ses:Recipients`; §1.1).
 //
 // What an error means, read by its name and status and never by its message
 // (`sdk-errors.ts`):

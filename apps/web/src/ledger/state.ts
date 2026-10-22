@@ -1,14 +1,13 @@
-// The state of the application: **one** loaded ledger, **one** base projection
-// and a memo per date (D7, ADR-0016).
+// The state of the application: **one** loaded ledger, **one** base projection and a memo per date
+// (ADR-0016).
 //
-// Measured (research.md §3): projecting the 200 events of the golden file costs
-// 1,2 ms warm and 4,6 ms cold, and the cost is linear, so the rule is not about
-// speed but about coherence — every screen reads the same projection instead of
-// building its own, which is how two views end up disagreeing.
+// Measured: projecting the 200 events of the golden file costs 1,2 ms warm and 4,6 ms cold, and the
+// cost is linear, so the rule is not about speed but about coherence — every screen reads the same
+// projection instead of building its own, which is how two views end up disagreeing.
 //
 // A module-level store inside `createRoot`: the application has exactly one
 // ledger, and a context would add plumbing without adding a capability. The
-// signals are plain functions, so the tests drive this without a DOM (Q8).
+// signals are plain functions, so the tests drive this without a DOM.
 
 import {
   type CivilDate,
@@ -132,9 +131,8 @@ const writeLocal = (key: string, value: string): void => {
 };
 
 /**
- * Privacy is **on** unless the device explicitly says it is off (FR-021,
- * decision (d)): anything that is not the literal "off" — nothing stored,
- * storage blocked, a value written by an older version — leaves the amounts
+ * Privacy is **on** unless the device explicitly says it is off: anything that is not the literal
+ * "off" — nothing stored, storage blocked, a value written by an older version — leaves the amounts
  * covered.
  *
  * It is a function of its own, and not an expression inside `createStore`, so a
@@ -150,7 +148,7 @@ const createStore = () => {
   const [pending, setPending] = createSignal<PendingWrite | undefined>(undefined);
   const [deps, setDeps] = createSignal<UseCaseDeps | undefined>(undefined);
   const [writing, setWriting] = createSignal(false);
-  // Privacy is **on** by default: the first read is what decides (FR-021).
+  // Privacy is **on** by default: the first read is what decides.
   const [privacy, setPrivacyRaw] = createSignal(privacyFromPreference(readLocal(PRIVACY_KEY)));
   const [theme, setThemeRaw] = createSignal<Theme>(themeFromPreference(readLocal(THEME_KEY)));
 
@@ -225,7 +223,7 @@ export const usePrivacy = (): (() => boolean) => store.privacy;
 /**
  * Today in Europe/Madrid, from the clock the use cases use — which is what
  * this comment always said and what the code did **not** do: it read
- * `new Date()`, the wall clock (feature 010, follow-up 2).
+ * `new Date()`, the wall clock.
  *
  * A component that reads the wall clock while the domain reads an injected one
  * makes the two look at different days, and nothing that depends on the date

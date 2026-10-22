@@ -1,6 +1,5 @@
-// Saving an operation as a draft, and confirming one, from the forms (feature
-// 027, E6 of ADR-0035). Apart from `draft-store.ts` so that the counter of the
-// frame does not carry the write flows with it.
+// Saving an operation as a draft, and confirming one, from the forms. Apart from `draft-store.ts`
+// so that the counter of the frame does not carry the write flows with it.
 //
 // The rules are the domain's (`preparePendingDraft`, `recordPendingDraft`): only
 // an operation whose ECB rate is not published yet, checked by the ledger's own
@@ -132,7 +131,7 @@ export const confirmDraft = async (
   }
   if (draft === undefined) {
     // Confirmed or discarded elsewhere: said, and **nothing** recorded — never
-    // the operation as a new one (third review of PR #75).
+    // the operation as a new one.
     return {
       ok: false,
       failure: { kind: "error", error: toAppError(new DraftChangedError(id, "gone")) },

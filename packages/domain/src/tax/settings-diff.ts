@@ -9,7 +9,7 @@ import { type Core, tryComputeCore } from "./core.js";
 import type { SettingsDiff } from "./report.js";
 import { lineKey } from "./shared.js";
 
-// --- The previous settings (A15) ----------------------------------------------
+// --- The previous settings ----------------------------------------------
 
 export const settingsDiff = (
   core: Core,

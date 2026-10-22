@@ -1,4 +1,4 @@
-// The automatic daily closes (feature 013, ADR-0031) as a **separate entry
+// The automatic daily closes (ADR-0031) as a **separate entry
 // point** of the domain, for the same reason as `ecb.ts`: nothing of the
 // automatic prices may land on the boot path of the web. The barrel never
 // re-exports any of it; the architecture test holds that, and

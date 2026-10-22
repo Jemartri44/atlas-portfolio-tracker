@@ -1,4 +1,4 @@
-// The ECB rate of a form (feature 012, block 3): what the history proposes
+// The ECB rate of a form: what the history proposes
 // for the rate fields the user has not touched, and which typed rates need an
 // explicit confirmation. The rules are the domain's (`@atlas/domain/ecb`);
 // this only turns them into form values and sentences. Loaded with the forms,

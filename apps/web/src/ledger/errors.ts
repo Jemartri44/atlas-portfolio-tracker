@@ -53,7 +53,7 @@ export const toAppError = (error: unknown): AppError => {
   }
   // Reading a file the user chose: it moved, it was a folder, the permission
   // lapsed, it is not text. The browser says so in English; the user reads it
-  // in Spanish, with what to do (review of 2026-09-19).
+  // in Spanish, with what to do.
   if (error instanceof DOMException && FILE_READ_ERRORS.has(error.name)) {
     return {
       code: "file_unreadable",
@@ -61,9 +61,8 @@ export const toAppError = (error: unknown): AppError => {
         "No se ha podido leer el archivo: puede que se haya movido, que no sea un archivo de texto o que el navegador ya no tenga permiso. Vuelve a elegirlo; no se ha tocado nada.",
     };
   }
-  // Another tab still has the previous version of the database open (feature
-  // 012 added the store of drafts). It is not the browser refusing to keep
-  // data, and saying so sent the user to change a setting that was fine.
+  // Another tab still has the previous version of the database open. It is not the browser refusing
+  // to keep data, and saying so sent the user to change a setting that was fine.
   if (error instanceof Error && error.name === "StorageUnavailable" && error.cause === "blocked") {
     return {
       code: "storage_blocked",

@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 //
-// «Tipos del BCE» in Ajustes and the import of the history by hand (feature
-// 012, block 3): the ZIP of the ECB's page or its CSV, read before it is kept,
-// and refused when it changes a rate already published. The ZIP is read with
-// the platform's `DecompressionStream`, and its CRC-32 checked.
+// «Tipos del BCE» in Ajustes and the import of the history by hand: the ZIP of the ECB's page or
+// its CSV, read before it is kept, and refused when it changes a rate already published. The ZIP is
+// read with the platform's `DecompressionStream`, and its CRC-32 checked.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

@@ -1,4 +1,4 @@
-// Invariants of the five primitives over random ledgers (prompt §3.7, ADR-0011).
+// Invariants of the five primitives over random ledgers (ADR-0011).
 
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";

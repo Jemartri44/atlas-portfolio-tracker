@@ -1,18 +1,16 @@
-// `prices/` in the bucket (feature 016, E2; ADR-0031; plan §7.2), written by
+// `prices/` in the bucket (ADR-0031), written by
 // **the prices job only**. In the folder, `transact` holds the lock of the
 // folder around what it reads and writes; S3 has no lock and no transaction,
 // so here each write is conditional on **what that same transaction read** —
 // `If-Match` on its ETag, `If-None-Match: *` when nothing was there — and is
 // made at once. A write whose condition fails is `PriceStoreConflict`, and the
-// run stops **without retrying** (§8.1 P11): the calls already reserved in
+// run stops **without retrying**: the calls already reserved in
 // `_status.json` stay counted — never fewer than were made — and a file of
 // closes is written whole or not at all (one `PutObject`).
 //
-// Two refusals, the second lock of Q1: the cloud never writes
-// `prices/symbols.json`, whose one writer is `atlas admin prices push`
-// (§8.1 P18), and never purges a file. And `prices/config.json` does not
-// exist in the cloud (§8.2 M5): `config()` gives the configuration of the
-// function, and never reads the bucket.
+// Two refusals: the cloud never writes `prices/symbols.json`, whose one writer is
+// `atlas admin prices push`, and never purges a file. And `prices/config.json` does not exist in
+// the cloud: `config()` gives the configuration of the function, and never reads the bucket.
 
 import type { AssetId } from "@atlas/domain";
 import { type PriceStore, type PriceTransaction, priceFileName } from "@atlas/domain/quotes";
@@ -33,7 +31,7 @@ export class PriceStoreConflict extends Error {
   }
 }
 
-/** A write the cloud never makes: `symbols.json` or a purge (Q1). */
+/** A write the cloud never makes: `symbols.json` or a purge. */
 export class PriceStoreRefused extends Error {
   override readonly name = "PriceStoreRefused";
   constructor(readonly code: "cloud_symbols_read_only" | "cloud_purge_refused") {

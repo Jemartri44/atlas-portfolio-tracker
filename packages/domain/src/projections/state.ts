@@ -67,8 +67,8 @@ export interface FiscalLot {
   source_lot_id?: string;
   /**
    * File position of the event that created the lot — of the **root** of its
-   * correction chain when that event is a correction, which is the same fact
-   * (review of PR #75) —: FIFO tie-break on equal dates.
+   * correction chain when that event is a correction, which is the same fact —:
+   * FIFO tie-break on equal dates.
    */
   position: number;
   closed: boolean;
@@ -79,12 +79,12 @@ export interface FiscalLot {
 export type ConsumePurpose = "transmission" | "transfer" | "convert";
 
 /**
- * One thing the single FIFO engine did to a lot, in the order it did it (feature
- * 009). The journal **decides nothing**: which lot is consumed is still the
- * FIFO's choice. It records those choices so that the tax engine can carry one
- * more magnitude along them —the loss the wash-sale rule defers— without a
- * second lot engine that could disagree with the first (constitution II,
- * ADR-0016). Never in the snapshot.
+ * One thing the single FIFO engine did to a lot, in the order it did it. The
+ * journal **decides nothing**: which lot is consumed is still the FIFO's
+ * choice. It records those choices so that the tax engine can carry one more
+ * magnitude along them —the loss the wash-sale rule defers— without a second
+ * lot engine that could disagree with the first (constitution II, ADR-0016).
+ * Never in the snapshot.
  *
  * - `open`: a lot was created; `source_lot_id` when it inherits from another.
  * - `consume`: `quantity` left the lot, which held `quantity_before`.
@@ -302,18 +302,18 @@ export interface LedgerState {
   accounts: Map<AccountId, Account>;
   assets: Map<AssetId, Asset>;
   settingsHistory: SettingsEntry[];
-  /** Settings used to derive fiscal dates (Q3: the latest, or an explicit override). */
+  /** Settings used to derive fiscal dates (the latest, or an explicit override). */
   fiscalSettings: Settings;
   /** Quantity per `account_id|asset_id`. */
   positions: Map<string, Quantity>;
   /** Balance per `account_id|currency`. */
   cash: Map<string, Money>;
-  /** Last ECB rate the ledger knows per currency (feature 005). Never in the snapshot. */
+  /** Last ECB rate the ledger knows per currency. Never in the snapshot. */
   fxRates: Map<string, KnownFxRate>;
-  /** Purchases per asset that count for the wash-sale rule (feature 005). Never in the snapshot. */
+  /** Purchases per asset that count for the wash-sale rule. Never in the snapshot. */
   acquisitions: Map<AssetId, Acquisition[]>;
   lots: Map<AssetId, AssetLots>;
-  /** What the FIFO did to every lot, in order (feature 009). Never in the snapshot. */
+  /** What the FIFO did to every lot, in order. Never in the snapshot. */
   lotJournal: LotJournalEntry[];
   /** Lots created per source event, to number lot ids uniquely across assets. */
   lotCounts: Map<Ulid, number>;

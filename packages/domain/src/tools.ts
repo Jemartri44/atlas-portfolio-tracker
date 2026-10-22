@@ -1,5 +1,5 @@
 // The tools of the screens opened on demand, as a **separate entry point** of
-// the domain (feature 015, E5; decision of the direction on Q12, §33): the
+// the domain: the
 // draft of a corporate action, the deep check of the raw lines and the
 // simulation of a transfer. The same code as always; what this file adds is a
 // door of its own, for the same reason as `fiscal.ts`: the barrel of the domain

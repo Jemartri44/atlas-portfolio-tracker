@@ -1,7 +1,6 @@
-// Feature 022 (ADR-0035, §3): every request of the web to its own API says
-// `cache: "no-store"`, so the HTTP cache of the browser never writes the
-// ledger, the session or the list of devices to disk. One test per caller of
-// the web; the ECB reference (`/api/reference/ecb/*`) is public and keeps its
+// Every request of the web to its own API says `cache: "no-store"` (ADR-0035, §3), so the HTTP
+// cache of the browser never writes the ledger, the session or the list of devices to disk. One
+// test per caller of the web; the ECB reference (`/api/reference/ecb/*`) is public and keeps its
 // `ETag`/`304` on purpose, and is not among them.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -27,8 +26,8 @@ describe("requests of the web to the API", () => {
   });
 });
 
-// M3 of the review: the callers are found by walking the code, not by a list
-// of this test. A file that reaches the network and is not known here fails.
+// The callers are found by walking the code, not by a list of this test. A file that reaches the
+// network and is not known here fails.
 const src = join(dirname(fileURLToPath(import.meta.url)), "../../src");
 const files = (dir: string): string[] =>
   readdirSync(dir).flatMap((name) => {

@@ -1,7 +1,7 @@
-// Feature 015, E3: the HTTP client of the sync (`src/sync/http-remote.ts`)
-// against a scripted `fetch`: what it sends (the credential, the hash of the
-// exact bytes, `redirect: "error"`) and what it makes of each answer (the rule
-// of §7: only a `rejected.code` holds a line; nothing else ever does).
+// The HTTP client of the sync (`src/sync/http-remote.ts`) against a scripted `fetch`: what it
+// sends (the credential, the hash of the exact bytes, `redirect: "error"`) and what it makes of
+// each answer (the rule of `docs/api.md` §7: only a `rejected.code` holds a line; nothing else
+// ever does).
 
 import { createHash } from "node:crypto";
 import { RemoteError } from "@atlas/domain/sync";

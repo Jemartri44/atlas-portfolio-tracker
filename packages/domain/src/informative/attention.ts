@@ -1,19 +1,17 @@
-// What the summary says about the tax side (feature 010, blocks 3 and 4;
-// prompt P1 and question Q11), and when the fiscal card goes to the top.
+// What the summary says about the tax side, and when the fiscal card goes to the top.
 //
 // The screen is used a handful of times a year, so it is not a sixth
 // destination of the navigation; but in the weeks when it matters it has to be
 // the first thing the user sees. **The domain decides that, not the web**: a
 // rule about when a tax return is due is a fiscal rule.
 //
-// Since feature 020 (E2, M2) only **the income tax season** raises the card.
-// Before, something of the 720 or the 721 to do raised it too; now it is said
-// in *Atención*, out of season, and the card stays folded at the end. The 720
-// is due from January to March, outside the season, and "cannot be
-// determined" still counts as something to do: with securities abroad and no
-// valuations at 31 December — the ordinary state of affairs in January — the
-// summary would otherwise stay quiet exactly when what is missing is the datum
-// that decides whether there is anything to file.
+// Only **the income tax season** raises the card: something of the 720 or the
+// 721 to do is said in *Atención*, out of season, and the card stays folded at
+// the end. The 720 is due from January to March, outside the season, and
+// "cannot be determined" still counts as something to do: with securities
+// abroad and no valuations at 31 December — the ordinary state of affairs in
+// January — the summary would otherwise stay quiet exactly when what is missing
+// is the datum that decides whether there is anything to file.
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { yearOf } from "../dates/civil-date.js";
@@ -53,10 +51,9 @@ export interface FiscalAttention {
   invalid_events: number;
   todo: InformativeTodo[];
   /**
-   * The card goes to the top of the summary: **in the season, and only then**
-   * (feature 020, E2, M2). What is pending out of it —`todo`, `unfiled_years`,
-   * `invalid_events`— is still said, in *Atención*: its place changes, not
-   * whether it is said.
+   * The card goes to the top of the summary: **in the season, and only then**.
+   * What is pending out of it —`todo`, `unfiled_years`, `invalid_events`— is
+   * still said, in *Atención*: its place changes, not whether it is said.
    */
   prominent: boolean;
 }

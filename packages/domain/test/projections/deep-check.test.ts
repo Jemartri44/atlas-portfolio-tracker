@@ -170,10 +170,10 @@ describe("deepCheck and the fingerprint of a filing (ADR-0020)", () => {
    * the file was edited. The fingerprint is then unverifiable, which is not
    * the same as wrong.
    *
-   * It carries a **code of its own** (feature 011, block 0): a ledger whose
-   * lines cannot be re-read at the version its fingerprint declares is not a
-   * ledger somebody edited, and telling the user to restore the copy from
-   * before the edit —which is what the other code's text says— fixes nothing.
+   * It carries a **code of its own**: a ledger whose lines cannot be re-read at
+   * the version its fingerprint declares is not a ledger somebody edited, and
+   * telling the user to restore the copy from before the edit —which is what
+   * the other code's text says— fixes nothing.
    */
   it("says a fingerprint cannot be verified, under a code of its own", () => {
     const lines = unreadableLedger();

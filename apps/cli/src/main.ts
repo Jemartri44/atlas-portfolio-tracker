@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// atlas — command-line interface over a local ledger.jsonl (specs/001-ledger-core/contracts/cli.md).
+// atlas — command-line interface over a local ledger.jsonl.
 
 import { createInterface } from "node:readline/promises";
 import {
@@ -144,7 +144,7 @@ export const COMMANDS: Record<string, Command> = {
  * How many words each command reads, its own name included, per subcommand
  * where it has them. A word more is refused, never ignored: a boolean flag
  * followed by a word leaves that word loose, and a command that ignored it
- * would record the opposite of what was written (verifier of feature 009).
+ * would record the opposite of what was written.
  * An unknown subcommand is left to the command, which says its own usage.
  */
 export const ARITY: Readonly<Record<string, number | Readonly<Record<string, number>>>> = {
@@ -394,13 +394,13 @@ const dispatch = async (
 
 /**
  * The temporaries of a write killed before its rename, removed at the start of
- * every command — only when nobody holds the lock (review of PR #75). Best
+ * every command — only when nobody holds the lock. Best
  * effort: a folder that cannot be swept must not stop the command.
  */
 const sweepTemporaries = async (io: Io, ledgerPath: string): Promise<void> => {
   try {
     const removed = await sweepOrphanTemporaries(ledgerPath);
-    // Said as it is (review of PR #83): a temporary of the ledger means the
+    // Said as it is: a temporary of the ledger means the
     // ledger was not replaced; one of `sync/` means a sync was cut, and the
     // ledger may have been rewritten already — the next sync recognises it.
     const ledger = removed.filter((name) => !name.startsWith("sync"));
@@ -508,7 +508,7 @@ const report = async (io: Io, error: unknown, cloud?: CloudLedgerStore): Promise
     io.err(describeDuplicate(error));
     return EXIT.duplicate;
   }
-  // The refusal of `--accept-invalid` on a synced folder (V7) is not a list of
+  // The refusal of `--accept-invalid` on a synced folder is not a list of
   // dependants to rectify: it has its own sentence.
   if (error instanceof DependentEventsError && error.code !== "accept_invalid_while_synced") {
     io.err(describeDependants(error, cloud === undefined));

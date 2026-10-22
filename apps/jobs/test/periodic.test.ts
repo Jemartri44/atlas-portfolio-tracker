@@ -1,8 +1,7 @@
-// Feature 016, E4 (plan §10.4; Q10; questions §13; mutants 31 and 32): the
-// periodic warnings of the mail function end to end — the weekly review, the
-// income tax of January and the thresholds of the 720 and 721. Each only when
-// there is something to do, at most once, and never an amount with the switch
-// off; the income tax never with one; the 720 never with a close.
+// The periodic warnings of the mail function end to end — the weekly review, the income tax of
+// January and the thresholds of the 720 and 721. Each only when there is something to do, at most
+// once, and never an amount with the switch off; the income tax never with one; the 720 never with
+// a close.
 
 import { encodeLine } from "@atlas/domain";
 import { describe, expect, it } from "vitest";

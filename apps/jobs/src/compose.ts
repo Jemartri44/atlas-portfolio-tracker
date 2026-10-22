@@ -1,10 +1,10 @@
-// The composition of production of the jobs (feature 016, E1): the
-// configuration of the function (`ATLAS_*`, `contracts/ssm-and-config.md`),
+// The composition of production of the jobs: the
+// configuration of the function (`ATLAS_*`),
 // the stores of AWS and, **only for the mail family**, the `Notifier` of SES
-// (§8.2 B2) — put together once, before any event. It refuses to start —
+// — put together once, before any event. It refuses to start —
 // nothing runs — with a configuration it does not understand or a task that
 // has no runner yet, and says only the **name** of what failed: an error of
-// the SDK carries ARNs and account ids in its message (015, §26.1 N2).
+// the SDK carries ARNs and account ids in its message.
 
 import { AlphaVantagePriceSource, EcbFxRateSource, EodhdPriceSource } from "@atlas/adapters";
 import type { ObjectStore, ParameterStore } from "@atlas/adapters/aws";
@@ -30,8 +30,8 @@ export interface ProductionParts {
 }
 
 /**
- * The longest a call to a source may take (`questions.md` §14.1, point 3):
- * the adapters of the 013 set none, and a source that hangs would take the
+ * The longest a call to a source may take (point 3):
+ * the price adapters set none, and a source that hangs would take the
  * whole Lambda. 41 calls at 15 s are 615 s, under its 900 s.
  */
 export const SOURCE_TIMEOUT_MS = 15_000;
@@ -71,8 +71,8 @@ export const compose = (
 
 /**
  * The composition with a given set of runners: production passes `RUNNERS`;
- * a test passes a runner of its own, to cut a delivery where no task of E1
- * can yet (review of PR #104, idempotence N1).
+ * a test passes a runner of its own, to cut a delivery where no task
+ * can yet.
  */
 export const composeWith = (
   env: Readonly<Record<string, string | undefined>>,

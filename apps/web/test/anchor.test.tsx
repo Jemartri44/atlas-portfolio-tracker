@@ -1,8 +1,7 @@
 // @vitest-environment happy-dom
 //
-// An anchor of the application stops under the fixed bar, not behind it
-// (feature 020, E1, block 6; the defect of `#sincronizacion` that feature 015
-// left, §30.5). Two parts, and each has its test:
+// An anchor of the application stops under the fixed bar, not behind it (the case of
+// `#sincronizacion`). Two parts, and each has its test:
 //
 //   1. the document's `scroll-padding-top` is tied to the height of the bar,
 //      a variable, never a number, so if the bar changes the margin follows;
@@ -53,8 +52,7 @@ describe("the margin of an anchor", () => {
 });
 
 describe("reading the fragment", () => {
-  // Round 1 of the review of PR #105, B1: `#50%` threw `URIError` in the
-  // effect of the frame and left the screen blank.
+  // `#50%` threw `URIError` in the effect of the frame and left the screen blank.
   it("decodes it, falls back to it as written, and reads nothing in a bare #", () => {
     expect(decodeFragment("#sincronizaci%C3%B3n")).toBe("sincronización");
     expect(decodeFragment("#50%")).toBe("50%");
@@ -96,8 +94,8 @@ describe("the way back through the history", () => {
 
 describe("the title reached by an anchor", () => {
   it("takes the focus without the ring, and anything interactive keeps it", () => {
-    // Round 2 of the review of PR #105, O2: a focus from a script met
-    // `:focus-visible` in Chromium and painted the accent ring on the title.
+    // A focus from a script met `:focus-visible` in Chromium and painted the accent ring on the
+    // title.
     const rule = cssRules(readFileSync(join(styles, "base.css"), "utf8")).find(
       (candidate) => candidate.path.join(" ") === ':where(h1, h2, h3)[tabindex="-1"]:focus',
     );
@@ -196,9 +194,8 @@ describe("going to the fragment", () => {
   });
 
   it("opens the gate again after going back from a filter, which only changes the query", async () => {
-    // Round 2 of the review of PR #105, O1: the filters of the movements push
-    // their query; back from one, only the query changes, and a gate that
-    // compared the path and the fragment stayed shut for the next navigation.
+    // The filters of the movements push their query; back from one, only the query changes, and a
+    // gate that compared the path and the fragment stayed shut for the next navigation.
     const scroll = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
     let go: ((to: string) => void) | undefined;
     const ConNavegacion = () => {
@@ -272,7 +269,6 @@ describe("going to the fragment", () => {
   });
 
   it("does not win over the back button: coming back from the history, it stays", async () => {
-    // Round 1 of the review of PR #105, N2.
     const scroll = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
     const host = await showInShell("/ajustes#sincronizacion", { "/ajustes": Ajustes });
     await until(() => toSync(scroll) === 1, "la primera llegada");

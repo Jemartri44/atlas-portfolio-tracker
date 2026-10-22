@@ -29,7 +29,7 @@ const REASON: Record<string, string> = {
  * What the user is giving up, one filing at a time, **before** being asked.
  * It says what will be given up and nothing about it being recorded: that is
  * not known until the rewrite has gone through, and saying it first is
- * affirming what has not happened (review of feature 011, decision (g)).
+ * affirming what has not happened.
  */
 export const describeWaivers = (waiving: readonly UnverifiedFiling[]): string =>
   [
@@ -63,7 +63,7 @@ export const compactCommand = async (
     throw new DomainError("compact_cloud_folder", "a cloud folder has no ledger to compact", {});
   }
   // A `sync/state.json` left by the old queue (ADR-0026) is not read: the
-  // folder is a local one (ADR-0035, E5), and compacts as any local ledger.
+  // folder is a local one (ADR-0035), and compacts as any local ledger.
   const accepted = listFlag(flags, "accept-unverified");
   const plan = await planCompact(ctx.deps);
   if (plan.outdated === 0) {

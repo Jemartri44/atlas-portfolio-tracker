@@ -28,7 +28,7 @@ export const SOURCE_FAILURE_KINDS: readonly SourceFailureKind[] = [
  * One daily close as the source gave it: the close **as traded** (never an
  * adjusted one), as the decimal text it arrived with (ADR-0005; a number is
  * never read through a float), and the currency **only if the source says
- * it** — neither EODHD nor Alpha Vantage do (questions.md §1.1, §1.4), and
+ * it** — neither EODHD nor Alpha Vantage do, and
  * then the currency declared in `prices/symbols.json` applies.
  */
 export interface DailyClose {
@@ -46,8 +46,7 @@ export type SourceResult<T> =
  * the only thing with a network. **Outside** everything the web bundles.
  *
  * No failure carries a message of the source or an address: the key of two of
- * the sources travels in the URL, and what is never kept cannot leak (§6.4 (e)
- * of prompt 013).
+ * the sources travels in the URL, and what is never kept cannot leak.
  */
 export interface PriceSource {
   readonly name: QuoteSource;
@@ -55,16 +54,16 @@ export interface PriceSource {
   dailyCloses(symbol: string, from: CivilDate, to: CivilDate): Promise<SourceResult<DailyClose[]>>;
   /**
    * The currency the source's own metadata gives for `symbol`, used only when
-   * the user declares a correspondence (decision D-Q2); `undefined` when the
+   * the user declares a correspondence; `undefined` when the
    * metadata do not say. Costs a call of the quota.
    */
   currencyOf(symbol: string): Promise<SourceResult<string | undefined>>;
   /**
    * Throws when this runtime cannot run the adapter at all — EODHD cannot read
-   * the exact text of a JSON number without `context.source` (decision D-Q1).
+   * the exact text of a JSON number without `context.source`.
    * Called **before** reserving any call: that is not a source that does not
    * answer, and it must stop the run with its own message, not spend the
-   * budget as «unavailable» (review of PR #78).
+   * budget as «unavailable».
    */
   ready?(): void;
 }

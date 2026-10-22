@@ -1,8 +1,8 @@
-// Whether a date falls in the income tax season (feature 020, E2; Q5,
-// answered 2026-09-27). The rule moves out of `informative/attention.ts`, which
-// is lazy, to the settings, so the summary places the tax card on its first
-// paint: in season, at the top; out of it, a folded row at the end. Both ends
-// are included, the date is an argument and nothing reads a clock.
+// Whether a date falls in the income tax season. The rule lives in the
+// settings and not in `informative/attention.ts`, which is lazy, so the summary
+// places the tax card on its first paint: in season, at the top; out of it, a
+// folded row at the end. Both ends are included, the date is an argument and
+// nothing reads a clock.
 
 import { describe, expect, it } from "vitest";
 import { inRentaSeason, nextReturnYear } from "../../src/settings/settings.js";

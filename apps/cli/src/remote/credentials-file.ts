@@ -1,8 +1,7 @@
-// `~/.config/atlas/credentials.json` on disk (ADR-0033, point 3;
-// `data-model.md` §7): **written only by the console**, at sign-in and at
-// sign-out, **atomically and created with 600**; with any other permission it
-// is not used; and never when its folder and the ledger's are one inside the
-// other. What it holds is read strictly by the domain.
+// `~/.config/atlas/credentials.json` on disk (ADR-0033, point 3): **written only by the console**,
+// at sign-in and at sign-out, **atomically and created with 600**; with any other permission it is
+// not used; and never when its folder and the ledger's are one inside the other. What it holds is
+// read strictly by the domain.
 
 import { promises as fs } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
@@ -64,10 +63,9 @@ export const assertApart = async (path: string, ledgerFolder: string): Promise<v
 };
 
 /**
- * Whether the folder of the credentials is open to others (CLAUDE.md: the
- * folder is `700`; review of PR #95, N4). The file is `600` whatever the
- * folder says, so this is a warning, not a refusal; on Windows there are no
- * such bits, as for `secrets.json`.
+ * Whether the folder of the credentials is open to others (CLAUDE.md: the folder is `700`). The
+ * file is `600` whatever the folder says, so this is a warning, not a refusal; on Windows there are
+ * no such bits, as for `secrets.json`.
  */
 export const folderOpenToOthers = async (path: string): Promise<boolean> => {
   try {
@@ -79,9 +77,9 @@ export const folderOpenToOthers = async (path: string): Promise<boolean> => {
 };
 
 /**
- * Changes the file **reading it again just before writing** (review of PR #95,
- * N2): a sign-in waits minutes for the browser, and another console may have
- * written its own entry meanwhile. Only the change of this order is applied.
+ * Changes the file **reading it again just before writing**: a sign-in waits minutes for the
+ * browser, and another console may have written its own entry meanwhile. Only the change of this
+ * order is applied.
  */
 export const updateCredentials = async (
   path: string,

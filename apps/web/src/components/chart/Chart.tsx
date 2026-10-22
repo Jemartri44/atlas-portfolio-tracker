@@ -10,8 +10,8 @@
 // Three rules it enforces so no chart can forget them:
 //   1. A `null` is a **hole**: `spanGaps` is off, so the line stops instead of
 //      jumping across a stretch where the ledger knows nothing (constitution V).
-//   2. Series are told apart by **dash pattern as well as colour** (decision (f)
-//      of the 006): a screenshot in black and white still reads.
+//   2. Series are told apart by **dash pattern as well as colour**: a screenshot in black and white
+//      still reads.
 //   3. `prefers-reduced-motion` is honoured by simply not animating — uPlot
 //      redraws, it does not tween, so there is nothing to disable beyond the
 //      CSS transition of the container.

@@ -1,9 +1,9 @@
-// The fiscal criteria of `docs/fiscal-questions.md`, as data (feature 009).
+// The fiscal criteria of `docs/fiscal-questions.md`, as data.
 //
 // Every figure of the tax report says which of these it depends on, and the
 // report has a section of its own for the doubtful ones: a figure computed
 // under a disputed criterion must never look like one computed under article
-// 35, which nobody disputes (decision (b) of the prompt).
+// 35, which nobody disputes.
 //
 // The table below is a copy of the certainty and the direction of risk the
 // document declares, and a test (`tests/fiscal-criteria.test.ts`) compares them
@@ -28,12 +28,12 @@ export interface FiscalCriterion {
 
 /**
  * The criteria the engine applies. Criterion #2 is labelled by the window
- * **actually applied**, not by the type of asset (feature 009 review): a stock
+ * **actually applied**, not by the type of asset: a stock
  * the user set to one year applies the prudent side of the dispute, and saying
  * "two months, aggressive" of it would state the opposite of what was done.
  *
  * - `2:listed`: two months for a listed security — **disputed** outside the EU,
- *   and the system cannot tell where a security trades (Q15), so every listed
+ *   and the system cannot tell where a security trades, so every listed
  *   security carries it; **aggressive** if wrong.
  * - `2:listed_1y`: one year for a listed security — the other side of the same
  *   dispute; **conservative** if wrong.
@@ -88,17 +88,16 @@ export interface FiscalCriterion {
  * portfolio.
  *
  * #25 is the ECB rate of a line after a change of `fiscal_date_rule` (ADR-0029,
- * point 10; feature 012): the rate is the one of the fiscal date in force, and
- * a line with another one is corrected by rectification, never recalculated.
- * **Medium**, the certainty of #1 and #5 it rests on; **both**, because the
- * stored rate can be above or below the right one, and so can the figure the
- * proposed correction leaves.
+ * point 10): the rate is the one of the fiscal date in force, and a line with
+ * another one is corrected by rectification, never recalculated. **Medium**,
+ * the certainty of #1 and #5 it rests on; **both**, because the stored rate can
+ * be above or below the right one, and so can the figure the proposed
+ * correction leaves.
  *
- * #18 to #23 were numbered by the direction on 2026-09-18 (questions Q1, Q2 and
- * Q5 of the feature 009). Where the document gives a criterion two certainties
- * (#21 "media-baja", #22 "alta (orden) / media (redondeo)"), the catalogue
- * keeps the more doubtful one: a figure is never presented as firmer than the
- * weakest part of what it depends on.
+ * Where the document gives a criterion two certainties (#21 "media-baja", #22
+ * "alta (orden) / media (redondeo)"), the catalogue keeps the more doubtful
+ * one: a figure is never presented as firmer than the weakest part of what it
+ * depends on.
  */
 export const FISCAL_CRITERIA = {
   "1": { doc: "1", certainty: "medium", risk: "conservative" },
@@ -189,7 +188,7 @@ export const categoryCriterion = (
   category: "capital_gain" | "movable_capital",
 ): CriterionId => (category === "movable_capital" ? `24:${type}` : `24:${type}_gain`);
 
-/** Doubtful is anything that is not high certainty (feature 009, Q8). */
+/** Doubtful is anything that is not high certainty. */
 export const isDoubtful = (id: CriterionId): boolean => FISCAL_CRITERIA[id].certainty !== "high";
 
 /** A set of criteria in the catalogue's order: stable output, easy to read and to compare. */

@@ -1,4 +1,4 @@
-// The findings of the fiscal review of feature 009, each with the reviewer's
+// Regression cases found by a fiscal review of the tax engine, each with its
 // reproduction ledger rebuilt here.
 
 import { describe, expect, it } from "vitest";
@@ -7,7 +7,7 @@ import { windowCriterion } from "../../src/tax/lines.js";
 import { lineOf, reportOf, taxBuilder, text } from "./helpers.js";
 
 describe("pending at 31/12 includes what waits for a repurchase of the next year (finding 2)", () => {
-  /** The reviewer's `dec.jsonl`: sold at a loss in December, bought back in January. */
+  /** The `dec.jsonl` reproduction: sold at a loss in December, bought back in January. */
   const december = () => {
     const b = taxBuilder();
     b.buy({
@@ -97,7 +97,7 @@ describe("#13 marks the cash of an exchange in either order (finding 3)", () => 
 });
 
 describe("#2 is labelled by the window applied, not by the type of asset (finding 5)", () => {
-  /** The reviewer's `stk1y.jsonl`: a stock set to the prudent one-year window. */
+  /** The `stk1y.jsonl` reproduction: a stock set to the prudent one-year window. */
   const oneYearStock = () => {
     const b = taxBuilder({
       ...DEFAULT_SETTINGS,

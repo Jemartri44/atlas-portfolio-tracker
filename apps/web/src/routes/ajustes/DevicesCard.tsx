@@ -1,4 +1,4 @@
-// «Dispositivos» in Ajustes (feature 015, E2, block 4; ADR-0033, point 8):
+// «Dispositivos» in Ajustes (ADR-0033, point 8):
 // every token of the console with its state and its last sync, **the issues
 // of the last days marked** — a token nobody remembers issuing is the sign of
 // a stolen account —, and revoking them one by one. Only with the session; a

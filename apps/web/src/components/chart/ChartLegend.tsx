@@ -1,5 +1,5 @@
 // The legend of a chart. Colour **and** dash pattern **and** the name, because
-// the colour is never the only carrier of meaning (decision (f) of the 006):
+// the colour is never the only carrier of meaning:
 // the same chart has to read in a black-and-white screenshot and to somebody
 // who does not distinguish blue from orange. Each key is a short piece of the
 // line itself, drawn with the same dash as the series.

@@ -1,5 +1,5 @@
 // Whether the text of a JSON value repeats a key inside one object, at any
-// level (review of PR #96, security N3). `JSON.parse` keeps the last of two
+// level. `JSON.parse` keeps the last of two
 // equal keys without a word, so `"amount":"1000.00", …, "amount":"1.00"` reads
 // as 1.00 to the domain and as 1000.00 to a person reading the file: two
 // readers, two ledgers. Only the exact text says it, so it is read here, token
@@ -9,9 +9,9 @@
 // and every bracket matched, which is what lets this walk stay this small.
 
 /**
- * The first key a JSON text repeats inside one object, at any level, cut to
- * 64 characters; nothing when it repeats none (review of PR #106, R2-B1: a
- * refusal names the key, never its value).
+ * The first key a JSON text repeats inside one object, at any level, cut to 64
+ * characters; nothing when it repeats none (a refusal names the key, never its
+ * value).
  */
 export const repeatedKey = (text: string): string | undefined => {
   /** One entry per open bracket: the keys of an object seen so far, or null for an array. */
@@ -55,13 +55,13 @@ export const repeatedKey = (text: string): string | undefined => {
 
 export const repeatsKey = (text: string): boolean => repeatedKey(text) !== undefined;
 
-/** Whether a text holds a lone surrogate: its UTF-8 would not be UTF-8 (review of PR #96, B1). */
+/** Whether a text holds a lone surrogate: its UTF-8 would not be UTF-8. */
 export const holdsLoneSurrogate = (text: string): boolean => /\p{Cs}/u.test(text);
 
 /**
- * The events read from a line with a key twice (Q12, option (b), §29 and
- * §33): the line loads as `JSON.parse` reads it, and the degraded projection
- * marks the event invalid with `duplicate_key`. Held by identity, never as a
- * field: the event is what the line says, and nothing is added to it.
+ * The events read from a line with a key twice: the line loads as `JSON.parse`
+ * reads it, and the degraded projection marks the event invalid with
+ * `duplicate_key`. Held by identity, never as a field: the event is what the
+ * line says, and nothing is added to it.
  */
 export const REPEATED_KEY = new WeakSet<object>();

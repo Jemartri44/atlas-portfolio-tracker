@@ -78,7 +78,7 @@ describe("the automatic closes as quotes", () => {
     expect(external.at("ast_gold", "2027-01-05")?.fx_rate?.toString()).toBe("1.2");
     // The 6th has no ECB rate yet: it is never converted with the rate of the
     // 5th. The quote in euros is the close of the 4th, with its own rate, and
-    // the 6th travels with it as information (review of PR #78).
+    // the 6th travels with it as information.
     const sixth = external.at("ast_gold", "2027-01-06");
     expect(sixth).toMatchObject({ date: "2027-01-04", fx_rate_date: "2027-01-04" });
     expect(sixth?.fx_rate?.toString()).toBe("1.2");

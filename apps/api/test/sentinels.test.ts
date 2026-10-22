@@ -1,9 +1,8 @@
-// Feature 015, E1: nothing secret or personal ever reaches a log (§2 bis; R25;
-// N3). Every route is walked with recognisable values — an e-mail, a `sub`, a
-// secret of the client, the session key, a device token, a line with an
-// amount, bodies that **start** with the sentinel — and `stdout`, `stderr`,
-// `console` and the logger itself are captured: none may carry any of them,
-// nor the cookies, the session id, the code or the verifier of an attempt.
+// Nothing secret or personal ever reaches a log (`docs/specification.md` §11.7). Every route is
+// walked with recognisable values — an e-mail, a `sub`, a secret of the client, the session key, a
+// device token, a line with an amount, bodies that **start** with the sentinel — and `stdout`,
+// `stderr`, `console` and the logger itself are captured: none may carry any of them, nor the
+// cookies, the session id, the code or the verifier of an attempt.
 
 import { createHash, randomBytes } from "node:crypto";
 import { base64url, pkceChallenge, Signer } from "@atlas/adapters/access";
@@ -93,9 +92,8 @@ describe("the log of the API (R25)", () => {
 
     const session = Signer.fromSessionKey(sessionKey);
     expect(session).toBeDefined();
-    // The failures too (S5 of the review of PR #90): the provider down, a
-    // forged token that carries the sentinels, S3 failing, and an unexpected
-    // error whose message carries them.
+    // The failures too: the provider down, a forged token that carries the sentinels, S3 failing,
+    // and an unexpected error whose message carries them.
     await api.signIn(account);
     api.google.down = true;
     await api.signIn(account);
@@ -180,12 +178,11 @@ describe("the log of the API (R25)", () => {
   });
 
   /**
-   * The five routes of the console (review of PR #95, B1): the start, the
-   * return by loopback, by hand and to reissue, the exchange — issue, renewal,
-   * reissue, sent again, forged, malformed, with SSM and S3 failing —, the
-   * revocation of the own token and the list and revocation of the web. A
-   * record is sown whose `sub`, `email` and `secret_sha256` are sentinels, and
-   * the hashes of the real tokens are looked for too: at most a `token_id`.
+   * The five routes of the console: the start, the return by loopback, by hand and to reissue, the
+   * exchange — issue, renewal, reissue, sent again, forged, malformed, with SSM and S3 failing —,
+   * the revocation of the own token and the list and revocation of the web. A record is sown whose
+   * `sub`, `email` and `secret_sha256` are sentinels, and the hashes of the real tokens are looked
+   * for too: at most a `token_id`.
    */
   it("carries none of them on the routes of the console, in any outcome", async () => {
     const api = setup();

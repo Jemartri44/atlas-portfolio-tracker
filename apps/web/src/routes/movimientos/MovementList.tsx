@@ -1,6 +1,6 @@
 // The rows of the ledger (docs/design/system.md §7.3): on a phone, under one
 // heading per month with the date in each row, and the valuations of a day
-// gathered into one row that unfolds (feature 020, M8); from
+// gathered into one row that unfolds; from
 // 1024px, the dense table. What is genuinely about a movement — which figure
 // matters, what a reversed row looks like — lives in `MovementLine`.
 
@@ -25,7 +25,7 @@ const COLUMNS: readonly DataColumn<MovementRow>[] = [
     header: "Fecha",
     cell: (row) => (
       <>
-        {/* In ink, and the whole row its target (feature 020, M13): a column of
+        {/* In ink, and the whole row its target: a column of
             twenty underlined dates was the loudest thing on the screen. */}
         <A href={`/movimientos/${row.id}`} class="row-link">
           {formatDate(row.date)}
@@ -64,8 +64,8 @@ const COLUMNS: readonly DataColumn<MovementRow>[] = [
 ];
 
 /**
- * The valuations of one day, folded into one row that unfolds (feature 020,
- * M8), with the same disclosure as everywhere: its summary is a 44px row.
+ * The valuations of one day, folded into one row that unfolds, with the same disclosure as
+ * everywhere: its summary is a 44px row.
  */
 const ValuationGroupLine = (props: { group: ValuationGroup }): JSX.Element => (
   <Disclosure label={`${props.group.rows.length} valoraciones · ${formatDate(props.group.date)}`}>

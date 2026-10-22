@@ -88,8 +88,8 @@ describe("theses: lifecycle and derived metrics", () => {
       closing_notes: "played out",
       days_open: 0,
     });
-    // The legs carry what measuring against the index needs (feature 005): the
-    // event, its fiscal date, its quantity and its money.
+    // The legs carry what measuring against the index needs: the event, its
+    // fiscal date, its quantity and its money.
     expect(view?.buys).toEqual([
       {
         event_id: buy.id,

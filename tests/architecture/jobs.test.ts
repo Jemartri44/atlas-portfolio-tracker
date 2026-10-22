@@ -9,19 +9,16 @@ import {
 import { repoRoot } from "./support.js";
 
 /**
- * **The sync of the ledger** (feature 014, block 2): the guards are in place
- * before a line of the engine exists, and everything is read off folders and
- * off the import graph, never off a list of today's files.
+ * **The sync of the ledger**: the guards are in place before a line of the engine exists, and
+ * everything is read off folders and off the import graph, never off a list of today's files.
  */
 /**
- * Feature 016, block 1 of E1 (§8.1 P3): the scheduled jobs are a workspace of
- * their own, `apps/jobs`. Like every application it imports the domain and the
- * adapters; unlike the others **nothing imports it** — not the domain, not the
- * adapters, not another application, not a test outside it — so the code that
- * holds the keys of the sources and the permission of SES is never bundled
- * into anything else. Read with the parser (static, re-exports and literal
- * `import()`), and a dynamic import whose argument is not a literal is refused
- * outright in `apps/jobs/src`, since no graph can follow it.
+ * The scheduled jobs are a workspace of their own, `apps/jobs`. Like every application it imports
+ * the domain and the adapters; unlike the others **nothing imports it** — not the domain, not the
+ * adapters, not another application, not a test outside it — so the code that holds the keys of the
+ * sources and the permission of SES is never bundled into anything else. Read with the parser
+ * (static, re-exports and literal `import()`), and a dynamic import whose argument is not a literal
+ * is refused outright in `apps/jobs/src`, since no graph can follow it.
  */
 describe("architecture: apps/jobs (016)", () => {
   const jobsRoot = join(repoRoot, "apps", "jobs");

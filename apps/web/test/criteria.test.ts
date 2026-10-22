@@ -1,11 +1,10 @@
-// The names of the fiscal criteria: one per criterion of the catalogue, and
-// not a trace of the identifier the engine uses (prompt 010, block 4).
+// The names of the fiscal criteria: one per criterion of the catalogue, and not a trace of the
+// identifier the engine uses.
 //
-// The completeness half is enforced by the type — `Record<CriterionId, string>`
-// does not compile with one missing — so what is left to check is what a type
-// cannot see: that a name is a sentence and not `2:fund_1y` with spaces, that
-// nobody wrote "criterio #18", and that the two ends of the risk are said in
-// words, because the direction is what survives the privacy mask.
+// The completeness half is enforced by the type — `Record<CriterionId, string>` does not compile
+// with one missing — so what is left to check is what a type cannot see: that a name is a sentence
+// and not `2:fund_1y` with spaces, that nobody wrote "criterio #18", and that the two ends of the
+// risk are said in words, because the direction is what survives the privacy mask.
 
 import { CRITERION_IDS, FISCAL_CRITERIA } from "@atlas/domain/fiscal";
 import { describe, expect, it } from "vitest";
@@ -75,9 +74,8 @@ describe("the names of the criteria", () => {
     for (const measure of ["difference", "exposure", "not_quantifiable"] as const) {
       expect(MEASURE_LABELS[measure].length).toBeGreaterThan(0);
     }
-    // The codes of `CriterionStake.reason`, which the domain documents. The
-    // map is closed against that union since feature 011, so the compiler
-    // already refuses to leave one out; this says which ones there are.
+    // The codes of `CriterionStake.reason`, which the domain documents. The map is closed against
+    // that union, so the compiler already refuses to leave one out; this says which ones there are.
     for (const reason of [
       "invalid_under_alternative",
       "unsupported_under_alternative",

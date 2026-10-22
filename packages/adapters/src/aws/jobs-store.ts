@@ -1,11 +1,8 @@
-// The run records and the streaks of the jobs in the bucket (feature 016,
-// E1; `specs/016-scheduled-jobs/data-model.md` §1 and §2), over the narrow
-// `ObjectStore` of the 015. Every write is conditional — `If-None-Match: *`
-// to claim, `If-Match` on the ETag just read to move on — and **only under
-// `jobs/<family>/`** of the function that writes: one writer per object
-// (§8.1 P11 and P18). Reading is free across `jobs/`: the mail reads what the
-// others found. Bytes are read as strict UTF-8; what does not read is said as
-// such, never taken for «nothing there».
+// The run records and the streaks of the jobs in the bucket, over the narrow `ObjectStore`. Every
+// write is conditional — `If-None-Match: *` to claim, `If-Match` on the ETag just read to move on —
+// and **only under `jobs/<family>/`** of the function that writes: one writer per object. Reading
+// is free across `jobs/`: the mail reads what the others found. Bytes are read as strict UTF-8;
+// what does not read is said as such, never taken for «nothing there».
 //
 // `putIfMatch` does not return the new ETag, so after each write the object
 // is read again to take it, and a read that is not what was written is a
@@ -76,7 +73,10 @@ export class JobsStore {
     return { kind: "read", value: parsed.value, etag: stored.etag };
   }
 
-  /** Writes `text` at `key`: created when `etag` is absent, over it otherwise. Answers the new ETag. */
+  /**
+   * Writes `text` at `key`: created when `etag` is absent, over it otherwise. Answers the new
+   * ETag.
+   */
   private async write(key: string, text: string, etag: string | undefined): Promise<string> {
     const body = new TextEncoder().encode(text);
     const done =

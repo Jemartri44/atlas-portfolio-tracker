@@ -53,7 +53,7 @@
   color: var(--c-text);
 }
 
-/* Destructive looks like what it is: never the primary blue (brief §13). */
+/* Destructive looks like what it is: never the primary blue. */
 :where(button, a[role="button"]).quiet {
   background: none;
   border-color: transparent;
@@ -214,14 +214,14 @@
   max-width: var(--reading-max);
 }
 
-/* Every field takes the row; two short ones of a pair share it (feature 020, M11). */
+/* Every field takes the row; two short ones of a pair share it. */
 .fieldset > * {
   grid-column: 1 / -1;
 }
 
 /*
- * Only from 384px: measured at 360, a date field needs 169px and half the row
- * gives it 158, so at that width the pair stays a column (feature 020, M11).
+ * Only from 384px: measured at 360, a date field needs 169px and half the row gives it 158, so at
+ * that width the pair stays a column.
  */
 @media (min-width: 24rem) {
   .fieldset > .pair {

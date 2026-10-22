@@ -1,8 +1,7 @@
 /*
- * The portfolio (docs/design/system.md §5.14, §5.15 and §7.5): the classes
- * against their targets with the swatch of each, the deviation gauge (D7), the
- * strip of the contribution's figures, the note of a proposal, and the two
- * columns of the costs.
+ * The portfolio (docs/design/system.md §5.14, §5.15 and §7.5): the classes against their targets
+ * with the swatch of each, the deviation gauge, the strip of the contribution's figures, the note
+ * of a proposal, and the two columns of the costs.
  */
 
 /* ---- Asset classes: a swatch, a name and whatever the row says -------- */
@@ -81,7 +80,7 @@
   margin-bottom: var(--space-2);
 }
 
-/* ---- Gauge: the deviation against the threshold (D7) ------------------- */
+/* ---- Gauge: the deviation against the threshold ------------------- */
 
 .dev-cell {
   align-items: center;
@@ -160,7 +159,7 @@
   font-weight: var(--fw-medium);
 }
 
-/* The share of a part, in front of the amount that may be hidden (feature 020, M1). */
+/* The share of a part, in front of the amount that may be hidden. */
 .kpi dd .share {
   display: block;
 }

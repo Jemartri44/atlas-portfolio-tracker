@@ -1,4 +1,4 @@
-// Cloud folder or local folder (ADR-0035, §4; feature 024). **Never both**:
+// Cloud folder or local folder (ADR-0035, §4). **Never both**:
 //
 // - **cloud**: `sync/remote.json` (origin and device) and **no** `ledger.jsonl`.
 //   The ledger is the one in S3, read and written through the API with the
@@ -39,7 +39,7 @@ const MODE_BLIND = new Set(["help", "synth", "remote", "admin", "lock"]);
 /**
  * Whether an order looks at the mode of the folder. Not those that do not read
  * or write the ledger of the folder: `synth`, `remote` (but its `upload`, which
- * runs in a cloud folder), `admin` (the S3 itself) and `lock`.
+ * runs in a cloud folder), `admin` and `lock`.
  */
 export const looksAtMode = (positionals: readonly string[]): boolean =>
   !MODE_BLIND.has(positionals[0] ?? "") ||
@@ -115,7 +115,7 @@ export class CloudLedgerStore implements LedgerStore {
       }
       const entry = session.entry;
       const remote = httpRemote({ origin: entry.origin, fetch: env.fetch, token: entry.token });
-      // The drafts of the cloud (ADR-0035, E6): the same token, nothing kept on this computer.
+      // The drafts of the cloud (ADR-0035): the same token, nothing kept on this computer.
       const drafts = new ApiDraftStore({
         origin: entry.origin,
         fetch: env.fetch,

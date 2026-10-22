@@ -1,7 +1,6 @@
-// Composing a corporate action from parameters (Q4 of prompt 007). It used to
-// live in `apps/cli`; the piece that mattered was the fractional-share
-// calculation of a reverse split, which decides how much gain is realised and
-// in which account.
+// Composing a corporate action from parameters. It used to live in `apps/cli`;
+// the piece that mattered was the fractional-share calculation of a reverse
+// split, which decides how much gain is realised and in which account.
 
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "../../src/errors.js";

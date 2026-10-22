@@ -1,7 +1,5 @@
-// Feature 015, E2: what the console keeps (data-model §7 and §8; plan §4.2,
-// T30 to T36): `credentials.json` as a map by device, `sync/remote.json`,
-// which entry each order may use (B2), the folders that never nest and the
-// warning of an expiry close by.
+// What the console keeps: `credentials.json` as a map by device, `sync/remote.json`, which entry
+// each order may use, the folders that never nest and the warning of an expiry close by.
 
 import { describe, expect, it } from "vitest";
 import {

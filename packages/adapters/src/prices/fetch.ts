@@ -1,9 +1,8 @@
-// What the adapters of prices share: the injectable `fetch`, and the one rule
-// about addresses. **EODHD and Alpha Vantage carry the key in the URL**, so
-// no address is ever kept: not in an error, not in a message, not in a file
-// (§6.3 (e) and §6.4 (e) of prompt 013). A failure is its kind and nothing
-// else; the error of `fetch` itself — which may quote the URL — is dropped
-// unread. This is not the `reasonOf` of the ECB, which kept `error.message`.
+// What the adapters of prices share: the injectable `fetch`, and the one rule about addresses.
+// **EODHD and Alpha Vantage carry the key in the URL**, so no address is ever kept: not in an
+// error, not in a message, not in a file. A failure is its kind and nothing else; the error of
+// `fetch` itself — which may quote the URL — is dropped unread. This is not the `reasonOf` of the
+// ECB, which kept `error.message`.
 
 import type { SourceFailureKind, SourceResult } from "@atlas/domain/quotes";
 

@@ -194,9 +194,8 @@ describe("contributionPlan", () => {
   it("gives a rounding residue left over to the first row in order, whole", () => {
     // Four equal assets at target and one cent to split: every row rounds down
     // to zero, so the cent is left over and goes whole to the first row by the
-    // order of the residue. Until the review of PR #90 (round 3) only the
-    // random property reached this path; the 100 % of the domain must not
-    // depend on its seed.
+    // order of the residue. Only the random property used to reach this path;
+    // the 100 % of the domain must not depend on its seed.
     const b = new LedgerBuilder();
     catalogue(b);
     const targets: Record<string, string> = {};

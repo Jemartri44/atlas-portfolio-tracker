@@ -1,4 +1,4 @@
-// How the console says a price (feature 013): where it came from, how old it
+// How the console says a price: where it came from, how old it
 // is, whether it is an approximation, and when a quote has no value in euros.
 // The domain decides **whether** each thing is said; this only picks words.
 
@@ -118,9 +118,8 @@ export const describeSecretsError = (error: SecretsError): string => {
 };
 
 /**
- * Closes stored in a currency their source does not declare (feature 013
- * stored the pence of Alpha Vantage as pounds): left out of every figure in
- * euros, said, and purged on request (review of PR #80).
+ * Closes stored in a currency their source does not declare: left out of every figure in
+ * euros, said, and purged on request.
  */
 export const mismatchedNotes = (mismatched: readonly MismatchedCloses[]): string[] =>
   mismatched.map((m) => {

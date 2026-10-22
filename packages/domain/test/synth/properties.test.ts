@@ -1,5 +1,5 @@
-// Invariants of the synthetic generator for any seed (spec FR-005): the
-// skeleton is fixed, so what the seed changes never breaks the ledger.
+// Invariants of the synthetic generator for any seed: the skeleton is
+// fixed, so what the seed changes never breaks the ledger.
 
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";

@@ -25,9 +25,9 @@ export interface PriceInfo {
   ageDays?: number | undefined;
   /** Older than `stale_price_days`: shown, with its age, never hidden. */
   stale: boolean;
-  /** «manual», or the source of an automatic close (feature 013). */
+  /** «manual», or the source of an automatic close. */
   priceOrigin?: string | undefined;
-  /** An approximation through the reference ETF: marked wherever it is shown (P3). */
+  /** An approximation through the reference ETF: marked wherever it is shown. */
   approximate?: boolean | undefined;
   /** Why the quote has no value in euros; it is then never added up in euros. */
   eurMissing?: string | undefined;
@@ -87,7 +87,7 @@ export const Price = (props: { price: PriceInfo; marked?: boolean }): JSX.Elemen
  *
  * With no price it says nothing: the figure of the same row already reads «sin
  * dato», and the card says which prices are missing. The row read «sin precio
- * sin dato», the same thing twice (second pass of the review of 2026-09-19).
+ * sin dato», the same thing twice.
  */
 export const PriceDetail = (props: { price: PriceInfo; withAge?: boolean }): JSX.Element => (
   <Show when={props.price.unitValue !== undefined}>
@@ -111,9 +111,8 @@ export const PriceDetail = (props: { price: PriceInfo; withAge?: boolean }): JSX
 );
 
 /**
- * Where a price comes from and of which day, for a column of a wide table
- * (feature 013): «EODHD · 24/09/2026», «manual · 15/09/2026». On a phone the
- * same is said by `PriceDetail`.
+ * Where a price comes from and of which day, for a column of a wide table: «EODHD · 24/09/2026»,
+ * «manual · 15/09/2026». On a phone the same is said by `PriceDetail`.
  */
 export const PriceSource = (props: { price: PriceInfo }): JSX.Element => (
   <Show when={props.price.priceDate}>

@@ -1,6 +1,6 @@
 // The Modelo 720 and the Modelo 721, ready to paint.
 //
-// Two rules of the prompt live here and not in the screen, so no card can
+// Two rules live here and not in the screen, so no card can
 // forget them:
 //
 //   1. **Never "no obliged" with incomplete data.** The verdict comes from the
@@ -53,7 +53,7 @@ export interface CategoryView {
   tone: VerdictTone;
   value_eur: Money;
   q4_average_eur?: Money;
-  /** How much of the threshold it is. **Only without privacy** (decision (k)). */
+  /** How much of the threshold it is. **Only without privacy**. */
   share_pct?: string;
   reasons: string[];
   /** What is missing before it can be decided, as an action. */
@@ -121,7 +121,7 @@ const categoryView = (
   // The percentage comes from the domain: it is a derived value like the rest
   // and the console has to show the same one. What is decided here is only
   // whether it may be shown at all — with privacy on it is money by another
-  // name, because the threshold is public (decision (k)).
+  // name, because the threshold is public.
   const share = privacy ? undefined : category.threshold_share_pct;
   return {
     key: category.category,

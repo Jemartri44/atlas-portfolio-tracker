@@ -1,4 +1,4 @@
-// The warning of the wash-sale rule (business-rules.md §5.4, prompt 005 §3.6),
+// The warning of the wash-sale rule (business-rules.md §5.4),
 // in **both directions**: the rule looks at the window before *and* after the
 // loss-making transmission.
 //
@@ -17,7 +17,7 @@
 //
 // This is only the warning. Quantifying the deferred loss, splitting it across
 // the repurchased lots and carrying it through transfers and swaps is the tax
-// engine (`tax/wash-sale.ts`, feature 009), which walks the lot journal after
+// engine (`tax/wash-sale.ts`), which walks the lot journal after
 // the projection. The warning follows the same rule for what a prior purchase
 // is (#18); how much each purchase defers only the engine knows, which is why
 // the text says "may" and points at `atlas tax`.
@@ -58,7 +58,7 @@ export const noteAcquisition = (state: LedgerState, acquisition: Acquisition): v
  * in), so `state.gains` holds exactly what happened before it in time.
  *
  * The warning names the purchase by its date and quantity and the sale by its
- * asset and date, and says the tax year with its number (feature 009): "this
+ * asset and date, and says the tax year with its number: "this
  * year" read a year later is false. It says the loss **may** not be computable,
  * because a purchase only defers the part it covers — and none when earlier
  * purchases already covered it (#19). The figure is the tax engine's.
@@ -117,9 +117,9 @@ export const warnRepurchase = (
  * so "still held" is "still has an open lot of this asset".
  *
  * And it says **how much of it** is still held, in today's units: the sum of
- * those open lots (feature 009, fiscal review 7a). What was bought is not what
- * is left after a reverse split, nor after a sale that consumed part of it. A
- * purchase noted once per account (a grant with a cost) is named once.
+ * those open lots. What was bought is not what is left after a reverse split,
+ * nor after a sale that consumed part of it. A purchase noted once per account
+ * (a grant with a cost) is named once.
  */
 export const warnPriorBuys = (
   state: LedgerState,

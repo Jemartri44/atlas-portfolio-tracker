@@ -349,7 +349,7 @@ export const bucketCommand = async (
   const text = [
     `Cubo especulativo a ${date} (precios informativos, nunca fiscales; gana el más reciente, y con la misma fecha el manual).`,
     // The stop-loss goes at the top, not in a corner: it is the rule the plan
-    // wants hardest to ignore (rule 17). It warns; it never blocks (decision (f)).
+    // wants hardest to ignore (rule 17). It warns; it never blocks.
     ...(stopLoss.length === 0 ? [] : ["", ...describeWarnings(stopLoss)]),
     "",
     ...positionsText(positions),

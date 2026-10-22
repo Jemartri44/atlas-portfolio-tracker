@@ -164,7 +164,7 @@ const thesisOf = (
     // Already the position of the root of the event's correction chain
     // (`project-ledger.ts`, pass B, from `correction-root.ts`): a correction,
     // and a correction of a correction, keep the thesis window of the fact
-    // they correct (spec A6; second review of PR #75).
+    // they correct.
     position,
     event.id,
   );
@@ -211,7 +211,7 @@ const swapThesisOf = (
     // Already the position of the root of the event's correction chain
     // (`project-ledger.ts`, pass B, from `correction-root.ts`): a correction,
     // and a correction of a correction, keep the thesis window of the fact
-    // they correct (spec A6; second review of PR #75).
+    // they correct.
     position,
     event.id,
   );
@@ -343,12 +343,11 @@ export const swapValuation = (event: SwapEvent): Money => {
  * transfer nor an exchange covered by the neutrality regime, and modelling it
  * as one would omit the whole gain (`docs/fiscal-questions.md` #7).
  *
- * The wash-sale rule is wired in **all four directions**, which is the gap the
- * PR #40 had to fix for transfers and that is not repeated here: what is
- * received is an acquisition (so it is warned about after an earlier loss, and
- * it is remembered for a later loss), and what is handed over is a disposal (so
- * a loss is warned about against earlier purchases, and it is remembered for a
- * later repurchase).
+ * The wash-sale rule is wired in **all four directions**, transfers included:
+ * what is received is an acquisition (so it is warned about after an earlier
+ * loss, and it is remembered for a later loss), and what is handed over is a
+ * disposal (so a loss is warned about against earlier purchases, and it is
+ * remembered for a later repurchase).
  */
 export const applySwap = (state: LedgerState, event: SwapEvent, position: number): void => {
   const account = requireAccount(state, event.account_id, event.id);
@@ -368,8 +367,7 @@ export const applySwap = (state: LedgerState, event: SwapEvent, position: number
   // The fee is inherent to the disposal and subtracts from it, as in a `sell`;
   // it does **not** also add to the cost of what is received, because the same
   // fee counted on both legs would be counted twice. It is a new fiscal
-  // criterion and its direction of risk is written down in the feature's
-  // `questions.md`; verify with an adviser.
+  // criterion; verify it with an adviser.
   const proceedsEur = fx.toEur(value.sub(fee));
   const costEur = fx.toEur(value);
 

@@ -1,6 +1,5 @@
-// Every command says how many words it reads, and a word more is refused
-// (verifier of feature 009): a word left loose by a boolean flag used to be
-// ignored, and the command recorded the opposite of what was written.
+// Every command says how many words it reads, and a word more is refused: a word left loose by a
+// boolean flag used to be ignored, and the command recorded the opposite of what was written.
 
 import { describe, expect, it } from "vitest";
 import { ARITY, COMMANDS } from "../src/main.js";

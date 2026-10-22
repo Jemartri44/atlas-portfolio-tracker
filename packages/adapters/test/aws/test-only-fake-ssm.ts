@@ -1,12 +1,12 @@
 // TEST ONLY — a double of SSM Parameter Store for the narrow `ParameterStore`,
-// never reachable from the product. It imitates what block 0 of E2 verified
-// (`specs/015-api-access/questions.md (in git history)` §18):
+// never reachable from the product. It imitates what the documentation of SSM
+// says:
 //
 // - **every version is kept**, and `GetParameter` resolves `name:version` and
 //   `name:label` like SSM («To query by parameter label, use "Name":
 //   "name:label". To query by parameter version, use "Name":
-//   "name:version"»), so the mutant of B1 dies against the service's own
-//   behaviour and not against a guess;
+//   "name:version"»), so a registry that built a name with a label fails against
+//   the service's own behaviour and not against a guess;
 // - `PutParameter` without `Overwrite` on an existing name answers
 //   `ParameterAlreadyExists` («You can't create duplicate parameters»), and a
 //   concurrent update `TooManyUpdates` («There are concurrent updates for a

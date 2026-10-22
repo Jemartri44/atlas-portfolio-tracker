@@ -1,4 +1,4 @@
-// Synthetic data (feature 003, decision (a)): lives in the domain, imports
+// Synthetic data: lives in the domain, imports
 // from it, and nothing in the domain imports from here.
 
 export { type Pico, ScenarioBuilder, ScenarioStream } from "./builder.js";

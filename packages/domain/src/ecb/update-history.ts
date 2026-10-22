@@ -4,7 +4,7 @@
 // be read as a history, leave the stored file exactly as it was — the read
 // happens before anything is written. A download that reads but contradicts
 // what was published is **kept apart** and the previous history stays in
-// force (decision (o)); saying so is the result, not an exception. The TARGET
+// force; saying so is the result, not an exception. The TARGET
 // calendar is compared in the years the ledger uses and only warns.
 
 import type { CivilDate } from "../dates/civil-date.js";
@@ -84,7 +84,7 @@ export interface EcbGeneration {
 
 /**
  * What rewrites a history in force that is **damaged** — its file does not
- * match its manifest and `previous/` cannot undo it (review of PR #106, B1):
+ * match its manifest and `previous/` cannot undo it:
  * the download becomes the only history in force, over whatever is there,
  * with conditional writes. Only the store of the cloud has it.
  */
@@ -92,7 +92,7 @@ export interface EcbHistoryRebuilder {
   /**
    * The generations left, newest first: the file in force as it is (its bytes
    * do not match the manifest, but may still read as a history), then
-   * `previous/` (round 2 of the review of PR #106, R2-N1).
+   * `previous/`.
    */
   generations(): Promise<readonly EcbGeneration[]>;
   rebuild(next: DownloadedHistory): Promise<StoredHistoryMeta>;
@@ -138,13 +138,13 @@ const lastReadable = (generations: readonly EcbGeneration[]): EcbHistory | undef
 
 /**
  * Rebuilds a damaged history **from the official ZIP of the ECB only**, the
- * source of truth, which anyone can download again and compare: never from
- * the API. **The comparison of ADR-0029, point 2, still applies** (round 2 of
- * the review of PR #106, R2-N1; note of ADR-0029 of 2026-09-28): against the
- * last generation that still reads — the file in force as it is, else
- * `previous/` — and a ZIP that changes or drops a rate of it is **not**
- * activated. Only when nothing left reads is the ZIP accepted unverified,
- * and that is said. A ZIP that does not read as a history writes nothing.
+ * source of truth, which anyone can download again and compare: never from the
+ * API. **The comparison of ADR-0029, point 2, still applies** (note of ADR-0029
+ * of 2026-09-28): against the last generation that still reads — the file in
+ * force as it is, else `previous/` — and a ZIP that changes or drops a rate of
+ * it is **not** activated. Only when nothing left reads is the ZIP accepted
+ * unverified, and that is said. A ZIP that does not read as a history writes
+ * nothing.
  */
 export const rebuildEcbHistory = async (
   deps: { source: FxRateSource; store: EcbHistoryRebuilder },

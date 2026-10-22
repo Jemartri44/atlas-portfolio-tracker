@@ -1,4 +1,4 @@
-// The chain of tax years (feature 010, block 1).
+// The chain of tax years.
 //
 // The carry-forward chains one year to the next, so no year can be computed on
 // its own: the engine walks from the first year that matters up to the one
@@ -12,7 +12,7 @@
 // in force on the day of the query, and only its pending losses. The figures a
 // 720 declares are market values stored in the ledger, and letting them reach
 // the savings base would be putting a price into the income tax through the
-// back door (prompt 010, decision (d)).
+// back door.
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { yearOf } from "../dates/civil-date.js";
@@ -46,18 +46,17 @@ import type {
 } from "./report.js";
 import { type PendingDeferral, type WashSaleResult, walkWashSales } from "./wash-sale.js";
 
-/** The regime of compensation the engine implements is the one in force since 2018 (A13). */
+/** The regime of compensation the engine implements is the one in force since 2018. */
 export const FIRST_SUPPORTED_YEAR = 2018;
 
 export interface TaxOptions {
   /** The date of the query: it decides what is provisional, and what was filed by then. */
   today: CivilDate;
   /**
-   * The findings of the ECB check on the ledger's rates, by event (feature
-   * 012, ADR-0029 point 8), when the caller has a history to check them
-   * against. The engine **computes nothing with them**: it computes with the
-   * `fx_rate` of the ledger, always. It only notes which lines depend on a
-   * rate with a finding.
+   * The findings of the ECB check on the ledger's rates, by event (ADR-0029
+   * point 8), when the caller has a history to check them against. The engine
+   * **computes nothing with them**: it computes with the `fx_rate` of the
+   * ledger, always. It only notes which lines depend on a rate with a finding.
    */
   rateFindings?: readonly { event_id: string; code: string }[];
 }
@@ -76,7 +75,7 @@ export interface ChainCore {
    * the chain with a return on record, not the last one. It used to be a
    * single `let` overwritten at each of them, so with two returns filed the
    * first substitution disappeared without a trace and no interface could tell
-   * the user about it (feature 011, block 6).
+   * the user about it.
    */
   anchors: AnchorDifference[];
   /** Deferred losses still sitting on lots at 31/12 of the year asked. */
@@ -107,12 +106,12 @@ export const isInvalid = <T extends object>(result: T | Invalid): result is Inva
  * A reading whose chain would have to start **before the first supported
  * year**, which the engine refuses to compute.
  *
- * It is a fact about **that reading**, not about the year asked. An
- * alternative reading —another configuration, the one a filing was computed
- * with, the one in force before the last change— can reach a year the good one
- * does not, because `fiscal_date_rule` moves an operation from one year to the
- * next. Before feature 011 four of those readings had no guard and the report
- * of a supported, computable year died with them.
+ * It is a fact about **that reading**, not about the year asked. An alternative
+ * reading —another configuration, the one a filing was computed with, the one
+ * in force before the last change— can reach a year the good one does not,
+ * because `fiscal_date_rule` moves an operation from one year to the next.
+ * Every one of those readings is guarded, so the report of a supported,
+ * computable year never dies with one of them.
  */
 export interface Unsupported {
   unsupported: { year: number; first_supported: number };
@@ -187,7 +186,7 @@ export const chainFigures = (chain: ChainCore, year: number): Map<string, Money>
     figures.set(`pending:${entry.origin_year}:${entry.category}`, entry.amount_eur);
   }
   // What the wash-sale rule still holds deferred at 31/12 of that year, the
-  // third figure a `renta` declares (feature 009, Q9).
+  // third figure a `renta` declares.
   figures.set("deferred", chain.deferrals.get(year) as Money);
   return figures;
 };
@@ -313,7 +312,7 @@ export const taxChain = (
   }
   const years = [...balances.keys()];
   // The chain starts at the earliest of three: the year asked, the first year
-  // with figures and the **first filed return** (prompt 010, P5). Walking only
+  // with figures and the **first filed return**. Walking only
   // the years with figures drops in silence a return filed for a year earlier
   // than the ledger, and with it the losses it declares pending: the way the
   // user brings in what he carried from before the application. Never before

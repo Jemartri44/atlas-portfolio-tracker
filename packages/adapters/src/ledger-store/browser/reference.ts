@@ -1,16 +1,15 @@
 // `@atlas/adapters/reference`, a subpath of its own and not part of
 // `./browser`: the browser store is on the boot path of the web, and nothing
-// of the ECB may be (decision (r) of prompt 012).
+// of the ECB may be.
 //
-// The ECB history **imported by hand** into this browser (feature 012, block
-// 3), or **downloaded from the cloud** with the session of this browser
-// (feature 016, E3) — never from a third party (ADR-0028, ADR-0029, point 3). Kept as text, exactly as imported, next to the ledger in the same
-// database, under a key of its own. Losing it loses nothing of the ledger: it
-// is imported again.
+// The ECB history **imported by hand** into this browser, or **downloaded from the cloud** with the
+// session of this browser — never from a third party (ADR-0028, ADR-0029, point 3). Kept as text,
+// exactly as imported, next to the ledger in the same database, under a key of its own. Losing it
+// loses nothing of the ledger: it is imported again.
 
 import { idbDelete, idbGet, idbPut, LEDGER_STORE } from "./idb.js";
 
-/** The key of the ECB history imported by hand, in the `ledger` store (exported for the test of keys of feature 014). */
+/** The key of the ECB history imported by hand, in the `ledger` store. */
 export const IMPORTED_HISTORY_KEY = "reference:ecb";
 const KEY = IMPORTED_HISTORY_KEY;
 
@@ -24,7 +23,7 @@ export interface ImportedHistory {
   /** ISO 8601 UTC. */
   imported_at: string;
   /**
-   * Where it came from when it is not a file chosen by hand (feature 016, E3):
+   * Where it came from when it is not a file chosen by hand:
    * `cloud`, downloaded from the API with the session of this browser. Absent
    * for a copy imported by hand, as every copy stored before.
    */
@@ -40,7 +39,7 @@ export const importedHistory = (): Promise<ImportedHistory | undefined> =>
   idbGet<ImportedHistory>(LEDGER_STORE, KEY);
 
 /**
- * Erases the copy kept in this browser (review of PR #108, N4): after the
+ * Erases the copy kept in this browser: after the
  * administration restores a generation of the cloud that an older one
  * contradicts, the next download is a first one again. The ledger is not
  * touched.

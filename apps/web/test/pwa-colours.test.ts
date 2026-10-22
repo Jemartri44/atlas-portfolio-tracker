@@ -1,8 +1,7 @@
-// The installed application paints its splash and the system bar before any
-// stylesheet loads, from the manifest and the meta tags. They used to keep the
-// navy of the first palette: on Android the bar and the start came out navy
-// over a page of paper (review of 2026-09-19). Now they are read from the
-// tokens, so a change of palette that forgets them fails here.
+// The installed application paints its splash and the system bar before any stylesheet loads, from
+// the manifest and the meta tags. They used to keep the navy of the first palette: on Android the
+// bar and the start came out navy over a page of paper. Now they are read from the tokens, so a
+// change of palette that forgets them fails here.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

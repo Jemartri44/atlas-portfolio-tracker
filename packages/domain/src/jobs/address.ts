@@ -1,8 +1,8 @@
-// A mail address as the jobs accept it (feature 016): the recipient read from
+// A mail address as the jobs accept it: the recipient read from
 // SSM and the sender of the configuration. **One** address, plain ASCII, with
 // nothing a header could be split on — no space, comma, `<`, `>`, `;` or line
 // break — at most 254 characters, a local part of at most 64 and a domain of
-// dotted labels. What is not an address never sends (R6).
+// dotted labels. What is not an address never sends.
 
 const LOCAL = /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*$/;
 const LABEL = /^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/;

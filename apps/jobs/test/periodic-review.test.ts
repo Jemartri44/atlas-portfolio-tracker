@@ -1,10 +1,8 @@
-// Review of PR #109, warnings and the fiscal path (decisions of 2026-09-28,
-// questions §21): a warning of a period gone is closed `expired` and never
-// sent (B1, N4); a passing failure to read the ledger or the ECB is retried
-// the next day and never spent on a mail, and on the last day of the period it
-// is said neutrally with its code (B2, N1); the income tax notes the rates as
-// `atlas tax` does, with the history of the bucket (N2); and the fiscal
-// warnings never read `prices/` (N3).
+// Warnings and the fiscal path: a warning of a period gone is closed `expired` and never sent; a
+// passing failure to read the ledger or the ECB is retried the next day and never spent on a mail,
+// and on the last day of the period it is said neutrally with its code; the income tax notes the
+// rates as `atlas tax` does, with the history of the bucket; and the fiscal warnings never read
+// `prices/`.
 
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";

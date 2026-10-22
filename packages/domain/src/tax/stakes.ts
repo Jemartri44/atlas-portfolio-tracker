@@ -74,8 +74,8 @@ const alternatives = (settings: Settings): { criterion: CriterionId; settings: S
     ]),
   );
   // The other side of #2 for the types that apply one side today: the
-  // alternative is labelled by the window applied, like the figures (feature
-  // 009 review). A reading nobody applies is not computed.
+  // alternative is labelled by the window applied, like the figures. A reading
+  // nobody applies is not computed.
   const windows = (
     criterion: CriterionId,
     types: readonly AssetType[],
@@ -280,7 +280,7 @@ export const criterionStakes = (
   };
   const abs = (money: Money): Money => (money.isNegative() ? money.neg() : money);
   // #5 reaches every figure converted at the rate of an earlier day: the
-  // disposals, and also the income and the deductible fees (feature 009 review).
+  // disposals, and also the income and the deductible fees.
   const lateIncome = core.income.filter((line) => line.criteria.includes("5"));
   const lateFees = core.expenses.filter((line) => line.criteria.includes("5"));
   const lateSales = declaring("5");
@@ -332,8 +332,8 @@ export const criterionStakes = (
           .roundToCents(),
       ),
     );
-    // #18 read the other way can only defer onto units still held (direction's
-    // decision): with none, it moves nothing, and the item says why.
+    // #18 read the other way can only defer onto units still held: with none,
+    // it moves nothing, and the item says why.
     const withoutCarrier =
       id === "18" &&
       difference.isZero() &&
@@ -402,10 +402,10 @@ export const criterionStakes = (
   }
   // #22: the order among years only matters when two or more years of origin
   // compete for a balance that cannot absorb them all. Two steps of one year
-  // (its own category, then the other) compete with nothing (feature 009
-  // review), and when everything is absorbed the order changes nothing. A year
-  // that took nothing competed too: it is the one the order left out, so the
-  // years are those of the steps and those still pending or expiring after them.
+  // (its own category, then the other) compete with nothing, and when
+  // everything is absorbed the order changes nothing. A year that took nothing
+  // competed too: it is the one the order left out, so the years are those of
+  // the steps and those still pending or expiring after them.
   const phase2 = core.compensation.steps.filter((step) => step.phase === 2);
   const left = [
     ...core.compensation.expired,

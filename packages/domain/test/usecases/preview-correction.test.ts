@@ -29,8 +29,8 @@ const rejection = async (promise: Promise<unknown>): Promise<unknown> => {
 
 describe("previewCorrection", () => {
   /**
-   * The case of the review: a deposit of 8.700 € corrected to 8.000 €. Adding
-   * the corrected deposit to the ledger as it is showed 8.700 + 8.000.
+   * A deposit of 8.700 € corrected to 8.000 €. Adding the corrected deposit to
+   * the ledger as it is showed 8.700 + 8.000.
    */
   it("replaces the original instead of adding the corrected event to it", async () => {
     const b = new LedgerBuilder();

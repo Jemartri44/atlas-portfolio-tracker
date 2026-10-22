@@ -1,9 +1,9 @@
-// How the handler runs one job for one period (feature 016, plan §5.3). The
+// How the handler runs one job for one period. The
 // domain decides what a retry does (`nextStep`); this only reads the record,
 // writes it conditionally and calls the task. A conflict means another run
 // has the period: this one stops, writes nothing more and says so. **A
 // foreseen failure is closed in the record with its code and the invocation
-// ends normally**, so Lambda never retries it by itself (`questions.md` §1.4);
+// ends normally**, so Lambda never retries it by itself;
 // only a record that cannot even be written escapes as an error.
 
 import type { ObjectStore, ParameterStore } from "@atlas/adapters/aws";
@@ -31,7 +31,7 @@ import { errorName, logLine } from "./log.js";
 /**
  * The sources of the daily tasks, built by the composition. The keys are a
  * plain record here, not the type of the adapter that reads them: the mail
- * task imports this module, and must not reach that adapter (B2).
+ * task imports this module, and must not reach that adapter.
  */
 export interface JobSources {
   readonly ecb?: () => FxRateSource;
@@ -45,7 +45,7 @@ export interface JobsDeps {
   readonly config: JobsConfig;
   readonly objects: ObjectStore;
   readonly parameters: ParameterStore;
-  /** Only the mail family has one (§8.2 B2). */
+  /** Only the mail family has one. */
   readonly notifier?: Notifier;
   /** Only the ECB and the prices functions have them. */
   readonly sources?: JobSources;
@@ -69,7 +69,7 @@ export interface TaskContext {
   readonly earlier: readonly DumpObject[];
   /**
    * Notes in the record of this attempt, **before** writing them, the objects
-   * it is going to write (only the dump; review of PR #109, R2-B1): a run that
+   * it is going to write (only the dump): a run that
    * dies right after a write, never closing its record, still leaves it said,
    * and the retry keeps that object as its own. A conditional write on the
    * record: another run in between stops this one.
@@ -81,16 +81,15 @@ export interface TaskResult {
   readonly state: "done" | "failed" | "send_failed" | "send_unknown";
   readonly outcome: Outcome;
   readonly findings?: readonly Finding[];
-  /** Only the monthly dump: what it wrote, or found written (plan §8). */
+  /** Only the monthly dump: what it wrote, or found written. */
   readonly objects?: readonly DumpObject[];
 }
 
 export type TaskRunner = (context: TaskContext) => Promise<TaskResult>;
 
 /**
- * A run that could not finish and says what it wrote before (review of PR
- * #109, copias N3): its record keeps those objects, so the retry keeps them as
- * its own and nothing else. Only the name of the cause is said.
+ * A run that could not finish and says what it wrote before: its record keeps those objects, so the
+ * retry keeps them as its own and nothing else. Only the name of the cause is said.
  */
 export class TaskInterrupted extends Error {
   override readonly name = "TaskInterrupted";
@@ -118,7 +117,7 @@ export interface RunInput {
   readonly onlyUnfinished?: boolean;
   /**
    * A period before today's of a warning (at most once): never sent any more,
-   * closed `expired` if it was left open (review of PR #109, avisos B1 and N4).
+   * closed `expired` if it was left open.
    */
   readonly expire?: boolean;
 }
@@ -140,8 +139,7 @@ export const runPeriod = async (input: RunInput): Promise<void> => {
   const delivery = JOB_TASKS[task].delivery;
   // A record that does not read is never taken for a free period. Only the
   // reminder, which must arrive, claims it back over its own ETag — never one
-  // of a newer format, which an old run must not rewrite — and says so
-  // (review of PR #104, idempotence N4): the month is not lost.
+  // of a newer format, which an old run must not rewrite — and says so: the month is not lost.
   const reclaim =
     read.kind === "unreadable" &&
     delivery === "at_least_once" &&
@@ -185,7 +183,7 @@ export const runPeriod = async (input: RunInput): Promise<void> => {
     etag = await store.writeRecord(record, etag);
     // Whether the mail may have gone: once `sending` is written, a run that
     // throws closes as `send_unknown`, never as `failed`, or the next run would
-    // send an at-most-once warning again (review of PR #104, idempotence B1).
+    // send an at-most-once warning again.
     let sending = false;
     const markSending = async () => {
       record = recordIn(record, "sending", at());
@@ -242,7 +240,7 @@ export const runPeriod = async (input: RunInput): Promise<void> => {
       });
     }
     // A run that marked `sending` and then says it failed may have sent: the
-    // same as a throw after it, `send_unknown` (round 2 of the review, R2-B1).
+    // same as a throw after it, `send_unknown`.
     const state = sending && result.state === "failed" ? "send_unknown" : result.state;
     await store.writeRecord(
       recordIn(record, state, at(), {

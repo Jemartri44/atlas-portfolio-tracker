@@ -1,9 +1,8 @@
-// Whether the ledger has, on a date, an account abroad (feature 020, E2; §0
-// point 1 and §8.1 B3 of prompt 020, Q3 answered 2026-09-27). The summary
-// reserves a row of *Atención* for the 720 and the 721 out of season only
-// when there can be something of them to say, and it has to know it on its
-// first paint, so this lives in the barrel and not behind the lazy door of
-// the informative returns.
+// Whether the ledger has, on a date, an account abroad. The summary reserves a
+// row of *Atención* for the 720 and the 721 out of season only when there can
+// be something of them to say, and it has to know it on its first paint, so
+// this lives in the barrel and not behind the lazy door of the informative
+// returns.
 //
 // Abroad means a country other than `tax_residence` of the settings. Without
 // it, the rule the engine applies today: a country other than ES — inside this

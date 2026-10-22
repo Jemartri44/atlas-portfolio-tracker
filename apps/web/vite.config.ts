@@ -21,11 +21,10 @@ const repo = (path: string): string => fileURLToPath(new URL(path, import.meta.u
 const repoRoot = realpathSync(repo("../../"));
 
 /**
- * A module id as the guard compares it: without the `\0` of a virtual module
- * and without its query (`?raw`, `?url`, `?worker&inline`, which travels
- * apart), and **after `realpath`**, relative to the repository — so no alias,
- * no `preserveSymlinks` and no `node_modules/@atlas/…` can make a file of a
- * package look like another path (round 3 of the review of PR #90).
+ * A module id as the guard compares it: without the `\0` of a virtual module and without its query
+ * (`?raw`, `?url`, `?worker&inline`, which travels apart), and **after `realpath`**, relative to
+ * the repository — so no alias, no `preserveSymlinks` and no `node_modules/@atlas/…` can make a
+ * file of a package look like another path.
  */
 const normalise = (raw: string): { id: string; query: string } => {
   const bare = raw.replace(/^\0/, "");
@@ -48,7 +47,7 @@ interface Graph {
       readonly query: string;
       readonly bytes: number;
       readonly exports: readonly string[];
-      /** Who imports it, statically or with `import()` (review of PR #97, N1). */
+      /** Who imports it, statically or with `import()`. */
       readonly importers: readonly string[];
     }[];
   }[];
@@ -59,20 +58,16 @@ interface Graph {
 const workerGraphs: Graph[] = [];
 
 /**
- * **The real graph of the bundle**, for the authoritative guard (rounds 2 and
- * 3 of the review of PR #90): every module Rolldown put in every chunk, with
- * the bytes it renders and the names the bundle uses of it, and every asset
- * with the files it comes from, written next to the output for
- * `scripts/check-bundle.mjs` to read. **The workers are other builds**: the
- * same plugin goes in `worker.plugins`, and their graphs travel inside the
- * one of the main build, which runs after them. The static guards of
- * `tests/api-access.test.ts` read the sources and are a quick warning; what
- * the browser can download is decided here, and a module the web must not
- * reach — however it got in: a relay, a relative path, `require`,
- * `import.meta.glob`, a string, a worker, a query, an alias — is in this list
- * or it is not in the bundle. Never precached nor served: `.json` is not among
- * the patterns of the service worker, and the deploy (017) leaves `.vite/` out
- * like Vite's own manifest.
+ * **The real graph of the bundle**, for the authoritative guard: every module Rolldown put in every
+ * chunk, with the bytes it renders and the names the bundle uses of it, and every asset with the
+ * files it comes from, written next to the output for `scripts/check-bundle.mjs` to read. **The
+ * workers are other builds**: the same plugin goes in `worker.plugins`, and their graphs travel
+ * inside the one of the main build, which runs after them. The static guards of
+ * `tests/api-access.test.ts` read the sources and are a quick warning; what the browser can
+ * download is decided here, and a module the web must not reach — however it got in: a relay, a
+ * relative path, `require`, `import.meta.glob`, a string, a worker, a query, an alias — is in this
+ * list or it is not in the bundle. Never precached nor served: `.json` is not among the patterns of
+ * the service worker, and the deploy leaves `.vite/` out like Vite's own manifest.
  */
 const moduleGraph = (build: "main" | "worker"): Plugin => ({
   name: `atlas-module-graph-${build}`,
@@ -165,10 +160,9 @@ export const WORKBOX_OPTIONS: NonNullable<VitePWAOptions["workbox"]> = {
   globPatterns: ["**/*.{js,css,html,svg,png,webmanifest}"],
   // The shell opens without a connection and says «Sin conexión» by itself.
   navigateFallback: "index.html",
-  // Except under /api/: the sign-in (`/api/auth/login`) and the return
-  // from Google are navigations the Lambda must answer. Found on the
-  // screen in feature 015: with the service worker installed, the SPA
-  // painted «Aquí no hay nada» instead of going to Google.
+  // Except under /api/: the sign-in (`/api/auth/login`) and the return from Google are navigations
+  // the Lambda must answer. With the service worker installed, the SPA painted «Aquí no hay nada»
+  // instead of going to Google.
   navigateFallbackDenylist: [/^\/api\//],
   cleanupOutdatedCaches: true,
 };
@@ -249,16 +243,13 @@ export default defineConfig(({ command }) => ({
     modulePreload: { polyfill: false },
     sourcemap: true,
     /*
-     * **An asset that is a source of code is not inlined by size** (round 4
-     * of the review of PR #90, V3-inline). `new URL("…", import.meta.url)`
-     * makes the file an asset, and Vite inlines an asset under 4 KiB as a
-     * `data:` URL instead of emitting it: the text of a vetoed source then
-     * travelled inside a chunk, out of every graph. Emitted, it is a file
-     * `check-bundle.mjs` refuses. Anything else keeps the default of Vite
-     * (`undefined`). **This does not cover `?inline`** (round 5): Vite reads
-     * that query before it asks this function, and inlines whatever the
-     * function says; what stops it is the rule of `data:` URLs of
-     * `check-bundle.mjs`, which reads the MIME type and the graph.
+     * **An asset that is a source of code is not inlined by size**. `new URL("…", import.meta.url)`
+     * makes the file an asset, and Vite inlines an asset under 4 KiB as a `data:` URL instead of
+     * emitting it: the text of a vetoed source then travelled inside a chunk, out of every graph.
+     * Emitted, it is a file `check-bundle.mjs` refuses. Anything else keeps the default of Vite
+     * (`undefined`). **This does not cover `?inline`**: Vite reads that query before it asks this
+     * function, and inlines whatever the function says; what stops it is the rule of `data:` URLs
+     * of `check-bundle.mjs`, which reads the MIME type and the graph.
      */
     assetsInlineLimit: (filePath: string): boolean | undefined =>
       /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)(\?|$)/.test(filePath) ? false : undefined,
@@ -267,7 +258,7 @@ export default defineConfig(({ command }) => ({
     rollupOptions: {
       output: {
         /*
-         * **The domain travels in one chunk** (feature 010, block 4).
+         * **The domain travels in one chunk.**
          *
          * The browser downloads the domain at boot: the first screen projects
          * the ledger, so there is no way around it (ADR-0007). What there is a
@@ -279,21 +270,16 @@ export default defineConfig(({ command }) => ({
          * its own import plumbing. Measured: 73,0 KB before the card, 74,3
          * with it and 72,7 with this group, against a ceiling of 74,0.
          *
-         * The test keeps out exactly what must **not** be on the boot path:
-         * `tax/`, `informative/`, the `fiscal.ts` door and the three modules
-         * of `filings/` that reach the tax chain — and, since feature 012,
-         * everything of the ECB (`ecb/`, the `ecb.ts` door and the local
-         * configuration in `config/`), which must never be on the boot path
-         * either (decision (r) of its prompt); and, since feature 013, the
-         * automatic daily closes (`quotes/` and the `quotes.ts` door), and since
-         * feature 014 the sync of the ledger (`sync/`, the `sync.ts` door and
-         * its two ports), lazy by construction, and since feature 020 the
-         * indicators of the Cubo (`charts/` and the `charts.ts` door). **The store of the browser rides
-         * in the same chunk** (`blob.ts` and `idb.ts`): it is boot too —
-         * opening the ledger is the boot. Without the group the bundler splits
-         * the store into a boot chunk of its own (0,5 KB gzip, measured,
-         * feature 012). `scripts/check-bundle.mjs` fails the build if any
-         * lazily loaded module turns up in a chunk `index.html` preloads.
+         * The test keeps out exactly what must **not** be on the boot path: `tax/`, `informative/`,
+         * the `fiscal.ts` door and the three modules of `filings/` that reach the tax chain — and
+         * everything of the ECB (`ecb/`, the `ecb.ts` door and the local configuration in
+         * `config/`), the automatic daily closes (`quotes/` and the `quotes.ts` door), the sync of
+         * the ledger (`sync/`, the `sync.ts` door and its two ports) and the indicators of the Cubo
+         * (`charts/` and the `charts.ts` door), none of which may be on the boot path. **The store
+         * of the browser rides in the same chunk** (`blob.ts` and `idb.ts`): it is boot too —
+         * opening the ledger is the boot. Without the group the bundler splits the store into a
+         * boot chunk of its own (0,5 KB gzip, measured). `scripts/check-bundle.mjs` fails the build
+         * if any lazily loaded module turns up in a chunk `index.html` preloads.
          */
         advancedChunks: {
           groups: [

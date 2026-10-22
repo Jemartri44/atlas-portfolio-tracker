@@ -6,9 +6,9 @@
 // the **fractional shares of a reverse split**. Working out that an account is
 // left with `position − ⌊position⌋` shares, and that exactly those are sold,
 // decides how much gain is realised and in which account — a fiscal
-// consequence. A rule like that cannot live in an interface (ADR-0007,
-// decision (h) of prompt 006, Q4 of prompt 007), because the second interface
-// would have to write it again and the two would drift in silence.
+// consequence. A rule like that cannot live in an interface (ADR-0007), because
+// the second interface would have to write it again and the two would drift in
+// silence.
 //
 // It is **pure**: it projects the ledger with the main effects to see the
 // resulting positions, which needs no clock, no identifier and no I/O. The

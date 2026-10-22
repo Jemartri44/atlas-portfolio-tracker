@@ -1,12 +1,12 @@
-// The thin adapter of the narrow `ObjectStore` over `@aws-sdk/client-s3`
-// (feature 015, E3; authorised by the user, questions.md §12). **The only
+// The thin adapter of the narrow `ObjectStore` over `@aws-sdk/client-s3`. **The only
 // file with the S3 client** (architecture test). It sends exactly four
 // commands — `GetObject`, `PutObject` with `If-None-Match: *`, `PutObject`
 // with `If-Match` and `ListObjectsV2` — and never a delete.
 //
-// What each answer means comes from block 0 of E3 (questions.md §23.1):
+// What each answer means:
 // - `GetObject` of a key that does not exist is `404 NoSuchKey` → nothing.
-//   A `403` (no `s3:ListBucket`) is **not** «does not exist»: it is thrown.
+//   Without `s3:ListBucket` S3 answers `403` instead of `404` for an absent key,
+//   so a `403` is **not** «does not exist»: it is thrown.
 // - `If-None-Match: *`: `412` (it exists) and `409` (a concurrent request)
 //   are `exists`.
 // - `If-Match`: `412` (another ETag), `409` (concurrent) and `404` (no

@@ -1,4 +1,4 @@
-// The rules of the access to the API (feature 015; ADR-0027, ADR-0033), as a
+// The rules of the access to the API (ADR-0027, ADR-0033), as a
 // **separate entry point** of the domain, like `sync.ts`: which credential a
 // request brings, which route admits it, how a signed payload is read, what
 // an ID token of Google has to say, who is in the allow list, which device a

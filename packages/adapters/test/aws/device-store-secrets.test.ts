@@ -1,5 +1,4 @@
-// Feature 015, E1: the objects of the devices over S3 and the secrets of SSM
-// with their cache (R18, R20, R21, R31).
+// The objects of the devices over S3 and the secrets of SSM with their cache.
 
 import {
   AccessSecrets,

@@ -1,4 +1,4 @@
-// The three gauges of the bucket (feature 020, E3, M1 and M10): how much of the
+// The three gauges of the bucket: how much of the
 // cap has been contributed, the result over what was contributed against the
 // stop rule, and the weight of the bucket over net worth against its maximum.
 //

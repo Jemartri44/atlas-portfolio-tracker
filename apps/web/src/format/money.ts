@@ -3,9 +3,9 @@
 // fails if any file other than `components/Amount.tsx` imports this module. It
 // is the same mechanism that guards the price gate of the domain, and the
 // reason the rule will still be alive in two years: it does not depend on
-// anybody remembering it (decision (d), prompt §3.4).
+// anybody remembering it.
 //
-// Q6: the mask covers **amounts and quantities**, as `docs/specification.md`
+// The mask covers **amounts and quantities**, as `docs/specification.md`
 // §9.6 demands — twelve units of a fund with a public price give the amount
 // away just as well as the amount. Percentages, weights, deviations, dates and
 // text stay visible and live in `format/number.ts`, which is not gated.
@@ -65,8 +65,8 @@ export interface AmountDisplay {
   /** The figure, the mask, or "sin dato": exactly what is written first. */
   text: string;
   /**
-   * The unit written after it — "€", "USD", "part." — or empty. It survives
-   * the mask: it says what kind of figure is hidden, never how big (D2).
+   * The unit written after it — "€", "USD", "part." — or empty. It survives the mask: it says what
+   * kind of figure is hidden, never how big.
    */
   unit: string;
   /** Classes of the `<span>`, the semantic one first. */
@@ -83,7 +83,7 @@ interface AmountInput {
   formatted: string | undefined;
   /** The unit of the figure: a currency already written ("€", "USD"), or a measure. */
   unit?: string | undefined;
-  /** Privacy mode, on by default (FR-021). */
+  /** Privacy mode, on by default. */
   privacy: boolean;
   /** What is being shown, for the accessible label. */
   kind: "importe" | "cantidad";

@@ -2,7 +2,7 @@
 //
 // The domain speaks English by contract (`errors.ts`) and each interface
 // translates: the CLI sends you to a command, the web to the screen where it is
-// fixed (decision (i) of the prompt). A drift test checks that both catalogues
+// fixed. A drift test checks that both catalogues
 // cover every code the domain can raise, and an unknown code falls back to the
 // domain's own message so a new error is never swallowed.
 //
@@ -33,7 +33,7 @@ import {
 } from "./prose.js";
 
 /**
- * The failures of the remote one by one (`docs/api.md` §7; feature 014), each
+ * The failures of the remote one by one (`docs/api.md` §7), each
  * with its own sentence. Exported so that a test holds it level with the
  * closed list of the domain.
  */
@@ -112,7 +112,7 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   // --- Catalogue ---------------------------------------------------------
   unknown_account: (d, n) => `La cuenta ${n.one(d.account_id)} no existe.`,
   unknown_asset: (d, n) => `El activo ${n.one(d.asset_id)} no existe.`,
-  // --- Corporate actions composed from parameters (feature 007) ------------
+  // --- Corporate actions composed from parameters ------------
   missing_source_document: (d) =>
     `Un evento corporativo de tipo ${enumValue(d.kind)} necesita su fuente documental: la dirección o el PDF de la nota del emisor. No es opcional.`,
   missing_effect_parameter: (d) =>
@@ -425,7 +425,7 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   // What the reader needs: the file is not what was expected, and where.
   invalid_line: (d) => `${notTheFormat(d)} no es un evento.`,
   invalid_json: (d) => `${notTheFormat(d)} no se puede leer como datos de Atlas.`,
-  // An annulment cannot be annulled (round 2 of the review of PR #98, R2-B1).
+  // An annulment cannot be annulled.
   duplicate_key: (d) =>
     d.type === "reversal"
       ? "Esta anulación repite un campo en su línea (lo deja así una edición a mano del archivo): cuenta como inválida, no anula nada y no se sincroniza. Una anulación no se puede anular: corrígela a mano en el archivo, quitando el campo repetido."

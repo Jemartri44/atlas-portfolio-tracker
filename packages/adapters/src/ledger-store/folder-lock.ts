@@ -1,17 +1,15 @@
-// The advisory lock of a ledger folder (ADR-0026, Part B; feature 012, block 0).
+// The advisory lock of a ledger folder (ADR-0026, Part B).
 //
-// **One lock per ledger folder**, covering every write inside it: the ledger,
-// `archive/`, `drafts/`, `reference/ecb/` and, when it exists, `sync/`
-// (decision (t) of prompt 012). It is built around "write bytes in a folder"
-// and not around `append` and `replace`, so the raw-line operations of feature
-// 014 take it as they are.
+// **One lock per ledger folder**, covering every write inside it: the ledger, `archive/`,
+// `drafts/`, `reference/ecb/` and, when it exists, `sync/`. It is built around "write bytes in a
+// folder" and not around `append` and `replace`, so the raw-line operations of the sync take it as
+// they are.
 //
 // What it guarantees, and what it does not, said where it is read:
 //
 // - **Only the console writes in the folder.** The browser cannot create a file
-//   exclusively (the File System Access API has no such primitive: verified in
-//   `specs/012-ecb-reference-rates/questions.md (in git history)` §1), so by decision of the
-//   direction the web never writes here (ADR-0019 and ADR-0026 amended). The
+//   exclusively (the File System Access API has no such primitive), so the
+//   web never writes here (ADR-0019 and ADR-0026 amended). The
 //   lock closes the window between Atlas **console** writers, and only because
 //   `open(…, "wx")` — `O_CREAT | O_EXCL` — is atomic where it runs.
 // - **Advisory**: a text editor does not see it, and that is accepted.
@@ -28,7 +26,10 @@ import { basename, dirname, join } from "node:path";
 
 export const LOCK_FILE = "ledger.lock";
 
-/** What the lock file says. `holder` is only ever `cli` today; the field is kept for feature 014. */
+/**
+ * What the lock file says. `holder` is only ever `cli` today; the field is kept for other
+ * holders.
+ */
 export interface FolderLockInfo {
   holder: string;
   token: string;
@@ -40,11 +41,14 @@ export interface FolderLockInfo {
 /**
  * A lock file that exists and is still empty: another writer has just created
  * it exclusively and has not written who it is yet. A write is starting — not
- * an unreadable lock, and nothing to break (review of PR #75).
+ * an unreadable lock, and nothing to break.
  */
 export const BEING_WRITTEN = "being_written";
 
-/** What a lock file says: who holds it, that it is being written, or `undefined` when unreadable. */
+/**
+ * What a lock file says: who holds it, that it is being written, or `undefined` when
+ * unreadable.
+ */
 export type FolderLockState = FolderLockInfo | typeof BEING_WRITTEN | undefined;
 
 const hasCode = (error: unknown, code: string): boolean =>
@@ -205,22 +209,20 @@ export const withFolderLock = async <T>(
 };
 
 /**
- * Removes the temporary files a write of the ledger left behind when it was
- * killed before its rename (`ledger.jsonl.tmp-<pid>-<time>`; review of PR
- * #75), and those of `sync/` (feature 014), `drafts/`, `prices/` and `reference/ecb/`. Only under the lock: every
- * writer creates its temporary holding it,
- * so while this holds it, any temporary is an orphan. If somebody holds the
- * lock, nothing is touched — their temporary may be the write in progress.
- * Returns the names removed.
+ * Removes the temporary files a write of the ledger left behind when it was killed before its
+ * rename (`ledger.jsonl.tmp-<pid>-<time>`), and those of `sync/`, `drafts/`, `prices/` and
+ * `reference/ecb/`. Only under the lock: every writer creates its temporary holding it, so while
+ * this holds it, any temporary is an orphan. If somebody holds the lock, nothing is touched — their
+ * temporary may be the write in progress. Returns the names removed.
  */
 export const sweepOrphanTemporaries = async (ledgerPath: string): Promise<string[]> => {
   const folder = dirname(ledgerPath);
   const prefix = `${basename(ledgerPath)}.tmp-`;
-  // Since feature 014 (decision D-Q19), the temporaries of the state of the
+  // The temporaries of the state of the
   // sync too: `sync/state.json`, `held.jsonl` and `discarded.jsonl` are
   // written the same way, and a loose file in the folder that syncs ends up
   // confusing somebody.
-  // Since feature 015 (§7 P16), `sync/remote.json` too.
+  // `sync/remote.json` too.
   const syncTemporary = /^(?:state\.json|held\.jsonl|discarded\.jsonl|remote\.json)\.tmp-\d+-\d+$/;
   // `drafts/` (it holds the draft), `prices/` and `reference/ecb/` with its
   // `previous/` and `rejected/` are written by `writeFileAtomically` under this

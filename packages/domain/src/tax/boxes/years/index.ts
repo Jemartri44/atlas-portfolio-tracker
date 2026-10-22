@@ -1,5 +1,4 @@
-// The boxes of the Modelo 100, **one table per tax year** (prompt 010,
-// decision (e)).
+// The boxes of the Modelo 100, **one table per tax year**.
 //
 // They are data and nothing else: no `if` about a year lives outside this file,
 // and a year with no table produces the concepts with **no numbers at all**

@@ -1,8 +1,7 @@
 // @vitest-environment happy-dom
 //
-// The chip of the status bar (FR-011): the ledger lives in the cloud and the
-// device keeps no copy (ADR-0035), so it says where it is and nothing about
-// exporting or its age.
+// The chip of the status bar: the ledger lives in the cloud and the device keeps no copy
+// (ADR-0035), so it says where it is and nothing about exporting or its age.
 
 import { describe, expect, it } from "vitest";
 import { LedgerChip } from "../src/shell/LedgerChip.jsx";

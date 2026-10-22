@@ -5,13 +5,12 @@
 // of the history, without trailing zeros (point 4: the canonical form), and
 // every comparison is numeric (`sameRate`).
 //
-// Two formats, with their provenance kept apart (decision (l) of prompt 012):
+// Two formats, with their provenance kept apart:
 //
 // - **The ZIP's CSV** (`eurofxref-hist.csv`), the preferred source: one row per
 //   day of publication, newest first, a column per currency, `N/A` where a
 //   currency had no value that day, and a trailing comma on every row
-//   (verified on the real file of 2026-09-24,
-//   `specs/012-ecb-reference-rates/questions.md (in git history)` §4).
+//   (verified on the real file of 2026-09-24).
 // - **The API's CSV** (`format=csvdata`), the fallback: one row per series and
 //   day, oldest first. On a closing day of 1999-2012 it returns a row **with
 //   no value** (`OBS_STATUS` `H`), which is **not** a publication and is read
@@ -24,7 +23,7 @@ import { type CivilDate, compareCivilDates, isCivilDate } from "../dates/civil-d
 import { ValidationError } from "../errors.js";
 import { Decimal, type DecimalString, isDecimalString } from "../money/decimal.js";
 
-/** Where a history came from: said, never disguised (decision (l)). */
+/** Where a history came from: said, never disguised. */
 export type EcbSource = "zip" | "api";
 
 export interface CurrencySeries {

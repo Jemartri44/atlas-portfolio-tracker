@@ -1,10 +1,10 @@
-// The savings base laid out **by box** (feature 010, block 2).
+// The savings base laid out **by box**.
 //
-// A layer over the report of feature 009 that recomputes nothing: it takes its
+// A layer over the tax report that recomputes nothing: it takes its
 // figures and puts them in the order the Modelo 100 asks for them, with the
 // number and the literal label of each box of **that** tax year.
 //
-// The rule that governs the whole file is decision (e) of the prompt: a wrong
+// The rule that governs the whole file: a wrong
 // box is worse than no box. So the boxes are data per year, and:
 //
 //   - a year with no checked table gives the concepts with **no numbers at
@@ -139,7 +139,7 @@ const PARTIAL_MESSAGES: Record<PartialReason, string> = {
   ledger_withholdings_only: "only the withholdings recorded in the ledger are counted",
 };
 
-/** The notes of the report about the ECB rates of a line (feature 012). */
+/** The notes of the report about the ECB rates of a line. */
 const RATE_NOTES = new Set([
   "tax_fx_rate_finding",
   "tax_fx_rate_unverified",
@@ -212,7 +212,7 @@ export const boxesOf = (report: TaxYearReport, chain: ChainCore): TaxBoxes => {
     ...report.notes.filter((entry) => RATE_NOTES.has(entry.code)),
   ];
   // The repurchase has no numbered box: Renta WEB carries a mark in its capture
-  // window, so the output says what it is instead of inventing a number (N12).
+  // window, so the output says what it is instead of inventing a number.
   if (report.wash_sale.deferred.length > 0 || report.wash_sale.released.length > 0) {
     notes.push(
       note(

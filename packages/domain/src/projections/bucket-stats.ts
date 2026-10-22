@@ -2,11 +2,11 @@
 // business rules 14, 16, 17 and 18).
 //
 // Two ideas govern this file. The unit of decision is the **thesis**, not the
-// FIFO operation (decision (d) of prompt 005): the user decided once, bought
-// perhaps twice and sold perhaps twice, and that is one bet. And a figure that
-// cannot be measured honestly is **excluded and counted**, never averaged in
-// (decision (k)): the global FIFO can hand a thesis lots another thesis bought,
-// and averaging that is worse than having no average at all.
+// FIFO operation: the user decided once, bought perhaps twice and sold perhaps
+// twice, and that is one bet. And a figure that cannot be measured honestly is
+// **excluded and counted**, never averaged in: the global FIFO can hand a
+// thesis lots another thesis bought, and averaging that is worse than having no
+// average at all.
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
@@ -42,7 +42,7 @@ const SIGNIFICANT_SAMPLE = 100;
 /**
  * Fixed relative threshold of rule 17's "warn when getting close"; not
  * configurable on purpose. Exported so that the screens draw the mark of the
- * warning from the very constant the warning uses (feature 020, E3), never from
+ * warning from the very constant the warning uses, never from
  * a copy of the number.
  */
 export const NEAR_LIMIT_PCT = Decimal.parse("80");
@@ -159,8 +159,8 @@ const average = (values: readonly Money[]): Money | undefined =>
 /**
  * The worst run of the realized result: sales ordered by fiscal date (ties by
  * file position), cumulative gain, and the largest fall from a previous peak.
- * Computed **from the ledger alone**, with no price, so it is exact (decision
- * (e)); the value curve needs prices and belongs to the web.
+ * Computed **from the ledger alone**, with no price, so it is exact; the value
+ * curve needs prices and belongs to the web.
  */
 const drawdownOf = (
   gains: readonly RealizedGain[],
@@ -200,8 +200,8 @@ const drawdownOf = (
  * What a deposit or a withdrawal is worth in euros: `amount / fx_rate` of the
  * event itself. The rate carries its own date since ADR-0021: a cash movement
  * without it does not reach a projection, because the loader rejects it.
- * Exported from the module, never from the barrel, for `contributedSeries`
- * (feature 020, E4), which must value cash exactly as the bucket does.
+ * Exported from the module, never from the barrel, for `contributedSeries`,
+ * which must value cash exactly as the bucket does.
  */
 export const cashEurOf = (event: CashDepositEvent | CashWithdrawalEvent): Money =>
   FxRate.of(Decimal.parse(event.fx_rate), event.currency, event.fx_rate_date).toEur(
@@ -265,7 +265,7 @@ export interface BucketReport {
   controls: BucketControls;
 }
 
-/** Trading statistics and control rules of the bucket at a date (§3.4 and §3.5). */
+/** Trading statistics and control rules of the bucket at a date. */
 export const bucketStats = (
   state: LedgerState,
   events: readonly LedgerEvent[],

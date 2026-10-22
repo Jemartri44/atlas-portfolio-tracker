@@ -116,7 +116,7 @@ export interface AssetFields {
    * (`docs/fiscal-questions.md` #2), and it cannot be answered either way if
    * the catalogue does not say where the thing trades.
    *
-   * The tax engine **reads it** (feature 009): each transmission line carries
+   * The tax engine **reads it**: each transmission line carries
    * it, and the doubtful item of criterion `2:listed` lists the markets at
    * stake, so that the reading of the dispute can be checked market by market.
    * Nothing chooses a window with it yet: that is the criterion's to decide.
@@ -176,12 +176,12 @@ export interface BuyEvent extends Envelope, OperationFields {
   thesis_id?: string;
   /**
    * Euros the broker's statement says moved in the account for this operation,
-   * as printed there, fees in euros included (ADR-0030, amended by prompt 012
-   * (n)). The sign comes from the event type, so it is never negative; zero
-   * only in `dividend` and `interest` (a dividend withheld whole at source is a
-   * *known* zero); absent means **unknown**, never zero. Only when `currency` is
-   * not `EUR`. **Informative: no projection, no tax figure and no balance reads
-   * it** — a closed list of modules may, and the architecture test holds it.
+   * as printed there, fees in euros included (ADR-0030). The sign comes from
+   * the event type, so it is never negative; zero only in `dividend` and
+   * `interest` (a dividend withheld whole at source is a *known* zero); absent
+   * means **unknown**, never zero. Only when `currency` is not `EUR`.
+   * **Informative: no projection, no tax figure and no balance reads it** — a
+   * closed list of modules may, and the architecture test holds it.
    */
   broker_settled_eur?: DecimalString;
 }
@@ -193,12 +193,12 @@ export interface SellEvent extends Envelope, OperationFields {
   thesis_id?: string;
   /**
    * Euros the broker's statement says moved in the account for this operation,
-   * as printed there, fees in euros included (ADR-0030, amended by prompt 012
-   * (n)). The sign comes from the event type, so it is never negative; zero
-   * only in `dividend` and `interest` (a dividend withheld whole at source is a
-   * *known* zero); absent means **unknown**, never zero. Only when `currency` is
-   * not `EUR`. **Informative: no projection, no tax figure and no balance reads
-   * it** — a closed list of modules may, and the architecture test holds it.
+   * as printed there, fees in euros included (ADR-0030). The sign comes from
+   * the event type, so it is never negative; zero only in `dividend` and
+   * `interest` (a dividend withheld whole at source is a *known* zero); absent
+   * means **unknown**, never zero. Only when `currency` is not `EUR`.
+   * **Informative: no projection, no tax figure and no balance reads it** — a
+   * closed list of modules may, and the architecture test holds it.
    */
   broker_settled_eur?: DecimalString;
 }
@@ -287,12 +287,12 @@ export interface DividendEvent extends Envelope {
   notes?: string;
   /**
    * Euros the broker's statement says moved in the account for this operation,
-   * as printed there, fees in euros included (ADR-0030, amended by prompt 012
-   * (n)). The sign comes from the event type, so it is never negative; zero
-   * only in `dividend` and `interest` (a dividend withheld whole at source is a
-   * *known* zero); absent means **unknown**, never zero. Only when `currency` is
-   * not `EUR`. **Informative: no projection, no tax figure and no balance reads
-   * it** — a closed list of modules may, and the architecture test holds it.
+   * as printed there, fees in euros included (ADR-0030). The sign comes from
+   * the event type, so it is never negative; zero only in `dividend` and
+   * `interest` (a dividend withheld whole at source is a *known* zero); absent
+   * means **unknown**, never zero. Only when `currency` is not `EUR`.
+   * **Informative: no projection, no tax figure and no balance reads it** — a
+   * closed list of modules may, and the architecture test holds it.
    */
   broker_settled_eur?: DecimalString;
 }
@@ -311,12 +311,12 @@ export interface InterestEvent extends Envelope {
   notes?: string;
   /**
    * Euros the broker's statement says moved in the account for this operation,
-   * as printed there, fees in euros included (ADR-0030, amended by prompt 012
-   * (n)). The sign comes from the event type, so it is never negative; zero
-   * only in `dividend` and `interest` (a dividend withheld whole at source is a
-   * *known* zero); absent means **unknown**, never zero. Only when `currency` is
-   * not `EUR`. **Informative: no projection, no tax figure and no balance reads
-   * it** — a closed list of modules may, and the architecture test holds it.
+   * as printed there, fees in euros included (ADR-0030). The sign comes from
+   * the event type, so it is never negative; zero only in `dividend` and
+   * `interest` (a dividend withheld whole at source is a *known* zero); absent
+   * means **unknown**, never zero. Only when `currency` is not `EUR`.
+   * **Informative: no projection, no tax figure and no balance reads it** — a
+   * closed list of modules may, and the architecture test holds it.
    */
   broker_settled_eur?: DecimalString;
 }
@@ -374,12 +374,12 @@ export interface StandaloneFeeEvent extends Envelope {
   fingerprint: string;
   /**
    * Euros the broker's statement says moved in the account for this operation,
-   * as printed there, fees in euros included (ADR-0030, amended by prompt 012
-   * (n)). The sign comes from the event type, so it is never negative; zero
-   * only in `dividend` and `interest` (a dividend withheld whole at source is a
-   * *known* zero); absent means **unknown**, never zero. Only when `currency` is
-   * not `EUR`. **Informative: no projection, no tax figure and no balance reads
-   * it** — a closed list of modules may, and the architecture test holds it.
+   * as printed there, fees in euros included (ADR-0030). The sign comes from
+   * the event type, so it is never negative; zero only in `dividend` and
+   * `interest` (a dividend withheld whole at source is a *known* zero); absent
+   * means **unknown**, never zero. Only when `currency` is not `EUR`.
+   * **Informative: no projection, no tax figure and no balance reads it** — a
+   * closed list of modules may, and the architecture test holds it.
    */
   broker_settled_eur?: DecimalString;
 }
@@ -396,7 +396,7 @@ export interface ValuationEvent extends Envelope {
   /**
    * Date of the ECB rate applied. Required since ADR-0021; see the note below.
    *
-   * This is where the hole was found (challenge 3, finding 6): form 720 values
+   * This is why it is required: form 720 values
    * at the 31/12 price **converted at the ECB rate of that day**, and 31/12
    * falls on a weekend two years out of seven, so a valuation in a foreign
    * currency without the date of its rate is not reproducible from the official
@@ -410,7 +410,7 @@ export interface ValuationEvent extends Envelope {
  * **Why these four became required, and why it had to be now.**
  *
  * `cash_deposit`, `cash_withdrawal`, `standalone_fee` and `valuation` gained
- * `fx_rate_date` as an optional field in feature 005. Making it required is a
+ * `fx_rate_date` as an optional field. Making it required is a
  * **hardening**, and ADR-0018 allows one inside schema version 1 only while the
  * real ledger is empty: the loader judges old lines by today's rules, so
  * hardening with data inside leaves the ledger not degraded but **unreadable in
@@ -527,7 +527,7 @@ export interface ForcedSaleEntry {
    * said: a forced sale settles account by account and each broker withholds
    * its own, so a single amount would have to be split between accounts and the
    * split would be a figure the system invented. It is the same reason the fee
-   * moved here (challenge 2026-08-31, finding 8).
+   * moved here.
    */
   withholding?: DecimalString;
 }
@@ -584,7 +584,7 @@ export interface CorporateActionEvent extends Envelope {
    * a merger, exchange or spin-off (ADR-0021). Optional. It does not decide
    * which primitives an exchange composes into —that is still the user's
    * choice, and `KIND_RULES` does not look at this field— but the tax engine
-   * **reads it** (feature 009): an exchange that says nothing about the regime
+   * **reads it**: an exchange that says nothing about the regime
    * is exposed as doubtful under criteria #7 and #13, and one that says the
    * regime does **not** apply while keeping date and cost gets its own note,
    * `tax_neutrality_contradiction`.
@@ -670,7 +670,7 @@ export interface FiledPendingLoss {
 export interface FiledRentaFigures {
   savings_base_eur: DecimalString;
   pending_losses: FiledPendingLoss[];
-  /** Losses still deferred by the wash-sale rule at 31/12. Negative; for comparison only (feature 009, Q9). */
+  /** Losses still deferred by the wash-sale rule at 31/12. Negative; for comparison only. */
   deferred_losses_eur: DecimalString;
 }
 
@@ -678,14 +678,14 @@ export interface FiledRentaFigures {
  * One asset as an informative return declares it. Cash is **the account**; a
  * security is **(account, asset)**. Without this list there is no way to know
  * when the taxpayer stopped holding something that was declared, which is the
- * second trigger of having to file again (prompt 010, P3).
+ * second trigger of having to file again.
  */
 export interface FiledItem {
   category: FilingCategory;
   account_id: AccountId;
   /** Absent on a cash account: the item is the account itself. */
   asset_id?: AssetId;
-  /** Cash: the balance at 31/12 and the average of the fourth quarter (P2). */
+  /** Cash: the balance at 31/12 and the average of the fourth quarter. */
   balance_eur?: DecimalString;
   q4_average_eur?: DecimalString;
   /** Securities and crypto: the value at 31/12. */

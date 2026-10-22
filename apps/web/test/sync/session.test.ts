@@ -1,5 +1,4 @@
-// Feature 015, E1: what the web learns of its session, and how it closes it
-// (docs/api.md §3; P8 (a), B5).
+// What the web learns of its session, and how it closes it (docs/api.md §3).
 
 import { describe, expect, it } from "vitest";
 import { bodySha256, readSession, signInHref, signOut } from "../../src/sync/session.js";

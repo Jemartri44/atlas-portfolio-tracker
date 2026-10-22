@@ -1,4 +1,4 @@
-// A transient failure of AWS (feature 015; ADR-0034, row 13): a
+// A transient failure of AWS (ADR-0034, row 13): a
 // `ThrottlingException` of SSM, a 5xx of S3. It is **never** a credential that
 // passes and never one that is invalid for ever: the API answers
 // `503 remote_unavailable`, which may be retried. Implementations of the

@@ -1,9 +1,9 @@
 // @vitest-environment happy-dom
 //
-// The two analytical screens, **rendered**. Not their view-models: the screens,
-// with the store loaded and the router in front, because that wiring is where
-// the four rules of this feature actually take effect and where the blocking
-// defect of feature 004 was born.
+// The two analytical screens, **rendered**. Not their view-models: the screens, with the store
+// loaded and the router in front, because that wiring is where the four rules of the analytical
+// screens actually take effect and where the blocking defect of quantities taken from the wrong
+// date was born.
 //
 // What it caught when it was written: eight mutations of that wiring — the
 // privacy mask on a chart, the hole that must not be spanned, and both screens
@@ -87,10 +87,9 @@ const coreTotalAt = (date: string): string => {
 
 describe("Núcleo cuts the ledger by the date asked", () => {
   /**
-   * The blocking defect of feature 004, literally: quantities taken from the end
-   * of the ledger while the date only chose the prices. The screens have to
-   * project with `asOf` (ADR-0016), and this is the only test that looks at the
-   * place where that decision is made.
+   * The blocking defect, literally: quantities taken from the end of the ledger while the date only
+   * chose the prices. The screens have to project with `asOf` (ADR-0016), and this is the only test
+   * that looks at the place where that decision is made.
    */
   it("shows the figures of the date in the address, not of the last event", async () => {
     const early = text(await show("/cartera?fecha=2027-01-31", Cartera));
@@ -183,10 +182,9 @@ describe("the privacy mode covers the two screens", () => {
 
     expect(shown).toContain(MASK);
     expect(DECIMAL.test(withoutPercentages(shown))).toBe(false);
-    // Including the ones a warning **says**. This is the sentence the review of
-    // feature 007 found (N11), and the bucket screen has its own call to the
-    // catalogue: masking it in the summary would not have masked it here.
-    // The mask keeps its unit, and nothing else of the figure (D2).
+    // Including the ones a warning **says**: the bucket screen has its own call to the catalogue,
+    // so masking it in the summary would not have masked it here. The mask keeps its unit, and
+    // nothing else of the figure.
     expect(shown).toContain(
       `El aporte bruto al cubo (${MASK} €) pasa del 80 % del tope de ${MASK} €`,
     );
@@ -226,10 +224,9 @@ describe("the privacy mode covers the two screens", () => {
  * A transfer request left open long before any plausible "today", so it is
  * overdue whenever this test runs and stays overdue tomorrow.
  *
- * `transfer_max_days` had existed since phase 1 with nobody reading it; feature
- * 007 added `transferWatch`, which applies it — and the summary went on calling
- * `pendingTransfers`, the plain query that knows nothing about the rule. The
- * warning was computed, translated in both catalogues and shown nowhere.
+ * `transfer_max_days` had existed since phase 1 with nobody reading it; `transferWatch` was added to
+ * apply it — and the summary went on calling `pendingTransfers`, the plain query that knows nothing
+ * about the rule. The warning was computed, translated in both catalogues and shown nowhere.
  */
 const CATALOGUE = [
   {
@@ -348,14 +345,12 @@ describe("Resumen applies the rule of `transfer_max_days`", () => {
 });
 
 /**
- * A loss-making sale of a fund bought inside the wash-sale window, so the
- * summary carries a warning whose figures live **inside the sentence**: "Venta
- * con pérdida de World Index Fund del 2026-02-12 (−500,00 EUR) cuando siguen
- * en cartera 0,5 títulos de una compra del 2026-01-14…". It sells 10 of the
- * 10.5 bought: a purchase sold whole defers nothing and is not named
- * (criterion #18, feature 009), and the warning says what is left of it, not
- * what was bought (fiscal review 7a). The dates are in the past of any plausible "today", which
- * is what keeps this ledger stable: the summary projects at today's date.
+ * A loss-making sale of a fund bought inside the wash-sale window, so the summary carries a warning
+ * whose figures live **inside the sentence**: "Venta con pérdida de World Index Fund del 2026-02-12
+ * (−500,00 EUR) cuando siguen en cartera 0,5 títulos de una compra del 2026-01-14…". It sells 10 of
+ * the 10.5 bought: a purchase sold whole defers nothing and is not named (criterion #18), and the
+ * warning says what is left of it, not what was bought. The dates are in the past of any plausible
+ * "today", which is what keeps this ledger stable: the summary projects at today's date.
  */
 const WASH_SALE = ledgerOf(
   {
@@ -395,7 +390,7 @@ const WASH_SALE = ledgerOf(
 );
 
 /**
- * **The prose of a warning is a figure too** (N11 of the review of feature 007).
+ * **The prose of a warning is a figure too.**
  *
  * The tables, the cards and the axes were masked and covered by tests, and the
  * warning right under them went on saying "el aporte bruto al cubo (5000 EUR)
@@ -417,11 +412,10 @@ describe("the privacy mode covers the prose of the warnings", () => {
     );
 
   beforeEach(async () => {
-    // Standing inside the window: the sale is of 12/02/2026 and the window of
-    // a fund set to one year closes in 2027, so the warning this test is about
-    // only exists before then. It used to stand on the **wall clock**, which
-    // happened to be inside the window while this was written and would have
-    // silently emptied the block the day it was not (feature 011, P7).
+    // Standing inside the window: the sale is of 12/02/2026 and the window of a fund set to one
+    // year closes in 2027, so the warning this test is about only exists before then. It used to
+    // stand on the **wall clock**, which happened to be inside the window when this was written and
+    // would have silently emptied the block the day it was not.
     await loadInto({
       deps: deps(WASH_SALE, "2026-06-01T10:00:00.000Z"),
       source: { expiresAt: "2099-01-01T00:00:00.000Z" },

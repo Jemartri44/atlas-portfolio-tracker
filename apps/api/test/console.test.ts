@@ -1,8 +1,6 @@
-// Feature 015, E2: the token of the console through the API (plan §4.2, T13
-// to T26), walked end to end against the doubles of Google, SSM and S3: the
-// start, the return by loopback and by hand, the exchange and its single use,
-// the check of a token on every request, the renewal, the reissue, the
-// revocation and the list of the web.
+// The token of the console through the API, walked end to end against the doubles of Google, SSM
+// and S3: the start, the return by loopback and by hand, the exchange and its single use, the check
+// of a token on every request, the renewal, the reissue, the revocation and the list of the web.
 
 import { randomBytes } from "node:crypto";
 import { base64url, pkceChallenge, Signer } from "@atlas/adapters/access";
@@ -160,7 +158,7 @@ describe("the return of the console (§4.2; T16 to T18)", () => {
     expect(cookies.has("__Host-atlas_session")).toBe(false);
     expect(cookies.get("__Host-atlas_login")).toBe("");
     expect(done.headers["referrer-policy"]).toBe("no-referrer");
-    // The code is signed with the subkey of its purpose, and no other opens it (B3).
+    // The code is signed with the subkey of its purpose, and no other opens it.
     const signer = Signer.fromSessionKey(SESSION_KEY);
     const code = codeOfLoopback(done.headers.location as string);
     expect(JSON.parse(signer.open("console_code", code) as string)).toMatchObject({
@@ -186,9 +184,8 @@ describe("the return of the console (§4.2; T16 to T18)", () => {
     const code = codeOfPage(done.body);
     expect(code.length).toBeGreaterThan(100);
     expect(before).not.toContain(code);
-    // Found on the screen (captures of E2): a code of ~400 characters with no
-    // place to break overflowed a phone five times its width. Nothing on the
-    // page may run longer than 64 characters without a break.
+    // A code of ~400 characters with no place to break once overflowed a phone five times its
+    // width. Nothing on the page may run longer than 64 characters without a break.
     expect(/<code>[^<]{65,}/.test(done.body)).toBe(false);
     expect(done.body).toContain("«portátil de casa»");
     expect(setCookies(done).has("__Host-atlas_session")).toBe(false);
@@ -217,7 +214,7 @@ describe("POST /api/auth/console/token (§4.3; T20 to T22)", () => {
       state: "active",
       device_name: "portátil de casa",
     });
-    // The single use: the same code again is `console_code_used`, and writes nothing (mutant 19).
+    // The single use: the same code again is `console_code_used`, and writes nothing.
     const again = await exchange(api, code, secrets.verifier);
     expect(again.statusCode).toBe(409);
     expect(errorOf(again).code).toBe("console_code_used");
@@ -625,8 +622,7 @@ describe("the reissue (§4.2 and §4.3; T23, mutant 29 sexies)", () => {
     for (const tokenId of ["AAAAAAAAAAAAAAAAAAAAAA", "BBBBBBBBBBBBBBBBBBBBBB"]) {
       api.ssm.set(`${TOKENS}${tokenId}`, record(tokenId));
     }
-    // A live token of **another** console: the reissue of ID never touches it
-    // (review of PR #95, B1: revoking every record survived).
+    // A live token of **another** console: the reissue of ID never touches it.
     const other = "OTHEROTHEROTHEROTHEROT";
     const otherRecord = record(other).replace(
       `"device_id":"${ID}"`,
@@ -650,8 +646,8 @@ describe("the reissue (§4.2 and §4.3; T23, mutant 29 sexies)", () => {
       (write) => !write.startsWith("putNew /atlas/dev/device-tokens/AAAA"),
     );
     expect(writes.at(-1)).toBe(`putNew ${TOKENS}${body.token_id}`);
-    // The record keeps the name of the device the user confirmed, the one of
-    // its object, not the one the console proposed (review of PR #95, N7).
+    // The record keeps the name of the device the user confirmed, the one of its object, not the
+    // one the console proposed.
     expect(body.device_name).toBe("sobremesa");
     expect(JSON.parse(api.ssm.history(`${TOKENS}${body.token_id}`)[0] as string).device_name).toBe(
       "sobremesa",
@@ -958,9 +954,8 @@ describe("what the round 2 of the review of PR #95 found", () => {
     const code = codeOfLoopback(
       /<a href="([^"]+)"/.exec(done.body)?.[1]?.replaceAll("&amp;", "&") as string,
     );
-    // Interleaved as the review did: both read the code's record before
-    // either creates it, and the second lists the tokens of the device after
-    // the first created its own.
+    // Interleaved: both read the code's record before either creates it, and the second lists the
+    // tokens of the device after the first created its own.
     const get = api.ssm.get.bind(api.ssm);
     const putNew = api.ssm.putNew.bind(api.ssm);
     const listByPath = api.ssm.listByPath.bind(api.ssm);

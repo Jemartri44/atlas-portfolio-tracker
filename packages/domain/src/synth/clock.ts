@@ -1,4 +1,4 @@
-// Clock of the synthetic generator (feature 003): every instant derives from a
+// Clock of the synthetic generator: every instant derives from a
 // business date, never from the wall clock, and it only moves forward, so the
 // `recorded_at` values and the ULIDs are monotonic in file order.
 

@@ -1,5 +1,4 @@
-// Time series (decision (f) of prompt 007: "the series are computed by the
-// domain, with tests, not by a loop inside a component").
+// Time series (with tests, not by a loop inside a component").
 //
 // A series is N projections of the same ledger cut at N dates (`asOf`,
 // ADR-0016). It is the same code path `atlas networth --date` walks, so a point
@@ -8,10 +7,10 @@
 // **The rule that decides everything here**: a figure exists only when *all* of
 // its components have a price. `netWorth` returns, in a partial block, the sum
 // of what *does* have a price — a number smaller than reality and, drawn on a
-// line, indistinguishable from a fall. Drawing it would invent a loss that never
-// happened, which is worse than drawing nothing (constitution V; Q1 of this
-// feature). So a partial block is **absent**, never a number, and `missing`
-// says what was lacking.
+// line, indistinguishable from a fall. Drawing it would invent a loss that
+// never happened, which is worse than drawing nothing (constitution V). So a
+// partial block is **absent**, never a number, and `missing` says what was
+// lacking.
 //
 // Nothing is interpolated, carried forward or filled in. There is no option to
 // do so.
@@ -120,7 +119,7 @@ export const sampleEvenly = <T>(values: readonly T[], limit: number): T[] => {
  *
  * **The cap never samples a hole away.** Sampling drops intermediate dates, and
  * a dropped date that happened to be the incomplete one turns a gap into a
- * continuous line — the interpolation decision (d) forbids, arrived at by
+ * continuous line — the interpolation decision forbids, arrived at by
  * arithmetic instead of by drawing. The cap shapes which **complete** points are
  * drawn; a date known to be incomplete is kept on top of it, as is the last date
  * of the range, which is the day the user asked about.
@@ -183,8 +182,8 @@ const at = (events: readonly LedgerEvent[], date: CivilDate) => {
 
 /**
  * The dates of a net worth series, as `netWorthSeries` draws them. Exported
- * from the module, never from the barrel, so that a series drawn beside it
- * (the contributions, feature 020, E4) shares its axis point by point.
+ * from the module, never from the barrel, so that a series drawn beside it (the
+ * contributions) shares its axis point by point.
  */
 export const netWorthDates = (events: readonly LedgerEvent[], options: SeriesOptions): Resolved =>
   rangeOf(projectLedger(events, { collectErrors: true }), options, (date) => {

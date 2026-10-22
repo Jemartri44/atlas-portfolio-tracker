@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 //
-// The way back from a page that does not exist is a button of 44px, not a word
-// of 24: it is the only thing on the screen to press (review of 2026-09-19).
+// The way back from a page that does not exist is a button of 44px, not a word of 24: it is the
+// only thing on the screen to press.
 
 import { afterEach, describe, expect, it } from "vitest";
 import NoExiste from "../src/routes/no-existe.jsx";

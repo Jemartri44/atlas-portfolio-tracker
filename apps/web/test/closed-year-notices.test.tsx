@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 //
-// "Esto toca un ejercicio que ya declaraste", in the four places the web
-// writes (FR-018, ADR-0020 amended): registering, correcting, annulling and
-// changing the configuration. It never refuses; what it may never do is stay
-// quiet, and the moment it is useful is **before** the question.
+// "Esto toca un ejercicio que ya declaraste", in the four places the web writes (ADR-0020 amended):
+// registering, correcting, annulling and changing the configuration. It never refuses; what it may
+// never do is stay quiet, and the moment it is useful is **before** the question.
 //
 // The same notice in the four of them on purpose: a warning that looks
 // different in each screen is the warning nobody recognises.
@@ -82,9 +81,8 @@ describe("a write that reaches a filed return", () => {
     expect(shown.indexOf("Afecta a la Renta")).toBeLessThan(shown.indexOf("Registrar"));
   });
 
-  // Feature 015, E4 (P11; `specs/014-ledger-sync-core/questions.md (in git history)` §9.2): a
-  // corporate action lands on a date of its own and rewrites lots, and the
-  // console already says it (`corporate-actions.ts`).
+  // A corporate action lands on a date of its own and rewrites lots, and the console already says
+  // it (`corporate-actions.ts`).
   it("says so in the form of a corporate action, before the button that writes", async () => {
     await withFiling();
     const host = await show(
@@ -196,8 +194,8 @@ describe("a write that reaches a filed return", () => {
     await settle(60);
     const open = () =>
       [...host.querySelectorAll("dialog")].find((node) => node.hasAttribute("open"));
-    // First the question about the ECB rates of the lines whose fiscal date
-    // moves (feature 012, block 6), then the one about the filed return.
+    // First the question about the ECB rates of the lines whose fiscal date moves, then the one
+    // about the filed return.
     expect(text(open())).toContain("Este cambio deja tipos del BCE de otra fecha");
     await press(open() as HTMLElement, "Guardar de todas formas");
     await settle(60);

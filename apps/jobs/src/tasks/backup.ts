@@ -1,22 +1,18 @@
-// The monthly dump (feature 016, E4; ADR-0032, point 3; plan §8): the ledger
-// byte for byte, `positions.json`, the ECB history in force **with its
-// manifest** and `prices/` whole, into `backups/<YYYY-MM>/` of the month of
-// Madrid. It composes and decides nothing — what to do with each object is
-// the domain's (`dumpStep`, `dumpManifestStep`) — and **it sends nothing**
-// (§8.2 B2): what fails is a finding in its record, for the mail function.
+// The monthly dump (ADR-0032, point 3): the ledger byte for byte, `positions.json`, the ECB history
+// in force **with its manifest** and `prices/` whole, into `backups/<YYYY-MM>/` of the month of
+// Madrid. It composes and decides nothing — what to do with each object is the domain's
+// (`dumpStep`, `dumpManifestStep`) — and **it sends nothing**: what fails is a finding in its
+// record, for the mail function.
 //
-// **A dump is for ever.** Every object is written with `If-None-Match: *`,
-// never over another. **Before each write, the object is noted in the record
-// of the attempt** (its key and SHA-256, a conditional write on the record;
-// review of PR #109, R2-B1). A month left half done by a cut — a thrown error,
-// or a run that dies with its record still claimed (a timeout) — is finished
-// by the retry, which leaves what an earlier attempt noted and wrote, and says
-// so (`kept_from_earlier_attempt`): the positions are always those of the
-// ledger **of the dump**, not of the live one. An object there with bytes no
-// attempt noted is refused (`backup_object_differs`, N3 of round 1) and
-// nothing more is written. A conditional write that meets another writer
-// stops the run: only this function writes `backups/`, so it can only be
-// another run of it.
+// **A dump is for ever.** Every object is written with `If-None-Match: *`, never over another.
+// **Before each write, the object is noted in the record of the attempt** (its key and SHA-256, a
+// conditional write on the record). A month left half done by a cut — a thrown error, or a run that
+// dies with its record still claimed (a timeout) — is finished by the retry, which leaves what an
+// earlier attempt noted and wrote, and says so (`kept_from_earlier_attempt`): the positions are
+// always those of the ledger **of the dump**, not of the live one. An object there with bytes no
+// attempt noted is refused (`backup_object_differs`) and nothing more is written. A conditional
+// write that meets another writer stops the run: only this function writes `backups/`, so it can
+// only be another run of it.
 
 import { LEDGER_KEY, sha256Bytes } from "@atlas/adapters/aws";
 import { JobsWriteConflict } from "@atlas/adapters/aws-jobs";
@@ -48,7 +44,7 @@ const PRICES_DIR = "prices/";
 export const monthlyBackup: TaskRunner = async (context: TaskContext): Promise<TaskResult> => {
   const { deps } = context;
   const prefix = dumpPrefix(context.period);
-  // What earlier attempts of the month say they wrote, byte for byte (copias N3).
+  // What earlier attempts of the month say they wrote, byte for byte.
   const earlier = new Map<string, string[]>();
   for (const object of context.earlier) {
     earlier.set(object.key, [...(earlier.get(object.key) ?? []), object.sha256]);
@@ -81,7 +77,7 @@ export const monthlyBackup: TaskRunner = async (context: TaskContext): Promise<T
     });
     switch (step) {
       case "write":
-        // Said before it is written: a run that dies after this write still left it said (R2-B1).
+        // Said before it is written: a run that dies after this write still left it said.
         await context.note([{ key, sha256: next }]);
         if ((await deps.objects.putIfNoneMatch(key, bytes)) === "exists") {
           throw new JobsWriteConflict();
@@ -160,7 +156,7 @@ export const monthlyBackup: TaskRunner = async (context: TaskContext): Promise<T
     }
 
     // 3. The ECB history in force, then its manifest — only over the very file it names.
-    // None in force that matches its manifest: the dump goes without, and says so (copias N1).
+    // None in force that matches its manifest: the dump goes without, and says so.
     let ecbInconsistent = false;
     let ecbMissing = false;
     const manifest = await deps.objects.get(`${ECB_DIR}manifest.json`);

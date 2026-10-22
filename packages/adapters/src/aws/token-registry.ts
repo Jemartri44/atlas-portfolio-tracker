@@ -1,9 +1,8 @@
-// The records of the console tokens in SSM (ADR-0033, point 9;
-// `data-model.md` §2): one `SecureString` per token under
+// The records of the console tokens in SSM (ADR-0033, point 9): one `SecureString` per token under
 // `/atlas/<env>/device-tokens/<token_id>`, **written only to create it and to
 // revoke it**, never deleted. The name is built only from a valid `token_id`
-// and never with a selector (B1); the record is read strictly and only as the
-// token asked for; nothing is cached (B2). The rules are the domain's.
+// and never with a selector; the record is read strictly and only as the
+// token asked for; nothing is cached. The rules are the domain's.
 
 import {
   parseTokenRecord,

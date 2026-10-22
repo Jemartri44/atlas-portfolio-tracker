@@ -1,9 +1,9 @@
 // @vitest-environment happy-dom
 //
-// Feature 023 (ADR-0035, E2b): writing from the web, over the real handler with
-// the doubles of S3, SSM and Google. A write is one unit with `If-Match`; a
-// `412` reloads quietly and asks to confirm again; a lost answer is looked for
-// by its ids and a retry uses the same ones; an ended session is said, not lost.
+// Writing from the web (ADR-0035), over the real handler with the doubles of S3, SSM and Google. A
+// write is one unit with `If-Match`; a `412` reloads quietly and asks to confirm again; a lost
+// answer is looked for by its ids and a retry uses the same ones; an ended session is said, not
+// lost.
 
 import type { PreparedRateCorrections } from "@atlas/domain/ecb";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";

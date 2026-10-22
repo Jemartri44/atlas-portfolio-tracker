@@ -1,12 +1,12 @@
-// Where the web gets the ECB history (feature 012, block 3; ADR-0029, point 3).
+// Where the web gets the ECB history (ADR-0029, point 3).
 //
 // **The web downloads nothing from a third party.** It uses the public copy
 // kept in this browser: imported by hand, or downloaded from our own cloud
 // (`./cloud.ts`). Without one there is no history: nothing is proposed, and
-// the rates are typed as always (decision (p)).
+// the rates are typed as always.
 //
-// Everything here is loaded lazily: nothing of the ECB is on the boot path
-// (decision (r)), and the build fails if it ever is.
+// Everything here is loaded lazily: nothing of the ECB is on the boot path, and the build fails if
+// it ever is.
 
 import {
   forgetImportedHistory,
@@ -27,7 +27,7 @@ import { entryOfZip, isZip } from "./zip.js";
 
 export interface WebHistory {
   history?: EcbHistory;
-  /** Where it came from: a copy imported by hand, or the cloud (feature 016, E3). */
+  /** Where it came from: a copy imported by hand, or the cloud. */
   origin?: "imported" | "cloud";
   source?: EcbSource;
   /** The last day it publishes. */
@@ -118,7 +118,7 @@ export const importHistoryFile = async (
   return { kind: "imported", latest: check.latest, source };
 };
 
-/** Erases the copy of this browser (imported or from the cloud) and reads again (review of PR #108, N4). */
+/** Erases the copy of this browser (imported or from the cloud) and reads again. */
 export const forgetWebCopy = async (): Promise<void> => {
   await forgetImportedHistory();
   await reloadWebHistory();

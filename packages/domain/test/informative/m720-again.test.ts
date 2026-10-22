@@ -1,5 +1,4 @@
-// When a Modelo 720 has to be filed **again**, worked out by hand (feature 010,
-// §6.2 of `specs/010-tax-output/questions.md (in git history)`).
+// When a Modelo 720 has to be filed **again**, worked out by hand.
 //
 // Four years on one ledger, each sitting on an edge on purpose:
 //
@@ -184,8 +183,8 @@ describe("filing the Modelo 720 again", () => {
     const rise = securities.reasons.find((reason) => reason.kind === "increase");
     expect(cents(rise?.before_eur)).toBe("60000.00");
     expect(cents(rise?.after_eur)).toBe("80000.01");
-    // Against 2028 it would be one cent, and 2028 was never filed: that is the
-    // mutant "compare with the year before" and this is what kills it.
+    // Against 2028 it would be one cent, and 2028 was never filed: that is the mistake of comparing
+    // with the year before, and this is what catches it.
     expect(rise?.against_year).toBe(2027);
     // The accounts go above the threshold for the first time: the return of
     // 2027 did not declare them.
@@ -235,9 +234,8 @@ describe("filing the Modelo 720 again", () => {
 
 describe("an account of the last return that is closed", () => {
   it("obliges by extinction, without the return naming an asset", () => {
-    // The second trigger applies to cash too: the asset of that category is
-    // **the account**, and an account is extinguished when it is closed, not
-    // when it empties (S7, question Q7).
+    // The second trigger applies to cash too: the asset of that category is **the account**, and an
+    // account is extinguished when it is closed, not when it empties.
     const b = new LedgerBuilder();
     b.settings(SETTINGS);
     b.account("acc_ib", { platform: "ibkr", country: "IE" });

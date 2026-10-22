@@ -1,7 +1,7 @@
 // Integrity checks (data-schema.md §7): what a quarterly verification reports.
-// References the projection already rejects are not repeated here (feature 003
-// plan, table "reference → where it is checked"); `dangling_reference` covers
-// the one nobody checked: `reference_etf_id`.
+// References the projection already rejects are not repeated here (table
+// "reference → where it is checked"); `dangling_reference` covers the one
+// nobody checked: `reference_etf_id`.
 
 import { Quantity } from "../money/quantity.js";
 import type { AccountId, AssetId } from "../schema/events.js";
@@ -16,7 +16,7 @@ export interface IntegrityFinding {
   event_ids: string[];
   /**
    * The facts of the finding, for an interface to say them in its own words
-   * (feature 012: the findings of the ECB carry the field, the rates and the
+   * (the findings of the ECB carry the field, the rates and the
    * dates, so the console and the web can say them in Spanish). Optional: the
    * older findings say all they have to say with their code.
    */
@@ -72,9 +72,9 @@ export const integrity = (state: LedgerState): IntegrityFinding[] => {
     }
   }
   // One ISIN, one asset (ADR-0009): two assets sharing it are one security to
-  // the tax agency and two to FIFO and the wash-sale rule. Recording refuses it
-  // since feature 009; a ledger written before is told here, never refused.
-  // Compared as the tax agency reads it: `ie00…` and `IE00…` are one security.
+  // the tax agency and two to FIFO and the wash-sale rule. Recording refuses
+  // it; a ledger written before is told here, never refused. Compared as the
+  // tax agency reads it: `ie00…` and `IE00…` are one security.
   for (const [isin, assets] of sharedIsins(state.assets.values())) {
     findings.push({
       severity: "error",

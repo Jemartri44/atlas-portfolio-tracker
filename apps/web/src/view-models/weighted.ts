@@ -1,14 +1,11 @@
 // Which assets of the core the configuration asks a target weight for.
 //
-// The defect round decided «only active assets», and the screen filtered on
-// the `active` flag of the catalogue. That flag is not enough: a delisting is
-// followed by an update that deactivates the asset, but a fund merger, a
-// change of share class or a merger **converts** every unit into another asset
-// and leaves the old one active in the catalogue, with nothing in it and no
-// way to buy it. So «Small Cap Index Fund» and «Global Bond Index Fund» came
-// back with an empty weight after their merger and their class change (review
-// of 2026-09-19). An asset a corporate action converted away, and that holds
-// nothing, is not asked for a weight.
+// Only active assets are asked for a weight, but the `active` flag of the catalogue is not enough:
+// a delisting is followed by an update that deactivates the asset, but a fund merger, a change of
+// share class or a merger **converts** every unit into another asset and leaves the old one active
+// in the catalogue, with nothing in it and no way to buy it. So «Small Cap Index Fund» and «Global
+// Bond Index Fund» came back with an empty weight after their merger and their class change. An
+// asset a corporate action converted away, and that holds nothing, is not asked for a weight.
 
 import {
   type Asset,

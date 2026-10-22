@@ -60,9 +60,9 @@ const INVOCATIONS: {
   argv: string[];
   readOnly: boolean;
   /**
-   * The command acts on the **folder**, not on the ledger (feature 012: the
-   * lock). It neither reads nor writes the ledger, so neither side applies;
-   * it is still listed, so the question is asked for every new command.
+   * The command acts on the **folder**, not on the ledger (the lock). It neither reads nor writes
+   * the ledger, so neither side applies; it is still listed, so the question is asked for every new
+   * command.
    */
   folderOnly?: true;
 }[] = [
@@ -87,9 +87,9 @@ const INVOCATIONS: {
   { command: "export", argv: ["export", "--format", "csv"], readOnly: true },
   // `check` is the tool that lists the invalid events: it reports them, it does not warn about itself.
   { command: "check", argv: ["check"], readOnly: true },
-  // `tax` writes nothing, but on a degraded ledger it refuses instead of warning:
-  // a savings base computed over a skipped event is approximate, and the answer
-  // to that is the list of what to repair (feature 009, Q11).
+  // `tax` writes nothing, but on a degraded ledger it refuses instead of warning: a savings base
+  // computed over a skipped event is approximate, and the answer to that is the list of what to
+  // repair.
   { command: "tax", argv: ["tax", "2027"], readOnly: false },
   // The informative returns refuse for the same reason: they value the
   // quantities of one day, and a projection that skipped an event holds the
@@ -155,16 +155,16 @@ const INVOCATIONS: {
   // The drafts live in the folder, outside the ledger; the ledger is read only
   // to say whether their rate is published, never to show its figures.
   { command: "draft", argv: ["draft", "list"], readOnly: true, folderOnly: true },
-  // The prices live in the folder, outside the ledger (feature 013); the ledger
-  // is read only for the list of assets whose last close is shown.
+  // The prices live in the folder, outside the ledger; the ledger is read only for the list of
+  // assets whose last close is shown.
   { command: "prices", argv: ["prices", "symbols"], readOnly: true, folderOnly: true },
-  // The sessions of the console live in credentials.json, outside the folder
-  // (feature 015, E2); the ledger is never read nor written by them.
+  // The sessions of the console live in credentials.json, outside the folder; the ledger is never
+  // read nor written by them.
   { command: "remote", argv: ["remote", "status"], readOnly: true, folderOnly: true },
   // Retired (ADR-0035): it only says so, and touches no ledger.
   { command: "sync", argv: ["sync"], readOnly: true, folderOnly: true },
-  // The administration works on the remote with the role of administration,
-  // never on the figures of the local ledger (feature 015, E5).
+  // The administration works on the remote with the role of administration, never on the figures of
+  // the local ledger.
   {
     command: "admin",
     argv: ["admin", "devices", "--env", "test"],
@@ -297,9 +297,8 @@ describe("writing inside a git working tree", () => {
   });
 });
 
-// Q12, option (b) (§29 and §33): a line with a key twice — a hand edit — is
-// read with its last value and reported by `atlas check` as invalid, with its
-// id; the other commands answer on the degraded ledger.
+// A line with a key twice — a hand edit — is read with its last value and reported by `atlas check`
+// as invalid, with its id; the other commands answer on the degraded ledger.
 describe("a line with a key twice", () => {
   const twice = () => {
     const lines = configured().map((event) => encodeLine(event as unknown as LedgerEvent));
@@ -325,9 +324,8 @@ describe("a line with a key twice", () => {
     expect(h.text()).toContain(HEADER);
   });
 
-  // The remedy the message gives, walked whole (review of PR #98, B1; §35):
-  // annulled, the line stops being invalid, and every output that refused the
-  // ledger answers again.
+  // The remedy the message gives, walked whole: annulled, the line stops being invalid, and every
+  // output that refused the ledger answers again.
   it("is remedied by annulling it: check, compact, the renta and the 720 answer again", async () => {
     const h = twice();
     expect(await h.exec(["tax", "2027"])).not.toBe(0);

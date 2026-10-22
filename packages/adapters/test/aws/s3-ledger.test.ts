@@ -1,7 +1,7 @@
-// The remote ledger in S3 (ADR-0026, Part A; feature 015, E3, block 1): the
-// same contract as the memory, file and browser stores, over the double of
-// S3 that imitates what block 0 verified (questions.md §23.1). The etag is the
-// SHA-256 of the bytes; the ETag of S3 is only the condition of the write.
+// The remote ledger in S3 (ADR-0026, Part A): the same contract as the memory, file and
+// browser stores, over a double of S3 that imitates the documented behaviour of conditional
+// writes. The etag is the SHA-256 of the bytes; the ETag of S3 is only the condition of the
+// write.
 
 import { ArchiveExistsError, ConflictError, sha256Hex } from "@atlas/domain";
 import { describe, expect, it } from "vitest";

@@ -9,7 +9,8 @@
 //   3. the rest of the core.
 //
 // Computed on the ledger **of the console**, which the caller projects at the
-// day (`asOf`, P5): an asset without an open position spends no call unless it is a reference.
+// day (`asOf`): an asset without an open position spends no call unless it is a
+// reference.
 
 import { bucketAccountIds } from "../projections/bucket.js";
 import type { LedgerState } from "../projections/state.js";

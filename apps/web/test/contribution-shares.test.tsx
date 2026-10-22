@@ -1,10 +1,9 @@
 // @vitest-environment happy-dom
 //
-// M1 of feature 020 (E3), the contribution of the month: with the amounts
-// hidden, the card still says where the money goes — each asset's share of the
-// part that goes to the core, and the two parts of the amount as shares of it.
-// The shares are computed in decimal and rounded once, when they are shown; a
-// share of nothing is no share.
+// The contribution of the month: with the amounts hidden, the card still says where the money goes
+// — each asset's share of the part that goes to the core, and the two parts of the amount as shares
+// of it. The shares are computed in decimal and rounded once, when they are shown; a share of
+// nothing is no share.
 
 import {
   type ContributionPlan,

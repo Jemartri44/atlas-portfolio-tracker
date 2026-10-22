@@ -1,6 +1,5 @@
 // The manual price of an asset at a date: the last `valuation` the ledger
-// holds on or before it, and **nothing else** (feature 013, decision §6.5 (a)
-// of its prompt; ADR-0031, second amendment).
+// holds on or before it, and **nothing else** (ADR-0031, second amendment).
 //
 // **This is the one price the Modelo 720 reads, and any change here changes
 // the 720.** It is a leaf on purpose: it imports nothing of the price gate
@@ -11,12 +10,11 @@
 // reach even this.
 //
 // The gate of presentation (`prices.ts`) imports this file instead of reading
-// the valuations on its own (decision D-Q8 of the direction), so the
-// valuations are read in one place. The price paid for that is written here so
-// nobody pays it without knowing: a change made in this leaf for the sake of a
-// view is also a change of the Modelo 720. That is why the 720 carries the
-// test of an identical fiscal output with automatic quotes that would win in a
-// view, and the mutants of the 720 (prompt 013, §5, mutants 2 and 3).
+// the valuations on its own, so the valuations are read in one place. The price
+// paid for that is written here so nobody pays it without knowing: a change
+// made in this leaf for the sake of a view is also a change of the Modelo 720.
+// That is why the 720 carries the test of an identical fiscal output with
+// automatic quotes that would win in a view.
 
 import type { CivilDate } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
@@ -48,7 +46,7 @@ export interface ManualPrice {
 /**
  * Last valuation per asset on or before `date`. `state.valuations` is already
  * in (date, file position) order, so the last one seen wins and a tie is
- * broken by file position (decision (b) of prompt 004).
+ * broken by file position.
  */
 export const latestValuations = (
   state: LedgerState,

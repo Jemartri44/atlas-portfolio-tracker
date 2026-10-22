@@ -1,5 +1,4 @@
-// Feature 016, E2 (§8.2 B1, B2; mutants 18 and 18 bis): what the ECB and the
-// prices leave for the mail, with codes and subjects of the closed lists and
+// What the ECB and the prices leave for the mail, with codes and subjects of the closed lists and
 // counts only.
 
 import { describe, expect, it } from "vitest";
@@ -92,7 +91,7 @@ describe("the findings of the ECB", () => {
       { code: "ecb_rebuilt_unverified", subject: "ecb" },
       { code: "ecb_calendar_mismatch", subject: "ecb", counts: { days: 1 } },
     ]);
-    // A ZIP that contradicts the last readable generation asks for someone (R2-N1).
+    // A ZIP that contradicts the last readable generation asks for someone.
     expect(ecbFindings({ kind: "rejected", conflicts: [], total: 3 })).toEqual([
       { code: "ecb_history_damaged", subject: "ecb", counts: { conflicts: 3 } },
     ]);

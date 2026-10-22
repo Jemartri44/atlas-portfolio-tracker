@@ -9,11 +9,9 @@
 //   reference/ecb/previous/<name>    the one it replaced, as a backup
 //   reference/ecb/rejected/<when>-<name>  a download that did not validate
 //
-// Every write goes under the lock of the ledger folder (ADR-0026, Part B;
-// decision (t) of prompt 012): one lock for every write in the folder. Files
-// are written to a temporary name, synced and renamed, so a history is never
-// seen in half; the manifest is renamed last, so until then the old one is in
-// force.
+// Every write goes under the lock of the ledger folder (ADR-0026, Part B): one lock for every write
+// in the folder. Files are written to a temporary name, synced and renamed, so a history is never
+// seen in half; the manifest is renamed last, so until then the old one is in force.
 
 import { promises as fs } from "node:fs";
 import { join } from "node:path";

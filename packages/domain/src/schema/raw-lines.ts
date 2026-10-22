@@ -42,8 +42,8 @@ export const rawLinesText = (lines: readonly string[], schema: LedgerSchema): st
         line: index + 1,
       });
     }
-    // Its bytes would not be UTF-8, and the store would be unreadable (review
-    // of PR #96, B1): no store writes it, whoever asks.
+    // Its bytes would not be UTF-8, and the store would be unreadable: no store
+    // writes it, whoever asks.
     if (holdsLoneSurrogate(line)) {
       throw new ValidationError("raw_lone_surrogate", `line ${index + 1} is not Unicode`, {
         line: index + 1,

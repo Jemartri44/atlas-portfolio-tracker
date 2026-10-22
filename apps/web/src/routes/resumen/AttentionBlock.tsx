@@ -1,6 +1,6 @@
-// "¿Hay algo que hacer?" — every active warning, ordered by importance, each
-// one saying what happens and leading to where it is fixed (FR-034). When there
-// is nothing, it says so calmly instead of inventing a card.
+// "¿Hay algo que hacer?" — every active warning, ordered by importance, each one saying what
+// happens and leading to where it is fixed. When there is nothing, it says so calmly instead of
+// inventing a card.
 //
 // The order and the grouping are decided in `view-models/attention.ts`; here
 // they are only painted, with the one notice of the whole application and its
@@ -29,7 +29,7 @@ const VISIBLE = 4;
 export const AttentionBlock = (props: {
   items: readonly AttentionItem[];
   /**
-   * The notice of the 720 and the 721 out of the season (feature 020, M2):
+   * The notice of the 720 and the 721 out of the season:
    * a row kept for it while the tax engine answers, then the notice or
    * nothing. It counts among the four in sight.
    */

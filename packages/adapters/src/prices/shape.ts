@@ -22,7 +22,7 @@ export const closeOf = (date: unknown, close: unknown): DailyClose | undefined =
  * they give nothing or say they do not know («Unknown»); **anything else is
  * said as it is**, also what is not a code of three capitals (`GBp`): it is
  * then a disagreement the user confirms, never the silence of a source that
- * says nothing (decision D-Q2; second pass of the review of PR #78).
+ * says nothing.
  */
 export const saidCurrency = (value: unknown): string | undefined =>
   typeof value === "string" && value.trim() !== "" && value.trim() !== "Unknown"

@@ -1,7 +1,7 @@
 // The two lists of criteria, side by side and kept apart on purpose.
 //
 // "No sé cómo se lee esto" y "sé cómo se lee, y esto es lo que hay detrás" are
-// not the same thing (feature 010, block 2): the doubtful ones are where the
+// not the same thing: the doubtful ones are where the
 // reading itself is open, and the settled ones are the criteria held at high
 // certainty that still move a figure if they are read the other way. Filtering
 // the second list by amount is what lost 200,00 € of exposure once; an entry

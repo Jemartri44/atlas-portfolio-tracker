@@ -1,17 +1,15 @@
-// The web of the phone downloads the ECB history **from the cloud** (feature
-// 016, E3, block 2; 015, §7 P12): an origin next to the copy imported by
-// hand. With the session of this browser it reads
-// `manifest.json` from our own API — `If-None-Match` on the version it holds
-// — and the file in force, **checks its SHA-256 against the manifest**, and
-// keeps it as the imported copy is kept, marked as from the cloud. A file
-// that does not match is **not used**, and said; one that changes a rate the
-// copy held already is **not kept** (ADR-0029, point 2), as with an import.
+// The web of the phone downloads the ECB history **from the cloud**: an origin next to the copy
+// imported by hand. With the session of this browser it reads `manifest.json` from our own API —
+// `If-None-Match` on the version it holds — and the file in force, **checks its SHA-256 against the
+// manifest**, and keeps it as the imported copy is kept, marked as from the cloud. A file that does
+// not match is **not used**, and said; one that changes a rate the copy held already is **not
+// kept** (ADR-0029, point 2), as with an import.
 //
 // **Only when the user asks or opens the card of the ECB**: nothing here runs
-// at start or on a timer (mutant 25). It travels in the lazy section of
+// at start or on a timer. It travels in the lazy section of
 // Ajustes, next to the card that calls it; what is heavy — the ECB, the store
 // of the browser, the history of the web — comes in only when it runs, so
-// neither the boot nor the section grows by more than this file (§8.1 P13).
+// neither the boot nor the section grows by more than this file.
 // The CSP does not change: it is our own origin.
 
 import { httpReference } from "@atlas/adapters/reference-http";
@@ -90,7 +88,7 @@ export const downloadCloudHistory = async (
     return { kind: "saved", latest: check.latest, source: active.source };
   } catch (error) {
     // A `RemoteError` of the client, by its base class: the web imports the
-    // door of the sync only in its engine (feature 015's guardians).
+    // door of the sync only in its engine.
     if (error instanceof DomainError) {
       return { kind: "failed", code: error.code };
     }

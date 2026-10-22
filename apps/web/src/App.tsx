@@ -1,5 +1,4 @@
-// Router and shell. Fourteen routes, all readable and navigable
-// (`specs/006-web-shell/contracts/routes.md`), each screen lazily loaded so the
+// Router and shell. Fourteen routes, all readable and navigable, each screen lazily loaded so the
 // first paint only carries what the summary needs.
 
 import { Navigate, Route, Router, useLocation } from "@solidjs/router";
@@ -23,9 +22,8 @@ const Presentar = lazy(() => import("./routes/fiscal/presentar.jsx"));
 const NoExiste = lazy(() => import("./routes/no-existe.jsx"));
 
 /**
- * `/nucleo` was the address of the portfolio until it was renamed to what the
- * interface calls it (D9). Bookmarks keep working: the old address sends to
- * the new one with the date it carried.
+ * `/nucleo` was the address of the portfolio until it was renamed to what the interface calls it.
+ * Bookmarks keep working: the old address sends to the new one with the date it carried.
  */
 const ToCartera = () => {
   const location = useLocation();

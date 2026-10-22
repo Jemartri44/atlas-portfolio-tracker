@@ -21,7 +21,7 @@ export type Presented =
   | { readonly kind: "none" }
   | { readonly kind: "ambiguous" }
   | { readonly kind: "session"; readonly value: string }
-  /** The session cookie twice: never "the first one" (bloque 0, §1.4). */
+  /** The session cookie twice: never "the first one". */
   | { readonly kind: "session_repeated" }
   | { readonly kind: "token"; readonly value: string };
 

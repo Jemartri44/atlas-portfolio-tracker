@@ -1,5 +1,4 @@
-// Whether a category of an informative return obliges (feature 010, block 3;
-// decision (h) of the prompt).
+// Whether a category of an informative return obliges.
 //
 // **Never "not obliged" with incomplete data.** Saying there is nothing to file
 // when there is has consequences; saying "this cannot be determined yet" with
@@ -11,8 +10,7 @@
 //
 // Every comparison is **strictly above**: 50.000,00 does not oblige and
 // 50.000,01 does; a rise of 20.000,00 does not and one of 20.000,01 does. The
-// law says "superior a", and the hand-computed exercise §6.2 sits on both
-// edges on purpose.
+// law says "superior a", so the tests sit on both edges on purpose.
 
 import { Decimal } from "../money/decimal.js";
 import type { Money } from "../money/money.js";
@@ -37,7 +35,7 @@ export interface Declared {
   year: number;
   value_eur?: Money;
   q4_average_eur?: Money;
-  /** An asset of its list that is no longer held: the second trigger (S7, Q7). */
+  /** An asset of its list that is no longer held: the second trigger. */
   extinct: { account_id: AccountId; asset_id?: AssetId }[];
 }
 
@@ -159,7 +157,7 @@ export const verdictOf = (
   }
   // Which marked values the verdict leans on: those without which it would not
   // be reached. With them removed the category may still oblige, and then they
-  // decided nothing (S16).
+  // decided nothing.
   const withoutFlagged = {
     ...input,
     value_eur: input.value_eur.sub(input.flagged_eur),

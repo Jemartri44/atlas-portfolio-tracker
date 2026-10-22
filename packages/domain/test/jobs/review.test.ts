@@ -1,7 +1,5 @@
-// Feature 016, E4 (plan §10.4; mutant 32): the weekly review reads the
-// warnings the domain already raises — by code and by the details it
-// enumerates, never by their message — and has something to do only when a
-// threshold is passed.
+// The weekly review reads the warnings the domain already raises — by code and by the details it
+// enumerates, never by their message — and has something to do only when a threshold is passed.
 
 import { describe, expect, it } from "vitest";
 import { reviewDue, reviewFacts } from "../../src/jobs/review.js";
@@ -21,7 +19,7 @@ const state = {
 const warning = (code: string, details: Record<string, string>): Warning => ({
   code,
   event_id: "",
-  // The message carries amounts and ids: the review never reads it (R3).
+  // The message carries amounts and ids: the review never reads it.
   message: "MESSAGE-SENTINEL 987654.32 ast_world",
   details,
 });

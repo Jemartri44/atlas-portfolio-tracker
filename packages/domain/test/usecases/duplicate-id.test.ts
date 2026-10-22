@@ -1,6 +1,6 @@
 // A second event with an id already in the ledger is refused when it is
-// appended — a refusal, not a warning (third review of PR #75: a confirmation
-// of a draft retried with its stamped id relies on it).
+// appended — a refusal, not a warning (a confirmation of a draft retried with
+// its stamped id relies on it).
 
 import { describe, expect, it } from "vitest";
 import { ProjectionError } from "../../src/errors.js";

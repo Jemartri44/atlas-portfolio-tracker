@@ -1,6 +1,5 @@
 // Which route admits which credential (`docs/api.md` §2.3), decided here and
-// nowhere else: the handler only matches the path and asks. E1 has the routes
-// of the access of the web; E2 and E3 add theirs to the same table.
+// nowhere else: the handler only matches the path and asks.
 
 import { type ApiRefusal, refusal } from "./codes.js";
 import type { Presented } from "./cookies.js";
@@ -9,7 +8,7 @@ import type { Presented } from "./cookies.js";
  * - `public`: no credential is looked at (the start of a sign-in replaces
  *   whatever session there was).
  * - `console_start`: public too, but **a token opens no attempt** (§2.3:
- *   issuing is only at the end of a sign-in the console opens; mutant 26).
+ *   issuing is only at the end of a sign-in the console opens).
  * - `login_return`: only the transient cookie of the attempt counts.
  * - `session`: the cookie of the session and nothing else.
  * - `logout`: the cookie is **deleted without being checked**, so none is
@@ -17,7 +16,7 @@ import type { Presented } from "./cookies.js";
  * - `exchange`: the exchange of §4.3, with no credential or with the previous
  *   token to renew; never with the cookie.
  * - `token`: the token of the console and nothing else.
- * - `sync`: the sync and the reference data (§2.3): the cookie **or** the
+ * - `sync`: the sync and the reference data: the cookie **or** the
  *   token. With the cookie, a write checks `Origin`.
  */
 export type RoutePolicy =
@@ -43,7 +42,7 @@ export const ROUTES: readonly RouteSpec[] = [
   { method: "GET", path: "/api/auth/callback", policy: "login_return", writes: false },
   { method: "POST", path: "/api/auth/logout", policy: "logout", writes: true },
   { method: "GET", path: "/api/session", policy: "session", writes: false },
-  // E2, the token of the console (`docs/api.md` §4).
+  // The token of the console (`docs/api.md` §4).
   { method: "GET", path: "/api/auth/console/start", policy: "console_start", writes: false },
   { method: "POST", path: "/api/auth/console/token", policy: "exchange", writes: true },
   { method: "POST", path: "/api/auth/console/revoke", policy: "token", writes: true },
@@ -54,7 +53,7 @@ export const ROUTES: readonly RouteSpec[] = [
     policy: "session",
     writes: true,
   },
-  // E3, the sync (`docs/api.md` §5) and the reference data (§6).
+  // The sync (`docs/api.md` §5) and the reference data.
   { method: "GET", path: "/api/ledger", policy: "sync", writes: false },
   { method: "POST", path: "/api/ledger/lines", policy: "sync", writes: true },
   { method: "PUT", path: "/api/ledger", policy: "sync", writes: true },
@@ -62,7 +61,7 @@ export const ROUTES: readonly RouteSpec[] = [
   { method: "GET", path: "/api/reference/index", policy: "sync", writes: false },
   { method: "GET", path: "/api/reference/ecb/{name}", policy: "sync", writes: false },
   { method: "GET", path: "/api/reference/prices/{name}", policy: "sync", writes: false },
-  // E6, the drafts in the cloud (`docs/api.md` §6.1): the cookie or the token.
+  // The drafts in the cloud (`docs/api.md` §6.1): the cookie or the token.
   { method: "GET", path: "/api/drafts", policy: "sync", writes: false },
   { method: "POST", path: "/api/drafts", policy: "sync", writes: true },
   { method: "POST", path: "/api/drafts/{id}/stamp", policy: "sync", writes: true },
@@ -109,7 +108,7 @@ export type Admission =
   | { readonly kind: "session"; readonly value: string }
   /** `logout` with a cookie: it is cleared, never read. */
   | { readonly kind: "clear_session" }
-  /** The token of the console, **not yet checked**: the handler checks it (§2.2). */
+  /** The token of the console, **not yet checked**: the handler checks it. */
   | { readonly kind: "token"; readonly value: string }
   | { readonly kind: "refused"; readonly refusal: ApiRefusal };
 
@@ -118,8 +117,8 @@ const refused = (value: ApiRefusal): Admission => ({ kind: "refused", refusal: v
 /**
  * Whether a write that comes **with the cookie** is from our own origin
  * (ADR-0027; `docs/api.md` §2). An absent `Origin` is refused as much as a
- * foreign one (N6): the `if (origin && origin !== self)` of always is the
- * mutant this exists to kill.
+ * foreign one: the `if (origin && origin !== self)` of always is the bug this
+ * exists to prevent.
  */
 export const originAccepted = (origin: string | undefined, self: string): boolean =>
   origin === self;

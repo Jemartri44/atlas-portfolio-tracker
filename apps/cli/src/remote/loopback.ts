@@ -2,7 +2,7 @@
 // `docs/api.md` §4.2): **only on `127.0.0.1`, on the port the system
 // chooses**, open only while the attempt lasts. A request whose `state` is not
 // the console's **is ignored and the port keeps waiting** — a page of another
-// site cannot close it with a guess (mutant 22). The page it serves loads
+// site cannot close it with a guess. The page it serves loads
 // nothing and says nothing to anybody (`no-referrer`, a CSP of `none`).
 
 import { createServer } from "node:http";

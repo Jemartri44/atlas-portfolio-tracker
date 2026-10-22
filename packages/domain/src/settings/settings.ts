@@ -97,13 +97,12 @@ export const normalizeSettings = (settings: Settings): Settings => {
  * along would make every change written from now on repeat the old form for
  * ever.
  *
- * `notification_email` never survives either (feature 016, E3; §8.1 P12,
- * §8.2 M7): the recipient of the mail lives outside the ledger, in SSM
- * (ADR-0028, ADR-0034), and a setting no figure reads is not a setting
- * (constitution IV, 1.6.0). The loader still reads it in the lines already
- * written — the ledger is append-only and the validator never hardens
- * (ADR-0018) — but every snapshot written from now on, by the web or the
- * console, goes without it.
+ * `notification_email` never survives either: the recipient of the mail lives
+ * outside the ledger, in SSM (ADR-0028, ADR-0034), and a setting no figure
+ * reads is not a setting (constitution IV, 1.6.0). The loader still reads it in
+ * the lines already written — the ledger is append-only and the validator never
+ * hardens (ADR-0018) — but every snapshot written from now on, by the web or
+ * the console, goes without it.
  *
  * `income_category` needs no line of its own: it is optional, so the spread
  * already replaces it when the patch carries one and keeps the current one when

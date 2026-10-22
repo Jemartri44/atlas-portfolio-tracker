@@ -1,14 +1,13 @@
-// The tax year (feature 009): the savings base of the return, computed from the
+// The tax year: the savings base of the return, computed from the
 // ledger and **only** from the ledger.
 //
 // What it produces is the **base**, not the tax: it cannot see the rest of the
 // return (the personal allowance, the general base, the effective average
-// rate), and pretending it can would give a believable and false figure
-// (decision (a)). Every figure opens into the events that produce it
-// (decision (c)) and says which fiscal criteria it depends on (decision (b));
-// what each criterion puts at stake gets a section of its own — two, in fact:
-// `doubtful` for the readings that are open and `settled` for the ones that are
-// not but would still move a figure read the other way.
+// rate), and pretending it can would give a believable and false figure. Every
+// figure opens into the events that produce it and says which fiscal criteria
+// it depends on; what each criterion puts at stake gets a section of its own —
+// two, in fact: `doubtful` for the readings that are open and `settled` for the
+// ones that are not but would still move a figure read the other way.
 //
 // The report aggregates **both books**, per taxpayer, and says so
 // (`scope: "fiscal_total"`): the first exception of constitution III, and the
@@ -68,7 +67,7 @@ export interface MovedTaxYear {
    * third figure a return declares, and the one a change of window moves first:
    * reading two months where a year was read releases a loss that was deferred
    * and changes nothing else about that year. Without it the warning stayed
-   * silent on exactly the change it exists for (plan §1.5).
+   * silent on exactly the change it exists for.
    */
   deferred_before: Money;
   deferred_after: Money;
@@ -76,7 +75,7 @@ export interface MovedTaxYear {
 
 /**
  * Years **before** `currentYear` whose savings base changes when the same
- * ledger is read with the new settings (feature 009, Q12).
+ * ledger is read with the new settings.
  *
  * `movedFiscalYears` compares realized gains, and that stopped being enough
  * the day the engine started reading the wash-sale window, the transfer
@@ -99,8 +98,7 @@ export const movedTaxYears = (
   // every keystroke of the configuration screen.
   const chainOf = (settings: Settings): ChainCore | undefined => {
     // The guard this function used to carry alone, now the shared one: it was
-    // the only one in the domain, and the other three readings did without it
-    // (feature 011, block 4).
+    // the only one in the domain, and the other three readings did without it.
     const chain = tryReading(() =>
       taxChain(events, Math.max(last, FIRST_SUPPORTED_YEAR), options, settings),
     );
@@ -121,7 +119,7 @@ export const movedTaxYears = (
     // The base is not the whole of it: a year can keep the same base and leave
     // a different balance pending, or the same base and a different deferred
     // loss, and either moves **the years after it**. The warning compares the
-    // three figures a return declares (feature 010, §1.5).
+    // three figures a return declares.
     const pendingBefore = before.pendings.get(year) ?? [];
     const pendingAfter = after.pendings.get(year) ?? [];
     const deferredBefore = before.deferrals.get(year) ?? zero();
@@ -157,7 +155,7 @@ const pendingText = (pending: readonly PendingLoss[]): string =>
 /**
  * The tax report of `year`. Refuses a ledger with invalid events: a projection
  * that skipped one gives an approximate base, and the answer to that is the
- * list of what to repair, not a number (feature 009, Q11).
+ * list of what to repair, not a number.
  */
 export const taxYear = (
   events: readonly LedgerEvent[],
@@ -170,7 +168,7 @@ export const taxYear = (
  *
  * The layout by box needs two things the report does not carry: what each year
  * of the chain left deferred, so it can say which original loss every deferred
- * amount belongs to (ficha F5), and what the year before left pending, for
+ * amount belongs to, and what the year before left pending, for
  * annex C.3. Handing over the chain that was walked anyway is what keeps the
  * layout from projecting the ledger a second time to find out.
  */
@@ -236,9 +234,9 @@ export const taxYearWithChain = (
     ...rateNotes(core, options.rateFindings ?? []),
   ];
   // **A cause that cannot be sustained is not attributed in silence**
-  // (ADR-0024, prompt 011 decision (e)). The comparison already omitted the
-  // four causes when the prefix could not be trusted; omitting is not warning,
-  // and this is the datum with a code that says so.
+  // (ADR-0024). The comparison already omitted the four causes when the prefix
+  // could not be trusted; omitting is not warning, and this is the datum with a
+  // code that says so.
   if (filing?.unverified_prefix !== undefined) {
     notes.push(
       note(

@@ -1,7 +1,6 @@
-// Writes the synthetic ECB histories of the tests (feature 012): the **real
-// format** of each source, verified on 2026-09-24
-// (`specs/012-ecb-reference-rates/questions.md (in git history)` §4), with **invented values**.
-// The real history never enters the repository (CLAUDE.md, rule 7).
+// Writes the synthetic ECB histories of the tests: the **real format** of each source, verified on
+// 2026-09-24, with **invented values**. The real history never enters the repository (CLAUDE.md,
+// rule 7).
 //
 //   node tests/fixtures/ecb/make-synthetic.mjs
 //

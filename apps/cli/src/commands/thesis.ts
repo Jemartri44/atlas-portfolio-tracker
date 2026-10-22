@@ -183,7 +183,7 @@ export const thesisCommand = async (
   }
   if (action === "list") {
     // `--at` is gone: every dated view projects with `asOf` (ADR-0016), and one
-    // name for one thing (Q4, the same call as `--wash-sale-window-days` in 004).
+    // name for one thing.
     if (flags.has("at")) {
       throw new UsageError(
         "usa --date YYYY-MM-DD: la vista se proyecta a esa fecha (ADR-0016), no solo los precios",

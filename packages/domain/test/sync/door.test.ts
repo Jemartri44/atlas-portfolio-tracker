@@ -1,5 +1,5 @@
-// The door of the sync (feature 014, block 2): what it exports exists, and a
-// failure of the remote keeps its code and its status apart.
+// The door of the sync: what it exports exists, and a failure of the remote
+// keeps its code and its status apart.
 
 import { describe, expect, it } from "vitest";
 import { DomainError } from "../../src/errors.js";

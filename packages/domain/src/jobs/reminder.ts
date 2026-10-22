@@ -1,4 +1,4 @@
-// What the monthly reminder says (feature 016, E1, block 4; `docs/specification.md`
+// What the monthly reminder says (`docs/specification.md`
 // §9.5), computed from data already read — the job decides nothing:
 //
 // - the contribution of the month split **by class of the core**, from
@@ -12,7 +12,7 @@
 //   delete an unused OAuth client;
 // - how many console tokens are alive and how many were issued in the month
 //   just ended, without names; **an unreadable record is counted as such,
-//   never left out nor taken for alive** (mutant 8).
+//   never left out nor taken for alive**.
 
 import { type TokenRecord, tokenStatus } from "../access/token.js";
 import { addMonths, type CivilDate, daysBetween } from "../dates/civil-date.js";

@@ -1,6 +1,6 @@
-// What the console says about the lock of the ledger folder (ADR-0026, Part B;
-// feature 012). Who holds it, since when, whether it looks abandoned, and the
-// two ways out: wait, or break it knowing what that means.
+// What the console says about the lock of the ledger folder (ADR-0026, Part B). Who holds it, since
+// when, whether it looks abandoned, and the two ways out: wait, or break it knowing what that
+// means.
 
 import { BEING_WRITTEN, type FolderLockInfo, type FolderLockState } from "@atlas/adapters";
 import { madridDateOf } from "@atlas/domain";
@@ -50,7 +50,7 @@ export const describeLock = (info: FolderLockState, now: Date, staleMinutes: num
 /**
  * The remedy for the lock `info` describes: a write that is just starting only
  * needs a moment — suggesting `lock break` there would teach breaking a lock
- * that is about to be released (review of PR #75).
+ * that is about to be released.
  */
 export const remedyFor = (info: FolderLockState): string =>
   info === BEING_WRITTEN

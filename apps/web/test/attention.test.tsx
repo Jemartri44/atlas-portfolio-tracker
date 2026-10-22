@@ -34,9 +34,8 @@ const attention = (
 
 describe("the list, as data", () => {
   it("puts a degraded ledger above a breached rule, and leaves the risk of losing the data to its own line", () => {
-    // Feature 020, E2, M2: the risk of losing the data is the first line of
-    // the summary (`dataLossItem`), and a notice said in its place is not
-    // repeated in the list.
+    // The risk of losing the data is the first line of the summary (`dataLossItem`), and a notice
+    // said in its place is not repeated in the list.
     const items = attention(
       [
         warning("bucket_stop_loss_reached", {

@@ -1,5 +1,4 @@
-// Feature 016, E1 (R8, R10, R12, R20; mutants 4, 5, 7): the monthly reminder
-// end to end through the handler, with every double, and what each retry does.
+// The monthly reminder end to end through the handler, with every double, and what each retry does.
 
 import { describe, expect, it } from "vitest";
 import { MAIL_ENV, ORIGIN, RECIPIENT, records, SENDER, SENTINELS, setupJobs } from "./harness.js";
@@ -126,7 +125,7 @@ describe("the monthly reminder, end to end", () => {
       code: "job_record_unavailable",
       error_name: "Error",
     });
-    // A run within the longest run of the Lambda may still be going on: left alone (N3).
+    // A run within the longest run of the Lambda may still be going on: left alone.
     jobs.setNow("2026-10-01T06:14:59Z");
     await jobs.run(["monthly_reminder"], "req-2");
     expect(jobs.ses.sent).toHaveLength(1);

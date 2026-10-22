@@ -127,7 +127,7 @@ export const symbolsFile = (assets: Record<string, Record<string, unknown>>): st
     ),
   });
 
-/** A declaration with the same currency for every source it names (the tests written for feature 013). */
+/** A declaration with the same currency for every source it names. */
 export const declared = (
   currency: string,
   symbols: { eodhd?: string; alpha_vantage?: string },

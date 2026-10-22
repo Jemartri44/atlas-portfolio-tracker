@@ -1,5 +1,5 @@
-// A ledger with Windows line endings (decision D-Q18 of feature 014): the
-// message gives the exact, safe order to convert it, and the order works.
+// A ledger with Windows line endings: the message gives the exact, safe order to convert it, and
+// the order works.
 
 import { execFileSync, execSync } from "node:child_process";
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";

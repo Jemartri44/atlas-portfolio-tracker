@@ -141,9 +141,8 @@ describe("the privacy gate", () => {
 });
 
 /*
- * The behaviour of the gate, not just its constants. Three mutations used to
- * pass the whole suite: removing the mask, losing the privacy default and
- * painting a zero where the datum is missing (review of 2026-09-18).
+ * The behaviour of the gate, not just its constants. Three mutations used to pass the whole suite:
+ * removing the mask, losing the privacy default and painting a zero where the datum is missing.
  */
 describe("amountDisplay", () => {
   const input = { formatted: "1.234,56", unit: "€", privacy: false, kind: "importe" } as const;
@@ -161,9 +160,9 @@ describe("amountDisplay", () => {
   });
 
   /**
-   * D2: the mask keeps the unit — it says what kind of figure is hidden,
-   * never how big — and it is the same four dots whatever the amount, so its
-   * width cannot tell twelve euros from a hundred and twenty thousand.
+   * The mask keeps the unit — it says what kind of figure is hidden, never how big — and it is the
+   * same four dots whatever the amount, so its width cannot tell twelve euros from a hundred and
+   * twenty thousand.
    */
   it("keeps the unit under the mask and the same mask for every amount", () => {
     const small = amountDisplay({ ...input, formatted: "12,00", privacy: true });
@@ -242,9 +241,8 @@ describe("the label catalogue", () => {
   });
 
   /**
-   * The detail screen shows a ledger line field by field: a field the schema
-   * gains and this catalogue forgets would be painted as snake_case at the user
-   * (FR-040).
+   * The detail screen shows a ledger line field by field: a field the schema gains and this
+   * catalogue forgets would be painted as snake_case at the user.
    */
   it("has a Spanish name for every field of every event type", () => {
     const missing = new Set<string>();
@@ -272,10 +270,9 @@ describe("the label catalogue", () => {
 
 describe("the catalogue of names", () => {
   /*
-   * The ledger stores `acc_mi` and keeps "Fondos indexados" right next to it.
-   * Showing the identifier where the name exists turns the application into a
-   * debug dump, and it was doing it in the patrimony, in the two hundred rows
-   * of the ledger and inside the translated messages (review of 2026-09-18).
+   * The ledger stores `acc_mi` and keeps "Fondos indexados" right next to it. Showing the
+   * identifier where the name exists turns the application into a debug dump, and it was doing it
+   * in the patrimony, in the two hundred rows of the ledger and inside the translated messages.
    */
   const state = projectLedger(goldenEvents() as SupportedEvent[], { collectErrors: true });
   const names = nameIndex(state);
@@ -401,8 +398,8 @@ describe("the catalogue of names", () => {
     expect(describeError(error, { privacy: false })).toContain("acc_ibkr");
   });
 
-  // Round 2 of the review of PR #98, R2-B1: an annulment with a key twice
-  // cannot be annulled, so its remedy is the file; any other line, annulling.
+  // An annulment with a key twice cannot be annulled, so its remedy is the file; any other line,
+  // annulling.
   it("gives the remedy of a key twice by the kind of line", () => {
     const of = (type: string) =>
       describeError(

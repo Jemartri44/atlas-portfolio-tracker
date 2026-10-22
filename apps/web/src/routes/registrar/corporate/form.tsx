@@ -49,7 +49,7 @@ export default function CorporateFormRoute(): JSX.Element {
         const [duplicate, setDuplicate] = createSignal<readonly string[] | undefined>(undefined);
         const warned = createWarned();
         const [conflict, setConflict] = createSignal(false);
-        /** The filed returns it reaches, said before «Registrar» (ADR-0020; P11 of 015). */
+        /** The filed returns it reaches, said before «Registrar» (ADR-0020). */
         const [closed, setClosed] = createSignal<readonly ClosedYearImpact[]>([]);
         const names = nameIndex(snapshot.state);
         const catalogue = accounts(snapshot.state);

@@ -1,4 +1,4 @@
-// The door `@atlas/adapters/identity` (feature 015): the port of the identity
+// The door `@atlas/adapters/identity`: the port of the identity
 // provider and Google. Node only, never reached by the web.
 
 export {

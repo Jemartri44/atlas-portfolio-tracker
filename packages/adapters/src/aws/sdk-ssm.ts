@@ -1,10 +1,9 @@
-// The thin adapter of the narrow `ParameterStore` over `@aws-sdk/client-ssm`
-// (feature 015, E3; authorised by the user, questions.md §12). **The only
-// file with the SSM client** (architecture test). It sends exactly three
-// commands — `GetParameter`, `PutParameter` and `GetParametersByPath` — and
-// never `DeleteParameter` nor `LabelParameterVersion` (T26).
+// The thin adapter of the narrow `ParameterStore` over `@aws-sdk/client-ssm`. **The only file
+// with the SSM client** (architecture test). It sends exactly three commands —
+// `GetParameter`, `PutParameter` and `GetParametersByPath` — and never `DeleteParameter` nor
+// `LabelParameterVersion` (an architecture test pins it).
 //
-// What each answer means comes from block 0 of E2 (questions.md §18):
+// What each answer means:
 // - `GetParameter`, always decrypted and **never with a selector** (the name
 //   is built by the caller from a checked id): `ParameterNotFound` → nothing;
 // - `PutParameter` without `Overwrite` and with its tags: `ParameterAlreadyExists`

@@ -1,8 +1,7 @@
-// Feature 016, E2, block 3 (R24; §8.1 P18, amended in §8.2 M4 and M5):
-// `atlas admin prices push` against the double of S3 the API runs on. Only
-// `prices/symbols.json`; no local state; the difference on screen; the name of
-// the environment typed; never `--yes`; 4 without a terminal; and the write on
-// the ETag of the read that showed the difference. Never AWS.
+// `atlas admin prices push` against the double of S3 the API runs on. Only `prices/symbols.json`;
+// no local state; the difference on screen; the name of the environment typed; never `--yes`; exit
+// code 4 without a terminal; and the write on the ETag of the read that showed the difference.
+// Never AWS.
 
 import { mkdir, mkdtemp, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -104,7 +103,7 @@ describe("atlas admin prices push (016, E2, block 3)", () => {
     expect(c.text()).toContain("quitado ast_gone");
     expect(c.text()).toContain("cambiado ast_moved (eodhd)");
     expect(c.text()).toContain("añadido ast_new");
-    // What it replaces, to recover it from the versions of the bucket (review of PR #106, N5).
+    // What it replaces, to recover it from the versions of the bucket.
     expect(c.text()).toContain(`ETag ${read}`);
     expect(c.text()).toMatch(/versión version-\d+/);
     expect(api.s3.text(KEY)).toBe(local);

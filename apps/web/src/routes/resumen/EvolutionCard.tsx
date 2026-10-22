@@ -1,4 +1,4 @@
-// The evolution of the net worth of the summary (feature 020, E4, M3): the
+// The evolution of the net worth of the summary: the
 // main panel with the core **and the cash of its accounts** against what was
 // contributed (a step), and a strip for the bucket with the cash of its own,
 // on its own scale. Net worth is the core, the bucket and the cash of the

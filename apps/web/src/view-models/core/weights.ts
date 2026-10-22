@@ -142,7 +142,7 @@ export const weightsView = (view: CoreWeights, names: NameIndex = NO_NAMES): Wei
     classes: view.by_class.map((subtotal) => classOf(subtotal, rows, belowMinimum)),
     ...(view.partial && view.total_eur.isZero() ? {} : { total: view.total_eur }),
     partial: view.partial,
-    // A quote without its value in euros is not a missing price (feature 013):
+    // A quote without its value in euros is not a missing price:
     // it is said apart, with its reason, and a valuation is not its only remedy.
     missing: view.missing_prices
       .filter((id) => !withoutEur.has(id))

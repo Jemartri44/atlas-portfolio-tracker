@@ -6,7 +6,7 @@
 //
 // A year with no checked mapping prints the same figures with no numbers at
 // all, and says so: a box inherited from another year is a believable, wrong
-// figure that the user types into a real return (prompt 010, decision (e)).
+// figure that the user types into a real return.
 
 import type { BoxBlockId, BoxEntry, TaxBoxes } from "@atlas/domain/fiscal";
 import { BOX_BLOCKS, blockOfConcept, conceptName } from "@atlas/domain/fiscal";

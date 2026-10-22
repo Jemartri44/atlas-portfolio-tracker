@@ -1,7 +1,7 @@
 // The ledger as the sync sees it: exact lines and hashes of their bytes
-// (ADR-0026, Part A; §6.3 (V14) of prompt 014). Whether a line of the queue is
-// already somewhere — in the remote, in what is held back — is decided by its
-// exact bytes, never by its id, its fingerprint or a re-serialisation.
+// (ADR-0026, Part A). Whether a line of the queue is already somewhere — in the
+// remote, in what is held back — is decided by its exact bytes, never by its
+// id, its fingerprint or a re-serialisation.
 
 import { sha256Hex } from "../ids/sha256.js";
 

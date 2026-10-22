@@ -1,11 +1,10 @@
 // @vitest-environment happy-dom
 //
-// The card of the summary is the only way into the fiscal screen, and it has
-// two shapes (feature 020, E2, M2): in the income tax season, a card with
-// «Campaña de la Renta» and what is pending; out of it, a row folded at the
-// end that says only its neutral state and the years with no return recorded.
-// Whether it is the season is the domain's (`inRentaSeason`); where the card
-// goes is the order of the summary (`summary-first-screen.test.tsx`).
+// The card of the summary is the only way into the fiscal screen, and it has two shapes: in the
+// income tax season, a card with «Campaña de la Renta» and what is pending; out of it, a row folded
+// at the end that says only its neutral state and the years with no return recorded. Whether it is
+// the season is the domain's (`inRentaSeason`); where the card goes is the order of the summary
+// (`summary-first-screen.test.tsx`).
 
 import { type LedgerEvent, nextReturnYear } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
@@ -124,7 +123,7 @@ describe("the fiscal card of the summary", () => {
     const row = host.querySelector(".summary-fiscal.is-row");
     expect(row).not.toBeNull();
     expect(text(row)).toContain("Declaración 2028 · fuera de campaña");
-    // Q2: the years with figures and no return, as a state, not a warning.
+    // The years with figures and no return, as a state, not a warning.
     expect(text(row)).toMatch(/sin declarar: 2026, 2027 y 2028/);
     // Never a notice: the 720 goes to *Atención*, the invalid events too.
     expect(text(row)).not.toMatch(/Modelo 72[01]|inválidos|Campaña/);

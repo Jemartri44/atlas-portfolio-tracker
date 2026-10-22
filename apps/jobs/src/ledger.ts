@@ -1,8 +1,8 @@
-// The remote ledger as the jobs read it (feature 016): its bytes from the
+// The remote ledger as the jobs read it: its bytes from the
 // bucket, read only — the jobs never write it — decoded as strict UTF-8, its
 // lines through the domain's decoder and projected. **What does not load is a
 // code, never an exception that stops a job**: the monthly reminder arrives
-// with an invalid ledger too, saying what it could not compute (R8).
+// with an invalid ledger too, saying what it could not compute.
 
 import {
   appendOnlyLedger,
@@ -46,7 +46,7 @@ export const loadLedger = async (objects: ObjectStore, today: CivilDate): Promis
 };
 
 /**
- * A ledger from its bytes: the remote one, or the one of a monthly dump (E4).
+ * A ledger from its bytes: the remote one, or the one of a monthly dump.
  * Empty is absent; what does not decode or project cleanly is a code.
  */
 export const ledgerOfBytes = (bytes: Uint8Array, today: CivilDate): JobLedger => {

@@ -1,5 +1,5 @@
-// What an initialisation refuses before calling the remote (ADR-0026, Part B;
-// §6.3 (V7)): an invalid ledger never reaches the cloud.
+// What an initialisation refuses before calling the remote (ADR-0026, Part B):
+// an invalid ledger never reaches the cloud.
 
 import type { DomainError } from "../errors.js";
 import { projectLedger } from "../projections/project-ledger.js";
@@ -24,7 +24,7 @@ const invalidOf = (events: readonly LedgerEvent[]): { id: string; code: string }
  * The client refuses to initialise **before calling** when its ledger is not
  * valid (a `settings_changed` recorded with `acceptInvalid` before the sync
  * was configured, any invalid event): the remote never receives an invalid
- * ledger, and an `init_rejected` must never be the normal path (V7).
+ * ledger, and an `init_rejected` must never be the normal path.
  */
 export const initRefusal = (events: readonly LedgerEvent[]): Refusal | undefined => {
   const invalid = invalidOf(events);

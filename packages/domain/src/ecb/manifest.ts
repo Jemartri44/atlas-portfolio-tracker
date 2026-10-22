@@ -74,7 +74,7 @@ export interface PreviousHistory {
  * The history a manifest names as **the one it replaced** (`previous`), with
  * the SHA-256 its bytes must have — or nothing, when the manifest does not
  * read or names none. **Whoever uses `previous/` checks its bytes against
- * this first** (N3 of the review of PR #106): a cut between the first two
+ * this first**: a cut between the first two
  * steps of an activation leaves in `previous/` other bytes than the ones the
  * manifest records, and those were never verified as a generation.
  */

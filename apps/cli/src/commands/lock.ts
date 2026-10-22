@@ -1,5 +1,5 @@
 // atlas lock show | atlas lock break: the advisory lock of the ledger folder
-// (ADR-0026, Part B; feature 012, block 0).
+// (ADR-0026, Part B).
 //
 // The lock is **never broken automatically**, however old: breaking it is this
 // command, asked for by the user after seeing who holds it and since when.

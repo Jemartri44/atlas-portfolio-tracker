@@ -1,9 +1,7 @@
-// The rehearsal of `docs/runbooks/stolen-google-account.md` with the doubles
-// (feature 015, E5; review of PR #98, B1 of security; §35): the six steps in
-// their order, with the user's console and the intruder's over one remote,
-// both signed in with the same stolen Google account. Every step that needs
-// no real AWS is walked: the allow list and the session key are written in
-// the double of SSM, as the script of secrets or the AWS CLI would.
+// The rehearsal of `docs/runbooks/stolen-google-account.md` with the doubles: the six steps in
+// their order, with the user's console and the intruder's over one remote, both signed in with the
+// same stolen Google account. Every step that needs no real AWS is walked: the allow list and the
+// session key are written in the double of SSM, as the script of secrets or the AWS CLI would.
 
 import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

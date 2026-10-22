@@ -1,7 +1,6 @@
-// Feature 015, E2: the device token of the console as a rule (plan §4.2,
-// T01 to T12): its format before any name is built, the record read as the
-// token it was asked for, the order of the check, the expiry under the
-// ceiling and the row of the list.
+// The device token of the console as a rule: its format before any name is built, the record read
+// as the token it was asked for, the order of the check, the expiry under the ceiling and the row
+// of the list.
 
 import { describe, expect, it } from "vitest";
 import type { AllowEntry } from "../../src/access/allow-list.js";
@@ -82,7 +81,7 @@ describe("the record of a token (data-model §2)", () => {
     const text = serializeTokenRecord(record());
     expect(text.includes("\n")).toBe(false);
     expect(parseTokenRecord(text, TID)).toEqual(record());
-    // Its own token_id is not the one asked for: another token's record (B1).
+    // Its own token_id is not the one asked for: another token's record.
     expect(parseTokenRecord(text, "OOOOOOOOOOOOOOOOOOOOOO")).toBe("unreadable");
     // Asked for with a malformed id that happens to be inside: still unreadable.
     const odd = serializeTokenRecord({ ...record(), token_id: "x:1" });

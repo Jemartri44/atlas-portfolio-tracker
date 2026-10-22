@@ -1,7 +1,6 @@
-// Feature 016, E4 (plan §8; mutant 28): what the monthly dump does with each
-// object, decided here and only here. A dump is **for ever**: an object is
-// never overwritten, and a month left half done is finished by the retry
-// without touching what an earlier attempt wrote.
+// What the monthly dump does with each object, decided here and only here. A dump is **for ever**:
+// an object is never overwritten, and a month left half done is finished by the retry without
+// touching what an earlier attempt wrote.
 
 import { describe, expect, it } from "vitest";
 import {
@@ -50,7 +49,7 @@ describe("what the dump does with each object (mutant 28)", () => {
     // A retry, with other bytes that no attempt wrote: somebody else did.
     expect(dumpStep({ existing: B, next: A, earlier: [] })).toBe("differs");
     expect(dumpStep({ existing: B, next: A, earlier: ["c".repeat(64)] })).toBe("differs");
-    // Several intents of earlier attempts at one key: any of them is its own (R2-B1).
+    // Several intents of earlier attempts at one key: any of them is its own.
     expect(dumpStep({ existing: B, next: A, earlier: ["c".repeat(64), B] })).toBe("kept");
   });
 
@@ -99,7 +98,7 @@ describe("what a dump leaves for the mail (only when it fails, §8.2 B2)", () =>
       { code: "backup_ecb_inconsistent", subject: "backup" },
       { code: "backup_positions_missing", subject: "backup" },
     ]);
-    // A dump without the history of the ECB says so (copias N1).
+    // A dump without the history of the ECB says so.
     expect(
       backupFindings({
         differs: 0,

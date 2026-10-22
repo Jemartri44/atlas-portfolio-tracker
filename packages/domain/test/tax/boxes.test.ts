@@ -1,5 +1,4 @@
-// The boxes as **data per tax year** (feature 010, block 2; decision (e) of the
-// prompt).
+// The boxes as **data per tax year**.
 //
 // The rule the whole layer exists for: a wrong box is worse than no box. The
 // Agencia Tributaria renumbers the Modelo 100 every campaign —2025 is the year
@@ -61,7 +60,7 @@ describe("a year whose boxes nobody checked", () => {
 
   it("never falls back on the boxes of the year that does have a table", () => {
     // 2025 has a table. Neither the year before nor the year after may borrow
-    // a single number from it: this is the mutant "land on another year's box".
+    // a single number from it: a fall back on another year's box would fail here.
     for (const year of [2024, 2026]) {
       const boxes = taxBoxes(oneOfEach(year), year, { today: TODAY });
       expect(boxes.mapping).toBe("none");
@@ -206,7 +205,7 @@ describe("the two ways the savings base can cross categories", () => {
     // and the sale of the fund releases it. The engine integrates it where the
     // loss came from —movable capital income— and so does the form: box 0031,
     // in the year it is freed and in the row of the security that frees it
-    // (ficha F5, added after Q2; there is no "earlier years" section there).
+    // (there is no "earlier years" section there).
     const b = taxBuilder({
       ...HAND_SETTINGS,
       income_category: { ...HAND_SETTINGS.income_category, etc: "movable_capital" },

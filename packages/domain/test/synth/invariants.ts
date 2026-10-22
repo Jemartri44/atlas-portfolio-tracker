@@ -1,5 +1,5 @@
-// The invariants every synthetic ledger must satisfy (spec FR-005), shared by
-// the golden-file tests and the seed property.
+// The invariants every synthetic ledger must satisfy, shared by the
+// golden-file tests and the seed property.
 
 import { expect } from "vitest";
 import { isWeekend } from "../../src/dates/civil-date.js";
@@ -37,9 +37,9 @@ const pricedPartsOf = (event: LedgerEvent): Priced[] => {
 };
 
 /**
- * The hardened validation of the block 0 (challenge 2026-08-31): the ECB never
- * publishes on a weekend, and the euro is its own reference. `validateShape`
- * already rejects both, so this states what the scenario must produce.
+ * The hardened validation: the ECB never publishes on a weekend, and the euro
+ * is its own reference. `validateShape` already rejects both, so this states
+ * what the scenario must produce.
  */
 const checkEcbRules = (ledger: readonly LedgerEvent[]): void => {
   for (const event of ledger) {
@@ -58,7 +58,7 @@ const checkEcbRules = (ledger: readonly LedgerEvent[]): void => {
   }
 };
 
-/** Target weights are keyed by `asset_id` of core assets and add up to exactly 100 (feature 004). */
+/** Target weights are keyed by `asset_id` of core assets and add up to exactly 100. */
 const checkTargetWeights = (state: LedgerState): void => {
   for (const entry of state.settingsHistory) {
     const weights = entry.settings.target_weights;
@@ -81,7 +81,7 @@ export const checkInvariants = (
   checkEcbRules(ledger);
   checkTargetWeights(full);
   expect(integrity(full)).toEqual([]);
-  // Bilateral (Q1): no warning outside the declared codes, and every declared code present.
+  // Bilateral: no warning outside the declared codes, and every declared code present.
   const codes = new Set(full.warnings.map((warning) => warning.code));
   expect([...codes].sort()).toEqual([...SYNTHETIC_EXPECTED_WARNINGS].sort());
   for (const [assetId] of full.lots) {

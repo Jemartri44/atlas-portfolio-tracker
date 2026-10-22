@@ -1,7 +1,6 @@
-// The gate every screen that needs the ledger goes through, so the states are
-// written once (FR-019): loading shows the shape of what is coming, and a
-// degraded ledger blocks **writing** only. No session, no connection and a read
-// that failed never get here: the frame puts `CloudGate` in place of the
+// The gate every screen that needs the ledger goes through, so the states are written once: loading
+// shows the shape of what is coming, and a degraded ledger blocks **writing** only. No session, no
+// connection and a read that failed never get here: the frame puts `CloudGate` in place of the
 // content (`shell/AppShell.tsx`).
 //
 // A screen that **writes** is not unmounted while a write is in flight or after

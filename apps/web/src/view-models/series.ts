@@ -3,7 +3,7 @@
 //
 // **Nothing decides here what a hole is.** `netWorthSeries` already returned a
 // block as absent when a price was missing, because a partial total is smaller
-// than reality and, drawn on a line, indistinguishable from a fall (Q1). This
+// than reality and, drawn on a line, indistinguishable from a fall. This
 // only turns "absent" into `null`, which is what uPlot draws as a gap with
 // `spanGaps` off.
 
@@ -40,7 +40,7 @@ export interface PlottedSeries {
 /**
  * What a chart lacks, said in **one line**, and what it lacks it from, apart:
  * the list of assets folded under the line, where it does not push the chart
- * off the screen (review of 2026-09-19).
+ * off the screen.
  */
 export interface MissingNote {
   line: string;
@@ -161,9 +161,8 @@ export const withContributed = (plot: PlottedSeries, series: ContributedSeries):
 });
 
 /**
- * The bucket against the index **in percent** of what was contributed (feature
- * 020, E4, M7). The values are numbers only to place the line: what is shown
- * is the decimal string of the domain, formatted once.
+ * The bucket against the index **in percent** of what was contributed. The values are numbers only
+ * to place the line: what is shown is the decimal string of the domain, formatted once.
  */
 export const bucketIndexPlot = (full: BucketIndexPctSeries): PlottedSeries => {
   // A date with a reason (nothing invested yet, or nothing contributed) is not a
@@ -205,7 +204,7 @@ export const bucketIndexPlot = (full: BucketIndexPctSeries): PlottedSeries => {
 
 /**
  * What to do when the holes take up **more than half** of the width of the
- * range chosen (feature 020, E4, M7): nothing, jump to the last stretch with
+ * range chosen: nothing, jump to the last stretch with
  * data (the indices of its first and last point), or, with no data at all,
  * `"pending"`, and no chart. A hole is where no series has a value, measured
  * as the band the chart draws over it. Presentation, not a rule of the

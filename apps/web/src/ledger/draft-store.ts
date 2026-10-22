@@ -1,10 +1,10 @@
-// The drafts of the account (feature 027, E6 of ADR-0035; ADR-0029, point 9), as
+// The drafts of the account (ADR-0029, point 9), as
 // the frame and the list of drafts see them: how many there are, and the drafts
 // themselves. They live **in the cloud**, behind the same session as the ledger,
 // and nothing of them stays on the device: no copy, no cache, no queue.
 //
 // Loaded **lazily**, with the counter of the frame and with the screens that
-// need it: nothing of the ECB is on the boot path (decision (r) of prompt 012).
+// need it: nothing of the ECB is on the boot path.
 //
 // A draft is not a fact: nothing here projects one, and nothing here records
 // one. Recording a draft is the form's, after the user's yes.

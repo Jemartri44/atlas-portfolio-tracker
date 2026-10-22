@@ -1,8 +1,7 @@
-// The pages of the Lambda (`docs/api.md` §3.1): **no script, nothing external**,
-// `no-store` and `no-referrer`. The access-denied page shows **only the `sub`
-// of the account that has just signed in, in this very request** — never the
-// e-mail —, escaped, and it goes to no URL and to no log (ADR-0027; P8 (c);
-// N10). Plain HTML: prose in Spanish, as the interfaces.
+// The pages of the Lambda (`docs/api.md` §3.1): **no script, nothing external**, `no-store` and
+// `no-referrer`. The access-denied page shows **only the `sub` of the account that has just signed
+// in, in this very request** — never the e-mail —, escaped, and it goes to no URL and to no log
+// (ADR-0027). Plain HTML: prose in Spanish, as the interfaces.
 
 import type { LoginPageError } from "@atlas/domain/access";
 
@@ -12,8 +11,7 @@ export const PAGE_CSP =
 /**
  * The pages that show a code of the console (`docs/api.md` §4.2): the same,
  * plus `sandbox` without `allow-same-origin`, so the page has an opaque origin
- * and nothing of the SPA can read it (block 0 of E2, §18.5, checked in
- * Chromium).
+ * and nothing of the SPA can read it (checked in Chromium).
  */
 export const CODE_PAGE_CSP = `${PAGE_CSP}; sandbox`;
 
@@ -100,7 +98,7 @@ const WARNING = `<p><strong>Solo pega este código en una consola que acabas de 
 
 /**
  * The code, **only inside a `<details>`** whose `<summary>` is the explicit
- * confirmation (plan §6.2 (i bis)): no script and no form — the sandbox would
+ * confirmation: no script and no form — the sandbox would
  * block them — and the code is not text on the page until the user opens it.
  */
 const revealed = (confirmation: string, code: string): string =>
@@ -113,7 +111,7 @@ const revealed = (confirmation: string, code: string): string =>
 /**
  * A long code that a phone can wrap: a `<wbr>` every 32 characters. The page
  * has no style — its CSP allows none — and `<wbr>` adds nothing to the text
- * the user copies. Found on the screen (captures of E2): the unbroken code
+ * the user copies. Found on the screen: the unbroken code
  * made the page five times as wide as a phone.
  */
 const breakable = (code: string): string =>
@@ -137,7 +135,7 @@ ${revealed(
   );
 
 /**
- * The reissue for a device without a credential (N5; R2-N1): the data **of
+ * The reissue for a device without a credential: the data **of
  * the server** — its name, and its last publication, if known — and the explicit confirmation. Without it there is no code.
  */
 export const reissueConfirmPage = (fields: {

@@ -1,4 +1,4 @@
-// Feature 016, E1: the file in force of the ECB history, from its manifest.
+// The file in force of the ECB history, from its manifest.
 
 import { describe, expect, it } from "vitest";
 import { activeHistoryOf, previousHistoryOf } from "../../src/ecb/manifest.js";
@@ -38,7 +38,7 @@ describe("the manifest of the ECB history", () => {
       manifest({ file: "eurofxref-hist.csv", source: "ftp", sha256: SHA }),
       manifest({ file: "eurofxref-hist.csv", source: "zip", sha256: "A".repeat(64) }),
       manifest({ file: "eurofxref-hist.csv", source: "zip", sha256: 7 }),
-      // Read strictly, as the web reads it too (feature 016, E3).
+      // Read strictly, as the web reads it too.
       "[]",
       // No `rejected` list: the stores append to it.
       JSON.stringify({ active: { file: "api-exr.csv", source: "api", sha256: SHA } }),

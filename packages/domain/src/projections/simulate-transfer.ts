@@ -1,4 +1,4 @@
-// Transfer simulator (specification §6.1.1, prompt 004 §3.4).
+// Transfer simulator (specification §6.1.1).
 //
 // A pure query: it builds no event, touches no lot and writes nothing. It moves
 // `quantity × manual price` euros from one core fund to another and shows the
@@ -89,7 +89,7 @@ export const simulateTransfer = (
   /*
    * A partial core blanks every weight, so simulating over it would print a
    * table of empty cells and explain nothing. The simulator refuses listing
-   * what is missing (decision (c) of prompt 004), even when the two assets of
+   * what is missing, even when the two assets of
    * the transfer are priced: the weights are computed over the whole core.
    */
   if (table.partial) {

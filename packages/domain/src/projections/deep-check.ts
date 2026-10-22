@@ -1,4 +1,4 @@
-// Deep checks over the raw lines (data-schema.md §7, feature 003): what the
+// Deep checks over the raw lines (data-schema.md §7): what the
 // projection cannot see because it only ever receives decoded events. Run by
 // `atlas check --deep`; `integrity` stays the cheap projection-level check.
 
@@ -139,8 +139,7 @@ export const deepCheck = (
   // Each code is written as a **literal** in its own call, never as a ternary
   // inside one: the anti-drift test of the messages scans the sources for
   // `error("<code>"`, so a ternary would hide **both** codes from it and the
-  // translation that already exists would be reported as a dead entry
-  // (measured, feature 011).
+  // translation that already exists would be reported as a dead entry (measured).
   for (const check of checkFilingFingerprints(lines, events, schema)) {
     if (check.reason === undefined || check.reason === "lines") {
       continue;

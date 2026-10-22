@@ -75,7 +75,7 @@ describe("prices/symbols.json", () => {
       JSON.stringify({
         symbols_format: 1,
         assets: { a: { currency: "EUR", confirmed_at: AT, ...extra } },
-        // Format 1, of feature 013: still read, and refused the same way.
+        // Format 1: still read, and refused the same way.
       });
     const cases: [string, string][] = [
       ["no", "json"],

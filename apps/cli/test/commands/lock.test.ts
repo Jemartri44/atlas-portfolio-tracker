@@ -1,4 +1,4 @@
-// The lock of the ledger folder from the console (ADR-0026, Part B; feature 012).
+// The lock of the ledger folder from the console (ADR-0026, Part B).
 
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

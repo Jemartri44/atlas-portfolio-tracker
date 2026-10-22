@@ -7,7 +7,7 @@
 // What is left here is the state of the draft and the save. The fields live in
 // `view-models/settings.ts`, where a test reaches them without a DOM; the four
 // blocks in `SettingsCards.tsx`, and the three questions in
-// `SettingsDialogs.tsx` (review of 2026-09-18: this file was 517 lines).
+// `SettingsDialogs.tsx`.
 
 import {
   type AssetType,
@@ -112,7 +112,7 @@ export default function ConfiguracionRoute(): JSX.Element {
             next = candidateSettings(current(), patch(), weights());
           } catch (failure) {
             // `toAppError` and not `failure.message`: the domain speaks English
-            // by contract and each interface translates (decision (i)).
+            // by contract and each interface translates.
             setError(toAppError(failure));
             return;
           }
@@ -127,10 +127,9 @@ export default function ConfiguracionRoute(): JSX.Element {
               return;
             }
             const movedResult = movedFiscalYears(snapshot.events, current(), next, yearOf(date));
-            // A filed return can move without a single realized gain moving:
-            // the window, the transfer criterion and the income category change
-            // the base on their own (FR-018). So the question is asked for
-            // either of the two, and it names the return.
+            // A filed return can move without a single realized gain moving: the window, the
+            // transfer criterion and the income category change the base on their own. So the
+            // question is asked for either of the two, and it names the return.
             const declaredResult = await closedYearsOfSettings(next);
             if ((movedResult.length > 0 || declaredResult.length > 0) && moved() === undefined) {
               setMoved(movedResult);

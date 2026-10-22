@@ -1,9 +1,9 @@
-// What any HTTP client of our API accepts of an answer, whatever it asks for
-// (feature 016, E3; review of PR #108, N3): an error of the closed list of
-// `docs/api.md` §7, and the index of the reference data (§6). **Neutral**:
-// neither of the sync nor of the jobs, so that the client of the reference
-// data — which the web reaches outside the engine of the sync — never
-// reaches the door of the sync. The sync re-exports what it uses.
+// What any HTTP client of our API accepts of an answer, whatever it asks for:
+// an error of the closed list of `docs/api.md` §7, and the index of the
+// reference data. **Neutral**: neither of the sync nor of the jobs, so that the
+// client of the reference data — which the web reaches outside the engine of
+// the sync — never reaches the door of the sync. The sync re-exports what it
+// uses.
 
 import { isCount, isRecord, onlyKeys } from "../guards.js";
 import { REMOTE_FAILURE_CODES } from "../ports/remote-ledger.js";
@@ -48,7 +48,7 @@ const isEntry = (value: unknown): value is ReferenceIndexEntry =>
   isCount(value.size);
 
 /**
- * The `200` of `GET /api/reference/index` (feature 016, E3): the first level
+ * The `200` of `GET /api/reference/index`: the first level
  * of `reference/ecb/` and of `prices/`, each entry with its opaque version.
  */
 export const parseReferenceIndex = (

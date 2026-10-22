@@ -1,7 +1,6 @@
-// The jobs composed with their doubles (feature 016, E1): S3, SSM and SES
-// simulated, a clock that only moves when a test moves it, and every log
-// line kept. The ledger is small and known, sown with sentinels: a mail with
-// the switch off, or a log line on any path, must carry none of them.
+// The jobs composed with their doubles: S3, SSM and SES simulated, a clock that only moves when a
+// test moves it, and every log line kept. The ledger is small and known, sown with sentinels: a
+// mail with the switch off, or a log line on any path, must carry none of them.
 
 import { DEFAULT_SETTINGS, encodeLine, mergeSettings } from "@atlas/domain";
 import type { JobTask } from "@atlas/domain/jobs";

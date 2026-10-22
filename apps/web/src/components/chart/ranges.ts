@@ -12,7 +12,7 @@ export const RANGE_KEYS: readonly RangeKey[] = ["ESTE_ANO", "1A", "5A", "TODO"];
 /**
  * Days each window spans back from the last point. "Todo" has no window, and
  * "Este año" is not a span of days: it is the calendar year of the date asked
- * about (feature 020, E4).
+ * about.
  */
 export const RANGE_DAYS: Record<Exclude<RangeKey, "TODO" | "ESTE_ANO">, number> = {
   "1A": 366,

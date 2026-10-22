@@ -1,6 +1,6 @@
 // Realized gains per sell, lot by lot (data-schema.md §8.1). Exact per lot,
 // summed per operation and rounded to cents once (ADR-0005). The wash-sale rule
-// is left to the tax engine (feature 005).
+// is left to the tax engine.
 
 import { yearOf } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";

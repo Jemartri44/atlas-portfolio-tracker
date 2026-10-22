@@ -1,9 +1,8 @@
 // What the remote accepts (`docs/api.md` §5.2, §5.3 and §5.5; ADR-0026, Part A
-// and its notes of 2026-09-25). Pure: the simulated remotes of feature 014
-// call it, and the Lambda of feature 015 will call it, over the same use case
-// the client re-applies with (`reapplyUnits` + `evaluateUnit`). The remote
-// only ever **appends**; the validation is here, in the backend, whatever the
-// client did.
+// and its notes of 2026-09-25). Pure: the simulated remotes and the Lambda both
+// call it, over the same use case the client re-applies with (`reapplyUnits` +
+// `evaluateUnit`). The remote only ever **appends**; the validation is here, in
+// the backend, whatever the client did.
 
 import type { DomainError } from "../errors.js";
 import { isRecord, type UnknownRecord } from "../guards.js";
@@ -24,7 +23,7 @@ import { sealHolds } from "./seal.js";
 export interface RemoteRules {
   readonly schema: LedgerSchema;
   readonly now: Date;
-  /** How far ahead of the remote's clock a `recorded_at` may be (case 8; the value is feature 015's). */
+  /** How far ahead of the remote's clock a `recorded_at` may be (the value is the API's). */
   readonly clockToleranceMs: number;
 }
 
@@ -47,7 +46,7 @@ const ENTRY_KEYS = new Set(["line", "confirm_duplicate", "has_correction", "chai
  * The body of `POST /api/ledger/lines`, by its **shape only** (`docs/api.md`
  * §5.2): never by the content of a line, which is judged line by line inside
  * a successful answer. A `device_id` anywhere is refused: the device comes
- * from the credential (§2.3).
+ * from the credential.
  */
 export const parseAppendBody = (body: unknown): AppendEntry[] => {
   if (
@@ -83,11 +82,11 @@ export const parseAppendBody = (body: unknown): AppendEntry[] => {
 };
 
 /**
- * What makes a line unacceptable **before it is judged** (review of PR #96,
- * security B1 and N3): a lone surrogate, whose bytes would not be UTF-8 and
- * would leave the remote unreadable for every device; or, in a line that is
- * JSON, a key repeated inside one object, which two readers read two ways.
- * A line that is not JSON is left to its judgement (`line_unreadable`).
+ * What makes a line unacceptable **before it is judged**: a lone surrogate,
+ * whose bytes would not be UTF-8 and would leave the remote unreadable for
+ * every device; or, in a line that is JSON, a key repeated inside one object,
+ * which two readers read two ways. A line that is not JSON is left to its
+ * judgement (`line_unreadable`).
  */
 const textRefusal = (line: string): "lone_surrogate" | "duplicate_key" | undefined => {
   if (holdsLoneSurrogate(line)) {
@@ -101,7 +100,7 @@ const textRefusal = (line: string): "lone_surrogate" | "duplicate_key" | undefin
   return repeatsKey(line) ? "duplicate_key" : undefined;
 };
 
-/** The body of `PUT /api/ledger` (§5.5). */
+/** The body of `PUT /api/ledger`. */
 export const parseInitBody = (
   body: unknown,
 ): { content: string; confirm_duplicate_ids: string[] } => {
@@ -145,9 +144,9 @@ const readLine = (
       details: { found: raw.schema_version, supported: rules.schema.version },
     };
   }
-  // Row 3, **before** the line is decoded (`docs/api.md` §5.2; review of PR
-  // #83, non-blocking 7): a declaration the line does not admit is said as
-  // such, whatever else is wrong with the line.
+  // Row 3, **before** the line is decoded (`docs/api.md` §5.2): a declaration
+  // the line does not admit is said as such, whatever else is wrong with the
+  // line.
   if (
     (entry?.has_correction === true && raw.type !== "reversal") ||
     (entry?.chain_continues === true && raw.corrects_id === undefined)
@@ -231,7 +230,7 @@ const formUnits = (
       const id = firstId ?? read.event.id;
       const position = members.length;
       if (position === 0 && correctsOf(read.raw) !== undefined) {
-        // A correction with no declared reversal right before it (P7).
+        // A correction with no declared reversal right before it.
         return stop({ code: "pair_not_contiguous", details: {} }, id);
       }
       if (position % 2 === 1) {
@@ -380,10 +379,10 @@ export const acceptAppend = (
 };
 
 /**
- * The ids a first device confirms when it initialises the remote (§6.3 (V17),
- * decision D-Q16): every event whose fingerprint repeats that of an **earlier
- * event in the file**, reversed or not. Everything in the local ledger was
- * accepted locally, so the client derives them without asking again.
+ * The ids a first device confirms when it initialises the remote: every event
+ * whose fingerprint repeats that of an **earlier event in the file**, reversed
+ * or not. Everything in the local ledger was accepted locally, so the client
+ * derives them without asking again.
  */
 export const initDuplicateIds = (events: readonly LedgerEvent[]): string[] => {
   const seen = new Set<string>();
@@ -406,7 +405,7 @@ const initRejected = (code: string, details: Record<string, unknown>): RemoteErr
 
 /**
  * Judges the initialisation of an **empty** remote with the whole bytes of a
- * ledger (§5.5; §6.3 (V6) and (V17)): it loads with the schema, projects valid,
+ * ledger: it loads with the schema, projects valid,
  * no `recorded_at` beyond the clock, and every repeated fingerprint confirmed.
  * The declarations of pairs and chains do not apply: there is no queue to
  * split. Returns the lines to write; throws `init_rejected` otherwise.

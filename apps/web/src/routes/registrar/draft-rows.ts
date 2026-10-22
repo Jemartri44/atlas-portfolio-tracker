@@ -1,4 +1,4 @@
-// The drafts as the list shows them (feature 012, block 5): what the domain
+// The drafts as the list shows them: what the domain
 // says of each one today, in the shape the screen paints. The rule is the
 // domain's (`pendingDraftStatus`); nothing here decides anything.
 

@@ -1,7 +1,6 @@
-// The API of the tests of feature 015 (`apps/api/test/harness.ts`) as the
-// network of the web: a `fetch` at the page's own origin, with the cookie of a
-// web sign-in and `Origin` on a write, as the browser sends them; a browser on
-// the double of IndexedDB; and what the cloud holds.
+// The API of the tests (`apps/api/test/harness.ts`) as the network of the web: a `fetch` at the
+// page's own origin, with the cookie of a web sign-in and `Origin` on a write, as the browser sends
+// them; a browser on the double of IndexedDB; and what the cloud holds.
 
 import { SESSION_COOKIE } from "@atlas/domain/access";
 import { ALLOWED, SELF, setup } from "../../../api/test/harness.js";

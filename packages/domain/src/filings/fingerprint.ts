@@ -1,7 +1,6 @@
-// The fingerprint of the ledger a filing was computed on (ADR-0020, prompt 010
-// block 1).
+// The fingerprint of the ledger a filing was computed on (ADR-0020).
 //
-// The prompt fixes three requirements and not the algorithm:
+// Three requirements, and not a fixed algorithm:
 //
 //   1. It covers every event that precedes the filing in the file.
 //   2. It does **not** change with `compact` nor with a migration.
@@ -75,7 +74,7 @@ export interface FingerprintCheck {
    * fingerprint, not a detail of its failure — and it is what the one message
    * of the project that says *from which version* the ledger has to be
    * migrated needs to print. That message used to print `declared_lines`,
-   * which is a count of lines and not a version (feature 011, block 0).
+   * which is a count of lines and not a version.
    */
   declared_schema_version: number;
 }

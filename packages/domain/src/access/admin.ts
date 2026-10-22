@@ -1,9 +1,8 @@
-// The rules of the administration of the remote (feature 015, E5; ADR-0026,
-// Part A; ADR-0032; ADR-0033, point 8): what
-// forgetting a device writes, how a candidate to restore compares with the
-// remote, and the local configuration of the administration (`admin.json`).
-// Pure: the console's orders apply them with the role of administration,
-// never through the API (architecture test).
+// The rules of the administration of the remote (ADR-0026, Part A, ADR-0032,
+// ADR-0033, point 8): what forgetting a device writes, how a candidate to
+// restore compares with the remote, and the local configuration of the
+// administration (`admin.json`). Pure: the console's orders apply them with the
+// role of administration, never through the API (architecture test).
 
 import type { LedgerEvent } from "../schema/events.js";
 import type { Refusal } from "../sync/permission.js";
@@ -15,7 +14,7 @@ export type AdminDeviceRead =
   | { readonly device_id: string; readonly unreadable: true };
 
 /**
- * Forgetting a device (§7 P9): refused for an object that is missing or
+ * Forgetting a device: refused for an object that is missing or
  * cannot be read; nothing to do for one already forgotten.
  */
 export const forgetRefusal = (

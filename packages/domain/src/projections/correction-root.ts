@@ -1,5 +1,4 @@
-// The root of a correction chain (decision of the direction on the adversarial
-// review of PR #75, feature 012).
+// The root of a correction chain.
 //
 // A correction (`corrects_id`) is **the same economic fact** as the event it
 // corrects, and a correction of a correction is still that fact. Its root is
@@ -8,7 +7,7 @@
 // so that they cannot disagree about what a chain is:
 //
 // - **at most one live correction per root** (ADR-0026, Part C), judged in
-//   file order — per `corrects_id` alone, `O, R(O), C1→O, R(C1), C2→C1, C3→O`
+//   file order — per `corrects_id` alone, `O, R(O), C1→O, R, C2→C1, C3→O`
 //   let two live corrections of O through;
 // - **the place of the fact in the file is the root's**: the FIFO tie-break
 //   between lots of the same date, and the order of operations of the same

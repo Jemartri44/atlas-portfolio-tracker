@@ -1,8 +1,7 @@
-// Feature 016, E3, block 1 (R34-R36; mutants 22 and 23): what the console
-// adds of the closes the cloud downloaded — the rules of the 013, the source
-// and the time of the cloud kept — and which files it asks for again; and
-// the budget of a console that shares the free plans with the cloud (N2 of
-// §15).
+// What the console adds of the closes the cloud downloaded — the rules of the
+// local download, the source and the time of the cloud kept — and which files
+// it asks for again; and the budget of a console that shares the free plans
+// with the cloud.
 
 import { describe, expect, it } from "vitest";
 import {

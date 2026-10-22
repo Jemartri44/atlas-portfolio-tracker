@@ -1,9 +1,7 @@
-// «Tipos del BCE» in the verification (feature 012, block 4): the rates of the
-// ledger against the official history, with the findings of the domain — and,
-// without a history, **«sin contrastar»**, never «sin hallazgos»: saying the
-// rates are right without having looked is worse than saying nothing
-// (decisions (f) and (p) of prompt 012). Everything of the ECB is loaded here,
-// lazily, when the screen opens.
+// «Tipos del BCE» in the verification: the rates of the ledger against the official history, with
+// the findings of the domain — and, without a history, **«sin contrastar»**, never «sin hallazgos»:
+// saying the rates are right without having looked is worse than saying nothing. Everything of the
+// ECB is loaded here, lazily, when the screen opens.
 
 import type { IntegrityFinding, LedgerEvent, LedgerState } from "@atlas/domain";
 import { createResource, type JSX, Match, Show, Switch } from "solid-js";

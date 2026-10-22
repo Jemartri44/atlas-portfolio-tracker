@@ -1,13 +1,12 @@
-// A line of `prices/<asset_id>.jsonl` (ADR-0031, «Almacén»; feature 013,
-// `plan.md` §4): the close of one date from one source, as the source gave it.
+// A line of `prices/<asset_id>.jsonl` (ADR-0031, «Almacén»): the
+// close of one date from one source, as the source gave it.
 //
-// **Only appended.** Whether a close is already there is decided by identity
-// — the asset, the date and the source — and by the value **as a number**
+// **Only appended.** Whether a close is already there is decided by identity —
+// the asset, the date and the source — and by the value **as a number**
 // (`101.50` and `101.5` are the same close), never by a hash of the line, which
-// carries `fetched_at` and would make every run a new line (§2 ter of prompt
-// 013, the lesson of §11.1 of feature 012).
+// carries `fetched_at` and would make every run a new line.
 //
-// **One close in force per asset and date** (decision D-Q10 of the direction):
+// **One close in force per asset and date**:
 // the console resolves which source wins when it writes, so a reader never
 // needs the configured order. The file only grows, so the close in force of a
 // date is **the last line of that date**, and the ones before it are what it
@@ -98,7 +97,7 @@ const lineOf = (assetId: AssetId, text: string, number: number): CloseLine => {
   }
   // A reader refuses what it does not know (trap 10): the whole file of the
   // asset, not the line, because a newer line may be the correction of an
-  // older one of the same date and source (questions.md §2.5, accepted).
+  // older one of the same date and source (accepted).
   if (version > PRICE_LINE_VERSION) {
     throw new ValidationError(
       "price_file_newer_version",
@@ -193,7 +192,7 @@ export const closeOn = (
  *   differs as a number (a correction of the source), never for the same value;
  * - it is of **another** source: append only when `source` comes **before**
  *   it in the configured order — the primary replaces the fallback, never the
- *   other way round (D-Q10). Nothing is ever averaged (P7).
+ *   other way round. Nothing is ever averaged.
  */
 export const linesToAppend = (
   existing: readonly CloseLine[],
@@ -243,15 +242,15 @@ export interface UnreadableCloses {
 
 /**
  * Closes stored in a currency that is not the one their source declares now:
- * feature 013 stored the pence of Alpha Vantage as pounds when one currency
- * was declared for the whole asset (review of PR #80).
+ * e.g. the pence of Alpha Vantage stored as pounds when one currency was
+ * declared for the whole asset.
  */
 export interface MismatchedCloses {
   readonly asset_id: AssetId;
   readonly source: QuoteSource;
   readonly declared: string;
   /**
-   * Present when they are the closes feature 013 stored in this currency
+   * Present when they are the closes stored in this currency
    * although the source said another one (`misstored` of the correspondence).
    */
   readonly misstored?: string;
@@ -260,8 +259,8 @@ export interface MismatchedCloses {
 }
 
 /**
- * Days a purge asked for again once and no source served (third pass of the
- * review of PR #80): a hole, said while no close fills it.
+ * Days a purge asked for again once and no source served: a hole, said while no
+ * close fills it.
  */
 export interface UnservedDays {
   readonly asset_id: AssetId;
@@ -270,9 +269,8 @@ export interface UnservedDays {
 }
 
 /**
- * The lines of `lines` whose currency is not the one declared for their
- * source, or the one in which feature 013 stored a source that said another
- * (`misstored`, second pass of the review of PR #80).
+ * The lines of `lines` whose currency is not the one declared for their source,
+ * or the one in which a source that said another was stored (`misstored`).
  */
 export const mismatchedLines = (
   lines: readonly CloseLine[],
@@ -295,7 +293,7 @@ export const mismatchedLines = (
  *
  * With the correspondence of symbols, a line whose currency is not the one
  * its source declares **is left out**, and said (`mismatched`): a hole is
- * better than a figure a hundred times wrong (review of PR #80). Without a
+ * better than a figure a hundred times wrong. Without a
  * declaration there is nothing to compare with, and the lines are read as
  * they are.
  */

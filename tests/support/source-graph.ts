@@ -1,9 +1,7 @@
-// The reader of the source graph the guardians share (feature 015, block 1
-// of E1; moved out of `tests/api-access.test.ts` by feature 016, block 1 of
-// E1, so `tests/jobs-access.test.ts` walks the same graph and does not grow a
-// second, weaker copy). Static imports, re-exports and literal dynamic
-// imports, parsed with the parser Vite ships, across packages through their
-// `exports`. Nothing here is a test: it only reads.
+// The reader of the source graph the guardians share (`tests/api-access.test.ts` and
+// `tests/jobs-access.test.ts` walk the same graph, so there is no second, weaker copy). Static
+// imports, re-exports and literal dynamic imports, parsed with the parser Vite ships, across
+// packages through their `exports`. Nothing here is a test: it only reads.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
@@ -40,14 +38,12 @@ export const productSources = (): string[] => [
 ];
 
 /**
- * A source as the bundler reads it (round 2 of the review of PR #90, B2-bis
- * and B3). The guards used to read imports with regular expressions and to
- * strip comments with one more: a `//` inside a string swallowed the rest of
- * the line, and a re-export, a `require` or an `import.meta.glob` walked past
- * them. Now the source is **parsed** — with the parser Vite already ships
- * (`parseSync`, Oxc), no new dependency — and its imports, re-exports and
- * dynamic imports come from the parser, and its comments are blanked by the
- * ranges the parser gives. A source it cannot parse fails the guard.
+ * A source as the bundler reads it. The guards used to read imports with regular expressions and to
+ * strip comments with one more: a `//` inside a string swallowed the rest of the line, and a
+ * re-export, a `require` or an `import.meta.glob` walked past them. Now the source is **parsed** —
+ * with the parser Vite already ships (`parseSync`, Oxc), no new dependency — and its imports,
+ * re-exports and dynamic imports come from the parser, and its comments are blanked by the ranges
+ * the parser gives. A source it cannot parse fails the guard.
  *
  * These guards are the **quick warning**. The authoritative check is on the
  * real graph of the bundle: `apps/web/scripts/check-bundle.mjs` reads the
@@ -198,11 +194,10 @@ const targetsOf = (value: unknown): string[] =>
       : [];
 
 /**
- * A package subpath as its source file, **read off `exports`** (never a list
- * written here). **Every condition** is resolved, and they must all name the
- * same module (round 2 of the review of PR #106, R2-N3): the graph once read
- * `types` while the bundler took `import`, and a subpath could point the two
- * at different files. Different modules fail, so no guard passes on one.
+ * A package subpath as its source file, **read off `exports`** (never a list written here). **Every
+ * condition** is resolved, and they must all name the same module: the graph once read `types`
+ * while the bundler took `import`, and a subpath could point the two at different files. Different
+ * modules fail, so no guard passes on one.
  */
 export const exportsOf = (root: string): Map<string, string> => {
   const exported = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).exports as Record<
@@ -251,9 +246,8 @@ export const resolveAcross = (
   if (specifier.startsWith(".")) {
     return fileAt(resolve(dirname(from), specifier));
   }
-  // A root-absolute path, which Vite resolves from the root of the web (and an
-  // absolute path of the disk): never a way past a guard (round 2 of the
-  // review of PR #97, B1).
+  // A root-absolute path, which Vite resolves from the root of the web (and an absolute path of the
+  // disk): never a way past a guard.
   if (specifier.startsWith("/")) {
     return (
       fileAt(join(repoRoot, "apps", "web", specifier)) ??
@@ -261,8 +255,8 @@ export const resolveAcross = (
       `<unresolved ${specifier}>`
     );
   }
-  // An alias of the `imports` field of a package.json: the graph cannot follow
-  // it, so it fails closed (review of PR #106, N1), and a test forbids the field.
+  // An alias of the `imports` field of a package.json: the graph cannot follow it, so it fails
+  // closed and a test forbids the field.
   if (specifier.startsWith("#")) {
     return `<unresolved ${specifier}>`;
   }

@@ -1,5 +1,4 @@
-// The draft of an operation recorded before its ECB rate is published
-// (ADR-0029, point 9; block 5 of prompt 012; mutant 12 of §5).
+// The draft of an operation recorded before its ECB rate is published (ADR-0029, point 9).
 
 import { describe, expect, it } from "vitest";
 import {
@@ -113,9 +112,8 @@ describe("preparePendingDraft", () => {
     await expect(preparePendingDraft(deps, undefined, 30, goldBuy)).rejects.toMatchObject({
       code: "draft_not_needed",
     });
-    // Nor when the user typed half of it: only a pair nobody typed waits
-    // (review of PR #75) — the half typed is the user's, and the ledger's
-    // validation says what is missing.
+    // Nor when the user typed half of it: only a pair nobody typed waits — the half typed is the
+    // user's, and the ledger's validation says what is missing.
     await expect(
       preparePendingDraft(deps, history, 30, { ...goldBuy, fx_rate_date: "2026-04-01" }),
     ).rejects.toMatchObject({ code: "draft_not_needed" });
@@ -324,8 +322,8 @@ describe("a confirmation retried knows its own line, and nothing else (second re
   const confirmed = { ...goldBuy, fx_rate: "1.1104", fx_rate_date: "2026-04-01" };
 
   it("keeps a draft whose twin was recorded by hand, and asks the duplicate question", async () => {
-    // The reviewer's case: a draft of 1 ast_gold, then an identical purchase
-    // recorded by hand. Confirming must not take the draft for recorded.
+    // A draft of 1 ast_gold, then an identical purchase recorded by hand. Confirming must not take
+    // the draft for recorded.
     const store = seeded();
     const deps = testDeps(store);
     const drafts = new MemoryDrafts();

@@ -4,7 +4,7 @@
 // dozen figures for fun, and every field can be corrected to what was really
 // declared: the two are not the same thing, and the whole point of the event
 // is that the ledger keeps the second one even when the application computes
-// something else today (decision (l) of the prompt).
+// something else today.
 //
 // Two rules of the house live in the form itself: what arrives preloaded is
 // **the user's data**, so it is masked until the field has the focus
@@ -53,7 +53,7 @@ export default function PresentarRoute(): JSX.Element {
   /**
    * A filing with the same fingerprint is already recorded: a warning with a
    * confirmation, never a refusal (ADR-0012), as `--confirm-duplicate` in the
-   * console (feature 015, E4, P11).
+   * console.
    */
   const [duplicate, setDuplicate] = createSignal<readonly string[] | undefined>();
   const warned = createWarned();

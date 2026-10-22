@@ -6,8 +6,7 @@
 // Fund" right next to them, in the catalogue events. Showing the identifier
 // where the name exists turns the application into a debug dump — and it was
 // doing exactly that in the patrimony, in the two hundred rows of the ledger,
-// in the warnings and inside half the translated error messages (review of
-// 2026-09-18).
+// in the warnings and inside half the translated error messages.
 //
 // Three rules, all of them here so no screen has to remember them:
 //
@@ -46,10 +45,9 @@ export const NO_NAMES: NameIndex = {};
 const thesisKey = (id: string): string => `tesis:${id}`;
 
 /**
- * What the units of an asset are called, beside a quantity: "12,5 part." and,
- * masked, "•••• part." (D2 of docs/design/system.md). In the same index under
- * its own namespace, like the theses, because it is the catalogue read for the
- * screen.
+ * What the units of an asset are called, beside a quantity: "12,5 part." and, masked, "•••• part."
+ * (docs/design/system.md). In the same index under its own namespace, like the theses, because it
+ * is the catalogue read for the screen.
  */
 const unitsKey = (id: string): string => `unidades:${id}`;
 

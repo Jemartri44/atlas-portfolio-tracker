@@ -1,6 +1,5 @@
-// The three gauges of the bucket (feature 020, E3, M10; mockup
-// `indicadores.html`, card C): how much of the cap has been contributed with
-// the mark of the warning, the result over what was contributed with the stop
+// The three gauges of the bucket (mockup `indicadores.html`, card C): how much of the cap has been
+// contributed with the mark of the warning, the result over what was contributed with the stop
 // rule, and the weight of the bucket over net worth with its maximum.
 //
 // They are drawn from percentages, so they say the same with the privacy mode

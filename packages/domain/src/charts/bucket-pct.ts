@@ -1,6 +1,6 @@
-// The bucket against the index in **percent**, on each date (feature 020, E4,
-// M7): the result of the bucket and what the same money would have made in the
-// index, both over what was contributed to the bucket by that date.
+// The bucket against the index in **percent**, on each date: the result of the
+// bucket and what the same money would have made in the index, both over what
+// was contributed to the bucket by that date.
 //
 // **Nothing of rule 16 is recomputed.** Each point is a point of
 // `bucketIndexSeries`, divided by the gross contribution of the bucket at that

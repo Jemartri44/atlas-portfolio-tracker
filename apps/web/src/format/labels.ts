@@ -4,7 +4,7 @@
 // test compares this against `knownFieldsOf` for every type and fails.
 //
 // The domain speaks English by contract (`errors.ts`); translating is the
-// interface's job, and each interface does it its own way (decision (i)).
+// interface's job, and each interface does it its own way.
 //
 // LINE BUDGET: six dictionaries — event types, fields, values, settings,
 // platforms and states — and nothing else. They are the vocabulary of the

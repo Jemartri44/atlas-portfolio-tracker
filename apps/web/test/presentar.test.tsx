@@ -126,9 +126,8 @@ describe("recording what was filed", () => {
     expect(text(again)).toContain("la primera sigue constando");
   });
 
-  // Feature 015, E4 (P11; `specs/014-ledger-sync-core/questions.md (in git history)` §9.1): a
-  // repeated fingerprint is a warning with a confirmation, never a refusal
-  // (ADR-0012), as `atlas filed … --confirm-duplicate` in the console.
+  // A repeated fingerprint is a warning with a confirmation, never a refusal (ADR-0012), as `atlas
+  // filed … --confirm-duplicate` in the console.
   it("asks before recording a filing whose fingerprint repeats, and records it on a yes", async () => {
     const filings = (): number =>
       blob.text.split("\n").filter((line) => line.includes('"tax_return_filed"')).length;
@@ -152,9 +151,8 @@ describe("recording what was filed", () => {
     expect(filings()).toBe(before + 1);
   });
 
-  // Review of PR #97, security N5: the dialog does not freeze the form. A
-  // field changed with the warning open is another filing, and the yes that
-  // was given to the first does not confirm it: it warns again.
+  // The dialog does not freeze the form. A field changed with the warning open is another filing,
+  // and the yes that was given to the first does not confirm it: it warns again.
   it("confirms a repeated filing only as it was when the warning was shown", async () => {
     const filings = (): number =>
       blob.text.split("\n").filter((line) => line.includes('"tax_return_filed"')).length;

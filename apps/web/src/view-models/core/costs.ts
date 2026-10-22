@@ -1,9 +1,9 @@
 // What the portfolio costs, as rows.
 //
 // Three blocks that never share a total: the core per asset, the bucket per
-// account (constitution III) and — new in feature 007 — the **standalone
+// account (constitution III) and the **standalone
 // charges**, which are not part of any fiscal basis and which no screen of
-// either interface used to show at all (`docs/business-rules.md` §5.2, Q9).
+// either interface used to show at all (`docs/business-rules.md` §5.2).
 
 import type { CostSummary, Money } from "@atlas/domain";
 import { valueLabel } from "../../format/labels.js";

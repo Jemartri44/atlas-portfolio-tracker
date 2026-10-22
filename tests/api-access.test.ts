@@ -1,8 +1,6 @@
-// Feature 015, block 1 of E1: the guardians of the API and the access, written
-// **before** `apps/api` exists and seen failing against an empty module
-// (`specs/015-api-access/questions.md (in git history)`, E1). Kept apart from
-// `architecture.test.ts`, which is already two thousand lines long; the graph
-// walk is the same idea: static imports, across packages through `exports`.
+// The guardians of the API and the access. Kept apart from `architecture.test.ts`, which is already
+// two thousand lines long; the graph walk is the same idea: static imports, across packages through
+// `exports`.
 
 import { readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
@@ -50,12 +48,12 @@ describe("architecture (015): the API is a workspace of its own", () => {
     expect(
       Object.keys(manifest.dependencies ?? {}).filter((name) => !name.startsWith("@atlas/")),
     ).toEqual([]);
-    // The one tool the user authorised for the API (§12 of questions.md), at an exact version.
+    // The one tool the user authorised for the API, at an exact version.
     expect(manifest.devDependencies).toEqual({ esbuild: "0.28.2" });
   });
 
-  // Feature 016, E1 (§8.1 P8): the client of SES v2 joins the two of the 015,
-  // authorised by the user and pinned at the same exact version.
+  // The client of SES v2 joins the other two, authorised by the user and pinned at the same exact
+  // version.
   it("gives the adapters the three clients of the SDK the user authorised, pinned, and no other", () => {
     const manifest = JSON.parse(
       readFileSync(join(repoRoot, "packages", "adapters", "package.json"), "utf8"),
@@ -91,9 +89,9 @@ describe("architecture (015): the API is a workspace of its own", () => {
   });
 
   /**
-   * The doubles of S3, SSM and Google, and the local server of the captures,
-   * are test code: nothing the product ships may reach them (plan §11). Read
-   * on the whole graph of the API and of every subpath of `exports`.
+   * The doubles of S3, SSM and Google, and the local server of the captures, are test code: nothing
+   * the product ships may reach them. Read on the whole graph of the API and of every subpath of
+   * `exports`.
    */
   it("reaches no test double and nothing under a test folder, from the API or any export", () => {
     const roots = [
@@ -127,15 +125,12 @@ describe("architecture (015): the API is a workspace of its own", () => {
 
 describe("architecture (015): every import can be read", () => {
   /**
-   * The graph every guard above and below walks is read off the imports of
-   * each source, so an import it cannot read is an import it cannot see. A
-   * dynamic `import(…)` whose argument is not a plain string literal in
-   * single or double quotes — a template literal, a variable, any expression —
-   * is refused **everywhere in the product** (B2 of the review of PR #90: a
-   * template literal walked past the guard of P2 and P3 with every test
-   * green). Read off the parsed program, so a `//` inside a string before it
-   * hides nothing (B2-bis of round 2: the regular expression that stripped
-   * comments swallowed the rest of the line).
+   * The graph every guard above and below walks is read off the imports of each source, so an
+   * import it cannot read is an import it cannot see. A dynamic `import(…)` whose argument is not a
+   * plain string literal in single or double quotes — a template literal, a variable, any
+   * expression — is refused **everywhere in the product** (a template literal once walked past the
+   * guard with every test green). Read off the parsed program, so a `//` inside a string before it
+   * hides nothing (a regular expression that stripped comments swallowed the rest of the line).
    */
   it("allows a dynamic import only with a quoted string literal", () => {
     const offenders: string[] = [];
@@ -159,14 +154,12 @@ describe("architecture (015): every import can be read", () => {
   });
 
   /**
-   * Two more ways in that no guard read (B3 of round 2): `require(…)` — the
-   * web compiles with the types of Node, and the bundler follows it — and
-   * `import.meta.glob(…)`, which Vite turns into imports at build time. The
-   * product is ESM with literal imports only: neither is allowed anywhere,
-   * nor `createRequire`, nor `import.meta` read by a computed key. Only the
-   * sources that can hold one are walked: an identifier spells `require` as a
-   * word of the text or through a `\u` escape, and the parser lists every
-   * `import.meta`.
+   * Two more ways in that a guard must read: `require(…)` — the web compiles with the types of
+   * Node, and the bundler follows it — and `import.meta.glob(…)`, which Vite turns into imports at
+   * build time. The product is ESM with literal imports only: neither is allowed anywhere, nor
+   * `createRequire`, nor `import.meta` read by a computed key. Only the sources that can hold one
+   * are walked: an identifier spells `require` as a word of the text or through a `\u` escape, and
+   * the parser lists every `import.meta`.
    */
   it("never uses require, createRequire or import.meta.glob", () => {
     const offenders: string[] = [];
@@ -246,9 +239,8 @@ describe("architecture (015): AWS and Google only where they belong", () => {
   });
 
   /**
-   * What the web bundles is **derived** — its own imports resolved through
-   * `exports` — so a subpath added tomorrow and imported by the web is looked
-   * at without anybody writing it here (§2 bis; mutant 11).
+   * What the web bundles is **derived** — its own imports resolved through `exports` — so a subpath
+   * added tomorrow and imported by the web is looked at without anybody writing it here.
    */
   it("lets neither the SDK, nor Google, nor the Node adapters of the API reach the web", () => {
     const reached = webReach();
@@ -266,8 +258,8 @@ describe("architecture (015): AWS and Google only where they belong", () => {
           ) ||
           /[/\\]adapters[/\\]src[/\\](aws|identity|access)[/\\]/.test(file) ||
           /[/\\]domain[/\\]src[/\\]access(\.ts|[/\\])/.test(file) ||
-          // The administration (review of PR #98, N7): its rules, its adapter
-          // (under `aws/`, above) and its orders, which live in the console.
+          // The administration: its rules, its adapter (under `aws/`, above) and its orders, which
+          // live in the console.
           /[/\\]domain[/\\]src[/\\]admin\.ts$/.test(file) ||
           /[/\\]apps[/\\]cli[/\\]/.test(file)
         );
@@ -279,10 +271,9 @@ describe("architecture (015): AWS and Google only where they belong", () => {
 
 describe("architecture (015): the records of the tokens are never deleted nor labelled (T26)", () => {
   /**
-   * ADR-0033, point 9: a record is written to create it and to revoke it, and
-   * never deleted; a label or a delete is a way to bring a revoked token back
-   * (B1). The narrow interface of SSM offers exactly five operations, and no
-   * source of the product names the others of the service.
+   * ADR-0033, point 9: a record is written to create it and to revoke it, and never deleted; a
+   * label or a delete is a way to bring a revoked token back. The narrow interface of SSM offers
+   * exactly five operations, and no source of the product names the others of the service.
    */
   it("offers get, getVersioned, putNew, overwrite and listByPath, and nothing else", () => {
     const file = join(adaptersRoot, "src", "aws", "parameter-store.ts");
@@ -301,10 +292,9 @@ describe("architecture (015): the records of the tokens are never deleted nor la
 
 describe("architecture (015): the thin adapters of the SDK send only what they are for (E3)", () => {
   /**
-   * The API only appends to the bucket and never deletes (ADR-0026, Part A;
-   * ADR-0028, row 7), and the records of the tokens are never deleted nor
-   * labelled (T26). What the adapters take from the SDK is the closed list of
-   * commands they send; a delete, or anything else, is a violation.
+   * The API only appends to the bucket and never deletes (ADR-0026, Part A; ADR-0028, row 7), and
+   * the records of the tokens are never deleted nor labelled. What the adapters take from the SDK
+   * is the closed list of commands they send; a delete, or anything else, is a violation.
    */
   it("takes from the SDK only the clients and the commands of the narrow interfaces", () => {
     const allowed: Record<string, readonly string[]> = {
@@ -322,10 +312,10 @@ describe("architecture (015): the thin adapters of the SDK send only what they a
         "PutParameterCommand",
         "GetParametersByPathCommand",
         "GetParametersByPathCommandOutput",
-        // Feature 017, E4: tags a parameter after a rotation (`SdkSecretStore`, administration only).
+        // Tags a parameter after a rotation (`SdkSecretStore`, administration only).
         "AddTagsToResourceCommand",
       ],
-      // Feature 016 (§8.1 P8): one command, to send a mail, and its client.
+      // One command, to send a mail, and its client.
       "@aws-sdk/client-sesv2": ["SESv2Client", "SendEmailCommand"],
     };
     const taken = productSources().flatMap((file) =>
@@ -351,9 +341,8 @@ describe("architecture (015): the API only appends, and the domain judges every 
   const apiSources = () => listSources(join(apiRoot, "src"));
 
   /**
-   * ADR-0026, Part A: the API never rewrites nor deletes a line. It holds the
-   * remote ledger only as `AppendOnlyLedger`, and no source of it names an
-   * operation that rewrites or deletes (mutant 31).
+   * ADR-0026, Part A: the API never rewrites nor deletes a line. It holds the remote ledger only as
+   * `AppendOnlyLedger`, and no source of it names an operation that rewrites or deletes.
    */
   it("names no operation that rewrites or deletes the remote", () => {
     const offenders = apiSources().filter((file) =>
@@ -364,16 +353,15 @@ describe("architecture (015): the API only appends, and the domain judges every 
     expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
     const sync = readFileSync(join(apiRoot, "src", "sync.ts"), "utf8");
     expect(sync).toContain("AppendOnlyLedger");
-    // The routes get no ObjectStore of their own (review of PR #96, security
-    // N1): the reference data through a read-only port of its two prefixes.
+    // The routes get no ObjectStore of their own: the reference data through a read-only port of
+    // its two prefixes.
     expect(parse(join(apiRoot, "src", "sync.ts")).code).not.toMatch(/\bObjectStore\b|\bobjects\b/);
     expect(sync).toContain("ReferenceReader");
   });
 
   /**
-   * What a line is worth is `acceptAppend` and `acceptInit`, never a copy in
-   * the handler: no source of the API names a code of the table of §5.2
-   * (mutant 31, «reimplement a rule of acceptAppend»).
+   * What a line is worth is `acceptAppend` and `acceptInit`, never a copy in the handler: no source
+   * of the API names a code of the table of `docs/api.md` §5.2.
    */
   it("reimplements no rule of acceptAppend: the codes of a line live in the domain", () => {
     const codes =
@@ -394,11 +382,10 @@ describe("architecture (015): the administration is out of reach of the API (E5)
     /[/\\]apps[/\\]cli[/\\]/.test(file);
 
   /**
-   * ADR-0026, Part A: `compact` and the restore are operations of
-   * administration, «fuera del camino que alcanza Internet». Nothing the
-   * handler reaches is an order, an adapter or a rule of the administration
-   * (mutant 45), and no source of the API names what only the administration
-   * has: an old version, a listing at depth, the mark of a forgotten device.
+   * ADR-0026, Part A: `compact` and the restore are operations of administration, «fuera del camino
+   * que alcanza Internet». Nothing the handler reaches is an order, an adapter or a rule of the
+   * administration, and no source of the API names what only the administration has: an old
+   * version, a listing at depth, the mark of a forgotten device.
    */
   it("reaches no order, adapter or rule of the administration from apps/api", () => {
     const roots = listSources(join(apiRoot, "src"));
@@ -416,10 +403,9 @@ describe("architecture (015): the administration is out of reach of the API (E5)
   });
 
   /**
-   * The administration takes the role of administration from the standard
-   * chain of the SDK, **never the token of a device** (mutant 45; §7 P5, mutant
-   * 46 ter): nothing it imports is the credentials of the console, the header
-   * of the token or the client of the API.
+   * The administration takes the role of administration from the standard chain of the SDK, **never
+   * the token of a device**: nothing it imports is the credentials of the console, the header of
+   * the token or the client of the API.
    */
   it("uses no token of a device: it imports neither the credentials nor the client of the API", () => {
     const roots = cliSources().filter((file) =>
@@ -453,21 +439,20 @@ describe("architecture (015): the administration is out of reach of the API (E5)
 
 describe("architecture (015): the authoritative guard reads the graph of the bundle", () => {
   /**
-   * The guards of this file read the sources; the one that decides reads the
-   * modules Rolldown put in the bundle (round 2 of the review of PR #90). It
-   * runs inside `npm run build`, so this only holds that it is there: the
-   * plugin that writes the graph, and each family it refuses.
+   * The guards of this file read the sources; the one that decides reads the modules Rolldown put
+   * in the bundle. It runs inside `npm run build`, so this only holds that it is there: the plugin
+   * that writes the graph, and each family it refuses.
    */
   it("writes the graph in the build and refuses each family on it", () => {
     const config = readFileSync(join(repoRoot, "apps", "web", "vite.config.ts"), "utf8");
     expect(config).toContain('moduleGraph("main"),');
-    // Round 3: the workers are other builds, with the same plugin.
+    // The workers are other builds, with the same plugin.
     expect(config).toContain('worker: { plugins: () => [moduleGraph("worker")] }');
     expect(config).toContain('fileName: ".vite/atlas-modules.json"');
-    // Review of PR #97, N1: who imports each module, statically or not.
+    // Who imports each module, statically or not.
     expect(config).toContain("info?.dynamicImporters");
     expect(config).toContain("realpathSync(path)");
-    // Round 4: a source of code is never inlined as a `data:` URL.
+    // A source of code is never inlined as a `data:` URL.
     expect(config).toMatch(/assetsInlineLimit: \(filePath: string\)/);
     const script = readFileSync(
       join(repoRoot, "apps", "web", "scripts", "check-bundle.mjs"),
@@ -485,7 +470,6 @@ describe("architecture (015): the authoritative guard reads the graph of the bun
       "el bundle lleva un fuente",
       "ningún grafo dice de dónde sale este fichero",
       "lleva código incrustado como URL data:",
-      // Review of PR #97, N1 of round 1 and B1 of round 2.
       "un módulo de la sección de la sincronización que no es su puerta",
       "alcanza el motor de la sincronización de la web desde fuera de su sección",
       "el grafo no dice quién importa",
@@ -514,11 +498,10 @@ describe("architecture (015): nothing of the access on the boot path", () => {
 
 describe("architecture (015): the service worker leaves the API alone", () => {
   /**
-   * Found by looking at the screen (E1): the PWA answered **every** navigation
-   * with `index.html` (`navigateFallback`), so `GET /api/auth/login` and the
-   * return from Google never reached the Lambda once the service worker was
-   * installed — the SPA painted «Aquí no hay nada». A navigation under
-   * `/api/` is the API's, always.
+   * Found by looking at the screen: the PWA answered **every** navigation with `index.html`
+   * (`navigateFallback`), so `GET /api/auth/login` and the return from Google never reached the
+   * Lambda once the service worker was installed — the SPA painted «Aquí no hay nada». A navigation
+   * under `/api/` is the API's, always.
    */
   it("never answers a navigation under /api/ with the shell of the SPA", () => {
     const config = readFileSync(join(repoRoot, "apps", "web", "vite.config.ts"), "utf8");

@@ -5,9 +5,9 @@ import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 const project = (b: LedgerBuilder) => projectLedger(b.build());
 
 /**
- * Feature 005 §3.1: the cash of the net worth has to be converted with a rate
- * the ledger actually carries, and the view has to say how old that rate is. A
- * currency the ledger never priced has no rate, and that is a datum, not a zero.
+ * The cash of the net worth has to be converted with a rate the ledger actually
+ * carries, and the view has to say how old that rate is. A currency the ledger
+ * never priced has no rate, and that is a datum, not a zero.
  */
 describe("fxRates: the last ECB rate the ledger knows per currency", () => {
   it("keeps the last one in chronological order, with the date the event carries", () => {

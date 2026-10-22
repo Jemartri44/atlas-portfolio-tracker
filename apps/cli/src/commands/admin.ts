@@ -1,10 +1,8 @@
-// atlas admin devices | revoke-all-tokens | forget-device | compact | restore
-// | prices push --env <e> (feature 015, E5; feature 016, E2, block 3; ADR-0026, Part A; ADR-0032; ADR-0033, point 8;
-// `contracts/cli-commands.md`): operations of administration **over the copy
-// of reference**, with the short-lived credentials of the role
-// `atlas-<env>-admin` (the standard chain of the SDK) — **never with the
-// token of a device and never through the API**, which only appends. Nothing
-// of this is reachable from `apps/api` (architecture test).
+// atlas admin devices | revoke-all-tokens | forget-device | compact | restore | prices push --env
+// <e> (ADR-0026, Part A, ADR-0032, ADR-0033, point 8): operations of administration **over the copy
+// of reference**, with the short-lived credentials of the role `atlas-<env>-admin` (the standard
+// chain of the SDK) — **never with the token of a device and never through the API**, which only
+// appends. Nothing of this is reachable from `apps/api` (architecture test).
 
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -53,7 +51,7 @@ const SYMBOLS_KEY = "prices/symbols.json";
 
 /**
  * The confirmation of an order that rewrites the remote or forgets a device
- * (review of PR #98, N1; ADR-0032, note of 2026-09-27): never `--yes`, which
+ * (ADR-0032, note of 2026-09-27): never `--yes`, which
  * is written before the list is on screen, and never a plain yes — the user
  * types the name of the environment, with what is at stake in front.
  */
@@ -114,7 +112,7 @@ const devicesOrder = async (ctx: Context, clients: AdminClients): Promise<number
 
 /**
  * Revokes the live records `which` picks with the **same code the API
- * writes** (`TokenRegistry.revoke`, `revokedRecord`; §7 P4): one already
+ * writes** (`TokenRegistry.revoke`, `revokedRecord`): one already
  * revoked is left as it is, so it can be repeated without harm. An unreadable
  * record is said and left: the API refuses it anyway.
  */
@@ -156,13 +154,13 @@ const revokeAllOrder = async (ctx: Context, clients: AdminClients): Promise<numb
           ]),
     ].join("\n"),
   );
-  // Revoking **all** is not done while a record could not be read (review of
-  // PR #98, N2): a console older than the API may not understand a live one.
+  // Revoking **all** is not done while a record could not be read: a console older than the API may
+  // not understand a live one.
   return done.unreadable.length === 0 ? EXIT.ok : EXIT.domain;
 };
 
 /**
- * `atlas admin forget-device <id>|--device <id>` (§7 P9):
+ * `atlas admin forget-device <id>|--device <id>`:
  * **first** its tokens are revoked, **then** its object is rewritten on the
  * ETag it was read at, with `state: "forgotten"`. Never deleted. A cut between
  * the two leaves it revoked and not forgotten — safe, and repeating finishes
@@ -240,7 +238,7 @@ const forgetOrder = async (
     }
     current = await devices.readForUpdate(id);
   }
-  // And again once it is forgotten (review of PR #98, N8): a sign-in that
+  // And again once it is forgotten: a sign-in that
   // ended between the revocation and the mark left a token nobody revoked.
   const late = await sweep();
   const revoked = [...tokens.revoked, ...late.revoked];
@@ -308,15 +306,14 @@ const compactOrder = async (
 };
 
 /**
- * The bytes of the candidate as text, **strictly** (review of PR #98, N9): a
+ * The bytes of the candidate as text, **strictly**: a
  * byte that is not UTF-8 would become U+FFFD, pass the check and be written
  * as other bytes than the copy's. Refused instead, as a candidate that does
  * not pass.
  */
 const strictText = (bytes: Uint8Array): string => {
   // A BOM is kept as a character, so the first line cannot be read and the
-  // copy is refused — never written back without it (round 2 of the review
-  // of PR #98).
+  // copy is refused — never written back without it.
   const text = strictUtf8(bytes);
   if (text === undefined) {
     throw new DomainError("restore_candidate_invalid", "the candidate is not UTF-8", {
@@ -427,8 +424,7 @@ const restoreOrder = async (
 const CHANGE_TEXT = { added: "añadido", removed: "quitado", changed: "cambiado" } as const;
 
 /**
- * `atlas admin prices push` (feature 016, E2, block 3; §8.1 P18, amended in
- * §8.2 M4 and M5): uploads **only** the local `prices/symbols.json` — never
+ * `atlas admin prices push`: uploads **only** the local `prices/symbols.json` — never
  * `config.json`, which stays the budget of the console — and keeps **no
  * local state**: it reads the remote object, shows the difference, asks for
  * the name of the environment and writes on the ETag of **that same read**
@@ -464,8 +460,8 @@ const pricesPushOrder = async (
     );
     return EXIT.ok;
   }
-  // What it replaces, to recover it from the versions of the bucket (review
-  // of PR #106, N5): its ETag, and its version when the bucket says it.
+  // What it replaces, to recover it from the versions of the bucket: its ETag, and its version when
+  // the bucket says it.
   const replaced =
     remote === undefined
       ? []
@@ -582,7 +578,7 @@ export const adminCommand = async (
       "falta el dispositivo: los enseña «atlas admin devices»; si empieza por guion, escríbelo detrás de «--» o con --device <id>",
     );
   }
-  // Review of PR #98, N1: a `--yes` is written before the list is on screen.
+  // A `--yes` is written before the list is on screen.
   if (ctx.yes && ["forget-device", "compact", "restore", "prices", "secrets"].includes(order)) {
     throw new UsageError(
       `--yes no vale en «atlas admin ${order === "prices" ? "prices push" : order}»: se confirma escribiendo el nombre del entorno, con lo que se pierde delante (ADR-0032)`,

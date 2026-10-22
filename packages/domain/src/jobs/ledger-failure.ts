@@ -1,5 +1,5 @@
-// What a ledger that does not load means for a warning (review of PR #109,
-// avisos B2 and N1). The code comes from the reader of the jobs:
+// What a ledger that does not load means for a warning. The
+// code comes from the reader of the jobs:
 //
 // - `transient`: it could not be read now (S3 throttled, erred or denied).
 //   The warning is retried the next day, never spent on a text that is not

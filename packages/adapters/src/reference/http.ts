@@ -1,4 +1,4 @@
-// The reference data over HTTP (feature 016, E3; `docs/api.md` §6): the
+// The reference data over HTTP (`docs/api.md` §6): the
 // index of `reference/ecb/` and `prices/`, and one file at a time, with
 // `If-None-Match` on the version the device holds. **One client, the
 // credential injected**, like the remote ledger: the console with the device
@@ -9,7 +9,7 @@
 // A subpath of its own (`@atlas/adapters/reference-http`), so that the web
 // loads it lazily, never on its boot path; and a folder of its own, outside
 // `sync/`: it only reads, and the web reaches what configures the sync only
-// through its engine (feature 015's guardians).
+// through its engine.
 
 import { parseErrorAnswer, parseReferenceIndex, RemoteError } from "@atlas/domain/remote-answers";
 
@@ -23,15 +23,14 @@ interface HttpReferenceOptions {
 export type ReferenceKind = "ecb" | "prices";
 
 /**
- * The most an answer of the reference data may weigh: 20 MB (review of PR
- * #108, N6) — the index, the manifest of the ECB, a file of prices.
+ * The most an answer of the reference data may weigh: 20 MB — the index, the manifest of the ECB, a
+ * file of prices.
  */
 const MAX_REFERENCE_BYTES = 20 * 1024 * 1024;
 
 /**
- * The most **a history of the ECB** may weigh: 64 MB (round 2 of the review
- * of PR #108). `api-exr.csv` is some 12 MB today and grows every day; the
- * ZIP's CSV is smaller. Only these two names under `ecb`.
+ * The most **a history of the ECB** may weigh: 64 MB. `api-exr.csv` is some 12 MB today and grows
+ * every day; the ZIP's CSV is smaller. Only these two names under `ecb`.
  */
 const MAX_ECB_HISTORY_BYTES = 64 * 1024 * 1024;
 
@@ -73,10 +72,9 @@ export const httpReference = (options: HttpReferenceOptions) => {
     new RemoteError("transport_rejected", status, { reason: "too_large" });
 
   /**
-   * The body, **never more than `limit`** (review of PR #108, N6 and round
-   * 2): the SHA-256 of the manifest says nothing of the size, and a huge
-   * object would be loaded whole into a phone before anything checked it.
-   * Refused by the length it says, or counted as it arrives.
+   * The body, **never more than `limit`**: the SHA-256 of the manifest says nothing of the size,
+   * and a huge object would be loaded whole into a phone before anything checked it. Refused by the
+   * length it says, or counted as it arrives.
    */
   const bytesOf = async (
     response: Response,

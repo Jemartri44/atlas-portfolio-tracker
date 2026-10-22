@@ -1,5 +1,5 @@
 // Which informative return the ledger has on record, and which one the rule of
-// the 20.000 € is measured against (feature 010, block 3).
+// the 20.000 € is measured against.
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { type Filing, filingInForce } from "../projections/filings.js";
@@ -12,9 +12,8 @@ import type { InformativeModel } from "../settings/settings.js";
  * The last, not the one of the year before: what obliges again is a rise over
  * what was actually declared, and if nothing was filed in 2028 then the rise of
  * 2029 is measured against 2027. Reading the previous year instead would let a
- * category creep up 20.000 € a year for ever without ever obliging — the mutant
- * the hand-computed exercise §6.2 exists to kill, where 2029 rises 20.000,01
- * over 2027 and only 0,01 over 2028.
+ * category creep up 20.000 € a year for ever without ever obliging, as when
+ * 2029 rises 20.000,01 over 2027 and only 0,01 over 2028.
  */
 export const lastFiledBefore = (
   state: LedgerState,

@@ -1,12 +1,11 @@
-// What `atlas tax` prints, figure by figure (feature 009, quality review B1).
+// What `atlas tax` prints, figure by figure.
 //
-// The console is the deliverable of the feature: a column printed from the
-// wrong field, gains and losses swapped or the expiry lines dropped would pass
-// every test of the domain. So these read the text the user reads and compare
-// each figure with a literal worked out by hand for the ledger
+// The console is what the user reads: a column printed from the wrong field, gains and losses
+// swapped or the expiry lines dropped would pass every test of the domain. So these read the text
+// the user reads and compare each figure with a literal worked out by hand for the ledger
 // `tests/fixtures/ledger/tax-hand-v1.jsonl` (the working is in
-// `packages/domain/test/tax/hand-checked.test.ts`). Never with `--json`, which
-// comes out of the same engine as the text.
+// `packages/domain/test/tax/hand-checked.test.ts`). Never with `--json`, which comes out of the
+// same engine as the text.
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

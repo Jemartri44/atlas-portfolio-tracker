@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 //
-// M9 (feature 020, E3): with the privacy mode on, the columns that would only
-// hold masks fuse into one, "importes ocultos", and the percentages that stand
-// for them go in front; with it off, the table is the one it always was. The
-// decision of what is hidden stays with `Amount`: the fused cell is its cell.
+// With the privacy mode on, the columns that would only hold masks fuse into one, "importes
+// ocultos", and the percentages that stand for them go in front; with it off, the table is the one
+// it always was. The decision of what is hidden stays with `Amount`: the fused cell is its cell.
 
 import { describe, expect, it } from "vitest";
 import { type DataColumn, rowColumns, tableColumns } from "../src/components/columns.js";

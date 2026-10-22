@@ -1,9 +1,7 @@
-// Feature 016, E4 (plan §8; ADR-0032, point 3; mutant 28): the monthly dump
-// end to end over the doubles. The ledger byte for byte, positions.json of
-// that ledger, the ECB history with its manifest and prices/ into
-// backups/<YYYY-MM>/, every object with If-None-Match: *; a cut between any
-// two objects is finished by the retry without overwriting anything; and
-// what fails is said by the mail function only.
+// The monthly dump (ADR-0032, point 3) end to end over the doubles. The ledger byte for byte,
+// positions.json of that ledger, the ECB history with its manifest and prices/ into
+// backups/<YYYY-MM>/, every object with If-None-Match: *; a cut between any two objects is finished
+// by the retry without overwriting anything; and what fails is said by the mail function only.
 
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
@@ -96,7 +94,7 @@ describe("the monthly dump (E4, plan §8)", () => {
       },
     });
     expect(record.findings).toBeUndefined();
-    // In the order of plan §8: the ledger, its positions, the ECB file then its manifest, prices/.
+    // In the order of the dump: the ledger, its positions, the ECB file then its manifest, prices/.
     const order = [0, 1, 5, 6, 2, 3, 4].map((index) => DUMPED[index] as string);
     expect(record.objects).toEqual(
       order.map((name) => ({

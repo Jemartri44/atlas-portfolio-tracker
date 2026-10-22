@@ -1,4 +1,4 @@
-// Settings history (data-schema.md §5, §6.1): `settingsAt(date)` is the last
+// Settings history (data-schema.md §5): `settingsAt(date)` is the last
 // `settings_changed` whose `recorded_at`, as a Europe/Madrid date, is <= date.
 
 import type { CivilDate } from "../dates/civil-date.js";
@@ -39,7 +39,10 @@ export const settingsAt = (state: LedgerState, date: CivilDate): SettingsResolut
     : { settings: normalizeSettings(found.settings), origin: found.event_id };
 };
 
-/** Settings used to derive fiscal dates: an explicit override, else the latest change, else the defaults (Q3). */
+/**
+ * Settings used to derive fiscal dates: an explicit override, else the latest change, else the
+ * defaults.
+ */
 export const resolveFiscalSettings = (
   history: readonly SettingsEntry[],
   override?: Settings,

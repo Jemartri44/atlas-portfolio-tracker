@@ -1,5 +1,5 @@
-// Contract every LedgerStore must honour (specs/001-ledger-core/contracts/ports.md §2,
-// extended by feature 003 with raw lines and replace).
+// Contract every LedgerStore must honour (specs/001-ledger-core/contracts/ports.md §2),
+// raw-line operations and `replace` included.
 
 import {
   ArchiveExistsError,
@@ -20,7 +20,7 @@ export type ArchiveReader = (store: LedgerStore, name: string) => Promise<string
 /**
  * A line the application never writes: keys in another order, spaces, an
  * escaped character. `append` would re-serialise it; the raw-line operations
- * keep it byte for byte (feature 014, block 1, mutant 1).
+ * keep it byte for byte.
  */
 export const nonCanonical = (): string => {
   const record = JSON.parse(lineOf(deposit)) as Record<string, unknown>;

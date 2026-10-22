@@ -22,7 +22,7 @@ export class UsageError extends Error {
  * by a word swallowed it as its value: `atlas --json tax 2027` read `tax` as the
  * value of `--json` and answered «comando desconocido: 2027», and
  * `atlas --yes asset add` answered «--yes no admite valor» — in exactly the
- * order the usage line suggests (verifier of feature 009). Every `booleanFlag`
+ * order the usage line suggests. Every `booleanFlag`
  * of the CLI has to be here; `test/args.test.ts` reads the sources to check it.
  */
 export const BOOLEAN_FLAGS: ReadonlySet<string> = new Set([
@@ -42,9 +42,9 @@ export const BOOLEAN_FLAGS: ReadonlySet<string> = new Set([
   "history",
   "inactive",
   "local-only",
-  // Feature 016, E3: `atlas prices update --from-sources`.
+  // `atlas prices update --from-sources`.
   "from-sources",
-  // Feature 015, E5: `atlas backup`.
+  // `atlas backup`.
   "from-bucket",
   "lots",
   "manual",
@@ -72,7 +72,7 @@ const OPPOSITES: Readonly<Record<string, string>> = {
  * Only these: everywhere else a repeated flag is a mistake, and the last one
  * winning in silence is how a user writes two values and records one. `--set`
  * of `atlas filed` is repeatable because a return declares a dozen figures and
- * the user corrects them one at a time (prompt 010, block 5).
+ * the user corrects them one at a time.
  */
 export const REPEATABLE_FLAGS: ReadonlySet<string> = new Set([
   "set",
@@ -101,11 +101,10 @@ const DASH_HINT =
 const YES_OR_NO = new Set(["true", "false", "sí", "si", "no", "0", "1"]);
 
 /**
- * A boolean flag followed by `false` used to leave `false` loose and set the
- * flag: `--neutrality-regime false` recorded the regime as applying, the
- * opposite of what was written, in a field that decides criteria #7 and #13
- * (verifier of feature 009). Interpreting the word is not safe; refusing it,
- * and saying how the flag is written, is.
+ * A boolean flag followed by `false` used to leave `false` loose and set the flag:
+ * `--neutrality-regime false` recorded the regime as applying, the opposite of what was written, in
+ * a field that decides criteria #7 and #13. Interpreting the word is not safe; refusing it, and
+ * saying how the flag is written, is.
  */
 const booleanWithValue = (flag: string, value: string): UsageError => {
   const opposite = OPPOSITES[flag];

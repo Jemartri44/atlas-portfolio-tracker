@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 //
-// The fiscal calendar (feature 020, E4, M12): the strip and the list on
-// `/fiscal`, and the short version (the strip and the next date) inside the
-// card of the summary in the season. The dates are the domain's; this checks
-// what is placed, said and dimmed, and that no amount appears.
+// The fiscal calendar: the strip and the list on `/fiscal`, and the short version (the strip and
+// the next date) inside the card of the summary in the season. The dates are the domain's; this
+// checks what is placed, said and dimmed, and that no amount appears.
 
 import { fiscalCalendar } from "@atlas/domain/fiscal";
 import { describe, expect, it } from "vitest";

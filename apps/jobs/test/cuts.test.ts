@@ -1,9 +1,7 @@
-// Feature 016, E1 (R10; mutant 5; review of PR #104, idempotence B1 and N1):
-// the cuts of a delivery **at most once**. No task of E1 sends that way yet
-// (the periodic warnings arrive in E4), so a runner of this test does: it
-// marks `sending`, sends, and closes. A retry never sends it twice — not
-// after a cut between marking and closing, not after a runner that throws
-// once the mail may have gone — and sends it again only when nothing went.
+// The cuts of a delivery **at most once**. The tasks that send this way are the periodic warnings;
+// here a runner of this test does it in isolation: it marks `sending`, sends, and closes. A retry
+// never sends it twice — not after a cut between marking and closing, not after a runner that
+// throws once the mail may have gone — and sends it again only when nothing went.
 
 import { describe, expect, it } from "vitest";
 import type { TaskRunner } from "../src/run.js";

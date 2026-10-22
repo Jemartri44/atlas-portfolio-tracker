@@ -1,4 +1,4 @@
-// Reading what comes from outside the jobs, strictly (feature 016, §5 family 7):
+// Reading what comes from outside the jobs, strictly:
 // a plain object — never an array, never something with a prototype through
 // which `__proto__` or `toString` would be found — with exactly the keys it
 // may have; JSON text with a repeated key or a lone surrogate is refused, as

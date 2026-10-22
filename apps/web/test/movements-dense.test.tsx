@@ -1,10 +1,8 @@
 // @vitest-environment happy-dom
 //
-// Movements, denser on a phone (feature 020, E2, M8): one heading per month
-// with the date in each row, and the valuations of one day gathered into one
-// row that unfolds, in the list and in the recent movements of the summary,
-// where a gathered day counts as one of the five and the list is cut at the
-// date read.
+// Movements, denser on a phone: one heading per month with the date in each row, and the valuations
+// of one day gathered into one row that unfolds, in the list and in the recent movements of the
+// summary, where a gathered day counts as one of the five and the list is cut at the date read.
 
 import { describe, expect, it } from "vitest";
 import Movimientos from "../src/routes/movimientos/index.jsx";

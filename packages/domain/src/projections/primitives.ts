@@ -109,7 +109,7 @@ export const applyScale = (
   // A split of an asset nobody holds transforms nothing, and it still happened:
   // the units of the asset are others from then on. An action that only
   // scales is recorded without open lots, and the journal keeps its ratio for
-  // the tax engine (verifier of feature 009): selling everything at a loss, a
+  // the tax engine: selling everything at a loss, a
   // reverse split while holding nothing and a repurchase inside the window
   // compared units of before and after without knowing it.
   if (ctx.scaleOnly && (state.lots.get(effect.asset_id)?.open ?? []).length === 0) {

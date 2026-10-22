@@ -1,5 +1,5 @@
 // The draft of an operation recorded before the ECB publishes its rate
-// (ADR-0029, point 9, option B; block 5 of prompt 012).
+// (ADR-0029, point 9, option B).
 //
 // An operation in a foreign currency whose reference date has no rate **yet**
 // cannot be recorded without inventing one. It is kept, complete and **without
@@ -13,7 +13,7 @@
 //   `pendingDraftStatus` only says that it *can* be confirmed, with the
 //   official rate already in place, and writing is always the user's act
 //   (`recordPendingDraft`, called by an interface after a yes).
-// - **Its own validation** (decision (x)): the ledger's is not loosened —
+// - **Its own validation**: the ledger's is not loosened —
 //   `validateShape` still demands `fx_rate` —, and nothing persisted carries a
 //   stand-in rate. The draft is checked by running the ledger's own preview on
 //   a **copy that lives only in memory**, where each rate still to be published
@@ -228,13 +228,12 @@ export const pendingDraftStatus = (
 
 /**
  * The event of the ledger that **is** this draft: the one with exactly the id
- * its confirmation stamped on it before writing (`pending_event_id`). That is
- * a confirmation whose removal of the draft did not happen — a cut, or a
- * failure of the store of drafts —, and confirming again only removes the
- * draft. Nothing else is: an identical operation has another id, and it goes
- * through the duplicate question of ADR-0012 like any other (review of PR #75,
- * which found that guessing by the fingerprint deleted the only copy of an
- * operation).
+ * its confirmation stamped on it before writing (`pending_event_id`). That is a
+ * confirmation whose removal of the draft did not happen — a cut, or a failure
+ * of the store of drafts —, and confirming again only removes the draft.
+ * Nothing else is: an identical operation has another id, and it goes through
+ * the duplicate question of ADR-0012 like any other (which found that guessing
+ * by the fingerprint deleted the only copy of an operation).
  */
 export const draftRecordedAs = (events: readonly LedgerEvent[], draft: PendingDraft): string[] =>
   draft.pending_event_id === undefined

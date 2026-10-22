@@ -1,7 +1,6 @@
-// Where the administration finds its environments (feature 015, E5;
-// `data-model.md` §9): `admin.json` under the configuration folder, read
-// strictly, and the clients built from it with the standard chain of the SDK —
-// built, never called: no test reaches AWS.
+// Where the administration finds its environments: `admin.json` under the configuration folder,
+// read strictly, and the clients built from it with the standard chain of the SDK — built, never
+// called: no test reaches AWS.
 
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -54,7 +53,7 @@ describe("environmentOf", () => {
       code: "admin_environment_unknown",
       details: { environment: "dev" },
     });
-    // Only its own keys (review of PR #98, N6): never the prototype's.
+    // Only its own keys: never the prototype's.
     for (const name of ["toString", "constructor", "__proto__", "hasOwnProperty"]) {
       await expect(environmentOf(join(good, "atlas", "admin.json"), name)).rejects.toMatchObject({
         code: "admin_environment_unknown",
@@ -83,12 +82,11 @@ describe("systemAdminAccess", () => {
 });
 
 /**
- * Block 0 of E5, verified with the SDK itself and no AWS: the chain of a
- * client **does not ask for the MFA code** of a profile with `mfa_serial` —
- * it has no callback, and it stops there (`tryNextLink: false`), before any
- * call to STS. So the console takes a session already opened: `aws sso
- * login`, or `aws configure export-credentials` after the AWS CLI asked for
- * the code (runbook «Revocar todos los tokens», «Lo que necesitas»).
+ * The chain of a client **does not ask for the MFA code** of a profile with `mfa_serial` (verified
+ * with the SDK itself, no AWS): it has no callback, and it stops there (`tryNextLink: false`),
+ * before any call to STS. So the console takes a session already opened: `aws sso login`, or `aws
+ * configure export-credentials` after the AWS CLI asked for the code (runbook «Revocar todos los
+ * tokens», «Lo que necesitas»).
  */
 describe("the standard chain with a profile that asks for MFA", () => {
   const names = [

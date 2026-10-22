@@ -1,5 +1,5 @@
-// The ECB rate proposed and checked when recording from the console
-// (feature 012, block 3), over a real folder with the synthetic history.
+// The ECB rate proposed and checked when recording from the console, over a real folder with the
+// synthetic history.
 
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

@@ -1,5 +1,4 @@
-// The TARGET calendar as a cross-check (ADR-0029, point 6, amended by prompt
-// 012 (m)). Mutants 11 and 22.
+// The TARGET calendar as a cross-check (ADR-0029, point 6, amended).
 
 import { describe, expect, it } from "vitest";
 import { readEcbZipCsv } from "../../src/ecb/history.js";

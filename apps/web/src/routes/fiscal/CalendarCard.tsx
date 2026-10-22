@@ -1,4 +1,4 @@
-// The fiscal calendar of `/fiscal` (feature 020, E4, M12): the strip of the
+// The fiscal calendar of `/fiscal`: the strip of the
 // year and, under it, the list of every date, which is also its accessible
 // equivalent. A past date says so, and a year with no verified deadline is
 // said, never supposed.

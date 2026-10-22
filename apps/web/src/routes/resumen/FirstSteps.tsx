@@ -1,6 +1,6 @@
-// The first steps of an empty ledger, with their state (D4 of
-// docs/design/system.md, §5.18): done, current with the main button, or
-// pending with the way to it. They leave the summary with the first purchase.
+// The first steps of an empty ledger, with their state (docs/design/system.md §5.18): done, current
+// with the main button, or pending with the way to it. They leave the summary with the first
+// purchase.
 
 import { A } from "@solidjs/router";
 import { For, type JSX, Match, Switch } from "solid-js";

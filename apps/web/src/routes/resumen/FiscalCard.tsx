@@ -1,5 +1,4 @@
-// The way into the fiscal screen from the summary (P1 of prompt 010; feature
-// 020, E2, M2).
+// The way into the fiscal screen from the summary.
 //
 // There is **no sixth destination** in the navigation: the screen is opened a
 // handful of times a year and a sixth tab would cost every other day. So it is
@@ -9,7 +8,7 @@
 // - **in the income tax season**, a card at the top of the summary, with
 //   «Campaña de la Renta» beside its title and what is pending;
 // - **out of it**, a row folded at the end that says only its neutral state
-//   and the years with figures and no return recorded (Q2) — never a notice:
+//   and the years with figures and no return recorded — never a notice:
 //   what is pending of the 720 and the 721, and the invalid events, go to
 //   *Atención*, and a notice is never said twice.
 //
