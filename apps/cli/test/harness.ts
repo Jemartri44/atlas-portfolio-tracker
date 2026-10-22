@@ -1,7 +1,7 @@
 // Runs the CLI in-process against an in-memory ledger with a fixed clock.
 
-import { MemoryLedgerStore } from "@atlas/adapters";
 import type { LedgerEvent, LedgerSchema, UseCaseDeps } from "@atlas/domain";
+import { MemoryLedgerStore } from "../../../packages/adapters/test/test-only-memory-ledger-store.js";
 import type { AdminAccess } from "../src/admin/environment.js";
 import type { Io } from "../src/context.js";
 import { run } from "../src/main.js";
