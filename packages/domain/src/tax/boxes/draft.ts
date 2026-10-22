@@ -372,7 +372,7 @@ const annexC3 = (report: TaxYearReport, year: number): Draft[] => {
 const deductions = (report: TaxYearReport, categories: Map<string, IncomeCategory>): Draft[] => {
   const drafts: Draft[] = [];
   // Which operation each deduction is about. Only a **dividend** produces one
-  // (`doubleTaxation` in `year.ts`), and a dividend always names its asset, so
+  // (`doubleTaxation` in `notes.ts`), and a dividend always names its asset, so
   // the row is read off the income line and nothing has to be invented. It
   // used to build `{ event_id } as BoxRow` and hand that over as a whole row:
   // the cast compiled, the other three fields were undefined at run time, and
