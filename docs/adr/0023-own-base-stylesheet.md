@@ -24,7 +24,7 @@ Nuestras hojas mencionaban a Pico 34 veces y tenían 27 declaraciones escritas s
 
 ## Decisión
 
-**Opción 3.** Se retira `apps/web/vendor/pico/`. La base de estilos es propia y vive en `apps/web/src/styles/`: `tokens`, `base`, `controls`, `layout`, `cards`, `feedback`, `charts` y `screens`. Sigue el sistema de diseño de `docs/design/system.md` y su prototipo de referencia (`docs/design/prototype/`). Ningún valor se escribe fuera de `tokens.css`. No se añade ninguna dependencia.
+**Opción 3.** Se retira `apps/web/vendor/pico/`. La base de estilos es propia y vive en `apps/web/src/styles/`: `tokens`, `base`, `controls`, `layout`, `cards`, `feedback`, `charts` y `screens`. Sigue el sistema de diseño de `docs/design/system.md` y su prototipo de referencia (retirado del árbol; en el historial de git). Ningún valor se escribe fuera de `tokens.css`. No se añade ninguna dependencia.
 
 ## Consecuencias
 
