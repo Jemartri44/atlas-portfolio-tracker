@@ -1222,7 +1222,12 @@ const BOOT_BUDGET_GZIP_BYTES = 76_055;
  * prices (fresh, exact, in euros, unit-traded assets), in the lazy `cartera`
  * chunk. The boot is not touched.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 304_050;
+/*
+ * **Midnight watcher, rate date from the operation and CSV defence
+ * (2026-10-22): measured 304.198 bytes gzip, ceiling 304.240 — measured + 42.**
+ * +148 bytes over the price filter; the boot stays under its own ceiling.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 304_240;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,
