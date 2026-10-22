@@ -335,7 +335,7 @@ const applyCatalogue = (state: LedgerState, event: CatalogueEvent): void => {
 };
 
 /**
- * With its type (round 2 of the review of PR #98, R2-B1): the remedy of an
+ * With its type: the remedy of an
  * annulment with a key twice is not another annulment — it cannot be
  * reversed — and the interfaces say which one it is.
  */
@@ -395,7 +395,7 @@ export const projectLedger = (
       guarded(event, () => applyReversal(state, events, event));
     }
   }
-  // The remedy of the messages (review of PR #98, B1; §35): annulled by a live
+  // The remedy of the messages: annulled by a live
   // reversal, the line counts as annulled and is not invalid any more; the
   // ledger is append-only, and otherwise only another hand edit would do.
   for (const event of repeated) {
@@ -418,7 +418,7 @@ export const projectLedger = (
   // "The same original" is the **root** of the chain (`correction-root.ts`):
   // a correction of a correction corrects the same fact, and judging by
   // `corrects_id` alone let `O, R(O), C1→O, R(C1), C2→C1, C3→O` keep two live
-  // corrections of O (adversarial review of PR #75).
+  // corrections of O.
   const roots = correctionRoots(events);
   const accepted = new Map<Ulid, Ulid[]>();
   events.forEach((event, position) => {

@@ -131,7 +131,7 @@ const cashBlockOf = (
       continue;
     }
     // The more recent of the two ECB rates at hand, the history's and the
-    // ledger's; on the same date the history's (round 1 of PR #102). Small on
+    // ledger's; on the same date the history's. Small on
     // purpose: this file is on the boot path of the web.
     const ecb = external?.latestRate?.(currency, date);
     const ledger = state.fxRates.get(currency);

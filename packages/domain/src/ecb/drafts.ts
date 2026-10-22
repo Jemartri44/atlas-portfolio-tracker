@@ -59,7 +59,7 @@ export interface PendingDraft {
 
 /**
  * The draft is no longer as it was read: removed, or stamped with another id —
- * almost surely confirmed somewhere else meanwhile (third review of PR #75).
+ * almost surely confirmed somewhere else meanwhile.
  * The confirmation stops: it never writes the draft again, and never records
  * the operation as a new one.
  */

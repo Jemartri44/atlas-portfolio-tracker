@@ -33,7 +33,7 @@ export interface CloudPull {
   readonly pulled_at: string;
   /** The version of each file of `prices/` as the index said it, by name. */
   readonly versions: Readonly<Record<string, string>>;
-  /** What the last pull left out, by why (review of PR #108, B1 and N5); `status` says it. */
+  /** What the last pull left out, by why; `status` says it. */
   readonly discarded?: { readonly future: number; readonly currency_mismatch: number };
 }
 
@@ -123,13 +123,13 @@ export const changedPriceFiles = <T extends { readonly name: string; readonly ve
 export interface CloudMerge {
   readonly added: CloseLine[];
   /**
-   * Closes of today or of a day to come (review of PR #108, B1), or taken on
+   * Closes of today or of a day to come, or taken on
    * the day of their own session (R2-B1): never taken.
    */
   readonly future: number;
   /**
    * Closes in another currency than the one the folder declares for their
-   * source in its `symbols.json`: never taken (review of PR #108, N5).
+   * source in its `symbols.json`: never taken.
    */
   readonly mismatched: number;
 }

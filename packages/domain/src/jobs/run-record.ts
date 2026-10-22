@@ -44,7 +44,7 @@ export const RUN_STATES = [
   "done",
   "failed",
   "send_unknown",
-  // A past period of a warning nobody sent: closed without sending (review of PR #109, avisos B1).
+  // A past period of a warning nobody sent: closed without sending.
   "expired",
 ] as const;
 export type RunState = (typeof RUN_STATES)[number];
@@ -252,7 +252,7 @@ export const claimRecord = (
   claimed_at: at,
   attempts: previous === undefined ? 1 : previous.attempts + 1,
   // What earlier attempts of a dump wrote is carried, so a retry tells its own
-  // objects from anybody else's even after a run that died (review of PR #109, copias N3).
+  // objects from anybody else's even after a run that died.
   ...(previous?.objects === undefined ? {} : { objects: previous.objects }),
 });
 

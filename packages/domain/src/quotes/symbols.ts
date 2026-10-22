@@ -300,7 +300,7 @@ export const parseSymbols = (text: string | undefined): SymbolsFile => {
   } catch {
     throw wrong("json");
   }
-  // A key twice says two things (review of PR #106, R2-B1): refused first.
+  // A key twice says two things: refused first.
   const repeated = repeatedKey(text);
   if (repeated !== undefined) {
     throw repeatedKeyError("prices/symbols.json", repeated);
@@ -337,7 +337,7 @@ export const parseSymbols = (text: string | undefined): SymbolsFile => {
     throw wrong("symbols_format");
   }
   const legacy = raw.symbols_format === LEGACY_FORMAT;
-  // Without a prototype (review of PR #106, N4): an asset called `__proto__`
+  // Without a prototype: an asset called `__proto__`
   // or `constructor` is an asset like any other, never a property of objects.
   const assets: Record<AssetId, SymbolEntry> = Object.create(null);
   for (const [assetId, value] of Object.entries(raw.assets)) {
