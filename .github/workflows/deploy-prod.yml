@@ -44,7 +44,8 @@ jobs:
           ARTIFACT_BUCKET: ${{ secrets.ATLAS_ARTIFACT_BUCKET }}
       - name: Apply prod
         run: |
-          set -a; . <(infra/scripts/ci/artifact-env.sh "$RUNNER_TEMP/artifact" "$TREE"); set +a
+          infra/scripts/ci/artifact-env.sh "$RUNNER_TEMP/artifact" "$TREE" > "$RUNNER_TEMP/artifact.env"
+          set -a; . "$RUNNER_TEMP/artifact.env"; set +a
           infra/scripts/ci/terraform-run.sh prod apply
         env:
           ATLAS_TFVARS_B64: ${{ secrets.ATLAS_PROD_TFVARS_B64 }}

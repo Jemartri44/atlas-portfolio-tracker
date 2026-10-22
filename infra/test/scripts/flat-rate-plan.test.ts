@@ -69,9 +69,12 @@ describe("flat-rate-plan.sh", () => {
     const s = setup({ subscriptions: [] });
     const first = run("subscribe", s.env);
     expect(first.status).toBe(0);
-    expect(mutating(s.calls())).toEqual([
-      `--region us-east-1 pricing-plan-manager create-subscription --plan-family CloudFront --plan-tier FREE --usage-level DEFAULT --resource-arns ${DIST} ${ACL} --approval-mode IMMEDIATE --client-token atlas-dev-flat-rate-free --output json`,
-    ]);
+    expect(mutating(s.calls())).toHaveLength(1);
+    expect(mutating(s.calls())[0]).toMatch(
+      new RegExp(
+        `^--region us-east-1 pricing-plan-manager create-subscription --plan-family CloudFront --plan-tier FREE --usage-level DEFAULT --resource-arns ${DIST} ${ACL} --approval-mode IMMEDIATE --client-token atlas-dev-flat-rate-free-\\d{8} --output json$`,
+      ),
+    );
     const second = run("subscribe", s.env);
     expect(second.status).toBe(0);
     expect(second.stdout).toContain("ya esta suscrito");

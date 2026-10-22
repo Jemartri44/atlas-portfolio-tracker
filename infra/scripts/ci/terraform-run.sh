@@ -11,7 +11,7 @@ case "$env_name" in dev | prod) ;; *) exit 64 ;; esac
 tmp="${RUNNER_TEMP:?}"; log="$tmp/terraform.log"; : >"$log"
 (umask 077; printf '%s' "$ATLAS_TFVARS_B64" | base64 -d >"$tmp/terraform.tfvars"; printf '%s' "$ATLAS_BACKEND_B64" | base64 -d >"$tmp/backend.hcl")
 tf() { terraform -chdir="infra/envs/$env_name" "$@"; }
-fail() { echo "terraform $1 fallo (codigo $2); su salida no se publica"; exit 1; }
+fail() { echo "terraform $1 falló (código $2); su salida no se publica"; exit 1; }
 tf init -input=false -backend-config="$tmp/backend.hcl" >>"$log" 2>&1 || fail init $?
 lock=()
 [ "$mode" = plan ] && lock=(-lock=false) # the plan role reads the state and never writes it (B2)

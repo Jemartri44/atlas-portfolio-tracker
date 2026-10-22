@@ -4,7 +4,8 @@ name: Deploy dev
 # repository variable ATLAS_DEPLOY_ENABLED = true. Builds ONCE, writes the set to the
 # artifacts bucket (only this job may) under the SHA of the source tree, applies `dev`, and
 # uploads the SPA without `.vite/` nor `*.map`. What terraform and aws print goes to files that
-# are never uploaded.
+# are never uploaded. The build runs in a job WITHOUT `id-token`: no dependency script can ask
+# for the OIDC token; the set reaches the job that holds the role as a one-day run artifact.
 on:
   push:
     branches: [develop]
@@ -17,12 +18,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  build:
     if: ${{ vars.ATLAS_DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -31,16 +29,37 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Package the set that is promoted
+        run: infra/scripts/ci/package.sh "$RUNNER_TEMP/artifact"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: atlas-set
+          path: ${{ runner.temp }}/artifact
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: 1.16.5
           terraform_wrapper: false
-      - run: npm ci
-      - run: npm run build
-      - name: Package the set that is promoted
-        run: |
-          infra/scripts/ci/package.sh "$RUNNER_TEMP/artifact"
-          echo "TREE=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: atlas-set
+          path: ${{ runner.temp }}/artifact
+      - name: Name the source tree
+        run: echo "TREE=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_ENV"
       - name: Assume the deploy role of dev
         run: infra/scripts/ci/assume-role.sh "$ROLE_ARN"
         env:
@@ -51,8 +70,8 @@ jobs:
           ARTIFACT_BUCKET: ${{ secrets.ATLAS_ARTIFACT_BUCKET }}
       - name: Apply dev
         run: |
-          infra/scripts/ci/artifact-env.sh "$RUNNER_TEMP/artifact" "$TREE" >> "$GITHUB_ENV"
-          set -a; . <(infra/scripts/ci/artifact-env.sh "$RUNNER_TEMP/artifact" "$TREE"); set +a
+          infra/scripts/ci/artifact-env.sh "$RUNNER_TEMP/artifact" "$TREE" > "$RUNNER_TEMP/artifact.env"
+          set -a; . "$RUNNER_TEMP/artifact.env"; set +a
           infra/scripts/ci/terraform-run.sh dev apply
         env:
           ATLAS_TFVARS_B64: ${{ secrets.ATLAS_DEV_TFVARS_B64 }}
