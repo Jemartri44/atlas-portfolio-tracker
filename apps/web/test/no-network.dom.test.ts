@@ -3,7 +3,7 @@
 // T1 of the review of PR #90, round 2, under happy-dom: its window brings a
 // `fetch` of its own that resolves `/api/session` against
 // `http://localhost:3000` and goes out to the network. Both the global and the
-// window's are the failing one (see `no-network.test.ts`).
+// window's are the failing one (`test/setup/no-network.ts`).
 
 import { describe, expect, it } from "vitest";
 

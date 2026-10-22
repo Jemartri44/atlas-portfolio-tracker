@@ -15,7 +15,7 @@ import { store } from "../ledger/state.js";
 import { signInHref } from "../sync/session.js";
 
 /** Less than this and the person is told before opening a form. */
-export const SESSION_WARNING_MINUTES = 15;
+const SESSION_WARNING_MINUTES = 15;
 
 /** Minutes left in the session, or `undefined` while there is none known. */
 const minutesLeft = (): number | undefined => {

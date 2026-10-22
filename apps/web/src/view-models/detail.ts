@@ -44,7 +44,7 @@ import {
  * JSON they used to be printed as is gone from the interface, and with it the
  * quantities and prices it showed with the privacy mode on.
  */
-export type DetailKind =
+type DetailKind =
   | "amount"
   | "quantity"
   | "date"

@@ -10,9 +10,11 @@ import { DomainError } from "@atlas/domain";
 import { RemoteError } from "@atlas/domain/sync";
 import { describeError, REMOTE_FAILURES } from "../format/messages/errors.js";
 import { nameIndex } from "../format/names.js";
-import { countOf } from "../format/number.js";
 import type { AppError } from "./state.js";
 import { store } from "./state.js";
+
+/** What the browser throws when a chosen file cannot be read. */
+const FILE_READ_ERRORS = new Set(["NotReadableError", "NotFoundError", "EncodingError"]);
 
 /**
  * A domain error (or anything else) as the interface shows it, in Spanish.
@@ -22,9 +24,6 @@ import { store } from "./state.js";
  * snapshot yet and `nameIndex` answers with an empty index, which resolves
  * every identifier to itself — the behaviour this had before.
  */
-/** What the browser throws when a chosen file cannot be read. */
-const FILE_READ_ERRORS = new Set(["NotReadableError", "NotFoundError", "EncodingError"]);
-
 export const toAppError = (error: unknown): AppError => {
   // First: a `RemoteError` is a `DomainError` too, and says its own sentence.
   // The cloud did not answer as it should, before anything was sent: nothing was written.
@@ -48,29 +47,6 @@ export const toAppError = (error: unknown): AppError => {
       ...(typeof line === "number" ? { line } : {}),
     };
   }
-  if (error instanceof Error && error.name === "NoLedgerInFolder") {
-    return {
-      code: "no_ledger_in_folder",
-      message:
-        "En esa carpeta no hay ningún ledger.jsonl: elige la carpeta donde la consola guarda tus datos. No se ha tocado nada.",
-    };
-  }
-  if (error instanceof DOMException && error.name === "NotAllowedError") {
-    return {
-      code: "permission_denied",
-      message:
-        "El navegador ha denegado el permiso para leer la carpeta. Vuelve a elegirla y concédelo para seguir; no se ha tocado nada.",
-      action: { label: "Abrir tus datos", to: "/libro" },
-    };
-  }
-  if (error instanceof DOMException && error.name === "QuotaExceededError") {
-    return {
-      code: "storage_full",
-      message:
-        "No cabe en el almacenamiento del navegador: no se ha escrito nada. Exporta tus datos y libera espacio del sitio antes de volver a intentarlo.",
-      action: { label: "Exportar tus datos", to: "/ajustes" },
-    };
-  }
   // Reading a file the user chose: it moved, it was a folder, the permission
   // lapsed, it is not text. The browser says so in English; the user reads it
   // in Spanish, with what to do (review of 2026-09-19).
@@ -79,15 +55,6 @@ export const toAppError = (error: unknown): AppError => {
       code: "file_unreadable",
       message:
         "No se ha podido leer el archivo: puede que se haya movido, que no sea un archivo de texto o que el navegador ya no tenga permiso. Vuelve a elegirlo; no se ha tocado nada.",
-    };
-  }
-  // The ledger of this browser changed between the question and the yes of an
-  // import (another tab recorded something): the yes was about another ledger.
-  if (error instanceof Error && error.name === "LedgerChangedSinceAsked") {
-    const lines = (error as Error & { lines?: number }).lines ?? 0;
-    return {
-      code: "ledger_changed_since_asked",
-      message: `Mientras decidías, los datos de este navegador han cambiado (otra pestaña ha registrado algo): ahora tienen ${countOf(lines, "movimiento", "movimientos")}. No se ha importado nada; vuelve a elegir el archivo para ver qué sustituiría.`,
     };
   }
   // Another tab still has the previous version of the database open (feature
@@ -104,8 +71,7 @@ export const toAppError = (error: unknown): AppError => {
     return {
       code: "storage_unavailable",
       message:
-        "Este navegador no permite guardar datos del sitio (modo privado o datos bloqueados), y tus datos viven en él. Permite los datos del sitio o usa otro navegador.",
-      action: { label: "Abrir tus datos", to: "/libro" },
+        "Este navegador no permite guardar datos del sitio (modo privado o datos bloqueados). Permite los datos del sitio o usa otro navegador.",
     };
   }
   // Never swallowed: what failed goes after a sentence in Spanish, so the

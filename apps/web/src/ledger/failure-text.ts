@@ -4,10 +4,10 @@
 
 import type { WriteFailure } from "./write.js";
 
-export const CONFLICT_SENTENCE =
+const CONFLICT_SENTENCE =
   "Tus datos han cambiado mientras rellenabas esto (otro dispositivo, otra pestaña o la consola). Se han vuelto a leer y no se ha guardado nada: revisa el efecto y confirma otra vez.";
 
-export const UNKNOWN_SENTENCE =
+const UNKNOWN_SENTENCE =
   "No sabemos si se ha guardado: la conexión falló justo al enviarlo. Mira el aviso de arriba; no hace falta que repitas nada.";
 
 /** The sentence of a failure that has no screen of its own; `signed_out` goes with `SessionNotice`. */

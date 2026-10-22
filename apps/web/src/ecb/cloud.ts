@@ -1,6 +1,6 @@
 // The web of the phone downloads the ECB history **from the cloud** (feature
-// 016, E3, block 2; 015, §7 P12): a third origin, next to the linked folder
-// and the copy imported by hand. With the session of this browser it reads
+// 016, E3, block 2; 015, §7 P12): an origin next to the copy imported by
+// hand. With the session of this browser it reads
 // `manifest.json` from our own API — `If-None-Match` on the version it holds
 // — and the file in force, **checks its SHA-256 against the manifest**, and
 // keeps it as the imported copy is kept, marked as from the cloud. A file

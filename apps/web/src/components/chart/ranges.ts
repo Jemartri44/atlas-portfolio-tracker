@@ -28,7 +28,7 @@ export const RANGE_LABELS: Record<RangeKey, string> = {
 
 export const DAY_SECONDS = 86_400;
 
-export interface RangeCount {
+interface RangeCount {
   key: RangeKey;
   label: string;
   /** Points **with data** inside the window. Zero means the button is dead. */

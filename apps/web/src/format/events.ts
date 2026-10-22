@@ -22,7 +22,7 @@ const DATE_FIELDS = [
   "value_date_out",
 ] as const;
 
-export const eventDateOf = (event: LedgerEvent): string => {
+const eventDateOf = (event: LedgerEvent): string => {
   const fields = event as unknown as Record<string, unknown>;
   for (const field of DATE_FIELDS) {
     const value = fields[field];
@@ -38,7 +38,7 @@ export const eventDateOf = (event: LedgerEvent): string => {
  * "Orden de compra de World Index Fund del 02/09/2026" —, because a day can
  * hold several and the user remembers them by the asset (review of 2026-09-19).
  */
-export const describeEvent = (event: LedgerEvent, names: NameIndex = NO_NAMES): string => {
+const describeEvent = (event: LedgerEvent, names: NameIndex = NO_NAMES): string => {
   const date = formatDate(eventDateOf(event));
   if (event.type === "order_placed") {
     const order = event as unknown as { side?: string; asset_id?: string };

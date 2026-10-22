@@ -2,6 +2,7 @@
 // of §3.1, redirects only where the sign-in needs them, and the cookies with
 // the attributes ADR-0027 fixes. Nothing here is stored by any cache.
 
+import { decodeUtf8Strict } from "@atlas/adapters/aws";
 import { type ApiRefusal, LOGIN_COOKIE, SESSION_COOKIE } from "@atlas/domain/access";
 import type { FunctionUrlResult } from "./event.js";
 
@@ -73,8 +74,6 @@ export const loginCookie = (value: string, maxAge: number): string =>
 export const clearSessionCookie = (): string => sessionCookie("", 0);
 export const clearLoginCookie = (): string => loginCookie("", 0);
 
-const utf8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
-
 /**
  * The exact bytes of a file (block 0 of E3, questions.md §23.4): as text when
  * they are UTF-8, which writes them back identical, and in base64 otherwise.
@@ -87,7 +86,7 @@ export const bytes = (
 ): FunctionUrlResult => {
   let text: string | undefined;
   try {
-    text = utf8.decode(body);
+    text = decodeUtf8Strict(body, true);
   } catch {
     text = undefined;
   }

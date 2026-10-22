@@ -24,6 +24,7 @@ import {
   type PriceTransaction,
   priceFileName,
 } from "@atlas/domain/quotes";
+import { nodeFileOps, writeFileAtomically } from "../ledger-store/file-ops.js";
 import { type HeldLock, LedgerLockedError, withFolderLock } from "../ledger-store/folder-lock.js";
 
 export const PRICES_DIR = "prices";
@@ -44,11 +45,11 @@ const readOrUndefined = async (path: string): Promise<string | undefined> => {
  * cloud (feature 016, E3): `prices/_cloud.json`, written under the same lock
  * as the closes it describes.
  */
-export interface FilePriceTransaction extends PriceTransaction {
+interface FilePriceTransaction extends PriceTransaction {
   readonly writeCloudPull: (text: string) => Promise<void>;
 }
 
-export interface FilePriceStoreOptions {
+interface FilePriceStoreOptions {
   /** How many times, and how long apart, a transaction asks for the lock again. */
   readonly lockAttempts?: number;
   readonly lockWaitMs?: number;
@@ -78,20 +79,7 @@ export class FilePriceStore implements PriceStore {
 
   private async writeAtomically(path: string, text: string, lock: HeldLock): Promise<void> {
     await fs.mkdir(this.dir, { recursive: true });
-    const temporary = `${path}.tmp-${process.pid}-${Date.now()}`;
-    const handle = await fs.open(temporary, "wx");
-    try {
-      await handle.writeFile(text);
-      await handle.sync();
-    } finally {
-      await handle.close();
-    }
-    try {
-      await lock.assertOwned();
-      await fs.rename(temporary, path);
-    } finally {
-      await fs.rm(temporary, { force: true });
-    }
+    await writeFileAtomically(nodeFileOps, path, text, lock);
   }
 
   async transact<T>(work: (tx: FilePriceTransaction) => Promise<T>): Promise<T> {

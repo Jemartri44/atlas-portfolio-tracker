@@ -4,7 +4,7 @@
 
 import { DependencyUnavailable } from "./errors.js";
 
-export interface SdkErrorFacts {
+interface SdkErrorFacts {
   readonly name: string;
   readonly status: number | undefined;
 }

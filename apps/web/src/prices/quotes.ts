@@ -1,15 +1,7 @@
-// Where the web gets the automatic daily closes (feature 013, block 5).
-//
-// **The web downloads nothing and writes nothing in the folder.** On the
-// desktop it reads `prices/` from the folder linked for reading — what the
-// console downloaded — and converts with the ECB history it already reads from
-// the same folder; on the phone, or without a folder, the files **imported by
-// hand**. On the phone there are no automatic prices until the cloud exists
-// (features 014-016): said as such, not softened.
-//
-// The console downloads the prices **of the assets of its own ledger** (P5):
-// an asset created only in this web has no automatic price until it reaches
-// the console's ledger (export and import) or the sync exists.
+// Where the web gets the daily closes (feature 013, block 5): the price files
+// the user imported by hand into this browser, converted with the ECB history
+// the web holds. The web downloads no price and reads no folder; the ledger
+// never depends on them (they are informational).
 //
 // Loaded lazily: nothing of it is on the boot path, and the build fails if it
 // ever is.
@@ -45,7 +37,7 @@ export interface WebQuotes {
   /**
    * Closes stored in a currency their source does not declare in
    * `prices/symbols.json` (feature 013 stored pence as pounds): left out, and
-   * said. Only known where the folder gives the correspondence.
+   * said. Only known where `symbols.json` was imported with the closes.
    */
   readonly mismatched: readonly MismatchedCloses[];
   /**
@@ -56,12 +48,12 @@ export interface WebQuotes {
   readonly symbols?: SymbolsProblem;
   /** What the screens say of `symbols`, here and not in a module of its own (the boot). */
   readonly symbolsNotice?: string;
-  /** The folder is linked and lost its permission, or this browser keeps nothing. */
+  /** This browser keeps no site data, so nothing imported can be read. */
   readonly problem?: "storage";
   readonly history: WebHistory;
 }
 
-export type SymbolsProblem =
+type SymbolsProblem =
   | { readonly problem: "missing" }
   | { readonly problem: "unreadable"; readonly code: string };
 
@@ -112,7 +104,7 @@ const withSymbols = (
   };
 };
 
-/** The closes for the assets given: the folder's, else the imported ones, else none. */
+/** The closes for the assets given: the imported ones, else none. */
 export const loadWebQuotes = async (assetIds: readonly AssetId[]): Promise<WebQuotes> => {
   const history = await loadWebHistory();
   try {
@@ -160,7 +152,7 @@ export const externalOf = (
 const COMPANIONS = ["_status.json", "config.json"];
 const SYMBOLS = "symbols.json";
 
-export type PricesImport =
+type PricesImport =
   | {
       readonly kind: "imported";
       readonly assets: readonly AssetId[];

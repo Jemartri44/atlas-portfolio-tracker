@@ -8,7 +8,7 @@ import { Money, type PriceLookup } from "@atlas/domain";
 import { formatDate } from "../format/date.js";
 import { fxMissingText } from "../format/messages/warnings.js";
 
-export interface PriceFields {
+interface PriceFields {
   unitValue?: Money;
   priceDate?: string;
   ageDays?: number;

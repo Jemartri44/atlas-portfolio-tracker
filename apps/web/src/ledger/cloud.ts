@@ -122,7 +122,7 @@ export const bootCloud = async (request: Fetch = pageFetch): Promise<void> => {
     return;
   }
   await loadInto(
-    { deps: depsFor(request), source: { kind: "cloud", expiresAt: session.expiresAt } },
+    { deps: depsFor(request), source: { expiresAt: session.expiresAt } },
     ofReadFailure,
     current,
   );
@@ -187,7 +187,7 @@ export const refreshSession = async (
   const phase = store.load();
   store.setDeps(depsFor(request));
   if (phase.phase === "ready") {
-    store.setLoad({ ...phase, source: { kind: "cloud", expiresAt: session.expiresAt } });
+    store.setLoad({ ...phase, source: { expiresAt: session.expiresAt } });
   }
   return "signed_in";
 };
