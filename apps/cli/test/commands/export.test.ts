@@ -82,4 +82,24 @@ describe("atlas export", () => {
       'a,b,c\n"x,""y""",true,\n,,"line\nbreak"',
     );
   });
+
+  it("defuses free text a spreadsheet would run as a formula, and leaves numbers alone", () => {
+    expect(
+      toCsv([
+        {
+          a: "=HYPERLINK(1)",
+          b: "+cmd",
+          c: "@SUM(A1)",
+          d: "-1+2",
+          e: "\tx",
+          f: "-12.5",
+          g: "40",
+          h: -3,
+          i: "ordinary -note",
+        },
+      ]),
+    ).toBe(
+      "a,b,c,d,e,f,g,h,i\n'=HYPERLINK(1),'+cmd,'@SUM(A1),'-1+2,'\tx,-12.5,40,-3,ordinary -note",
+    );
+  });
 });
