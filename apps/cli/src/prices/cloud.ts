@@ -9,7 +9,6 @@
 import { FilePriceStore } from "@atlas/adapters";
 import { httpReference } from "@atlas/adapters/reference-http";
 import { type AssetId, todayInMadrid } from "@atlas/domain";
-import { entryForRemote } from "@atlas/domain/access";
 import {
   assetOfPriceFile,
   changedPriceFiles,
@@ -24,7 +23,7 @@ import {
 import type { Context } from "../context.js";
 import { strictUtf8 } from "../fs.js";
 import { systemRemote } from "../remote/environment.js";
-import { where } from "../remote/where.js";
+import { sessionOf } from "../remote/where.js";
 import { folderOf } from "./load.js";
 
 /** Where the prices of a folder come from. */
@@ -39,21 +38,20 @@ export const priceOriginOf = async (ctx: Context): Promise<PriceOrigin> => {
   if (ctx.mode.kind !== "cloud") {
     return { kind: "unsynced" };
   }
-  const at = await where(ctx, ctx.remote ?? systemRemote());
-  const entry = entryForRemote(at.credentials, ctx.mode.remote);
-  if (entry === undefined) {
+  const session = await sessionOf(ctx, ctx.remote ?? systemRemote(), ctx.mode.remote);
+  if (session.kind === "missing") {
     return {
       kind: "refused",
       message: `(session_missing) no hay sesión guardada del dispositivo de esta carpeta (${ctx.mode.remote.device_id} en ${ctx.mode.remote.origin}): «atlas remote login» se la vuelve a dar.`,
     };
   }
-  if (Date.parse(entry.expires_at) <= ctx.deps.clock.now().getTime()) {
+  if (session.kind === "expired") {
     return {
       kind: "refused",
-      message: `(session_expired) el token de esta carpeta caducó el ${entry.expires_at.slice(0, 10)}: renuévalo con «atlas remote login».`,
+      message: `(session_expired) el token de esta carpeta caducó el ${session.entry.expires_at.slice(0, 10)}: renuévalo con «atlas remote login».`,
     };
   }
-  return { kind: "cloud", origin: entry.origin, token: entry.token };
+  return { kind: "cloud", origin: session.entry.origin, token: session.entry.token };
 };
 
 export interface PulledFile {

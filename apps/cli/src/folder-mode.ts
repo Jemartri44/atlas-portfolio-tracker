@@ -21,14 +21,14 @@ import {
   type LedgerStore,
   type LoadedLedger,
 } from "@atlas/domain";
-import { entryForRemote, type RemoteJson } from "@atlas/domain/access";
+import type { RemoteJson } from "@atlas/domain/access";
 import type { PendingDraftStore } from "@atlas/domain/ecb";
 import type { RemoteLedger } from "@atlas/domain/sync";
 import type { Context } from "./context.js";
 import { pathExists } from "./fs.js";
 import { readRemoteJson } from "./remote/credentials-file.js";
 import { systemRemote } from "./remote/environment.js";
-import { where } from "./remote/where.js";
+import { sessionOf } from "./remote/where.js";
 
 export type FolderMode =
   | { readonly kind: "local" }
@@ -100,18 +100,18 @@ export class CloudLedgerStore implements LedgerStore {
     this.api ??= (async () => {
       const ctx = this.ctx();
       const env = ctx.remote ?? systemRemote();
-      const at = await where(ctx, env);
-      const entry = entryForRemote(at.credentials, this.cloud);
+      const session = await sessionOf(ctx, env, this.cloud);
       const identity = { origin: this.cloud.origin, device_id: this.cloud.device_id };
-      if (entry === undefined) {
+      if (session.kind === "missing") {
         throw new CloudSessionError("session_missing", identity);
       }
-      if (Date.parse(entry.expires_at) <= ctx.deps.clock.now().getTime()) {
+      if (session.kind === "expired") {
         throw new CloudSessionError("session_expired", {
           ...identity,
-          expires_at: entry.expires_at,
+          expires_at: session.entry.expires_at,
         });
       }
+      const entry = session.entry;
       const remote = httpRemote({ origin: entry.origin, fetch: env.fetch, token: entry.token });
       // The drafts of the cloud (ADR-0035, E6): the same token, nothing kept on this computer.
       const drafts = new ApiDraftStore({
