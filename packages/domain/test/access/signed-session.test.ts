@@ -145,7 +145,13 @@ describe("the identifiers and the view of the session (R23)", () => {
     expect(isInstant("2026-10-01T10:00:00Z")).toBe(true);
     expect(isInstant("2026-10-01T10:00:00.123Z")).toBe(true);
     expect(isInstant("2026-10-01T10:00:00+02:00")).toBe(false);
-    expect(isInstant("2026-13-45T99:99:99Z")).toBe(false);
+    for (const impossible of [
+      "2026-13-45T99:99:99Z",
+      "2026-02-30T10:00:00Z",
+      "2026-10-01T24:00:00Z",
+    ]) {
+      expect(isInstant(impossible)).toBe(false);
+    }
     expect(isInstant(5)).toBe(false);
     expect(instantOf(0)).toBe("1970-01-01T00:00:00Z");
     expect(isSubject("a".repeat(255))).toBe(true);
