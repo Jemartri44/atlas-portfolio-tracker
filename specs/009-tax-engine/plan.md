@@ -1,6 +1,6 @@
 # Plan de implementación: Motor fiscal (`009-tax-engine`)
 
-**Rama**: `feature/009-tax-engine` · **Spec**: [`spec.md`](spec.md) · **Preguntas**: [`questions.md`](questions.md)
+**Rama**: `feature/009-tax-engine` · **Spec**: [`spec.md`](spec.md) · **Preguntas**: `questions.md` (en el historial de git)
 
 **Fecha**: 2026-09-18 · **Estado**: **aprobado por la dirección el 2026-09-18** (quince respuestas y N6 en `questions.md`; N6 añade el commit final del aviso) · **Entrada**: `docs/prompts/009-tax-engine.md`, ADR-0020, ADR-0021, ADR-0022, ADR-0013, ADR-0014, ADR-0009, ADR-0010, ADR-0011, ADR-0005, ADR-0015, ADR-0016
 

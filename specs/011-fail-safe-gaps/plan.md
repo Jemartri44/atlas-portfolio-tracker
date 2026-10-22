@@ -4,7 +4,7 @@
 
 **Entrada**: `docs/prompts/011-fail-safe-gaps.md` y la especificación de esta carpeta.
 
-**Estado**: **aprobado por la dirección el 2026-09-23**, con las dos comprobaciones previas hechas y reportadas en [`questions.md`](questions.md). P6 y P7, levantados al implementar el bloque 1, **retiraron dos instrucciones del encargo** y **ampliaron el alcance** con el reloj de la web; los dos están resueltos y aplicados. P1 resuelta con una regla que no era ninguna de las dos que propuse (§1); P4 aprobada con cuatro exigencias sobre el evento nuevo (§8); P2, P3 y P5 conformes. **Dos correcciones de la dirección a este plan**: la forma del ancla pasa a lista siempre presente (§6) y el ternario del bloque 0 queda prohibido (§0).
+**Estado**: **aprobado por la dirección el 2026-09-23**, con las dos comprobaciones previas hechas y reportadas en `questions.md` (en el historial de git). P6 y P7, levantados al implementar el bloque 1, **retiraron dos instrucciones del encargo** y **ampliaron el alcance** con el reloj de la web; los dos están resueltos y aplicados. P1 resuelta con una regla que no era ninguna de las dos que propuse (§1); P4 aprobada con cuatro exigencias sobre el evento nuevo (§8); P2, P3 y P5 conformes. **Dos correcciones de la dirección a este plan**: la forma del ancla pasa a lista siempre presente (§6) y el ternario del bloque 0 queda prohibido (§0).
 
 ---
 

@@ -4,11 +4,11 @@
 
 **Creada**: 2026-09-23 (Europe/Madrid)
 
-**Estado**: **aprobada por la dirección el 2026-09-23**. Las dos comprobaciones previas que el encargo exige —las dos premisas del bloque 3 y el mapa de guardias del bloque 4— están hechas y reportadas en [`questions.md`](questions.md) con la salida de los comandos, y los dos defectos del bloque 4 se **reprodujeron ejecutando**. Las cinco preguntas están respondidas en `questions.md` §8.
+**Estado**: **aprobada por la dirección el 2026-09-23**. Las dos comprobaciones previas que el encargo exige —las dos premisas del bloque 3 y el mapa de guardias del bloque 4— están hechas y reportadas en `questions.md` (en el historial de git) con la salida de los comandos, y los dos defectos del bloque 4 se **reprodujeron ejecutando**. Las cinco preguntas están respondidas en `questions.md` §8.
 
 **Entrada**: `docs/prompts/011-fail-safe-gaps.md` (§3 bloques 0–8, §5 criterios de terminado, §6 decisiones (a)–(l)); `docs/pendientes-post-010.md` (pendientes 3, 4, 5, 6, 7, 8, 9, 10 y 12, más la asimetría «de paso»); ADR-0024, ADR-0020 (con sus dos enmiendas y su nota de erratas), ADR-0003, ADR-0018, ADR-0015, ADR-0006, ADR-0016, ADR-0022; `docs/data-schema.md` §4, §5, §6.6 y §7; `docs/business-rules.md` §5; `docs/fiscal-questions.md` entero; `specs/010-tax-output/implementation-notes.md` §3, §7, §9 y §10 y `questions.md` «5 bis» y «6».
 
-**Preguntas**: [`questions.md`](questions.md). Cinco (P1–P5), **todas respondidas**, y **cuatro** observaciones sobre el propio encargo (E1–E4), tres de ellas verificadas ejecutando. Ninguna era fiscal: de forma y de alcance.
+**Preguntas**: `questions.md` (en el historial de git). Cinco (P1–P5), **todas respondidas**, y **cuatro** observaciones sobre el propio encargo (E1–E4), tres de ellas verificadas ejecutando. Ninguna era fiscal: de forma y de alcance.
 
 ---
 

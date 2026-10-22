@@ -4,7 +4,7 @@
 
 **Creada**: 2026-09-27 (Europe/Madrid)
 
-**Estado**: **borrador para el alto del plan**. Espera el visto bueno de la dirección junto con [`plan.md`](plan.md) y [`questions.md`](questions.md). No hay ni una línea de código de producción.
+**Estado**: **borrador para el alto del plan**. Espera el visto bueno de la dirección junto con [`plan.md`](plan.md) y `questions.md` (en el historial de git). No hay ni una línea de código de producción.
 
 **Entrada**: `docs/prompts/020-visual-refresh.md` entero, con las respuestas de su §8.1 (P1-P9, M2, y la segunda ronda: B1-B3, N1-N4 y la preferencia aceptada). Además: la propuesta `docs/design/proposals/2026-09-25-visual-improvements.md` y sus dos maquetas, `docs/design/brief.md` y `docs/design/system.md` enteros; ADR-0017, ADR-0023, ADR-0019, ADR-0024, ADR-0013, ADR-0014, ADR-0015, ADR-0016 y ADR-0020; `docs/business-rules.md` (regla 2, reglas 16-18 y la tabla de `Settings`); `specs/015-api-access/questions.md (en el historial de git)` §24.11, §26.5, §27.3, §28.4, §28.5, §30.5, §32.2, §33.2, §33.4 y §34.2. Constitución 1.6.2. **Donde la maqueta y el texto de la propuesta discrepan, manda el texto** (§8 P6 del encargo), y la discrepancia se dice.
 

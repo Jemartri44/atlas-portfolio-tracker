@@ -1,6 +1,6 @@
 # Plan de implementación: La salida fiscal (`010-tax-output`)
 
-**Rama**: `feature/010-tax-output` · **Spec**: [`spec.md`](spec.md) · **Preguntas**: [`questions.md`](questions.md)
+**Rama**: `feature/010-tax-output` · **Spec**: [`spec.md`](spec.md) · **Preguntas**: `questions.md` (en el historial de git)
 
 **Fecha**: 2026-09-19 · **Estado**: **aprobado por la dirección el 2026-09-19**, con las once respuestas de `questions.md` y una decisión fiscal nueva (los ETC y los ETP, rendimiento del capital mobiliario por defecto, §0.3). Sin código hasta que la 009, el rediseño y la PR #59 estén en `develop`: la dirección avisa. · **Entrada**: `docs/prompts/010-tax-output.md` (con §7), ADR-0020, ADR-0022, ADR-0021, ADR-0013, ADR-0016, ADR-0018, ADR-0003, ADR-0015, ADR-0019, ADR-0023.
 

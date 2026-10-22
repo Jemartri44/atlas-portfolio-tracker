@@ -1,6 +1,6 @@
 # Plan de implementación: `015-api-access`
 
-**Rama**: `feature/015-api-access` (worktree `../atlas-wt-015`) | **Fecha**: 2026-09-25 (Europe/Madrid) | **Especificación**: [`spec.md`](spec.md) | **Bloque 0 y preguntas**: [`questions.md`](questions.md)
+**Rama**: `feature/015-api-access` (worktree `../atlas-wt-015`) | **Fecha**: 2026-09-25 (Europe/Madrid) | **Especificación**: [`spec.md`](spec.md) | **Bloque 0 y preguntas**: `questions.md` (en el historial de git)
 
 **Estado**: **aprobado por la dirección el 2026-09-25**, con las decisiones de `questions.md` §8 (Q1 a Q7 respondidas). Las marcas **PROPUESTA** quedan como referencia a esas respuestas.
 
@@ -9,8 +9,8 @@
 - [`data-model.md`](data-model.md): los formatos, escritos como contrato;
 - [`contracts/api-routes.md`](contracts/api-routes.md): las propuestas sobre `docs/api.md`;
 - [`contracts/cli-commands.md`](contracts/cli-commands.md): las órdenes;
-- [`research.md`](research.md): las decisiones y sus alternativas;
-- [`quickstart.md`](quickstart.md): cómo se valida cada entrega.
+- `research.md` (en el historial de git): las decisiones y sus alternativas;
+- `quickstart.md` (en el historial de git): cómo se valida cada entrega.
 
 ## Contexto técnico
 

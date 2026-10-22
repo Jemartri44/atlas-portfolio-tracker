@@ -8,7 +8,7 @@
 
 **Entrada**: `docs/prompts/010-tax-output.md` con sus respuestas P1–P7; ADR-0020 (con sus dos enmiendas y su nota de erratas), ADR-0022, ADR-0021, ADR-0013, ADR-0016, ADR-0018, ADR-0003, ADR-0015, ADR-0019, ADR-0023; `docs/fiscal-questions.md` (#1–#23 y la cuestión ETC/ETP); `specs/009-tax-engine/` (spec, plan y `questions.md` con N1–N36); `docs/design/system.md` y `docs/design/brief.md`.
 
-**Preguntas**: [`questions.md`](questions.md), respondidas. Cada supuesto de abajo (S1–S17) remite a la suya y está **confirmado**.
+**Preguntas**: `questions.md` (en el historial de git), respondidas. Cada supuesto de abajo (S1–S17) remite a la suya y está **confirmado**.
 
 ---
 

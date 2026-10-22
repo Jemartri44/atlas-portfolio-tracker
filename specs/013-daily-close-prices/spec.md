@@ -8,7 +8,7 @@
 
 **Entrada**: `docs/prompts/013-daily-close-prices.md` entero (§0–§6.5); ADR-0031 con su enmienda y su segunda enmienda (manda sobre el prompt si discrepan); ADR-0019 (enmienda del 2026-09-24), ADR-0026 Parte B (enmendada), ADR-0029 (tres enmiendas), ADR-0018 (enmienda); ADR-0005, ADR-0007, ADR-0013, ADR-0016, ADR-0017, ADR-0028; ADR-0027 y ADR-0032 solo para el borde del encargo; `docs/data-schema.md` §1, §5, §7; `docs/specification.md` §7, §9.5, §11.8; constitución 1.6.0.
 
-**Preguntas y verificaciones**: [`questions.md`](questions.md).
+**Preguntas y verificaciones**: `questions.md` (en el historial de git).
 
 ---
 

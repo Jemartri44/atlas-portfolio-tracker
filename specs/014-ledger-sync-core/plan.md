@@ -1,6 +1,6 @@
 # Plan de implementación: `014-ledger-sync-core`
 
-**Rama**: `feature/014-ledger-sync-core` | **Fecha**: 2026-09-25 (Europe/Madrid) | **Especificación**: [`spec.md`](spec.md) | **Bloque 0 y preguntas**: [`questions.md`](questions.md)
+**Rama**: `feature/014-ledger-sync-core` | **Fecha**: 2026-09-25 (Europe/Madrid) | **Especificación**: [`spec.md`](spec.md) | **Bloque 0 y preguntas**: `questions.md` (en el historial de git)
 
 **Estado**: **aprobado por la dirección el 2026-09-25**, con las decisiones de `questions.md` §8. Las marcas **[CONFIRMAR]** y **[PREGUNTA]** quedan como referencia a sus respuestas (D-Qn).
 

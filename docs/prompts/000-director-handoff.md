@@ -180,7 +180,7 @@ Con eso, **34 ADRs, todas aceptadas**. La última PR fusionada es la #92; **abie
 
 Rama **`feature/015-api-access`**, **una sola rama y cinco entregas, E1 a E5, con una PR por entrega** (como la 010; prompt §3, «La partición»): E1, el esqueleto de `apps/api`, el acceso de la web con Google y la sesión; E2, el token de la consola; E3, la sincronización sobre HTTP; E4, la web sincronizada, con P2 y P3 primero; E5, la administración y los procedimientos.
 
-- **E1 está en la PR #90**, con el **commit congelado `ed1bb11`**. El registro de la entrega está en `specs/015-api-access/questions.md (en el historial de git)` de esa rama (§10 a §14); léelo con `git show origin/feature/015-api-access:specs/015-api-access/questions.md (en el historial de git)`.
+- **E1 está en la PR #90**, con el **commit congelado `ed1bb11`**. El registro de la entrega está en `specs/015-api-access/questions.md` de esa rama (§10 a §14, hoy en el historial de git); léelo con `git show origin/feature/015-api-access:specs/015-api-access/questions.md`.
 - **Ronda 1 de revisión: dos revisores, uno de corrección y otro de seguridad.** El de seguridad **no encontró ninguna forma de saltarse la autenticación**. Todo lo que encontraron está corregido, y cada arreglo, con el test que lo vio en rojo, está en `questions.md` §14. Tras la ronda, los lotes de mutación salieron enteros: 59 de 59 en E1 y 18 de 18 en los guardianes.
 - **Ronda 2: en curso o pendiente.** Antes de hacer nada, mira los comentarios de la PR #90 para saber si ya se lanzó y qué dijo.
 - **Siguiente:** fusionar E1 cuando la revisión converja y seguir con **E2 (el token de la consola)** en la misma rama. Las decisiones que E2 necesita ya están escritas en `questions.md` §12 a §14:

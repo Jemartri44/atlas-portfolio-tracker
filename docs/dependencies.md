@@ -23,7 +23,7 @@ Constitución VI y ADR-0007: pocas dependencias, cada una justificada. Esta es l
 | `typescript` | Lenguaje |
 | `@biomejs/biome` | Lint y formato (ADR-0008) |
 | `vitest` | Tests, comparte config con Vite |
-| `@vitest/coverage-v8` | Cobertura 100% en `domain` |
+| `@vitest/coverage-v8` | Cobertura 100% en `domain`, medida en una pasada propia (`npm run test:coverage:domain`): al unir varios proyectos se perdieron los aciertos de un fichero entero y el 100 % dependía de tests de otros proyectos. La CI llama a esa pasada y después a `test:others` |
 | `fast-check` | Tests de propiedades (FIFO, primitivas, dinero) |
 | `happy-dom` | Entorno de DOM para los tests de la web. Autorizado en la feature 007 (decisión (h) de su prompt): la 006 se hizo sin él y funcionó, pero las gráficas y los asistentes nuevos tienen comportamiento que no se prueba bien solo desde el grafo de importaciones. Solo desarrollo, nunca llega al *bundle* |
 | `esbuild` (**versión exacta fijada**: `0.28.2`, en `apps/api` y `apps/jobs`) | Empaquetado de las Lambdas: un solo fichero ESM con el SDK dentro, construido por un guion versionado (`apps/api/scripts/build-lambda.mjs`; y, desde la 016, el de `apps/jobs/scripts/`, que da `jobs.zip`, el único artefacto de las cinco funciones programadas) y consumido por la 017. **Instalado el 2026-09-26** con la autorización del usuario (feature 015, §7 P3). Como Tailwind, trae su binario nativo por plataforma en `optionalDependencies` (`@esbuild/<plataforma>`, 26 entradas en el *lockfile*): el riesgo de `npm ci` entre sistemas operativos que motivó excluir Tailwind existe también aquí; se acepta porque está presupuestado, solo corre en el *build* de la Lambda y la CI es Linux x64 |

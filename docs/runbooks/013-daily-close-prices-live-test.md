@@ -15,7 +15,7 @@ El día de EODHD empieza a medianoche GMT, que en Madrid es la **01:00 en invier
 2. **No copies tus ISIN** en lo que devuelvas: de los fondos, solo el recuento.
 3. **Todo en la carpeta de prueba**, `~/atlas-prueba-013`, nunca en la de tu libro. El libro de prueba es sintético, con activos inventados; aquí solo se les da un símbolo real para que haya algo que descargar.
 
-Lo que tienes que devolver está en la plantilla del final. Registro de la feature: [`specs/013-daily-close-prices/questions.md (en el historial de git)`](../../specs/013-daily-close-prices/questions.md (en el historial de git)) (§1.8 y §8); las decisiones, en ADR-0031, tercera enmienda.
+Lo que tienes que devolver está en la plantilla del final. Registro de la feature: `specs/013-daily-close-prices/questions.md (en el historial de git)` (§1.8 y §8); las decisiones, en ADR-0031, tercera enmienda.
 
 ## Resultado de la prueba del 2026-09-27
 
