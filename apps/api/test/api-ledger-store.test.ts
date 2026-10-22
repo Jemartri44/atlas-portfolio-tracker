@@ -15,7 +15,7 @@ import {
   SchemaTooNewError,
   WriteOutcomeUnknownError,
 } from "@atlas/domain";
-import { RemoteError } from "@atlas/domain/sync";
+import { MAX_APPEND_UNITS, RemoteError } from "@atlas/domain/sync";
 import { describe, expect, it } from "vitest";
 import { account, deposit, futureLine, lineOf } from "../../../packages/adapters/test/fixtures.js";
 import { consoleLogin, SELF, setup } from "./harness.js";
@@ -365,6 +365,94 @@ describe("ApiLedgerStore: 412, rejection and what is deduced", () => {
     const error = await failureOf(store.append([deposit], etag));
     expect(error).not.toBeInstanceOf(WriteOutcomeUnknownError);
     expect((error as RemoteError).code).toBe("body_invalid");
+  });
+});
+
+describe("ApiLedgerStore: more units than one request admits", () => {
+  const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+  /** A deposit with an id and a fingerprint of its own, for any `n` below 32,768. */
+  const numbered = (n: number, extra: Record<string, unknown> = {}): LedgerEvent =>
+    ({
+      ...deposit,
+      id: `01ARYZ6S41TSV4RRFFQ69G0${ALPHABET[Math.floor(n / 1024)]}${ALPHABET[Math.floor(n / 32) % 32]}${ALPHABET[n % 32]}`,
+      recorded_at: at(1),
+      fingerprint: `sha256:n${n}`,
+      ...extra,
+    }) as LedgerEvent;
+  const bodies = (sent: { init: RequestInit }[]) =>
+    sent
+      .filter((request) => request.init.method === "POST")
+      .map(
+        (request) =>
+          (JSON.parse(new TextDecoder().decode(request.init.body as Uint8Array)) as { lines: [] })
+            .lines.length,
+      );
+
+  it("splits into requests of MAX_APPEND_UNITS units, each on the etag of the previous", async () => {
+    const { store, stored, sent } = await rig();
+    const { etag } = await store.load();
+    const events = Array.from({ length: 2 * MAX_APPEND_UNITS + 50 }, (_, n) => numbered(n));
+    const result = await store.append(events, etag);
+    expect(bodies(sent)).toEqual([MAX_APPEND_UNITS, MAX_APPEND_UNITS, 50]);
+    expect(stored()).toBe(textOf([lineOf(account), ...events.map(lineOf)]));
+    expect(result.etag).toBe(sha(stored()));
+  });
+
+  it("never splits a pair or a chain between two requests", async () => {
+    const targets = Array.from({ length: MAX_APPEND_UNITS - 1 }, (_, n) => numbered(n));
+    const { store, stored, sent } = await rig([lineOf(account), ...targets.map(lineOf)]);
+    const { etag } = await store.load();
+    const lone = numbered(500);
+    const pair = [
+      reversalOf(1, (targets[0] as LedgerEvent).id),
+      numbered(501, { corrects_id: (targets[0] as LedgerEvent).id }),
+    ];
+    // 99 lone deposits, then the pair as the 100th unit: the first request
+    // carries 101 lines, and the deposit after the pair opens the second.
+    const filler = Array.from({ length: MAX_APPEND_UNITS - 2 }, (_, n) => numbered(600 + n));
+    const events = [...filler, lone, ...pair, numbered(900)];
+    await store.append(events, etag);
+    expect(bodies(sent)).toEqual([MAX_APPEND_UNITS + 1, 1]);
+    expect(stored().split("\n").length - 1).toBe(1 + targets.length + events.length);
+  });
+
+  it("a rejection in a later request keeps the earlier ones and counts everything written", async () => {
+    const { store, stored } = await rig();
+    const { etag } = await store.load();
+    const events = Array.from({ length: MAX_APPEND_UNITS + 3 }, (_, n) =>
+      n === MAX_APPEND_UNITS + 1
+        ? numbered(n, { recorded_at: "2099-01-01T00:00:00.000Z" })
+        : numbered(n),
+    );
+    const error = (await failureOf(store.append(events, etag))) as RemoteRejectedError;
+    expect(error.accepted).toBe(MAX_APPEND_UNITS + 1);
+    expect(error.remoteCode).toBe("recorded_at_in_future");
+    expect(error.details.index).toBe(MAX_APPEND_UNITS + 1);
+    expect(stored()).toBe(
+      textOf([lineOf(account), ...events.slice(0, MAX_APPEND_UNITS + 1).map(lineOf)]),
+    );
+  });
+
+  it("the API refuses a request with more units than the bound, writing nothing", async () => {
+    const { api, stored } = await rig();
+    const console = await consoleLogin(api);
+    const lines = Array.from({ length: MAX_APPEND_UNITS + 1 }, (_, n) => ({
+      line: lineOf(numbered(n)),
+    }));
+    const response = await api.call("POST", "/api/ledger/lines", {
+      headers: {
+        "x-atlas-device-token": console.token,
+        "content-type": "application/json",
+        "if-match": `"${sha(stored())}"`,
+      },
+      body: JSON.stringify({ lines }),
+      jar: false,
+    });
+    expect(response.statusCode).toBe(413);
+    expect(JSON.parse(response.body)).toEqual({
+      error: { code: "append_too_many_units", details: { max: MAX_APPEND_UNITS } },
+    });
+    expect(stored()).toBe(textOf([lineOf(account)]));
   });
 });
 

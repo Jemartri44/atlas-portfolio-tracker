@@ -12,6 +12,10 @@
 //   for every line whose fingerprint repeats a live event, the rule of the
 //   initialisation (§5.5). It is correct because the use case already refused
 //   without confirmation and `If-Match` makes the API judge the same bytes.
+// - More units than `MAX_APPEND_UNITS` go in several requests, each with the
+//   etag the previous one answered; a unit is never split. A refusal in the
+//   second or later request leaves the earlier ones written, and is told as
+//   a partial write (`accepted` counts them all).
 // - `412` is a `ConflictError`: the caller reloads and asks to confirm again.
 //   Never a retry, never a merge.
 // - A refusal inside a `200` is `RemoteRejectedError` (nothing held back,
@@ -44,6 +48,7 @@ import {
   entriesOf,
   evaluateUnit,
   linesOfText,
+  MAX_APPEND_UNITS,
   RemoteError,
   type RemoteLedger,
   unitsOf,
@@ -69,6 +74,19 @@ const UNKNOWN_CODES = new Set(["network_failed", "transport_rejected"]);
 const mayHaveWritten = (error: RemoteError): boolean =>
   UNKNOWN_CODES.has(error.code) || (error.status !== undefined && error.status >= 500);
 
+/**
+ * Splits the entries of the units into requests of at most `MAX_APPEND_UNITS`
+ * units (`docs/api.md` §5.2): a unit is never split between two requests, so
+ * a pair or a chain still travels whole.
+ */
+const batchesOf = (units: readonly AppendEntry[][]): AppendEntry[][] => {
+  const batches: AppendEntry[][] = [];
+  for (let from = 0; from < units.length; from += MAX_APPEND_UNITS) {
+    batches.push(units.slice(from, from + MAX_APPEND_UNITS).flat());
+  }
+  return batches;
+};
+
 export class ApiLedgerStore implements LedgerStore {
   private loaded: { etag: string; events: readonly LedgerEvent[] } | undefined;
 
@@ -90,32 +108,48 @@ export class ApiLedgerStore implements LedgerStore {
       return { etag };
     }
     const base = await this.baseFor(etag);
-    const entries = this.entriesFor(events, base);
-    let result: Awaited<ReturnType<RemoteLedger["append"]>>;
-    try {
-      result = await this.remote.append(entries, etag);
-    } catch (error) {
-      if (error instanceof RemoteError) {
-        if (error.code === "precondition_failed") {
-          throw new ConflictError();
+    const batches = batchesOf(this.entriesFor(events, base));
+    let current = etag;
+    let accepted = 0;
+    let sent = 0;
+    for (const entries of batches) {
+      let result: Awaited<ReturnType<RemoteLedger["append"]>>;
+      try {
+        result = await this.remote.append(entries, current);
+      } catch (error) {
+        if (sent > 0) {
+          this.loaded = undefined;
         }
-        if (mayHaveWritten(error)) {
-          throw new WriteOutcomeUnknownError(events.map((event) => event.id));
+        if (error instanceof RemoteError) {
+          // A conflict after the first batch is not a clean one: part of the
+          // write is already in, and the caller must reload and look.
+          if (error.code === "precondition_failed") {
+            if (sent === 0) {
+              throw new ConflictError();
+            }
+            throw new RemoteRejectedError("partial_write", accepted);
+          }
+          if (mayHaveWritten(error)) {
+            throw new WriteOutcomeUnknownError(events.map((event) => event.id));
+          }
         }
+        throw error;
       }
-      throw error;
+      this.loaded = undefined;
+      accepted += result.accepted;
+      if (result.accepted !== entries.length || result.rejected !== undefined) {
+        // Refused (nothing written), or written only in part (an internal
+        // failure by ADR-0035: the caller reloads and says what stayed in).
+        throw new RemoteRejectedError(result.rejected?.code ?? "partial_write", accepted, {
+          ...(result.rejected === undefined
+            ? {}
+            : { index: sent + result.rejected.index, ...result.rejected.details }),
+        });
+      }
+      sent += entries.length;
+      current = result.etag;
     }
-    this.loaded = undefined;
-    if (result.accepted === entries.length && result.rejected === undefined) {
-      return { etag: result.etag };
-    }
-    // Refused (nothing written), or written only in part (an internal failure
-    // by ADR-0035: the caller reloads and says what stayed in).
-    throw new RemoteRejectedError(result.rejected?.code ?? "partial_write", result.accepted, {
-      ...(result.rejected === undefined
-        ? {}
-        : { index: result.rejected.index, ...result.rejected.details }),
-    });
+    return { etag: current };
   }
 
   /**
@@ -163,10 +197,13 @@ export class ApiLedgerStore implements LedgerStore {
    * top of the previous ones. A unit the domain refuses is sent without
    * confirmations: the API refuses it first, for the same reason.
    */
-  private entriesFor(events: readonly LedgerEvent[], base: readonly LedgerEvent[]): AppendEntry[] {
+  private entriesFor(
+    events: readonly LedgerEvent[],
+    base: readonly LedgerEvent[],
+  ): AppendEntry[][] {
     const lines = events.map(encodeLine);
     let before = base;
-    return unitsOf(lines, events).flatMap((unit) => {
+    return unitsOf(lines, events).map((unit) => {
       const checked = evaluateUnit(before, unit.events);
       before = [...before, ...unit.events];
       const repeated = unit.events.map(

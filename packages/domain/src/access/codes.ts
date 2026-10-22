@@ -35,6 +35,7 @@ export const API_ERRORS = {
   precondition_required: 428,
   precondition_failed: 412,
   init_rejected: 422,
+  append_too_many_units: 413,
   reference_name_invalid: 400,
   // E6, the drafts in the cloud (`docs/api.md` §6.1 and §7).
   draft_exists: 409,
