@@ -104,7 +104,6 @@ export {
 } from "./jobs/run-record.js";
 export { type TaxReturnFacts, taxReturnFacts } from "./jobs/tax-return.js";
 export type { MailMessage, Notifier, NotifierFailure, NotifierResult } from "./ports/notifier.js";
-export { NOTIFIER_FAILURES } from "./ports/notifier.js";
 export {
   type IgnoredFrequency,
   type JobFrequencies,

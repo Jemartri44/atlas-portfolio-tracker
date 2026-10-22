@@ -13,20 +13,17 @@ export interface MailMessage {
   readonly body: string;
 }
 
-export const NOTIFIER_FAILURES = [
+export type NotifierFailure =
   // The parameter of the recipient is not in SSM.
-  "mail_recipient_missing",
+  | "mail_recipient_missing"
   // It is there, and it is not one mail address.
-  "mail_recipient_invalid",
+  | "mail_recipient_invalid"
   // SSM did not answer (a throttling, a 5xx, the network).
-  "mail_recipient_unavailable",
+  | "mail_recipient_unavailable"
   // SES refused the mail: it was not sent.
-  "mail_send_failed",
+  | "mail_send_failed"
   // The request went and no answer came back: it may have been sent.
-  "mail_send_unknown",
-] as const;
-
-export type NotifierFailure = (typeof NOTIFIER_FAILURES)[number];
+  | "mail_send_unknown";
 
 export type NotifierResult =
   | { readonly ok: true }
