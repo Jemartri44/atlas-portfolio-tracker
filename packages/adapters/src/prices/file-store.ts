@@ -45,11 +45,11 @@ const readOrUndefined = async (path: string): Promise<string | undefined> => {
  * cloud (feature 016, E3): `prices/_cloud.json`, written under the same lock
  * as the closes it describes.
  */
-export interface FilePriceTransaction extends PriceTransaction {
+interface FilePriceTransaction extends PriceTransaction {
   readonly writeCloudPull: (text: string) => Promise<void>;
 }
 
-export interface FilePriceStoreOptions {
+interface FilePriceStoreOptions {
   /** How many times, and how long apart, a transaction asks for the lock again. */
   readonly lockAttempts?: number;
   readonly lockWaitMs?: number;
