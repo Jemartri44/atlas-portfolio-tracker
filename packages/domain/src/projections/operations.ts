@@ -20,17 +20,15 @@ import type {
   SellEvent,
   StandaloneFeeEvent,
   SwapEvent,
-  TransferEvent,
   ValuationEvent,
 } from "../schema/events.js";
 import { fiscalDateOf } from "../settings/fiscal-date.js";
-import { washSaleTransferCounts } from "../settings/wash-sale.js";
 import { adjustCash } from "./cash.js";
 import { assertSameBook, requireAccount, requireAsset } from "./catalogue.js";
 import { recordGain } from "./gains.js";
 import { recordIncome } from "./income.js";
 import { consume, openLot, openQuantity } from "./lots.js";
-import { completeRequest, fillOrder, lookupOpenOrder, lookupOpenRequest } from "./pending.js";
+import { fillOrder, lookupOpenOrder } from "./pending.js";
 import { accountsHolding, adjustPosition, positionOf } from "./positions.js";
 import { type Account, type Asset, addWarning, type LedgerState, type Thesis } from "./state.js";
 import { linkBuy, linkSell, requireOpenThesis } from "./theses.js";
@@ -46,7 +44,7 @@ export interface Priced {
 export const fxOf = (event: Priced): FxRate =>
   FxRate.of(Decimal.parse(event.fx_rate), event.currency, event.fx_rate_date);
 
-const money = (amount: string, currency: string): Money => Money.parse(amount, currency);
+export const money = (amount: string, currency: string): Money => Money.parse(amount, currency);
 
 /** Cost or proceeds basis: `amount` when present, else `quantity × unit_price` (ADR-0012). */
 const basisOf = (event: {
@@ -439,94 +437,6 @@ export const applySwap = (state: LedgerState, event: SwapEvent, position: number
   warnCurrency(state, event, from);
   warnFxDate(state, event, dateOut);
   warnHolders(state, event.to_asset_id, event.id);
-};
-
-export const applyTransfer = (state: LedgerState, event: TransferEvent): void => {
-  const fromAccount = requireAccount(state, event.from_account_id, event.id);
-  const fromAsset = requireAsset(state, event.from_asset_id, event.id);
-  const toAccount = requireAccount(state, event.to_account_id, event.id);
-  const toAsset = requireAsset(state, event.to_asset_id, event.id);
-  assertSameBook(fromAccount, fromAsset, event.id);
-  assertSameBook(toAccount, toAsset, event.id);
-  if (fromAsset.book !== toAsset.book) {
-    throw new ProjectionError("book_mismatch", event.id, "a transfer cannot cross books", {
-      from_asset_id: event.from_asset_id,
-      to_asset_id: event.to_asset_id,
-    });
-  }
-  const custody = event.from_asset_id === event.to_asset_id;
-  const quantityOut = Quantity.parse(event.quantity_out);
-  const quantityIn = Quantity.parse(event.quantity_in);
-  const request =
-    event.request_id === undefined ? undefined : lookupOpenRequest(state, event.request_id, event);
-  if (!custody && !(fromAsset.transferable && toAsset.transferable)) {
-    throw new ProjectionError(
-      "not_transferable",
-      event.id,
-      "fund transfers require both assets to be transferable",
-      { from_asset_id: event.from_asset_id, to_asset_id: event.to_asset_id },
-    );
-  }
-  requireAvailable(state, event.from_account_id, event.from_asset_id, quantityOut, event.id);
-
-  if (request !== undefined) {
-    completeRequest(request, event.id, event.value_date_in);
-  }
-  adjustPosition(
-    state,
-    event.from_account_id,
-    event.from_asset_id,
-    negative(quantityOut),
-    event.id,
-  );
-  adjustPosition(state, event.to_account_id, event.to_asset_id, quantityIn, event.id);
-  if (custody) {
-    warnHolders(state, event.to_asset_id, event.id);
-    return;
-  }
-  const slices = consume(state, event.from_asset_id, quantityOut, event.id, "transfer");
-  let assigned = Quantity.ZERO;
-  slices.forEach((slice, index) => {
-    const quantity =
-      index === slices.length - 1
-        ? quantityIn.sub(assigned)
-        : Quantity.of(quantityIn.value.mul(slice.quantity.value).div(quantityOut.value));
-    assigned = assigned.add(quantity);
-    openLot(state, {
-      asset_id: event.to_asset_id,
-      acquisition_date: slice.acquisition_date,
-      quantity,
-      cost_eur: slice.cost_eur,
-      source_event_id: event.id,
-      // FIFO tie-break on equal dates keeps the position of the origin event of the consumed lot (data-schema.md §8.1).
-      position: slice.position,
-      source_lot_id: slice.lot_id,
-    });
-  });
-  // The destination leg acquires homogeneous securities, so it counts for the
-  // wash-sale rule unless the criterion is switched off (business-rules.md
-  // §5.4, data-schema.md §8.4, fiscal question #2b). It counts on the date the
-  // units are subscribed (`value_date_in`, the fiscal date of a fund), which is
-  // **not** the acquisition date of the lots: those keep the original one
-  // (data-schema.md §8.1), and mixing the two would break the antiquity.
-  // A custody transfer returned above: moving the same asset between accounts
-  // acquires nothing.
-  if (washSaleTransferCounts(state.fiscalSettings)) {
-    noteAcquisition(state, {
-      event_id: event.id,
-      asset_id: event.to_asset_id,
-      fiscal_date: event.value_date_in,
-      quantity: quantityIn,
-    });
-    warnRepurchase(
-      state,
-      event.id,
-      event.to_asset_id,
-      toAsset.asset_type,
-      event.value_date_in,
-      quantityIn,
-    );
-  }
 };
 
 export const applyDividend = (state: LedgerState, event: DividendEvent): void => {

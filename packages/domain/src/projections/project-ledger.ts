@@ -49,9 +49,9 @@ import {
   applySell,
   applyStandaloneFee,
   applySwap,
-  applyTransfer,
   applyValuation,
 } from "./operations.js";
+import { applyTransfer } from "./operations-transfer.js";
 import {
   applyOrderPlaced,
   applyOrderUpdated,
