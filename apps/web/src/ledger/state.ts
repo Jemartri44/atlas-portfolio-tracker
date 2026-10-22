@@ -20,6 +20,7 @@ import {
 } from "@atlas/domain";
 import { createMemo, createRoot, createSignal } from "solid-js";
 import { themeFromPreference } from "../shell/theme.js";
+import { readDay } from "./day-watch.js";
 import type { LedgerSource } from "./source.js";
 
 export interface LedgerSnapshot {
@@ -236,36 +237,7 @@ export const usePrivacy = (): (() => boolean) => store.privacy;
  * clock, which is the same clock the use cases will bring.
  */
 const clockDay = (): CivilDate => madridDateOf(store.deps()?.clock.now() ?? new Date());
-
-const [dayChanges, markDayChange] = createSignal(0);
-let watchingDay = false;
-
-/**
- * An open tab does not know it is a new day: once, the first time the date is read, a
- * check each minute (cheap, and with no time-zone arithmetic of its own) tells the
- * readers of `today()` when Madrid's day has changed, so the screens do not keep
- * valuing the portfolio at yesterday's date.
- */
-const watchDay = (): void => {
-  if (watchingDay || typeof setInterval === "undefined") {
-    return;
-  }
-  watchingDay = true;
-  let seen = clockDay();
-  setInterval(() => {
-    const now = clockDay();
-    if (now !== seen) {
-      seen = now;
-      markDayChange((count) => count + 1);
-    }
-  }, 60_000);
-};
-
-export const today = (): CivilDate => {
-  dayChanges();
-  watchDay();
-  return clockDay();
-};
+export const today = (): CivilDate => readDay(clockDay);
 
 /** The dependencies of the use cases; only defined once a ledger is open. */
 export const requireDeps = (): UseCaseDeps => {
