@@ -16,7 +16,9 @@ import { EmptyState, Notice, Parts, Tag } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
+import { maskFigures } from "../../format/privacy.js";
 import { sentenceOf } from "../../ledger/failure-text.js";
+import { store } from "../../ledger/state.js";
 import { closedYearsOfReversal, reverse } from "../../ledger/write.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { SessionNotice } from "../../shell/SessionNotice.jsx";
@@ -171,7 +173,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
 
                   <Show when={view().invalidReason !== undefined}>
                     <Notice severity="danger" title="Este evento es inválido">
-                      {view().invalidReason}
+                      {maskFigures(view().invalidReason ?? "", store.privacy())}
                     </Notice>
                   </Show>
 
