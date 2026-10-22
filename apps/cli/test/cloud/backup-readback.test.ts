@@ -58,6 +58,8 @@ describe("the copy of a cloud ledger, read back from the disk", () => {
       expect(code).not.toBe(EXIT.offline);
       expect(c.err.join("\n")).toContain("backup_mismatch");
       expect(c.err.join("\n")).not.toContain("No se ha leído ni registrado nada");
+      // The bad copy does not stay to block the retry of the day.
+      expect(await readdir(second)).toEqual([]);
     } finally {
       state.corrupt = false;
     }

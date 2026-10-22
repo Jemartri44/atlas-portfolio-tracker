@@ -46,7 +46,7 @@ import { strictUtf8 } from "../fs.js";
 import { table } from "../output/table.js";
 import { secretsOrder } from "./admin-secrets.js";
 import { describeWaivers } from "./compact.js";
-import { render } from "./shared.js";
+import { aside, render } from "./shared.js";
 
 const LEDGER_KEY = "ledger/ledger.jsonl";
 const SYMBOLS_KEY = "prices/symbols.json";
@@ -57,18 +57,14 @@ const SYMBOLS_KEY = "prices/symbols.json";
  * is written before the list is on screen, and never a plain yes — the user
  * types the name of the environment, with what is at stake in front.
  */
-/**
- * What the person must read before a yes. With `--json` the answer stays the
- * only thing on stdout and this goes to stderr, still on the screen.
- */
-const sayAside = (ctx: Context, text: string): void => (ctx.json ? ctx.io.err : ctx.io.out)(text);
-
 const confirmEnvironment = async (
   ctx: Context,
   environment: string,
   question: string,
 ): Promise<boolean> => {
-  const typed = await ctx.io.ask?.(`${question} Escribe «${environment}» para seguir: `);
+  const typed = await ctx.io.ask?.(`${question} Escribe «${environment}» para seguir: `, {
+    aside: ctx.json,
+  });
   if (typed === undefined) {
     throw new ConfirmationRequired(
       "hace falta confirmar escribiendo el nombre del entorno, y no hay terminal interactiva",
@@ -287,14 +283,14 @@ const compactOrder = async (
     return EXIT.ok;
   }
   const accepted = listFlag(flags, "accept-unverified");
-  sayAside(
+  aside(
     ctx,
     `La nube tiene ${plan.lines} líneas, ${plan.outdated} en versiones anteriores a ${plan.targetVersion}. El original se archivará como archive/${plan.archiveName}, que nunca se sobrescribe.`,
   );
   // What is given up has to be on screen before the yes, as in the local compact.
   const waiving = plan.unverified.filter((entry) => accepted.includes(entry.filing_id));
   if (waiving.length > 0) {
-    sayAside(ctx, describeWaivers(waiving));
+    aside(ctx, describeWaivers(waiving));
   }
   if (!(await confirmEnvironment(ctx, environment, `¿Compactar la nube de ${environment}?`))) {
     render(ctx, { status: "cancelled" }, "Cancelado: no se ha tocado nada.");
@@ -386,7 +382,7 @@ const restoreOrder = async (
   // 1. The candidate.
   const from = requireFlag(flags, "from");
   const lines = linesOfText(await candidateText(clients, from));
-  const say = (text: string): void => sayAside(ctx, text);
+  const say = (text: string): void => aside(ctx, text);
   say(`1. Copia candidata: ${from}.`);
   // 2. Checked before touching anything.
   const events = checkCandidate(ctx, lines);
@@ -493,7 +489,7 @@ const pricesPushOrder = async (
               change.fields.length === 0 ? "" : ` (${change.fields.join(", ")})`
             }`,
         );
-  sayAside(ctx, [said, ...lines, ...replaced].join("\n"));
+  aside(ctx, [said, ...lines, ...replaced].join("\n"));
   if (
     !(await confirmEnvironment(
       ctx,
@@ -527,6 +523,20 @@ const pricesPushOrder = async (
 const USAGE =
   "uso: atlas admin devices | revoke-all-tokens | forget-device [--] <dispositivo> | forget-device --device <dispositivo> | compact [--accept-unverified <id>]… | restore --from <fichero|s3-version:<id>|backups/AAAA-MM> | prices push | secrets, siempre con --env <entorno>";
 
+/** The options of each order besides `--env`; `secrets` takes none of its own. */
+const ORDER_FLAGS: Readonly<Record<string, readonly string[]>> = {
+  devices: ["env"],
+  "revoke-all-tokens": ["env"],
+  "forget-device": ["env", "device"],
+  compact: ["env", "accept-unverified"],
+  restore: ["env", "from"],
+  prices: ["env"],
+  secrets: ["env"],
+};
+
+/** The global options that mean something here; the ones about recording an event do not. */
+const ADMIN_GLOBAL_FLAGS: readonly string[] = ["ledger", "yes", "json"];
+
 export const adminCommand = async (
   ctx: Context,
   positionals: string[],
@@ -548,6 +558,14 @@ export const adminCommand = async (
     (order === "prices" && positionals[2] !== "push")
   ) {
     throw new UsageError(USAGE);
+  }
+  // What this order does not take is refused, not ignored in silence.
+  for (const name of flags.keys()) {
+    if (!ORDER_FLAGS[order]?.includes(name) && !ADMIN_GLOBAL_FLAGS.includes(name)) {
+      throw new UsageError(
+        `--${name} no vale en «atlas admin ${order === "prices" ? "prices push" : order}»`,
+      );
+    }
   }
   // A device id may begin with a dash: after `--`, or as `--device <id>`.
   const flagged = stringFlag(flags, "device");

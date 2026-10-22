@@ -14,7 +14,7 @@ import { type Context, describeWarnings, EXIT } from "../context.js";
 import { describeError } from "../output/messages.js";
 import { saveAsDraft } from "./draft.js";
 import { confirmRates, rateDraft } from "./rates.js";
-import { confirmAndRecord, type DraftSpec, draftFromFlags } from "./shared.js";
+import { aside, cancelled, confirmAndRecord, type DraftSpec, draftFromFlags } from "./shared.js";
 
 const COMMON = [
   "account",
@@ -252,12 +252,12 @@ export const addCommand = async (
   const draft = rated.draft;
   if (rated.waiting) {
     for (const note of rated.notes) {
-      ctx.io.out(note);
+      aside(ctx, note);
     }
     if (asDraft) {
       return saveAsDraft(ctx, draft, rated.history, rated.staleDays);
     }
-    ctx.io.out("Para guardarla como borrador, repite el comando con --draft.");
+    aside(ctx, "Para guardarla como borrador, repite el comando con --draft.");
     return EXIT.domain;
   }
   if (asDraft) {
@@ -272,7 +272,7 @@ export const addCommand = async (
   const notes =
     name === "buy" || name === "sell" || name === "swap" ? await tradeNotes(ctx, draft) : [];
   if (!(await confirmRates(ctx, rated.mismatches))) {
-    ctx.io.out("Cancelado.");
+    cancelled(ctx);
     return 0;
   }
   await confirmAndRecord(ctx, draft, [...rated.notes, ...notes]);

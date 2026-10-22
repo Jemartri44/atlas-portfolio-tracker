@@ -126,13 +126,19 @@ const writeCredentials = async (path: string, file: CredentialsFile): Promise<vo
   const temporary = `${path}.tmp-${process.pid}-${Date.now()}`;
   const handle = await fs.open(temporary, "wx", 0o600);
   try {
-    await handle.writeFile(serializeCredentials(file), "utf8");
-    await handle.sync();
-  } finally {
-    await handle.close();
+    try {
+      await handle.writeFile(serializeCredentials(file), "utf8");
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+    await fs.chmod(temporary, 0o600);
+    await fs.rename(temporary, path);
+  } catch (failure) {
+    // The temporary holds the token: it must not outlive a failed write.
+    await fs.rm(temporary, { force: true });
+    throw failure;
   }
-  await fs.chmod(temporary, 0o600);
-  await fs.rename(temporary, path);
 };
 
 /** The folder's `sync/remote.json`: nothing when it does not exist, never «empty» when unreadable. */
