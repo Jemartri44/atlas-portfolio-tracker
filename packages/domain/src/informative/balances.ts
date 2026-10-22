@@ -103,7 +103,9 @@ export const quarterAverages = (
   const moves = new Set<CivilDate>();
   const state = projectLedger(events);
   for (const event of events) {
-    if (!isOperationEvent(event)) {
+    // A voided event is not an operation of the account: its date must not move
+    // the start of the period.
+    if (!isOperationEvent(event) || state.reversed.has(event.id)) {
       continue;
     }
     const named = accountsNamed(event).filter((id) => accounts.has(id));

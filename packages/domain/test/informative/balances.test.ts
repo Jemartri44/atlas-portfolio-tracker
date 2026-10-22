@@ -48,6 +48,18 @@ describe("the period the average covers", () => {
     expect(item?.value_eur?.amount.toString()).toBe("4600");
   });
 
+  it("ignores the date of a voided event when it starts the period", () => {
+    const b = new LedgerBuilder();
+    b.settings(SETTINGS);
+    b.account("acc_new", { platform: "ibkr", country: "IE" });
+    const wrong = b.deposit({ account_id: "acc_new", value_date: "2027-10-01", amount: "4600" });
+    b.reversal(wrong.id);
+    b.deposit({ account_id: "acc_new", value_date: "2027-11-16", amount: "4600" });
+    const item = itemOf(model720(b.build(), 2027, { today: TODAY }), "acc_new");
+    expect(item?.balances?.[0]?.days).toBe(46);
+    expect(item?.q4_average_eur?.amount.toString()).toBe("4600");
+  });
+
   it("counts an account closed inside the quarter with zero from its closing", () => {
     const b = new LedgerBuilder();
     b.settings(SETTINGS);
