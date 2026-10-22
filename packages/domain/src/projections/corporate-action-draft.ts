@@ -229,7 +229,9 @@ const positionsAfter = (
   effects: readonly Effect[],
 ): ReturnType<typeof physicalPositions> => {
   const probe = { ...PROBE, ...eventOf(params, effects) } as unknown as CorporateActionEvent;
-  return physicalPositions(projectLedger([...events, probe]));
+  // The positions of the day of the event: what is bought or sold afterwards
+  // is not there to be rounded or sold by it.
+  return physicalPositions(projectLedger([...events, probe], { asOf: params.effective_date }));
 };
 
 /**
@@ -368,7 +370,8 @@ const compose = (
     case "fund_liquidation":
     case "issuer_liquidation": {
       const cash = required(params.cash, "cash", kind);
-      const entries: ForcedSaleEntry[] = holdersOf(state, params.asset_id).map((account_id) => ({
+      const onTheDay = projectLedger(events, { asOf: params.effective_date });
+      const entries: ForcedSaleEntry[] = holdersOf(onTheDay, params.asset_id).map((account_id) => ({
         account_id,
         quantity: "all",
       }));
