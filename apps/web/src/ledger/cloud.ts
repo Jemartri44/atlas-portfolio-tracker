@@ -204,7 +204,7 @@ export const watchConnection = (request: Fetch = pageFetch): (() => void) => {
   // full boot is for what is not shown (offline, stopped, failed).
   const back = (): void => {
     if (store.load().phase === "ready") {
-      void reloadLedger({ quiet: true });
+      void reloadLedger({ quiet: true }).then(settleAfterBoot);
       return;
     }
     void bootCloud(request);
