@@ -1,15 +1,14 @@
-// The price of an asset at a date (data-schema.md §7, feature 004; single gate
-// since feature 005).
+// The price of an asset at a date (data-schema.md §7, single gate).
 //
 // **This module is the only door to a price for a view.** No other projection
 // reads `state.valuations` to find out what something is worth: it reads them
 // through the manual leaf (`manual-price.ts`), and the automatic daily closes
-// of feature 013 (`prices/<asset_id>.jsonl`, outside the ledger) arrive here as
-// an `ExternalPrices`, built by `@atlas/domain/quotes`.
+// (`prices/<asset_id>.jsonl`, outside the ledger) arrive here as an
+// `ExternalPrices`, built by `@atlas/domain/quotes`.
 //
 // The Modelo 720 does **not** come through here: it reads the manual leaf
 // alone, and an architecture test keeps every informative return from
-// reaching this file (feature 013, §6.5 (a)).
+// reaching this file.
 //
 // Informative by definition: no tax calculation reads this (constitution II),
 // and a missing price is never interpolated or replaced by zero (constitution
@@ -32,10 +31,9 @@ import type { LedgerState, Warning } from "./state.js";
 export type PriceOrigin = "manual" | "external";
 
 /**
- * The sources of automatic daily closes (ADR-0031; CoinGecko left the feature
- * by decision D-Q5 of the direction). Declared here, with every type of the
- * gate: the modules of `quotes/` import them from this file, never the other
- * way round (§6.4 (b) of prompt 013).
+ * The sources of automatic daily closes (ADR-0031). Declared here, with every
+ * type of the gate: the modules of `quotes/` import them from this file, never
+ * the other way round.
  */
 export type QuoteSource = "eodhd" | "alpha_vantage";
 
@@ -43,7 +41,7 @@ export type QuoteSource = "eodhd" | "alpha_vantage";
  * Why a quote has no value in euros: the ECB rate of its date could not be
  * resolved (ADR-0029's `resolveRate`), or there is no ECB history at all. It is
  * **never** converted with the rate of the day before, nor with the rate of a
- * currency that looks alike — `GBX` is not `GBP` (feature 013, §6.4 (i)).
+ * currency that looks alike — `GBX` is not `GBP`.
  */
 export type FxMissing =
   | "not_yet_published"
@@ -60,7 +58,7 @@ export interface ExternalQuote {
   unit_value: Decimal;
   currency: Currency;
   source: QuoteSource;
-  /** An approximation through the reference ETF (P3), never a close of its own. */
+  /** An approximation through the reference ETF, never a close of its own. */
   approximate?: boolean;
   /** ECB rate as published (ADR-0013); `1` for euros. Absent when it could not be resolved. */
   fx_rate?: Decimal;
@@ -69,10 +67,9 @@ export interface ExternalQuote {
   /** Why `fx_rate` is absent. */
   fx_missing?: FxMissing;
   /**
-   * A more recent quote of the same asset that has **no** value in euros,
-   * shown as information next to this one, which has (feature 013, review of
-   * PR #78): a figure in euros is never covered by a newer one that cannot be
-   * added up.
+   * A more recent quote of the same asset that has **no** value in euros, shown
+   * as information next to this one, which has: a figure in euros is never
+   * covered by a newer one that cannot be added up.
    */
   newer?: ExternalQuote;
 }
@@ -96,7 +93,7 @@ export interface PriceLookup {
   event_id?: Ulid;
   /** The source of an external quote. */
   source?: QuoteSource;
-  /** An approximation through the reference ETF (P3): always said as such. */
+  /** An approximation through the reference ETF: always said as such. */
   approximate?: boolean;
   date: CivilDate;
   unit_value: Decimal;
@@ -110,9 +107,9 @@ export interface PriceLookup {
    * Sunday being the ordinary case.
    *
    * It used to be dropped here, and the price was dated with the day of the
-   * valuation for both. Nothing noticed until the Modelo 720 had to say
-   * whether the rate applied is the one the law asks for (feature 010, block
-   * 3), which is a question about **this** date and not about the other.
+   * valuation for both. Nothing noticed until the Modelo 720 had to say whether
+   * the rate applied is the one the law asks for, which is a question about
+   * **this** date and not about the other.
    */
   fx_rate_date?: CivilDate;
   /**
@@ -175,7 +172,7 @@ const lookupOf = (
 
 /**
  * Says that a quote has no value in euros and why, so that the view that
- * leaves it out of a total in euros never does so in silence (§6.4 (i)).
+ * leaves it out of a total in euros never does so in silence.
  */
 export const warnWithoutEur = (warnings: Warning[], price: PriceLookup): void => {
   warnings.push({
@@ -198,10 +195,10 @@ export const warnWithoutEur = (warnings: Warning[], price: PriceLookup): void =>
  * It lives here, and not in whoever asks, for the reason this module exists:
  * "on which days does a price exist" is a question about prices, and
  * `state.valuations` is read behind this one door (the architecture test
- * enforces it). **The dates of the automatic quotes are not added here**
- * (feature 013, §6.4 (h)): they reach the views of presentation as data of
- * their own (`quoteDates` of `@atlas/domain/quotes`), never through the state
- * of the ledger, which the fiscal path reads.
+ * enforces it). **The dates of the automatic quotes are not added here**: they
+ * reach the views of presentation as data of their own (`quoteDates` of
+ * `@atlas/domain/quotes`), never through the state of the ledger, which the
+ * fiscal path reads.
  *
  * The time series uses it: between two valuations the ledger knows nothing new,
  * so these are the only dates worth projecting at.
@@ -210,14 +207,12 @@ export const priceDates = (state: LedgerState): CivilDate[] =>
   [...new Set(state.valuations.map((event) => event.date))].sort();
 
 /**
- * Which price a view uses (decision P2 of the direction, ADR-0031 second
- * amendment; it replaces decision (j) of prompt 005 for views only): the more
- * recent date, and on the same date the manual one, because the user is the
- * authority — **among the prices that have a value in euros** (review of PR
- * #78). A newer quote without one never covers a figure that can be added up:
- * it is carried as `newer_quote`, to be shown, and the last usable figure is
- * used, with its age. The Modelo 720 is not affected: it reads the manual leaf
- * alone.
+ * Which price a view uses (ADR-0031, second amendment): the more recent date,
+ * and on the same date the manual one, because the user is the authority —
+ * **among the prices that have a value in euros**. A newer quote without one
+ * never covers a figure that can be added up: it is carried as `newer_quote`,
+ * to be shown, and the last usable figure is used, with its age. The Modelo 720
+ * is not affected: it reads the manual leaf alone.
  */
 const choose = (
   assetId: AssetId,
@@ -234,7 +229,7 @@ const choose = (
   }
   // The newest quote that exists, not the one the source fell back to: a
   // close with euros older than the valuation must not hide a newer one
-  // without them (second pass of the review of PR #78).
+  // without them.
   const newest = quote?.newer ?? quote;
   return manual === undefined
     ? undefined

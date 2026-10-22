@@ -1,14 +1,14 @@
-// The periodic warnings (feature 016, E4; `contracts/mail.md` §2): the weekly
+// The periodic warnings: the weekly
 // review, the income tax of January and the thresholds of the 720 and 721.
-// Plain text, Spanish, no HTML; the subject in ASCII with its period (Q5).
+// Plain text, Spanish, no HTML; the subject in ASCII with its period.
 //
 // - **Weekly review**: the classes of the core, points and percentages, which
-//   P9 allows (decided in round 2 of the review of PR #104); with the switch
+//   carry no amount; with the switch
 //   on, **only** the euros of rule 17 — the gross contribution and its cap,
 //   and the loss of the stop-loss — never an asset, an account or an ISIN.
 // - **Income tax**: ready, with how many notes and criteria in dispute;
-//   **never a figure**, whatever the switch (Q10): it does not even take it.
-// - **720 and 721**: neutral (questions §13) — which model to look at, never
+//   **never a figure**, whatever the switch: it does not even take it.
+// - **720 and 721**: neutral — which model to look at, never
 //   the word «umbral», a figure, or whether it is passed.
 
 import type { MailMessage } from "../../ports/notifier.js";
@@ -107,7 +107,7 @@ const reviewSubject = (period: string): string =>
 
 /**
  * The review of a period whose ledger could not be read on any day of it,
- * said on its last day (review of PR #109, avisos B2): with its code, and no
+ * said on its last day: with its code, and no
  * figure.
  */
 export const weeklyReviewUnavailableMail = (

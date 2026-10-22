@@ -1,5 +1,5 @@
 // What each book is worth **with the cash of its own accounts**, on each date of
-// a net worth series (feature 020, E4, second part; ADR-0004).
+// a net worth series (second part, ADR-0004).
 //
 // Net worth is `core + bucket + cash in the investment accounts`. A portfolio
 // that was funded with 10.000 and bought 2.000 is not worth 2.000: it is worth

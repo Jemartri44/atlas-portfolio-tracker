@@ -83,13 +83,12 @@ interface Snapshot {
    * The acquisitions a `grant` notes for the wash-sale rule and the income in
    * kind it records. They were left out, so a rejected action kept both: a
    * phantom acquisition that a real loss could be deferred against, and a
-   * phantom line of `in_kind_income` in the snapshot (question Q14 of the
-   * feature 009). Both lists only grow while an event applies, so their
-   * lengths are enough to put them back.
+   * phantom line of `in_kind_income` in the snapshot. Both lists only grow
+   * while an event applies, so their lengths are enough to put them back.
    */
   acquisitions: Map<AssetId, number>;
   inKindIncome: number;
-  /** The lot journal only grows too (feature 009). */
+  /** The lot journal only grows too. */
   lotJournal: number;
 }
 

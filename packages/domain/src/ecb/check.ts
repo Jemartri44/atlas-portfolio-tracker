@@ -1,5 +1,4 @@
-// The rates of the ledger against the official history (ADR-0029, point 8;
-// decisions (f), (p), (q) and (z) of prompt 012).
+// The rates of the ledger against the official history (ADR-0029, point 8).
 //
 // Every rate field the schema defines as an ECB reference rate — through the
 // one enumeration, `FX_FIELDS`, effects included — of every event in force is
@@ -9,8 +8,8 @@
 // not a reference rate and is not compared.
 //
 // Each finding is emitted **with its own literal, in its own call**: four of
-// them look alike, and folding one into another is how feature 011 wrote a
-// false reason forever into an append-only file.
+// them look alike, and folding one into another would write a false reason
+// forever into an append-only file.
 //
 // **Without a history nothing is said to be right or wrong**: the outcome is
 // `unchecked`, with how many rates stayed without being contrasted. That is a

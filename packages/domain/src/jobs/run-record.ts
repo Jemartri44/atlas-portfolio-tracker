@@ -1,11 +1,11 @@
-// The run record of a job and a period (feature 016;
-// `specs/016-scheduled-jobs/data-model.md` §1): `jobs/<family>/<task>/<period>.json`,
-// written **only** by the function of its family. A job runs more than once:
-// EventBridge Scheduler retries an invocation, Lambda retries an asynchronous
-// one that fails and may deliver the same event twice (`questions.md` §1.4).
-// So each job **claims** its period with `If-None-Match: *` before doing
-// anything and **closes** it with `If-Match`, and what a retry does in each
-// state is decided here, by the delivery of the job (plan §5.3):
+// The run record of a job and a period:
+// `jobs/<family>/<task>/<period>.json`, written **only** by the function of its
+// family. A job runs more than once: EventBridge Scheduler retries an
+// invocation, Lambda retries an asynchronous one that fails and may deliver the
+// same event twice. So each job **claims** its period
+// with `If-None-Match: *` before doing anything and **closes** it with
+// `If-Match`, and what a retry does in each state is decided here, by the
+// delivery of the job:
 //
 //   none          claim, do
 //   claimed       do again (nothing was sent, or it is the reminder) — unless
@@ -15,11 +15,10 @@
 //   send_failed   send again: the service said no
 //   failed        do again: the task failed **before** marking `sending` — a
 //                 run that throws after it closes as `send_unknown` instead
-//                 (review of PR #104, idempotence B1)
 //   done          nothing
 //   send_unknown  nothing
 //
-// A finding is what a job leaves for the mail (§8.2 B2): a code and a subject
+// A finding is what a job leaves for the mail: a code and a subject
 // that **never** is an asset, a symbol, an ISIN, an account nor an amount.
 
 import { type CivilDate, isCivilDate } from "../dates/civil-date.js";
@@ -62,7 +61,7 @@ export interface Finding {
 }
 
 /**
- * An object a monthly dump wrote, or found already there (E4, plan §8): its
+ * An object a monthly dump wrote, or found already there: its
  * key, **always under the dump of its own period**, and the SHA-256 of its
  * bytes. `kept_from_earlier_attempt` says that an attempt before this one
  * of the same period left other bytes there, which stay: a dump is never
@@ -201,11 +200,10 @@ export type RunStep =
     };
 
 /**
- * What a run does with the record it found for its period (plan §5.3). A
+ * What a run does with the record it found for its period. A
  * record `claimed` or `sending` less than the longest run of the function ago
  * may belong to a run still going on: it is left alone (`job_in_progress`),
- * never taken up, or two runs would send the reminder twice (review of
- * PR #104, idempotence N3).
+ * never taken up, or two runs would send the reminder twice.
  */
 export const nextStep = (
   record: RunRecord | undefined,

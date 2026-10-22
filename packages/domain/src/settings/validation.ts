@@ -138,12 +138,12 @@ const checkWashSaleWindow = (raw: UnknownRecord): void => {
  * siblings (ADR-0018). What is present must still name a category the engine
  * knows: the tolerance is to absence, not to nonsense.
  *
- * A wrong value has a code of its own, like the other two per-asset-type maps
- * (feature 009, Q13). It used to share `invalid_settings`, on the argument that
- * an enumeration of two values is what the generic message covers; but since
- * the tax engine reads it, this is the setting that moves a disposal from one
- * box of the return to another, and the message has to be able to say so.
- * A map that is not an object stays `invalid_settings`, as for the window.
+ * A wrong value has a code of its own, like the other two per-asset-type maps.
+ * It used to share `invalid_settings`, on the argument that an enumeration of
+ * two values is what the generic message covers; but since the tax engine reads
+ * it, this is the setting that moves a disposal from one box of the return to
+ * another, and the message has to be able to say so. A map that is not an
+ * object stays `invalid_settings`, as for the window.
  */
 const checkIncomeCategory = (raw: UnknownRecord): void => {
   const categories = raw.income_category;
@@ -258,7 +258,7 @@ export const validateSettings = (raw: unknown): Settings => {
   }
   // Partial map (ADR-0018): a missing asset type is fine and takes its default;
   // a present one must name a rule the engine knows. Its own code, like its
-  // two siblings (feature 009, Q13): a missing map is still `invalid_settings`.
+  // two siblings: a missing map is still `invalid_settings`.
   for (const assetType of ASSET_TYPES) {
     const rule = rules[assetType];
     if (rule !== undefined && !(FISCAL_DATE_RULES as readonly unknown[]).includes(rule)) {

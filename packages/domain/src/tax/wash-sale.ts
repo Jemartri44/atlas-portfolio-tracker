@@ -1,7 +1,7 @@
 // The wash-sale rule, computed (data-schema.md §8.4, business-rules.md §5.4,
 // fiscal criteria #2, #2b, #14, #15 and #18–#21).
 //
-// Until feature 009 the rule only warned. Here it decides: which part of a loss
+// Here the rule decides, it does not only warn: which part of a loss
 // is not computable this year, which lots carry it, how it travels through
 // transfers, conversions and carve-outs, and in which year it comes back.
 //
@@ -10,8 +10,8 @@
 // record and carries one more magnitude along it, the deferred loss. Which lots
 // a sale consumed is never decided again: it is read.
 //
-// The rules the document leaves open are the ones the direction numbered on
-// 2026-09-18 (feature 009, Q1):
+// The rules the document leaves open are the fiscal criteria numbered in
+// `docs/fiscal-questions.md`:
 //
 // - #18: an acquisition inside the window only counts for the units still held
 //   after the loss-making transmission (not the ones that same sale consumed,
@@ -124,7 +124,7 @@ export interface WashSaleOutcome {
   not_held: boolean;
   /**
    * With #18 read the other way, no homogeneous lot is left to carry the extra
-   * deferral (feature 009 review): the other reading defers nothing more.
+   * deferral: the other reading defers nothing more.
    */
   no_carrier_for_18: boolean;
   /** Candidates whose units were already used by an earlier loss (#19). */
@@ -463,8 +463,8 @@ class Walker {
     // deferral needs a lot to wait on: by article 33.5 in fine it comes back as
     // the securities that **remain** are transmitted. So the other reading can
     // only defer onto homogeneous units still held after the sale that the
-    // current one does not already use (direction's decision, feature 009
-    // review); with none left, it defers nothing more.
+    // current one does not already use; with none left,
+    // it defers nothing more.
     const priorAvailable = candidates
       .filter((c) => c.timing === "prior")
       .reduce((sum, c) => sum.add(c.available), Quantity.ZERO);
@@ -529,9 +529,9 @@ class Walker {
         );
         const free = acquisition.quantity.sub(usedBefore);
         // A split or reverse split in between does not make it another
-        // security: what was bought after is the same value, in other units.
-        // It is converted with the exact ratio of each one (verifier of
-        // feature 009): 20 bought after a 2:1 split are 10 of those sold.
+        // security: what was bought after is the same value, in other units. It
+        // is converted with the exact ratio of each one: 20 bought after a 2:1
+        // split are 10 of those sold.
         const between = (this.scales.get(assetId) ?? []).filter(
           (mark) => mark.at > journalIndex && mark.at < position,
         );

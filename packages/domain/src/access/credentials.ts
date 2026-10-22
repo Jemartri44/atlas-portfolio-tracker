@@ -3,7 +3,7 @@
 // `device_id`** — a token per device and per folder —, and the folder's
 // `sync/remote.json`, which says which remote the folder syncs with and which
 // entry is its own. Read strictly; which entry an order may use is decided
-// here, by identity and never by resemblance (B2).
+// here, by identity and never by resemblance.
 
 import { isRecord } from "../guards.js";
 import { isId22, isInstant } from "./ids.js";
@@ -61,8 +61,8 @@ const isEntry = (key: string, value: unknown): value is CredentialEntry =>
 
 /**
  * Whether a value is an entry as `credentials.json` keeps it: what the console
- * checks on the answer of an exchange **before** writing anything (review of
- * PR #95, N5), so a broken or hostile answer never makes the file unreadable.
+ * checks on the answer of an exchange **before** writing anything, so a broken
+ * or hostile answer never makes the file unreadable.
  */
 export const isCredentialEntry = (value: unknown): value is CredentialEntry =>
   isRecord(value) && typeof value.device_id === "string" && isEntry(value.device_id, value);
@@ -92,17 +92,16 @@ export const parseCredentials = (text: string): CredentialsFile | "unreadable" =
 export const serializeCredentials = (file: CredentialsFile): string =>
   `${JSON.stringify(file, null, 2)}\n`;
 
-/** The entry of its `device_id` added or replaced; every other one untouched (mutant 29 bis). */
+/** The entry of its `device_id` added or replaced; every other one untouched. */
 export const withEntry = (file: CredentialsFile, entry: CredentialEntry): CredentialsFile => ({
   credentials_format: 1,
   entries: { ...file.entries, [entry.device_id]: entry },
 });
 
 /**
- * A new entry that would take the place of the entry **of another origin**
- * for the same device: never kept (review of PR #95, round 2, the rest of
- * N5). A server answering a new sign-in with the id of a device of another
- * origin must not steal that origin's token.
+ * A new entry that would take the place of the entry **of another origin** for
+ * the same device: never kept. A server answering a new sign-in with the id of
+ * a device of another origin must not steal that origin's token.
  */
 export const replacesAnotherOrigin = (file: CredentialsFile, entry: CredentialEntry): boolean => {
   const existing = file.entries[entry.device_id];
@@ -149,7 +148,7 @@ export const serializeRemoteJson = (remote: RemoteJson): string =>
 /**
  * The entry a folder that has `sync/remote.json` uses to sync and to renew:
  * **only the one its `device_id` names, for its origin**, and none other —
- * never another entry of the same origin, which belongs to another folder (B2).
+ * never another entry of the same origin, which belongs to another folder.
  */
 export const entryForRemote = (
   file: CredentialsFile,
@@ -161,8 +160,8 @@ export const entryForRemote = (
 
 /**
  * The entry a folder **without** `sync/remote.json` may use to start (to
- * initialise or to join, E3): one of that origin whose hint is **exactly**
- * this folder, even if it is the only entry of the origin (B2). None: sign in
+ * initialise or to join): one of that origin whose hint is **exactly**
+ * this folder, even if it is the only entry of the origin. None: sign in
  * from this folder. Several: `--device`, which has to be one of them.
  */
 export const entryForStart = (
@@ -208,7 +207,7 @@ export const foldersNested = (a: string, b: string): boolean => {
 /**
  * The warning of an expiry close by: `expired` once `expires_at` has passed,
  * and otherwise the **whole** days left when they are `warnDays` or fewer —
- * `0` is «less than a day», never «expired» (review of PR #95, N1). Nothing
+ * `0` is «less than a day», never «expired». Nothing
  * when it is further away.
  */
 export const expiryWarning = (

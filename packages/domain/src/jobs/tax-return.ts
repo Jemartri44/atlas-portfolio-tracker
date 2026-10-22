@@ -1,10 +1,10 @@
-// The income tax of January (feature 016, E4; `docs/specification.md` §9.5,
-// «Anual (enero) — preparar datos de la Renta del ejercicio anterior»): the
-// report of the year before, computed from the ledger alone (domain trap 5),
-// said by **how many notes and how many criteria in dispute** it carries
-// (ADR-0024) — **never a figure, whatever the switch says** (Q10, decided on
-// 2026-09-27): a base or a quota in a mailbox is the most sensitive thing
-// Atlas computes, and the mail only has to say the data is ready.
+// The income tax of January (`docs/specification.md` §9.5, «Anual (enero) —
+// preparar datos de la Renta del ejercicio anterior»): the report of the year
+// before, computed from the ledger alone (domain trap 5), said by **how many
+// notes and how many criteria in dispute** it carries (ADR-0024) — **never a
+// figure, whatever the switch says** (decided on 2026-09-27): a base or a quota
+// in a mailbox is the most sensitive thing Atlas computes, and the mail only
+// has to say the data is ready.
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { DomainError } from "../errors.js";
@@ -25,7 +25,7 @@ export type TaxReturnFacts =
 
 export const taxReturnFacts = (input: {
   readonly events: readonly LedgerEvent[];
-  /** The fiscal year: the one before the year of the period, never of the day (review of PR #109, avisos B1). */
+  /** The fiscal year: the one before the year of the period, never of the day. */
   readonly year: number;
   readonly today: CivilDate;
   /** The findings of the ECB check, as `atlas tax` passes them: they only note lines. */

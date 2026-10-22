@@ -1,14 +1,14 @@
-// The warnings the mail function sends for the other jobs (feature 016, §8.2
-// B2): **once per streak**, never once a day. A streak is a condition — a code
-// and a subject — present in the last closed record of the job that found it;
-// it opens when it appears, is sent once, and closes when the condition is no
-// longer there. If it comes back, it is another streak.
+// The warnings the mail function sends for the other jobs: **once per streak**,
+// never once a day. A streak is a condition — a code and a subject — present in
+// the last closed record of the job that found it; it opens when it appears, is
+// sent once, and closes when the condition is no longer there. If it comes
+// back, it is another streak.
 //
 // Each streak lives in `jobs/mail/notices/<code>--<subject>.json`, written
 // only by the mail function. Sending and noting are two steps, so the notice
 // is first marked `sending` (conditionally) and then `sent`: a cut between
 // them leaves `sending`, and the retry marks it `send_unknown` **without
-// sending again** (at most once, §8.1 P10).
+// sending again** (at most once).
 
 import { type CivilDate, isCivilDate } from "../dates/civil-date.js";
 import { type JobTask, PRODUCER_TASKS } from "./catalog.js";
@@ -120,9 +120,9 @@ export const noticeIn = (
 
 /**
  * The codes the mail function fabricates itself from a record — that a job
- * failed, that its record cannot be read — with the task as subject. **A
- * record can never bring them in its findings** (review of PR #104, privacy
- * B1): a finding `task_failed` with an ISIN as subject would put it in a mail.
+ * failed, that its record cannot be read — with the task as subject. **A record
+ * can never bring them in its findings**: a finding `task_failed` with an ISIN
+ * as subject would put it in a mail.
  */
 export const FABRICATED_CODES: readonly string[] = ["task_failed", "record_unreadable"];
 
@@ -170,7 +170,7 @@ const mayFind = (
   );
 };
 
-/** Of what a producer said, only what it may say (privacy B1): everything else is dropped. */
+/** Of what a producer said, only what it may say: everything else is dropped. */
 export const ownFindings = (
   task: JobTask,
   findings: readonly Finding[],

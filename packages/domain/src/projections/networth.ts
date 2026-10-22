@@ -1,4 +1,4 @@
-// Total net worth (specification §3.2, business rule 18, feature 005 §3.1).
+// Total net worth (specification §3.2, business rule 18).
 //
 // The **only** view that adds the two books, and it does so as a budget control
 // with the breakdown always in sight: constitution III writes it as its second
@@ -7,12 +7,12 @@
 //
 // Cash in a foreign currency is converted with the more recent of two ECB
 // rates: the last one of the downloaded history and the last one the ledger
-// knows for that currency (live test of 2026-09-27 and round 1 of PR #102: the
-// weights already used the history, and an old history must not hide a newer
-// rate of the ledger). The row says **from when** and **from where** that rate is: a
-// rate two years old is not today's data and must not be dressed up as one,
-// and it is said once per currency. A currency with no rate at all is shown
-// unconverted and makes the total partial. Informative: nothing fiscal reads it.
+// knows for that currency (the weights already used the history, and an old
+// history must not hide a newer rate of the ledger). The row says **from when**
+// and **from where** that rate is: a rate two years old is not today's data and
+// must not be dressed up as one, and it is said once per currency. A currency
+// with no rate at all is shown unconverted and makes the total partial.
+// Informative: nothing fiscal reads it.
 
 import { type CivilDate, daysBetween } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
@@ -192,7 +192,7 @@ const cashBlockOf = (
   return { rows, total_eur: total, partial: missing.length > 0, missing_rates: missing };
 };
 
-/** Total net worth at a date, always broken down (§3.1). */
+/** Total net worth at a date, always broken down. */
 export const netWorth = (
   state: LedgerState,
   date: CivilDate,

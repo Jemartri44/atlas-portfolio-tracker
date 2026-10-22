@@ -1,4 +1,4 @@
-// What would happen if I recorded this (decision (h) of prompt 006).
+// What would happen if I recorded this.
 //
 // It lived in the CLI, where the wizards print positions and lots before and
 // after. The web needs exactly the same thing, so it lives here: one definition
@@ -70,7 +70,7 @@ export interface EventPreview<E extends SupportedEvent = SupportedEvent> {
    * The tax years already filed that writing this would reach, and the past
    * years with figures and no return recorded. The same two the write returns:
    * a preview that does not warn where the write warns sends the user into the
-   * write to be surprised there (plan §1.6).
+   * write to be surprised there.
    */
   closed: ClosedYear[];
   unfiledPastYears: number[];
@@ -82,7 +82,7 @@ export interface EventPreview<E extends SupportedEvent = SupportedEvent> {
    * **figure** on the warning of a closed year (`closedYearImpact`) without
    * rebuilding the candidate itself, which is the one thing a preview must not
    * do twice: a preview that builds a different event from the one the write
-   * appends warns about something else (plan §1.6).
+   * appends warns about something else.
    */
   candidates: readonly SupportedEvent[];
   /** Events already recorded that the candidate would leave invalid (only a settings change can). */
@@ -162,7 +162,7 @@ export const previewEvent = async <E extends SupportedEvent>(
  * very check it runs (`prepareCorrection`). Adding the corrected event to the
  * ledger as it is counted the movement twice — a deposit corrected from 8.700
  * to 8.000 € showed 18.092,05 € of cash instead of 9.392,05 — and refused a
- * purchase whose order the original itself had filled (review of 2026-09-19).
+ * purchase whose order the original itself had filled.
  *
  * A dependent event the correction would break is refused here as the write
  * refuses it, so there is nothing to list in `newlyInvalid`. The duplicates are
@@ -175,8 +175,7 @@ export const previewEvent = async <E extends SupportedEvent>(
  *
  * It exists for the same reason as the other two: the destructive dialogue has
  * to say which filed return it reaches **before** the confirmation, and that
- * needs the reversal as the write will append it, not a rebuilt lookalike
- * (prompt 010, §4.4).
+ * needs the reversal as the write will append it, not a rebuilt lookalike.
  */
 export const previewReversal = async (
   deps: UseCaseDeps,

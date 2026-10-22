@@ -1,8 +1,8 @@
-// The monthly dump (feature 016, E4; ADR-0032, point 3; plan §8): what goes
+// The monthly dump (ADR-0032, point 3): what goes
 // into `backups/<YYYY-MM>/` and what happens to each object, decided here.
 // **A dump is for ever**: every object is written with `If-None-Match: *` and
 // never overwritten (ADR-0006), and the bucket policy denies a write to
-// `backups/*` without that condition (questions §20.1).
+// `backups/*` without that condition.
 //
 // Only the backup function writes `backups/`, so an object already there with
 // other bytes than the ones it was going to write is either **what an earlier
@@ -31,7 +31,7 @@ export const DUMP_POSITIONS = "positions.json";
 
 /**
  * Whether a name of the first level of `prices/` goes into the dump: a plain
- * name, never a way out of the folder (§5, family 7). The listing of S3 is
+ * name, never a way out of the folder. The listing of S3 is
  * what the outside says.
  */
 export const dumpablePriceName = (name: string): boolean =>
@@ -40,12 +40,11 @@ export const dumpablePriceName = (name: string): boolean =>
 export type DumpStep = "write" | "same" | "kept" | "differs";
 
 /**
- * What to do with one object of the dump, from the SHA-256 of what is there
- * (if anything), of what was going to be written, and of **every intent an
- * earlier attempt of the same month noted in its record before writing** at
- * that key (review of PR #109: N3 of round 1, and R2-B1, a run that dies
- * after writing still left its intent). Other bytes are kept only when they
- * are one of those: anything else, somebody else wrote.
+ * What to do with one object of the dump, from the SHA-256 of what is there (if
+ * anything), of what was going to be written, and of **every intent an earlier
+ * attempt of the same month noted in its record before writing** at that key (a
+ * run that dies after writing still leaves its intent). Other bytes are kept
+ * only when they are one of those: anything else, somebody else wrote.
  */
 export const dumpStep = (input: {
   readonly existing: string | undefined;
@@ -72,13 +71,13 @@ export const dumpManifestStep = (input: {
 }): "write" | "inconsistent" =>
   input.fileInDump === input.manifestSha256 ? "write" : "inconsistent";
 
-/** What a dump leaves for the mail: only what failed (§9.5, «solo si falla»). */
+/** What a dump leaves for the mail: only what failed («solo si falla»). */
 export const backupFindings = (input: {
   readonly differs: number;
   readonly ecbInconsistent: boolean;
   /** The ledger of the dump does not project cleanly: no `positions.json` was written. */
   readonly positionsMissing: boolean;
-  /** No history of the ECB in force that matched its manifest: none was dumped (copias N1). */
+  /** No history of the ECB in force that matched its manifest: none was dumped. */
   readonly ecbMissing: boolean;
 }): Finding[] => [
   ...(input.differs === 0

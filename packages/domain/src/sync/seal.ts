@@ -13,7 +13,7 @@ import type { LedgerSchema } from "../schema/migrations/index.js";
 
 /**
  * Whether a filed return still matches the lines it would sit on (`docs/api.md`
- * §5.2, row 8; decision P6): the count its fingerprint declares is the number
+ * §5.2, row 8): the count its fingerprint declares is the number
  * of lines before it, and their digest is the one it recorded.
  */
 export const sealHolds = (

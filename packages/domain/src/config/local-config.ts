@@ -1,5 +1,4 @@
-// The local configuration of a ledger folder, `atlas.config.json` (feature 012,
-// decision (j) of its prompt).
+// The local configuration of a ledger folder, `atlas.config.json`.
 //
 // **Outside the ledger on purpose.** These values change no fiscal figure: the
 // engine always computes with the `fx_rate` of the ledger. One decides whether
@@ -27,7 +26,7 @@ export interface LocalConfig {
   readonly lock_stale_minutes: number;
   /**
    * Days before its expiry from which the console warns that its token
-   * expires (feature 015, plan §6.2 (e); ADR-0033, point 7). Informative only:
+   * expires (ADR-0033, point 7). Informative only:
    * an expired token keeps the console working locally.
    */
   readonly token_expiry_warning_days: number;

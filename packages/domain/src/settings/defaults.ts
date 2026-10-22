@@ -19,7 +19,7 @@ export type FiscalDateRule = (typeof FISCAL_DATE_RULES)[number];
  * capital income. ADR-0021 left it as configuration so that the case could be
  * answered with a `settings_changed` and not a migration, and criterion #24
  * answered it: since the binding ruling V0267-25, the default of an ETC and an
- * ETP is `movable_capital`. The **tax engine reads it** (feature 009): it
+ * ETP is `movable_capital`. The **tax engine reads it**: it
  * decides which section of the savings base a disposal lands in, and with it
  * how its losses offset.
  */
@@ -76,7 +76,7 @@ export interface Settings {
    * base (capital gains, movable capital income) that a negative balance of the
    * other can offset (art. 49 LIRPF; fiscal criteria #10 and #22). It has been
    * 10, 15, 20 and 25 in four consecutive years, so it is configuration and not
-   * a constant (constitution IV, feature 009 Q3). Absent means
+   * a constant (constitution IV). Absent means
    * `DEFAULT_SAVINGS_OFFSET_LIMIT_PCT`; read through `savingsOffsetLimitPctOf`.
    */
   savings_offset_limit_pct?: DecimalString;
@@ -89,7 +89,7 @@ export interface Settings {
   /**
    * The withholding rate, in percent, that the double taxation treaty with each
    * country allows at source, keyed by ISO 3166-1 alpha-2 of the payer (fiscal
-   * criterion #16, feature 009 Q4). **No default on purpose**: each rate is a
+   * criterion #16). **No default on purpose**: each rate is a
    * figure of a treaty, to be verified one by one. A dividend from a country
    * missing here gets no deduction calculated, and the tax report says so;
    * deducting everything withheld abroad would be the aggressive reading.
@@ -117,7 +117,7 @@ export interface Settings {
    * amount above which a category obliges, the increase over the last filed
    * return that obliges again, and the amount at which the application warns
    * before either. They are the law of a given year, not a constant of the
-   * code (constitution IV, prompt 010 decision (i)): a year computed today has
+   * code (constitution IV): a year computed today has
    * to stay reproducible if the figure changes (ADR-0022). Absent means the
    * documented default; read through `modelThresholdOf`, `modelIncreaseOf` and
    * `modelAlertThresholdOf`, never off the field.
@@ -297,9 +297,9 @@ export const rentaSeasonOf = (
 
 /**
  * Whether a date falls in the income tax season, both ends included. A rule
- * about when a return is due is a fiscal rule (prompt 010, Q11), and it lives
+ * about when a return is due is a fiscal rule, and it lives
  * here, with the season, so the summary can place its tax card on the first
- * paint (feature 020, E2; Q5, answered 2026-09-27). The date is an argument.
+ * paint (answered 2026-09-27). The date is an argument.
  */
 export const inRentaSeason = (
   settings: Pick<Settings, "renta_season_start" | "renta_season_end">,

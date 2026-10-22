@@ -7,8 +7,7 @@
 // What is never acceptable is doing it in silence, so the warning says **which
 // return would have to be looked at** and how much it moves.
 //
-// It warns in **both** cases, which is the amendment of ADR-0020 (prompt 010,
-// P4):
+// It warns in **both** cases, which is the amendment of ADR-0020:
 //
 //   - when the event falls **by date** in a closed year, and
 //   - whenever recording it **moves a figure that was declared**, even if its
@@ -54,7 +53,7 @@ export interface MovedFigure {
 
 /**
  * What the warning found out about the declared figures — **three** outcomes,
- * in a closed union (ADR-0024, feature 011, block 5).
+ * in a closed union (ADR-0024).
  *
  * It used to be `moves: MovedFigure[]`, and an empty list meant two different
  * things: "compared, and nothing moves" and "could not compare". Both
@@ -108,7 +107,7 @@ const text = (money: Money): string => money.amount.toString();
  * is repaired by fixing the ledger and the other cannot be repaired at all.
  * The second used to **throw**, and with it died the caller — including
  * `atlas settings set`, where there is no report to lose: there is a setting
- * that cannot be changed (feature 011, block 4).
+ * that cannot be changed.
  */
 const figuresOf = (
   reading: Reading,
@@ -148,7 +147,7 @@ const reachesInformative = (
  * (`resolveFiscalSettings` over the events that survive their reversals).
  * The last line written is not enough: after annulling a change of the fiscal
  * date rule it is still the annulled change, and the warning went silent
- * exactly when the rule moved back (second review of feature 011).
+ * exactly when the rule moved back.
  */
 const settingsOf = (reading: Reading): Settings | undefined => {
   if (reading.settings !== undefined) {
@@ -239,7 +238,7 @@ export const closedYearImpact = (
   for (const entry of closed) {
     const byDate = entry.by_date;
     // Only the income tax has figures the chain can compare; the assets of a
-    // 720 are valued at market and live in their own module (block 3), and
+    // 720 are valued at market and live in their own module, and
     // that is a **reason**, not an empty result.
     const was = entry.model === "renta" ? figuresOf(before, entry.year, today) : "by_design";
     const is = entry.model === "renta" ? figuresOf(after, entry.year, today) : "by_design";
@@ -273,7 +272,7 @@ export const closedYearImpact = (
     // behaviour is identical; what changes is that each branch is its own
     // statement and cannot be attributed to the other.
     // **An informative return is warned about only when the write can reach
-    // it** (review of feature 011, blocking 3). Its figures are never compared
+    // it** (blocking 3). Its figures are never compared
     // —they are market values that live in another module— so without this
     // gate the third outcome fired on every write, a purchase of two years
     // later or a new asset included, and a warning that fires always is learnt
@@ -293,10 +292,10 @@ export const closedYearImpact = (
       impacts.push(impact());
       continue;
     }
-    // **Not being able to compare is a reason to warn**, and the third one:
-    // before feature 011 this combination —an earlier reading that cannot be
-    // computed and a change dated outside the filed year— pushed nothing at
-    // all, and the guarantee written at the top of this file was false.
+    // **Not being able to compare is a reason to warn**, and the third one: an
+    // earlier reading that cannot be computed together with a change dated
+    // outside the filed year must still warn, or the guarantee written at the
+    // top of this file would be false.
     if (comparison.status === "not_compared") {
       impacts.push(impact());
       continue;

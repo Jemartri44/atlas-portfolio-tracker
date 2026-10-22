@@ -30,7 +30,7 @@ const integerPart = (value: Decimal): Decimal =>
   Decimal.parse(value.toString().split(".")[0] as string);
 
 /**
- * A side stream of the scenario (feature 005, prompt §3.8): it records into the
+ * A side stream of the scenario: it records into the
  * same ledger but with **its own dice, its own ULID generator and its own
  * clock**, so a block added here does not move a single byte of what the main
  * stream already recorded.
@@ -71,7 +71,7 @@ export class ScenarioStream {
 
 export class ScenarioBuilder {
   readonly events: LedgerEvent[] = [];
-  /** Warning codes the scenario provokes on purpose (Q1: e.g. the ETC held in two accounts). */
+  /** Warning codes the scenario provokes on purpose (e.g. the ETC held in two accounts). */
   readonly expectedWarnings = new Set<string>();
   private readonly deps: { clock: Clock; random: RandomSource };
   private readonly ids: UlidGenerator;

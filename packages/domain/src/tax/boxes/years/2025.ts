@@ -16,13 +16,13 @@
 // not in this table, and the layout says so rather than filling it in:
 //
 //   - the repurchase has **no numbered box**: Renta WEB carries a mark in its
-//     capture window, not a box (nota N12);
-//   - the fields of the double-taxation capture window have no number (N9), so
+//     capture window, not a box;
+//   - the fields of the double-taxation capture window have no number, so
 //     only the total 0588 is here, and the engine says it computes just the
 //     first limit of it (#16);
 //   - "otros elementos patrimoniales" (1624 and following) is not mapped: the
 //     only thing that would land there is an ETC or an ETP the user configured
-//     as a capital gain, and no official text says it goes there (ficha F1);
+//     as a capital gain, and no official text says it goes there;
 //   - the annex C.3 has **no "pending in future years" box for 2021**: a
 //     balance of 2021 that is not offset in this return expires;
 //   - boxes 0392 and 0393, the **gains** of earlier years imputable to this

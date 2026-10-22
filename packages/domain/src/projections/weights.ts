@@ -3,7 +3,7 @@
 // Only the `core` book: the bucket is a budget, never an allocation, and the
 // two never share a row or a total (constitution III). A missing price is
 // visible, never a zero: the row says so and the weights are not computed over
-// a partial total (constitution V, decision (c) of prompt 004).
+// a partial total (constitution V).
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
@@ -110,7 +110,7 @@ export const coreQuantityOf = (
 /**
  * Assets the table covers: a core asset held, or one with a target weight even
  * with no position — the largest possible deviation is an untouched target, and
- * a zero position is worth zero without needing a price (Q1, resolved).
+ * a zero position is worth zero without needing a price (resolved).
  */
 const universeOf = (
   state: LedgerState,
@@ -148,7 +148,7 @@ const targetOf = (targets: Record<string, string>, assetId: AssetId): Decimal =>
 const percentOf = (value: Money, total: Money): Decimal =>
   total.amount.eq(Decimal.ZERO) ? Decimal.ZERO : value.amount.div(total.amount).mul(HUNDRED);
 
-/** Target weights whose key is not a core asset of the catalogue: a warning, never a rejection (decision (a)). */
+/** Target weights whose key is not a core asset of the catalogue: a warning, never a rejection. */
 const warnUnknownTargets = (
   state: LedgerState,
   targets: Record<string, string>,

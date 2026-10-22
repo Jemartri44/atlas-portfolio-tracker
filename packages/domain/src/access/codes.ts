@@ -1,5 +1,5 @@
 // Every error the API answers with (`docs/api.md` §7), **each with its own
-// literal and its own status**: none is folded into another (mutant 49). The
+// literal and its own status**: none is folded into another. The
 // body is `{ "error": { "code", "details" } }`, never a sentence: the
 // interfaces translate the code.
 
@@ -20,7 +20,7 @@ export const API_ERRORS = {
   not_found: 404,
   internal: 500,
   remote_unavailable: 503,
-  // E2, the token of the console (`docs/api.md` §4 and §7).
+  // The token of the console (`docs/api.md` §4 and §7).
   console_start_invalid: 400,
   console_code_invalid: 400,
   console_code_expired: 400,
@@ -30,15 +30,15 @@ export const API_ERRORS = {
   reissue_device_missing: 403,
   reissue_device_forgotten: 403,
   reissue_device_not_console: 403,
-  /** An object that exists but cannot be read strictly: never folded into `missing` (as Q9). */
+  /** An object that exists but cannot be read strictly: never folded into `missing`. */
   reissue_device_unreadable: 403,
-  // E3, the sync and the reference data (`docs/api.md` §5, §6 and §7).
+  // The sync and the reference data (`docs/api.md` §5, §6 and §7).
   precondition_required: 428,
   precondition_failed: 412,
   init_rejected: 422,
   append_too_many_units: 413,
   reference_name_invalid: 400,
-  // E6, the drafts in the cloud (`docs/api.md` §6.1 and §7).
+  // The drafts in the cloud (`docs/api.md` §6.1 and §7).
   draft_exists: 409,
   draft_changed: 409,
 } as const;
@@ -77,9 +77,9 @@ export const LOGIN_PAGE_ERRORS = {
   id_token_nonce: 400,
   email_not_verified: 403,
   remote_unavailable: 503,
-  /** Anything nobody expected, on the start or the return of a sign-in (N1 of the review of PR #90). */
+  /** Anything nobody expected, on the start or the return of a sign-in. */
   internal: 500,
-  // E2: the return of a sign-in of the console that asks to reissue (§4.2).
+  // The return of a sign-in of the console that asks to reissue.
   reissue_device_missing: 403,
   reissue_device_forgotten: 403,
   reissue_device_not_console: 403,

@@ -1,4 +1,4 @@
-// The shape of the savings base laid out by box (feature 010, block 2).
+// The shape of the savings base laid out by box.
 //
 // It is a **layout**, not a calculation: every amount comes from
 // `TaxYearReport`, and the only arithmetic here is the one the form itself
@@ -43,10 +43,10 @@ export interface BoxMapping {
 /**
  * Why a box the engine shows is not the whole of what the form will hold. It is
  * a code the interfaces translate; the figure is never presented as the amount
- * of the box (prompt: "nunca como el importe de la casilla").
+ * of the box.
  */
 export type PartialReason =
-  /** 0510: the base less two remainders of reductions the ledger cannot see (N8). */
+  /** 0510: the base less two remainders of reductions the ledger cannot see. */
   | "reductions_unknown"
   /** 0588: the engine knows the treaty limit, not the effective average rate (#16). */
   | "treaty_limit_only"
@@ -76,13 +76,13 @@ export interface BoxEntry {
   source?: BoxSource;
   checked_at?: CivilDate;
   certainty?: Certainty;
-  /** What to type: rounded half-up to cents once (criterion #6, ficha F2). */
+  /** What to type: rounded half-up to cents once (criterion #6). */
   amount_eur?: Money;
   /** The same figure before rounding: what the invariants are checked on. */
   exact_eur?: Money;
   /**
    * What the **form** will compute from the two values typed above it, when it
-   * differs by a cent from the engine's own result (ficha F2). Absent when they
+   * differs by a cent from the engine's own result. Absent when they
    * agree, which is almost always.
    */
   form_eur?: Money;
@@ -104,7 +104,7 @@ export interface TaxBoxes {
    * `checked` when the boxes of this year were read in an official document,
    * `none` when they were not. Never the boxes of another year: they are
    * renumbered every campaign, and a believable wrong number is the worst
-   * failure this feature can have (prompt decision (e)).
+   * failure this feature can have.
    */
   mapping: "checked" | "none";
   /** The source of the mapping, when there is one. */

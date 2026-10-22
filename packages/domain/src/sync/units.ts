@@ -1,10 +1,10 @@
-// The units a queue is made of (ADR-0026, second and third amendments; §6.2 P1
-// and P7 of prompt 014): a line, a **pair** — a reversal immediately followed
-// by the line whose `corrects_id` is what it reverses —, or a **chain** of
-// rate corrections. A unit is uploaded whole or not at all, and counts as one
-// line for the rule that stops at the first failure.
+// The units a queue is made of (ADR-0026, second and third amendments): a line,
+// a **pair** — a reversal immediately followed by the line whose `corrects_id`
+// is what it reverses —, or a **chain** of rate corrections. A unit is uploaded
+// whole or not at all, and counts as one line for the rule that stops at the
+// first failure.
 //
-// **How a chain is recognised** (plan §9, decision D-Q2): every contiguous run
+// **How a chain is recognised**: every contiguous run
 // of two or more pairs is a chain. The ledger does not record which lines were
 // written together; `writeRateCorrections` writes its pairs contiguously in
 // one write, so a real chain is never split. Two independent corrections
@@ -23,8 +23,8 @@ export interface QueueUnit {
   readonly lines: readonly string[];
   readonly events: readonly LedgerEvent[];
   /**
-   * A correction that does not come right after the reversal of its target
-   * (P7). It is a unit of its own, and it is held back as it is.
+   * A correction that does not come right after the reversal of its target. It
+   * is a unit of its own, and it is held back as it is.
    */
   readonly detached?: true;
 }

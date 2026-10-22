@@ -1,5 +1,5 @@
 // The **concepts** of the savings base: stable identifiers that do not depend
-// on any form (feature 010, block 2; prompt decision (e)).
+// on any form.
 //
 // A box number is a datum of one tax year and nothing else: the Modelo 100
 // renumbers every year, and 2025 is the year the ETFs got a section of their
@@ -15,7 +15,7 @@ import type { IncomeCategory } from "../../settings/settings.js";
 
 /**
  * Where a disposal is declared. The section is a **fiscal criterion** and not a
- * detail of the form (prompt decision (f), criterion of ficha F1): it decides
+ * detail of the form (criterion of ficha F1): it decides
  * how the disposal is declared, so it is numbered in `docs/fiscal-questions.md`
  * before it is written here.
  *
@@ -28,7 +28,7 @@ export const SECTIONS = ["iic", "etf", "listed_shares", "crypto", "other"] as co
 export type SectionId = (typeof SECTIONS)[number];
 
 /**
- * The fields the form asks for, one disposal at a time (ficha F2: one row per
+ * The fields the form asks for, one disposal at a time (one row per
  * operation, never a global row per fund, because a global row cannot say which
  * part of a loss is imputable).
  *
@@ -67,7 +67,7 @@ export type ConceptId =
   | `gp.${SectionId}.${RowFieldId}`
   | `gp.${SectionId}.gains`
   | `gp.${SectionId}.losses`
-  // Losses of earlier years that become imputable this one (ficha F5). Only
+  // Losses of earlier years that become imputable this one. Only
   // losses: what is still deferred of a given loss never grows, so a year never
   // brings a **gain** back from an earlier one. The form has boxes for that
   // (0392, 0393) and they belong to instalment sales, which are out of scope.
@@ -166,7 +166,7 @@ type RowConceptId = `gp.${SectionId}.${RowFieldId | "gains" | "losses"}`;
  * string the type admits and the layout never emits. The compiler still holds
  * the whole of it — a new `RowFieldId` breaks the first table, a new concept of
  * any other shape breaks the second — which is the guarantee `CRITERION_NAMES`
- * gives and the two `Record<string, string>` maps of N8 did not.
+ * gives and two loose `Record<string, string>` maps did not.
  */
 export const ROW_FIELD_NAMES: Record<RowFieldId | "gains" | "losses", string> = {
   nif: "NIF de la entidad",

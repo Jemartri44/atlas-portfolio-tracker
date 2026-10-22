@@ -1,6 +1,6 @@
-// The dates of the fiscal calendar that cost money or time (feature 020, E4,
-// M12): the end of each open wash-sale window, the deadline of the 720 and the
-// 721, the valuation at 31 December and the income tax season.
+// The dates of the fiscal calendar that cost money or time: the end of each
+// open wash-sale window, the deadline of the 720 and the 721, the valuation at
+// 31 December and the income tax season.
 //
 // **Nothing is recomputed here.** The window is `washSaleWindowEnd` with the
 // window configured for the asset type (ADR-0014); the season comes from the

@@ -8,7 +8,7 @@
 // the fallback. What does not fit in the budget of the day keeps its last value
 // with its age, and the report says how many stayed out.
 //
-// Three rules the previous feature learnt the hard way (§2 ter of prompt 013):
+// Three rules the previous feature learnt the hard way:
 //
 // - **No network call with the lock held.** Every call is reserved in the
 //   status **under** the lock of the folder, and made **after** releasing it.
@@ -48,7 +48,7 @@ import {
 import { currencyAgrees, parseSymbols, type SymbolEntry, serializeSymbols } from "./symbols.js";
 
 export interface UpdatePricesInput {
-  /** The ledger **of the console**, projected at `today` (P5). */
+  /** The ledger **of the console**, projected at `today`. */
   readonly state: LedgerState;
   readonly settings: Settings;
   /** Today in `Europe/Madrid`. */
@@ -59,16 +59,16 @@ export interface UpdatePricesInput {
   readonly sources: Partial<Record<QuoteSource, PriceSource>>;
   /**
    * Whether this run may write `symbols.json` (the console, by default) or
-   * only read it (the cloud, feature 016, Q1): read only, a source never
+   * only read it (the cloud): read only, a source never
    * contrasted is left out as `currency_unchecked` — the cloud **never
-   * contrasts** (§8.1 P18) — and the days a local purge asked for again are
+   * contrasts** — and the days a local purge asked for again are
    * not chased, so `symbols.json`, whose one writer is `atlas admin prices
    * push`, is never written.
    */
   readonly symbols?: "read_write" | "read_only";
   /**
-   * A console whose folder is synced with a cloud that downloads too (N2 of
-   * §15 of feature 016): its default budget is the leftover of the free plans.
+   * A console whose folder is synced with a cloud that downloads too: its
+   * default budget is the leftover of the free plans.
    */
   readonly sharedWithCloud?: boolean;
 }
@@ -151,8 +151,8 @@ const outcomeOf = (failures: readonly { kind: QuoteFailureKind }[]): AssetOutcom
  * Clears the days a purge asked for again once they were asked — only those it
  * asked, read again under the lock: a purge made meanwhile is left owed. A day
  * asked that has no close in force now is left as a **hole** (`unserved_days`)
- * and said by `prices status`, never chased again (third pass of the review of
- * PR #80: a source that does not have a day today will not have it tomorrow).
+ * and said by `prices status`, never chased again (a source that does not have
+ * a day today will not have it tomorrow).
  */
 const clearRefetched = async (
   tx: PriceTransaction,
@@ -353,10 +353,10 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       });
       continue;
     }
-    // The days a purge promised to ask for again (second pass of the review
-    // of PR #80): the download starts at the first of them, whichever source
-    // answers, and not after the last close, which may be of another source.
-    // Read only, they are the console's to chase (Q1).
+    // The days a purge promised to ask for again: the download starts at the
+    // first of them, whichever source answers, and not after the last close,
+    // which may be of another source. Read only, they are the console's to
+    // chase.
     const refetch = readOnly ? undefined : entry.refetch_days;
     const owed = Object.values(refetch ?? {})
       .flat()
@@ -387,7 +387,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
         ? addYears(today, -1)
         : addDays(last, 1 - config.refetch_recent_days[type]);
     const from = owed !== undefined && owed < after ? owed : after;
-    // **Never the value of the day in course** (review of PR #78): asked in
+    // **Never the value of the day in course**: asked in
     // the afternoon, a source gives a price of mid-session, and stored as the
     // close of today it would stay one for good. Only days before today.
     const to = addDays(today, -1);
@@ -399,9 +399,9 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
         continue;
       }
       // A correspondence declared without contrasting it with this source (no
-      // key or no budget then) is contrasted **before its first download**:
-      // a price is never downloaded for a currency nobody checked (review of
-      // PR #78; the case GBX against GBP that decision D-Q2 is there for).
+      // key or no budget then) is contrasted **before its first download**: a
+      // price is never downloaded for a currency nobody checked (the case GBX
+      // against GBP).
       if (entry.currency_check?.[source] === undefined) {
         const checked = await contrast(asset_id, entry, source);
         entry = checked.entry;
@@ -434,7 +434,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       );
       if (found !== undefined) {
         // The source said the currency and it is not the declared one: never
-        // stored, never assumed, recorded with its own literal (§6.3 (a)).
+        // stored, never assumed, recorded with its own literal.
         failures.push({ source, kind: "currency_mismatch" });
         failuresOf.set(asset_id, {
           kind: "currency_mismatch",

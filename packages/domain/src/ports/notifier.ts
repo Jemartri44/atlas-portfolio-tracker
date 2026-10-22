@@ -1,13 +1,12 @@
-// The port that sends mail (feature 016; `CLAUDE.md`, ports). It receives a
-// message **already written** — a subject and a plain-text body — and answers
-// with a result that has a code. **It never receives the recipient**: the
-// adapter puts it, read from SSM (ADR-0028, row 17; ADR-0034, row 12), so
-// nothing of the domain or of the redaction can ever write to another address
-// (mutant 3). A transient failure is a failure with its code, never a mail
-// taken as sent (§8.1 P10).
+// The port that sends mail (`CLAUDE.md`, ports). It receives a message
+// **already written** — a subject and a plain-text body — and answers with a
+// result that has a code. **It never receives the recipient**: the adapter puts
+// it, read from SSM (ADR-0028, row 17; ADR-0034, row 12), so nothing of the
+// domain or of the redaction can ever write to another address. A transient
+// failure is a failure with its code, never a mail taken as sent.
 
 export interface MailMessage {
-  /** ASCII, with the period of the job (Q5). */
+  /** ASCII, with the period of the job. */
   readonly subject: string;
   /** Plain text, Spanish, no HTML, nothing remote. */
   readonly body: string;

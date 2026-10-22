@@ -1,4 +1,4 @@
-// compact (data-schema.md §5, ADR-0006, feature 003): the only operation that
+// compact (data-schema.md §5, ADR-0006): the only operation that
 // rewrites the ledger. Two steps so that an interactive client can confirm in
 // between and a non-interactive one does not have to: `planCompact` inspects
 // (and refuses a ledger with invalid events); `compactLedger` re-checks the
@@ -85,7 +85,7 @@ export type CompactResult =
       /**
        * The waivers that **are now in the ledger**, known only once the
        * rewrite has gone through: an interface says "it is recorded" from
-       * here, never before (review of feature 011, decision (g)).
+       * here, never before.
        */
       waived: UnverifiedFiling[];
     };
@@ -97,7 +97,7 @@ const MAX_ARCHIVE_ATTEMPTS = 99;
  * the why is **the real reason of the check, passed through as it is**: `lines`,
  * `digest` or `unreadable`. It used to be a ternary that folded everything that
  * was not `unreadable` into `digest`, so a `lines` case wrote for ever, in a
- * file that only grows, a reason that was false (review of feature 011; the
+ * file that only grows, a reason that was false (the
  * third time a ternary bit in this round). It also carries what the fingerprint
  * declared, which after resealing the ledger holds nowhere else, and its
  * `recorded_at` is when the user gave it for good.
@@ -206,7 +206,7 @@ export const compactLedger = async (
     // call with a ternary: the anti-drift test of the messages scans the
     // sources for `new CompactRejectedError("<code>"`, so a ternary hides
     // **both** codes from it and the translations that exist are reported as
-    // dead entries (measured twice, feature 011).
+    // dead entries (measured twice).
     const affected = refused.map((check) => ({ id: check.filing_id, reason: check.reason }));
     if (refused.every((check) => check.reason === "unreadable")) {
       throw new CompactRejectedError("filing_fingerprint_unreadable", { affected });
@@ -234,8 +234,8 @@ export const compactLedger = async (
   // filings **states the intent** but is not what protects the others. Every
   // filing that reaches this line either passed the count check —so its count
   // already equals its position, and setting it again changes nothing— or was
-  // waived. Widening it to every filing is therefore an equivalent mutant
-  // (recorded in `questions.md`); what guards everything else is that the
+  // waived. Widening it to every filing is therefore an equivalent mutant;
+  // what guards everything else is that the
   // comparison stays exact on every other field and every other key.
   const waivedIds = new Set(waived.map((check) => check.filing_id));
   const expected = events.map((event, position) =>

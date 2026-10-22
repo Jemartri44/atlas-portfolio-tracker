@@ -1,4 +1,4 @@
-// The shape of a Modelo 720 or 721 (feature 010, block 3).
+// The shape of a Modelo 720 or 721.
 //
 // It lives **outside `tax/`** and that is not tidiness: this is the only fiscal
 // route the law makes value things at market price, and the income tax may not
@@ -7,7 +7,7 @@
 // repository: nothing of `tax/` nor `project-ledger.ts` reaches anything here,
 // at any depth.
 //
-// The verdict fails safe (decision (h) of the prompt): "not obliged" is only
+// The verdict fails safe: "not obliged" is only
 // ever said when **every** asset of the category has a value and a rate of
 // 31 December. Anything less is "cannot be determined", with what is missing
 // as an action — unless what is known already exceeds the threshold, in which
@@ -34,7 +34,7 @@ export type ValueFlag =
 // There is no `rate_missing`: a balance in a currency implies an operation in
 // that currency, and every operation carries its ECB rate (ADR-0013). What the
 // ledger can be short of is a rate **of 31 December**, and that is
-// `rate_not_year_end`, which is the case question Q5 is about.
+// `rate_not_year_end`.
 
 /** One asset as the model declares it: cash is **the account**, a security is (account, asset). */
 export interface InformativeItem {
@@ -112,7 +112,7 @@ export interface InformativeCategory {
   reasons: VerdictReason[];
   /** What is missing before the category can be decided, as an action. */
   missing: { account_id: AccountId; asset_id?: AssetId; flag: ValueFlag }[];
-  /** Flagged values the verdict was reached with anyway (S16): the output names them. */
+  /** Flagged values the verdict was reached with anyway: the output names them. */
   decided_with: { account_id: AccountId; asset_id?: AssetId; flag: ValueFlag }[];
 }
 

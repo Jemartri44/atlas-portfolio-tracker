@@ -1,8 +1,8 @@
 // The allow list of `{sub, email}` (ADR-0027), read from SSM on every request
 // with its short cache. **Both, together, in one entry**: a `sub` of one entry
 // with the e-mail of another is not in the list. The e-mail is compared
-// **exactly** (decision of 2026-09-25): normalising it would be recognising
-// by resemblance (§2 ter).
+// **exactly**: normalising it would be recognising
+// by resemblance.
 
 import { ValidationError } from "../errors.js";
 import { isRecord } from "../guards.js";
@@ -53,10 +53,10 @@ export const isAllowed = (entries: readonly AllowEntry[], pair: AllowEntry): boo
 
 /**
  * The check of **every request with the cookie** (ADR-0027, amendment): the
- * cookie carries only the `sub` — no cookie carries the e-mail (decision of
- * 2026-09-25) —, so what is asked again is that an entry with that `sub` is
- * still in the list. The pair, both together, was checked when the session
- * was issued; removing the entry closes the session at the next request.
+ * cookie carries only the `sub` — no cookie carries the e-mail —, so what is
+ * asked again is that an entry with that `sub` is still in the list. The pair,
+ * both together, was checked when the session was issued; removing the entry
+ * closes the session at the next request.
  */
 export const subjectAllowed = (entries: readonly AllowEntry[], sub: string): boolean =>
   entries.some((entry) => entry.sub === sub);

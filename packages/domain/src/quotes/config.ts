@@ -1,11 +1,10 @@
-// `prices/config.json` (decision P1 as corrected by §6.4 (d) of prompt 013):
-// the order of the sources, the daily budget of calls of each one, the
-// threshold of consecutive failures and, by asset type, the days its market
-// trades and the recent days asked again (live test of 2026-09-27). None of it is secret and none of it moves
-// a figure of the ledger, so it lives **outside** the ledger and outside
-// `atlas.config.json`, in a file of its own next to `prices/`. The web never
-// reads it: it does not download, and the console resolves the order when it
-// writes (D-Q10).
+// `prices/config.json`: the order of the sources, the daily budget of calls of
+// each one, the threshold of consecutive failures and, by asset type, the days
+// its market trades and the recent days asked again (live test of 2026-09-27).
+// None of it is secret and none of it moves a figure of the ledger, so it lives
+// **outside** the ledger and outside `atlas.config.json`, in a file of its own
+// next to `prices/`. The web never reads it: it does not download, and the
+// console resolves the order when it writes.
 //
 // Written by the user, never by the application. A missing file is the
 // defaults; a file that does not read, or that says something this code does
@@ -44,10 +43,10 @@ export type MarketDays = (typeof MARKET_DAYS)[number];
 
 /**
  * The documented defaults: EODHD first, 20 calls a day on its free plan, and
- * Alpha Vantage second, 25 (`questions.md` §1.1 and §1.4, verified on
- * 2026-09-24). Crypto trades every day, and its last two closes are asked
- * again, because EODHD gave the close of a Saturday equal to Friday's (live
- * test of 2026-09-27); every other type, Monday to Friday and none.
+ * Alpha Vantage second, 25 (verified on 2026-09-24). Crypto trades every day,
+ * and its last two closes are asked again, because EODHD gave the close of a
+ * Saturday equal to Friday's (live test of 2026-09-27); every other type,
+ * Monday to Friday and none.
  */
 export const DEFAULT_PRICE_CONFIG: PriceConfig = {
   source_order: QUOTE_SOURCES,
@@ -140,18 +139,18 @@ const byTypeOf = <T>(
 const isMarketDays = (value: unknown): value is MarketDays =>
   (MARKET_DAYS as readonly unknown[]).includes(value);
 
-/** At most a month (round 1 of PR #102): a huge count broke the dates in the middle of a run. */
+/** At most a month: a huge count broke the dates in the middle of a run. */
 export const MAX_REFETCH_RECENT_DAYS = 31;
 
 const isDayCount = (value: unknown): value is number =>
   wholeNumber(value, 0) && value <= MAX_REFETCH_RECENT_DAYS;
 
 /**
- * The calls a day a console **shares with the cloud** by default (N2 of §15 of
- * feature 016): the leftover of the free plans (20 and 25) after the 18 and
- * 23 of the cloud. A console of a synced folder spends these unless its
- * `config.json` says otherwise; two stores that never see each other can
- * only keep inside the plan by splitting it.
+ * The calls a day a console **shares with the cloud** by default: the leftover
+ * of the free plans (20 and 25) after the 18 and 23 of the cloud. A console of
+ * a synced folder spends these unless its `config.json` says otherwise; two
+ * stores that never see each other can only keep inside the plan by splitting
+ * it.
  */
 export const SHARED_WITH_CLOUD_DAILY_CALLS: Readonly<Record<QuoteSource, number>> = {
   eodhd: 2,

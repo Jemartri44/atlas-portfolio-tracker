@@ -1,4 +1,4 @@
-// `job_frequencies` (feature 016, §8.1 P5; `docs/specification.md` §9.5): how
+// `job_frequencies` (`docs/specification.md` §9.5): how
 // often each scheduled job runs, configured from the interface without
 // touching Terraform. EventBridge Scheduler wakes each function once a day,
 // and the domain says whether a job is due (`jobs/due` through the catalog).

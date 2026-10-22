@@ -1,4 +1,4 @@
-// The tax report as plain JSON (feature 009): decimals as strings, keys sorted,
+// The tax report as plain JSON: decimals as strings, keys sorted,
 // nothing that depends on the moment of execution except the date of the query
 // the caller passed in. It is what `atlas tax --json` prints and what the proof
 // without prices compares byte for byte.

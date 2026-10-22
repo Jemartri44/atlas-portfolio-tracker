@@ -2,14 +2,14 @@
 // mandatory — one of the defences of ADR-0027 against forged requests — and
 // its size is bounded **before** reading it. What `JSON.parse` says about a
 // malformed body is never kept: its message copies the start of the body, and
-// the body may carry a secret (N3). Only the code travels.
+// the body may carry a secret. Only the code travels.
 
 import { type ApiRefusal, refusal } from "./codes.js";
 
 /**
- * Well below the 6 MB a synchronous Function URL admits (block 0, §1.4): the
+ * Well below the 6 MB a synchronous Function URL admits: the
  * ledger stays under 1-2 MB in twenty years (ADR-0002), and its first upload
- * travels JSON-escaped in one `PUT` (§5.5). A bound of the protocol, not a
+ * travels JSON-escaped in one `PUT`. A bound of the protocol, not a
  * setting of the user.
  */
 export const MAX_BODY_BYTES = 5 * 1024 * 1024;

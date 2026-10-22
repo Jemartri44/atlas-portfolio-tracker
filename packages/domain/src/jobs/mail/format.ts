@@ -1,4 +1,4 @@
-// How the mail writes what it may write (feature 016; `contracts/mail.md`):
+// How the mail writes what it may write:
 // Spanish figures, a comma for the decimals and a point for the thousands.
 // Only percentages, counts and dates go out with the switch off; euros only
 // through `euros`, which only the redaction calls when the switch is on.

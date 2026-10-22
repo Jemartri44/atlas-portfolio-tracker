@@ -1,18 +1,18 @@
-// The weekly review (feature 016, E4; `docs/specification.md` §9.5: «Semanal
+// The weekly review (`docs/specification.md` §9.5: «Semanal
 // — comprobar desviaciones de pesos y reglas del cubo — Sí, si se supera algún
 // umbral»). What the domain already warns of, **read by code and by the
-// details it enumerates, never by its message** (R3: the messages carry
+// details it enumerates, never by its message** (the messages carry
 // amounts and asset ids), with the thresholds of `Settings` — never a number
 // of this file:
 //
 // - the core: each asset whose weight deviates from its target by more than
 //   `deviation_threshold_pp` (`deviation_above_threshold`), said **by its
-//   class**, never by the asset (§8.1 P9);
+//   class**, never by the asset;
 // - the bucket, rules 17 and 18 of the plan (`bucketStats`): the gross
 //   contribution above its cap or near it, the stop-loss reached, and the
 //   weight of the bucket over the net worth above its maximum.
 //
-// **Only when there is something to do** (mutant 32): a rule that could not
+// **Only when there is something to do**: a rule that could not
 // be measured is said in a mail that goes anyway, never a reason to send one.
 
 import type { Decimal } from "../money/decimal.js";
@@ -80,7 +80,7 @@ export const reviewFacts = (input: {
   const deviations = input.weights.warnings
     .filter((warning) => warning.code === "deviation_above_threshold")
     .map((warning) => ({
-      // The class of the asset, never the asset (§8.1 P9); a core asset always has one.
+      // The class of the asset, never the asset; a core asset always has one.
       asset_class: (input.state.assets.get(text(warning, "asset_id")) as Asset)
         .asset_class as AssetClass,
       deviation_pp: D.parse(text(warning, "deviation_pp")),

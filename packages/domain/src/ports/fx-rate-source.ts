@@ -3,8 +3,7 @@ import type { EcbSource } from "../ecb/history.js";
 /**
  * The ECB history as it was downloaded (ADR-0029, point 1): the CSV **byte for
  * byte** — the one inside the ZIP, or the API's — with where it came from.
- * What comes from the API is never presented as the ZIP (decision (l) of
- * prompt 012).
+ * What comes from the API is never presented as the ZIP.
  */
 export interface DownloadedHistory {
   readonly source: EcbSource;

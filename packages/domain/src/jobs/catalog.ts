@@ -1,7 +1,7 @@
-// The scheduled jobs (feature 016; `docs/specification.md` §9.5), each with
-// its family — the Lambda and the role it runs under (§8.1 P4) — the key of
+// The scheduled jobs (`docs/specification.md` §9.5), each with
+// its family — the Lambda and the role it runs under — the key of
 // `job_frequencies` that says how often it runs, and how its mail may be
-// delivered when a retry comes (§8.1 P10):
+// delivered when a retry comes:
 //
 // - `at_least_once`: the monthly reminder, which must always arrive; a
 //   duplicate carries the period in its subject and is recognised as such;
@@ -9,7 +9,7 @@
 //   `sending` leaves the mail as unknown, never sent twice;
 // - `repeatable`: the jobs that send nothing, each step of which is idempotent.
 //
-// **Only the mail family sends** (§8.2 B2): the others leave their findings in
+// **Only the mail family sends**: the others leave their findings in
 // their run record, under `jobs/`, and `dispatch_findings` sends them.
 
 import type { JobFrequency, JobFrequencyKey } from "../settings/job-frequencies.js";

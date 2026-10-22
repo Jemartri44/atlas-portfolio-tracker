@@ -1,12 +1,11 @@
 // The ECB rates the ledger carries, found through **the one enumeration** of
 // the schema (`FX_FIELDS` of `schema/validate.ts`, with its dimension for the
-// effects of a corporate action; decisions (q) and (bb) of prompt 012). Nothing
+// effects of a corporate action). Nothing
 // here keeps a list of its own.
 //
-// Each rate is a **point**: which field, which currency, what was recorded,
-// and the **reference date** whose official rate applies — the date that
-// confirmed table of the direction fixes (`specs/012-ecb-reference-rates/
-// plan.md` §5, D3):
+// Each rate is a **point**: which field, which currency, what was recorded, and
+// the **reference date** whose official rate applies — the date that the table
+// below fixes:
 //
 //   buy, sell            the fiscal date (`fiscal_date_rule` of the asset)
 //   swap                 the fiscal date of the leg handed over

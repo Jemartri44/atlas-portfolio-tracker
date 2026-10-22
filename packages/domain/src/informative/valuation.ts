@@ -1,10 +1,10 @@
 // What an asset is worth **at 31 December**, for the Modelo 720 and the 721
-// (feature 010, block 3; criterion #11).
+// (criterion #11).
 //
 // This is the only fiscal calculation of the project that reads a price, and it
 // reads it only at **level 1**: a registered `valuation`, which is a decision of
 // the user, through the manual leaf (`projections/manual-price.ts`), which
-// knows nothing of the automatic quotes (feature 013). The specification
+// knows nothing of the automatic quotes. The specification
 // makes the year-end photograph a manual datum on purpose (§7.1 and §14.1);
 // an automatic quote of phase 4 must never walk into a tax return.
 //
@@ -15,7 +15,7 @@
 //   - the **rate** cannot be dated on a weekend, because the ECB does not
 //     publish then: it is the last Monday-to-Friday day on or before
 //     31 December. The ECB published on every 31 December that fell on a
-//     weekday from 2018 to 2025 (nota N5).
+//     weekday from 2018 to 2025.
 //
 // Anything that does not meet them is shown **with its date and marked**. The
 // value exists; it is not the one the rule asks for, and saying so is what
@@ -83,12 +83,11 @@ export const valueAt = (
   year: number,
 ): ValuedAsset => {
   const end = yearEnd(year);
-  // **Level 1 only**, and structurally so (feature 013, §6.5 (a) of its
-  // prompt): the manual leaf takes no external source at all, and an
-  // architecture test reads the import graph so that nothing of this folder
-  // reaches the price gate or an automatic quote, at any depth. A runtime
-  // check of an origin would be a branch no test could reach, which is worse
-  // than the rule written where it is enforced.
+  // **Level 1 only**, and structurally so: the manual leaf takes no external
+  // source at all, and an architecture test reads the import graph so that
+  // nothing of this folder reaches the price gate or an automatic quote, at any
+  // depth. A runtime check of an origin would be a branch no test could reach,
+  // which is worse than the rule written where it is enforced.
   const price = manualPriceAt(state, assetId, end);
   if (price === undefined) {
     return { flags: ["price_missing"] };
@@ -119,7 +118,7 @@ export const valueAt = (
  * A currency the ledger never priced simply has no value in euros
  * (`rate_missing`). There is no event for noting a rate by hand, so a balance
  * in a currency nothing else trades in can only be resolved by registering a
- * valuation of something in it — which is what the output says (S5, Q5).
+ * valuation of something in it — which is what the output says.
  */
 export const cashValueAt = (
   state: LedgerState,

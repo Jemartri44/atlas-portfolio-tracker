@@ -1,7 +1,7 @@
 // Migration chain (data-schema.md §5): pure functions raising one line from
-// version v to v+1, applied in memory at load time. The schema is injectable
-// (feature 003) so tests can exercise the loader with a future version; the
-// real one is `CURRENT_LEDGER_SCHEMA`, at version 1 with an empty chain.
+// version v to v+1, applied in memory at load time. The schema is injectable so
+// tests can exercise the loader with a future version; the real one is
+// `CURRENT_LEDGER_SCHEMA`, at version 1 with an empty chain.
 
 import { DomainError, SchemaTooNewError, ValidationError } from "../../errors.js";
 import type { UnknownRecord } from "../../guards.js";

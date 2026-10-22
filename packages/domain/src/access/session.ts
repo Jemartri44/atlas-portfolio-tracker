@@ -1,7 +1,6 @@
-// What the SPA learns of its session (`GET /api/session`, decisions P8 (a) and
-// B5): the cookie is `HttpOnly`, so this is how it knows it is signed in and
-// **which device id the API assigned it** — the one signed in the cookie,
-// never another.
+// What the SPA learns of its session (`GET /api/session`): the cookie is
+// `HttpOnly`, so this is how it knows it is signed in and **which device id the
+// API assigned it** — the one signed in the cookie, never another.
 
 import { instantOf, isId22 } from "./ids.js";
 import type { SessionPayload } from "./signed.js";
@@ -28,7 +27,7 @@ export interface RequestSite {
 /**
  * Whether a request comes **from our own site**: the browser says
  * `Sec-Fetch-Site: same-origin`, or `Origin` is ours. Anything else — another
- * site, or nothing to tell by — is not (S2 of the review of PR #90).
+ * site, or nothing to tell by — is not.
  */
 export const fromOwnSite = (site: RequestSite): boolean =>
   site.secFetchSite === "same-origin" || site.origin === site.self;

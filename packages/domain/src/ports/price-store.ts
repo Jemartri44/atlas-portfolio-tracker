@@ -19,7 +19,7 @@ export interface PriceFiles {
 /**
  * A transaction over `prices/`: the reads see the files as they are **now**,
  * under the lock of the folder, and the writes happen before it is released.
- * Checking and writing always go together (§2 ter of prompt 013).
+ * Checking and writing always go together.
  */
 export interface PriceTransaction extends PriceFiles {
   /** Appends lines at the end of `prices/<asset_id>.jsonl`; never rewrites a byte already there. */
@@ -27,7 +27,7 @@ export interface PriceTransaction extends PriceFiles {
   /**
    * Rewrites `prices/<asset_id>.jsonl` with `lines`: the one write that is not
    * an append, and only for purging closes stored in the wrong currency, on
-   * an explicit request of the user (review of PR #80).
+   * an explicit request of the user.
    */
   rewriteCloses(assetId: AssetId, lines: readonly string[]): Promise<void>;
   /** Replaces `prices/_status.json`. */

@@ -1,5 +1,4 @@
-// The configuration of each function of the jobs that is **not a secret**
-// (feature 016; `specs/016-scheduled-jobs/contracts/ssm-and-config.md` §2):
+// The configuration of each function of the jobs that is **not a secret**:
 // environment variables, read with the rule of the API (`parseApiConfig`). An
 // `ATLAS_*` variable nobody knows, one of another family, or a value that is
 // not understood **stops the function from starting** (`jobs_config_invalid`).
@@ -19,9 +18,8 @@ export const OAUTH_IDLE_WARNING_CEILING_DAYS = 179;
 
 /**
  * The ceiling of the longest run of a function, **fixed in the code**: the
- * timeout of a Lambda can never be above 900 s (`questions.md` §1.7). A record
- * claimed less than this ago may belong to a run still going on (review of
- * PR #104, idempotence N3), so it is left alone.
+ * timeout of a Lambda can never be above 900 s. A record
+ * claimed less than this ago may belong to a run still going on, so it is left alone.
  */
 export const JOB_MAX_RUN_CEILING_SECONDS = 900;
 
@@ -53,9 +51,9 @@ export interface MailConfig {
 }
 
 /**
- * The download of the cloud (§8.2 M5): **not** a `prices/config.json` of the
+ * The download of the cloud: **not** a `prices/config.json` of the
  * bucket, which does not exist, but variables of the function that Terraform
- * writes. `simulated` is the fixed source of `dev` (§8.1 P14, §8.2 m3): it
+ * writes. `simulated` is the fixed source of `dev`: it
  * replaces the real ones, never mixes with them, and **stops the function in
  * `prod`**.
  */
@@ -72,7 +70,7 @@ export const PRICE_BUDGET_CEILINGS = { eodhd: 20, alpha_vantage: 25 } as const;
 export const FAILURE_THRESHOLD_CEILING = 30;
 
 /**
- * The integrity (E4; ADR-0028, «Revisión del plazo de las versiones»): the
+ * The integrity (ADR-0028, «Revisión del plazo de las versiones»): the
  * size of the ledger above which the lifetime of the non-current versions of
  * ADR-0006 has to be looked at again. 1 MB by default in Terraform; **never
  * in the code**, with its floor and ceiling fixed here.
@@ -203,7 +201,7 @@ const pricesConfig = (
  * The text of a `prices/config.json` made of the configuration of the
  * function, for `parsePriceConfig` to read as always: the order of the
  * sources, their budgets and the threshold. The market days and the recent
- * days asked again by asset type keep their defaults (Q13). The simulated
+ * days asked again by asset type keep their defaults. The simulated
  * source answers as `eodhd`, the only name the store knows.
  */
 export const cloudPriceConfigText = (prices: PricesConfig): string =>
@@ -233,7 +231,7 @@ export const parseJobsConfig = (env: Readonly<Record<string, string | undefined>
   if (!/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(dataBucket)) {
     throw invalid("ATLAS_DATA_BUCKET", "not_a_bucket_name");
   }
-  // The bucket of the environment the function says (review of PR #106, N1):
+  // The bucket of the environment the function says:
   // a function of prod with ATLAS_ENV=dev does not start, so the simulated
   // source — which needs ATLAS_ENV=dev — only ever writes into a bucket of dev.
   if (!dataBucket.startsWith(`atlas-${environment}-`)) {

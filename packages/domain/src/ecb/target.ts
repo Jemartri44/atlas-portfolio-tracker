@@ -1,17 +1,15 @@
-// The TARGET calendar, **only as a cross-check** (ADR-0029, point 6, with the
-// amendment of prompt 012 (m)).
+// The TARGET calendar, **only as a cross-check** (ADR-0029, point 6).
 //
 // The closing days of TARGET: weekends, 1 January, Good Friday, Easter Monday,
 // 1 May, 25 and 26 December (the TARGET page of ecb.europa.eu). It is a
-// documented reference datum, not a fiscal criterion, and **never the source
-// of truth**: that is the absence of a day in the history. A disagreement is a
+// documented reference datum, not a fiscal criterion, and **never the source of
+// truth**: that is the absence of a day in the history. A disagreement is a
 // warning, never a block — either the file is incomplete or the calendar
 // changed and this function has to follow — and it is checked **only in the
 // years the ledger uses**, from its first `fx_rate_date`, and with an empty
 // ledger in the current year and the one before. No historical calendar is
 // invented: against the real history (1999-2026) this calendar disagrees in
-// 1999 and 2001 only, four days in all, none since
-// (`specs/012-ecb-reference-rates/questions.md (in git history)` §5).
+// 1999 and 2001 only, four days in all, none since.
 
 import { addDays, type CivilDate, isWeekend } from "../dates/civil-date.js";
 import { type EcbHistory, isPublication, latestPublication } from "./history.js";

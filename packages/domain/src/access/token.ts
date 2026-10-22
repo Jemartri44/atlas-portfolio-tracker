@@ -19,7 +19,7 @@ const DAY_MS = 86_400_000;
  * `atlasdt1.<token_id>.<secret>`: 22 and 43 characters of a closed alphabet
  * (`docs/api.md` §2.1). **Checked before any name of a parameter is built**:
  * a `token_id` never carries a `:` nor a `/`, so `GetParameter` can never be
- * asked for `nombre:versión` — the older, unrevoked version (B1).
+ * asked for `nombre:versión` — the older, unrevoked version.
  */
 export const DEVICE_TOKEN = /^atlasdt1\.([A-Za-z0-9_-]{22})\.([A-Za-z0-9_-]{43})$/;
 
@@ -44,7 +44,7 @@ export const formatDeviceToken = (tokenId: string, secret: string): string => {
 /** The folder of the records in SSM: `/atlas/<env>/device-tokens/`. */
 export const tokenParameterPath = (ssmPrefix: string): string => `${ssmPrefix}device-tokens/`;
 
-/** The name of a record, **built only from a valid `token_id`** (B1). */
+/** The name of a record, **built only from a valid `token_id`**. */
 export const tokenParameterName = (ssmPrefix: string, tokenId: string): string => {
   if (!isId22(tokenId)) {
     throw new ValidationError("token_id_invalid", "a token id is 22 characters of base64url");
@@ -89,7 +89,7 @@ const RECORD_KEYS = new Set([
 /**
  * Reads a record **strictly, and only as the token it was asked for**: a
  * record whose own `token_id` is not the one requested is unreadable, never
- * that token (B1: identity, not the name of the parameter).
+ * that token (identity, not the name of the parameter).
  */
 export const parseTokenRecord = (text: string, tokenId: string): TokenRecord | "unreadable" => {
   let value: unknown;
@@ -118,7 +118,7 @@ export const parseTokenRecord = (text: string, tokenId: string): TokenRecord | "
   return valid ? (value as unknown as TokenRecord) : "unreadable";
 };
 
-/** One line of JSON: the only writer of the format, for the API and for the administration (§7 P4). */
+/** One line of JSON: the only writer of the format, for the API and for the administration. */
 export const serializeTokenRecord = (record: TokenRecord): string => JSON.stringify(record);
 
 const instant = (ms: number): string => new Date(ms).toISOString().replace(/\.\d{3}Z$/, "Z");

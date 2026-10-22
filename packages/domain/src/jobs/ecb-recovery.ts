@@ -1,5 +1,5 @@
 // What the daily job of the ECB does first with `reference/ecb/` in the
-// bucket (feature 016, E2; plan §7.1). S3 has no `rename` and no lock, so an
+// bucket. S3 has no `rename` and no lock, so an
 // activation is a sequence of conditional writes — the history in force to
 // `previous/`, the new file, and the manifest last — and a cut can leave the
 // file in force already replaced under the old manifest. A reader never uses

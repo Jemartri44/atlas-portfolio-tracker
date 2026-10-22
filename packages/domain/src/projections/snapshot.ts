@@ -1,4 +1,4 @@
-// Canonical snapshot of a projected state (data-schema.md §7, feature 003): a
+// Canonical snapshot of a projected state (data-schema.md §7): a
 // plain JSON object with recursively sorted keys, decimals as strings and
 // nothing that depends on the moment of execution or on file positions. It is
 // the single definition of "the same projection" used by golden files,

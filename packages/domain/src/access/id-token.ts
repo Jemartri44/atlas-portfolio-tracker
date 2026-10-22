@@ -2,7 +2,7 @@
 // «Verificación», in this order and rejecting at the first failure). The
 // signature is checked by the adapter, with the public key of `kid`, between
 // the header and the claims; **the accepted issuers are given by the identity
-// adapter**, which is the only place allowed to name Google (§2 bis).
+// adapter**, which is the only place allowed to name Google.
 
 import { isRecord } from "../guards.js";
 import { isSubject } from "./signed.js";
@@ -37,7 +37,7 @@ export const splitJwt = (
 };
 
 /**
- * Only RS256 (block 0, §1.1: Google signs with nothing else). `none` and
+ * Only RS256 (Google signs with nothing else). `none` and
  * `HS256` — the public key used as an HMAC secret — are the classic ways in;
  * a header asking for anything else is refused before any key is looked up.
  */

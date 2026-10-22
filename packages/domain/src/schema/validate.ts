@@ -215,7 +215,7 @@ const FX_DATE_FIELDS: Partial<Record<SupportedEventType, readonly string[]>> = {
 /**
  * The ECB rates **inside the effects** of a corporate action, by operation of
  * the effect: a dimension of their own, because the two tables above go by
- * event type and an effect is not one (decision (bb) of prompt 012). The
+ * event type and an effect is not one. The
  * validation of `effects[]` reads it here, at the same point as before, and
  * the check against the ECB history walks it with the other two: **one
  * enumeration of the rate fields of the schema, and only one**.
@@ -460,7 +460,7 @@ const CONSISTENCY: Partial<Record<SupportedEventType, (raw: UnknownRecord) => vo
 };
 
 /**
- * `broker_settled_eur` (ADR-0030, amended by prompt 012 (n)): the euros the
+ * `broker_settled_eur` (ADR-0030): the euros the
  * broker really moved for the event, as its statement prints them. Each wrong
  * case with its own code, never folded into another: in euros it would only
  * repeat the amount; negative, it contradicts the event type, which gives the

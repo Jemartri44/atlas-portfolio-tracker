@@ -1,10 +1,10 @@
-// `prices/_status.json` (ADR-0031, «Política de fallo» and «Presupuesto»;
-// decision §6.3 (d) of prompt 013): per source, its consecutive failures, its
-// last success, the kind of its last failure and **the calls it spent** — which
-// is also what is reserved **under the lock of the folder before calling**, so
-// that two consoles at once never spend more than the configured budget.
+// `prices/_status.json` (ADR-0031, «Política de fallo» and «Presupuesto»): per
+// source, its consecutive failures, its last success, the kind of its last
+// failure and **the calls it spent** — which is also what is reserved **under
+// the lock of the folder before calling**, so that two consoles at once never
+// spend more than the configured budget.
 //
-// Never an address, never a message of the source: only kinds (§6.4 (e)).
+// Never an address, never a message of the source: only kinds.
 
 import { addDays, type CivilDate, isWeekend } from "../dates/civil-date.js";
 import { ValidationError } from "../errors.js";
@@ -23,7 +23,7 @@ export const STATUS_FORMAT = 1;
  * Why an asset could not be downloaded: one of the six failures of a source,
  * or `currency_mismatch` — the currency the source gave (or its metadata)
  * disagrees with the declared one. It is not a failure of the source and it
- * does not count as a consecutive one (questions.md §2.3, accepted).
+ * does not count as a consecutive one (accepted).
  */
 export type QuoteFailureKind = SourceFailureKind | "currency_mismatch";
 
@@ -101,7 +101,7 @@ export const serializeStatus = (status: PriceStatus): string =>
   `${JSON.stringify(status, null, 2)}\n`;
 
 /**
- * How each source counts its day (questions.md §1.1 and §1.4, decision D-Q3):
+ * How each source counts its day:
  * EODHD resets at midnight GMT, which it documents; Alpha Vantage documents
  * no reset at all, so a rolling window of 24 hours is used, which never goes
  * over the quota whatever the hour of its reset. Facts of the providers, not
@@ -201,7 +201,7 @@ export const applyOutcomes = (
   return next;
 };
 
-/** Records (or, with `undefined`, clears) the last failure of each asset. */
+/** Records (with `undefined`, clears) the last failure of each asset. */
 export const withAssetFailures = (
   status: PriceStatus,
   failures: ReadonlyMap<AssetId, AssetFailure | undefined>,

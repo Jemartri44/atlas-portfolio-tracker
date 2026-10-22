@@ -1,5 +1,4 @@
-// Monthly contribution split (business rule 2, data-schema.md §7, decision (d)
-// of prompt 004).
+// Monthly contribution split (business rule 2, data-schema.md §7).
 //
 // The bucket budget is separated first and never allocated: it is a budget, not
 // an allocation (constitution III). The rest goes to the core assets in
@@ -55,7 +54,7 @@ export interface ContributionInput {
   amount?: string;
   date: CivilDate;
   settings: Settings;
-  /** The automatic closes (feature 013), through the gate like every view. */
+  /** The automatic closes, through the gate like every view. */
   external?: ExternalPrices;
 }
 
@@ -97,9 +96,9 @@ interface Slice {
 
 /**
  * Spreads the rounding residue so the allocations add up to the core amount
- * exactly. It goes to the largest shortfall first (decision (d)); when taking
+ * exactly. It goes to the largest shortfall first; when taking
  * it would leave that allocation negative, only what it holds is taken and the
- * rest moves to the next one (A6).
+ * rest moves to the next one.
  */
 const settleResidue = (order: readonly Slice[], residue: Money): void => {
   let left = residue;
@@ -261,8 +260,8 @@ export const contributionPlan = (
     rows,
     surplus_distributed: surplus,
     // The calculator says when a weight it uses rests on an approximation
-    // through the reference ETF (P3): the domain says it, the interfaces only
-    // translate it (ADR-0024; review of PR #78).
+    // through the reference ETF: the domain says it, the interfaces only
+    // translate it (ADR-0024).
     warnings:
       approximated.length === 0
         ? weights.warnings

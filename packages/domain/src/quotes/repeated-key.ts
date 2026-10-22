@@ -1,7 +1,7 @@
-// The refusal of a JSON of `prices/` that repeats a key (round 2 of the
-// review of PR #106, R2-B1): the file and the key, never the value; the line,
-// for a JSONL. Here, beside the readers of `prices/`, and not in
-// `schema/json-keys.ts`, which the boot of the web carries.
+// The refusal of a JSON of `prices/` that repeats a key: the file and the key,
+// never the value; the line, for a JSONL. Here, beside the readers of
+// `prices/`, and not in `schema/json-keys.ts`, which the boot of the web
+// carries.
 
 import { ValidationError } from "../errors.js";
 

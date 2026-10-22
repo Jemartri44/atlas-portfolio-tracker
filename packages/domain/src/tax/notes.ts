@@ -112,11 +112,11 @@ export const doubleTaxation = (core: Core): { lines: DoubleTaxationLine[]; notes
 
 /**
  * **A line of the report that depends on a rate in doubt says so** (ADR-0029,
- * point 8; ADR-0024). "Depends" includes the acquisitions (decision (q) of
- * prompt 012): a sale depends on itself **and on the purchases whose lots it
- * consumes**, whose rate fixed the cost — the lineage of each lot says which.
- * The note **moves no figure**: the engine keeps computing with the `fx_rate`
- * of the ledger, which is the only source of the tax (trap 7 of CLAUDE.md).
+ * point 8; ADR-0024). "Depends" includes the acquisitions: a sale depends on
+ * itself **and on the purchases whose lots it consumes**, whose rate fixed the
+ * cost — the lineage of each lot says which. The note **moves no figure**: the
+ * engine keeps computing with the `fx_rate` of the ledger, which is the only
+ * source of the tax (trap 7 of CLAUDE.md).
  *
  * Both cite criterion 25 (ADR-0029, point 10): the rate that applies is the
  * one of the fiscal date in force, and a line with another one is corrected by
@@ -159,7 +159,7 @@ export const rateNotes = (
         line.event_id,
         // The lineage runs from the lot consumed back to the root acquisition,
         // which is its last step (`lineageOf`): the root needs no entry of its
-        // own — the review of PR #75 found that entry to be an equivalent mutant.
+        // own.
         ...line.lots.flatMap((lot) => lot.lineage.map((step) => step.event_id)),
       ],
     })),
@@ -179,7 +179,7 @@ export const rateNotes = (
   };
   for (const line of lines) {
     const depends = [...new Set(line.depends)];
-    // Each finding says **what it is** (review of PR #75): a rate the history
+    // Each finding says **what it is**: a rate the history
     // contradicts is not the same as one it could not contrast, and saying «not
     // the official one» of the second would state what nobody checked.
     const wrong = matching(depends, (code) => WRONG_RATE_CODES.has(code));

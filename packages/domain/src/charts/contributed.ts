@@ -1,6 +1,6 @@
-// What was contributed to the core book, on each date of a series (feature 020,
-// E4, M3). The line the net worth is read against: how far above or below the
-// money put in the portfolio stands.
+// What was contributed to the core book, on each date of a series. The line the
+// net worth is read against: how far above or below the money put in the
+// portfolio stands.
 //
 // **Only cash that the user put in or took out counts**: `cash_deposit` adds,
 // `cash_withdrawal` subtracts, in accounts of the core book, each at

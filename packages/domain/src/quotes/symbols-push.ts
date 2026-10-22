@@ -1,10 +1,9 @@
-// `atlas admin prices push` (feature 016, E2, block 3; §8.1 P18, amended in
-// §8.2 M4 and M5): what uploading the local `prices/symbols.json` would change
-// in the cloud, and when it is refused. **Only that file** — the budget of the
-// cloud is configuration of its Lambda, and the local `prices/config.json`
-// stays the console's — and **no local state**: the plan compares the local
-// bytes with the remote object read right now, and the order writes on the
-// ETag of that same read.
+// `atlas admin prices push`: what uploading the local `prices/symbols.json`
+// would change in the cloud, and when it is refused. **Only that file** — the
+// budget of the cloud is configuration of its Lambda, and the local
+// `prices/config.json` stays the console's — and **no local state**: the plan
+// compares the local bytes with the remote object read right now, and the order
+// writes on the ETag of that same read.
 //
 // Refused, with nothing written: no local file; a local file that cannot be
 // read, is of a newer format or has a top-level key the file does not have
@@ -110,7 +109,7 @@ export const symbolsPushPlan = (
   for (const assetId of [
     ...new Set([...Object.keys(before), ...Object.keys(mine.assets)]),
   ].sort()) {
-    // Own keys only (review of PR #106, N4): `constructor` is an asset here.
+    // Own keys only: `constructor` is an asset here.
     const was = Object.hasOwn(before, assetId) ? before[assetId] : undefined;
     const is = Object.hasOwn(mine.assets, assetId) ? mine.assets[assetId] : undefined;
     if (was === undefined) {

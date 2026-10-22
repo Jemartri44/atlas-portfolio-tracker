@@ -1,8 +1,8 @@
 // The remote copy of the ledger, as the sync sees it (ADR-0026; `docs/api.md`
-// §5). In feature 014 it is implemented only by the simulated remotes of the
-// tests; the HTTP client of feature 015 implements it over the API. The
-// semantics are the API's: the etag is the SHA-256 of the bytes, every write
-// is conditional, and a line is rejected on its own inside a successful answer.
+// §5). It is implemented by the simulated remotes of the tests and by the HTTP
+// client over the API. The semantics are the API's: the etag is the SHA-256 of
+// the bytes, every write is conditional, and a line is rejected on its own
+// inside a successful answer.
 
 import { DomainError } from "../errors.js";
 
@@ -46,7 +46,7 @@ export interface AppendResult {
 /**
  * Every code a request of the sync can fail with, **closed**: those of
  * `docs/api.md` §7 the routes of §5 can answer, and the two the client names
- * for what never reached the API. None of them holds a line back (V4); each
+ * for what never reached the API. None of them holds a line back; each
  * is translated on its own by both interfaces.
  */
 export const REMOTE_FAILURE_CODES = [
@@ -67,13 +67,13 @@ export const REMOTE_FAILURE_CODES = [
   "append_too_many_units",
   "not_found",
   "internal",
-  // Feature 015 (docs/api.md §2 and §7): the device of the credential is
+  // (docs/api.md §2 and §7): the device of the credential is
   // missing, of another type or forgotten; a transient failure of SSM or S3
   // that may be retried; a body over the bound of the Lambda. None holds a line.
   "device_forgotten",
   "remote_unavailable",
   "body_too_large",
-  // E6 (docs/api.md §6.1): the drafts in the cloud. A draft that already exists,
+  // (docs/api.md §6.1): the drafts in the cloud. A draft that already exists,
   // or that is no longer as it was read (closed, or stamped with another id).
   "draft_exists",
   "draft_changed",
@@ -107,7 +107,7 @@ export const LINE_REJECTION_CODES = [
  * codes of `docs/api.md` §7 — `precondition_failed` (412) sends the sync back
  * to step 1 — or, for what never reached the API, `transport_rejected` (an
  * answer without the API's error shape) and `network_failed`. Whatever it is,
- * it **never holds a line back** (§6.3 (V4)).
+ * it **never holds a line back**.
  */
 export class RemoteError extends DomainError {
   constructor(

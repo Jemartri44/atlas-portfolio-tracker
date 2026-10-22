@@ -1,6 +1,6 @@
-// The Modelo 720 and the Modelo 721 (feature 010, block 3).
+// The Modelo 720 and the Modelo 721.
 //
-// One machinery for the two (decision (j)): the 721 is the 720 with a single
+// One machinery for the two: the 721 is the 720 with a single
 // category, and with the portfolio of this user it will be zero almost always.
 // What differs is what each one counts:
 //
@@ -12,7 +12,7 @@
 //   - **721**: crypto held **directly** and kept abroad. The ledger cannot tell
 //     self-custody from a foreign custodian, so everything in an account whose
 //     country is not Spain counts and the output says so: over-declaring an
-//     informative return is the prudent direction (prompt 010, P6).
+//     informative return is the prudent direction.
 //
 // The verdict only exists for a 31 December that has already happened. The
 // current year is shown with what there is on the day of the query, labelled as
@@ -195,8 +195,8 @@ const declaredOf = (
 const heldKeys = (holdings: ForeignHoldings): Set<string> => {
   const held = new Set<string>();
   for (const [id, account] of holdings.accounts) {
-    // A cash account is extinguished when it is closed, not when it empties
-    // (S7, Q7): a balance of zero on a live account is still an account.
+    // A cash account is extinguished when it is closed, not when it empties: a
+    // balance of zero on a live account is still an account.
     if (account.active) {
       held.add(keyOf(id));
     }
@@ -290,7 +290,7 @@ export const informativeReturn = (
   const closed = exists && end < options.today;
   const holdings = foreignHoldingsAt(events, closed ? end : options.today);
   const state: LedgerState = holdings.state;
-  // The same refusal as the income tax (feature 009, Q11): a projection that
+  // The same refusal as the income tax: a projection that
   // skipped an event values the wrong quantities, and the answer to that is the
   // list of what to repair, not a verdict about whether a return is due.
   if (state.invalid.length > 0) {

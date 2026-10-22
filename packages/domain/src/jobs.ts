@@ -1,4 +1,4 @@
-// The rules of the scheduled jobs (feature 016), as a **separate entry point**
+// The rules of the scheduled jobs, as a **separate entry point**
 // of the domain, like `access.ts`: which job is due, its period in
 // `Europe/Madrid`, its run record and what a retry does, the streaks of the
 // warnings, the event of EventBridge Scheduler, the configuration of each

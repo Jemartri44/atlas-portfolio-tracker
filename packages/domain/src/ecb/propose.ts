@@ -1,5 +1,5 @@
 // The rate proposed when recording, and when a typed one needs a confirmation
-// (ADR-0029, points 3 and 7; decisions (e), (p) and (w) of prompt 012).
+// (ADR-0029, points 3 and 7).
 //
 // The application proposes the `fx_rate` and `fx_rate_date` of the history for
 // the reference date of each rate — for a buy or a sale **the fiscal date by
@@ -26,7 +26,7 @@ type Fields = Readonly<Record<string, unknown>>;
 
 export interface OfficialRate {
   readonly point: RatePoint;
-  /** `no_history`: there is no history to ask, so nothing is proposed or checked (decision (p)). */
+  /** `no_history`: there is no history to ask, so nothing is proposed or checked. */
   readonly resolution: RateResolution | { kind: "no_history" };
 }
 
@@ -133,7 +133,7 @@ export const rateConfirmations = (
       : [{ point, official: { rate: resolution.rate, date: resolution.date } }];
   });
 
-/** The rates the ECB has not published yet for their reference date: the case of a draft (block 5). */
+/** The rates the ECB has not published yet for their reference date: the case of a draft. */
 export const unpublishedRates = (
   history: EcbHistory | undefined,
   state: LedgerState,

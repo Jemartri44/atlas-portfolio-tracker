@@ -1,6 +1,5 @@
 // What a change of `fiscal_date_rule` does to the ECB rates of the ledger
-// (ADR-0029, point 10; block 6 of prompt 012; criterion 25 of
-// `docs/fiscal-questions.md`).
+// (ADR-0029, point 10, criterion 25 of `docs/fiscal-questions.md`).
 //
 // The rate of a line is the one of its fiscal date **by the rule in force when
 // it was recorded**. Change the rule and the fiscal date moves; the rate stays,
@@ -12,14 +11,14 @@
 //    that way are said (`ruleChangeRates`). Without a history, part of it is
 //    known all the same — a rate dated **after** the new fiscal date — and the
 //    rest is said as "cannot be verified against the official one", never taken
-//    for right or wrong (decision (p)).
-// 2. After, the check of the ledger flags them (block 4), and the tax report
+//    for right or wrong.
+// 2. After, the check of the ledger flags them, and the tax report
 //    carries a note while they remain.
 // 3. The fix is the correction of always, a reversal and a new line with the
 //    official rate (ADR-0003), which the application **proposes**
 //    (`prepareRateCorrections`) and the user confirms. Several lines make a
 //    **chain**, and the chain is written **in one write or not at all**
-//    (`writeRateCorrections`, decision (u)): a chain half written could leave
+//    (`writeRateCorrections`): a chain half written could leave
 //    a line reversed without its new version.
 
 import { type CivilDate, compareCivilDates } from "../dates/civil-date.js";
@@ -175,7 +174,7 @@ export interface RateCorrection {
  * another day than the publication that applies to their fiscal date — the
  * signature a change of rule leaves — and whose official rate is known. A
  * typed rate of the right day that differs in value is not here: it was
- * confirmed as typed (block 3), and the check keeps flagging it.
+ * confirmed as typed, and the check keeps flagging it.
  */
 export const rateCorrections = (
   history: EcbHistory | undefined,

@@ -86,7 +86,7 @@ export const bucketAccountIds = (state: LedgerState): Set<string> => {
  * Average cost per unit of the open lots of an asset. The lots are global per
  * asset (ADR-0009) and rule 21 keeps an asset out of both books, so inside the
  * bucket this is the cost of the account; with the same asset in two bucket
- * accounts (allowed, with a warning, since feature 001) each row takes its
+ * accounts (allowed, with a warning) each row takes its
  * share of the same average.
  */
 export const openUnitCostOf = (state: LedgerState, assetId: AssetId): Money | undefined => {
@@ -175,7 +175,7 @@ export interface BucketThesisView extends ThesisView {
   missing_benchmark: BenchmarkGap[];
 }
 
-/** Open positions of the bucket at a date, with their latent P&L and their thesis (§3.2). */
+/** Open positions of the bucket at a date, with their latent P&L and their thesis. */
 export const bucketPositions = (
   state: LedgerState,
   date: CivilDate,
@@ -277,16 +277,16 @@ const lastFiscalDateOf = (legs: readonly ThesisLeg[]): CivilDate | undefined => 
 
 /**
  * What the same money, on the same dates, would have made in the index
- * (business rule 16, decision (b) of prompt 005):
+ * (business rule 16):
  *
  *     benchmark_equivalent_eur = Σ cost_i × P(d_fin) / P(d_i)
  *
- * `P(d)` is the price of the benchmark on `d` **in euros** (Q2: the user would
+ * `P` is the price of the benchmark on `d` **in euros** (the user would
  * have put euros in the index, so the comparable return is theirs, currency
  * effect included), and `d_fin` is the fiscal date of the last linked sale of a
  * closed thesis, or the date asked while it is open.
  *
- * If any `P(d)` is missing the whole comparison is missing: a partial sum would
+ * If any `P` is missing the whole comparison is missing: a partial sum would
  * be a number nobody can reproduce (constitution V).
  */
 const benchmarkEquivalentOf = (
@@ -360,7 +360,7 @@ const ownQuantityOf = (
  * position of the pair (account, asset). A thesis closed while the pair still
  * holds something — because the next thesis on the asset bought more — must not
  * count shares that are not its own; that is the same mixing the statistics
- * exclude (decision (k)).
+ * exclude.
  */
 const latentOf = (
   state: LedgerState,
@@ -453,7 +453,7 @@ const benchmarkWarningsOf = (rows: readonly BucketThesisView[]): Warning[] => {
 };
 
 /**
- * The theses with their result against the index (§3.3). It **wraps** `theses()`
+ * The theses with their result against the index. It **wraps** `theses()`
  * instead of extending it: pass B of the projection uses `theses.ts`, and the
  * path that creates lots and gains must never learn what a price is
  * (constitution II, enforced by the architecture test).
@@ -476,7 +476,7 @@ export const bucketTheses = (
       gaps.push({ reason: "unknown_asset", asset_id: benchmarkId });
     } else if (thesis.buys.length === 0) {
       // Nothing was ever put in: the index would have made nothing out of
-      // nothing, and that is "no data", not zero (Q6).
+      // nothing, and that is "no data", not zero.
       gaps.push({ reason: "no_linked_buys" });
     } else {
       equivalent = benchmarkEquivalentOf(

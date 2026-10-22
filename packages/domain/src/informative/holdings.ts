@@ -1,11 +1,11 @@
-// What the taxpayer holds **abroad** on a date (feature 010, block 3).
+// What the taxpayer holds **abroad** on a date.
 //
 // An asset counts when the account that holds it is not Spanish. A Spanish
 // account in an omnibus arrangement — MyInvestor, for instance — is out even
 // when the fund itself is Luxembourgish, because the formal holder before the
 // registry is the distributor (`business-rules.md` §5.8). The output says which
-// accounts it left out and why: in the hand-computed exercise of §6.1 the
-// exclusion is what decides the verdict, and a reader has to be able to see it.
+// accounts it left out and why: the exclusion can decide the verdict, and a
+// reader has to be able to see it.
 //
 // The quantities and the cash are the ones **of that date**, projected with
 // `asOf` (ADR-0016). It is the most expensive lesson of the project: a dated
@@ -61,7 +61,7 @@ export interface ForeignHoldings {
  * business date, so the projection only ever knows the country of **today**.
  * What the ledger does keep is the day each change was **recorded**, and that
  * is what is used here, exactly as `settingsAt` does with the configuration and
- * as ADR-0016 requires of an administrative document (S6, question Q6). A
+ * as ADR-0016 requires of an administrative document. A
  * broker that moves its subsidiary is rare; getting it silently wrong would
  * apply the Spanish exclusion to the years in which the account was foreign,
  * and say "not obliged" of a year that obliged.

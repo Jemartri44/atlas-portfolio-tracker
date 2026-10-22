@@ -1,5 +1,5 @@
 // The filing deadline of the informative returns, **as normative data by
-// fiscal year** (feature 020, E4, M12; Q4, answered 2026-09-27), with its source:
+// fiscal year** (answered 2026-09-27), with its source:
 // the order that sets it, the article, the address and the day it was read.
 // Like the boxes of the Model 100, which live by year: the deadline of a year
 // nobody has verified is **not supposed**, it says "unverified" until someone

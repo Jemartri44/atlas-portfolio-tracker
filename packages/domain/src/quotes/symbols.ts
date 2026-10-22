@@ -1,12 +1,11 @@
-// `prices/symbols.json` (ADR-0031, amendment; decisions D-Q2 and D-Q6 of the
-// direction): which symbol each asset has in each source, and **the currency
-// of its quote, declared** — never assumed. Outside the ledger: it is
-// configuration of the download of prices, which are informative, and a full
-// snapshot `asset_updated` written by an old client would erase it (ADR-0018,
-// amended).
+// `prices/symbols.json` (ADR-0031, amendment): which symbol each asset has in
+// each source, and **the currency of its quote, declared** — never assumed.
+// Outside the ledger: it is configuration of the download of prices, which are
+// informative, and a full snapshot `asset_updated` written by an old client
+// would erase it (ADR-0018, amended).
 //
 // The user declares it; the application **confirms** it with the source's own
-// metadata when it is declared (D-Q6: no proposal from a translation of
+// metadata when it is declared (no proposal from a translation of
 // exchange codes nobody documents). If the metadata contradict the declared
 // currency — the case of London, pence against pounds — the disagreement is
 // shown and the user confirms the declared one **once and explicitly**; what
@@ -24,11 +23,11 @@ import { repeatedKeyError } from "./repeated-key.js";
 import { isQuoteSource, QUOTE_SOURCES } from "./sources.js";
 
 /**
- * Format 2: the currency is declared **per source** (fix of feature 013): a
+ * Format 2: the currency is declared **per source**: a
  * London share quotes in pounds at EODHD and in pence at Alpha Vantage, and
  * one currency for the asset made one of the two ask for a confirmation
  * forever, or stored the closes of the other a hundred times too high.
- * Format 1, written by feature 013 with one `currency` per asset, is still
+ * Format 1, with one `currency` per asset, is still
  * read, as the currency of all its sources; it is written as format 2.
  */
 export const SYMBOLS_FORMAT = 2;
@@ -52,21 +51,21 @@ export interface SymbolEntry {
   /** ISO 8601 UTC of the declaration. */
   readonly confirmed_at: string;
   readonly currency_check?: Partial<Record<QuoteSource, CurrencyCheck>>;
-  /** The currency of the source the user accepted to contradict, explicitly (D-Q2). */
+  /** The currency of the source the user accepted to contradict, explicitly. */
   readonly currency_confirmed_over?: Partial<Record<QuoteSource, string>>;
   /**
-   * The currency in which feature 013 stored the closes of a source **that
-   * said another one** (second pass of the review of PR #80): a file of
-   * format 1 confirmed the currency of the asset over what the source said
-   * (`currency_confirmed_over`), and every close of that source was stored
-   * with the currency of the asset — pence as pounds. Those lines are left out
-   * of every figure in euros until they are purged; never written by anything
-   * but the reading of format 1, and kept when the file is written again.
+   * The currency in which the closes of a source **that said another one** were
+   * stored: a file of format 1 confirmed the currency of the asset over what
+   * the source said (`currency_confirmed_over`), and every close of that source
+   * was stored with the currency of the asset — pence as pounds. Those lines
+   * are left out of every figure in euros until they are purged; never written
+   * by anything but the reading of format 1, and kept when the file is written
+   * again.
    */
   readonly misstored?: Partial<Record<QuoteSource, string>>;
   /**
    * The days whose closes of a source a purge removed, to be asked for again
-   * **once** (second and third passes of the review of PR #80): the next
+   * **once**: the next
    * download of the asset starts at the first of them, not after its last
    * close, and they are cleared once asked.
    */
@@ -143,7 +142,7 @@ const isSaid = (item: unknown): item is string =>
 
 /**
  * The currencies of an entry: its own per source (format 2), or the one of
- * the asset for every source that has a symbol (format 1, feature 013).
+ * the asset for every source that has a symbol (format 1).
  */
 const currenciesOf = (
   assetId: string,
@@ -178,7 +177,7 @@ const currenciesOf = (
 };
 
 /**
- * A confirmation of format 1 is **not inherited** (review of PR #80): it was
+ * A confirmation of format 1 is **not inherited**: it was
  * taken with one currency for every source — the model that was wrong — so
  * a user who declared GBP and confirmed it over the GBX of Alpha Vantage would
  * keep storing pence as pounds. Every source confirmed over another currency
@@ -193,7 +192,7 @@ const withoutLegacyConfirmations = (entry: SymbolEntry): SymbolEntry => {
   const check = { ...entry.currency_check };
   // What the source said is in `currency_confirmed_over`; the closes of that
   // source were stored with the currency of the asset, which is another one:
-  // exactly the defect (second pass of the review of PR #80).
+  // exactly the defect.
   const misstored: Partial<Record<QuoteSource, string>> = {};
   for (const source of Object.keys(over) as QuoteSource[]) {
     delete check[source];
@@ -271,10 +270,10 @@ export const unknownSymbolsKey = (raw: unknown): string | undefined =>
     : undefined;
 
 /**
- * Why the text of a `prices/symbols.json` must never be served (review of PR
- * #106, B1 and R2-B1): a key twice at any level, or a top-level key the file
- * does not have. Only names are looked at, never a value; a text that is not
- * JSON is not this function's to judge — every reader refuses it anyway.
+ * Why the text of a `prices/symbols.json` must never be served:
+ * a key twice at any level, or a top-level key the file does not have. Only
+ * names are looked at, never a value; a text that is not JSON is not this
+ * function's to judge — every reader refuses it anyway.
  */
 export const unservableSymbols = (text: string): "repeated_key" | "unknown_key" | undefined => {
   let raw: unknown;
@@ -317,10 +316,10 @@ export const parseSymbols = (text: string | undefined): SymbolsFile => {
       { format: raw.symbols_format },
     );
   }
-  // A key the file does not have is refused, by its name and never its value
-  // (review of PR #106, B1): `atlas admin prices push` uploads the bytes as
-  // they are, and the API serves them to every device, so a secret pasted at
-  // the top level would travel without the difference ever showing it.
+  // A key the file does not have is refused, by its name and never its value:
+  // `atlas admin prices push` uploads the bytes as they are, and the API serves
+  // them to every device, so a secret pasted at the top level would travel
+  // without the difference ever showing it.
   const unknown = unknownSymbolsKey(raw);
   if (unknown !== undefined) {
     throw new ValidationError(

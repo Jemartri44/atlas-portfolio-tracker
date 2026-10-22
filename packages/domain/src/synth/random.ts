@@ -1,4 +1,4 @@
-// Deterministic pseudo-random source for the synthetic generator (feature 003):
+// Deterministic pseudo-random source for the synthetic generator:
 // mulberry32, a 32-bit generator in a dozen lines. One instance feeds both the
 // ULID random bytes (as a RandomSource) and every value of the scenario, so the
 // whole output is a function of the seed.
@@ -49,7 +49,7 @@ export class Prng {
 }
 
 /**
- * A seed for a side stream of the scenario (feature 005). FNV-1a of the label
+ * A seed for a side stream of the scenario. FNV-1a of the label
  * mixed into the seed: same seed and same label, same stream; two labels never
  * share one. No dependency, a dozen lines, deterministic for ever.
  */

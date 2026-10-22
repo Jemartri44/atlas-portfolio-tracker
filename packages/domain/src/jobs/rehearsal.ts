@@ -1,5 +1,5 @@
-// The automatic rehearsal of a restore (feature 016, E4; ADR-0032, «La prueba
-// de que se puede restaurar»; plan §9.2): **the last dump is loaded in memory,
+// The automatic rehearsal of a restore (ADR-0032, «La prueba
+// de que se puede restaurar»): **the last dump is loaded in memory,
 // projected, and compared with the live ledger cut at the same events**. A
 // copy that was never restored is not a copy; this is the quarterly proof that
 // the dump of the cloud would restore to what the ledger says.
@@ -10,7 +10,7 @@
 //   and in the same order; then both projections — positions, cash, lots and
 //   the fiscal figures (realised gains and income) — must be the same.
 // - Anything else is a difference, said **by code and by how many**, never by
-//   an amount or an identifier (§8.1 P9).
+//   an amount or an identifier.
 //
 // Never in `dev` with real data: `dev` only has synthetic data, and this does
 // nothing different by environment (ADR-0032).
@@ -64,10 +64,10 @@ export const restoreRehearsal = (input: {
   readonly live: readonly LedgerEvent[];
   readonly today: CivilDate;
 }): Rehearsal => {
-  // An id twice stops a projection even when it collects errors (`duplicate_id`):
-  // the dump that repeats one is invalid, and a live ledger that does is not
-  // projected, and said — never a failure of the whole integrity (review of
-  // PR #109, copias B1). Its errors are said by the check anyway.
+  // An id twice stops a projection even when it collects errors
+  // (`duplicate_id`): the dump that repeats one is invalid, and a live ledger
+  // that does is not projected, and said — never a failure of the whole
+  // integrity. Its errors are said by the check anyway.
   const repeated = (events: readonly LedgerEvent[]): number =>
     events.length - new Set(events.map((event) => event.id)).size;
   if (repeated(input.dump) > 0) {

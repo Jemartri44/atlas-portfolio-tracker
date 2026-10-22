@@ -1,5 +1,4 @@
-// What a change of settings does to the tax years already gone (prompt 005
-// §3.5 bis).
+// What a change of settings does to the tax years already gone.
 //
 // The settings reinterpret the past: changing `fiscal_date_rule` moves a sale
 // agreed on the 30th of December and settled on the 2nd of January from one
@@ -9,8 +8,7 @@
 //
 // The warning does not block: it is information, like the one about a threshold
 // that silences a live alert. And it is emitted for **any** previous year,
-// because the ledger does not yet know which ones were filed (the
-// `tax_return_filed` event is planned for round 9).
+// because the ledger does not yet know which ones were filed.
 
 import { type CivilDate, yearOf } from "../dates/civil-date.js";
 import { EUR, Money } from "../money/money.js";
@@ -104,7 +102,7 @@ export const movedFiscalYears = (
  * Warnings the settings in force raise today and the new ones would silence
  * (constitution IV: raising a threshold must never mute a live alert behind the
  * user's back). It lived in the CLI; it is here so the web cannot forget to
- * warn (decision (h) of prompt 006).
+ * warn.
  *
  * Only the threshold warnings of the core are compared, which are the ones a
  * settings change can switch off: the rest depend on facts, not on parameters.

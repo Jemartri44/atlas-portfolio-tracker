@@ -9,7 +9,7 @@
 // discards. The outcomes are a closed union, each with its own name.
 //
 // The date is any date — a fiscal date when recording, a quotation date for
-// the prices of feature 013 — so nothing here knows about fiscal rules.
+// the automatic quotes — so nothing here knows about fiscal rules.
 //
 // `staleDays` is the configurable threshold of point 5 (`atlas.config.json`,
 // `ecb_stale_currency_days`): after it, a currency has **no official rate to

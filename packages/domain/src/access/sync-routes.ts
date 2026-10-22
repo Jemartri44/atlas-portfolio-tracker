@@ -1,8 +1,8 @@
-// The rules of the routes of the sync and of the reference data (feature
-// 015, E3; `docs/api.md` §5 and §6), pure. What a line is worth is
-// `acceptAppend` and `acceptInit` (`@atlas/domain/sync`); this is what the
-// handler needs around them: the etag a write asks for, the names of the reference data and the answer
-// of a conditional read. The handler decides nothing of it.
+// The rules of the routes of the sync and of the reference data (`docs/api.md`
+// §5 and §6), pure. What a line is worth is `acceptAppend` and `acceptInit`
+// (`@atlas/domain/sync`); this is what the handler needs around them: the etag
+// a write asks for, the names of the reference data and the answer of a
+// conditional read. The handler decides nothing of it.
 
 import type { RemoteError } from "../ports/remote-ledger.js";
 import { priceFileName } from "../quotes/line.js";
@@ -37,14 +37,14 @@ const REFERENCE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 /** The files of `prices/` served by their own name: never `_status.json` nor `config.json`. */
 const PRICE_FILES: readonly string[] = ["symbols.json"];
 
-/** The longest name of a price file: what a file system names (feature 016, §8.2 M1). */
+/** The longest name of a price file: what a file system names. */
 const MAX_PRICE_NAME = 255;
 
 /**
  * Whether `name` is **exactly what `priceFileName` writes** for some asset:
- * decoding it and encoding it again gives the same name (feature 016, E2;
- * §8.2 M1, amending P6 bis). The encoder never writes a `/`, so nothing can
- * leave `prices/`; and a name it does not write is not a price file.
+ * decoding it and encoding it again gives the same name. The
+ * encoder never writes a `/`, so nothing can leave `prices/`; and a name it
+ * does not write is not a price file.
  */
 const isPriceFileName = (name: string): boolean => {
   if (name.length > MAX_PRICE_NAME || !name.endsWith(".jsonl")) {
@@ -58,7 +58,7 @@ const isPriceFileName = (name: string): boolean => {
   }
 };
 
-/** Whether a name of `kind` may be served: the rule of each prefix, decided before S3 (§6). */
+/** Whether a name of `kind` may be served: the rule of each prefix, decided before S3. */
 const isReferenceName = (kind: ReferenceKind, name: string): boolean =>
   kind === "prices"
     ? PRICE_FILES.includes(name) || isPriceFileName(name)
@@ -67,7 +67,7 @@ const isReferenceName = (kind: ReferenceKind, name: string): boolean =>
 /**
  * The key of a reference file, **built only from a name its prefix serves**:
  * nothing can leave `reference/ecb/` or `prices/`, and it is decided before S3
- * is touched (§6; mutant 33).
+ * is touched.
  */
 export const referenceKey = (
   kind: ReferenceKind,
@@ -115,7 +115,7 @@ const referenceEntriesOf = (
     // By code point, as the keys of S3 are listed.
     .sort((a, b) => Number(a.name > b.name) - Number(a.name < b.name));
 
-/** `GET /api/reference/index`: the first level of each prefix (§6). */
+/** `GET /api/reference/index`: the first level of each prefix. */
 export const referenceIndex = (
   ecb: readonly { readonly key: string; readonly etag: string; readonly size: number }[],
   prices: readonly { readonly key: string; readonly etag: string; readonly size: number }[],
@@ -125,9 +125,9 @@ export const referenceIndex = (
 });
 
 /**
- * Whether an `If-None-Match` names the version (`304`). A weak `W/"…"`
- * counts, because CloudFront weakens the ETag when it compresses (block 0 of
- * E3, §23.3); an unquoted value does not.
+ * Whether an `If-None-Match` names the version (`304`). A weak `W/"…"` counts,
+ * because CloudFront weakens the ETag when it compresses; an unquoted value
+ * does not.
  */
 export const ifNoneMatchHits = (header: string | undefined, version: string): boolean => {
   if (header === undefined) {

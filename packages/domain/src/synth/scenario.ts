@@ -1,4 +1,4 @@
-// The synthetic scenario (specs/003-synthetic-data/data-model.md §6): a fixed
+// The synthetic scenario: a fixed
 // skeleton of accounts, assets and monthly blocks from 2026-09 to 2028-12 that
 // contains every event type and every rare case the later features need, with
 // amounts, prices, rates and day-of-month jitter drawn from the seed. Nothing
@@ -30,8 +30,8 @@ export interface GenerateOptions {
 }
 
 /**
- * Warning codes the scenario provokes on purpose (Q1): the ETC held in two IBKR
- * accounts, and the two directions of the wash-sale window (feature 005). The
+ * Warning codes the scenario provokes on purpose: the ETC held in two IBKR
+ * accounts, and the two directions of the wash-sale window. The
  * loss-making sale of the fund followed by the monthly contributions inside the
  * year was already in the scenario as a mandatory edge case (constitution VII):
  * what is new is that the application now sees it.
@@ -291,7 +291,7 @@ const LATER_ASSETS: Record<string, AssetSpec> = {
   },
 };
 
-/** Target weights by `asset_id` over the core book (feature 004); they add up to exactly 100. */
+/** Target weights by `asset_id` over the core book; they add up to exactly 100. */
 const TARGET_WEIGHTS: Record<string, string> = {
   ast_world: "45",
   ast_smallcap: "10",
@@ -327,8 +327,8 @@ const TARGET_WEIGHTS_AFTER_CONVERSIONS: Record<string, string> = {
 
 /**
  * The scenario writes its own per-asset-type maps instead of inheriting
- * `DEFAULT_SETTINGS`, and on purpose: the defaults grow with the enum (`etf`
- * arrived in the feature 005), and inheriting them would rewrite three
+ * `DEFAULT_SETTINGS`, and on purpose: the defaults grow with the enum (a new
+ * type such as `etf` shows up), and inheriting them would rewrite three
  * `settings_changed` lines of the golden file every time a type is added. As a
  * bonus, the synthetic ledger is now what a ledger written before `etf` existed
  * looks like, which is the regression test of the partial maps of ADR-0018.
@@ -347,7 +347,7 @@ const SCENARIO_FISCAL_DATE_RULE: Settings["fiscal_date_rule"] = {
  * and not the documented default**.
  *
  * It looks like duplication and it is not. The golden file is **frozen once
- * merged** (prompt 003, decision (i)), and a generator that read
+ * merged**, and a generator that read
  * `DEFAULT_WASH_SALE_WINDOW` would rewrite it every time the code changed its
  * mind about a criterion: moving the fund from a year to two months
  * (criterion #2, 2026-09-22) would have rewritten the settings line of a file
@@ -631,7 +631,7 @@ class Scenario {
     this.valuation("acc_ibkr", "ast_btc", date, this.b.rng.decimal(20, 45, 2), "EUR");
     this.valuation("acc_ibkr2", "ast_gold", date, this.b.rng.decimal(180, 260, 2), "USD");
     // The core funds too: without a price for every core asset held, `weights` is
-    // partial and `contribute` refuses to split (feature 004, decision (c)).
+    // partial and `contribute` refuses to split.
     for (const asset of [
       "ast_world",
       "ast_smallcap",
@@ -1077,14 +1077,14 @@ class Scenario {
     });
   }
 
-  // --- side streams (feature 005) -------------------------------------------------
+  // --- side streams -------------------------------------------------
 
   /**
    * Half-yearly prices of the benchmark, from before the first event of the
    * bucket: without them every comparison against the index would be "no data".
    *
    * Recorded in a **side stream** and at the end of the file, so not one id,
-   * `recorded_at` or amount of what came before moves (prompt §3.8). Recording
+   * `recorded_at` or amount of what came before moves. Recording
    * late is normal and does not change the projection (data-schema.md §7.1);
    * the quantity is read at the date of the valuation, with `asOf`.
    */
@@ -1117,9 +1117,9 @@ class Scenario {
   /**
    * The bucket programme of phase 3: four more closed theses (two winners, two
    * losers, one of them with two purchases on different dates), one more open,
-   * and a **repurchase inside the window** after a loss-making sale, which is
-   * the case §3.6 needs. On assets of its own, so no lot, gain or position of
-   * what was already there changes.
+   * and a **repurchase inside the window** after a loss-making sale, which
+   * exercises the wash-sale rule of the bucket. On assets of its own, so no
+   * lot, gain or position of what was already there changes.
    */
   private bucketProgramme(): void {
     const s = this.b.stream("bucket-programme");
@@ -1198,7 +1198,7 @@ class Scenario {
     trade("sell", "ast_delta", "2027-08-10", 30, cents(d(delta1).mul(d("1.35"))), "th_delta_1");
     close("th_delta_1", "2027-08-10");
 
-    // Another loser, and the repurchase inside its two-month window (§3.6).
+    // Another loser, and the repurchase inside its two-month window.
     open("th_delta_2", "ast_delta", "2027-09-01", 900);
     trade("buy", "ast_delta", "2027-09-10", 25, delta2, "th_delta_2");
     trade("sell", "ast_delta", "2027-11-10", 25, cents(d(delta2).mul(d("0.7"))), "th_delta_2");

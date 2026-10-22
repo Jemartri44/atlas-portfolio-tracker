@@ -1,5 +1,4 @@
-// `positions.json` of the monthly dump (feature 016, E4; ADR-0032, point 3;
-// `specs/016-scheduled-jobs/data-model.md` §4): the valued projection of the
+// `positions.json` of the monthly dump (ADR-0032, point 3): the valued projection of the
 // ledger **of the same dump**, written so that it reads without the
 // application. It is a projection, never a source: it is regenerated from the
 // ledger, and nothing reads it back (constitution I).
