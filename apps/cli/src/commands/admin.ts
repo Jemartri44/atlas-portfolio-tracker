@@ -6,13 +6,9 @@
 // token of a device and never through the API**, which only appends. Nothing
 // of this is reachable from `apps/api` (architecture test).
 
-import { dirname } from "node:path";
-import {
-  DependencyUnavailable,
-  DeviceStore,
-  S3LedgerBlob,
-  TokenRegistry,
-} from "@atlas/adapters/aws";
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { DeviceStore, S3LedgerBlob, TokenRegistry } from "@atlas/adapters/aws";
 import { BlobLedgerStore } from "@atlas/adapters/blob";
 import {
   compactLedger,
@@ -35,6 +31,7 @@ import {
 import { symbolsPushPlan } from "@atlas/domain/quotes";
 import { linesOfText, RefusedError, syncArchiveName } from "@atlas/domain/sync";
 import { deepCheck } from "@atlas/domain/tools";
+import { adminClientsOf, environmentFlag, translateAwsFailure } from "../admin/clients.js";
 import type { AdminClients } from "../admin/environment.js";
 import {
   assertKnownFlags,
@@ -52,47 +49,6 @@ import { render } from "./shared.js";
 
 const LEDGER_KEY = "ledger/ledger.jsonl";
 const SYMBOLS_KEY = "prices/symbols.json";
-
-/** The name of an environment, as `admin.json` names it (review of PR #98, N6). */
-const ENVIRONMENT = /^[a-z][a-z0-9-]*$/;
-
-/** `--env`, required and with the shape of a name: never `toString` nor `__proto__`. */
-export const environmentFlag = (flags: Flags): string => {
-  const environment = requireFlag(flags, "env");
-  if (!ENVIRONMENT.test(environment)) {
-    throw new UsageError(`--env no es el nombre de un entorno: «${environment}»`);
-  }
-  return environment;
-};
-
-/** The clients of the environment `--env` names, with the role of administration. */
-export const adminClientsOf = async (ctx: Context, flags: Flags): Promise<AdminClients> => {
-  const environment = environmentFlag(flags);
-  if (ctx.admin !== undefined) {
-    return ctx.admin.clientsFor(environment);
-  }
-  const { systemAdminAccess } = await import("../admin/environment.js");
-  return systemAdminAccess().clientsFor(environment);
-};
-
-/**
- * What AWS answers, said without the message of the SDK: unavailable (a 5xx,
- * a throttle, the network) or refused (no credentials, access denied, an
- * expired session). Anything else is left as it is.
- */
-export const translateAwsFailure = (error: unknown): unknown => {
-  if (error instanceof DependencyUnavailable) {
-    return new DomainError("admin_remote_unavailable", "aws is not answering", {});
-  }
-  if (
-    error instanceof Error &&
-    !(error instanceof DomainError) &&
-    ("$metadata" in error || /^(CredentialsProviderError|TokenProviderError)$/.test(error.name))
-  ) {
-    return new DomainError("admin_aws_refused", "aws refused the order", { name: error.name });
-  }
-  return error;
-};
 
 /**
  * The confirmation of an order that rewrites the remote or forgets a device
@@ -393,7 +349,6 @@ const candidateText = async (clients: AdminClients, from: string): Promise<strin
     }
     return strictText(stored.body);
   }
-  const { readFile } = await import("node:fs/promises");
   const bytes = await readFile(from).catch(() => undefined);
   if (bytes === undefined) {
     throw new DomainError("restore_source_missing", `no file ${from}`, { from });
@@ -497,8 +452,6 @@ const pricesPushOrder = async (
   clients: AdminClients,
   environment: string,
 ): Promise<number> => {
-  const { readFile } = await import("node:fs/promises");
-  const { join } = await import("node:path");
   const bytes = await readFile(join(dirname(ctx.ledgerPath), "prices", "symbols.json")).catch(
     (error: NodeJS.ErrnoException) => {
       if (error.code === "ENOENT") {
