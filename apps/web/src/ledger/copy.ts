@@ -47,13 +47,16 @@ export const copyText = async (format: CopyFormat): Promise<string> => {
 /** The name of the file, with the day: copies are never overwritten by the browser's own rename. */
 export const copyName = (format: CopyFormat, day: string): string => `atlas-copia-${day}.${format}`;
 
+const REVOKE_AFTER_MS = 30_000;
+
 const download = (text: string, name: string, type: string): void => {
   const url = URL.createObjectURL(new Blob([text], { type }));
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = name;
   anchor.click();
-  URL.revokeObjectURL(url);
+  // Some browsers start the download after the click returns: the address must outlive it.
+  setTimeout(() => URL.revokeObjectURL(url), REVOKE_AFTER_MS);
 };
 
 /** Downloads the copy; returns its name. */

@@ -117,6 +117,22 @@ describe("the copy of the ledger", () => {
       vi.restoreAllMocks();
     }
   });
+  it("revokes the address of the download later, not in the same turn as the click", async () => {
+    await open(new MemoryBlob(goldenText()));
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:copy");
+    const revoke = vi.spyOn(URL, "revokeObjectURL").mockReturnValue(undefined);
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockReturnValue(undefined);
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    try {
+      await downloadCopy("jsonl", "2029-07-01");
+      expect(revoke).not.toHaveBeenCalled();
+      await vi.runAllTimersAsync();
+      expect(revoke).toHaveBeenCalledWith("blob:copy");
+    } finally {
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    }
+  });
 });
 
 describe("the notice of a session about to end", () => {
