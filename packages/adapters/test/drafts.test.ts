@@ -8,8 +8,8 @@ import { DraftChangedError, type PendingDraft, recordPendingDraft } from "@atlas
 import { describe, expect, it } from "vitest";
 import { DRAFTS_DIR, FileDraftStore } from "../src/drafts/file-drafts.js";
 import { LedgerLockedError, LOCK_FILE, LockLostError } from "../src/ledger-store/folder-lock.js";
-import { MemoryLedgerStore } from "../src/ledger-store/memory.js";
 import { account } from "./fixtures.js";
+import { MemoryLedgerStore } from "./test-only-memory-ledger-store.js";
 
 const folder = (): Promise<string> => mkdtemp(join(tmpdir(), "atlas-012-drafts-"));
 

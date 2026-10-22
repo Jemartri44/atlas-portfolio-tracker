@@ -1,4 +1,4 @@
-// In-memory LedgerStore for tests and dry runs. It keeps serialised lines, so
+// In-memory LedgerStore for tests. It keeps serialised lines, so
 // it enforces the same decoding contract as the file store (newer schema
 // versions are rejected, numbers in amounts are rejected) and keeps the
 // archives written by `replace` in a map the tests can inspect.
