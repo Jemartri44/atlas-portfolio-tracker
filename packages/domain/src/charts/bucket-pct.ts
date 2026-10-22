@@ -21,7 +21,7 @@ import type { CivilDate } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
 import { type BenchmarkGap, bucketAccountIds } from "../projections/bucket.js";
 import { cashFlowsOf } from "../projections/bucket-stats.js";
-import { businessDateOf, isOperationEvent, projectLedger } from "../projections/project-ledger.js";
+import { businessDateOf, liveOperations, projectLedger } from "../projections/project-ledger.js";
 import { bucketIndexSeries, type SeriesOptions } from "../projections/series.js";
 import type { LedgerEvent } from "../schema/events.js";
 
@@ -56,12 +56,8 @@ export const bucketIndexPctSeries = (
   const series = bucketIndexSeries(events, options);
   const state = projectLedger(events, { collectErrors: true });
   const accounts = bucketAccountIds(state);
-  const invalid = new Set(state.invalid.map((entry) => entry.event.id));
   let firstTrade: CivilDate | undefined;
-  for (const event of events) {
-    if (state.reversed.has(event.id) || invalid.has(event.id) || !isOperationEvent(event)) {
-      continue;
-    }
+  for (const event of liveOperations(state, events)) {
     const account = (event as { account_id?: string }).account_id;
     if ((event.type === "buy" || event.type === "sell") && accounts.has(account as string)) {
       const date = businessDateOf(state, event);

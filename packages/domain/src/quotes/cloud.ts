@@ -14,6 +14,7 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import { madridDateOf } from "../dates/madrid.js";
 import { ValidationError } from "../errors.js";
+import { isRecord } from "../guards.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
 import { repeatedKey } from "../schema/json-keys.js";
@@ -32,7 +33,7 @@ export interface CloudPull {
   readonly pulled_at: string;
   /** The version of each file of `prices/` as the index said it, by name. */
   readonly versions: Readonly<Record<string, string>>;
-  /** What the last pull left out, by why (review of PR #108, B1 and N5); `status` says it. */
+  /** What the last pull left out, by why; `status` says it. */
   readonly discarded?: { readonly future: number; readonly currency_mismatch: number };
 }
 
@@ -40,9 +41,6 @@ const wrongPull = (field: string): ValidationError =>
   new ValidationError("invalid_cloud_pull", `prices/${CLOUD_PULL_FILE}: ${field} is not valid`, {
     field,
   });
-
-const isObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 
 /** Parses `prices/_cloud.json`, strictly; `undefined` (no file): the folder never pulled. */
 export const parseCloudPull = (text: string | undefined): CloudPull | undefined => {
@@ -59,7 +57,7 @@ export const parseCloudPull = (text: string | undefined): CloudPull | undefined 
   if (repeated !== undefined) {
     throw repeatedKeyError(`prices/${CLOUD_PULL_FILE}`, repeated);
   }
-  if (!isObject(raw) || raw.cloud_format !== CLOUD_PULL_FORMAT) {
+  if (!isRecord(raw) || raw.cloud_format !== CLOUD_PULL_FORMAT) {
     throw wrongPull("cloud_format");
   }
   for (const key of Object.keys(raw)) {
@@ -73,7 +71,7 @@ export const parseCloudPull = (text: string | undefined): CloudPull | undefined 
   if (typeof raw.pulled_at !== "string") {
     throw wrongPull("pulled_at");
   }
-  if (!isObject(raw.versions) || !Object.values(raw.versions).every((v) => typeof v === "string")) {
+  if (!isRecord(raw.versions) || !Object.values(raw.versions).every((v) => typeof v === "string")) {
     throw wrongPull("versions");
   }
   if (raw.discarded !== undefined) {
@@ -81,7 +79,7 @@ export const parseCloudPull = (text: string | undefined): CloudPull | undefined 
     const count = (value: unknown) =>
       typeof value === "number" && Number.isInteger(value) && value >= 0;
     if (
-      !isObject(discarded) ||
+      !isRecord(discarded) ||
       Object.keys(discarded).length !== 2 ||
       !count(discarded.future) ||
       !count(discarded.currency_mismatch)
@@ -125,13 +123,13 @@ export const changedPriceFiles = <T extends { readonly name: string; readonly ve
 export interface CloudMerge {
   readonly added: CloseLine[];
   /**
-   * Closes of today or of a day to come (review of PR #108, B1), or taken on
+   * Closes of today or of a day to come, or taken on
    * the day of their own session (R2-B1): never taken.
    */
   readonly future: number;
   /**
    * Closes in another currency than the one the folder declares for their
-   * source in its `symbols.json`: never taken (review of PR #108, N5).
+   * source in its `symbols.json`: never taken.
    */
   readonly mismatched: number;
 }

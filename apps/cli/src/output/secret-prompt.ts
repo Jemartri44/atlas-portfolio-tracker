@@ -6,7 +6,7 @@
 import { createInterface } from "node:readline/promises";
 import { Writable } from "node:stream";
 
-export interface PromptStreams {
+interface PromptStreams {
   readonly input: NodeJS.ReadableStream & { readonly isTTY?: boolean };
   readonly output: NodeJS.WritableStream;
 }

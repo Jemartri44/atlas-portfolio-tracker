@@ -360,33 +360,30 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   filing_fingerprint_waived: () =>
     "La huella de una declaración presentada nunca llegó a comprobarse, y tú lo diste por bueno para poder compactar.",
   // --- Store and schema --------------------------------------------------
-  // --- The sync of the ledger (feature 014) ------------------------------
-  // Why an operation is held back: it waits in «Retenidas» until you confirm,
-  // redo or discard it, and nothing behind it goes up meanwhile. Resolving
-  // never needs the rest of your data to be valid.
+  // --- What the cloud refuses to append ----------------------------------
+  // Nothing is stored on this device: a rejected operation is simply not saved.
   domain_rejected: (d) =>
-    `Retenida: con lo que ya hay en la nube, tus datos la rechazan${d.affected === undefined ? "" : ` y dejaría ${count(d.affected)} operaciones inválidas`}. Rehazla sobre lo actual o descártala en «Retenidas»; mientras, lo que va detrás espera y tus datos aquí pueden quedar incompletos.`,
+    `La nube la rechaza: con lo que ya hay, tus datos${d.affected === undefined ? " quedarían incoherentes" : ` dejarían ${count(d.affected)} operaciones inválidas`}. No se ha guardado nada; rehazla sobre lo actual.`,
   pair_rejected: (d) =>
-    `Retenida la corrección entera, la anulación y la operación corregida juntas: con lo que ya hay en la nube no cabe${d.affected === undefined ? "" : ` y dejaría ${count(d.affected)} operaciones inválidas`}. No se ha subido ninguna de las dos. Rehazla o descártala en «Retenidas»; mientras, lo que va detrás espera y tus datos aquí pueden quedar incompletos.`,
+    `La nube rechaza la corrección entera, la anulación y la operación corregida juntas: con lo que ya hay no cabe${d.affected === undefined ? "" : ` y dejaría ${count(d.affected)} operaciones inválidas`}. No se ha guardado ninguna de las dos; rehazla.`,
   pair_not_contiguous: () =>
-    "Retenida: la operación corregida no va justo detrás de su anulación, que es como se escriben siempre. Descártala o rehaz la corrección en «Retenidas».",
+    "La operación corregida no va justo detrás de su anulación, que es como se escriben siempre. No se ha guardado nada; rehaz la corrección.",
   pair_incomplete: () =>
     "La nube ha rechazado una anulación que anunciaba su corrección y no la traía detrás: se sube siempre la pareja entera.",
   pair_declaration_invalid: () =>
     "La nube ha rechazado la petición: una línea decía ser parte de una corrección sin serlo. Es un fallo de la aplicación.",
-  line_unreadable: () => "La nube no ha podido leer una operación. Queda retenida.",
-  line_invalid: () => "La nube ha rechazado una operación por su forma. Queda retenida.",
+  line_unreadable: () => "La nube no ha podido leer una operación. No se ha guardado.",
+  line_invalid: () => "La nube ha rechazado una operación por su forma. No se ha guardado.",
   schema_version_unsupported: () =>
-    "La nube no conoce todavía el formato de esta operación. Queda retenida hasta que la nube se actualice.",
+    "La nube no conoce todavía el formato de esta operación. No se ha guardado; vuelve a intentarlo cuando la nube se actualice.",
   recorded_at_in_future: () =>
-    "Retenida: su hora de registro va por delante del reloj de la nube. Revisa la hora de este dispositivo y rehazla.",
+    "Su hora de registro va por delante del reloj de la nube. Revisa la hora de este dispositivo y rehazla.",
   duplicate_unconfirmed: () =>
-    "La nube pide confirmar una operación que parece repetida. Queda retenida: confírmala en «Retenidas» si de verdad son dos.",
+    "La nube pide confirmar una operación que parece repetida. No se ha guardado: regístrala otra vez confirmando que de verdad son dos.",
   seal_mismatch: () =>
-    "Retenida: la declaración ya no cuadra con los movimientos que tendría delante en la nube. Regístrala otra vez sobre tus datos actuales.",
+    "La declaración ya no cuadra con los movimientos que tendría delante en la nube. Regístrala otra vez sobre tus datos actuales.",
   waiver_not_appendable: () =>
-    "Una renuncia a verificar una huella solo nace al compactar en la consola y nunca se sube sola. Queda retenida.",
-  // Why a sync stops: nothing is lost and nothing is held back.
+    "Una renuncia a verificar una huella solo nace al compactar en la consola y nunca se sube sola. No se ha guardado.",
   // What a synced ledger refuses.
   init_refused_invalid_ledger: (d) =>
     `No se suben tus datos a la nube: tienen ${count(d.invalid)} operaciones inválidas, y la nube nunca recibe datos inválidos. Repáralas primero en Ajustes → Verificación.`,
@@ -421,8 +418,8 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   // An annulment cannot be annulled (round 2 of the review of PR #98, R2-B1).
   duplicate_key: (d) =>
     d.type === "reversal"
-      ? "Esta anulación repite un campo en su línea (lo deja así una edición a mano del archivo): cuenta como inválida, no anula nada y no se sincroniza. Una anulación no se puede anular: corrígela a mano en el archivo, quitando el campo repetido. Con la sincronización activada, descártala desde lo retenido."
-      : "Esta operación repite un campo en su línea (lo deja así una edición a mano del archivo): se lee con el último valor, pero cuenta como inválida y no se sincroniza. Anúlala y regístrala bien; con la sincronización activada, descártala desde lo retenido.",
+      ? "Esta anulación repite un campo en su línea (lo deja así una edición a mano del archivo): cuenta como inválida, no anula nada y no se sincroniza. Una anulación no se puede anular: corrígela a mano en el archivo, quitando el campo repetido."
+      : "Esta operación repite un campo en su línea (lo deja así una edición a mano del archivo): se lee con el último valor, pero cuenta como inválida y no se sincroniza. Anúlala y regístrala bien.",
   invalid_envelope: (d) => `La cabecera de la línea no es válida (${field(d.field)}).`,
   missing_field: (d) => `Falta ${field(d.field)} en ${kind(d.type)}.`,
   invalid_field: (d) =>

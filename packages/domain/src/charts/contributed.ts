@@ -24,7 +24,7 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import { Money } from "../money/money.js";
 import { cashEurOf } from "../projections/bucket-stats.js";
-import { businessDateOf, isOperationEvent, projectLedger } from "../projections/project-ledger.js";
+import { businessDateOf, liveOperations, projectLedger } from "../projections/project-ledger.js";
 import { netWorthDates, type SeriesOptions } from "../projections/series.js";
 import type { LedgerEvent } from "../schema/events.js";
 
@@ -52,14 +52,10 @@ export const contributedSeries = (
   options: SeriesOptions,
 ): ContributedSeries => {
   const state = projectLedger(events, { collectErrors: true });
-  const invalid = new Set(state.invalid.map((entry) => entry.event.id));
   const flows: Flow[] = [];
   let firstBuy: CivilDate | undefined;
   let firstDeposit: CivilDate | undefined;
-  for (const event of events) {
-    if (state.reversed.has(event.id) || invalid.has(event.id) || !isOperationEvent(event)) {
-      continue;
-    }
+  for (const event of liveOperations(state, events)) {
     const account = (event as { account_id?: string }).account_id;
     if (account === undefined || state.accounts.get(account)?.book !== "core") {
       continue;

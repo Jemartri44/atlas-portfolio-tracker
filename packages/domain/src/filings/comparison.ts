@@ -20,15 +20,14 @@
 
 import type { CivilDate } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
-import { Money } from "../money/money.js";
+import { zero } from "../money/eur.js";
+import { EUR, Money } from "../money/money.js";
 import type { Filing } from "../projections/filings.js";
 import { filingInForce } from "../projections/filings.js";
 import type { LedgerState } from "../projections/state.js";
 import type { FiledRentaFigures, LedgerEvent } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import { type ChainCore, chainFigures, isUnsupported, taxChain, tryReading } from "../tax/chain.js";
-
-const EUR = "EUR";
 
 /** Where a difference comes from. The four add up to `now − declared`, exactly. */
 export interface FilingCauses {
@@ -93,8 +92,6 @@ export interface FilingComparison {
   unverified_prefix?: "line_count" | "waived";
   figures: FilingFigure[];
 }
-
-const zero = (): Money => Money.zero(EUR);
 
 const parse = (value: string): Money => Money.parse(value, EUR);
 

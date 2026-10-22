@@ -5,7 +5,7 @@
 import { isCivilDate, isWeekend } from "../dates/civil-date.js";
 import { madridDateOf } from "../dates/madrid.js";
 import { ValidationError } from "../errors.js";
-import { isRecord, type UnknownRecord } from "../guards.js";
+import { INSTANT_PATTERN, isRecord, SHA256_HEX, type UnknownRecord } from "../guards.js";
 import { isUlid } from "../ids/ulid.js";
 import { Decimal, isDecimalString } from "../money/decimal.js";
 import { isCurrency } from "../money/money.js";
@@ -417,7 +417,6 @@ const FINGERPRINT_RULES: Rules = {
   sha256: req("sha256"),
 };
 
-const INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
 const COUNTRY_PATTERN = /^[A-Z]{2}$/;
 
 const isNonNegativeDecimal = (value: unknown): boolean =>
@@ -425,8 +424,6 @@ const isNonNegativeDecimal = (value: unknown): boolean =>
 
 const isPositiveDecimal = (value: unknown): boolean =>
   isDecimalString(value) && Decimal.parse(value).isPositive();
-
-const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 
 const CHECKS: Record<RuleKind, (value: unknown, rule: Rule) => boolean> = {
   string: (value, rule) =>
@@ -444,7 +441,7 @@ const CHECKS: Record<RuleKind, (value: unknown, rule: Rule) => boolean> = {
   object: (value) => isRecord(value),
   non_negative_integer: (value) =>
     typeof value === "number" && Number.isInteger(value) && value >= 0,
-  sha256: (value) => typeof value === "string" && SHA256_PATTERN.test(value),
+  sha256: (value) => typeof value === "string" && SHA256_HEX.test(value),
   boolean: (value) => typeof value === "boolean",
   date: (value) => isCivilDate(value),
   currency: (value) => isCurrency(value),

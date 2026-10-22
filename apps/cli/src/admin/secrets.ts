@@ -10,7 +10,7 @@ import type { SecretKind } from "@atlas/adapters/aws";
 import { DomainError } from "@atlas/domain";
 import { parseAllowList } from "@atlas/domain/access";
 
-export type SecretSource = "typed" | "allow-list" | "generated";
+type SecretSource = "typed" | "allow-list" | "generated";
 
 export interface SecretSpec {
   /** Under `/atlas/<env>/`. */

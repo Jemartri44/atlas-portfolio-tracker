@@ -12,7 +12,7 @@ import type { CivilDate } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
 import type { Currency } from "../money/money.js";
-import { Money } from "../money/money.js";
+import { EUR, Money } from "../money/money.js";
 import type {
   AccountId,
   AssetId,
@@ -33,10 +33,9 @@ import {
 import { costSummary } from "./costs.js";
 import { netWorth } from "./networth.js";
 import type { ExternalPrices } from "./prices.js";
-import { businessDateOf, isOperationEvent } from "./project-ledger.js";
+import { businessDateOf, liveOperations } from "./project-ledger.js";
 import type { FiscalLot, LedgerState, RealizedGain, Warning } from "./state.js";
 
-const EUR = "EUR";
 const HUNDRED = Decimal.parse("100");
 /** Below this many closed theses, the sample says nothing (specification §6.2). */
 const SIGNIFICANT_SAMPLE = 100;
@@ -227,12 +226,8 @@ export const cashFlowsOf = (
   accounts: ReadonlySet<string>,
   asOf: CivilDate | undefined,
 ): CashFlows => {
-  const invalid = new Set(state.invalid.map((entry) => entry.event.id));
   const flows: CashFlows = { deposits: Money.zero(EUR), withdrawals: Money.zero(EUR) };
-  for (const event of events) {
-    if (state.reversed.has(event.id) || invalid.has(event.id) || !isOperationEvent(event)) {
-      continue;
-    }
+  for (const event of liveOperations(state, events)) {
     const date = businessDateOf(state, event);
     if (asOf !== undefined && date > asOf) {
       continue;

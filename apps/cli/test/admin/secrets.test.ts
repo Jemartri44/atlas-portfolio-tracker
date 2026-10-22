@@ -156,15 +156,10 @@ describe("atlas admin secrets with the real io and no terminal", () => {
     const secrets = new TestOnlyFakeSecrets();
     const err: string[] = [];
     const io = { ...terminalIo(), out: () => undefined, err: (t: string) => err.push(t) };
-    const code = await runCli(
-      ["admin", "secrets", "--env", "prod"],
-      io,
-      () => harness().store as never,
-      undefined,
-      undefined,
-      undefined,
-      adminOf(secrets),
-    );
+    const code = await runCli(["admin", "secrets", "--env", "prod"], io, {
+      compose: () => harness().store as never,
+      admin: adminOf(secrets),
+    });
     expect(code).toBe(EXIT.noTty);
     expect(secrets.calls.filter((call) => call.operation !== "exists")).toEqual([]);
     expect(err.join("\n")).toContain("no hay terminal");

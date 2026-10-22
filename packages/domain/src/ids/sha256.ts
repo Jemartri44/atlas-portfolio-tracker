@@ -118,7 +118,7 @@ export const sha256 = (message: Uint8Array): Uint8Array => {
   return digest;
 };
 
-export const toHex = (bytes: Uint8Array): string =>
+const toHex = (bytes: Uint8Array): string =>
   Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 
 /** Lower-case hexadecimal SHA-256 of a string (UTF-8) or of raw bytes. */

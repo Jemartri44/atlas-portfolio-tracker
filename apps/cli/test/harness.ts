@@ -87,11 +87,7 @@ export const harness = (options: HarnessOptions = {}): Harness => {
         // the test would make it a positional.
         options.ledgerPath === undefined ? argv : ["--ledger", options.ledgerPath, ...argv],
         io,
-        () => deps,
-        undefined,
-        undefined,
-        undefined,
-        options.admin,
+        { compose: () => deps, admin: options.admin },
       ),
     setInstant: (value) => {
       instant = value;

@@ -25,6 +25,7 @@ import {
 } from "@atlas/domain/access";
 import { assertKnownFlags, booleanFlag, type Flags, stringFlag, UsageError } from "../args.js";
 import { type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
+import { pathExists } from "../fs.js";
 import { describeConsoleFailure } from "../output/remote.js";
 import { updateCredentials } from "../remote/credentials-file.js";
 import { type RemoteEnvironment, systemRemote } from "../remote/environment.js";
@@ -32,7 +33,6 @@ import { postJson } from "../remote/http.js";
 import { openLoopback } from "../remote/loopback.js";
 import { expiryText, where } from "../remote/where.js";
 import { uploadCommand } from "./remote-upload.js";
-import { pathExists } from "./synth.js";
 
 const id43 = (): string => randomBytes(32).toString("base64url");
 

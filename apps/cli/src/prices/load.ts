@@ -79,7 +79,7 @@ export const keysFor = async (ctx: Context): Promise<{ keys: Keys; note?: string
   }
 };
 
-export interface LoadedQuotes {
+interface LoadedQuotes {
   readonly external?: ExternalPrices;
   readonly notes: readonly string[];
 }

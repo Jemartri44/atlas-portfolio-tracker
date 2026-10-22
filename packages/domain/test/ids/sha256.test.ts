@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sha256Hex, toHex, utf8Encode } from "../../src/ids/sha256.js";
+import { sha256Hex, utf8Encode } from "../../src/ids/sha256.js";
 
 describe("utf8Encode", () => {
   it("encodes 1, 2, 3 and 4 byte sequences", () => {
@@ -45,8 +45,7 @@ describe("sha256Hex", () => {
     );
   });
 
-  it("accepts raw bytes and renders hex with leading zeros", () => {
+  it("accepts raw bytes", () => {
     expect(sha256Hex(Uint8Array.from([0x61, 0x62, 0x63]))).toBe(sha256Hex("abc"));
-    expect(toHex(Uint8Array.from([0, 1, 255]))).toBe("0001ff");
   });
 });

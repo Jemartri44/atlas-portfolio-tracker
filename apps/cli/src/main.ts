@@ -239,7 +239,7 @@ comandos:
                                  la administración de la nube, con el rol de administración y nunca por la API
   --                             termina las opciones: lo que va detrás es posicional (un id que empiece por guion)`;
 
-export const composeDeps = (ledgerPath: string): UseCaseDeps => ({
+const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   store: new FileLedgerStore(ledgerPath),
   clock: systemClock,
   random: webCryptoRandom,
@@ -275,22 +275,27 @@ export const terminalIo = (): Io => ({
     askWithoutEcho(question, { input: process.stdin, output: process.stdout }),
 });
 
-/** Runs one invocation and returns the exit code. `compose` is replaced in tests. */
+/** What the tests replace: everything else is the real thing. */
+export interface RunOverrides {
+  readonly compose?: (ledgerPath: string) => UseCaseDeps;
+  /** The source of the ECB history; tests never touch the network. */
+  readonly fxSource?: (() => FxRateSource) | undefined;
+  /** The sources of prices and the file of the keys. */
+  readonly prices?: PriceEnvironment | undefined;
+  /** The network, the credentials and the browser of `atlas remote`. */
+  readonly remote?: RemoteEnvironment | undefined;
+  /** The clients of the administration; tests never reach AWS. */
+  readonly admin?: AdminAccess | undefined;
+}
+
+/** Runs one invocation and returns the exit code. */
 export const run = async (
   argv: readonly string[],
   io: Io,
-  compose: (ledgerPath: string) => UseCaseDeps = composeDeps,
-  /** The source of the ECB history; replaced in tests, which never touch the network. */
-  fxSource?: () => FxRateSource,
-  /** The sources of prices and the file of the keys; replaced in tests. */
-  prices?: PriceEnvironment,
-  /** The network, the credentials and the browser of `atlas remote`; replaced in tests. */
-  remote?: RemoteEnvironment,
-  /** The clients of the administration; replaced in tests, which never reach AWS. */
-  admin?: AdminAccess,
+  overrides: RunOverrides = {},
 ): Promise<number> => {
   let remind: string | undefined;
-  const code = await dispatch(argv, io, compose, fxSource, prices, remote, admin, (path) => {
+  const code = await dispatch(argv, io, overrides, (path) => {
     remind = path;
   });
   // Said after every command, whatever it did, failures included: a draft
@@ -307,11 +312,7 @@ export const run = async (
 const dispatch = async (
   argv: readonly string[],
   io: Io,
-  compose: (ledgerPath: string) => UseCaseDeps,
-  fxSource: (() => FxRateSource) | undefined,
-  prices: PriceEnvironment | undefined,
-  remote: RemoteEnvironment | undefined,
-  admin: AdminAccess | undefined,
+  { compose = composeDeps, fxSource, prices, remote, admin }: RunOverrides,
   /** Where the reminder of pending drafts looks, once a command is going to run. */
   remindAt: (ledgerPath: string) => void,
 ): Promise<number> => {

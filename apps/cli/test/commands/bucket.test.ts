@@ -1,21 +1,15 @@
 // atlas bucket · atlas thesis show — the view of the speculative bucket.
 
 import { readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { DEFAULT_SETTINGS } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { EXIT } from "../../src/context.js";
 import { bucketSeed, harness } from "../harness.js";
+import { LEDGER_FIXTURES } from "../support/fixtures.js";
 
 const goldenLines = (): string[] =>
-  readFileSync(
-    join(
-      resolve(dirname(fileURLToPath(import.meta.url)), "../../../../tests/fixtures/ledger"),
-      "synthetic-v1.jsonl",
-    ),
-    "utf8",
-  )
+  readFileSync(join(LEDGER_FIXTURES, "synthetic-v1.jsonl"), "utf8")
     .split("\n")
     .filter((line) => line !== "");
 

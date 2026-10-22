@@ -47,7 +47,7 @@ export const historyOf = async (
   }
 };
 
-export interface RatedDraft {
+interface RatedDraft {
   draft: Record<string, unknown>;
   /** What to print before the question: what was proposed, and what cannot be checked. */
   notes: string[];

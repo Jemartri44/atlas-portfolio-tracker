@@ -7,7 +7,7 @@
 import { createHash } from "node:crypto";
 import { DEVICE_TOKEN_HEADER, isHttpsOrigin } from "@atlas/domain/access";
 
-export type ApiAnswer =
+type ApiAnswer =
   | { readonly ok: true; readonly body: Record<string, unknown> }
   | { readonly ok: false; readonly code: string };
 
