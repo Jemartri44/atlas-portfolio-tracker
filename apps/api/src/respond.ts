@@ -73,7 +73,7 @@ export const loginCookie = (value: string, maxAge: number): string =>
 export const clearSessionCookie = (): string => sessionCookie("", 0);
 export const clearLoginCookie = (): string => loginCookie("", 0);
 
-const utf8 = new TextDecoder("utf-8", { fatal: true });
+const utf8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
 /**
  * The exact bytes of a file (block 0 of E3, questions.md §23.4): as text when
