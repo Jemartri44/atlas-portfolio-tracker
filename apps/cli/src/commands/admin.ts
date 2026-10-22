@@ -523,6 +523,20 @@ const pricesPushOrder = async (
 const USAGE =
   "uso: atlas admin devices | revoke-all-tokens | forget-device [--] <dispositivo> | forget-device --device <dispositivo> | compact [--accept-unverified <id>]… | restore --from <fichero|s3-version:<id>|backups/AAAA-MM> | prices push | secrets, siempre con --env <entorno>";
 
+/** The options of each order besides `--env`; `secrets` takes none of its own. */
+const ORDER_FLAGS: Readonly<Record<string, readonly string[]>> = {
+  devices: ["env"],
+  "revoke-all-tokens": ["env"],
+  "forget-device": ["env", "device"],
+  compact: ["env", "accept-unverified"],
+  restore: ["env", "from"],
+  prices: ["env"],
+  secrets: ["env"],
+};
+
+/** The global options that mean something here; the ones about recording an event do not. */
+const ADMIN_GLOBAL_FLAGS: readonly string[] = ["ledger", "yes", "json"];
+
 export const adminCommand = async (
   ctx: Context,
   positionals: string[],
@@ -544,6 +558,14 @@ export const adminCommand = async (
     (order === "prices" && positionals[2] !== "push")
   ) {
     throw new UsageError(USAGE);
+  }
+  // What this order does not take is refused, not ignored in silence.
+  for (const name of flags.keys()) {
+    if (!ORDER_FLAGS[order]?.includes(name) && !ADMIN_GLOBAL_FLAGS.includes(name)) {
+      throw new UsageError(
+        `--${name} no vale en «atlas admin ${order === "prices" ? "prices push" : order}»`,
+      );
+    }
   }
   // A device id may begin with a dash: after `--`, or as `--device <id>`.
   const flagged = stringFlag(flags, "device");
