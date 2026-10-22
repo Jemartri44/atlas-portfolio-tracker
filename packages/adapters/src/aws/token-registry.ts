@@ -51,6 +51,31 @@ export class TokenRegistry {
     return revoked;
   }
 
+  /**
+   * Revokes it **only if nobody else wrote it meanwhile**: SSM has no
+   * conditional overwrite, but it answers the new version, which is the one
+   * read plus one unless another write came in between. Of two renewals of the
+   * same token, exactly one reads `v` and gets `v + 1`; the other is `lost`
+   * (it was already revoked when read, or got `v + 2`) and must not hand out a
+   * second live token. The loser's write only repeats a revoked record.
+   */
+  async revokeExclusive(record: TokenRecord, atMs: number): Promise<"won" | "lost"> {
+    const name = tokenParameterName(this.ssmPrefix, record.token_id);
+    const current = await this.parameters.getVersioned(name);
+    if (current === undefined) {
+      return "lost";
+    }
+    const read = parseTokenRecord(current.value, record.token_id);
+    if (typeof read !== "object" || read.revoked_at !== undefined) {
+      return "lost";
+    }
+    const version = await this.parameters.overwrite(
+      name,
+      serializeTokenRecord(revokedRecord(read, atMs)),
+    );
+    return version === current.version + 1 ? "won" : "lost";
+  }
+
   /** Every record of the folder, as the token id its name says; the unreadable ones too. */
   async list(): Promise<
     readonly { readonly tokenId: string; readonly read: TokenRecord | "unreadable" }[]

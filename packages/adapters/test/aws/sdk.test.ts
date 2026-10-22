@@ -250,14 +250,25 @@ describe("SdkParameterStore", () => {
   });
 
   it("overwrites only with Overwrite and no tags", async () => {
-    const { client, sent } = ssmClient(() => ({}));
-    await new SdkParameterStore(client).overwrite("/n", "w");
+    const { client, sent } = ssmClient(() => ({ Version: 3 }));
+    expect(await new SdkParameterStore(client).overwrite("/n", "w")).toBe(3);
     expect((sent[0] as PutParameterCommand).input).toEqual({
       Name: "/n",
       Value: "w",
       Type: "SecureString",
       Overwrite: true,
     });
+  });
+
+  it("reads the version with the value, and refuses an overwrite answered without one", async () => {
+    const read = ssmClient(() => ({ Parameter: { Value: "v", Version: 4 } }));
+    expect(await new SdkParameterStore(read.client).getVersioned("/n")).toEqual({
+      value: "v",
+      version: 4,
+    });
+    await expect(
+      new SdkParameterStore(ssmClient(() => ({})).client).overwrite("/n", "w"),
+    ).rejects.toThrow("without a version");
   });
 
   it("turns a throttling, TooManyUpdates, a 5xx and the network into a transient failure", async () => {

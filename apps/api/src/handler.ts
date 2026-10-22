@@ -591,8 +591,12 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         return fail(refusal("not_allowed", { reason: "other_subject" }));
       }
       // The previous one first (ADR-0033, point 2): a cut between the two
-      // steps leaves no token, which is safe; the console signs in again.
-      await tokens.revoke(previous, nowMs);
+      // steps leaves no token, which is safe; the console signs in again. Of
+      // two renewals at once with this token only one revokes it; the other
+      // creates nothing, so the device never holds two live tokens.
+      if ((await tokens.revokeExclusive(previous, nowMs)) === "lost") {
+        return fail(refusal("console_renewal_conflict"));
+      }
       deviceId = previous.device_id;
       how = "token_renewed";
     } else if (code.rdid !== undefined) {

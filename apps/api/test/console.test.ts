@@ -463,6 +463,60 @@ describe("the renewal (§4.3; T22, mutant 18)", () => {
   });
 });
 
+describe("two renewals of the same token at once (different codes)", () => {
+  it("lets one win with 200 and answers the other 409 console_renewal_conflict, leaving one live token", async () => {
+    const api = setup();
+    const first = (await login(api)).body;
+    const headers = { "x-atlas-device-token": first.token as string };
+    const one = await consoleReturn(api);
+    const two = await consoleReturn(api);
+    // Both read the token as active before either revokes it: the worst order.
+    const overwrite = api.ssm.overwrite.bind(api.ssm);
+    let arrived = 0;
+    let release: () => void = () => undefined;
+    const both = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    api.ssm.overwrite = async (name: string, value: string) => {
+      if (name === `${TOKENS}${first.token_id}`) {
+        arrived += 1;
+        if (arrived === 2) {
+          release();
+        }
+        await both;
+      }
+      return overwrite(name, value);
+    };
+    const [a, b] = await Promise.all([
+      exchange(
+        api,
+        codeOfLoopback(one.done.headers.location as string),
+        one.secrets.verifier,
+        headers,
+      ),
+      exchange(
+        api,
+        codeOfLoopback(two.done.headers.location as string),
+        two.secrets.verifier,
+        headers,
+      ),
+    ]);
+    expect([a.statusCode, b.statusCode].sort()).toEqual([200, 409]);
+    const loser = a.statusCode === 409 ? a : b;
+    expect(errorOf(loser).code).toBe("console_renewal_conflict");
+    const winner = JSON.parse((a.statusCode === 200 ? a : b).body);
+    const alive = [first.token_id, ...api.ssm.writes.map((w) => w.split(`${TOKENS}`)[1])]
+      .filter((id): id is string => id !== undefined)
+      .filter((id, at, all) => all.indexOf(id) === at)
+      .filter(
+        (id) => !("revoked_at" in JSON.parse(api.ssm.history(`${TOKENS}${id}`).at(-1) as string)),
+      );
+    expect(alive).toEqual([winner.token_id]);
+    // The winner's token works; the answer of the loser was not a revocation of anything else.
+    expect((await withToken(api, "/api/auth/console/revoke", winner.token)).statusCode).toBe(200);
+  });
+});
+
 describe("the reissue (§4.2 and §4.3; T23, mutant 29 sexies)", () => {
   const seedConsole = (api: Api, id: string, overrides: Record<string, unknown> = {}) =>
     api.s3.seed(

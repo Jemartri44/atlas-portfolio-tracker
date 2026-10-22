@@ -13,6 +13,8 @@ export const describeConsoleFailure = (code: string): string => {
       return "el código no es de este inicio de sesión o está mal copiado. Vuelve a empezar.";
     case "console_code_expired":
       return "el código ha caducado (dura 5 minutos). Vuelve a empezar.";
+    case "console_renewal_conflict":
+      return "otra renovación del mismo dispositivo se adelantó y su token es el vigente. No se ha tocado nada: vuelve a ejecutar el comando.";
     case "console_code_used":
       return "ese código ya se canjeó. Vuelve a empezar para recibir otro.";
     case "pkce_mismatch":
