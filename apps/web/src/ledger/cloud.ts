@@ -131,7 +131,9 @@ export const bootCloud = async (request: Fetch = pageFetch): Promise<void> => {
     showOffline();
     return;
   }
-  settleAfterBoot();
+  if (current()) {
+    settleAfterBoot();
+  }
 };
 
 /** A write whose answer was lost is looked for as soon as the ledger is back (ADR-0035, §2). */
@@ -184,9 +186,10 @@ export const refreshSession = async (
   if (session.kind !== "signed_in") {
     return "signed_out";
   }
+  // A boot in flight leaves `deps` empty on purpose and sets its own.
   const phase = store.load();
-  store.setDeps(depsFor(request));
   if (phase.phase === "ready") {
+    store.setDeps(depsFor(request));
     store.setLoad({ ...phase, source: { expiresAt: session.expiresAt } });
   }
   return "signed_in";
@@ -197,7 +200,13 @@ export const refreshSession = async (
  * when it returns. Called once, by the boot.
  */
 export const watchConnection = (request: Fetch = pageFetch): (() => void) => {
+  // With the ledger on screen the quiet reload keeps the forms mounted; the
+  // full boot is for what is not shown (offline, stopped, failed).
   const back = (): void => {
+    if (store.load().phase === "ready") {
+      void reloadLedger({ quiet: true }).then(settleAfterBoot);
+      return;
+    }
     void bootCloud(request);
   };
   window.addEventListener("offline", showOffline);

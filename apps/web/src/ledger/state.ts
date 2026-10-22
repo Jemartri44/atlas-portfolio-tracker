@@ -19,6 +19,7 @@ import {
   type UseCaseDeps,
 } from "@atlas/domain";
 import { createMemo, createRoot, createSignal } from "solid-js";
+import { themeFromPreference } from "../shell/theme.js";
 import type { LedgerSource } from "./source.js";
 
 export interface LedgerSnapshot {
@@ -150,7 +151,7 @@ const createStore = () => {
   const [writing, setWriting] = createSignal(false);
   // Privacy is **on** by default: the first read is what decides (FR-021).
   const [privacy, setPrivacyRaw] = createSignal(privacyFromPreference(readLocal(PRIVACY_KEY)));
-  const [theme, setThemeRaw] = createSignal<Theme>((readLocal(THEME_KEY) as Theme) ?? "system");
+  const [theme, setThemeRaw] = createSignal<Theme>(themeFromPreference(readLocal(THEME_KEY)));
 
   const snapshot = createMemo<LedgerSnapshot | undefined>(() => {
     const phase = load();

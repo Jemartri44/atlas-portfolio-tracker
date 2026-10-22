@@ -9,7 +9,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { futureLine } from "../../../../packages/adapters/test/fixtures.js";
 import { allowListOf, NAMES } from "../../../api/test/harness.js";
-import { bootCloud, watchConnection } from "../../src/ledger/cloud.js";
+import { bootCloud, refreshSession, watchConnection } from "../../src/ledger/cloud.js";
 import { store } from "../../src/ledger/state.js";
 import { goldenText } from "../helpers/golden.js";
 import { press, showInShell, text, until } from "../helpers/render.jsx";
@@ -24,6 +24,8 @@ interface Net {
   cookie: string | undefined;
   /** The next read of the ledger waits for this, then answers as `ledgerStatus` says. */
   hold?: Promise<void> | undefined;
+  /** The next read of the session waits for this. */
+  holdSession?: Promise<void> | undefined;
   /** Answers the ledger with this status instead of serving it. */
   ledgerStatus?: number | undefined;
 }
@@ -38,6 +40,11 @@ const rig = async (ledger: string = goldenText(), signed = true) => {
     asked.push({ url: String(input), init });
     if (net.down) {
       throw new TypeError("network down");
+    }
+    if (net.holdSession !== undefined && String(input) === "/api/session") {
+      const wait = net.holdSession;
+      net.holdSession = undefined;
+      await wait;
     }
     if (net.hold !== undefined && String(input) === "/api/ledger") {
       const wait = net.hold;
@@ -274,6 +281,62 @@ describe("cloud boot", () => {
     await old;
     expect(store.load()).toEqual({ phase: "offline" });
     expect(text(host)).not.toContain("eventos:");
+  });
+
+  it("`online` with the ledger on screen keeps it mounted, so a form keeps what was typed", async () => {
+    const { request } = await rig();
+    const host = await shown();
+    watching(request);
+    await bootCloud(request);
+    await until(() => text(host).includes("eventos:200"), "the ledger");
+    const phases: string[] = [];
+    const watch = setInterval(() => phases.push(store.load().phase), 0);
+    window.dispatchEvent(new Event("online"));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    clearInterval(watch);
+    expect(phases).not.toContain("loading");
+    expect(text(host)).toContain("eventos:200");
+  });
+
+  it("an old boot that ends after a newer one does not settle the pending write again", async () => {
+    const { request, net, asked } = await rig();
+    await shown();
+    store.setPending({
+      ids: ["01ARYZ6S41TSV4RRFFQ69G5FAV"],
+      state: "unknown",
+      retry: async () => ({ outcome: "recorded" }) as never,
+    });
+    let release: () => void = () => undefined;
+    net.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const old = bootCloud(request);
+    await until(() => net.hold === undefined, "the old read in flight");
+    await bootCloud(request);
+    await until(() => store.pending()?.state !== "unknown", "the pending write settled");
+    await until(() => store.pending()?.state !== "checking", "the look-up finished");
+    const reads = () => asked.filter((call) => call.url === "/api/ledger").length;
+    const before = reads();
+    release();
+    await old;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(reads()).toBe(before);
+    store.setPending(undefined);
+  });
+
+  it("a new session read during a boot does not replace the deps that boot left empty", async () => {
+    const { request, net } = await rig();
+    await shown();
+    let release: () => void = () => undefined;
+    net.holdSession = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const booting = bootCloud(request);
+    await until(() => net.holdSession === undefined, "the session read in flight");
+    expect(await refreshSession(request)).toBe("signed_in");
+    expect(store.deps()).toBeUndefined();
+    release();
+    await booting;
   });
 
   it("a failed read says so and offers to retry; nothing partial is shown", async () => {

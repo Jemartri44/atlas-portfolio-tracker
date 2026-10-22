@@ -211,11 +211,9 @@ export const draftOf = (event: LedgerEvent): Record<string, unknown> => {
   return rest;
 };
 
-/** A year given as an argument: an integer, or `undefined` for anything else (a missing word included). */
-export const yearArgument = (raw: string | undefined): number | undefined => {
-  const year = Number(raw);
-  return Number.isInteger(year) ? year : undefined;
-};
+/** A year given as an argument: up to four digits without a leading zero, or `undefined` for anything else (`0`, `1e3`, a missing word). */
+export const yearArgument = (raw: string | undefined): number | undefined =>
+  raw !== undefined && /^[1-9]\d{0,3}$/.test(raw) ? Number(raw) : undefined;
 
 export const render = (ctx: Context, data: unknown, text: string): void => {
   ctx.io.out(ctx.json ? JSON.stringify(data, null, 2) : text);

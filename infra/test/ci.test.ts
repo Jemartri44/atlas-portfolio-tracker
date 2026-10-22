@@ -37,6 +37,14 @@ describe("the infra job of the CI", () => {
     expect(text).toContain("terraform_version: 1.16.5");
   });
 
+  it("pins the actions of the whole workflow by SHA, not only those of this job", () => {
+    const uses = [...workflow.matchAll(/^\s+- uses: (\S+)/gm)].map((match) => match[1] ?? "");
+    expect(uses.length).toBeGreaterThan(3);
+    for (const use of uses) {
+      expect(use, use).toMatch(/^[\w./-]+@[0-9a-f]{40}$/);
+    }
+  });
+
   it("runs the infra suite, and test:others leaves it out so verify needs no Terraform", () => {
     expect(text).toContain("npm run test:infra");
     const scripts = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8"))
