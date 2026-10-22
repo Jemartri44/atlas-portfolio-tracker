@@ -17,13 +17,13 @@
 
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
-import type {
-  DownloadedHistory,
-  EcbHistoryStore,
-  StoredHistory,
-  StoredHistoryMeta,
+import {
+  activeHistoryOf,
+  type DownloadedHistory,
+  type EcbHistoryStore,
+  type StoredHistory,
+  type StoredHistoryMeta,
 } from "@atlas/domain/ecb";
-import { activeHistoryOf } from "@atlas/domain/jobs";
 import { sha256Bytes } from "../hash.js";
 import { nodeFileOps, writeFileAtomically } from "../ledger-store/file-ops.js";
 import { type HeldLock, withFolderLock } from "../ledger-store/folder-lock.js";
