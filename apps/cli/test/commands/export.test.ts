@@ -1,6 +1,6 @@
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { link, mkdir, mkdtemp, readdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { toCsv } from "../../src/commands/export.js";
 import { BUY_WORLD, harness, seed } from "../harness.js";
@@ -42,10 +42,25 @@ describe("atlas export", () => {
       return { h, ledger, other };
     };
 
-    it("never replaces the ledger, not even with --yes", async () => {
+    it("never replaces the ledger, not even through a link, not even with --yes", async () => {
       const { h, ledger } = await setup(true);
-      expect(await h.exec(["--yes", "export", "--format", "csv", "--out", ledger])).not.toBe(0);
-      expect(await readFile(ledger, "utf8")).toBe("LEDGER\n");
+      const dir = dirname(ledger);
+      await symlink(ledger, join(dir, "soft.csv"));
+      await link(ledger, join(dir, "hard.csv"));
+      for (const target of [ledger, join(dir, "soft.csv"), join(dir, "hard.csv")]) {
+        h.reset();
+        expect(await h.exec(["--yes", "export", "--format", "csv", "--out", target])).toBe(1);
+        expect(h.text()).toContain("es el propio libro");
+        expect(await readFile(ledger, "utf8")).toBe("LEDGER\n");
+      }
+    });
+
+    it("refuses a directory and leaves no temporary behind", async () => {
+      const { h, ledger } = await setup(true);
+      const folder = join(dirname(ledger), "folder");
+      await mkdir(folder);
+      expect(await h.exec(["--yes", "export", "--out", folder])).toBe(1);
+      expect(await readdir(dirname(ledger))).not.toContainEqual(expect.stringContaining(".tmp-"));
     });
 
     it("asks before replacing another file, and leaves it alone unless told yes", async () => {

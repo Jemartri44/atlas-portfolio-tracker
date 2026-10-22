@@ -1,6 +1,6 @@
 // atlas export --format jsonl|csv [--out <ruta>]: the whole ledger, reversed events included.
 
-import { readFile, rename, stat, writeFile } from "node:fs/promises";
+import { readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import {
   DomainError,
   decodeLines,
@@ -94,14 +94,19 @@ export const exportCommand = async (
     ctx.io.out(content.endsWith("\n") ? content.slice(0, -1) : content);
     return 0;
   }
+  const exists = await pathExists(out);
+  // Before any question: this one has no «yes».
+  if (exists && (await sameFile(out, ctx.ledgerPath))) {
+    throw new DomainError("export_over_ledger", `${out} is the ledger`, { path: out });
+  }
+  if (exists && (await stat(out)).isDirectory()) {
+    throw new DomainError("path_exists", `${out} is a directory`, { path: out });
+  }
   if (!(await confirmOutsideRepository(ctx, out))) {
     ctx.io.out("Cancelado.");
     return 0;
   }
-  if (await pathExists(out)) {
-    if (await sameFile(out, ctx.ledgerPath)) {
-      throw new DomainError("path_exists", `${out} is the ledger`, { path: out });
-    }
+  if (exists) {
     ctx.io.out(`${out} ya existe y se sustituiría.`);
     if (!(await confirm(ctx, "¿Sobrescribir? [s/N] "))) {
       ctx.io.out("Cancelado.");
@@ -110,8 +115,13 @@ export const exportCommand = async (
   }
   // Whole or not at all: a cut leaves the previous file, never half of the new one.
   const temporary = `${out}.tmp-${process.pid}-${Date.now()}`;
-  await writeFile(temporary, content, { mode: 0o600 });
-  await rename(temporary, out);
+  try {
+    await writeFile(temporary, content, { mode: 0o600, flag: "wx" });
+    await rename(temporary, out);
+  } catch (failure) {
+    await rm(temporary, { force: true });
+    throw failure;
+  }
   ctx.io.out(`Exportado a ${out}.`);
   return 0;
 };
