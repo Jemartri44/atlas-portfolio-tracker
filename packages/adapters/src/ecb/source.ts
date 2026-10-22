@@ -11,7 +11,7 @@
 // origins hold it.
 
 import type { DownloadedHistory, FxRateSource } from "@atlas/domain/ecb";
-import { entryOfZip } from "./zip.js";
+import { entryOfZip, MAX_ENTRY_BYTES } from "./zip.js";
 
 export const ECB_ZIP_URL = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.zip";
 /** Every daily series against the euro, values only, oldest first. */
@@ -38,6 +38,7 @@ export class EcbFxRateSource implements FxRateSource {
   constructor(
     private readonly fetchUrl: Fetch = (url) => fetch(url),
     private readonly now: () => Date = () => new Date(),
+    private readonly maxBytes: number = MAX_ENTRY_BYTES,
   ) {}
 
   private async bytesOf(url: string): Promise<Uint8Array> {
@@ -45,7 +46,17 @@ export class EcbFxRateSource implements FxRateSource {
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
-    return new Uint8Array(await response.arrayBuffer());
+    // Read in chunks and stop at the cap: a download never fills the memory.
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    for await (const chunk of response.body ?? []) {
+      total += chunk.length;
+      if (total > this.maxBytes) {
+        throw new Error(`more than ${this.maxBytes} bytes`);
+      }
+      chunks.push(chunk);
+    }
+    return new Uint8Array(Buffer.concat(chunks));
   }
 
   async download(): Promise<DownloadedHistory> {
