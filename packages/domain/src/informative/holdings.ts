@@ -72,6 +72,7 @@ export const accountsAt = (
 ): { accounts: Map<AccountId, AccountAt>; changed: AccountId[] } => {
   const accounts = new Map<AccountId, AccountAt>();
   const countries = new Map<AccountId, Set<string>>();
+  const created = new Set<AccountId>();
   for (const event of events) {
     if (event.type !== "account_created" && event.type !== "account_updated") {
       continue;
@@ -81,7 +82,12 @@ export const accountsAt = (
       entry.account_id,
       (countries.get(entry.account_id) ?? new Set<string>()).add(entry.country),
     );
-    if (madridDateOf(entry.recorded_at) > date) {
+    // The first entry is the account itself: it existed whenever it was
+    // recorded, and its operations are dated by their own business date. Only
+    // the later changes (country, active) are dated by the day they were recorded.
+    const first = !created.has(entry.account_id);
+    created.add(entry.account_id);
+    if (!first && madridDateOf(entry.recorded_at) > date) {
       continue;
     }
     accounts.set(entry.account_id, {

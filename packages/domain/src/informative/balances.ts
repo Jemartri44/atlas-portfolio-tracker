@@ -53,6 +53,8 @@ const accountsNamed = (event: LedgerEvent): AccountId[] => {
   ].filter((id): id is AccountId => id !== undefined);
 };
 
+const BEGINNING: CivilDate = "0000-01-01";
+
 /** The days on which an account stops or starts being active, by the day it was recorded. */
 const activityChanges = (
   events: readonly LedgerEvent[],
@@ -63,9 +65,12 @@ const activityChanges = (
       continue;
     }
     const entry = event as AccountCreatedEvent;
+    const earlier = changes.get(entry.account_id) ?? [];
+    // The account itself is there from the start, however late it was recorded;
+    // only the changes after it are dated by the day they were recorded.
     changes.set(entry.account_id, [
-      ...(changes.get(entry.account_id) ?? []),
-      [madridDateOf(entry.recorded_at), entry.active],
+      ...earlier,
+      [earlier.length === 0 ? BEGINNING : madridDateOf(entry.recorded_at), entry.active],
     ]);
   }
   return changes;
