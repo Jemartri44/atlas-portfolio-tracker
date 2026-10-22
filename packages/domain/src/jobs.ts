@@ -6,6 +6,12 @@
 // here. Pure. The barrel never re-exports any of it, and neither the web nor
 // the API reach it (`tests/jobs-access.test.ts`; `check-bundle.mjs`).
 
+export {
+  type ActiveHistory,
+  activeHistoryOf,
+  type PreviousHistory,
+  previousHistoryOf,
+} from "./ecb/manifest.js";
 export { isMailAddress } from "./jobs/address.js";
 export { type AmountsSwitch, amountsSwitch } from "./jobs/amounts.js";
 export {
@@ -42,12 +48,6 @@ export {
   type PricesConfig,
   parseJobsConfig,
 } from "./jobs/config.js";
-export {
-  type ActiveHistory,
-  activeHistoryOf,
-  type PreviousHistory,
-  previousHistoryOf,
-} from "./jobs/ecb-manifest.js";
 export { type EcbRecovery, ecbRecovery } from "./jobs/ecb-recovery.js";
 export { type JobEvent, type JobEventRefusal, parseJobEvent } from "./jobs/event.js";
 export { ecbFindings, PRODUCER_FINDINGS, pricesFindings } from "./jobs/findings.js";

@@ -1,7 +1,7 @@
 // Feature 016, E1: the file in force of the ECB history, from its manifest.
 
 import { describe, expect, it } from "vitest";
-import { activeHistoryOf, previousHistoryOf } from "../../src/jobs/ecb-manifest.js";
+import { activeHistoryOf, previousHistoryOf } from "../../src/ecb/manifest.js";
 
 const SHA = "a".repeat(64);
 const manifest = (active: unknown) => JSON.stringify({ active, rejected: [] });

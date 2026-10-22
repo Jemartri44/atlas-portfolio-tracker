@@ -124,7 +124,6 @@ export {
   type NetWorthSeries,
   netWorthSeries,
   type SeriesOptions,
-  sampleEvenly,
 } from "./projections/series.js";
 export { type SettingsResolution, settingsAt } from "./projections/settings-at.js";
 export {

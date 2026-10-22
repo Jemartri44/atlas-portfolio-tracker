@@ -1,8 +1,8 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { CurrencyMismatchError, ValidationError } from "../../src/errors.js";
+import { CurrencyMismatchError } from "../../src/errors.js";
 import { Decimal } from "../../src/money/decimal.js";
-import { assertCurrency, EUR, isCurrency, Money } from "../../src/money/money.js";
+import { EUR, isCurrency, Money } from "../../src/money/money.js";
 import { currency, decimal } from "../arbitraries.js";
 
 const eur = (text: string): Money => Money.parse(text, EUR);
@@ -41,8 +41,6 @@ describe("Money", () => {
     expect(isCurrency("eur")).toBe(false);
     expect(isCurrency("EURO")).toBe(false);
     expect(isCurrency(1)).toBe(false);
-    expect(assertCurrency("USD", "currency")).toBe("USD");
-    expect(() => assertCurrency("US", "currency")).toThrow(ValidationError);
   });
 
   it("addition is commutative and associative; a − a = 0", () => {

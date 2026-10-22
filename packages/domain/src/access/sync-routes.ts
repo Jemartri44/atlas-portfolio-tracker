@@ -38,7 +38,7 @@ const REFERENCE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const PRICE_FILES: readonly string[] = ["symbols.json"];
 
 /** The longest name of a price file: what a file system names (feature 016, §8.2 M1). */
-export const MAX_PRICE_NAME = 255;
+const MAX_PRICE_NAME = 255;
 
 /**
  * Whether `name` is **exactly what `priceFileName` writes** for some asset:
@@ -59,7 +59,7 @@ const isPriceFileName = (name: string): boolean => {
 };
 
 /** Whether a name of `kind` may be served: the rule of each prefix, decided before S3 (§6). */
-export const isReferenceName = (kind: ReferenceKind, name: string): boolean =>
+const isReferenceName = (kind: ReferenceKind, name: string): boolean =>
   kind === "prices"
     ? PRICE_FILES.includes(name) || isPriceFileName(name)
     : REFERENCE_NAME.test(name) && !name.includes("..");
