@@ -21,7 +21,7 @@ import { priorYearWarning } from "../output/messages.js";
 import { ADD_SPECS } from "./add.js";
 import { requireId } from "./catalogue.js";
 import { confirmRates, rateDraft } from "./rates.js";
-import { confirm, draftOf, fieldOf, preview } from "./shared.js";
+import { answer, aside, cancelled, confirm, draftOf, fieldOf, preview } from "./shared.js";
 
 /**
  * Which filed returns a rectification reaches, said **before** the question.
@@ -131,16 +131,16 @@ export const editCommand = async (
   // The corrected line carries its rate like a new one: if it is not the
   // official one, it asks the same explicit yes (feature 012, block 3).
   if (!(await confirmRates(ctx, (await rateDraft(ctx, draft)).mismatches))) {
-    ctx.io.out("Cancelado.");
+    cancelled(ctx);
     return 0;
   }
   for (const line of await closedNotes(ctx, () =>
     previewCorrection(ctx.deps, id, draft as unknown as Draft<SupportedEvent>, reason),
   )) {
-    ctx.io.out(line);
+    aside(ctx, line);
   }
   if (!(await confirm(ctx, "¿Rectificar? [s/N] "))) {
-    ctx.io.out("Cancelado.");
+    cancelled(ctx);
     return 0;
   }
   const result = await correctEvent(
@@ -150,16 +150,24 @@ export const editCommand = async (
     reason,
     { confirmDuplicate: ctx.confirmDuplicate },
   );
-  ctx.io.out(`Registrados ${summarize(result.reversal)} y ${summarize(result.event)}.`);
+  aside(ctx, `Registrados ${summarize(result.reversal)} y ${summarize(result.event)}.`);
   if (result.priorYear) {
-    ctx.io.out(priorYearWarning);
+    aside(ctx, priorYearWarning);
   }
   for (const line of [
     ...describeWarnings(result.warnings),
     ...unfiledYearsNote(result.unfiledPastYears),
   ]) {
-    ctx.io.out(line);
+    aside(ctx, line);
   }
+  answer(ctx, {
+    status: "recorded",
+    reversal: result.reversal,
+    event: result.event,
+    prior_year: result.priorYear,
+    warnings: result.warnings,
+    unfiled_past_years: result.unfiledPastYears,
+  });
   return 0;
 };
 
@@ -180,19 +188,25 @@ export const deleteCommand = async (
   const target = findEvent(events, id);
   preview(ctx, `Evento a anular ${summarize(target)}:`, draftOf(target));
   for (const line of await closedNotes(ctx, () => previewReversal(ctx.deps, id, reason))) {
-    ctx.io.out(line);
+    aside(ctx, line);
   }
   if (!(await confirm(ctx, "¿Anular? [s/N] "))) {
-    ctx.io.out("Cancelado.");
+    cancelled(ctx);
     return 0;
   }
   const result = await reverseEvent(ctx.deps, id, reason);
-  ctx.io.out(`Registrado ${summarize(result.reversal)}.`);
+  aside(ctx, `Registrado ${summarize(result.reversal)}.`);
   if (result.priorYear) {
-    ctx.io.out(priorYearWarning);
+    aside(ctx, priorYearWarning);
   }
   for (const line of unfiledYearsNote(result.unfiledPastYears)) {
-    ctx.io.out(line);
+    aside(ctx, line);
   }
+  answer(ctx, {
+    status: "recorded",
+    reversal: result.reversal,
+    prior_year: result.priorYear,
+    unfiled_past_years: result.unfiledPastYears,
+  });
   return 0;
 };

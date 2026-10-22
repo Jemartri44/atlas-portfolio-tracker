@@ -58,7 +58,14 @@ import { synthCommand } from "./commands/synth.js";
 import { taxCommand } from "./commands/tax.js";
 import { thesisCommand } from "./commands/thesis.js";
 import { orderCommand, transferCommand } from "./commands/tracking.js";
-import { type Command, ConfirmationRequired, type Context, EXIT, type Io } from "./context.js";
+import {
+  type Command,
+  ConfirmationRequired,
+  type Context,
+  EXIT,
+  type Io,
+  type PromptOptions,
+} from "./context.js";
 import {
   CloudLedgerStore,
   CloudSessionError,
@@ -245,14 +252,17 @@ const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   random: webCryptoRandom,
 });
 
+const promptOutput = (options: PromptOptions | undefined) =>
+  options?.aside === true ? process.stderr : process.stdout;
+
 export const terminalIo = (): Io => ({
   out: (text) => process.stdout.write(`${text}\n`),
   err: (text) => process.stderr.write(`${text}\n`),
-  confirm: async (question) => {
+  confirm: async (question, options) => {
     if (!process.stdin.isTTY) {
       return undefined;
     }
-    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const rl = createInterface({ input: process.stdin, output: promptOutput(options) });
     try {
       const answer = (await rl.question(question)).trim().toLowerCase();
       return answer === "s" || answer === "si" || answer === "sí" || answer === "y";
@@ -260,11 +270,11 @@ export const terminalIo = (): Io => ({
       rl.close();
     }
   },
-  ask: async (question) => {
+  ask: async (question, options) => {
     if (!process.stdin.isTTY) {
       return undefined;
     }
-    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const rl = createInterface({ input: process.stdin, output: promptOutput(options) });
     try {
       return (await rl.question(question)).trim();
     } finally {

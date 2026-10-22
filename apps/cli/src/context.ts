@@ -7,17 +7,22 @@ import { describeWarning } from "./output/messages.js";
 import type { PriceEnvironment } from "./prices/load.js";
 import type { RemoteEnvironment } from "./remote/environment.js";
 
+/** Where a question is written: `aside` puts it on stderr, so `--json` keeps stdout for the answer. */
+export interface PromptOptions {
+  aside?: boolean;
+}
+
 export interface Io {
   out(text: string): void;
   err(text: string): void;
   /** Resolves undefined when there is no interactive terminal to ask. */
-  confirm(question: string): Promise<boolean | undefined>;
+  confirm(question: string, options?: PromptOptions): Promise<boolean | undefined>;
   /**
    * A line typed by the user, for the confirmations that ask for a word and
    * not a yes (`atlas admin`: the name of the environment). Undefined, or
    * absent, when there is no interactive terminal to ask.
    */
-  ask?(question: string): Promise<string | undefined>;
+  ask?(question: string, options?: PromptOptions): Promise<string | undefined>;
   /**
    * A line typed **with no echo** (`atlas admin secrets`): never shown, never
    * kept. Undefined, or absent, when there is no interactive terminal.

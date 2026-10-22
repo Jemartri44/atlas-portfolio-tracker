@@ -85,9 +85,29 @@ export const dateFlag = (ctx: Context, flags: Flags): CivilDate => {
   return raw;
 };
 
+/**
+ * What the person must read before a yes. With `--json` stdout carries only the
+ * answer (`answer`), so this goes to stderr, still on the screen.
+ */
+export const aside = (ctx: Context, text: string): void =>
+  (ctx.json ? ctx.io.err : ctx.io.out)(text);
+
+/** The one object a `--json` write leaves on stdout; nothing without `--json`. */
+export const answer = (ctx: Context, data: unknown): void => {
+  if (ctx.json) {
+    ctx.io.out(JSON.stringify(data, null, 2));
+  }
+};
+
+/** A write that was not made because the person said no. */
+export const cancelled = (ctx: Context, data: Record<string, unknown> = {}): void => {
+  aside(ctx, "Cancelado.");
+  answer(ctx, { ...data, status: "cancelled" });
+};
+
 export const preview = (ctx: Context, title: string, draft: Record<string, unknown>): void => {
-  ctx.io.out(title);
-  ctx.io.out(keyValue(draft));
+  aside(ctx, title);
+  aside(ctx, keyValue(draft));
 };
 
 /** Asks unless --yes; throws ConfirmationRequired when it cannot ask. Returns false when the user declines. */
@@ -95,11 +115,11 @@ export const confirm = async (ctx: Context, question: string): Promise<boolean> 
   if (ctx.yes) {
     return true;
   }
-  const answer = await ctx.io.confirm(question);
-  if (answer === undefined) {
+  const reply = await ctx.io.confirm(question, { aside: ctx.json });
+  if (reply === undefined) {
     throw new ConfirmationRequired();
   }
-  return answer;
+  return reply;
 };
 
 /**
@@ -165,10 +185,10 @@ export const confirmAndRecord = async (
 ): Promise<RecordResult | undefined> => {
   preview(ctx, "Evento a registrar:", draft);
   for (const note of [...brokerNote(draft), ...notes, ...(await closedYearNotes(ctx, draft))]) {
-    ctx.io.out(note);
+    aside(ctx, note);
   }
   if (!(await confirm(ctx, "¿Registrar? [s/N] "))) {
-    ctx.io.out("Cancelado.");
+    cancelled(ctx);
     return undefined;
   }
   const result = await write(
@@ -183,9 +203,10 @@ export const confirmAndRecord = async (
         }
       : { confirmDuplicate: ctx.confirmDuplicate },
   );
-  ctx.io.out(`Registrado ${summarize(result.event)}.`);
+  aside(ctx, `Registrado ${summarize(result.event)}.`);
   if (result.newlyInvalid.length > 0) {
-    ctx.io.out(
+    aside(
+      ctx,
       `${result.newlyInvalid.length} eventos registrados quedan inválidos bajo la configuración nueva; las consultas lo avisarán. Ejecuta \`atlas check\`.`,
     );
   }
@@ -193,8 +214,15 @@ export const confirmAndRecord = async (
     ...describeWarnings(result.warnings),
     ...unfiledYearsNote(result.unfiledPastYears),
   ]) {
-    ctx.io.out(line);
+    aside(ctx, line);
   }
+  answer(ctx, {
+    status: "recorded",
+    event: result.event,
+    warnings: result.warnings,
+    newly_invalid: result.newlyInvalid,
+    unfiled_past_years: result.unfiledPastYears,
+  });
   return result;
 };
 
@@ -312,7 +340,8 @@ export const confirmOutsideRepository = async (
   if (repository === undefined) {
     return true;
   }
-  ctx.io.out(
+  aside(
+    ctx,
     `El destino está dentro del repositorio ${repository}: un fichero con datos reales podría acabar en un commit.`,
   );
   return confirm(ctx, "¿Escribir de todas formas? [s/N] ");
