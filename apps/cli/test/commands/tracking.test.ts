@@ -228,6 +228,6 @@ describe("atlas transfer", () => {
         "--yes",
       ]),
     ).toBe(1);
-    expect(h.text()).toContain("traspasables");
+    expect(h.text()).toContain("solo existe entre fondos");
   });
 });

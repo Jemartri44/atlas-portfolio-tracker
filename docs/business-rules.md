@@ -161,7 +161,7 @@ Los fondos de inversión españoles y los UCITS comercializados en España admit
 
 **Modelarlo como venta seguida de compra rompe la fiscalidad de forma silenciosa durante años.** Es el error más caro posible en este sistema.
 
-Los ETFs, ETCs y ETPs (oro, cripto y todo el cubo) **no** admiten traspaso: cada venta es hecho imponible.
+Los ETFs, ETCs y ETPs (oro, cripto y todo el cubo) **no** admiten traspaso: cada venta es hecho imponible (art. 94.1.a LIRPF: el diferimiento es solo para fondos de inversión). El motor lo hace cumplir: un `transfer` o `transfer_requested` entre activos distintos solo se **registra** si ambos son `fund` o `money_market` y están marcados `transferable` (en otro caso se rechaza con `not_transferable`). Al **reproducir** un libro que ya lo contenía no se bloquea la carga: sale el aviso `transfer_not_between_funds` en la atención, con el texto de registrarlo como venta y compra. Un catálogo con `transferable: true` en otro tipo de activo también carga, con el aviso `transferable_not_fund`.
 
 ### 5.3 FIFO
 
@@ -263,7 +263,7 @@ La fecha que determina el ejercicio, la antigüedad del lote, el tipo de cambio 
 - **España no fracciona el ejercicio**: se es residente o no residente para el año completo.
 - Perder la residencia fiscal **elimina el derecho al traspaso**, que es la base de toda la arquitectura de vehículos.
 
-→ La residencia fiscal es un campo de configuración (`tax_residence`), no una constante. Un cambio invalida las funciones de traspaso.
+→ La residencia fiscal es un campo de configuración (`tax_residence`), no una constante. Un cambio invalida las funciones de traspaso: con `tax_residence` distinta de `ES` (vigente el día de registro), el traspaso se rechaza al registrarlo y avisa al reproducirlo (`transfer_not_resident`), y el simulador se niega. `ES` se lee sin distinguir mayúsculas ni espacios; vacío cuenta como `ES`. La residencia vigente se resuelve por día de Madrid.
 
 ### 5.11 Las casillas de la Renta son datos por ejercicio
 
