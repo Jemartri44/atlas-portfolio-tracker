@@ -65,6 +65,9 @@ describe("atlas export", () => {
         await writeFile(file, "KEEP\n");
       }
       await symlink(guarded[0] as string, join(dir, "alias.csv"));
+      const outside = await mkdtemp(join(tmpdir(), "atlas-export-other-"));
+      await symlink(join(outside, "gone.csv"), join(dir, "dangling.csv"));
+      await symlink(outside, join(dir, "linked"));
       for (const target of [
         ...guarded,
         join(dir, "alias.csv"),

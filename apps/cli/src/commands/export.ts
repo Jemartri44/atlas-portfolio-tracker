@@ -1,7 +1,7 @@
 // atlas export --format jsonl|csv [--out <ruta>]: the whole ledger, reversed events included.
 
-import { readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, relative } from "node:path";
+import { lstat, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import {
   DomainError,
   decodeLines,
@@ -34,12 +34,29 @@ const csvCell = (value: unknown): string => {
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 };
 
-/** Whether an existing file sits inside the ledger folder (symlinks and `..` resolved): credentials, sync state, config, backups. */
+/**
+ * Whether `file` is an entry of the ledger folder (credentials, sync state,
+ * config, backups): the entry itself, even a link pointing elsewhere or a
+ * dangling one, or whatever it resolves to. `rename` replaces the entry.
+ */
 const inLedgerFolder = async (file: string, ledgerPath: string): Promise<boolean> => {
-  try {
-    const [target, folder] = await Promise.all([realpath(file), realpath(dirname(ledgerPath))]);
+  const inside = (folder: string, target: string): boolean => {
     const path = relative(folder, target);
     return path !== "" && !path.startsWith("..") && !isAbsolute(path);
+  };
+  try {
+    const folder = await realpath(dirname(ledgerPath));
+    const entry = join(await realpath(dirname(resolve(file))), basename(file));
+    if (
+      inside(folder, entry) &&
+      (await lstat(entry).then(
+        () => true,
+        () => false,
+      ))
+    ) {
+      return true;
+    }
+    return inside(folder, await realpath(file));
   } catch {
     return false;
   }
