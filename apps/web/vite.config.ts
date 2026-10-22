@@ -245,6 +245,8 @@ export default defineConfig(({ command }) => ({
   worker: { plugins: () => [moduleGraph("worker")] },
   build: {
     target: "es2022",
+    // Without the polyfill, browsers lacking native modulepreload only lose a preload hint.
+    modulePreload: { polyfill: false },
     sourcemap: true,
     /*
      * **An asset that is a source of code is not inlined by size** (round 4
