@@ -1,6 +1,6 @@
 # Sistema de diseño de Atlas: «papel y tinta»
 
-> **Estado.** Aprobado por la dirección el 2026-09-19, con las decisiones D1–D13 de §8 y la barra de proporción del patrimonio. La especificación de partida es [`brief.md`](brief.md), entero. La referencia visual exacta es el prototipo estático de [`prototype/`](prototype/): HTML y CSS con los datos de ejemplo de la sección 9 del encargo, generados con `node prototype/build.mjs`. Las capturas de referencia se guardan fuera del repositorio.
+> **Estado.** Aprobado por la dirección el 2026-09-19, con las decisiones D1–D13 de §8 y la barra de proporción del patrimonio. La especificación de partida es [`brief.md`](brief.md), entero. La referencia visual exacta fue un prototipo estático (HTML y CSS con los datos de ejemplo de la sección 9 del encargo), retirado del árbol y recuperable en el historial de git (`git log -- docs/design/prototype`); hoy la referencia es `apps/web/src/styles/`. Las capturas de referencia se guardan fuera del repositorio.
 >
 > **Cómo leerlo.** §1 es el diagnóstico de la base anterior y por qué se quitó Pico (ADR-0023). §2 a §5 son el sistema: dirección, variables, maquetación y componentes. §6 es el vocabulario. §7 describe la composición de cada pantalla. §8 recoge las decisiones tomadas. §9 dice dónde vive cada cosa en el código.
 
@@ -170,7 +170,7 @@ Desde 1024 px, 12 columnas con espacio de 20 y clases `span-N`. Las tarjetas de 
 
 ## 5. Componentes
 
-La hoja visual es `prototype/componentes.html`.
+La hoja visual de componentes estaba en el prototipo retirado; hoy son los estilos de `apps/web/src/styles/`.
 
 ### 5.1 Tarjeta (`.card`)
 
