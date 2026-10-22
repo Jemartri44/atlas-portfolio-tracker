@@ -12,7 +12,7 @@ import { A } from "@solidjs/router";
 import { createMemo, type JSX, Show, untrack } from "solid-js";
 import { Notice, Skeleton } from "../components/index.js";
 import type { LedgerSnapshot } from "../ledger/state.js";
-import { store } from "../ledger/state.js";
+import { store, today } from "../ledger/state.js";
 import { SessionNotice } from "../shell/SessionNotice.jsx";
 
 interface RequireLedgerProps {
@@ -49,12 +49,19 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
    * person saw belongs to the ledger it was built on.
    */
   let held: LedgerSnapshot | undefined;
+  let heldDay = "";
   const painted = createMemo<LedgerSnapshot | undefined>(() => {
     const next = loaded();
-    if (held !== undefined && (untrack(store.writing) || next?.etag === held.etag)) {
+    // A new day in Madrid repaints from scratch: the screens value the portfolio at today's date.
+    const day = today();
+    if (
+      held !== undefined &&
+      (untrack(store.writing) || (day === heldDay && next?.etag === held.etag))
+    ) {
       return held;
     }
     held = next;
+    heldDay = day;
     return next;
   });
 
