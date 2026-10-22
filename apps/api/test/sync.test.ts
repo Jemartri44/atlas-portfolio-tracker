@@ -5,6 +5,7 @@
 // its own object and never brings it back.
 
 import { createHash } from "node:crypto";
+import { gunzipSync } from "node:zlib";
 import { newDevice, serializeDeviceObject } from "@atlas/domain/access";
 import { EMPTY_ETAG } from "@atlas/domain/sync";
 import { describe, expect, it } from "vitest";
@@ -590,6 +591,65 @@ describe("the reference data (§6)", () => {
       expect(again.statusCode).toBe(304);
       expect(again.body).toBe("");
     }
+  });
+
+  it("compresses a large history for a client that accepts gzip, with the same version", async () => {
+    const api = setup();
+    const { token } = await credentials(api);
+    // Rates that do not repeat, as the real history does: a repeated line would compress to nothing.
+    let seed = 12345;
+    const next = () => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed;
+    };
+    const rows = Array.from(
+      { length: 400_000 },
+      () => `2026-09-25,${(next() % 100000) / 10000},${(next() % 1000000) / 10000}\n`,
+    );
+    const csv = `Date,USD,JPY\n${rows.join("")}`;
+    api.s3.seed("reference/ecb/api-exr.csv", csv);
+    const plain = await read(api, token, "/api/reference/ecb/api-exr.csv");
+    const packed = await read(api, token, "/api/reference/ecb/api-exr.csv", {
+      "accept-encoding": "gzip, deflate, br",
+    });
+    expect(packed.statusCode).toBe(200);
+    expect(packed.isBase64Encoded).toBe(true);
+    expect(packed.headers["content-encoding"]).toBe("gzip");
+    expect(packed.headers.vary).toBe("accept-encoding");
+    expect(packed.headers.etag).toBe(plain.headers.etag);
+    expect(gunzipSync(Buffer.from(packed.body, "base64")).toString("utf8")).toBe(csv);
+    // Under the 6 MB of the Function URL, which the plain CSV (some 10 MB here) would exceed.
+    expect(csv.length).toBeGreaterThan(9 * 1024 * 1024);
+    expect(packed.body.length).toBeLessThan(6 * 1024 * 1024);
+    expect(plain.headers["content-encoding"]).toBeUndefined();
+    expect(plain.body).toBe(csv);
+  });
+
+  it("does not compress for a client that refuses or does not name gzip", async () => {
+    const api = setup();
+    const { token } = await credentials(api);
+    api.s3.seed("reference/ecb/api-exr.csv", "x".repeat(300_000));
+    for (const header of ["gzip;q=0", "x-gzip", "br, deflate", "identity"]) {
+      const answer = await read(api, token, "/api/reference/ecb/api-exr.csv", {
+        "accept-encoding": header,
+      });
+      expect(answer.headers["content-encoding"], header).toBeUndefined();
+    }
+    const weighted = await read(api, token, "/api/reference/ecb/api-exr.csv", {
+      "accept-encoding": "br;q=1.0, gzip;q=0.5",
+    });
+    expect(weighted.headers["content-encoding"]).toBe("gzip");
+  });
+
+  it("does not compress a small file even when gzip is accepted", async () => {
+    const api = setup();
+    const { token } = await credentials(api);
+    api.s3.seed("reference/ecb/eurofxref-hist.csv", "Date,USD\n");
+    const answer = await read(api, token, "/api/reference/ecb/eurofxref-hist.csv", {
+      "accept-encoding": "gzip",
+    });
+    expect(answer.headers["content-encoding"]).toBeUndefined();
+    expect(answer.body).toBe("Date,USD\n");
   });
 
   it("refuses a name outside its prefix before touching S3, and nothing else is reachable", async () => {

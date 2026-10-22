@@ -38,7 +38,7 @@ import {
   textOfLines,
 } from "@atlas/domain/sync";
 import { fail, type Outcome } from "./outcome.js";
-import { bytes, json, notModified } from "./respond.js";
+import { bytes, bytesCompressed, json, notModified } from "./respond.js";
 
 /** The device a checked credential speaks for: the cookie's or the token's, never the body's. */
 export interface SyncCredential {
@@ -229,6 +229,7 @@ export const syncRoutes = (context: SyncContext) => {
     kind: ReferenceKind,
     name: string,
     ifNoneMatch: string | undefined,
+    acceptEncoding?: string,
   ): Promise<Outcome> => {
     const key = referenceKey(kind, name);
     if ("code" in key) {
@@ -256,7 +257,14 @@ export const syncRoutes = (context: SyncContext) => {
     if (ifNoneMatchHits(ifNoneMatch, version)) {
       return { result: notModified(headers), code: "not_modified" };
     }
-    return { result: bytes(200, stored.body, { ...headers, "content-type": type }) };
+    return {
+      result: bytesCompressed(
+        200,
+        stored.body,
+        { ...headers, "content-type": type },
+        acceptEncoding,
+      ),
+    };
   };
 
   return {
