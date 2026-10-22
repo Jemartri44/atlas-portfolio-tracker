@@ -24,6 +24,7 @@ import type {
   StoredHistory,
   StoredHistoryMeta,
 } from "@atlas/domain/ecb";
+import { nodeFileOps, writeFileAtomically } from "../ledger-store/file-ops.js";
 import { type HeldLock, withFolderLock } from "../ledger-store/folder-lock.js";
 
 export const ECB_DIR = join("reference", "ecb");
@@ -85,20 +86,7 @@ export class FileEcbHistoryStore implements EcbHistoryStore {
 
   /** Writes `bytes` at `path` atomically: a temporary file, synced, renamed. */
   private async writeAtomically(path: string, bytes: Uint8Array, lock: HeldLock): Promise<void> {
-    const temporary = `${path}.tmp-${process.pid}-${Date.now()}`;
-    const handle = await fs.open(temporary, "wx");
-    try {
-      await handle.writeFile(bytes);
-      await handle.sync();
-    } finally {
-      await handle.close();
-    }
-    try {
-      await lock.assertOwned();
-      await fs.rename(temporary, path);
-    } finally {
-      await fs.rm(temporary, { force: true });
-    }
+    await writeFileAtomically(nodeFileOps, path, bytes, lock);
   }
 
   private metaOf(next: DownloadedHistory, file: string): StoredHistoryMeta {

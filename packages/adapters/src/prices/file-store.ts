@@ -24,6 +24,7 @@ import {
   type PriceTransaction,
   priceFileName,
 } from "@atlas/domain/quotes";
+import { nodeFileOps, writeFileAtomically } from "../ledger-store/file-ops.js";
 import { type HeldLock, LedgerLockedError, withFolderLock } from "../ledger-store/folder-lock.js";
 
 export const PRICES_DIR = "prices";
@@ -78,20 +79,7 @@ export class FilePriceStore implements PriceStore {
 
   private async writeAtomically(path: string, text: string, lock: HeldLock): Promise<void> {
     await fs.mkdir(this.dir, { recursive: true });
-    const temporary = `${path}.tmp-${process.pid}-${Date.now()}`;
-    const handle = await fs.open(temporary, "wx");
-    try {
-      await handle.writeFile(text);
-      await handle.sync();
-    } finally {
-      await handle.close();
-    }
-    try {
-      await lock.assertOwned();
-      await fs.rename(temporary, path);
-    } finally {
-      await fs.rm(temporary, { force: true });
-    }
+    await writeFileAtomically(nodeFileOps, path, text, lock);
   }
 
   async transact<T>(work: (tx: FilePriceTransaction) => Promise<T>): Promise<T> {

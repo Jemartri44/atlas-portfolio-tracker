@@ -34,7 +34,7 @@ import {
   rawLinesText,
   ValidationError,
 } from "@atlas/domain";
-import { type FileOps, nodeFileOps, type WritableFile } from "./file-ops.js";
+import { type FileOps, nodeFileOps, type WritableFile, writeFileAtomically } from "./file-ops.js";
 import { type HeldLock, withFolderLock } from "./folder-lock.js";
 
 const NEWLINE = 0x0a;
@@ -141,21 +141,10 @@ export class FileLedgerStore implements LedgerStore {
    * likely and cannot make it impossible.
    */
   private async writeAtomically(bytes: Buffer, lock: HeldLock): Promise<void> {
-    const temporary = `${this.path}.tmp-${process.pid}-${Date.now()}`;
-    const handle = await this.ops.open(temporary, "w");
-    try {
-      await handle.writeFile(bytes);
-      await handle.sync();
-    } finally {
-      await handle.close();
-    }
-    try {
-      await this.options.beforeCommit?.();
-      await lock.assertOwned();
-      await this.ops.rename(temporary, this.path);
-    } finally {
-      await this.ops.rm(temporary);
-    }
+    await writeFileAtomically(this.ops, this.path, bytes, lock, {
+      flags: "w",
+      beforeCommit: this.options.beforeCommit,
+    });
   }
 
   async load(): Promise<LoadedLedger> {
@@ -216,20 +205,7 @@ export class FileLedgerStore implements LedgerStore {
     const target = join(this.folder, relativePath);
     const directory = dirname(target);
     await this.ops.mkdir(directory);
-    const temporary = `${target}.tmp-${process.pid}-${Date.now()}`;
-    const handle = await this.ops.open(temporary, "wx");
-    try {
-      await handle.writeFile(bytes);
-      await handle.sync();
-    } finally {
-      await handle.close();
-    }
-    try {
-      await lock.assertOwned();
-      await this.ops.rename(temporary, target);
-    } finally {
-      await this.ops.rm(temporary);
-    }
+    await writeFileAtomically(this.ops, target, bytes, lock);
     await this.ops.syncDir(directory);
   }
 
