@@ -411,7 +411,7 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     } ${
       d.accepted === 0
         ? "No se ha guardado nada."
-        : `Se han guardado ${Math.floor(Number(d.accepted) || 0)} líneas y el resto no. Puedes repetir la operación sin miedo: lo ya guardado se reconoce y no se duplica.`
+        : `Se han guardado ${Math.floor(Number(d.accepted) || 0)} líneas y el resto no. Mira el libro antes de repetir: lo ya guardado está y repetir la operación desde cero lo duplicaría.`
     }`,
   write_outcome_unknown: () =>
     "La conexión se cortó al guardar y no se sabe si la operación quedó registrada: antes de repetirla, comprueba el libro.",

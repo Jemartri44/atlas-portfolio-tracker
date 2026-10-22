@@ -543,11 +543,12 @@ describe("themeFromPreference", () => {
 });
 
 describe("describeError: a write that stayed in part", () => {
-  it("says how many lines were saved and that repeating is safe", () => {
+  it("says how many lines were saved and that repeating from scratch would duplicate them", () => {
     const partial = describeError(new RemoteRejectedError("partial_write", 101), {
       privacy: false,
     });
     expect(partial).toContain("101 líneas");
-    expect(partial).toContain("no se duplica");
+    expect(partial).toContain("Mira el libro antes de repetir");
+    expect(partial).not.toContain("no se duplica");
   });
 });
