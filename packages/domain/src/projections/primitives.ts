@@ -27,7 +27,7 @@ import {
 } from "./operations.js";
 import { accountsHolding, adjustPosition, positionOf } from "./positions.js";
 import type { Asset, FiscalLot, LedgerState } from "./state.js";
-import { noteAcquisition, warnPriorBuys } from "./wash-sale.js";
+import { noteAcquisition, warnPriorBuys, warnRepurchase } from "./wash-sale.js";
 
 export interface EffectContext {
   eventId: Ulid;
@@ -410,6 +410,14 @@ export const applyGrant = (
         fiscal_date: effect.acquisition_date,
         quantity: entry.quantity,
       });
+      warnRepurchase(
+        state,
+        ctx.eventId,
+        asset.asset_id,
+        asset.asset_type,
+        effect.acquisition_date,
+        entry.quantity,
+      );
     }
   }
   noteInKindIncome(state, effect, asset.asset_id, ctx.eventId);
