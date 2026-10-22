@@ -1234,7 +1234,13 @@ const BOOT_BUDGET_GZIP_BYTES = 76_055;
  * new refusal. What grew is the store and the message; the boot stays under
  * its own ceiling.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 304_330;
+/*
+ * **Resent writes (2026-10-22): measured 304.396 bytes gzip, ceiling 304.440 —
+ * measured + 44.** +112 bytes over the append batches: the sentence that says
+ * how many lines went in and that repeating is safe, and the skip of what the
+ * ledger already holds. The boot stays under its own ceiling.
+ */
+const TOTAL_BUDGET_GZIP_BYTES = 304_440;
 
 /**
  * What the direction authorised, which **no ceiling may pass** (feature 020,

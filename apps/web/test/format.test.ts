@@ -7,6 +7,7 @@ import {
   type ProjectionError,
   projectLedger,
   Quantity,
+  RemoteRejectedError,
   SUPPORTED_EVENT_TYPES,
   type SupportedEvent,
   type Warning,
@@ -541,5 +542,15 @@ describe("themeFromPreference", () => {
     for (const stored of [undefined, "", "sepia", "Dark", "<script>"]) {
       expect(themeFromPreference(stored)).toBe("system");
     }
+  });
+});
+
+describe("describeError: a write that stayed in part", () => {
+  it("says how many lines were saved and that repeating is safe", () => {
+    const partial = describeError(new RemoteRejectedError("partial_write", 101), {
+      privacy: false,
+    });
+    expect(partial).toContain("101 líneas");
+    expect(partial).toContain("no se duplica");
   });
 });
