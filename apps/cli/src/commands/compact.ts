@@ -31,7 +31,7 @@ const REASON: Record<string, string> = {
  * not known until the rewrite has gone through, and saying it first is
  * affirming what has not happened (review of feature 011, decision (g)).
  */
-const describeWaivers = (waiving: readonly UnverifiedFiling[]): string =>
+export const describeWaivers = (waiving: readonly UnverifiedFiling[]): string =>
   [
     "Vas a compactar renunciando a verificar la huella de estas declaraciones:",
     ...waiving.map((entry) => `  ${entry.filing_id}: ${REASON[entry.reason] ?? entry.reason}`),

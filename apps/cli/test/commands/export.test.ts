@@ -28,6 +28,7 @@ describe("atlas export", () => {
   });
 
   it("quotes CSV cells with commas, quotes and newlines", () => {
+    expect(toCsv([{ a: "carriage\rreturn" }])).toBe('a\n"carriage\rreturn"');
     expect(toCsv([{ a: 'x,"y"', b: true }, { c: "line\nbreak" }])).toBe(
       'a,b,c\n"x,""y""",true,\n,,"line\nbreak"',
     );

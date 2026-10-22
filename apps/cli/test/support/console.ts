@@ -17,6 +17,7 @@ import type { RemoteEnvironment } from "../../src/remote/environment.js";
 export type Api = ReturnType<typeof setup>;
 
 export interface Seen {
+  readonly method: string;
   readonly url: string;
   readonly redirect: RequestInit["redirect"];
   readonly token: string | null;
@@ -38,6 +39,7 @@ export const consoleFetch = (api: Api, seen: Seen[], hooks: Hooks = {}): typeof 
     const url = new URL(String(input));
     const headers = new Headers(init?.headers);
     seen.push({
+      method: init?.method ?? "GET",
       url: url.href,
       redirect: init?.redirect,
       token: headers.get("x-atlas-device-token"),

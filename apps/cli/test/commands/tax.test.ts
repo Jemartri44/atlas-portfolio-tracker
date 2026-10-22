@@ -134,6 +134,9 @@ describe("atlas tax", () => {
     expect(await h.exec(["tax", "2017"])).toBe(EXIT.domain);
     expect(h.text()).toContain("régimen de compensación vigente desde 2018");
     expect(await h.exec(["tax", "dos mil"])).toBe(EXIT.usage);
+    for (const year of ["0", "1e3", "0x7e3", "", "20255", " 2025"]) {
+      expect(await h.exec(["tax", year])).toBe(EXIT.usage);
+    }
     expect(await h.exec(["tax"])).toBe(EXIT.usage);
   });
 

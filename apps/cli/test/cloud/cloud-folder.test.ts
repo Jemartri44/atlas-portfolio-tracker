@@ -128,6 +128,16 @@ describe("a cloud folder reads and writes the cloud's ledger", () => {
     expect(writes[0]?.token).not.toBeNull();
   });
 
+  it("downloads the ledger once per write, not once per check", async () => {
+    const { c } = await cloud();
+    const before = c.seen.length;
+    expect(await c.exec(CASH_IN)).toBe(EXIT.ok);
+    const reads = c.seen
+      .slice(before)
+      .filter((seen) => seen.method === "GET" && seen.url.endsWith("/api/ledger"));
+    expect(reads).toHaveLength(1);
+  });
+
   it("does not need the session for what does not read the ledger", async () => {
     const { c } = await cloud();
     await writeFile(c.credentials, '{"credentials_format":1,"entries":{}}\n');

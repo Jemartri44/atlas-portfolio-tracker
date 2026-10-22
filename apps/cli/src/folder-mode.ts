@@ -92,6 +92,8 @@ export class CloudLedgerStore implements LedgerStore {
     readonly schema: LedgerSchema = CURRENT_LEDGER_SCHEMA,
   ) {}
 
+  private loading: Promise<LoadedLedger> | undefined;
+
   private open(): Promise<{
     store: ApiLedgerStore;
     remote: RemoteLedger;
@@ -138,15 +140,31 @@ export class CloudLedgerStore implements LedgerStore {
     return (await this.open()).remote;
   }
 
-  async load(): Promise<LoadedLedger> {
-    return (await this.open()).store.load();
+  /**
+   * One download serves the checks and the write of a command; any write, or
+   * the look-up after a cut one, forgets it. A concurrent write is still caught
+   * by the `If-Match` of the append.
+   */
+  load(): Promise<LoadedLedger> {
+    if (this.loading === undefined) {
+      const loading = this.open().then((api) => api.store.load());
+      this.loading = loading;
+      loading.catch(() => {
+        if (this.loading === loading) {
+          this.loading = undefined;
+        }
+      });
+    }
+    return this.loading;
   }
 
   async append(events: readonly LedgerEvent[], etag: string): Promise<{ etag: string }> {
+    this.loading = undefined;
     return (await this.open()).store.append(events, etag);
   }
 
   async findOutcome(ids: readonly string[]) {
+    this.loading = undefined;
     return (await this.open()).store.findOutcome(ids);
   }
 
