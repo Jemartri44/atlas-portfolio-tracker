@@ -14,7 +14,7 @@ const csvCell = (value: unknown): string => {
     return "";
   }
   const text = typeof value === "string" ? value : JSON.stringify(value);
-  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 };
 
 export const toCsv = (rows: readonly Record<string, unknown>[]): string => {
