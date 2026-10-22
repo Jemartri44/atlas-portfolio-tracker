@@ -2,7 +2,7 @@
 // string. The native date inputs keep using YYYY-MM-DD, which is what the
 // ledger stores, so nothing has to be parsed back.
 
-import type { CivilDate } from "@atlas/domain";
+import { type CivilDate, madridDateOf } from "@atlas/domain";
 
 const MONTHS = [
   "enero",
@@ -63,8 +63,14 @@ export const daysSince = (from: CivilDate, to: CivilDate): number => {
   return Math.max(0, Math.round(ms / 86_400_000));
 };
 
-/** `2026-09-18T20:15:00.000Z` → `18/09/2026`, for an export timestamp. */
+/**
+ * `2026-09-18T20:15:00.000Z` → `18/09/2026`, for an export timestamp. The day is the
+ * one in Madrid, as everywhere else in the application: 22:30 UTC on the 22nd is the 23rd there.
+ */
 export const formatInstantDate = (instant: string): string => {
-  const date = instant.slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? formatDate(date) : instant;
+  try {
+    return formatDate(madridDateOf(instant));
+  } catch {
+    return instant;
+  }
 };

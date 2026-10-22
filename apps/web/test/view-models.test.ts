@@ -629,6 +629,11 @@ describe("the draft of the configuration screen", () => {
       deviation_threshold_pp: "2.5",
     });
     expect(withNumber({}, "stale_price_days", " 7 ", true)).toEqual({ stale_price_days: 7 });
+    for (const typed of ["9,5", "3e2", "0x4", "-3"]) {
+      expect(withNumber({}, "stale_price_days", typed, true), typed).toEqual({
+        stale_price_days: typed,
+      });
+    }
   });
 
   it("clears a setting when its field is emptied", () => {
