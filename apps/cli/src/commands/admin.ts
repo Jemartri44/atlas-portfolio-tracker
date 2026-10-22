@@ -35,7 +35,6 @@ import { adminClientsOf, environmentFlag, translateAwsFailure } from "../admin/c
 import type { AdminClients } from "../admin/environment.js";
 import {
   assertKnownFlags,
-  booleanFlag,
   type Flags,
   listFlag,
   requireFlag,
@@ -93,24 +92,14 @@ const devicesOrder = async (ctx: Context, clients: AdminClients): Promise<number
     reads.length === 0
       ? "No hay ningún dispositivo en sync/devices/."
       : table(
-          [
-            "dispositivo",
-            "tipo",
-            "estado",
-            "pendientes",
-            "retenidas",
-            "última sincronización",
-            "nombre",
-          ],
+          ["dispositivo", "tipo", "estado", "última sincronización", "nombre"],
           reads.map((read) =>
             "unreadable" in read
-              ? [read.device_id, "?", "ilegible", "?", "?", "", ""]
+              ? [read.device_id, "?", "ilegible", "", ""]
               : [
                   read.device_id,
                   read.type === "web" ? "web" : "consola",
                   read.state === "active" ? "activo" : "olvidado",
-                  String(read.pending),
-                  String(read.held),
                   read.last_sync_at ?? "",
                   read.device_name ?? "",
                 ],
@@ -170,7 +159,7 @@ const revokeAllOrder = async (ctx: Context, clients: AdminClients): Promise<numb
 };
 
 /**
- * `atlas admin forget-device <id>|--device <id> [--force]` (§7 P9, amended in §7.1 bis, B1):
+ * `atlas admin forget-device <id>|--device <id>` (§7 P9):
  * **first** its tokens are revoked, **then** its object is rewritten on the
  * ETag it was read at, with `state: "forgotten"`. Never deleted. A cut between
  * the two leaves it revoked and not forgotten — safe, and repeating finishes
@@ -181,11 +170,10 @@ const forgetOrder = async (
   clients: AdminClients,
   environment: string,
   id: string,
-  force: boolean,
 ): Promise<number> => {
   const devices = new DeviceStore(clients.objects);
   const first = await devices.readForUpdate(id);
-  const refusal = forgetRefusal(first?.device, force);
+  const refusal = forgetRefusal(first?.device);
   const sweep = () =>
     revokeTokens(clients, ctx.deps.clock.now().getTime(), (record) => record.device_id === id);
   if (refusal === "already_forgotten") {
@@ -202,11 +190,6 @@ const forgetOrder = async (
     throw new RefusedError(refusal);
   }
   const device = first?.device as DeviceObject;
-  if (device.pending > 0 || device.held > 0) {
-    ctx.io.out(
-      `Con --force: ${device.pending} operaciones pendientes y ${device.held} retenidas de ese dispositivo dejarán de verse desde aquí. Siguen en él, pero nunca llegarán a la nube.`,
-    );
-  }
   const described = [
     device.type === "web" ? "web" : "consola",
     ...(device.device_name === undefined ? [] : [`«${device.device_name}»`]),
@@ -229,7 +212,7 @@ const forgetOrder = async (
   // read again, never written over, and the rule is asked again.
   let current = first;
   for (let attempt = 1; ; attempt += 1) {
-    const again = forgetRefusal(current?.device, force);
+    const again = forgetRefusal(current?.device);
     if (again === "already_forgotten") {
       break;
     }
@@ -521,14 +504,14 @@ const pricesPushOrder = async (
 };
 
 const USAGE =
-  "uso: atlas admin devices | revoke-all-tokens | forget-device [--] <dispositivo> | forget-device --device <dispositivo> [--force] | compact [--accept-unverified <id>]… | restore --from <fichero|s3-version:<id>|backups/AAAA-MM> | prices push | secrets, siempre con --env <entorno>";
+  "uso: atlas admin devices | revoke-all-tokens | forget-device [--] <dispositivo> | forget-device --device <dispositivo> | compact [--accept-unverified <id>]… | restore --from <fichero|s3-version:<id>|backups/AAAA-MM> | prices push | secrets, siempre con --env <entorno>";
 
 export const adminCommand = async (
   ctx: Context,
   positionals: string[],
   flags: Flags,
 ): Promise<number> => {
-  assertKnownFlags(flags, ["env", "force", "from", "accept-unverified", "device", ...GLOBAL_FLAGS]);
+  assertKnownFlags(flags, ["env", "from", "accept-unverified", "device", ...GLOBAL_FLAGS]);
   const order = positionals[1];
   if (
     order === undefined ||
@@ -575,13 +558,7 @@ export const adminCommand = async (
       case "revoke-all-tokens":
         return await revokeAllOrder(ctx, clients);
       case "forget-device":
-        return await forgetOrder(
-          ctx,
-          clients,
-          environment,
-          id as string,
-          booleanFlag(flags, "force"),
-        );
+        return await forgetOrder(ctx, clients, environment, id as string);
       case "compact":
         return await compactOrder(ctx, clients, environment, flags);
       case "prices":

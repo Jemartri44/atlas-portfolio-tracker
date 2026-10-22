@@ -202,8 +202,6 @@ export const syncRoutes = (context: SyncContext) => {
         device_id: device.device_id,
         type: device.type,
         state: device.state,
-        pending: device.pending,
-        held: device.held,
         ...(device.last_sync_at === undefined ? {} : { last_sync_at: device.last_sync_at }),
         ...(device.published_at === undefined ? {} : { published_at: device.published_at }),
       });

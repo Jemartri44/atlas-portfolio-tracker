@@ -474,7 +474,6 @@ describe("the reissue (§4.2 and §4.3; T23, mutant 29 sexies)", () => {
           createdAt: "2026-09-01T10:00:00Z",
           deviceName: "sobremesa",
         }),
-        pending: 3,
         published_at: "2026-09-20T08:30:00Z",
         ...overrides,
       } as never),
@@ -489,7 +488,6 @@ describe("the reissue (§4.2 and §4.3; T23, mutant 29 sexies)", () => {
     expect(done.headers["content-security-policy"]).toMatch(/sandbox$/);
     expect(done.body).toContain("sobremesa");
     expect(done.body).toContain("2026-09-20 08:30 UTC");
-    expect(done.body).toContain("Líneas pendientes que publicó: 3");
     // Loopback: the code only behind the link of the confirmation.
     expect(done.body).toMatch(
       /<a href="http:\/\/127\.0\.0\.1:49152\/callback\?code=[^"]+&amp;state=/,

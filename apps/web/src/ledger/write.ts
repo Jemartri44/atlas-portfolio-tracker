@@ -357,7 +357,7 @@ export const changeSettings = async (
         requireDeps(),
         { type: "settings_changed", settings },
         acceptInvalid
-          ? { id: ids[0] as string, acceptInvalid: true, syncConfigured: true }
+          ? { id: ids[0] as string, acceptInvalid: true, cloudLedger: true }
           : { id: ids[0] as string },
       ),
     ids,

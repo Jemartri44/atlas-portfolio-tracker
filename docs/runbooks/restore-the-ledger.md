@@ -71,7 +71,7 @@ La cuenta de `prod` es la que compartes con otros proyectos (ADR-0034; ADR-0032,
 Las réplicas y el disco son las capas que no dependen de la cuenta: mantenlas al día.
 
 *Probado* contra los dobles de S3 (`apps/cli/test/admin/rewrite.test.ts`):
-- que ni un dispositivo con pendientes publicadas ni un objeto ilegible frenan `compact` o `restore`;
+- que un objeto de dispositivo ilegible no frena `compact` ni `restore`;
 - la copia que no pasa la comprobación, que se niega antes del paso 3;
 - un «no» en el paso 4, que no toca nada;
 - un prefijo, con su cola perdida, y una versión anterior del objeto;

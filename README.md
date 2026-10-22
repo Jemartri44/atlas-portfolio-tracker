@@ -45,9 +45,7 @@ Estructura (ADR-0007): `packages/domain` (núcleo puro, sin imports externos; `v
 
 ## La aplicación web
 
-> **Enmendado por ADR-0035 (2026-10-06): Atlas pasa a ser siempre en la nube.** Se entra con Google y se ve siempre el mismo libro, el de la nube, que es la única fuente de verdad; sin conexión no se registra ni se muestra nada, y no hay cola ni libro guardado en el dispositivo. La web local-first que describe el resto de esta sección **sigue siendo la que hay hasta que se entreguen E1 a E5 de ADR-0035**.
-
-Local-first (ADR-0019, **sustituido por ADR-0035 cuando se entregue E2**): **funciona entera en el dispositivo**, sin servidor, sin cuenta y sin conexión. El *stack* es Solid, con uPlot vendorizada (ADR-0017) y una base de estilos propia: Pico CSS se retiró en ADR-0023 y `docs/design/system.md` la sustituye entera. Seis pantallas: Resumen, Movimientos, Registrar, Cartera, Cubo y Ajustes, más la pantalla fiscal en `/fiscal`, que no ocupa un sitio en la barra porque se abre unas pocas veces al año.
+Atlas es siempre en la nube (ADR-0035): se entra con Google y se ve el libro de S3, que es la única fuente de verdad. Sin conexión no se registra ni se muestra nada, y no hay cola ni libro guardado en el dispositivo. El *stack* es Solid, con uPlot vendorizada (ADR-0017) y una base de estilos propia (ADR-0023, `docs/design/system.md`). Seis pantallas: Resumen, Movimientos, Registrar, Cartera, Cubo y Ajustes, más la pantalla fiscal en `/fiscal`, que no ocupa un sitio en la barra porque se abre unas pocas veces al año.
 
 ```bash
 npm run dev                          # http://localhost:5173
@@ -55,7 +53,7 @@ npm run build                        # produce apps/web/dist y comprueba el bund
 npm run preview                      # sirve el build de producción en :4173
 ```
 
-**Desarrollo en la nube sin AWS (ADR-0035, E2a).** La web arranca por la sesión y el libro de la nube (`apps/web/src/ledger/mode.ts`). Para trabajar sin AWS, `npm run dev` lleva `/api` (con un *proxy* de Vite, solo en desarrollo) al servidor local de pruebas, que compone el manejador real con dobles de S3, SSM y Google y solo lleva datos sintéticos:
+**Desarrollo sin AWS.** `npm run dev` lleva `/api` (con un *proxy* de Vite, solo en desarrollo) al servidor local de pruebas, que compone el manejador real con dobles de S3, SSM y Google y solo lleva datos sintéticos:
 
 ```bash
 npm run build                        # compila también el servidor de pruebas (apps/api/dist-test)
@@ -66,16 +64,7 @@ npm run dev                          # terminal 2; abre http://localhost:5173 y 
 
 `ATLAS_API_URL` cambia el destino del *proxy* (por defecto `http://127.0.0.1:8787`).
 
-### Cómo abrir un libro
-
-**El libro de la web vive siempre en el almacenamiento del navegador** de ese dispositivo, también en el ordenador, y se importa y se exporta con un botón. Hasta la feature 012 la web de escritorio escribía en el mismo `ledger.jsonl` que la CLI; **ya no lo hace**, porque el navegador no puede tomar en exclusiva el cerrojo de la carpeta y dos escritores podrían pisarse una línea (ADR-0019, enmienda del 2026-09-24). Hasta que exista la sincronización, la web y la CLI del mismo ordenador **no comparten un libro vivo**: se pasa de una a otra exportando e importando.
-
-En Chrome y Edge de escritorio se puede **enlazar la carpeta del libro solo para leer**: para importar el libro de la CLI (con confirmación) y para leer el histórico del BCE que descarga `atlas fx update`. La web nunca escribe en ella. Si el navegador pierde el permiso de lectura, la aplicación lo dice y basta volver a enlazarla.
-
-Una cosa que conviene saber y que la aplicación te recuerda:
-
-- *Con ADR-0035 desaparece este aviso* (el de «una semana sin exportar»), porque el navegador ya no guarda el libro: la copia es el botón «Descargar copia» y, en el ordenador, `atlas backup`, que son las únicas copias fuera de AWS. Hasta entonces, vale lo siguiente.
-- **El almacenamiento del navegador no es un almacén definitivo**: si borras los datos del sitio, el libro se va con ellos. Por eso la aplicación avisa cuando llevas más de una semana sin exportar. En el ordenador, `atlas backup` sigue siendo la copia de referencia.
+Las copias del libro fuera de AWS son el botón «Descargar copia» y, en el ordenador, `atlas backup`.
 
 El modo privacidad está **activado por defecto**: oculta importes y cantidades, y deja a la vista porcentajes, pesos, desviaciones y fechas. Se conmuta desde la cabecera y se recuerda en el dispositivo.
 

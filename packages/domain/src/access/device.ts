@@ -20,8 +20,6 @@ export interface DeviceObject {
   readonly type: DeviceType;
   readonly state: DeviceState;
   readonly created_at: string;
-  readonly pending: number;
-  readonly held: number;
   readonly last_sync_at?: string;
   readonly published_at?: string;
   /** Only a console: the name of its first exchange, which the reissue confirms. */
@@ -50,16 +48,11 @@ const KEYS = new Set([
   "type",
   "state",
   "created_at",
-  "pending",
-  "held",
   "last_sync_at",
   "published_at",
   "device_name",
   "forgotten_at",
 ]);
-
-const isCount = (value: unknown): boolean =>
-  typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 
 const optionalInstant = (value: unknown): boolean => value === undefined || isInstant(value);
 
@@ -85,8 +78,6 @@ export const parseDeviceObject = (text: string, deviceId: string): DeviceObject 
     (value.type === "web" || value.type === "console") &&
     (value.state === "active" || forgotten) &&
     isInstant(value.created_at) &&
-    isCount(value.pending) &&
-    isCount(value.held) &&
     optionalInstant(value.last_sync_at) &&
     optionalInstant(value.published_at) &&
     (forgotten ? isInstant(value.forgotten_at) : value.forgotten_at === undefined) &&
@@ -98,7 +89,7 @@ export const parseDeviceObject = (text: string, deviceId: string): DeviceObject 
 export const serializeDeviceObject = (device: DeviceObject): string =>
   `${JSON.stringify(device)}\n`;
 
-/** A device the API has just assigned: active, with an empty queue published. */
+/** A device the API has just assigned: active. */
 export const newDevice = (fields: {
   deviceId: string;
   type: DeviceType;
@@ -110,8 +101,6 @@ export const newDevice = (fields: {
   type: fields.type,
   state: "active",
   created_at: fields.createdAt,
-  pending: 0,
-  held: 0,
   ...(fields.deviceName === undefined ? {} : { device_name: fields.deviceName }),
 });
 
