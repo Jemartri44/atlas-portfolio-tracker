@@ -24,8 +24,10 @@ export const CRITERION_NAMES: Record<CriterionId, string> = {
   "1": "La fecha que cuenta a efectos fiscales, según el tipo de activo",
   "2:listed": "Ventana de dos meses para valores cotizados",
   "2:listed_1y": "Ventana de un año para valores cotizados, la lectura prudente",
-  "2:crypto": "Ventana de un año para criptomonedas, la lectura prudente",
-  "2:crypto_2m": "Ventana de dos meses para criptomonedas, la lectura menos prudente",
+  "2:crypto":
+    "Ventana de un año posterior a la venta para criptomonedas, la lectura literal del art. 33.5.e)",
+  "2:crypto_2m":
+    "Ventana de dos meses posterior a la venta para criptomonedas, la lectura menos prudente",
   "2:fund_2m": "Ventana de dos meses para fondos de inversión",
   "2:fund_1y": "Ventana de un año para fondos de inversión, la lectura prudente",
   "2:other": "Ventana a medida, que ninguna lectura conocida de la norma sostiene",

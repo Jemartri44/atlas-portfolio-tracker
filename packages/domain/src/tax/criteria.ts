@@ -37,8 +37,12 @@ export interface FiscalCriterion {
  *   security carries it; **aggressive** if wrong.
  * - `2:listed_1y`: one year for a listed security — the other side of the same
  *   dispute; **conservative** if wrong.
- * - `2:crypto`: one year for crypto, by prudence — **low**; conservative.
- * - `2:crypto_2m`: two months for crypto — the less prudent side; aggressive.
+ * - `2:crypto`: one year **after** the sale for crypto, article 33.5.e) LIRPF,
+ *   which the Renta manual words as "un año posterior a la transmisión" for
+ *   other assets; nothing before the sale — **medium** (no consultation on
+ *   crypto itself); conservative.
+ * - `2:crypto_2m`: two months after the sale for crypto — a configuration, not a
+ *   legal reading; aggressive.
  * - `2:fund_2m`: two months for a fund, which is what the document says since
  *   2026-09-22 — the two consultations on the point put fund units under
  *   letter f). Its certainty is **medium**, not high, for two reasons: the
@@ -100,7 +104,7 @@ export const FISCAL_CRITERIA = {
   "1": { doc: "1", certainty: "medium", risk: "conservative" },
   "2:listed": { doc: "2", certainty: "disputed", risk: "aggressive" },
   "2:listed_1y": { doc: "2", certainty: "disputed", risk: "conservative" },
-  "2:crypto": { doc: "2", certainty: "low", risk: "conservative" },
+  "2:crypto": { doc: "2", certainty: "medium", risk: "conservative" },
   "2:crypto_2m": { doc: "2", certainty: "low", risk: "aggressive" },
   "2:fund_2m": { doc: "2", certainty: "medium", risk: "aggressive" },
   "2:fund_1y": { doc: "2", certainty: "medium", risk: "conservative" },

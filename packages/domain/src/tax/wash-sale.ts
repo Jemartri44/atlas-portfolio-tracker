@@ -438,8 +438,9 @@ class Walker {
   }
 
   private evaluate(gain: RealizedGain, outcome: WashSaleOutcome, journalIndex: number): void {
-    const window = washSaleWindowOf(this.state.fiscalSettings, this.assetType(gain.asset_id));
-    const start = washSaleWindowStart(gain.fiscal_date, window);
+    const assetType = this.assetType(gain.asset_id);
+    const window = washSaleWindowOf(this.state.fiscalSettings, assetType);
+    const start = washSaleWindowStart(gain.fiscal_date, window, assetType);
     const end = washSaleWindowEnd(gain.fiscal_date, window);
     outcome.window = { window, start, end };
     // The last day of the window still counts (ADR-0014): a purchase recorded

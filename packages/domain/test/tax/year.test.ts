@@ -511,7 +511,7 @@ describe("the other doubtful criteria", () => {
     expect(item?.event_ids).toHaveLength(3);
   });
 
-  it("#2 crypto: one year by prudence, and what two months would change", () => {
+  it("#2 crypto: one year after the sale, and what two months would change", () => {
     const b = taxBuilder();
     buy(b, "coin_c", "2027-01-11", "1", "1000");
     const loss = sell(b, "coin_c", "2027-03-01", "1", "800");
@@ -522,6 +522,35 @@ describe("the other doubtful criteria", () => {
     expect(text(item?.base_difference_eur)).toBe("0");
     expect(text(item?.pending_difference_eur)).toBe("-200");
     expect(item?.direction).toBe("conservative");
+  });
+
+  it("#2 crypto: a purchase before the sale is not a repurchase (art. 33.5.e)", () => {
+    const b = taxBuilder();
+    buy(b, "coin_c", "2027-01-11", "10", "100");
+    buy(b, "coin_c", "2027-03-01", "5", "100");
+    const loss = sell(b, "coin_c", "2027-06-10", "10", "80");
+    const report = reportOf(b.build(), 2027);
+    expect(text(lineOf(report, loss.id).deferred_eur)).toBe("0");
+  });
+
+  it("#2 crypto: a purchase on the very day of the sale still counts, the prudent reading", () => {
+    const b = taxBuilder();
+    buy(b, "coin_c", "2027-01-11", "10", "100");
+    buy(b, "coin_c", "2027-06-10", "5", "100");
+    const loss = sell(b, "coin_c", "2027-06-10", "10", "80");
+    expect(text(lineOf(reportOf(b.build(), 2027), loss.id).deferred_eur)).toBe("-100");
+  });
+
+  it("#2 crypto: the last day of the following year still defers, the next one does not", () => {
+    const deferred = (repurchase: string) => {
+      const b = taxBuilder();
+      buy(b, "coin_c", "2027-01-11", "10", "100");
+      const loss = sell(b, "coin_c", "2027-06-10", "10", "80");
+      buy(b, "coin_c", repurchase, "5", "80");
+      return text(lineOf(reportOf(b.build(), 2027), loss.id).deferred_eur);
+    };
+    expect(deferred("2028-06-10")).toBe("-100");
+    expect(deferred("2028-06-11")).toBe("0");
   });
 
   it("#15 also counts what travelled and is still pending at the end of the year", () => {
