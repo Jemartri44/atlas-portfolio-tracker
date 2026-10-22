@@ -165,3 +165,29 @@ describe("sweepOrphanTemporaries in sync/ (feature 014, D-Q19)", () => {
     expect((await readdir(join(dir, "sync"))).sort()).toEqual(["held.jsonl", "notes.tmp-1-1"]);
   });
 });
+
+describe("sweepOrphanTemporaries in drafts/, prices/ and reference/ecb/", () => {
+  it("removes the temporaries left there, and nothing else", async () => {
+    const { path, dir } = await fresh([lineOf(account)]);
+    const { mkdir, readdir } = await import("node:fs/promises");
+    const orphans = [
+      join("drafts", "01J0000000000000000000000A.json.tmp-4242-1"),
+      join("prices", "x.jsonl.tmp-4242-2"),
+      join("reference", "ecb", "manifest.json.tmp-4242-3"),
+      join("reference", "ecb", "previous", "api-exr.csv.tmp-4242-4"),
+      join("reference", "ecb", "rejected", "r.csv.tmp-4242-5"),
+    ];
+    const kept = [
+      join("drafts", "01J0000000000000000000000A.json"),
+      join("prices", "x.jsonl"),
+      join("reference", "ecb", "manifest.json"),
+    ];
+    for (const name of [...orphans, ...kept]) {
+      await mkdir(join(dir, name, ".."), { recursive: true });
+      await writeFile(join(dir, name), "x");
+    }
+    expect((await sweepOrphanTemporaries(path)).sort()).toEqual([...orphans].sort());
+    expect((await readdir(join(dir, "drafts"))).length).toBe(1);
+    expect(await readdir(join(dir, "reference", "ecb", "previous"))).toEqual([]);
+  });
+});

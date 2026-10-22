@@ -207,7 +207,7 @@ export const withFolderLock = async <T>(
 /**
  * Removes the temporary files a write of the ledger left behind when it was
  * killed before its rename (`ledger.jsonl.tmp-<pid>-<time>`; review of PR
- * #75), and those of `sync/` (feature 014). Only under the lock: every
+ * #75), and those of `sync/` (feature 014), `drafts/`, `prices/` and `reference/ecb/`. Only under the lock: every
  * writer creates its temporary holding it,
  * so while this holds it, any temporary is an orphan. If somebody holds the
  * lock, nothing is touched — their temporary may be the write in progress.
@@ -222,6 +222,17 @@ export const sweepOrphanTemporaries = async (ledgerPath: string): Promise<string
   // confusing somebody.
   // Since feature 015 (§7 P16), `sync/remote.json` too.
   const syncTemporary = /^(?:state\.json|held\.jsonl|discarded\.jsonl|remote\.json)\.tmp-\d+-\d+$/;
+  // `drafts/` (it holds the draft), `prices/` and `reference/ecb/` with its
+  // `previous/` and `rejected/` are written by `writeFileAtomically` under this
+  // same lock: any `<file>.tmp-<pid>-<ms>` there is an orphan.
+  const dataTemporary = /\.tmp-\d+-\d+$/;
+  const dataDirs = [
+    "drafts",
+    "prices",
+    join("reference", "ecb"),
+    join("reference", "ecb", "previous"),
+    join("reference", "ecb", "rejected"),
+  ];
   const list = async (dir: string, keep: (name: string) => boolean): Promise<string[]> => {
     try {
       return (await fs.readdir(dir)).filter(keep);
@@ -237,6 +248,15 @@ export const sweepOrphanTemporaries = async (ledgerPath: string): Promise<string
     ...(await list(join(folder, "sync"), (name) => syncTemporary.test(name))).map((name) =>
       join("sync", name),
     ),
+    ...(
+      await Promise.all(
+        dataDirs.map(async (dir) =>
+          (
+            await list(join(folder, dir), (name) => dataTemporary.test(name))
+          ).map((name) => join(dir, name)),
+        ),
+      )
+    ).flat(),
   ];
   if ((await orphans()).length === 0) {
     return [];
