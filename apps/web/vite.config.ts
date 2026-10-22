@@ -236,13 +236,7 @@ export default defineConfig(({ command }) => ({
       "@atlas/adapters/reference": repo(
         "../../packages/adapters/src/ledger-store/browser/reference.ts",
       ),
-      "@atlas/adapters/folder": repo("../../packages/adapters/src/ledger-store/browser/folder.ts"),
       "@atlas/adapters/prices": repo("../../packages/adapters/src/ledger-store/browser/prices.ts"),
-      "@atlas/adapters/transfer": repo(
-        "../../packages/adapters/src/ledger-store/browser/transfer.ts",
-      ),
-      "@atlas/adapters/drafts": repo("../../packages/adapters/src/ledger-store/browser/drafts.ts"),
-      "@atlas/adapters/browser": repo("../../packages/adapters/src/ledger-store/browser/index.ts"),
       "@atlas/adapters/clock": repo("../../packages/adapters/src/clock/system.ts"),
       "@atlas/adapters/random": repo("../../packages/adapters/src/random/web-crypto.ts"),
     },
@@ -293,21 +287,17 @@ export default defineConfig(({ command }) => ({
          * feature 014 the sync of the ledger (`sync/`, the `sync.ts` door and
          * its two ports), lazy by construction, and since feature 020 the
          * indicators of the Cubo (`charts/` and the `charts.ts` door). **The store of the browser rides
-         * in the same chunk** (`blob.ts`, and `idb.ts`, `indexeddb.ts`,
-         * `folder.ts` and the `index.ts` of `browser/`): it is boot too —
-         * opening the ledger is the boot. Once the lazy screens of the ECB
-         * shared the folder reader with the boot, the bundler split the whole
-         * store into a boot chunk of its own, and that plumbing cost 0,5 KB
-         * gzip (measured, feature 012). They are grouped by whoever
-         * imports them, which is only ever a lazily loaded screen, and
-         * `scripts/check-bundle.mjs` fails the build if any of them turns up
-         * in a chunk `index.html` preloads.
+         * in the same chunk** (`blob.ts` and `idb.ts`): it is boot too —
+         * opening the ledger is the boot. Without the group the bundler splits
+         * the store into a boot chunk of its own (0,5 KB gzip, measured,
+         * feature 012). `scripts/check-bundle.mjs` fails the build if any
+         * lazily loaded module turns up in a chunk `index.html` preloads.
          */
         advancedChunks: {
           groups: [
             {
               name: "domain",
-              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|quotes[\\/]|quotes\.ts|charts[\\/]|charts\.ts|sync[\\/]|sync\.ts|remote[\\/]|remote-answers\.ts|tools\.ts|projections[\\/](?:corporate-action-draft|deep-check|simulate-transfer)\.ts|ports[\\/]remote-ledger\.ts|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/](?:idb|indexeddb|picker|index)\.ts))/,
+              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|quotes[\\/]|quotes\.ts|charts[\\/]|charts\.ts|sync[\\/]|sync\.ts|remote[\\/]|remote-answers\.ts|tools\.ts|projections[\\/](?:corporate-action-draft|deep-check|simulate-transfer)\.ts|ports[\\/]remote-ledger\.ts|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/]idb\.ts))/,
             },
           ],
         },

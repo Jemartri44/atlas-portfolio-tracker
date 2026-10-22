@@ -8,7 +8,7 @@
 
 import { Decimal, Money } from "@atlas/domain";
 import { readEcbZipCsv } from "@atlas/domain/ecb";
-import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { FakeIdbFactory } from "../../../packages/adapters/test/fake-idb.js";
 import { Price, PriceDetail } from "../src/components/Price.jsx";
 import { reloadWebHistory } from "../src/ecb/history.js";
@@ -19,26 +19,10 @@ import { settle, show, text, until, withGoldenLedger } from "./helpers/render.js
 
 withGoldenLedger();
 
-/**
- * The folder the browser remembers. A real handle is serialisable and lives in
- * IndexedDB; the double is not, so the one function that hands it over is
- * replaced — everything else of the module, `readFolderText` included, is the
- * real one.
- */
-const linked = vi.hoisted(() => ({ folder: undefined as FileSystemDirectoryHandle | undefined }));
-vi.mock("@atlas/adapters/folder", async (original) => ({
-  ...(await original<typeof import("@atlas/adapters/folder")>()),
-  rememberedFolder: async () => linked.folder,
-}));
-const _rememberFolder = async (folder: FileSystemDirectoryHandle): Promise<void> => {
-  linked.folder = folder;
-};
-
 const holder = globalThis as { indexedDB?: unknown };
 const before = holder.indexedDB;
 beforeEach(async () => {
   holder.indexedDB = new FakeIdbFactory();
-  linked.folder = undefined;
   await reloadWebHistory();
 });
 afterAll(() => {
