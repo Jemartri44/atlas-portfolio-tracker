@@ -278,6 +278,29 @@ describe("corporateActionDraft: the fractional shares", () => {
       expect(result.fractional).toEqual([{ account_id: "acc_a", quantity: "0.5" }]);
     });
 
+    it("still drafts over a ledger that holds an invalid event", () => {
+      const b = new LedgerBuilder();
+      b.account("acc_a");
+      b.asset("ast_old", stock);
+      b.buy({ account_id: "acc_a", asset_id: "ast_old", quantity: "10", unit_price: "100" });
+      // Sells what it never had: invalid, and the reader has to tolerate it.
+      b.sell({ account_id: "acc_a", asset_id: "ast_old", quantity: "99", unit_price: "100" });
+      const events = b.build();
+      const state = projectLedger(events, { collectErrors: true });
+      expect(state.invalid).toHaveLength(1);
+      expect(() =>
+        corporateActionDraft(state, events, {
+          ...base,
+          kind: "reverse_split",
+          ratio: "1/4",
+          cash: CASH,
+        }),
+      ).not.toThrow();
+      expect(() =>
+        corporateActionDraft(state, events, { ...base, kind: "issuer_liquidation", cash: CASH }),
+      ).not.toThrow();
+    });
+
     it("liquidates only the accounts that held the asset on the date", () => {
       const { events, state } = withLaterBuy();
       const result = corporateActionDraft(state, events, {
