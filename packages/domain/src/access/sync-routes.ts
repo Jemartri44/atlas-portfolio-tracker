@@ -97,7 +97,7 @@ export interface ReferenceEntry {
 /** The version of a stored object: its ETag without `W/` and without quotes. */
 export const versionOf = (etag: string): string => etag.replace(/^W\//, "").replace(/^"|"$/g, "");
 
-const entriesOf = (
+const referenceEntriesOf = (
   listed: readonly { readonly key: string; readonly etag: string; readonly size: number }[],
   kind: ReferenceKind,
 ): ReferenceEntry[] =>
@@ -120,8 +120,8 @@ export const referenceIndex = (
   ecb: readonly { readonly key: string; readonly etag: string; readonly size: number }[],
   prices: readonly { readonly key: string; readonly etag: string; readonly size: number }[],
 ): { readonly ecb: ReferenceEntry[]; readonly prices: ReferenceEntry[] } => ({
-  ecb: entriesOf(ecb, "ecb"),
-  prices: entriesOf(prices, "prices"),
+  ecb: referenceEntriesOf(ecb, "ecb"),
+  prices: referenceEntriesOf(prices, "prices"),
 });
 
 /**

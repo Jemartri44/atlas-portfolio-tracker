@@ -140,6 +140,18 @@ export const isOperationEvent = (event: LedgerEvent): event is OperationEvent =>
   !THESIS_TYPES.has(event.type) &&
   !isReservedEventType(event.type);
 
+/** The operations that stand: not reversed, not rejected by the projection, in ledger order. */
+export const liveOperations = (
+  state: LedgerState,
+  events: readonly LedgerEvent[],
+): OperationEvent[] => {
+  const invalid = new Set(state.invalid.map((entry) => entry.event.id));
+  return events.filter(
+    (event): event is OperationEvent =>
+      !state.reversed.has(event.id) && !invalid.has(event.id) && isOperationEvent(event),
+  );
+};
+
 const isOperation = (entry: Positioned): entry is Positioned<OperationEvent> =>
   isOperationEvent(entry.event);
 
