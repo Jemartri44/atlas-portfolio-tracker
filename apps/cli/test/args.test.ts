@@ -119,8 +119,8 @@ describe("parseArgs: a value that begins with a dash", () => {
 
   it("is a positional after `--`, which ends the options, and after `--` nothing is a flag", () => {
     for (const id of ids) {
-      const parsed = parseArgs(["admin", "forget-device", "--env", "test", "--", id, "--force"]);
-      expect(parsed.positionals).toEqual(["admin", "forget-device", id, "--force"]);
+      const parsed = parseArgs(["admin", "forget-device", "--env", "test", "--", id, "--yes"]);
+      expect(parsed.positionals).toEqual(["admin", "forget-device", id, "--yes"]);
       expect([...parsed.flags]).toEqual([["env", "test"]]);
     }
   });

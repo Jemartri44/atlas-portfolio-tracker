@@ -46,7 +46,7 @@ const refuseValues = (positionals: readonly string[], flags: Flags): void => {
       "«atlas admin secrets» no recibe ningún valor en la línea de órdenes: los pide uno a uno, sin eco",
     );
   }
-  for (const name of ["force", "from", "accept-unverified", "device"]) {
+  for (const name of ["from", "accept-unverified", "device"]) {
     if (flags.has(name)) {
       throw new UsageError(`--${name} no vale en «atlas admin secrets»`);
     }

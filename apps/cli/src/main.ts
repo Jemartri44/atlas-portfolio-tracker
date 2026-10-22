@@ -235,7 +235,7 @@ comandos:
   remote status                  las sesiones guardadas de esta carpeta y cuándo caducan
                                  una carpeta es «de nube» (sync/remote.json, sin ledger.jsonl: el libro es el de la nube) o «local» (ledger.jsonl); nunca las dos
   remote upload --from <ledger.jsonl>   la subida inicial: sube un libro entero a una nube vacía (solo en una carpeta de nube)
-  admin devices|revoke-all-tokens|forget-device [--] <id>|--device <id> [--force]|compact|restore --from <copia>|prices push|secrets --env <entorno>
+  admin devices|revoke-all-tokens|forget-device [--] <id>|--device <id>|compact|restore --from <copia>|prices push|secrets --env <entorno>
                                  la administración de la nube, con el rol de administración y nunca por la API
   --                             termina las opciones: lo que va detrás es posicional (un id que empiece por guion)`;
 

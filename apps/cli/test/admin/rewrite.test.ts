@@ -31,12 +31,11 @@ const adminOf = (api: Api): AdminAccess => ({
 const text = (lines: readonly string[]): string => lines.map((line) => `${line}\n`).join("");
 const seeded = seed().map((event) => encodeLine(event));
 
-const device = (api: Api, id: string, fields: { pending?: number; state?: "forgotten" } = {}) =>
+const device = (api: Api, id: string, fields: { state?: "forgotten" } = {}) =>
   api.s3.seed(
     `sync/devices/${id}.json`,
     serializeDeviceObject({
       ...newDevice({ deviceId: id, type: "web", createdAt: "2026-10-01T10:00:00Z" }),
-      pending: fields.pending ?? 0,
       ...(fields.state === undefined
         ? {}
         : { state: "forgotten", forgotten_at: "2026-10-02T10:00:00Z" }),
@@ -75,7 +74,7 @@ describe("no queue to wait for (ADR-0035, E4)", () => {
       const api = setup();
       api.s3.seed(LEDGER, text(seeded));
       api.s3.seed("backups/2026-09/ledger.jsonl", text(seeded.slice(0, 2)));
-      device(api, `D${"1".repeat(21)}`, { pending: 3 });
+      device(api, `D${"1".repeat(21)}`);
       api.s3.seed(`sync/devices/${"U".repeat(22)}.json`, "{");
       const { c } = await adminConsole(api, { schema: V2 });
       expect(await c.exec(argv)).toBe(EXIT.ok);

@@ -473,7 +473,7 @@ export const createHandler = (deps: HandlerDeps): Handler => {
     attemptIat: number,
   ): Promise<Outcome> => {
     const reissue = asked.reissue_device_id;
-    let device: { deviceName?: string; publishedAt?: string; pending: number } | undefined;
+    let device: { deviceName?: string; publishedAt?: string } | undefined;
     if (reissue !== undefined) {
       const read = await devices.read(reissue);
       const refused = reissueRefusal(read);
@@ -483,7 +483,6 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       device = {
         ...(read.device_name === undefined ? {} : { deviceName: read.device_name }),
         ...(read.published_at === undefined ? {} : { publishedAt: read.published_at }),
-        pending: read.pending,
       };
     }
     const code = (await signerNow()).sign(
@@ -523,7 +522,6 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         reissueConfirmPage({
           deviceName: device.deviceName,
           publishedAt: device.publishedAt,
-          pending: device.pending,
           attemptedAt,
           next: loopback === undefined ? { code } : { loopback },
         }),

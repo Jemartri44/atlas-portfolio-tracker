@@ -417,8 +417,6 @@ describe("the retired device binding (ADR-0035, E4; §5.4)", () => {
     const objects = [session, token].map((as) => api.s3.text(`sync/devices/${as.deviceId}.json`));
     for (const as of [session, token]) {
       const answer = await write(api, as, "PUT", "/api/sync/devices/self", {
-        pending: 1,
-        held: 0,
         last_sync_at: "2026-10-01T09:00:00Z",
       });
       expect(answer.statusCode).toBe(404);

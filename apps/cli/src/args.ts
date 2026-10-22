@@ -42,14 +42,9 @@ export const BOOLEAN_FLAGS: ReadonlySet<string> = new Set([
   "history",
   "inactive",
   "local-only",
-  // Feature 015, E3: `atlas sync join` and `atlas sync discard`.
-  "from-remote",
-  "with-own-lines",
-  "reversal-only",
   // Feature 016, E3: `atlas prices update --from-sources`.
   "from-sources",
-  // Feature 015, E5: `atlas admin forget-device` and `atlas backup`.
-  "force",
+  // Feature 015, E5: `atlas backup`.
   "from-bucket",
   "lots",
   "manual",

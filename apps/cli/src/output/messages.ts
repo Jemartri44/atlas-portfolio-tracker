@@ -308,41 +308,36 @@ export const describeError = (error: DomainError): string => {
     case "projection_changed":
       return `La reescritura cambiaría la proyección (${text(d.keys)}): no se ha escrito nada.`;
     // --- The sync of the ledger (feature 014) -------------------------------
-    // Why a line is held back. It left the ledger and waits in sync/held.jsonl;
-    // nothing behind it is uploaded until it is resolved (confirm, redo or
-    // discard), and resolving never needs the rest of the ledger to be valid.
+    // Why the cloud refuses a line: nothing of it is written.
     case "domain_rejected":
-      return `Retenida: sobre lo que ya hay en la nube, el libro la rechaza (${text(d.domain_code)}${d.affected === undefined ? "" : `; dejaría inválidos ${text(d.affected)}`}). Rehazla sobre el estado actual o descártala. Mientras, lo que va detrás espera, y tu libro local puede quedar incompleto hasta que la resuelvas.`;
+      return `Sobre lo que ya hay en la nube, el libro la rechaza (${text(d.domain_code)}${d.affected === undefined ? "" : `; dejaría inválidos ${text(d.affected)}`}). Rehazla sobre el estado actual.`;
     case "pair_rejected":
-      return `Retenida la corrección entera (anulación y operación corregida, juntas): sobre lo que ya hay en la nube no cabe (${text(d.member)}: ${text(d.member_code)}${d.affected === undefined ? "" : `; dejaría inválidos ${text(d.affected)}`}). Ninguna de las dos se ha subido. Rehazla o descártala; hasta entonces lo que va detrás espera y tu libro local puede quedar incompleto.`;
+      return `Corrección rechazada entera (anulación y operación corregida, juntas): sobre lo que ya hay en la nube no cabe (${text(d.member)}: ${text(d.member_code)}${d.affected === undefined ? "" : `; dejaría inválidos ${text(d.affected)}`}). Ninguna de las dos se ha subido. Rehazla.`;
     case "pair_not_contiguous":
-      return "Retenida: la operación corregida no va justo detrás de su anulación, que es como la aplicación las escribe siempre. Descártala o rehaz la corrección.";
+      return "La operación corregida no va justo detrás de su anulación, que es como la aplicación las escribe siempre. Rehaz la corrección.";
     case "pair_incomplete":
       return "La nube ha rechazado una anulación que anunciaba su corrección y no la traía detrás: se sube siempre la pareja entera.";
     case "pair_declaration_invalid":
       return "La nube ha rechazado la petición: una línea declaraba ser una anulación con corrección, o parte de una cadena, sin serlo.";
     case "line_unreadable":
-      return `La nube no ha podido leer una línea${d.line === undefined ? "" : ` (la ${text(d.line)})`}. Queda retenida.`;
+      return `La nube no ha podido leer una línea${d.line === undefined ? "" : ` (la ${text(d.line)})`}.`;
     case "line_invalid":
-      return `La nube ha rechazado una línea por su forma (${text(d.domain_code)}). Queda retenida.`;
+      return `La nube ha rechazado una línea por su forma (${text(d.domain_code)}).`;
     case "schema_version_unsupported":
-      return `La nube no conoce todavía el formato ${text(d.found)} de esta línea (entiende hasta el ${text(d.supported)}). Queda retenida hasta que la nube se actualice.`;
+      return `La nube no conoce todavía el formato ${text(d.found)} de esta línea (entiende hasta el ${text(d.supported)}). Espera a que la nube se actualice.`;
     case "recorded_at_in_future":
-      return `Retenida: su fecha de registro (${text(d.recorded_at)}) va por delante del reloj de la nube. Revisa la hora de este dispositivo y rehaz la operación.`;
+      return `Su fecha de registro (${text(d.recorded_at)}) va por delante del reloj de la nube. Revisa la hora de este dispositivo y rehaz la operación.`;
     case "duplicate_unconfirmed":
-      return `La nube pide confirmar una operación que repite la huella de otra (${text(d.existing ?? d.id)}). Queda retenida: confírmala si de verdad son dos.`;
+      return `La nube pide confirmar una operación que repite la huella de otra (${text(d.existing ?? d.id)}). Confírmala si de verdad son dos.`;
     case "seal_mismatch":
-      return "Retenida: la declaración ya no cuadra con los movimientos que tendría delante en la nube. Regístrala otra vez sobre el libro actual.";
+      return "La declaración ya no cuadra con los movimientos que tendría delante en la nube. Regístrala otra vez sobre el libro actual.";
     case "waiver_not_appendable":
-      return "Una renuncia a verificar una huella solo nace dentro de una compactación, y nunca se sube línea a línea. Queda retenida.";
-    // Why a sync stops: nothing is lost and nothing is held back.
+      return "Una renuncia a verificar una huella solo nace dentro de una compactación, y nunca se sube línea a línea.";
     // What a synced folder or browser refuses.
     case "forget_device_missing":
       return "Ese dispositivo no existe en sync/devices/: los enseña «atlas admin devices».";
     case "forget_device_unreadable":
       return "El objeto de ese dispositivo no se puede leer: no se ha tocado. Revísalo a mano en sync/devices/.";
-    case "forget_refused_queue":
-      return `Ese dispositivo tiene publicadas ${text(d.pending)} operaciones pendientes y ${text(d.held)} retenidas. Que sincronice antes; si está perdido, --force las deja fuera de la vista.`;
     case "forget_contention":
       return "El objeto del dispositivo ha cambiado tres veces mientras se olvidaba: repite la orden.";
     case "admin_config_missing":
@@ -377,8 +372,6 @@ export const describeError = (error: DomainError): string => {
       return `La clave ${text(d.key)} del bucket no es una ruta sencilla: no se copia nada fuera del destino.`;
     case "init_refused_invalid_ledger":
       return `No se sube el libro a la nube: tiene operaciones inválidas (${text(d.invalid)}), y la nube nunca recibe un libro inválido. Repáralas primero (atlas check te las enseña).`;
-    case "init_remote_not_this_ledger":
-      return "La nube ya no tiene exactamente este libro: la inicialización no se termina sobre otra cosa. Únete a ella con «atlas sync join --from-remote» o «atlas sync join --with-own-lines».";
     case "accept_invalid_while_synced":
       return `Ese cambio de configuración dejaría inválidos ${Array.isArray(d.affected) ? d.affected.length : 0} eventos, y --accept-invalid solo vale en una carpeta local sin nube ni sincronización (ADR-0035): la nube rechaza siempre un libro inválido. Repara antes esos eventos (atlas check te los enseña).`;
     case "folder_mode_ambiguous":
