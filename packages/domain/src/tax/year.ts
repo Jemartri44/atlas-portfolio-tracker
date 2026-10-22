@@ -247,7 +247,6 @@ const pendingText = (pending: readonly PendingLoss[]): string =>
     .sort()
     .join(",");
 
-/** A transmission line is one account of one event: a forced sale can have several. */
 // --- Notes ------------------------------------------------------------------
 
 /** A note of the report: a code the interfaces translate, never a figure in disguise. */
