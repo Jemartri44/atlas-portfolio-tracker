@@ -154,8 +154,7 @@ export const reissueConfirmPage = (fields: {
 <p>La carpeta desde la que inicias sesión nombra un dispositivo que ya existe en la nube y no tiene token. Comprueba que es el tuyo:</p>
 <ul>
 <li>Nombre: <strong>${escapeHtml(name)}</strong></li>
-<li>Última publicación: ${fields.publishedAt === undefined ? "nunca" : escapeHtml(when(fields.publishedAt))}</li>
-</ul>
+${fields.publishedAt === undefined ? "" : `<li>Última publicación: ${escapeHtml(when(fields.publishedAt))}</li>\n`}</ul>
 <p>Si es una copia de la carpeta en otra máquina, el token de la original dejará de valer. Intento abierto a las ${escapeHtml(when(fields.attemptedAt))}.</p>
 ${WARNING}
 ${

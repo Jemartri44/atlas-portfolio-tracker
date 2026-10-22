@@ -497,6 +497,15 @@ describe("the reissue (§4.2 and §4.3; T23, mutant 29 sexies)", () => {
     expect(before).not.toContain(codeOfPage(manual.done.body));
   });
 
+  it("does not claim a device never published when the server holds no instant", async () => {
+    const api = setup();
+    seedConsole(api, ID, { published_at: undefined });
+    const { done } = await consoleReturn(api, { reissue_device_id: ID });
+    expect(done.body).toContain("sobremesa");
+    expect(done.body).not.toContain("Última publicación");
+    expect(done.body).not.toContain("nunca");
+  });
+
   it("escapes the name the server keeps, whatever it holds (mutant 29)", async () => {
     const api = setup();
     seedConsole(api, ID, { device_name: '<img src=x onerror="alert(1)">' });
