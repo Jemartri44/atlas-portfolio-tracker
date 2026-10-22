@@ -88,7 +88,7 @@ const setup = async () => {
       err: (t) => err.push(t),
       confirm: async () => options.answer,
     };
-    const code = await run(["--ledger", ledger, ...argv], io, undefined, options.fx);
+    const code = await run(["--ledger", ledger, ...argv], io, { fxSource: options.fx });
     return { code, out: out.join("\n"), err: err.join("\n"), text: [...out, ...err].join("\n") };
   };
   const ledgerText = () => readFile(ledger, "utf8");

@@ -42,7 +42,7 @@ const setup = async () => {
   const csv = await readFile(join(fixtures, "eurofxref-hist.csv"));
   const atlas = (source: () => FxRateSource, ...argv: string[]) => {
     const out = capture();
-    return run(["--ledger", ledger, ...argv], out.io, undefined, source).then((code) => ({
+    return run(["--ledger", ledger, ...argv], out.io, { fxSource: source }).then((code) => ({
       code,
       ...out,
     }));
