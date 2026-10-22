@@ -96,6 +96,23 @@ export const terraform = (
   return { status: result.status ?? -1, stdout: result.stdout, stderr: result.stderr };
 };
 
+/**
+ * `terraform init` for a root. With the provider already in the plugin cache it
+ * installs from there and never touches the registry; otherwise (cold cache, or
+ * a version the cache lacks) it downloads it, the only network the suite uses.
+ */
+export const initRoot = (dir: string, args: string[]): Run => {
+  const base = ["init", "-input=false", "-no-color", "-lockfile=readonly", ...args];
+  const cached = existsSync(join(pluginCacheDir, "registry.terraform.io", "hashicorp", "aws"));
+  if (cached) {
+    const offline = terraform(dir, [...base, `-plugin-dir=${pluginCacheDir}`]);
+    if (offline.status === 0) {
+      return offline;
+    }
+  }
+  return terraform(dir, base, { network: true });
+};
+
 const SKIPPED = new Set([".terraform", "node_modules"]);
 
 const skipEntry = (path: string): boolean => {
@@ -192,11 +209,7 @@ export const renderPlan = (request: PlanRequest): Plan => {
     const scratch = mkdtempSync(join(tmpdir(), "atlas-infra-run-"));
     entry = { scratch, rootDir: fixture ? scratch : join(scratch, relative(infraRoot, absolute)) };
     refresh(absolute, entry.rootDir, fixture, scratch);
-    const init = terraform(
-      entry.rootDir,
-      ["init", "-input=false", "-no-color", "-lockfile=readonly"],
-      { network: true },
-    );
+    const init = initRoot(entry.rootDir, []);
     if (init.status !== 0) {
       throw new Error(`terraform init failed in ${request.root}:\n${init.stderr}${init.stdout}`);
     }
