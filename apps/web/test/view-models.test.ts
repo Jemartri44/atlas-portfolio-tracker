@@ -11,6 +11,7 @@ import {
   projectLedger,
   type SupportedEvent,
   settingsAt,
+  validateSettings,
   validateShape,
   type Warning,
 } from "@atlas/domain";
@@ -630,9 +631,12 @@ describe("the draft of the configuration screen", () => {
     });
     expect(withNumber({}, "stale_price_days", " 7 ", true)).toEqual({ stale_price_days: 7 });
     for (const typed of ["9,5", "3e2", "0x4", "-3"]) {
-      expect(withNumber({}, "stale_price_days", typed, true), typed).toEqual({
-        stale_price_days: typed,
-      });
+      const patch = withNumber({}, "stale_price_days", typed, true);
+      expect(patch, typed).toEqual({ stale_price_days: typed });
+      // And the domain refuses it by name, instead of saving a truncated number.
+      expect(() => validateSettings(candidateSettings(base, patch, undefined)), typed).toThrow(
+        expect.objectContaining({ code: "invalid_settings" }),
+      );
     }
   });
 
