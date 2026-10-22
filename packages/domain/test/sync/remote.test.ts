@@ -12,6 +12,7 @@ import {
   acceptAppend,
   acceptInit,
   initDuplicateIds,
+  MAX_APPEND_UNITS,
   parseAppendBody,
   parseInitBody,
   type RemoteRules,
@@ -189,6 +190,28 @@ describe("acceptAppend: the table of §5.2, in its order", () => {
       accepted: 2,
       lines: linesOf([one, two]),
     });
+  });
+
+  it("admits MAX_APPEND_UNITS units and refuses one more before judging any (a bound, not a clock)", () => {
+    const b = device(300);
+    const deposits = Array.from({ length: MAX_APPEND_UNITS + 1 }, (_, n) =>
+      b.deposit({ account_id: "acc_fund", amount: String(10 + n) }),
+    );
+    const refused = (() => {
+      try {
+        // The last line would be unreadable: the bound is hit first, so nothing is projected.
+        acceptAppend(remote, [...plain(deposits), { line: "not json" }], rules);
+      } catch (error) {
+        return error as RemoteError;
+      }
+      throw new Error("accepted");
+    })();
+    expect(refused.code).toBe("append_too_many_units");
+    expect(refused.status).toBe(413);
+    expect(refused.details).toEqual({ max: MAX_APPEND_UNITS });
+    expect(acceptAppend(remote, plain(deposits.slice(0, MAX_APPEND_UNITS)), rules).accepted).toBe(
+      MAX_APPEND_UNITS,
+    );
   });
 
   it("writes the valid stretch up to the first rejected line, and nothing after, even if valid", () => {

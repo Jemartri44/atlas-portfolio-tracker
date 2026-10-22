@@ -64,6 +64,7 @@ export const REMOTE_FAILURE_CODES = [
   "precondition_required",
   "precondition_failed",
   "init_rejected",
+  "append_too_many_units",
   "not_found",
   "internal",
   // Feature 015 (docs/api.md §2 and §7): the device of the credential is

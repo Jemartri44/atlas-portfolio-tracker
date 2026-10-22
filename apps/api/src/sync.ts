@@ -128,7 +128,10 @@ export const syncRoutes = (context: SyncContext) => {
     if (asked.etag !== current.etag) {
       return fail(refusal("precondition_failed"));
     }
-    const judgement = acceptAppend(current.lines, entries, rules());
+    const judgement = judged(() => acceptAppend(current.lines, entries, rules()));
+    if (isRefusal(judgement)) {
+      return fail(judgement);
+    }
     if (utf8Of(judgement.lines) === undefined) {
       return fail(refusal("body_invalid", { reason: "not_utf8" }));
     }

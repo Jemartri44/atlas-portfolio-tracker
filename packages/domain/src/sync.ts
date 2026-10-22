@@ -37,6 +37,7 @@ export {
   acceptAppend,
   acceptInit,
   initDuplicateIds,
+  MAX_APPEND_UNITS,
   parseAppendBody,
   parseInitBody,
   type RemoteRules,
