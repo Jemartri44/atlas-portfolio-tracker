@@ -190,6 +190,12 @@ export const ADD_SPECS: Record<string, DraftSpec> = {
   },
 };
 
+/** The assets an operation touches: one for a buy or a sell, two for a swap. */
+const assetsOf = (draft: Record<string, unknown>): string[] =>
+  [draft.asset_id, draft.from_asset_id, draft.to_asset_id].filter(
+    (value): value is string => typeof value === "string",
+  );
+
 /**
  * What the user has to see **before** confirming a trade: the warnings the event
  * itself raises — above all the wash-sale one, which is the most expensive
@@ -199,12 +205,6 @@ export const ADD_SPECS: Record<string, DraftSpec> = {
  * and `recordEvent` raises the same error right after, with its own message.
  * A preview must never turn into a worse error than the one that follows.
  */
-/** The assets an operation touches: one for a buy or a sell, two for a swap. */
-const assetsOf = (draft: Record<string, unknown>): string[] =>
-  [draft.asset_id, draft.from_asset_id, draft.to_asset_id].filter(
-    (value): value is string => typeof value === "string",
-  );
-
 const tradeNotes = async (ctx: Context, draft: Record<string, unknown>): Promise<string[]> => {
   try {
     const { warnings, state, events } = await previewEvent(ctx.deps, draft as unknown as Draft, {
