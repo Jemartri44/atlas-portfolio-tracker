@@ -11,6 +11,7 @@ import { negative, requireAvailable, warnHolders } from "./operations.js";
 import { completeRequest, lookupOpenRequest } from "./pending.js";
 import { adjustPosition } from "./positions.js";
 import type { LedgerState } from "./state.js";
+import { enforceTransfer } from "./transfer-rule.js";
 import { noteAcquisition, warnRepurchase } from "./wash-sale.js";
 
 export const applyTransfer = (state: LedgerState, event: TransferEvent): void => {
@@ -31,13 +32,8 @@ export const applyTransfer = (state: LedgerState, event: TransferEvent): void =>
   const quantityIn = Quantity.parse(event.quantity_in);
   const request =
     event.request_id === undefined ? undefined : lookupOpenRequest(state, event.request_id, event);
-  if (!custody && !(fromAsset.transferable && toAsset.transferable)) {
-    throw new ProjectionError(
-      "not_transferable",
-      event.id,
-      "fund transfers require both assets to be transferable",
-      { from_asset_id: event.from_asset_id, to_asset_id: event.to_asset_id },
-    );
+  if (!custody) {
+    enforceTransfer(state, event.id, fromAsset, toAsset, event.recorded_at);
   }
   requireAvailable(state, event.from_account_id, event.from_asset_id, quantityOut, event.id);
 

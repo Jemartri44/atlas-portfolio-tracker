@@ -56,6 +56,20 @@ const shift = (date: CivilDate, window: WashSaleWindow, direction: 1 | -1): Civi
 export const washSaleWindowEnd = (fiscalDate: CivilDate, window: WashSaleWindow): CivilDate =>
   shift(fiscalDate, window, 1);
 
-/** First day of the window before a sale, counted the same way. */
-export const washSaleWindowStart = (fiscalDate: CivilDate, window: WashSaleWindow): CivilDate =>
-  shift(fiscalDate, window, -1);
+/**
+ * Whether the rule looks at purchases before the sale. Crypto has no official
+ * secondary market, so only article 33.5.e) LIRPF applies to it: the year
+ * **following** the sale, nothing before. Securities, funds and ETPs keep the
+ * window on both sides (article 33.5.f and g).
+ */
+const washSaleLooksBack = (assetType: AssetType): boolean => assetType !== "crypto";
+
+/**
+ * First day of the window around a sale, counted the same way: the window
+ * before it, or the sale day itself when the rule only looks forward.
+ */
+export const washSaleWindowStart = (
+  fiscalDate: CivilDate,
+  window: WashSaleWindow,
+  assetType: AssetType,
+): CivilDate => (washSaleLooksBack(assetType) ? shift(fiscalDate, window, -1) : fiscalDate);

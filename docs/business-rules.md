@@ -161,7 +161,7 @@ Los fondos de inversión españoles y los UCITS comercializados en España admit
 
 **Modelarlo como venta seguida de compra rompe la fiscalidad de forma silenciosa durante años.** Es el error más caro posible en este sistema.
 
-Los ETFs, ETCs y ETPs (oro, cripto y todo el cubo) **no** admiten traspaso: cada venta es hecho imponible.
+Los ETFs, ETCs y ETPs (oro, cripto y todo el cubo) **no** admiten traspaso: cada venta es hecho imponible (art. 94.1.a LIRPF: el diferimiento es solo para fondos de inversión). El motor lo hace cumplir: un `transfer` o `transfer_requested` entre activos distintos solo se **registra** si ambos son `fund` o `money_market` y están marcados `transferable` (en otro caso se rechaza con `not_transferable`). Al **reproducir** un libro que ya lo contenía no se bloquea la carga: sale el aviso `transfer_not_between_funds` en la atención, con el texto de registrarlo como venta y compra. Un catálogo con `transferable: true` en otro tipo de activo también carga, con el aviso `transferable_not_fund`.
 
 ### 5.3 FIFO
 
@@ -185,9 +185,9 @@ Casos límite a cubrir en tests:
 
 ### 5.4 Regla de recompra con pérdidas (dos meses / un año)
 
-Si se vende con pérdidas y se recompra el **mismo valor homogéneo** dentro de la ventana anterior o posterior a la venta, la pérdida **no es computable** en ese ejercicio. Se difiere hasta que se transmitan los valores recomprados.
+Si se vende con pérdidas y se recompra el **mismo valor homogéneo** dentro de la ventana anterior o posterior a la venta (solo la posterior en la cripto directa), la pérdida **no es computable** en ese ejercicio. Se difiere hasta que se transmitan los valores recomprados.
 
-La ventana es de **dos meses** para valores admitidos a negociación (acciones, ETF, ETC, ETP **y participaciones de fondos** —y los monetarios, que en este catálogo son fondos—, que lo son por el art. 4.9 del RD 1082/2012 al difundir su valor liquidativo a diario; corregido el 2026-09-22, criterio #2, donde consta que esa cita **limita su alcance** «a los efectos de aquellas disposiciones que regulen regímenes específicos de inversión») y de **un año** para los no admitidos (art. 33.5 **f)** y **g)** LIRPF, **verificar**). **La cripto va al año por prudencia, no por la letra g)**: para las monedas virtuales no hay norma expresa que fije plazo, como dice el propio criterio #2. Se cuenta **de fecha a fecha** en meses y años naturales, no en un número fijo de días (61 días no son dos meses: pregunta #14). Con aportaciones mensuales a un fondo, cualquier reembolso con pérdida de ese fondo activa la regla. Parametrizada por tipo de activo (`wash_sale_window`, `"2m"`/`"1y"`/`"<n>d"`, ADR-0013 y `data-schema.md` §8.4).
+La ventana es de **dos meses** para valores admitidos a negociación (acciones, ETF, ETC, ETP **y participaciones de fondos** —y los monetarios, que en este catálogo son fondos—, que lo son por el art. 4.9 del RD 1082/2012 al difundir su valor liquidativo a diario; corregido el 2026-09-22, criterio #2, donde consta que esa cita **limita su alcance** «a los efectos de aquellas disposiciones que regulen regímenes específicos de inversión») y de **un año** para los no admitidos (art. 33.5 **f)** y **g)** LIRPF, **verificar**). **La cripto directa** (sin mercado secundario oficial) va por el art. 33.5.**e)**, que mira **solo el año siguiente** a la venta: una compra anterior a la venta no cuenta (criterio #2), salvo la del propio día de la venta, que cuenta por prudencia. Los ETP de cripto son valores admitidos y siguen con dos meses antes y después. Se cuenta **de fecha a fecha** en meses y años naturales, no en un número fijo de días (61 días no son dos meses: pregunta #14). Con aportaciones mensuales a un fondo, cualquier reembolso con pérdida de ese fondo activa la regla. Parametrizada por tipo de activo (`wash_sale_window`, `"2m"`/`"1y"`/`"<n>d"`, ADR-0013 y `data-schema.md` §8.4).
 
 **Qué cuenta como adquisición** (criterio fijado el 2026-09-18, `docs/fiscal-questions.md` #2b, certeza media): un **traspaso entrante sí cuenta**, porque es una adquisición de valores homogéneos aunque no haya tributado en origen; unas acciones liberadas (`scale`) y un `grant` con coste cero **no** cuentan, porque no hay desembolso. El criterio es configurable (`wash_sale_transfer_counts`, por defecto `true`): contar difiere la pérdida, que es la lectura prudente, y no contarla la deduce antes.
 
@@ -263,7 +263,7 @@ La fecha que determina el ejercicio, la antigüedad del lote, el tipo de cambio 
 - **España no fracciona el ejercicio**: se es residente o no residente para el año completo.
 - Perder la residencia fiscal **elimina el derecho al traspaso**, que es la base de toda la arquitectura de vehículos.
 
-→ La residencia fiscal es un campo de configuración (`tax_residence`), no una constante. Un cambio invalida las funciones de traspaso.
+→ La residencia fiscal es un campo de configuración (`tax_residence`), no una constante. Un cambio invalida las funciones de traspaso: con `tax_residence` distinta de `ES` (vigente el día de registro), el traspaso se rechaza al registrarlo y avisa al reproducirlo (`transfer_not_resident`), y el simulador se niega. `ES` se lee sin distinguir mayúsculas ni espacios; vacío cuenta como `ES`. La residencia vigente se resuelve por día de Madrid.
 
 ### 5.11 Las casillas de la Renta son datos por ejercicio
 

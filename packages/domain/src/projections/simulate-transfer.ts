@@ -14,7 +14,8 @@ import { Quantity } from "../money/quantity.js";
 import type { AssetClass, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import { manualPrices, type PriceLookup } from "./prices.js";
-import type { LedgerState, Warning } from "./state.js";
+import type { Asset, LedgerState, Warning } from "./state.js";
+import { transferBlock } from "./transfer-rule.js";
 import {
   type CoreWeightRow,
   type CoreWeights,
@@ -51,7 +52,7 @@ const fail = (code: string, message: string, details: Record<string, unknown>): 
 };
 
 /** Checks the asset exists, belongs to the core and can be transferred. */
-const requireTransferable = (state: LedgerState, assetId: AssetId, role: string): void => {
+const requireTransferable = (state: LedgerState, assetId: AssetId, role: string): Asset => {
   const asset = state.assets.get(assetId);
   if (asset === undefined) {
     fail("unknown_asset", `asset ${assetId} does not exist`, { asset_id: assetId, role });
@@ -62,6 +63,7 @@ const requireTransferable = (state: LedgerState, assetId: AssetId, role: string)
   if (asset?.transferable !== true) {
     fail("not_transferable", `asset ${assetId} is not transferable`, { asset_id: assetId, role });
   }
+  return asset as Asset;
 };
 
 export const simulateTransfer = (
@@ -72,8 +74,16 @@ export const simulateTransfer = (
   if (from_asset_id === to_asset_id) {
     fail("same_asset", "origin and destination must differ", { asset_id: from_asset_id });
   }
-  requireTransferable(state, from_asset_id, "from");
-  requireTransferable(state, to_asset_id, "to");
+  const fromAsset = requireTransferable(state, from_asset_id, "from");
+  const toAsset = requireTransferable(state, to_asset_id, "to");
+  const block = transferBlock(fromAsset, toAsset, settings.tax_residence);
+  if (block !== undefined) {
+    fail(
+      block.code === "transfer_not_between_funds" ? "not_transferable" : block.code,
+      block.message,
+      block.details,
+    );
+  }
 
   const table = coreWeights(state, date, settings);
   /*
