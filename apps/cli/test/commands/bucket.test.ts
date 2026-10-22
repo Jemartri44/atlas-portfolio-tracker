@@ -364,3 +364,28 @@ describe("atlas thesis show", () => {
     expect(await h.exec(["thesis", "show"])).toBe(EXIT.usage);
   });
 });
+
+describe("thesis open --horizon-days", () => {
+  it.each(["1e1", "0x4", "30.5", "0"])("rejects %j", async (text) => {
+    const h = harness({ events: bucketSeed(), confirm: true });
+    const code = await h.exec([
+      "thesis",
+      "open",
+      "--id",
+      "th_a",
+      "--account",
+      "acc_bucket",
+      "--asset",
+      "ast_spec",
+      "--hypothesis",
+      "sube",
+      "--horizon-days",
+      text,
+      "--invalidation",
+      "x",
+      "--planned-size",
+      "500",
+    ]);
+    expect(code).toBe(64);
+  });
+});

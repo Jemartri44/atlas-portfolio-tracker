@@ -1,13 +1,20 @@
 // atlas export --format jsonl|csv [--out <ruta>]: the whole ledger, reversed events included.
 
-import { readFile, writeFile } from "node:fs/promises";
-import { decodeLines, encodeLine, type LedgerEvent, projectLedger } from "@atlas/domain";
+import { readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import {
+  DomainError,
+  decodeLines,
+  encodeLine,
+  type LedgerEvent,
+  projectLedger,
+} from "@atlas/domain";
 import { linesOfText } from "@atlas/domain/sync";
 import { assertKnownFlags, type Flags, stringFlag, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { cloudStoreOf } from "../folder-mode.js";
+import { pathExists } from "../fs.js";
 import { assertNoLedgerInCloudFolder } from "../remote/credentials-file.js";
-import { confirmOutsideRepository, degradedHeader, loadForQuery } from "./shared.js";
+import { confirm, confirmOutsideRepository, degradedHeader, loadForQuery } from "./shared.js";
 
 const csvCell = (value: unknown): string => {
   if (value === undefined) {
@@ -30,6 +37,16 @@ export const toCsv = (rows: readonly Record<string, unknown>[]): string => {
     columns.join(","),
     ...rows.map((row) => columns.map((column) => csvCell(row[column])).join(",")),
   ].join("\n");
+};
+
+/** Whether both paths are the same file (a symlink or a hard link to the ledger included). */
+const sameFile = async (a: string, b: string): Promise<boolean> => {
+  try {
+    const [left, right] = await Promise.all([stat(a), stat(b)]);
+    return left.dev === right.dev && left.ino === right.ino;
+  } catch {
+    return false;
+  }
 };
 
 const cloudProjection = (events: LedgerEvent[]) => ({
@@ -77,11 +94,34 @@ export const exportCommand = async (
     ctx.io.out(content.endsWith("\n") ? content.slice(0, -1) : content);
     return 0;
   }
+  const exists = await pathExists(out);
+  // Before any question: this one has no «yes».
+  if (exists && (await sameFile(out, ctx.ledgerPath))) {
+    throw new DomainError("export_over_ledger", `${out} is the ledger`, { path: out });
+  }
+  if (exists && (await stat(out)).isDirectory()) {
+    throw new DomainError("path_exists", `${out} is a directory`, { path: out });
+  }
   if (!(await confirmOutsideRepository(ctx, out))) {
     ctx.io.out("Cancelado.");
     return 0;
   }
-  await writeFile(out, content);
+  if (exists) {
+    ctx.io.out(`${out} ya existe y se sustituiría.`);
+    if (!(await confirm(ctx, "¿Sobrescribir? [s/N] "))) {
+      ctx.io.out("Cancelado.");
+      return 0;
+    }
+  }
+  // Whole or not at all: a cut leaves the previous file, never half of the new one.
+  const temporary = `${out}.tmp-${process.pid}-${Date.now()}`;
+  try {
+    await writeFile(temporary, content, { mode: 0o600, flag: "wx" });
+    await rename(temporary, out);
+  } catch (failure) {
+    await rm(temporary, { force: true });
+    throw failure;
+  }
   ctx.io.out(`Exportado a ${out}.`);
   return 0;
 };

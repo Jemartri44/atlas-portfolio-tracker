@@ -101,6 +101,14 @@ describe("atlas settings set: a threshold that silences a live warning", () => {
     expect((await h.store.load()).lines).toHaveLength(lines.length);
   });
 
+  it.each(["1e1", "0x4", "9,5", "-3", " 9"])(
+    "rejects %j as a whole number of days",
+    async (text) => {
+      const h = await deviating("5");
+      expect(await h.exec(["settings", "set", "--stale-price-days", text])).toBe(64);
+    },
+  );
+
   it("says nothing when the change silences no warning", async () => {
     const h = await deviating("5");
     expect(await h.exec(["settings", "set", "--stale-price-days", "9"])).toBe(0);
