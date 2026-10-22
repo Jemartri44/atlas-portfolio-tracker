@@ -1,4 +1,4 @@
-// The remote ledger over HTTP (feature 015, E3; `docs/api.md` §5 and §7): the
+// The remote ledger over HTTP (`docs/api.md` §5 and §7): the
 // `RemoteLedger` of the console, with its device token, and of the web, with
 // its cookie. **One client, the credential injected.** No rule lives here:
 // what an answer may be is the domain's (`@atlas/domain/sync`, `answers.ts`).
@@ -10,16 +10,16 @@
 // - Every `POST` and `PUT` carries `x-amz-content-sha256`, the SHA-256 of
 //   **the exact bytes of the body**, with Web Crypto (ADR-0027, fact 2).
 // - The body of `GET /api/ledger` is hashed as it arrived — decompressed, if
-//   CloudFront compressed it (block 0 of E3, §23.3) — and decoded to text
+//   CloudFront compressed it — and decoded to text
 //   without losing anything; an `ETag` that does not say that hash, or bytes
 //   that are not UTF-8, are `transport_rejected`.
 // - **Only a `rejected.code` holds a line.** An error of the closed list is a
 //   `RemoteError` with its code (a `412` sends the sync back to step 1);
 //   anything without the shape of the API is `transport_rejected`; what did
-//   not arrive is `network_failed`. None of them holds a line (V4).
+//   not arrive is `network_failed`. None of them holds a line.
 //
 // Web Crypto and `fetch` exist in Node 22 and in the browser: no Node module
-// and no DOM type here, so the web can bundle it (E4) and the console runs it.
+// and no DOM type here, so the web can bundle it and the console runs it.
 
 import {
   type AppendEntry,

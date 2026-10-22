@@ -3,7 +3,7 @@
 // Several projections **reject** instead of returning an empty answer, and they
 // are right to: the contribution calculator refuses to split money over a core
 // where a price is missing, and the transfer simulator refuses to draw a table
-// of blank cells (decision (c) of prompt 004). What must not happen is that the
+// of blank cells. What must not happen is that the
 // refusal takes the whole screen with it — Núcleo has five blocks and one of
 // them failing is not a reason to hide the other four (FR-013).
 

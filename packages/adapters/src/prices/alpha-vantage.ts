@@ -1,5 +1,5 @@
 // Alpha Vantage as a `PriceSource` (ADR-0031: the fallback), verified on
-// 2026-09-24 (`specs/013-daily-close-prices/questions.md (in git history)` §1.4):
+// 2026-09-24:
 //
 // - `TIME_SERIES_DAILY`, `outputsize=compact` (the free plan sees the last
 //   100 market days), closes **as traded** and **as strings** (`"4. close"`),
@@ -7,7 +7,7 @@
 // - the currency, from `SYMBOL_SEARCH` (`"8. currency"`);
 // - the key travels **in the URL** (`apikey`), so no address is kept;
 // - **every answer comes with HTTP 200**: success and failure are told apart
-//   by the key of the body (decision D-Q4). A made-up key is not rejected: it
+//   by the key of the body. A made-up key is not rejected: it
 //   gets data, an `Error Message` or the `Information` of the limit, so this
 //   source **cannot say `blocked` reliably**; only a message that names the
 //   key says it.
@@ -26,8 +26,7 @@ const isObject = (value: unknown): value is Body =>
 
 /**
  * At most one call a second: the free key limits the bursts, and the only
- * word it says about it is «1 request per second» (questions.md §1.4; review
- * of PR #78). A call waits for the second to pass instead of being refused.
+ * word it says about it is «1 request per second». A call waits for the second to pass instead of being refused.
  */
 const ALPHA_VANTAGE_SPACING_MS = 1000;
 

@@ -60,7 +60,7 @@ const MAX_POINTS = 120;
  * What a card of this screen already says where it happens: the missing price
  * in its cell, the rule that could not be evaluated under its heading, the
  * sample and the index in the statistics. A list of notices repeating them was
- * a second copy of the screen (review of 2026-09-19); what is left goes into
+ * a second copy of the screen; what is left goes into
  * the card it is about.
  */
 const SAID_IN_PLACE = new Set([

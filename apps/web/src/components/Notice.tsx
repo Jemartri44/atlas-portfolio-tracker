@@ -1,5 +1,4 @@
-// **The** notice (docs/design/system.md §5.6; brief §13: "un único componente
-// de aviso"). It used to be drawn three ways — a bordered card in Atención, a
+// **The** notice (docs/design/system.md §5.6). It used to be drawn three ways — a bordered card in Atención, a
 // coloured callout in the forms, a plain paragraph in Cubo — and now it is one
 // component with one look, in a list or on its own:
 //
@@ -116,15 +115,14 @@ interface NoticeListProps {
   /**
    * A row kept, a skeleton, at the end of the visible ones, for a notice that
    * arrives after the first paint (the tax engine is lazy): it counts among
-   * the ones in sight, so nothing jumps when it fills or goes (feature 020,
-   * E2, §8 P5 of prompt 020).
+   * the ones in sight, so nothing jumps when it fills or goes.
    */
   reserve?: boolean | undefined;
 }
 
 /**
  * A notice on its own, boxed, whose whole is the link to where it is fixed:
- * the risk of losing the data, first line of the summary (feature 020, M2).
+ * the risk of losing the data, first line of the summary.
  */
 export const NoticeLink = (props: { item: NoticeItem; class?: string }): JSX.Element => (
   <Show

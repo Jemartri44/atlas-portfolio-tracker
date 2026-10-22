@@ -222,8 +222,7 @@ export default function VerificacionRoute(): JSX.Element {
 
               {/*
                 The command line exists only on a computer, beside a folder: on
-                a phone it named a tool the user has no way to run (review of
-                2026-09-19). There, the export is the copy.
+                a phone it named a tool the user has no way to run. There, the export is the copy.
               */}
               <Notice severity="info" title="La copia de seguridad sigue siendo tuya">
                 La verificación dice si tus datos son coherentes, no si están a salvo. Para tener

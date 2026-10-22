@@ -16,7 +16,7 @@
 //      success leaves the ledger exactly as it was, or says it does not know.
 //
 // LINE BUDGET: the whole write path (ids, conflict, unknown outcome, impacts of
-// a change) stays in one module on purpose; E5 will not split it.
+// a change) stays in one module on purpose.
 //
 // Separate from `actions.ts`: opening a ledger is what the boot does, writing
 // to it is what a form does, and keeping them together put the write flows in
@@ -199,7 +199,7 @@ const resultOfRetry = <T>(result: WriteResult<T>, id: string): RetryResult => {
  * nothing else may be recorded until it is settled.
  *
  * Exported for the one write that is not a use case of the barrel: the chain
- * of ECB rate corrections (feature 012, block 6), which lives behind the door
+ * of ECB rate corrections, which lives behind the door
  * of the ECB so that nothing of it lands where the forms are.
  */
 export const runWrite = async <T>(
@@ -224,7 +224,7 @@ export const runWrite = async <T>(
   return result;
 };
 
-/** The preview of a candidate, straight from the domain use case (decision (h)). */
+/** The preview of a candidate, straight from the domain use case. */
 export const previewDraft = async <E extends SupportedEvent>(
   draft: Draft<E>,
   options: PreviewOptions = {},
@@ -275,7 +275,7 @@ export const correct = async <E extends SupportedEvent>(
 
 /**
  * Which filed returns a change would reach, and how much it moves of each
- * declared figure (ADR-0020, amended; prompt 010, FR-018).
+ * declared figure (ADR-0020, amended, FR-018).
  *
  * The screens ask this **before** the question, which is the only moment it is
  * useful; it never refuses anything. The fast path is the one that matters: a
@@ -334,7 +334,7 @@ export const closedYearsOfReversal = async (
 
 /**
  * And for a settings change, where not a single event moves: the same ledger
- * read with other rules can empty a year that was filed (feature 009, Q12).
+ * read with other rules can empty a year that was filed.
  */
 export const closedYearsOfSettings = async (
   settings: Settings,

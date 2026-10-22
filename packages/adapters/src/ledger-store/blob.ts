@@ -7,7 +7,7 @@
 // It knows nothing about IndexedDB: that is the whole point. The two
 // byte-level methods of `LedgerBlob` are the only thing that changes with the
 // medium, and the comparison of the etag lives **inside** the one that writes,
-// so it happens in the same atomic step as the write (feature 012, block 0). This class is exercised by the same contract tests
+// so it happens in the same atomic step as the write. This class is exercised by the same contract tests
 // that `MemoryLedgerStore` and `FileLedgerStore` pass.
 
 import {
@@ -32,7 +32,7 @@ const NEWLINE = 0x0a;
  * browser's own storage (`./browser`) and by trivial in-memory doubles in the
  * tests.
  *
- * **There is no way to write without comparing** (feature 012, block 0). A
+ * **There is no way to write without comparing**. A
  * `read` followed by a separate `write` was a window: another tab could write
  * in between, and one of the two lines was lost without anyone knowing. So the
  * only write is `update`, which compares and writes as **one** atomic step of

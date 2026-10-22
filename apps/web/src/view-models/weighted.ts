@@ -6,8 +6,7 @@
 // change of share class or a merger **converts** every unit into another asset
 // and leaves the old one active in the catalogue, with nothing in it and no
 // way to buy it. So «Small Cap Index Fund» and «Global Bond Index Fund» came
-// back with an empty weight after their merger and their class change (review
-// of 2026-09-19). An asset a corporate action converted away, and that holds
+// back with an empty weight after their merger and their class change. An asset a corporate action converted away, and that holds
 // nothing, is not asked for a weight.
 
 import {

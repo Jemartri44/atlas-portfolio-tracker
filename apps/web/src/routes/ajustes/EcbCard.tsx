@@ -1,8 +1,8 @@
-// «Tipos del BCE» in Ajustes (feature 012, block 3): which history the web is
+// «Tipos del BCE» in Ajustes: which history the web is
 // using — one imported by hand or one downloaded from the cloud —, until when
 // it publishes, and the ways to get one. The web never downloads from a third
 // party: the history is imported, or **downloaded from our own cloud** with the
-// session of this browser (feature 016, E3, block 2) — only when the card opens
+// session of this browser — only when the card opens
 // or the user asks, never at start nor on a timer. Everything of the ECB is
 // loaded here, lazily.
 
@@ -60,8 +60,8 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
       return shown?.text;
     });
 
-  // Opening the card is asking (015, §7 P12): with a session, the history of
-  // the cloud comes down. Never at start and never on a timer (mutant 25). A
+  // Opening the card is asking: with a session, the history of
+  // the cloud comes down. Never at start and never on a timer. A
   // resource, as the card of the session reads its state: no start-up hook
   // outside the few files ADR-0017 allows.
   createResource(async () => {
@@ -73,7 +73,7 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
     return state.kind;
   });
 
-  /** Erases the copy of this browser, after asking (review of PR #108, N4). */
+  /** Erases the copy of this browser, after asking. */
   const onForget = (): Promise<void> => {
     setForgetting(false);
     return guarded(async () => {

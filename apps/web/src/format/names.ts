@@ -6,8 +6,7 @@
 // Fund" right next to them, in the catalogue events. Showing the identifier
 // where the name exists turns the application into a debug dump — and it was
 // doing exactly that in the patrimony, in the two hundred rows of the ledger,
-// in the warnings and inside half the translated error messages (review of
-// 2026-09-18).
+// in the warnings and inside half the translated error messages.
 //
 // Three rules, all of them here so no screen has to remember them:
 //

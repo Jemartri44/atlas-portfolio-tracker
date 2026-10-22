@@ -7,7 +7,7 @@
 // row, and the evolution closes the page (D5).
 //
 // Every figure comes from a projection of the domain **at today's date**
-// (`asOf`, Q11), the same one `atlas networth` uses without `--date`, and the
+// (`asOf`), the same one `atlas networth` uses without `--date`, and the
 // recent movements are cut at that date too: a valuation dated next month is
 // not something that happened lately.
 //
@@ -54,12 +54,12 @@ import { AttentionBlock } from "./AttentionBlock.jsx";
 import { EvolutionCard } from "./EvolutionCard.jsx";
 import { FirstSteps } from "./FirstSteps.jsx";
 // The card that leads to the fiscal screen only draws, so it is on the boot
-// path and in its place on the first paint (feature 020, E2): what asks the
+// path and in its place on the first paint: what asks the
 // tax engine is `fiscal-status.ts`, loaded after it.
 import FiscalCard from "./FiscalCard.jsx";
 import { NetWorthBlock } from "./NetWorthBlock.jsx";
 
-/** How many recent movements the summary shows (prompt §3.6). */
+/** How many recent movements the summary shows. */
 const RECENT = 5;
 
 /** Enough points for a curve, few enough that twenty years stay instant. */
@@ -137,7 +137,7 @@ export default function ResumenRoute(): JSX.Element {
         });
         // Cut at the date read: what is dated later has not happened yet.
         const entries = ledgerEntries(snapshot.state, snapshot.events, { to: date });
-        // Five entries, the valuations of a day gathered into one (M8).
+        // Five entries, the valuations of a day gathered into one.
         const movements = entries.filter(isMovement);
         const references = eventReferences(snapshot.events, names);
         const recent = firstEntries(

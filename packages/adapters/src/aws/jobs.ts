@@ -1,4 +1,4 @@
-// The door `@atlas/adapters/aws-jobs` (feature 016): what the scheduled jobs
+// The door `@atlas/adapters/aws-jobs`: what the scheduled jobs
 // build on the narrow interfaces of S3 and SSM — their records and streaks,
 // and the `Notifier` of SES over its narrow `MailSender`. Apart from
 // `@atlas/adapters/aws` so the API, which imports that door, never reaches

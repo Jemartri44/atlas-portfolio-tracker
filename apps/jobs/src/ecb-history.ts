@@ -1,9 +1,8 @@
-// The ECB history of the bucket as the jobs read it (feature 016): its
-// manifest and the file in force, read **only** through the `ReferenceReader`
-// of the 015, and the file used **only if its bytes are the ones its manifest
+// The ECB history of the bucket as the jobs read it: its
+// manifest and the file in force, read **only** through the `ReferenceReader`, and the file used **only if its bytes are the ones its manifest
 // records** — never as if they were (`EcbHistoryDamaged`). Nothing of
 // `prices/`: the income tax of January reads this (the notes of the ECB check,
-// as `atlas tax` does) and must not reach a price (E4; `tests/jobs-access.test.ts`).
+// as `atlas tax` does) and must not reach a price (`tests/jobs-access.test.ts`).
 
 import {
   decodeUtf8Strict,
@@ -16,9 +15,9 @@ import { activeHistoryOf } from "@atlas/domain/jobs";
 
 /**
  * How old a rate of the ECB may be before a currency counts as stale, in the
- * cloud: there is no `atlas.config.json`, so the default of the console (Q11).
+ * cloud: there is no `atlas.config.json`, so the default of the console.
  * **One value for every task**: the reminder values the cash with it, and the
- * income tax of January notes the rates with it (review of PR #109, avisos N2).
+ * income tax of January notes the rates with it.
  */
 export const CLOUD_ECB_STALE_DAYS = DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days;
 
@@ -31,8 +30,7 @@ export const textOf = (bytes: Uint8Array): string | undefined => {
 };
 
 /**
- * What the bucket holds of the history of the ECB (review of PR #109, round
- * 2, R2-N1): **none at all** (no manifest), a history in force whose bytes are
+ * What the bucket holds of the history of the ECB: **none at all** (no manifest), a history in force whose bytes are
  * the ones its manifest records, or one that is **damaged** — a manifest that
  * does not read, a file that is missing, does not match it or is not a
  * history, as an update cut halfway leaves it until the next run undoes it.

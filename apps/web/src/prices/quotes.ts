@@ -1,4 +1,4 @@
-// Where the web gets the daily closes (feature 013, block 5): the price files
+// Where the web gets the daily closes: the price files
 // the user imported by hand into this browser, converted with the ECB history
 // the web holds. The web downloads no price and reads no folder; the ledger
 // never depends on them (they are informational).
@@ -36,13 +36,12 @@ export interface WebQuotes {
   readonly unreadable: readonly UnreadableCloses[];
   /**
    * Closes stored in a currency their source does not declare in
-   * `prices/symbols.json` (feature 013 stored pence as pounds): left out, and
+   * `prices/symbols.json`: left out, and
    * said. Only known where `symbols.json` was imported with the closes.
    */
   readonly mismatched: readonly MismatchedCloses[];
   /**
-   * Why the currency of the closes could not be checked (second pass of the
-   * review of PR #80), said and never silent: no `symbols.json` beside them
+   * Why the currency of the closes could not be checked, said and never silent: no `symbols.json` beside them
    * (the closes are used as they are), or one that does not read (none used).
    */
   readonly symbols?: SymbolsProblem;
@@ -147,7 +146,7 @@ export const externalOf = (
 /**
  * The files of `prices/` that the console writes, that are not prices and that
  * the web does not need. `symbols.json` is not one of them: it says which
- * closes are stored in the wrong currency (second pass of the review of PR #80).
+ * closes are stored in the wrong currency.
  */
 const COMPANIONS = ["_status.json", "config.json"];
 const SYMBOLS = "symbols.json";
@@ -185,7 +184,7 @@ export const importPriceFiles = async (
     }
     // The other files of the folder `prices/` come along when a whole folder
     // is chosen: they are not prices, and they are left aside with a note
-    // instead of refusing the import (review of PR #78).
+    // instead of refusing the import.
     if (COMPANIONS.includes(name)) {
       ignored.push(name);
       continue;

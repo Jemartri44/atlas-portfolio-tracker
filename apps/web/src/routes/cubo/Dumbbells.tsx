@@ -1,5 +1,4 @@
-// Each thesis against the index, on one axis (feature 020, E3, M10; mockup
-// `indicadores.html`, card D): the dot is the thesis, the ring is the index,
+// Each thesis against the index, on one axis (mockup `indicadores.html`, card D): the dot is the thesis, the ring is the index,
 // the thin line is 0 %, and the difference in points is written in ink with its
 // sign — **the colour does not carry it**, and the shape tells the thesis from
 // the index, so it reads the same without colour.

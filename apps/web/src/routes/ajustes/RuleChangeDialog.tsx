@@ -1,5 +1,4 @@
-// The question about the ECB rates of a change of `fiscal_date_rule` (feature
-// 012, block 6; criterion 25): said before saving, line by line, with what is
+// The question about the ECB rates of a change of `fiscal_date_rule` (criterion 25): said before saving, line by line, with what is
 // known — and, without a history, «no se puede verificar contra el oficial»,
 // never taken for right or wrong. Rates are public figures: shown, not masked.
 

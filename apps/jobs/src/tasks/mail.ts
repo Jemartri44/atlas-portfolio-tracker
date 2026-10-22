@@ -1,8 +1,8 @@
-// The tasks of the mail function (feature 016, E1; §8.2 B2): **the only
+// The tasks of the mail function: **the only
 // function that sends**. It composes and decides nothing: the domain writes
 // every mail (`reminderMail`, `noticeMail`), says what a retry does and when a
 // streak is sent. This file is also **the one reader of the switch of the
-// amounts** (§8.2 M2): it reads `/atlas/<env>/mail/amounts` and hands the
+// amounts**: it reads `/atlas/<env>/mail/amounts` and hands the
 // redaction the value already understood (`amountsSwitch`: only `on` is on).
 // The architecture test holds that no other module names that parameter.
 //
@@ -118,7 +118,7 @@ export const monthlyReminder: TaskRunner = async (context): Promise<TaskResult> 
   ]);
   if (planned === undefined) {
     // Not sent: the period stays open and the next run tries again, so the
-    // reminder goes (at least once) as soon as it can be read (§8.1 P10).
+    // reminder goes (at least once) as soon as it can be read.
     return { state: "failed", outcome: { code: "reference_unavailable" } };
   }
   const { plan, counts } = planned;
@@ -138,7 +138,7 @@ export const monthlyReminder: TaskRunner = async (context): Promise<TaskResult> 
     split: facts.contribution.ok ? 1 : 0,
     amounts: amounts === "on" ? 1 : 0,
   };
-  // At least once (§8.1 P10): an unknown fate is sent again next time, never taken as sent.
+  // At least once: an unknown fate is sent again next time, never taken as sent.
   return sent.ok
     ? { state: "done", outcome: { code: "mail_sent", counts: summary } }
     : { state: "send_failed", outcome: { code: sent.code, counts: summary } };
@@ -154,8 +154,8 @@ interface Said {
 /**
  * What the last record of a producer says: of this period, or else the one
  * before. A record that does not read is said too, as `record_unreadable` with
- * the task as subject (review of PR #104, idempotence N4) — never skipped.
- * Of a readable one, only what that producer may say (privacy B1).
+ * the task as subject — never skipped.
+ * Of a readable one, only what that producer may say.
  */
 const latestOf = async (
   store: JobsStore,
@@ -271,14 +271,13 @@ export const dispatchFindings: TaskRunner = async (context): Promise<TaskResult>
 };
 
 /**
- * The weekly review (E4; `docs/specification.md` §9.5): the deviations of the
+ * The weekly review (`docs/specification.md` §9.5): the deviations of the
  * core above `deviation_threshold_pp` and rules 17 and 18 of the bucket,
  * valued with the closes of the cloud as the web values them (informative:
- * nothing fiscal). **Only when a threshold is passed** (mutant 32); at most
- * once, and never for a week gone (the handler closes it `expired`; review of
- * PR #109, avisos N4). A ledger that could not be read now closes the run
+ * nothing fiscal). **Only when a threshold is passed**; at most
+ * once, and never for a week gone (the handler closes it `expired`). A ledger that could not be read now closes the run
  * `failed` and the next day tries again; on the last day of the period it is
- * said, with its code (avisos B2). A ledger that is wrong sends nothing here:
+ * said, with its code. A ledger that is wrong sends nothing here:
  * the monthly reminder and the integrity say it.
  */
 export const weeklyReview: TaskRunner = async (context): Promise<TaskResult> => {
@@ -302,7 +301,7 @@ export const weeklyReview: TaskRunner = async (context): Promise<TaskResult> => 
     reference = await readReference(context.deps.objects, ledger.state);
   } catch {
     // The closes or the history of the ECB could not be read now: like the
-    // ledger, a passing failure, never a review valued with less (round 2).
+    // ledger, a passing failure, never a review valued with less.
     return passing("reference_unavailable");
   }
   const external = "external" in reference ? reference.external : undefined;

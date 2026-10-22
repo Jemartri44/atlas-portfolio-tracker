@@ -1,4 +1,4 @@
-// LedgerStore over the API (ADR-0035, E1; `docs/api.md` §5.8): the cloud
+// LedgerStore over the API (ADR-0035, `docs/api.md` §5.8): the cloud
 // ledger as the single source of truth. No queue, no copy on the device: the
 // store only remembers the last load **in memory** to judge a write, and every
 // write goes to the API as one unit with `If-Match`.

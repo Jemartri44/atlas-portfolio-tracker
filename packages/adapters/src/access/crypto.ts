@@ -1,4 +1,4 @@
-// The cryptographic primitives of the API (feature 015), with `node:crypto`
+// The cryptographic primitives of the API, with `node:crypto`
 // and nothing else: HKDF subkeys per purpose, HMAC-SHA256 signatures compared
 // in constant time, PKCE S256 and RS256 over a JWK. **The rules** — which
 // purpose, which `typ`, in which order — are the domain's (`@atlas/domain/access`);

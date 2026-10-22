@@ -1,8 +1,7 @@
 // atlas weights · contribute · costs
 //
 // Read-only commands of phase 2. None of them writes: the contribution is a
-// proposal, the orders are placed by hand and recorded as always (decision (h)
-// of prompt 004).
+// proposal, the orders are placed by hand and recorded as always.
 
 import {
   type ContributionPlan,

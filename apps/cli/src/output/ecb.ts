@@ -1,4 +1,4 @@
-// What the console says about the ECB history (feature 012). Spanish, dates
+// What the console says about the ECB history. Spanish, dates
 // as dd/mm/aaaa, rates as the history writes them.
 
 import type { CalendarDisagreement, EcbSource, EcbUpdateResult } from "@atlas/domain/ecb";
@@ -41,7 +41,7 @@ const whose = (basis: string | undefined): string =>
   basis === "fiscal" ? "la fecha fiscal" : "la fecha de la operación";
 
 /**
- * The findings of the ECB check, in Spanish (decision (z) of prompt 012): a
+ * The findings of the ECB check, in Spanish: a
  * catalogue **limited to the codes of the ECB** — translating every finding of
  * the console is another feature —, and the drift test of the messages
  * demands an entry here for each code the domain can raise. Each with the

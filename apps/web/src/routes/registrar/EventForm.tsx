@@ -52,7 +52,7 @@ interface EventFormProps {
   events?: readonly LedgerEvent[];
   /** Correcting an existing event instead of recording a new one. */
   correcting?: { id: string; values: FormValues };
-  /** Recording a draft (block 5): its values, the rate left for the history to propose. */
+  /** Recording a draft: its values, the rate left for the history to propose. */
   fromDraft?: { id: string; values: FormValues } | undefined;
 }
 

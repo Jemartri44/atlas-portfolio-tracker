@@ -7,7 +7,7 @@
 // round the other way.
 //
 // A year with no checked mapping keeps every figure and loses every number,
-// and says so. Never the box of another year (prompt 010, decision (e)).
+// and says so. Never the box of another year.
 
 import type { Money } from "@atlas/domain";
 import type { BoxBlockId, BoxEntry, PartialReason, TaxBoxes } from "@atlas/domain/fiscal";

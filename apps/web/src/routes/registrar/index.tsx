@@ -5,7 +5,7 @@
 // between funds, the bucket's theses, corporate actions, the catalogue — waits
 // folded underneath, each with one line about when it is used.
 //
-// Since feature 007 there is nothing left that only the CLI can write.
+// There is nothing left that only the CLI can write.
 
 import { A } from "@solidjs/router";
 import { For, type JSX } from "solid-js";

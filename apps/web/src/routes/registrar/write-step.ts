@@ -1,5 +1,5 @@
 // What "Registrar" and "Guardar como borrador" ask, in one place: the form is
-// long enough already (decision (g) of prompt 007).
+// long enough already.
 //
 // Writing records the event, or corrects the original, or — when the form came
 // from a draft — confirms the draft (`ledger/drafts.ts`): all go to the cloud

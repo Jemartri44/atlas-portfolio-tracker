@@ -1,5 +1,4 @@
-// Figures that stay visible in public: percentages, weights and deviations
-// (Q6). They are the information the user actually consults on the street and
+// Figures that stay visible in public: percentages, weights and deviations. They are the information the user actually consults on the street and
 // they do not give the patrimony away, so they are **not** masked — which is
 // also why they are not painted by `Amount` and do not touch `format/money.ts`.
 

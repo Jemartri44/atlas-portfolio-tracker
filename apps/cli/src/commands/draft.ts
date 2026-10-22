@@ -1,4 +1,4 @@
-// Drafts from the console (feature 012, block 5; ADR-0029, point 9):
+// Drafts from the console (ADR-0029, point 9):
 //
 //   atlas add … --draft          an operation whose ECB rate is not published
 //                                yet, kept in drafts/ next to the ledger
@@ -31,7 +31,7 @@ import { day } from "../output/ecb.js";
 import { historyOf } from "./rates.js";
 import { answer, aside, cancelled, confirm, confirmAndRecord, preview, render } from "./shared.js";
 
-/** The drafts of the cloud for a cloud folder (ADR-0035, E6), the folder's own `drafts/` otherwise. */
+/** The drafts of the cloud for a cloud folder (ADR-0035), the folder's own `drafts/` otherwise. */
 const storeOf = async (ctx: Context): Promise<PendingDraftStore> => {
   const cloud = cloudStoreOf(ctx);
   return cloud === undefined ? new FileDraftStore(dirname(ctx.ledgerPath)) : cloud.drafts();

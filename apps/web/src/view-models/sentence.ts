@@ -235,7 +235,7 @@ const DATE_FIELDS = ["trade_date", "date", "value_date", "requested_date", "effe
  * 2,5 participaciones de World Index Fund por 300,00 € el 19/09/2026 ·
  * MyInvestor». Told from the event the form built, before it exists, so the
  * figures are the ones just typed; each carries its field, for the form to
- * reveal what the user typed (review of 2026-09-19).
+ * reveal what the user typed.
  */
 export const draftSentence = (
   candidate: { type: string } & object,
@@ -257,7 +257,7 @@ export const draftSentence = (
   const date = DATE_FIELDS.map((field) => event[field]).find(
     (value): value is string => typeof value === "string",
   );
-  // A correction replaces an event: it is not one more (third pass of the review).
+  // A correction replaces an event: it is not one more.
   const corrects = typeof event.corrects_id === "string";
   return [
     text(corrects ? "Vas a rectificarlo: en su lugar, " : "Vas a registrar "),

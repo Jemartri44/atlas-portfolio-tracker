@@ -1,9 +1,7 @@
-// The console of a cloud folder takes the prices from the cloud (feature
-// 016, E3, block 1; ADR-0031, «Una sola clave, un solo presupuesto diario»;
-// §8.1 P7 and P11): the API's index, and each file of closes whose version the
+// The console of a cloud folder takes the prices from the cloud (ADR-0031, «Una sola clave, un solo presupuesto diario»): the API's index, and each file of closes whose version the
 // folder does not hold yet, with the token of the folder — **all of it before
 // the lock** — and then, **under the lock**, the lines added with the rules of
-// the 013 and `prices/_cloud.json` written. No source is called: the cloud
+// the price use case and `prices/_cloud.json` written. No source is called: the cloud
 // already spent the day's calls of the plans the console shares with it.
 
 import { FilePriceStore } from "@atlas/adapters";
@@ -67,7 +65,7 @@ export type PullOutcome =
       readonly kind: "pulled";
       readonly pulled_at: string;
       readonly files: readonly PulledFile[];
-      /** Lines left out, by why (review of PR #108, B1 and N5). */
+      /** Lines left out, by why. */
       readonly discarded: { readonly future: number; readonly currency_mismatch: number };
     };
 
@@ -90,7 +88,7 @@ export const pullFromCloud = async (
   const fetched: {
     name: string;
     asset_id: AssetId;
-    /** Absent: not modified. `null`: bytes that are not UTF-8 (N2). */
+    /** Absent: not modified. `null`: bytes that are not UTF-8. */
     text?: string | null;
     version: string;
   }[] = [];
@@ -109,17 +107,17 @@ export const pullFromCloud = async (
       continue;
     }
     // Bytes that are not UTF-8 are a file that does not read, never an
-    // empty one taken as held (review of PR #108, N2).
+    // empty one taken as held.
     const text = strictUtf8(read.bytes, false) ?? null;
     fetched.push({ name: entry.name, asset_id, text, version: read.version });
   }
   const pulled_at = ctx.deps.clock.now().toISOString();
-  // Never the day in course, as the 013 never asks a source for it (B1).
+  // Never the day in course, as the price use case never asks a source for it.
   const today = todayInMadrid(ctx.deps.clock);
   // 2. Compare and write, under the lock.
   const files = await store.transact(async (tx) => {
     const config = parsePriceConfig(await tx.config(), { sharedWithCloud: true });
-    // The currency the folder declares for each source is the only one taken (N5).
+    // The currency the folder declares for each source is the only one taken.
     const symbols = parseSymbols(await tx.symbols());
     const versions: Record<string, string> = { ...held };
     const done: PulledFile[] = [];
@@ -146,7 +144,7 @@ export const pullFromCloud = async (
       try {
         localLines = localText === undefined ? [] : readCloseFile(file.asset_id, localText);
       } catch {
-        // A local file that does not read is never touched (the 013's rule).
+        // A local file that does not read is never touched (the same rule as the price use case).
         done.push({ asset_id: file.asset_id, added: 0, problem: "local_unreadable" });
         continue;
       }

@@ -1,9 +1,7 @@
-// The run records and the streaks of the jobs in the bucket (feature 016,
-// E1; `specs/016-scheduled-jobs/data-model.md` §1 and §2), over the narrow
-// `ObjectStore` of the 015. Every write is conditional — `If-None-Match: *`
+// The run records and the streaks of the jobs in the bucket, over the narrow
+// `ObjectStore`. Every write is conditional — `If-None-Match: *`
 // to claim, `If-Match` on the ETag just read to move on — and **only under
-// `jobs/<family>/`** of the function that writes: one writer per object
-// (§8.1 P11 and P18). Reading is free across `jobs/`: the mail reads what the
+// `jobs/<family>/`** of the function that writes: one writer per object. Reading is free across `jobs/`: the mail reads what the
 // others found. Bytes are read as strict UTF-8; what does not read is said as
 // such, never taken for «nothing there».
 //

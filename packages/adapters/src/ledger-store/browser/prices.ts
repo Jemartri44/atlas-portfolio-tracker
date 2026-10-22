@@ -6,7 +6,7 @@
 import type { AssetId } from "@atlas/domain";
 import { idbGet, idbPut, LEDGER_STORE } from "./idb.js";
 
-/** The key of the prices imported by hand, in the `ledger` store (exported for the test of keys of feature 014). */
+/** The key of the prices imported by hand, in the `ledger` store. */
 export const IMPORTED_PRICES_KEY = "prices:imported";
 const KEY = IMPORTED_PRICES_KEY;
 
@@ -18,7 +18,7 @@ export interface ImportedPrices {
   /**
    * The text of `prices/symbols.json` imported with them, exactly as imported:
    * what says which closes are stored in a currency their source does not
-   * declare (second pass of the review of PR #80). Absent when never imported.
+   * declare. Absent when never imported.
    */
   readonly symbols?: string;
 }

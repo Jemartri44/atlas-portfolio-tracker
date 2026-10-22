@@ -1,4 +1,4 @@
-// The composition of production (feature 015, E3): the configuration of the
+// The composition of production: the configuration of the
 // Lambda (`ATLAS_*`, `docs/api.md` §9), the stores of AWS and Google, put
 // together **once, before any request**. It refuses to start — the Lambda
 // does not come up, and nothing is served — with a configuration it does not
@@ -45,8 +45,7 @@ export const compose = async (
 };
 
 /**
- * The composition, **saying only the name of what failed** (review of PR #96,
- * security N2): an error of the SDK carries the ARN of the role and the id of
+ * The composition, **saying only the name of what failed**: an error of the SDK carries the ARN of the role and the id of
  * the account in its message, and the runtime would log it whole with its
  * trace. The log gets the name; the runtime gets an error that says nothing.
  */

@@ -6,7 +6,7 @@
 // as prose, and the catalogues of `format/messages/` used to interpolate the
 // amount straight into the sentence. With the mask on, the table said `••••`
 // and the warning right under it said "el aporte bruto al cubo (5000 EUR)
-// supera el tope de 6000 EUR" (N11 of the review of feature 007).
+// supera el tope de 6000 EUR".
 //
 // So the same rule, one layer up: a template never prints a detail of the
 // domain by hand, it asks this module for it, and this module decides. Which

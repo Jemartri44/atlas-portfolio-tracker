@@ -321,7 +321,7 @@ const confirmSilencedWarnings = async (
 };
 
 /**
- * The expensive warning of a settings change (prompt 005 §3.5 bis): reading the
+ * The expensive warning of a settings change: reading the
  * same ledger with the new rules can move realized gains from one tax year to
  * another, and a return already filed may stop matching. It informs and asks;
  * it never blocks.
@@ -334,7 +334,7 @@ const confirmMovedYears = async (
 ): Promise<boolean> => {
   const year = yearOf(todayInMadrid(ctx.deps.clock));
   const moved = movedFiscalYears(events, current, next, year);
-  // The base too (feature 009, Q12): the window, the transfer criterion and the
+  // The base too: the window, the transfer criterion and the
   // income category move it without moving a single realized gain.
   const bases = movedTaxYears(events, current, next, year);
   if (moved.length === 0 && bases.length === 0) {
@@ -391,7 +391,7 @@ const confirmMovedYears = async (
     }
   }
   // "A past year" and "a year you filed" are not the same thing, and only the
-  // second one may need a supplementary return (prompt 010, FR-018). The impact
+  // second one may need a supplementary return (FR-018). The impact
   // names the filing and says which declared figure moves.
   const declared = closedYearLines(
     closedYearImpact(
@@ -429,8 +429,8 @@ export const settingsCommand = async (
     return 0;
   }
   if (action === "set") {
-    // Feature 016, E3 (review of PR #108, N1): never accepted to be dropped in
-    // silence — a new snapshot leaves it out (`mergeSettings`, §8.1 P12).
+    // Never accepted to be dropped in
+    // silence — a new snapshot leaves it out (`mergeSettings`).
     if (flags.has("notification-email")) {
       throw new UsageError(
         "--notification-email ya no existe: el destinatario de los correos vive en la configuración de la nube (terraform.tfvars, de donde pasa a SSM), nunca en el libro (ADR-0028, ADR-0034)",
@@ -479,7 +479,7 @@ export const settingsCommand = async (
         ...assetTypeAssignments(categories, "income-category"),
       };
     }
-    // Merged too: a treaty rate is set one country at a time (feature 009, Q4).
+    // Merged too: a treaty rate is set one country at a time.
     const treaties = stringFlag(flags, "treaty-withholding-pct");
     if (treaties !== undefined) {
       patch.treaty_withholding_pct = {

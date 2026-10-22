@@ -7,7 +7,7 @@
 // What is left here is the state of the draft and the save. The fields live in
 // `view-models/settings.ts`, where a test reaches them without a DOM; the four
 // blocks in `SettingsCards.tsx`, and the three questions in
-// `SettingsDialogs.tsx` (review of 2026-09-18: this file was 517 lines).
+// `SettingsDialogs.tsx`.
 
 import {
   type AssetType,
@@ -112,7 +112,7 @@ export default function ConfiguracionRoute(): JSX.Element {
             next = candidateSettings(current(), patch(), weights());
           } catch (failure) {
             // `toAppError` and not `failure.message`: the domain speaks English
-            // by contract and each interface translates (decision (i)).
+            // by contract and each interface translates.
             setError(toAppError(failure));
             return;
           }

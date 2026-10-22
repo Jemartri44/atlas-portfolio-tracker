@@ -11,7 +11,7 @@
 //     shown on the new ledger and another yes;
 //   - after a `412` that follows an unknown outcome, the ledger is searched
 //     **again** before asking to confirm: the first send may have landed after
-//     the first look (`specs/021-api-ledger-store`, reminder for E2b).
+//     the first look (reminder for E2b).
 //
 // The state is kept in memory (`store.pending()`), never on the device.
 

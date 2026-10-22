@@ -3,8 +3,7 @@
 // `corporate_action` is the only event of the schema whose body is not flat: it
 // carries `effects[]`, and composing that array — including working out the
 // fractional shares a reverse split leaves in each account — is a business rule
-// with a fiscal consequence. It lives in the domain (`corporateActionDraft`,
-// Q4 of prompt 007), and this file only says **which fields to ask for** for
+// with a fiscal consequence. It lives in the domain (`corporateActionDraft`), and this file only says **which fields to ask for** for
 // each kind, exactly like `specs.ts` does for the flat events.
 //
 // The eight forms mirror the eight wizards of `atlas ca`. The ninth escape

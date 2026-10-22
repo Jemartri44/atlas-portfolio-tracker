@@ -326,7 +326,7 @@ const WAIVER_REASONS: Record<FingerprintWaiver["reason"], string> = {
  * The text of a finding. The domain speaks English by contract; the CLI still
  * prints most findings in it —a known gap, left for a later round— but **this
  * one is read for twenty years**, so it is said in Spanish with its reason and
- * its date (review of feature 011).
+ * its date.
  */
 const describeFindingIn = (state: LedgerState | undefined, finding: IntegrityFinding): string => {
   const ecb = describeEcbFinding(finding.code, finding.details ?? {});
@@ -345,8 +345,7 @@ const describeFindingIn = (state: LedgerState | undefined, finding: IntegrityFin
 
 /**
  * What the check says about the ECB rates, always: contrasted until when, or
- * **without contrasting** and why — never folded into "no findings"
- * (decisions (f) and (z) of prompt 012).
+ * **without contrasting** and why — never folded into "no findings".
  */
 const ratesLine = (rates: RateCheck | undefined, deep: boolean): string[] => {
   if (rates === undefined) {

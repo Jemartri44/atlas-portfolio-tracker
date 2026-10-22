@@ -1,13 +1,12 @@
 // **The second module allowed to format money**, and the only one that is not
-// `Amount` (Q5 of prompt 007, authorised by the direction with a condition that
-// is a test, not a promise).
+// `Amount` (not a promise).
 //
 // uPlot asks for functions that take numbers and give back the labels of an
 // axis and of a tooltip. There is no component to go through in there, so the
 // rule of the privacy gate — one enumerated place formats an amount — becomes
 // two enumerated places. The architecture test lists both, with this reason.
 //
-// The criterion the direction stated out loud: **the axis of a chart is an
+// The rule: **the axis of a chart is an
 // amount for every purpose**. With the privacy mode on there can be no absolute
 // figure on it. If that leaves the chart lame in public, it stays lame: that is
 // exactly what the privacy mode promises.
@@ -27,8 +26,7 @@ const compact = (value: number): string => {
   if (abs >= 1_000) {
     return `${formatDecimalString((value / 1_000).toFixed(0), { decimals: 0 })} k€`;
   }
-  // With its unit, as every amount: «400, 0, −200» alone did not say euros
-  // (feature 020, M13). The space before it does not break.
+  // With its unit, as every amount: «400, 0, −200» alone did not say euros. The space before it does not break.
   return `${formatDecimalString(value.toFixed(0), { decimals: 0 })}${NBSP}€`;
 };
 
@@ -49,8 +47,7 @@ export const axisAmount = (value: number | null | undefined, privacy: boolean): 
 /**
  * The labels of a percentage axis, with as many decimals as its steps need
  * («2,5 %» and not «3 %»). A share does not give the size of the money away,
- * so, unlike the amounts, it is never withheld with the privacy on (feature
- * 020, E4, M7).
+ * so, unlike the amounts, it is never withheld with the privacy on.
  */
 export const axisPercents = (splits: readonly number[]): string[] => {
   const decimals = splits.every((value) => Number.isInteger(value))

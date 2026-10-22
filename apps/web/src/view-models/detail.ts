@@ -64,7 +64,7 @@ export interface DetailField {
   /**
    * The raw value, when `text` is a resolved name. The detail screen is where
    * the ledger is checked, so the identifier stays visible — **next to** the
-   * name and not instead of it (review of 2026-09-18).
+   * name and not instead of it.
    */
   hint?: string;
   /** Sensitive value, for the gated component. */
@@ -169,7 +169,7 @@ const EURO_BOOKKEEPING = new Set(["currency", "fee_currency", "fx_rate", "fx_rat
  * What a reader does not need to understand the movement: where the line came
  * from, and on an operation all in euros its currency and a rate of 1 with its
  * date. «Tipo del BCE 1» and «Divisa EUR» among the data of a purchase in euros
- * read as something to check (review of 2026-09-19). Still printed, folded in
+ * read as something to check. Still printed, folded in
  * the technical record: the detail hides nothing.
  */
 const isBookkeeping = (event: Record<string, unknown>, name: string): boolean =>

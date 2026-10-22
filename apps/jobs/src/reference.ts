@@ -1,7 +1,7 @@
-// What the monthly reminder values with (feature 016, §8.2 M6): the closes of
+// What the monthly reminder values with: the closes of
 // `prices/` and the ECB history of the bucket, read **only** through the
-// `ReferenceReader` of the 015, which cannot write nor read outside those two
-// prefixes. Until E2 writes them in the cloud there may be nothing, and then
+// `ReferenceReader`, which cannot write nor read outside those two
+// prefixes. Until they are written in the cloud there may be nothing, and then
 // the reminder values with the manual valuations alone. Everything degrades:
 // a file that does not read leaves its asset without an automatic price; a
 // history whose bytes do not match its manifest is **not used**, and every
@@ -24,7 +24,7 @@ export const readReference = async (
   const reader = referenceReader(objects);
   const files = new Map<AssetId, string>();
   for (const assetId of state.assets.keys()) {
-    // A read that fails throws: a passing failure, never «no price» (R2, weekly review).
+    // A read that fails throws: a passing failure, never «no price» (weekly review).
     const stored = await reader.get(`prices/${priceFileName(assetId)}`);
     const text = stored === undefined ? undefined : textOf(stored.body);
     if (text !== undefined) {
@@ -54,7 +54,7 @@ export const readReference = async (
     };
   } catch {
     // A correspondence that does not read cannot say which closes are in the
-    // wrong currency: no automatic prices, as in the console (feature 013).
+    // wrong currency: no automatic prices, as in the console.
     return { counts: { ...counts, price_files: 0 } };
   }
 };

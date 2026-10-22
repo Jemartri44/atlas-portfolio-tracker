@@ -4,7 +4,7 @@
 // string is ten lines and it is exact.
 //
 // This module is not the privacy gate: it formats percentages, weights and
-// deviations, which stay visible in public (Q6). Amounts and quantities go
+// deviations, which stay visible in public. Amounts and quantities go
 // through `format/money.ts`, which only `components/Amount.tsx` may import.
 
 const GROUP = ".";

@@ -29,7 +29,7 @@ const VISIBLE = 4;
 export const AttentionBlock = (props: {
   items: readonly AttentionItem[];
   /**
-   * The notice of the 720 and the 721 out of the season (feature 020, M2):
+   * The notice of the 720 and the 721 out of the season:
    * a row kept for it while the tax engine answers, then the notice or
    * nothing. It counts among the four in sight.
    */

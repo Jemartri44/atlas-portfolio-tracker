@@ -1,10 +1,10 @@
 // atlas m720 <año> [--json] · atlas m721 <año> [--json]
 //
 // Two commands and not `atlas tax 720`, which the argument parser would read as
-// the tax year 720 (prompt 010, block 5).
+// the tax year 720.
 //
 // The CLI only formats: what counts, what it is worth, whether it obliges and
-// why is decided in `packages/domain/src/informative/` (§2 bis of the prompt).
+// why is decided in `packages/domain/src/informative/`.
 
 import { todayInMadrid } from "@atlas/domain";
 import type {

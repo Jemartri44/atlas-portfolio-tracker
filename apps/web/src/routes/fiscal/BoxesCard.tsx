@@ -1,7 +1,7 @@
 // The return laid out by box, to read beside Renta WEB.
 //
 // The calm notice of a year with no checked mapping is the point of the whole
-// card (prompt 010, decision (e)): the Modelo 100 is renumbered every campaign,
+// card: the Modelo 100 is renumbered every campaign,
 // so a number inherited from another year would be a believable, wrong figure
 // typed into a real return. The figures are still shown, by concept, and the
 // card says plainly that it has no numbers for that year.

@@ -8,7 +8,7 @@
 //      valuation that has not been recorded is the normal state of a ledger
 //      priced by hand.
 //   2. **With privacy on there is no bar and no percentage against the
-//      threshold** (decision (k)): the threshold is a public figure, so a
+//      threshold**: the threshold is a public figure, so a
 //      percentage of it is the amount in disguise. The verdict is not, and it
 //      stays.
 

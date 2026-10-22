@@ -139,7 +139,7 @@ export const openTransferOptions = (state: LedgerState, at: CivilDate): Option[]
 
 /**
  * Open theses of that (account, asset). A bucket purchase demands one (rule 15),
- * and since feature 007 the form that creates one lives in the web too.
+ * and the form that creates one lives in the web too.
  */
 export const openThesisOptions = (
   state: LedgerState,

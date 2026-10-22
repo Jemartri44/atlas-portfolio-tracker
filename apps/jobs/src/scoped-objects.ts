@@ -1,5 +1,4 @@
-// A view of the bucket that reaches only some prefixes, for reading (review of
-// PR #109, avisos N3): the fiscal warnings of January get one over `ledger/`
+// A view of the bucket that reaches only some prefixes, for reading: the fiscal warnings of January get one over `ledger/`
 // and `reference/ecb/`, so no close of `prices/` can reach them — whatever a
 // later change writes in their module, the store refuses it. The role of the
 // mail function can read `prices/` (the weekly review needs it); this view is

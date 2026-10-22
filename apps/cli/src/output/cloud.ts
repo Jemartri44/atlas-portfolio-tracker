@@ -1,4 +1,4 @@
-// The sentences of a cloud folder (ADR-0035, §4; feature 024): what the
+// The sentences of a cloud folder (ADR-0035, §4): what the
 // console says when the cloud cannot be reached, when its session cannot be
 // used, and when a write was cut. Each tells the truth about what **was** and
 // **was not** read or recorded: the user decides what to do from it.

@@ -14,7 +14,7 @@ interface PendingProps {
   /** The one action that fixes it. */
   action?: { label: string; to: string } | undefined;
   /**
-   * One line and no well, when one datum is missing (feature 020, M2): a
+   * One line and no well, when one datum is missing: a
    * block of 160px for a single price pushed the summary down.
    */
   line?: boolean | undefined;

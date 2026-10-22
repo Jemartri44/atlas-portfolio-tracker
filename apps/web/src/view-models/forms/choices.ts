@@ -14,7 +14,7 @@ import type { FieldSpec } from "./specs.js";
  * The order a correction already names, when it is no longer open: the
  * purchase executed it, so the list of open orders leaves it out, and the
  * correction would silently unlink it. It stays, named by what it asked for
- * and when — never by its identifier (review of 2026-09-19).
+ * and when — never by its identifier.
  */
 const heldOrder = (
   field: FieldSpec,

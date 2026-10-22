@@ -7,7 +7,7 @@
 //
 // The specs carry no validation: they say what to ask, with which keyboard and
 // from which list to choose. Whether the value is acceptable is decided by
-// `validateShape` and the projection, never here (decision (c)).
+// `validateShape` and the projection, never here.
 //
 // LINE BUDGET: this file is a **data table**, not logic. It is one entry per
 // form, each one a list of fields with its label, its keyboard and the list it
@@ -62,7 +62,7 @@ export interface FieldSpec {
   full?: boolean;
   /**
    * Sits beside the field next to it on a phone, as one of a pair of short
-   * fields (the two dates, quantity and price; feature 020, M11). Both of a
+   * fields (the two dates, quantity and price). Both of a
    * pair carry it, and they are declared one after the other.
    */
   pair?: boolean;
@@ -82,7 +82,7 @@ export interface FieldSpec {
    * For a list of assets: leave out one a corporate action converted into
    * another — a fund merged away, a share class that no longer exists — and
    * that holds nothing (`view-models/weighted.ts`). It cannot be bought, and
-   * offering it invites the mistake (review of 2026-09-19).
+   * offering it invites the mistake.
    */
   liveOnly?: boolean;
 }
@@ -112,7 +112,7 @@ const account = (): FieldSpec => ({
  * An asset of an operation: of the account's book, a delisted one only while
  * the account still holds it, and never one a merger or a class change
  * converted away and that holds nothing (`liveOnly`): there is nothing of it
- * to buy, sell, value or transfer (second pass of the review of 2026-09-19).
+ * to buy, sell, value or transfer.
  */
 const asset = (account = "account_id"): FieldSpec => ({
   name: "asset_id",
@@ -156,7 +156,7 @@ const currency = (): FieldSpec => ({
  * The ECB rate and its date, hidden when the currency is the euro because
  * neither is asked for: the rate is "1", and the date is the last working day
  * on or before the operation's **fiscal date** — by `fiscal_date_rule` of the
- * asset, never `trade_date` (decision (w) of prompt 012) — which `toDraft`
+ * asset, never `trade_date` — which `toDraft`
  * takes from the domain. Every date the application fills in comes from that
  * one rule, the same the proposal of the ECB history uses in another currency.
  */
@@ -250,7 +250,7 @@ const tradeFields = (): FieldSpec[] => [
 
 /**
  * A purchase lists only the assets in force. A delisted one is still held,
- * still valued and still sold, but never bought again (review of 2026-09-18);
+ * still valued and still sold, but never bought again;
  * a correction that already holds one keeps it on its list (`choices.ts`).
  */
 const buyFields = (): FieldSpec[] =>

@@ -49,8 +49,7 @@ export const LossesCard = (props: {
       **What the engine substitutes, the engine says** (ADR-0024). When a
       return is on record the chain replaces the pending losses it computed
       with the ones that return declared, so the figure below is not the one
-      the application calculated — and until feature 011 the screen said so
-      nowhere at all. It goes here, next to the figure it affects, and not in
+      the application calculated — and the screen has to say so. It goes here, next to the figure it affects, and not in
       a note at the end. With privacy on the **fact** is still visible; the
       amounts go through `Amount` like every other amount.
     */}

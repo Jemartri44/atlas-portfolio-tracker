@@ -1,4 +1,4 @@
-// The CSV inside the ECB's ZIP, in the browser (feature 012, block 3): on a
+// The CSV inside the ECB's ZIP, in the browser: on a
 // phone the user imports what the ECB's page offers, `eurofxref-hist.zip`.
 // The platform inflates (`DecompressionStream("deflate-raw")`, in every
 // current browser); the directory, the lengths and the CRC-32 are checked here,

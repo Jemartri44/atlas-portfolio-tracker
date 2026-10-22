@@ -2,7 +2,7 @@
 // with the band of ±threshold, the mark of the target in the middle, and a dot
 // where the deviation is — in the colour of a warning when the domain said it
 // is off target. Only the geometry is decided here; whether it is off target
-// arrives from the warning (decision (c)).
+// arrives from the warning.
 //
 // Drawn in SVG attributes: the page serves `style-src 'self'`, so a position
 // written as an inline style would simply be blocked.

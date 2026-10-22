@@ -2,7 +2,7 @@
 // one about damage that is invisible in the form:
 //
 //   1. which live warnings this change switches off (constitution IV),
-//   2. which lines keep an ECB rate of another date (criterion 25, feature 012),
+//   2. which lines keep an ECB rate of another date (criterion 25),
 //   3. which closed tax years it moves (ADR-0013),
 //   4. which events already in the ledger stop being valid (ADR-0015).
 //
@@ -54,8 +54,7 @@ const IN_MODEL: Record<FilingModel, string> = {
 
 /**
  * The headline of the question about past years, which is the first thing
- * read. It says gains move **only** when a realized gain moves: since the
- * review of feature 011 a change of the fiscal date rule reaches a Modelo 720
+ * read. It says gains move **only** when a realized gain moves: a change of the fiscal date rule reaches a Modelo 720
  * or 721 too, which declares no gains, and the headline said otherwise. With
  * no gain moving it names the one model reached, or stays neutral when
  * returns of several models are.

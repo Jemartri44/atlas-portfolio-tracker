@@ -1,5 +1,4 @@
-// Where the console stands before an order of `atlas remote` or `atlas sync`
-// (feature 015): the folder of the ledger, its `sync/remote.json` and the
+// Where the console stands before an order of `atlas remote` or `atlas sync`: the folder of the ledger, its `sync/remote.json` and the
 // credentials — once the two folders are known to be apart (ADR-0033, point 3).
 
 import { dirname } from "node:path";
@@ -70,7 +69,7 @@ export const sessionOf = async (
   return { kind: "ok", entry };
 };
 
-/** The warning of the expiry, precise: less than a day is not expired (review of PR #95, N1). */
+/** The warning of the expiry, precise: less than a day is not expired. */
 export const expiryText = (left: number | "expired" | undefined): string => {
   if (left === undefined) {
     return ".";

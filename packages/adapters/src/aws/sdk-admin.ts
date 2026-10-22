@@ -1,16 +1,15 @@
-// The clients of the administration (feature 015, E5; ADR-0026, Part A;
-// ADR-0034, rows 6 and 16), the door `@atlas/adapters/aws-admin`: the data
+// The clients of the administration (ADR-0026, Part A, ADR-0034, rows 6 and 16), the door `@atlas/adapters/aws-admin`: the data
 // bucket and SSM **with the role of administration**, whose short-lived
 // credentials come from the **standard chain of the SDK**: a session already
 // opened — an IAM Identity Center profile after `aws sso login`, or the
 // variables `aws configure export-credentials` writes once the AWS CLI asked
 // for the MFA code. A profile with `mfa_serial` alone is refused by the chain,
-// which has no way to ask for the code (block 0 of E5, `questions.md` §33).
+// which has no way to ask for the code.
 // The console never stores them. Node only; never
 // reached by the API nor by the web (architecture tests).
 //
 // What the administration needs and the API must not have: an old version of
-// an object (restore from `s3-version:<id>`) and every object under a prefix,
+// an object and every object under a prefix,
 // at any depth (`documents/<event_id>/<file>`, for `atlas backup`). Still no
 // delete, never.
 
@@ -110,7 +109,7 @@ const tagList = (tags: Readonly<Record<string, string>>) =>
   Object.entries(tags).map(([Key, Value]) => ({ Key, Value }));
 
 /**
- * The parameters the secrets order writes (feature 017, E4). Three commands and
+ * The parameters the secrets order writes. Three commands and
  * no more: `GetParameter` **never decrypting**, `PutParameter` and
  * `AddTagsToResource`. No delete and no label, never.
  */

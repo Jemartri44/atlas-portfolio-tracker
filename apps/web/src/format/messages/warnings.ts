@@ -26,7 +26,7 @@ import {
   text,
 } from "./prose.js";
 
-/** Why a quote has no value in euros (feature 013, §6.4 (i)). */
+/** Why a quote has no value in euros. */
 export const fxMissingText = (reason: unknown): string =>
   reason === "not_yet_published"
     ? "el BCE aún no ha publicado el tipo de esa fecha"
@@ -186,7 +186,7 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   swap_fiscal_dates_differ: (d, n) =>
     `En la permuta, ${n.one(d.from_asset_id)} tiene fecha fiscal ${day(d.fiscal_date_out)} y ${n.one(d.to_asset_id)} la tiene ${day(d.fiscal_date_in)}: la transmisión y la adquisición caen en días distintos porque sus tipos de activo usan reglas distintas.`,
 
-  // --- Tax report (feature 009) --------------------------------------------
+  // --- Tax report --------------------------------------------
   tax_quota_not_computed: () =>
     "Esto es la base del ahorro, no la cuota ni lo que se paga: el mínimo personal, la base general y el tipo medio efectivo no están en tus datos.",
   // **Una causa que no se puede sostener no se reparte en silencio**
@@ -223,7 +223,7 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     `El ISIN ${text(d.isin)} lo comparten ${n.many(d.assets)}: para Hacienda son el mismo valor y el cálculo fiscal los trata como distintos. Registra ese valor en un solo activo.`,
   tax_settings_default_used: (d) =>
     `Hay ${countOf(count(d.fields), "parámetro fiscal", "parámetros fiscales")} que no están en tus datos y se han tomado del código. Guardar la configuración los dejará fijados.`,
-  // --- The return laid out by box (feature 010) --------------------------
+  // --- The return laid out by box --------------------------
   tax_boxes_missing_year: (d) =>
     `Las casillas de ${year(d.year)} no están comprobadas en el formulario oficial: te damos los importes por conceptos, sin números de casilla. Nunca usamos la casilla de otro ejercicio.`,
   tax_box_missing: (d) =>
@@ -233,7 +233,7 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   tax_box_partial: (d) => `${PARTIAL_BOX[text(d.reason)] ?? "Esta casilla no se calcula entera"}.`,
   tax_box_rounding_differs: (d) =>
     `El formulario redondea cada valor y hace él mismo la resta: en ${countOf(count(d.boxes), "una casilla", "algunas casillas")} sale un céntimo distinto del nuestro. Te enseñamos los dos.`,
-  // --- The informative returns (feature 010, block 3) --------------------
+  // --- The informative returns --------------------
   // The date of the query is on the screen already: repeating it here only
   // gives the drift test a date to trip over.
   informative_current_year: () =>
@@ -265,8 +265,7 @@ const joinAll = (items: readonly string[]): string =>
 /**
  * The age a group of stale prices is past: the limit configured, which the
  * domain puts in each warning. The youngest of their ages is not it — six
- * prices of 10 days and more read «más de 10 días» with a limit of 7 (second
- * pass of the review of 2026-09-19); it is only the answer for a warning of an
+ * prices of 10 days and more read «más de 10 días» with a limit of 7; it is only the answer for a warning of an
  * older version, which does not carry the limit.
  */
 const limitOf = (warnings: readonly Warning[]): number => {
@@ -293,7 +292,7 @@ export const describeWarningGroup = (
   switch (code) {
     // One loss and its purchases inside the window: one sentence with how many,
     // each purchase in the detail. The preview of a sale listed ten notices
-    // that said the same thing (third pass of the review of 2026-09-19).
+    // that said the same thing.
     case "wash_sale_window_prior_buy":
       return `Venta con pérdida de ${n.one(d.asset_id)} del ${day(d.sale_date)} (${f.money(d.loss_eur)}) con ${warnings.length} compras en cartera dentro de la ventana abierta el ${day(d.window_start)} (${windowText(d.window)}): la pérdida puede no ser computable en ${year(d.tax_year)}.`;
     case "wash_sale_window_repurchase":

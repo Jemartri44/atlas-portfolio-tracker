@@ -1,8 +1,8 @@
 // **The only place an amount or a quantity is painted.** Everything sensitive
 // goes through here: `format/money.ts` may not be imported anywhere else, and
-// the architecture test fails if it is (decision (d), prompt §3.4).
+// the architecture test fails if it is.
 //
-// Q6: the mask covers amounts **and** quantities. Percentages, weights and
+// The mask covers amounts **and** quantities. Percentages, weights and
 // deviations stay visible and are painted by `Figure`, which is not gated.
 //
 // Three rules it enforces on its own, so no screen can forget them:
@@ -18,7 +18,7 @@
 //
 // The three live in `format/money.ts` as `amountDisplay`, a pure function with
 // its own tests: inside this JSX they were unreachable, and three mutations of
-// them passed the whole suite (review of 2026-09-18).
+// them passed the whole suite.
 
 import type { Money, Quantity } from "@atlas/domain";
 import { createMemo, type JSX, Show } from "solid-js";
@@ -111,7 +111,7 @@ export const Amount = (props: AmountProps): JSX.Element => {
   };
 
   // Everything this component decides is decided by `amountDisplay`, in the
-  // gated module: here there is only markup left (decision (d), prompt §3.4).
+  // gated module: here there is only markup left.
   const display = createMemo<AmountDisplay>(() =>
     amountDisplay({
       formatted: missing() ? undefined : shown(),

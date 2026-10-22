@@ -3,7 +3,7 @@
 //
 // **One date, one projection.** Every block reads the ledger cut at the date in
 // the address bar (`asOf`, ADR-0016) and nobody touches the base snapshot: that
-// is the blocking defect of feature 004 — quantities from the end of the ledger
+// is the defect of quantities from the end of the ledger
 // read with the prices of another day — made impossible by construction.
 //
 // A block the domain refuses (no prices, no target weights) explains itself and

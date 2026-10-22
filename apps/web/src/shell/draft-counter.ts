@@ -1,7 +1,6 @@
-// The counter of drafts in the frame (feature 012, block 5; in the cloud since
-// feature 027): visible on every screen while one is pending, and a way to the
+// The counter of drafts in the frame: visible on every screen while one is pending, and a way to the
 // list. It is of the ECB, so it arrives in a chunk of its own, **after** the
-// first paint (decision (r) of prompt 012): the frame keeps an empty place and
+// first paint: the frame keeps an empty place and
 // imports this lazily.
 //
 // Plain DOM and not a Solid component, on purpose: a lazily loaded component

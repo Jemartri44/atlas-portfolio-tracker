@@ -1,4 +1,4 @@
-// The entries of a list of movements (feature 020, E2, M8): the rows with the
+// The entries of a list of movements: the rows with the
 // current valuations of a day gathered, under one heading per month, and the
 // first few of them for the summary. Only grouping: the rows themselves are
 // made in `movements.ts`.
@@ -6,8 +6,7 @@
 import { hasState, type MovementRow } from "./movements.js";
 
 /**
- * The valuations of one day, gathered into one row that unfolds (feature 020,
- * E2, M8): «7 valoraciones · 31/12/2028» said once instead of seven rows that
+ * The valuations of one day, gathered into one row that unfolds: «7 valoraciones · 31/12/2028» said once instead of seven rows that
  * say one thing. Only valuations, only of the same day, and never one that is
  * not current: an annulled or invalid valuation keeps its own row, with its
  * state, because gathered it would read as one more of the day.
@@ -61,7 +60,7 @@ export interface MonthOfEntries {
 }
 
 /**
- * The list of a phone under one heading per month (feature 020, M8), with the
+ * The list of a phone under one heading per month, with the
  * date in each row: a heading per day cost a row per movement. The dates are
  * civil dates of the ledger, already the days of Madrid, so the month is read
  * off them and never off an instant.

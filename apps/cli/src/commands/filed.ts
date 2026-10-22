@@ -12,7 +12,7 @@
 // filing from the same proposal, and a key of `--set` is part of the contract
 // of both.
 //
-// Nothing is written without an explicit confirmation (decision (l)): turning a
+// Nothing is written without an explicit confirmation: turning a
 // calculation into "what was filed" by pressing enter is exactly what ADR-0020
 // separates.
 

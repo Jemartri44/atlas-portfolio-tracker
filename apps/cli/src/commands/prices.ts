@@ -1,7 +1,7 @@
-// atlas prices update | status | symbols (feature 013; ADR-0031).
+// atlas prices update | status | symbols (ADR-0031).
 //
 // The console is the one that downloads (the web only reads): it takes the
-// assets and their priority from **its** ledger (P5), reserves every call under
+// assets and their priority from **its** ledger, reserves every call under
 // the lock of the folder, calls outside it, and writes `prices/` under it.
 // It never writes in the ledger. Without keys it calls nobody and says so:
 // that is not an error, and everything else works the same.
@@ -57,7 +57,7 @@ const OUTCOME_TEXT: Record<AssetOutcome, string> = {
   out_of_budget: "fuera del cupo de hoy: conserva su último valor",
   failed: "sin respuesta útil: conserva su último valor",
   currency_mismatch: "divisa en desacuerdo: no se guarda",
-  // Only the cloud leaves a source out this way (feature 016, Q1): the console contrasts.
+  // Only the cloud leaves a source out this way: the console contrasts.
   currency_unchecked: "divisa sin contrastar: no se descarga",
   unreadable: "su fichero de precios no se lee: no se toca",
 };
@@ -97,7 +97,7 @@ const pulledText = (outcome: Extract<PullOutcome, { kind: "pulled" }>, origin: s
   return [
     `Precios de la nube (${origin}), bajados el ${outcome.pulled_at}: ${outcome.files.length} ficheros con cambios, ${added} líneas añadidas. No se ha llamado a ninguna fuente.`,
     ...(outcome.files.length === 0 ? ["La carpeta ya estaba al día con la nube."] : []),
-    // Review of PR #108, B1 and N5: what the cloud had and the folder never takes.
+    // What the cloud had and the folder never takes.
     ...(outcome.discarded.future === 0
       ? []
       : [
@@ -117,8 +117,8 @@ const pulledText = (outcome: Extract<PullOutcome, { kind: "pulled" }>, origin: s
 };
 
 const update = async (ctx: Context, flags: Flags): Promise<number> => {
-  // Feature 016, E3, block 1: a cloud folder takes its prices from the cloud,
-  // and calls the sources only when asked (mutant 22), sharing the plans (N2).
+  // A cloud folder takes its prices from the cloud,
+  // and calls the sources only when asked, sharing the plans.
   const fromSources = booleanFlag(flags, "from-sources");
   const origin = await priceOriginOf(ctx);
   if (origin.kind === "refused" && !fromSources) {
@@ -193,7 +193,7 @@ const status = async (ctx: Context): Promise<number> => {
     ctx.mode.kind === "cloud"
       ? await assetsWithPriceFiles(ctx)
       : [...(await loadForQuery(ctx, today)).state.assets.keys()];
-  // A cloud folder shares the plans with the cloud (N2 of §15).
+  // A cloud folder shares the plans with the cloud.
   const config = parsePriceConfig(await store.config(), {
     sharedWithCloud: ctx.mode.kind === "cloud",
   });
@@ -232,7 +232,7 @@ const status = async (ctx: Context): Promise<number> => {
       : [
           `cloud_currency_mismatch: ${pull.discarded.currency_mismatch} cierres de la nube en otra divisa que la declarada se dejaron fuera en la última descarga.`,
         ]),
-    // Where the prices of the folder came from, and when (feature 016, E3).
+    // Where the prices of the folder came from, and when.
     `Procedencia: ${
       [
         ...(pull === undefined
@@ -342,7 +342,7 @@ const listSymbols = async (ctx: Context, assetId: string | undefined): Promise<n
       ["activo", "EODHD", "Alpha Vantage", "contraste con la fuente"],
       entries.map(([id, entry]) => [
         id,
-        // Each symbol with the currency declared for it (fix of 013).
+        // Each symbol with the currency declared for it.
         ...QUOTE_SOURCES.map((s) =>
           entry[s] === undefined ? "" : `${entry[s]} (${entry.currencies[s] as string})`,
         ),
@@ -365,7 +365,7 @@ const listSymbols = async (ctx: Context, assetId: string | undefined): Promise<n
  * The declaration from the flags: each symbol with **its own** currency
  * (`--eodhd-currency`, `--alpha-vantage-currency`), and `--currency` for every
  * source that has none of its own. A London share quotes in pounds at EODHD
- * and in pence at Alpha Vantage (fix of 013): one currency for both made one
+ * and in pence at Alpha Vantage: one currency for both made one
  * of them ask forever, or stored its closes a hundred times too high.
  */
 const declarationOf = (flags: Flags): SymbolDeclaration => {
@@ -379,7 +379,7 @@ const declarationOf = (flags: Flags): SymbolDeclaration => {
     alpha_vantage: stringFlag(flags, "alpha-vantage-currency"),
   };
   const flagOf = { eodhd: "eodhd", alpha_vantage: "alpha-vantage" } as const;
-  // Nothing is dropped in silence (review of PR #80): a currency for a source
+  // Nothing is dropped in silence: a currency for a source
   // without its symbol, or a declaration without any symbol, is a mistake.
   for (const source of QUOTE_SOURCES) {
     if (own[source] !== undefined && symbols[source] === undefined) {

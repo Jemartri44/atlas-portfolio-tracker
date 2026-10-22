@@ -17,7 +17,7 @@ export interface NetWorthLine {
    * What the line is about, **ready to paint**: the asset class in Spanish, or
    * the current name of the asset or the account. The component used to run the
    * name through `valueLabel`, which would have translated an asset genuinely
-   * called "Oro" into something else (review of 2026-09-18).
+   * called "Oro" into something else.
    */
   name: string;
   detail?: string | undefined;
@@ -108,7 +108,7 @@ const cashDetail = (row: CashLine): string | undefined => {
  * identifiers in the projection (`ast_alpha`, `acc_mi`) and the user knows them
  * as "Alpha Robotics" and "Fondos indexados". The list of what is missing goes
  * through the same resolver, because it is the text of the note at the bottom
- * of the block (review of 2026-09-18). Without a catalogue every identifier
+ * of the block. Without a catalogue every identifier
  * still prints as itself.
  */
 export const netWorthView = (view: NetWorth, names: NameIndex = NO_NAMES): NetWorthView => {

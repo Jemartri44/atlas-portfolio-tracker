@@ -1,5 +1,5 @@
 // EODHD as a `PriceSource` (ADR-0031: the primary source), verified on
-// 2026-09-24 (`specs/013-daily-close-prices/questions.md (in git history)` §1.1):
+// 2026-09-24:
 //
 // - end of day: `GET /api/eod/{SYMBOL}?api_token=…&fmt=json&from=&to=`, one
 //   call whatever the range; `close` is the close **as traded**, never
@@ -23,7 +23,7 @@ import { closeOf, saidCurrency } from "./shape.js";
 export const EODHD_API = "https://eodhd.com/api";
 
 /**
- * Each status to its kind, one to one (decision D-Q4): a 403 is `not_found`
+ * Each status to its kind, one to one: a 403 is `not_found`
  * **of that symbol** — an index outside the free plan must not stop the source
  * for every other symbol, which `blocked` would.
  */
@@ -64,7 +64,7 @@ export class EodhdPriceSource implements PriceSource {
     private readonly parse?: Parameters<typeof parseExactJson>[1],
   ) {}
 
-  /** Stops, with `ExactJsonUnsupported`, where a number could only be read as a float (D-Q1). */
+  /** Stops, with `ExactJsonUnsupported`, where a number could only be read as a float. */
   ready(): void {
     parseExactJson("[1]", this.parse);
   }

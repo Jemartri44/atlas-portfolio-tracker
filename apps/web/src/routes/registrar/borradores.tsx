@@ -1,5 +1,5 @@
 // «Borradores»: the operations kept before the ECB published their rate
-// (feature 012, block 5; ADR-0029, point 9).
+// (ADR-0029, point 9).
 //
 // A draft is not a fact: it counts in no figure, it is always shown as
 // pending, and it is **never recorded by itself** — not even when the history

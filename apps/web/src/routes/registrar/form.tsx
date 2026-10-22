@@ -1,7 +1,6 @@
 // "¿Queda bien antes de escribirlo?" — the form of one event type.
 //
-// With `?borrador=<id>` it records a draft (feature 012, block 5; in the cloud
-// since feature 027): the form comes filled with the draft's values and
+// With `?borrador=<id>` it records a draft: the form comes filled with the draft's values and
 // **without** a rate, so the history proposes the official one as for any other
 // operation, and the write goes through every validation of a record.
 
@@ -41,7 +40,7 @@ const draftFor = async (
 /**
  * `/registrar/borradores` is the list of drafts, served by this route and not
  * by one of its own: a route in the table of the entry costs the boot about a
- * hundred bytes, and the list is not the boot's (review of PR #75).
+ * hundred bytes, and the list is not the boot's.
  */
 const Borradores = lazy(() => import("./borradores.jsx"));
 const DRAFTS_SLUG = "borradores";

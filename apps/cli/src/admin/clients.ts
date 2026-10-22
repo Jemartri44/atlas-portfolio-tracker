@@ -7,7 +7,7 @@ import { type Flags, requireFlag, UsageError } from "../args.js";
 import type { Context } from "../context.js";
 import type { AdminClients } from "./environment.js";
 
-/** The name of an environment, as `admin.json` names it (review of PR #98, N6). */
+/** The name of an environment, as `admin.json` names it. */
 const ENVIRONMENT = /^[a-z][a-z0-9-]*$/;
 
 /** `--env`, required and with the shape of a name: never `toString` nor `__proto__`. */

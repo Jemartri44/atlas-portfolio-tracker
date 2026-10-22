@@ -1,5 +1,4 @@
-// The routes of the sync and of the reference data (feature 015, E3;
-// `docs/api.md` §5 and §6). They decide nothing: what a line is worth is the
+// The routes of the sync and of the reference data (`docs/api.md` §5 and §6). They decide nothing: what a line is worth is the
 // domain's `acceptAppend` and `acceptInit`, what a name of the reference data may be is
 // `referenceKey`. The remote ledger is reached only through
 // `AppendOnlyLedger`: read and append, never rewrite, never delete.
@@ -50,15 +49,14 @@ export interface SyncCredential {
 export interface SyncContext {
   readonly config: ApiConfig;
   readonly ledger: AppendOnlyLedger;
-  /** The reference data, read only, its two prefixes and nothing else (review of PR #96, N1). */
+  /** The reference data, read only, its two prefixes and nothing else. */
   readonly reference: ReferenceReader;
   readonly devices: DeviceStore;
   readonly now: () => Date;
 }
 
 /**
- * The bytes the lines make, **only if they are UTF-8** (review of PR #96,
- * security B1): the domain refuses a lone surrogate before judging a line,
+ * The bytes the lines make, **only if they are UTF-8**: the domain refuses a lone surrogate before judging a line,
  * and this is the last check before S3, so that the remote can never be left
  * in bytes no device can read.
  */
@@ -246,7 +244,7 @@ export const syncRoutes = (context: SyncContext) => {
     if (stored === undefined) {
       return fail(refusal("not_found", { reason: "missing" }));
     }
-    // Never served (review of PR #106, B1 and R2-B1): a key twice, or one it
+    // Never served: a key twice, or one it
     // does not have. It did not go through the difference of `push`.
     const unservable =
       kind === "prices" && name === "symbols.json"

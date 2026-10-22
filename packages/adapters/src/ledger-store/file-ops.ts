@@ -1,5 +1,5 @@
 // The file operations the console's stores write with, as a parameter
-// (feature 014, §6.3 (V9)). Production uses `node:fs/promises` as it is; a
+//. Production uses `node:fs/promises` as it is; a
 // test passes a wrapper that records the order of `write`, `sync`, `rename`
 // and `rm`, or fails at a chosen point — which is how the durability of what
 // the sync holds back is proved without killing processes.

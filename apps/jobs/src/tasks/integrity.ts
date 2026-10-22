@@ -1,5 +1,4 @@
-// The quarterly integrity (feature 016, E4; `docs/specification.md` §9.5;
-// ADR-0032; plan §9; Q7). Three things, and **it sends nothing** (§8.2 B2):
+// The quarterly integrity (`docs/specification.md` §9.5, ADR-0032). Three things, and **it sends nothing**:
 // what it finds is left in its record, for the mail function.
 //
 // 1. Recompute from scratch and compare: the checks of `atlas check --deep`

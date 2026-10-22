@@ -5,7 +5,7 @@
 // three things a person needs and the engine does not provide:
 //
 //   1. things named by **what they are** — the asset and the fiscal date —
-//      never by the identifier of an event (prompt 010, block 4);
+//      never by the identifier of an event;
 //   2. each figure with the criteria it depends on, said in Spanish;
 //   3. the money at stake of a criterion kept apart from its **direction**,
 //      because the direction is shown with privacy on and the amount is not.

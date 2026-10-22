@@ -11,8 +11,7 @@
 //
 // A destination is current on its own page **and on every page under it**: the
 // detail of a movement, its correction or a form of Registrar still belong to
-// their section, and the bar has to say where the user is (review of
-// 2026-09-19). The router only marks the exact page, so the mark is ours. The
+// their section, and the bar has to say where the user is. The router only marks the exact page, so the mark is ours. The
 // links are plain anchors, which the router still handles.
 
 import { useLocation } from "@solidjs/router";

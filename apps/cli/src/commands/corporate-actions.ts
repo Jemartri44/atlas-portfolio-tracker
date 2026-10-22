@@ -2,7 +2,7 @@
 //
 // The wizards map **flags to parameters**; composing the `effects[]` — and, in
 // particular, working out the fractional shares of a reverse split — is the
-// domain's job since feature 007 (`corporateActionDraft`, Q4). What is left
+// domain's job (`corporateActionDraft`). What is left
 // here is what an interface is for: reading the flags, showing the event and the
 // before/after tables, and recording on confirmation.
 
@@ -325,7 +325,7 @@ export const corporateActionCommand = async (
   adviseAfter(ctx, params, preview);
   // A corporate action lands on a date of its own and rewrites lots: it moves a
   // filed return as surely as a sale does. This path does not go through
-  // `confirmAndRecord`, so it asks for the warning itself (prompt 010, FR-018).
+  // `confirmAndRecord`, so it asks for the warning itself (FR-018).
   for (const line of await closedYearNotes(ctx, draft)) {
     aside(ctx, line);
   }

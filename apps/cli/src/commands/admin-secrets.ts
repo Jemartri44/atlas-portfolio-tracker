@@ -1,4 +1,4 @@
-// atlas admin secrets --env <e> (feature 017, E4; ADR-0034, row 21; P9, P-3): the
+// atlas admin secrets --env <e> (ADR-0034, row 21): the
 // secrets of `/atlas/<env>/` are created and rotated **here**, with the role of
 // administration, and never by Terraform (their value would sit in its state).
 //

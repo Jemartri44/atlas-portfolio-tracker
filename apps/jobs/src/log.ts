@@ -1,4 +1,4 @@
-// The log of the jobs (`docs/specification.md` §11.7; feature 016, §2 bis):
+// The log of the jobs (`docs/specification.md` §11.7, §2 bis):
 // one JSON line per job and period, with the `request_id` of the invocation,
 // **its name, its period and its result with a code and counts, and nothing
 // else**. Never a recipient, a sender, the subject or the body of a mail, an

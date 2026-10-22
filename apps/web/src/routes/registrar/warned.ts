@@ -1,5 +1,4 @@
-// The yes to «Ya existe un movimiento igual» is a yes to **that** movement
-// (review of PR #97, security N5): the dialog does not freeze the form, so a
+// The yes to «Ya existe un movimiento igual» is a yes to **that** movement: the dialog does not freeze the form, so a
 // field changed with the warning open would otherwise be recorded as a
 // confirmed duplicate that nobody saw. A yes confirms only the very draft the
 // warning was about; any other is written without the confirmation, and

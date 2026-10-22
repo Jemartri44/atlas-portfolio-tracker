@@ -163,8 +163,7 @@ export default function AjustesRoute(): JSX.Element {
 
           <Section title="Configuración y verificación">
             <ul class="rows">
-              {/* The fiscal screen has no place in the bottom bar (P1 of the
-                  prompt): it is reached from the summary and from here. */}
+              {/* The fiscal screen has no place in the bottom bar (it is reached from the summary and from here. */}
               <LinkRow to="/fiscal" icon="catalogue" title="Declaración">
                 La base del ahorro por ejercicio, las casillas del Modelo 100, el Modelo 720 y el
                 721, y lo que ya has presentado.

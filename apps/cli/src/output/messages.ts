@@ -8,7 +8,7 @@ import type {
 } from "@atlas/domain";
 import { table } from "./table.js";
 
-/** Why a quote has no value in euros (feature 013, §6.4 (i)). */
+/** Why a quote has no value in euros. */
 export const fxMissingText = (reason: unknown): string => {
   switch (reason) {
     case "not_yet_published":
@@ -23,8 +23,7 @@ export const fxMissingText = (reason: unknown): string => {
 };
 
 /**
- * The safe way out of a ledger with Windows line endings (decision D-Q18 of
- * feature 014): `compact` does not normalise, so the message gives the exact
+ * The safe way out of a ledger with Windows line endings: `compact` does not normalise, so the message gives the exact
  * order, with nothing but the Node the console already runs on. It copies the
  * file first, refusing to overwrite a copy, and only then rewrites `\r\n` as
  * `\n`. Exported so that a test runs it for real.
@@ -35,7 +34,7 @@ const text = (value: unknown): string =>
   typeof value === "string" ? value : JSON.stringify(value);
 
 /**
- * The failures of the remote one by one (`docs/api.md` §7; feature 014), each
+ * The failures of the remote one by one (`docs/api.md` §7), each
  * with its own sentence: none holds a line back, and each asks for something
  * different.
  */
@@ -101,7 +100,7 @@ export const describeError = (error: DomainError): string => {
       return `La cuenta ${text(d.account_id)} no existe.`;
     case "unknown_asset":
       return `El activo ${text(d.asset_id)} no existe.`;
-    // --- Corporate actions composed from parameters (feature 007) ----------
+    // --- Corporate actions composed from parameters ----------
     case "missing_source_document":
       return `Un evento corporativo de tipo ${text(d.kind)} necesita su fuente documental: la URL o el PDF del emisor. No es opcional (data-schema.md §6.5).`;
     case "missing_effect_parameter":
@@ -199,7 +198,7 @@ export const describeError = (error: DomainError): string => {
     case "invalid_settings": {
       // `validateSettings` names the parameter it rejected; the CLI is the only
       // place that speaks to a person, so it is the one that has to say it in
-      // Spanish (deuda anotada en la feature 004).
+      // Spanish.
       if (d.total !== undefined) {
         return `Los pesos objetivo deben sumar 100 y suman ${text(d.total)}: corrígelos con \`atlas settings set --target-weights …\`.`;
       }
@@ -313,7 +312,7 @@ export const describeError = (error: DomainError): string => {
       )}`;
     case "projection_changed":
       return `La reescritura cambiaría la proyección (${text(d.keys)}): no se ha escrito nada.`;
-    // --- The sync of the ledger (feature 014) -------------------------------
+    // --- The sync of the ledger -------------------------------
     // Why the cloud refuses a line: nothing of it is written.
     case "domain_rejected":
       return `Sobre lo que ya hay en la nube, el libro la rechaza (${text(d.domain_code)}${d.affected === undefined ? "" : `; dejaría inválidos ${text(d.affected)}`}). Rehazla sobre el estado actual.`;
@@ -484,8 +483,7 @@ export const describeError = (error: DomainError): string => {
     case "invalid_json":
       return `La línea ${text(d.line ?? "")} no es JSON válido: el fichero no es un libro de Atlas.`;
     case "duplicate_key":
-      // An annulment cannot be annulled (round 2 of the review of PR #98,
-      // R2-B1): its only remedy, without sync, is the file itself.
+      // An annulment cannot be annulled: its only remedy, without sync, is the file itself.
       return d.type === "reversal"
         ? "Una anulación del libro repite un campo (lo deja así una edición a mano): cuenta como inválida, no anula nada y no se sincroniza. Una anulación no se puede anular: corrígela a mano en el fichero, quitando el campo repetido. Con la sincronización configurada, descártala desde lo retenido."
         : "Una línea del libro repite un campo (lo deja así una edición a mano): se lee con el último valor, pero el evento cuenta como inválido y no se sincroniza. Anúlala (atlas delete) y registra el evento correcto; con la sincronización configurada, descártala desde lo retenido.";

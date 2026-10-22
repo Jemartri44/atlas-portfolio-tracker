@@ -3,9 +3,9 @@
 // fails if any file other than `components/Amount.tsx` imports this module. It
 // is the same mechanism that guards the price gate of the domain, and the
 // reason the rule will still be alive in two years: it does not depend on
-// anybody remembering it (decision (d), prompt §3.4).
+// anybody remembering it.
 //
-// Q6: the mask covers **amounts and quantities**, as `docs/specification.md`
+// The mask covers **amounts and quantities**, as `docs/specification.md`
 // §9.6 demands — twelve units of a fund with a public price give the amount
 // away just as well as the amount. Percentages, weights, deviations, dates and
 // text stay visible and live in `format/number.ts`, which is not gated.

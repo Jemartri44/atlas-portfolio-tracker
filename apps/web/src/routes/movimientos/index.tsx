@@ -1,7 +1,6 @@
 // "¿Qué he registrado?" — every movement, readable and filterable.
 //
-// The order and the state of each entry come from the domain (`ledgerEntries`,
-// decision (h)); this screen filters through it, paints and **pages**: twenty
+// The order and the state of each entry come from the domain (`ledgerEntries`); this screen filters through it, paints and **pages**: twenty
 // years of ledger never land on screen at once (FR-039).
 
 import { type EntryFilter, ledgerEntries } from "@atlas/domain";

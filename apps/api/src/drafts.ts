@@ -1,5 +1,4 @@
-// The routes of the drafts in the cloud (feature 027, E6 of ADR-0035;
-// `docs/api.md` §6.1). They decide nothing about the operation: its shape is
+// The routes of the drafts in the cloud (`docs/api.md` §6.1). They decide nothing about the operation: its shape is
 // the domain's (`ecb/cloud-drafts.ts`), and what a rate is worth is the
 // client's preview. They reach S3 only through `DraftObjects`: read, create
 // once, list. **Nothing is overwritten and nothing is deleted.**

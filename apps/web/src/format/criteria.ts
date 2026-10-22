@@ -3,7 +3,7 @@
 // The engine labels every figure with the criteria it depends on, by an
 // identifier of the catalogue: `2:listed`, `24:etc_gain`, `2:fund_1y`. That
 // identifier is exact and it is useless to the person reading the screen, so
-// **it never appears in the interface** (prompt 010, block 4): what appears is
+// **it never appears in the interface**: what appears is
 // "ventana de dos meses para cotizados".
 //
 // The map is typed against the catalogue, so a criterion added to the domain
@@ -96,7 +96,7 @@ export const MEASURE_LABELS: Record<Measure, string> = {
  * Why a criterion cannot be measured, when the engine says why.
  *
  * **Closed against the union of the domain**, like `PARTIAL_TEXTS` and
- * `MODEL_NAMES` of feature 010: it was a `Record<string, string>`, so a reason
+ * `MODEL_NAMES`: it was a `Record<string, string>`, so a reason
  * added to the engine broke nothing here and the screen painted a hole where
  * the explanation goes. The console's map was already typed against the union
  * and stopped the build; this one did not, which is the asymmetry. Now the

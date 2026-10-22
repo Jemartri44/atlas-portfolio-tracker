@@ -1,6 +1,5 @@
-// atlas remote login | logout | status | upload (feature 015, E2; ADR-0033,
-// points 2 to 8; `docs/api.md` §4; contracts `cli-commands.md`; feature 024).
-// Signing in writes `credentials.json` (§7 P16) and, in a folder with no
+// atlas remote login | logout | status | upload (ADR-0033, points 2 to 8, `docs/api.md` §4).
+// Signing in writes `credentials.json` and, in a folder with no
 // ledger and no cloud identity, **makes it a cloud folder** (`sync/remote.json`,
 // ADR-0035, §4); in a folder with a ledger it touches nothing. The token never goes to an argument, an
 // environment variable, a URL, the output or a message: only to its file, 600,
@@ -66,7 +65,7 @@ const login = async (ctx: Context, flags: Flags, env: RemoteEnvironment): Promis
   }
   const manual = booleanFlag(flags, "manual");
   // Renewing only with the entry sync/remote.json names; with no entry for
-  // that device, reissuing for it (N5); with no sync/remote.json, a new one (B2).
+  // that device, reissuing for it; with no sync/remote.json, a new one.
   const previous = at.remote === undefined ? undefined : entryForRemote(at.credentials, at.remote);
   const reissue =
     at.remote !== undefined && previous === undefined ? at.remote.device_id : undefined;
@@ -120,8 +119,7 @@ const login = async (ctx: Context, flags: Flags, env: RemoteEnvironment): Promis
       folder_hint: at.realFolder,
     };
     // The answer checked with the rules of the file before it is kept, and a
-    // renewal or a reissue has to answer for **its** device (review of PR
-    // #95, N5): nothing is written otherwise.
+    // renewal or a reissue has to answer for **its** device: nothing is written otherwise.
     const expected = previous?.device_id ?? reissue;
     if (!isCredentialEntry(entry) || (expected !== undefined && entry.device_id !== expected)) {
       ctx.io.err(
@@ -131,7 +129,7 @@ const login = async (ctx: Context, flags: Flags, env: RemoteEnvironment): Promis
     }
     const kept: CredentialEntry = entry;
     // Read again just before writing: an entry of this device from another
-    // origin is never replaced (review of PR #95, round 2, the rest of N5).
+    // origin is never replaced.
     const written = await updateCredentials(at.path, (file) =>
       replacesAnotherOrigin(file, kept) ? undefined : withEntry(file, kept),
     );

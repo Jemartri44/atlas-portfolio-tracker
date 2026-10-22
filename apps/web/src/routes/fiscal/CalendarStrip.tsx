@@ -1,4 +1,4 @@
-// The strip of the fiscal calendar (feature 020, E4, M12): the year with the
+// The strip of the fiscal calendar: the year with the
 // season, today and the dates that cost money or time, and the sentence of
 // each date. It lives apart from the card with the list so the summary can
 // load the short version (the strip and the next date) after its first paint.

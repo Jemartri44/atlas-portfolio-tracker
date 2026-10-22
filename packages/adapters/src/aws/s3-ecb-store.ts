@@ -1,5 +1,4 @@
-// `reference/ecb/` in the bucket (feature 016, E2; ADR-0029, third amendment,
-// point 2; plan §7.1): the same layout as the folder of the console —
+// `reference/ecb/` in the bucket (ADR-0029, third amendment, point 2): the same layout as the folder of the console —
 // `manifest.json`, the file in force byte for byte (`eurofxref-hist.csv` or
 // `api-exr.csv`), `previous/` and `rejected/` — written by **the ECB job
 // only** (one writer per object) and **without `rename` and without a lock**:
@@ -14,11 +13,10 @@
 //   3. `manifest.json` ← the new manifest                     the new history
 //
 // Every object the three steps write is read **at the start, together with
-// the manifest**, and each write is conditioned on **that** read (review of
-// PR #106, B1): two activations that verified the same history never leave
+// the manifest**, and each write is conditioned on **that** read: two activations that verified the same history never leave
 // one's file under the other's manifest. A write whose condition fails —
 // another run, or the administration — is `EcbStoreConflict`, and the run
-// stops without retrying (§8.1 P11).
+// stops without retrying.
 //
 // `recover()`, called before each update, undoes a cut between 2 and 3 when
 // `previous/` holds exactly what the manifest records (`ecbRecovery`). What it
@@ -27,13 +25,12 @@
 // that still reads (`generations()`, ADR-0029, note of 2026-09-28).
 //
 // **Two interleavings the conditions cannot rule out without a lock**, because
-// S3 cannot condition a write on the ETag of **another** object (round 2 of
-// the review of PR #106, R2-N2): (1) two activations of different sources
+// S3 cannot condition a write on the ETag of **another** object: (1) two activations of different sources
 // writing each other's file name at once; (2) an activation between its steps
 // 2 and 3 while another run's `recover()` undoes its file — the first then
 // writes its manifest over the one the undo did not touch. Both end
 // **damaged**, never read as if they matched; the next run's rebuild resolves
-// them, and the reserved concurrency 1 of the function (feature 017) keeps two
+// them, and the reserved concurrency 1 of the function keeps two
 // runs from ever meeting.
 
 import type {
@@ -82,8 +79,7 @@ export class S3EcbHistoryStore implements EcbHistoryStore {
   /**
    * The ETag of the manifest `active()` read (`null`: there was none), so
    * that the write that follows — `activate` or `keepRejected`, which the
-   * update decided comparing with **that** history — happens only over it
-   * (§15.5): another run that activated in between makes this one stop.
+   * update decided comparing with **that** history — happens only over it: another run that activated in between makes this one stop.
    */
   private seen: { readonly etag: string | null } | undefined;
 
@@ -165,7 +161,7 @@ export class S3EcbHistoryStore implements EcbHistoryStore {
     };
   }
 
-  /** Undoes an activation cut before its manifest, or says the history damaged (plan §7.1). */
+  /** Undoes an activation cut before its manifest, or says the history damaged. */
   async recover(): Promise<EcbRecovered> {
     const { decision, current, previous } = await this.diagnose();
     if (decision.kind !== "undo") {
@@ -176,11 +172,9 @@ export class S3EcbHistoryStore implements EcbHistoryStore {
   }
 
   /**
-   * The generations left for the rebuild to compare with (round 2 of the
-   * review of PR #106, R2-N1), newest first: the file the manifest names, as
+   * The generations left for the rebuild to compare with, newest first: the file the manifest names, as
    * it is, and the one the manifest names as `previous` — **only if its bytes
-   * have the SHA-256 the manifest records for it** (N3 of the review of PR
-   * #106): a cut between the first two steps of an activation leaves other
+   * have the SHA-256 the manifest records for it**: a cut between the first two steps of an activation leaves other
    * bytes there. With no manifest that reads there is nothing to check them
    * against: both names of both, as they are, which can only make the rebuild
    * refuse a ZIP that contradicts them — never accept one.
@@ -214,8 +208,7 @@ export class S3EcbHistoryStore implements EcbHistoryStore {
   }
 
   /**
-   * Rewrites a **damaged** history in force from a new download (review of
-   * PR #106, B1 (b)): a new generation — the file, then a manifest that names
+   * Rewrites a **damaged** history in force from a new download: a new generation — the file, then a manifest that names
    * it alone, with no `previous` from the damaged one and the rejected
    * downloads it still names — each written on the object read here. Refused
    * when the history is not damaged (another run repaired it first), and a
@@ -256,7 +249,7 @@ export class S3EcbHistoryStore implements EcbHistoryStore {
   async activate(next: DownloadedHistory): Promise<StoredHistoryMeta> {
     // Every object this activation will write is read **first, together with
     // the manifest**, and each write is conditioned on **that** read, never on
-    // a read made just before the write (review of PR #106, B1): another run
+    // a read made just before the write: another run
     // that wrote any of them in between makes this one stop, whatever it wrote.
     const read = await this.manifest();
     this.assertSeen(read?.stored);

@@ -1,12 +1,10 @@
-// The daily task of the closes (feature 016, E2; ADR-0031): `updatePrices`,
-// the use case of the 013 — the cascade, never the day in course, one close
+// The daily task of the closes (ADR-0031): `updatePrices`,
+// the use case — the cascade, never the day in course, one close
 // in force per date, the currency declared and contrasted — over the store of
 // `prices/` in the bucket, with the assets and their priority **of the remote
-// ledger**, `symbols.json` of the bucket **read only** (Q1: the cloud never
-// contrasts and never writes it) and the configuration of the function
-// (§8.2 M5). The keys, from SSM on every run; **without them** (the case of
+// ledger**, `symbols.json` of the bucket **read only** and the configuration of the function. The keys, from SSM on every run; **without them** (the case of
 // `dev`) nothing is called, no failure is counted and nothing is left for the
-// mail. **It sends nothing** (§8.2 B2): its findings go to its record.
+// mail. **It sends nothing**: its findings go to its record.
 
 import {
   PriceKeyInvalid,
@@ -84,7 +82,7 @@ export const pricesUpdate: TaskRunner = async (context): Promise<TaskResult> => 
         out_of_budget: count("out_of_budget"),
         unchecked: count("currency_unchecked"),
         no_symbol: count("no_symbol"),
-        // Never silent (round 3 of the review of PR #106): a file that does not read.
+        // Never silent: a file that does not read.
         unreadable: count("unreadable"),
       },
     },

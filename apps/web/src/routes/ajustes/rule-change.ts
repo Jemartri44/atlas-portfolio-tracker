@@ -1,5 +1,4 @@
-// The fourth question of a configuration change (feature 012, block 6;
-// ADR-0029, point 10; criterion 25): which lines a change of
+// The fourth question of a configuration change (ADR-0029, point 10, criterion 25): which lines a change of
 // `fiscal_date_rule` would leave with a rate that is not the one of their new
 // fiscal date — asked **before** the change is written. The rule is the
 // domain's (`ruleChangeRates`); the ECB is loaded here lazily, and only when

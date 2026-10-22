@@ -1,4 +1,4 @@
-// «Precios automáticos» in Ajustes (feature 013, block 5): the daily closes the
+// «Precios automáticos» in Ajustes: the daily closes the
 // web uses are the files imported by hand into this browser; the card says how
 // many assets have one and what is wrong when something is. The web never
 // downloads a price.

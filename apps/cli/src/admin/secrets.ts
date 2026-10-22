@@ -1,6 +1,4 @@
-// The parameters of SSM `atlas admin secrets` creates and rotates (feature 017,
-// E4; ADR-0034, row 21; `docs/api.md` §9; `specs/016-scheduled-jobs/contracts/
-// ssm-and-config.md` §1): every `SecureString` of `/atlas/<env>/` except the
+// The parameters of SSM `atlas admin secrets` creates and rotates (ADR-0034, row 21, `docs/api.md` §9): every `SecureString` of `/atlas/<env>/` except the
 // records of the device tokens (the API writes those), and the `String` of the
 // client of Google. **Never `mail/recipient` nor `mail/amounts`**: those are
 // Terraform's (ADR-0034, row 12). The pure part: names, kinds, how each value

@@ -69,8 +69,7 @@ interface ConfirmDialogProps {
 /**
  * The shape every "this is expensive, are you sure?" takes: one explanation,
  * cancel, and the action spelled out. Three of them were written by hand in the
- * configuration screen, each with its own pair of buttons (review of
- * 2026-09-18); a fourth would have been a fourth copy.
+ * configuration screen, each with its own pair of buttons; a fourth would have been a fourth copy.
  */
 export const ConfirmDialog = (props: ConfirmDialogProps): JSX.Element => (
   <Dialog

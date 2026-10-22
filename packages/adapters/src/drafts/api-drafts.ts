@@ -1,4 +1,4 @@
-// The drafts of the cloud, from a client (ADR-0035, E6; `docs/api.md` §6.1):
+// The drafts of the cloud, from a client (ADR-0035, `docs/api.md` §6.1):
 // `PendingDraftStore` over the four routes of the API, the credential injected
 // like `httpRemote` (the token of the console, or the cookie of the web). No
 // rule lives here; no copy is kept anywhere: **nothing of a draft stays on the

@@ -1,5 +1,5 @@
 // The gauges of the bucket and the dumbbells of its theses, as what a drawing
-// needs (feature 020, E3, M10).
+// needs.
 //
 // **Every figure is the domain's** (`bucketGauges`, `thesisVsIndexPct`), and
 // every mark is too: the mark of the warning is `NEAR_LIMIT_PCT`, the stop rule

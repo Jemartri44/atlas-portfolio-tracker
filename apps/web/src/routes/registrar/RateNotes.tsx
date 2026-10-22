@@ -1,4 +1,4 @@
-// What the form says about the ECB rate (feature 012, block 3): where the
+// What the form says about the ECB rate: where the
 // proposal came from, that the ECB has not published yet, that there is no
 // history to propose from — and, before writing, that a typed rate is not
 // the official one, with the explicit yes it needs. Rates are public figures:
@@ -18,7 +18,7 @@ const whose = (basis: "fiscal" | "business"): string =>
 export const RateHint = (props: {
   rates: FormRates;
   currency: string;
-  /** Keeps the operation as a draft, without a rate, until the ECB publishes it (block 5). */
+  /** Keeps the operation as a draft, without a rate, until the ECB publishes it. */
   onDraft?: (() => void) | undefined;
 }): JSX.Element => (
   <Case>

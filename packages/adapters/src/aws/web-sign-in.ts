@@ -1,5 +1,4 @@
-// The date of the last web sign-in in the bucket (feature 016, §8.1 P6;
-// `@atlas/domain/access`, `web-sign-in.ts`): read by the mail, moved forward
+// The date of the last web sign-in in the bucket (`@atlas/domain/access`, `web-sign-in.ts`): read by the mail, moved forward
 // by the API after each web sign-in, **never back**. Conditional, as every
 // write of the bucket: `If-Match` on what was read, `If-None-Match: *` when
 // there was nothing. A conflict writes nothing and is said; the caller decides.

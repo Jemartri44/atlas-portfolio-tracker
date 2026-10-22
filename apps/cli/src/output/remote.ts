@@ -1,4 +1,4 @@
-// The sentences of `atlas remote …` (feature 015, E2): each code of
+// The sentences of `atlas remote …`: each code of
 // `docs/api.md` §4 and §7 the console can meet while signing in or out, with
 // its own sentence; none is folded into another.
 
@@ -32,7 +32,7 @@ export const describeConsoleFailure = (code: string): string => {
   }
 };
 
-/** The files of the console refused (ADR-0033, point 3; data-model §7 and §8). */
+/** The files of the console refused (ADR-0033, point 3). */
 export const describeCredentialsError = (code: CredentialsProblem): string => {
   switch (code) {
     case "credentials_inside_ledger":

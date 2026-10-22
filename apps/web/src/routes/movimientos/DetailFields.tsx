@@ -187,7 +187,7 @@ export const EventEnvelope = (props: {
   /**
    * The identifiers behind the names of the data (`acc_mi`, `ast_world`, the
    * ULID of an order): here and nowhere else, folded, where the ledger is
-   * checked and a repair is written (review of 2026-09-19).
+   * checked and a repair is written.
    */
   identifiers?: readonly DetailField[];
   /** Bookkeeping of the line: its origin, and the rate of 1 of an operation in euros. */

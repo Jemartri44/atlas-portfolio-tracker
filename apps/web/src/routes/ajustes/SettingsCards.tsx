@@ -1,6 +1,5 @@
 // The four blocks of the configuration screen. They paint a draft and report
-// what was typed; they never write: the route owns the draft and the save
-// (review of 2026-09-18). The only state here is which way a window is being
+// what was typed; they never write: the route owns the draft and the save. The only state here is which way a window is being
 // typed — a choice of the control, not of the configuration.
 //
 // Each block is a group that folds (docs/design/system.md §7.7): the target

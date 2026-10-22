@@ -4,8 +4,7 @@
 // past tax year the form stayed open with a notice, and the reload of the
 // ledger that follows every write mounted the form again with the original
 // values and without the notice: «8.700» on screen again, as if nothing had
-// happened, and a second try answered «Ese evento ya está anulado» (third pass
-// of the review of 2026-09-19). Now every write leads to the detail of the
+// happened, and a second try answered «Ese evento ya está anulado». Now every write leads to the detail of the
 // movement it wrote, and the confirmation travels in the address, so no reload
 // can take it away.
 

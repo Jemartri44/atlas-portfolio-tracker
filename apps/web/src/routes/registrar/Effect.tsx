@@ -28,7 +28,7 @@ interface EffectProps {
   closedYears: readonly ClosedYearImpact[];
   onBack: () => void;
   onConfirm: () => void;
-  /** The typed rates that are not the official one, with their yes (feature 012). */
+  /** The typed rates that are not the official one, with their yes. */
   rates?: FormRates;
 }
 

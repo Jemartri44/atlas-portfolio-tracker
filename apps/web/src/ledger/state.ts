@@ -8,7 +8,7 @@
 //
 // A module-level store inside `createRoot`: the application has exactly one
 // ledger, and a context would add plumbing without adding a capability. The
-// signals are plain functions, so the tests drive this without a DOM (Q8).
+// signals are plain functions, so the tests drive this without a DOM.
 
 import {
   type CivilDate,
@@ -132,8 +132,7 @@ const writeLocal = (key: string, value: string): void => {
 };
 
 /**
- * Privacy is **on** unless the device explicitly says it is off (FR-021,
- * decision (d)): anything that is not the literal "off" — nothing stored,
+ * Privacy is **on** unless the device explicitly says it is off (FR-021): anything that is not the literal "off" — nothing stored,
  * storage blocked, a value written by an older version — leaves the amounts
  * covered.
  *
@@ -225,7 +224,7 @@ export const usePrivacy = (): (() => boolean) => store.privacy;
 /**
  * Today in Europe/Madrid, from the clock the use cases use — which is what
  * this comment always said and what the code did **not** do: it read
- * `new Date()`, the wall clock (feature 010, follow-up 2).
+ * `new Date()`, the wall clock.
  *
  * A component that reads the wall clock while the domain reads an injected one
  * makes the two look at different days, and nothing that depends on the date

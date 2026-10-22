@@ -17,8 +17,7 @@ const cssValue = (name: string): string =>
  * The stretches of the X axis where **no** series has a value: from the last
  * known point before the hole to the first known one after it (or the edge of
  * the chart). Where only one series lacks its datum, the hole is that line
- * stopping, and a band across the whole chart would say the others lack it too
- * (review of 2026-09-19). A series with no value at all is absent, not a hole, and
+ * stopping, and a band across the whole chart would say the others lack it too. A series with no value at all is absent, not a hole, and
  * a step series (what was contributed) has no holes and says nothing about them.
  * Pure, so what is shaded can be asserted without a canvas.
  */

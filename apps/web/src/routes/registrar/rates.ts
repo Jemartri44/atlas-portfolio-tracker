@@ -1,4 +1,4 @@
-// The ECB rate of the form being filled in (feature 012, block 3), as a hook:
+// The ECB rate of the form being filled in, as a hook:
 // the history is fetched **lazily** when the form opens — nothing of the ECB
 // is on the boot path —, its proposal fills the rate fields the user has not
 // touched, and a typed rate that is not the official one asks for a yes

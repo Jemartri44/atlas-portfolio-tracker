@@ -1,7 +1,7 @@
 // What a form says went wrong, and where (FR-043): a refusal about one field
 // goes under it, the rest next to the button, and the whole error of a write
-// with the button that fixes it (inventory V6). Out of `EventForm` because the
-// form is long enough already (decision (g) of prompt 007).
+// with the button that fixes it . Out of `EventForm` because the
+// form is long enough already.
 
 import { type Accessor, createSignal } from "solid-js";
 import { toAppError } from "../../ledger/errors.js";

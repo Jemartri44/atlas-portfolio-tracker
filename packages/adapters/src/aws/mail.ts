@@ -1,14 +1,14 @@
-// The `Notifier` of SES (feature 016, E1, block 3), written against a narrow
+// The `Notifier` of SES, written against a narrow
 // interface of its own, `MailSender`, which the thin adapter of the SDK
-// implements (`sdk-ses.ts`) and the tests simulate — as the 015 did with S3
+// implements (`sdk-ses.ts`) and the tests simulate — as with S3
 // and SSM. The SDK plugs in only in the composition of the jobs.
 //
 // **It puts the recipient itself**: read from SSM on every send
 // (`/atlas/<env>/mail/recipient`, a `String` that Terraform writes from
 // `terraform.tfvars`, ADR-0034, row 12), never taken from the message, so
-// nothing of the domain can write to another address (mutant 3). A recipient
+// nothing of the domain can write to another address. A recipient
 // that is not one mail address does not send. **It never reads the switch of
-// the amounts** (§8.2 M2): the composition of the mail task does.
+// the amounts**: the composition of the mail task does.
 //
 // Every failure is a code, never a mail taken as sent: SSM that does not
 // answer, a parameter missing or not an address, SES that refuses (it was not

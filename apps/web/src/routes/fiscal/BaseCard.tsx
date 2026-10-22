@@ -1,6 +1,6 @@
 // The savings base: the one hero figure of the screen, always broken down.
 //
-// Three things it has to say and does (prompt 010, block 4): that it is a
+// Three things it has to say and does: that it is a
 // **fiscal total**, core and bucket together, which is the first exception of
 // the constitution and the only place in the application where the two books
 // are added up; that it is the **base**, not what is paid, because the

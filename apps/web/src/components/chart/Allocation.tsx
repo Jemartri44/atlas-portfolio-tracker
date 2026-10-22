@@ -72,7 +72,7 @@ export const Allocation = (props: { segments: readonly AllocationSegment[] }): J
     <div class="alloc" role="img" aria-label="Reparto actual de la cartera frente al objetivo">
       {/*
         With a partial total there is no current weight to draw: an empty rail
-        looked broken (review of 2026-09-19). The target stays, and the card
+        looked broken. The target stays, and the card
         says what is missing in its pending block.
       */}
       <Show when={hasActual()}>

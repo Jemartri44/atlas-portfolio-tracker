@@ -1,10 +1,8 @@
-// Going to the fragment of the address once its target is there (feature
-// 020, E1, block 6; round 1 of the review of PR #105, B1 and N2).
+// Going to the fragment of the address once its target is there.
 //
 // The browser looks for `#sincronizacion` when the page loads, and the card
 // that carries it is painted later, when its screen arrives: at 400px the
-// page did not move at all (measured, `specs/020-visual-refresh/questions.md (in git history)`
-// §7). So after entering by an address with a fragment, or following a link
+// page did not move at all (measured). So after entering by an address with a fragment, or following a link
 // of the application to one, this waits for the target, a frame at a time and
 // up to a bound, and brings it to the top. Under the fixed bar, not behind it:
 // `scrollIntoView` honours the `scroll-padding-top` of the document, which
@@ -44,7 +42,7 @@ export const decodeFragment = (hash: string): string | undefined => {
  * stays shut for every step until the address it popped to is reached, and
  * a click (a link, a button that navigates) opens it again in any case.
  * Measured in Chromium: a flag spent on the first step let the second one
- * follow the fragment, and the back button lost (round 1 of PR #105, N2).
+ * follow the fragment, and the back button lost.
  */
 export const historyGate = () => {
   let poppedTo: string | undefined;

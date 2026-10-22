@@ -1,7 +1,7 @@
-// atlas tax <año> [--lots] [--json] — the savings base of a tax year (feature 009).
+// atlas tax <año> [--lots] [--json] — the savings base of a tax year.
 //
 // The CLI only formats: every figure, every criterion and every note comes from
-// `taxYear` in the domain (decision (h) of prompt 006, §2 bis of prompt 009).
+// `taxYear` in the domain.
 
 import { todayInMadrid } from "@atlas/domain";
 import type {
@@ -381,7 +381,7 @@ const renderTaxReport = (report: TaxYearReport, withLots: boolean): string => {
         ),
         // One line per substitution, oldest first: with two returns filed the
         // report used to carry only the last, and the text said "anclado en"
-        // as if there had been one (feature 011, block 6).
+        // as if there had been one.
         ...report.anchors.map((anchor) =>
           anchor.before_ledger === true
             ? `Anclado en lo declarado en ${anchor.year}, anterior a tus datos: ${anchor.declared.map((p) => `${p.origin_year} ${eur(p.amount_eur)}`).join(", ") || "nada"}. Vienen de lo declarado, no de un cálculo.`

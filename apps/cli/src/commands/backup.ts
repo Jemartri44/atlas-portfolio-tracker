@@ -1,10 +1,10 @@
 // atlas backup --to <directorio> [--from-bucket --env <e>]: verified local copy
-// of the ledger bytes (feature 003, decision (g)). A file operation of the CLI:
+// of the ledger bytes. A file operation of the CLI:
 // no new port, no domain change; the copy is re-read and compared by etag and
-// line count. Feature 015, E5 (ADR-0032, layer 4; §7 P5): also the local
+// line count. Also (ADR-0032, layer 4) the local
 // `documents/` beside the ledger and, with `--from-bucket`, `documents/` and
 // `imports/` of the data bucket with the role of administration, only reading.
-// Feature 024 (ADR-0035, §4): in a cloud folder the ledger comes down by the API
+// In a cloud folder (ADR-0035, §4) the ledger comes down by the API
 // with the device token, is checked against its etag, and is written dated,
 // never over another, read-only (`0444`).
 

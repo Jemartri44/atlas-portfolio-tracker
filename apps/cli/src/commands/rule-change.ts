@@ -1,5 +1,5 @@
 // The ECB rates after a change of `fiscal_date_rule`, from the console
-// (ADR-0029, point 10; block 6 of prompt 012; criterion 25):
+// (ADR-0029, point 10, criterion 25):
 //
 // - `atlas settings set --fiscal-date-rule …` says, **before** the question,
 //   which lines would be left with a rate that is not the one of their new

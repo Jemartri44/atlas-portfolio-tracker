@@ -1,5 +1,4 @@
-// Router and shell. Fourteen routes, all readable and navigable
-// (`specs/006-web-shell/contracts/routes.md`), each screen lazily loaded so the
+// Router and shell. Fourteen routes, all readable and navigable, each screen lazily loaded so the
 // first paint only carries what the summary needs.
 
 import { Navigate, Route, Router, useLocation } from "@solidjs/router";

@@ -1,5 +1,4 @@
-// JSON with its numbers **as the text they arrived with** (decision D-Q1 of
-// the direction). EODHD gives a close as a JSON number, and `JSON.parse`
+// JSON with its numbers **as the text they arrived with**. EODHD gives a close as a JSON number, and `JSON.parse`
 // alone would turn `325.13` into the nearest double: a float, which the
 // project never lets near an amount (trap 3, ADR-0005). The reviver of
 // `JSON.parse` receives the source text of every primitive in its third
