@@ -50,7 +50,7 @@ const rateCell = (row: CashLine): string[] =>
  */
 const shownSum = (values: readonly (Money | undefined)[]): Money => Money.sumShown(values, "EUR");
 
-export const netWorthText = (view: NetWorth): string => {
+const netWorthText = (view: NetWorth): string => {
   const missing = [
     ...view.core.missing_prices,
     ...view.bucket.missing_prices,

@@ -2,10 +2,10 @@
 // `--flag=value`, boolean flags (no value or followed by another flag) and `--`
 // to stop flag parsing.
 
-export type FlagValue = string | true | string[];
+type FlagValue = string | true | string[];
 export type Flags = Map<string, FlagValue>;
 
-export interface ParsedArgs {
+interface ParsedArgs {
   positionals: string[];
   flags: Flags;
 }

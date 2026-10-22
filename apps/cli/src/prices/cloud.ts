@@ -54,7 +54,7 @@ export const priceOriginOf = async (ctx: Context): Promise<PriceOrigin> => {
   return { kind: "cloud", origin: session.entry.origin, token: session.entry.token };
 };
 
-export interface PulledFile {
+interface PulledFile {
   readonly asset_id: AssetId;
   readonly added: number;
   /** Why nothing was added from it: a file that does not read, here or in the cloud. */

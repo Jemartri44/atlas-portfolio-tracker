@@ -239,7 +239,7 @@ comandos:
                                  la administración de la nube, con el rol de administración y nunca por la API
   --                             termina las opciones: lo que va detrás es posicional (un id que empiece por guion)`;
 
-export const composeDeps = (ledgerPath: string): UseCaseDeps => ({
+const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   store: new FileLedgerStore(ledgerPath),
   clock: systemClock,
   random: webCryptoRandom,

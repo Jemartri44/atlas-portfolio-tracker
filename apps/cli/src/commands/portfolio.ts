@@ -45,7 +45,7 @@ const totalWeightCell = (weights: CoreWeights): string => {
   return summed.isZero() ? "" : pct(summed);
 };
 
-export const weightsText = (weights: CoreWeights): string => {
+const weightsText = (weights: CoreWeights): string => {
   const rows = weights.rows.map((row) => [
     row.asset_id,
     row.asset_class,

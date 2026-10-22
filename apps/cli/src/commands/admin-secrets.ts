@@ -54,7 +54,7 @@ const refuseValues = (positionals: readonly string[], flags: Flags): void => {
 };
 
 /** What the order borrows from `atlas admin`: the confirmation and the reading of a failure of AWS. */
-export interface AdminHelpers {
+interface AdminHelpers {
   confirm(ctx: Context, environment: string, question: string): Promise<boolean>;
   translate(error: unknown): unknown;
 }

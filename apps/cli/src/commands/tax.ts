@@ -249,7 +249,7 @@ const filingText = (report: TaxYearReport): string => {
   return lines.filter((line) => line !== "").join("\n");
 };
 
-export const renderTaxReport = (report: TaxYearReport, withLots: boolean): string => {
+const renderTaxReport = (report: TaxYearReport, withLots: boolean): string => {
   const out: string[] = [
     `TOTAL FISCAL ${report.year} — núcleo y cubo agregados por contribuyente (constitución III).`,
     "Esto es la BASE del ahorro, no la cuota ni lo que se paga.",

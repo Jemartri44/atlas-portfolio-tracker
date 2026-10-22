@@ -154,7 +154,7 @@ const PERIOD: Record<InformativeReturn["period"], string> = {
   before_model: "el modelo no existía ese ejercicio",
 };
 
-export const renderInformative = (report: InformativeReturn): string => {
+const renderInformative = (report: InformativeReturn): string => {
   const out: string[] = [
     `MODELO ${report.model} de ${report.year} — núcleo y cubo agregados por contribuyente (constitución III).`,
     `${PERIOD[report.period]}. Fecha de consulta: ${report.today}.`,
@@ -213,7 +213,7 @@ export const renderInformative = (report: InformativeReturn): string => {
 };
 
 /** `atlas m720 <año>` and `atlas m721 <año>`: the same command with its model fixed. */
-export const informativeCommand =
+const informativeCommand =
   (model: "720" | "721") =>
   async (ctx: Context, positionals: string[], flags: Flags): Promise<number> => {
     assertKnownFlags(flags, [...GLOBAL_FLAGS]);

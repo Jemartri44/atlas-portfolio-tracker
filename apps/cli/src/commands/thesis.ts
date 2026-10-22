@@ -47,7 +47,7 @@ export const jsonThesis = (thesis: BucketThesisView) => ({
 });
 
 /** A linked trade as `--json` shows it: decimals as strings, like everywhere else. */
-export const jsonLeg = (leg: ThesisLeg) => ({
+const jsonLeg = (leg: ThesisLeg) => ({
   event_id: leg.event_id,
   fiscal_date: leg.fiscal_date,
   quantity: leg.quantity.toString(),
