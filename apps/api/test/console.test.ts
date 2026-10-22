@@ -331,12 +331,12 @@ describe("a token on every request (§2.2; T01 to T10)", () => {
       errorOf(await withToken(api, "/api/auth/console/revoke", `atlasdt1.${other}.${secret}`)),
     ).toEqual({
       code: "device_token_invalid",
-      details: { reason: "unreadable" },
+      details: {},
     });
     const wrong = `atlasdt1.${tokenId}.${"x".repeat(43)}`;
     expect(errorOf(await withToken(api, "/api/auth/console/revoke", wrong))).toEqual({
       code: "device_token_invalid",
-      details: { reason: "secret" },
+      details: {},
     });
   });
 

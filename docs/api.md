@@ -65,6 +65,8 @@ En este orden, rechazando al primer fallo (ADR-0033, punto 5):
 6. Su par `{sub, email}` sigue en la lista permitida → `403 not_allowed`.
 7. El objeto de su dispositivo existe, es de tipo `console` y está activo → `403 device_forgotten` (§2).
 
+Los pasos 2 y 3 dan la **misma respuesta** (`device_token_invalid` sin `details`): el cliente no averigua qué `token_id` existen.
+
 Solo pueden cachearse los negativos que no pueden volver a valer (revocado, caducado); un «no existe» no se cachea.
 
 ### 2.3 Alcance de cada credencial

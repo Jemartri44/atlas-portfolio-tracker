@@ -191,12 +191,11 @@ export const checkToken = (
   },
 ): { readonly ok: TokenRecord } | ApiRefusal => {
   if (read === undefined || read === "unreadable") {
-    return refusal("device_token_invalid", {
-      reason: read === undefined ? "missing" : "unreadable",
-    });
+    // The same answer as a wrong secret: which token ids exist is not for the client.
+    return refusal("device_token_invalid");
   }
   if (!facts.secretMatches) {
-    return refusal("device_token_invalid", { reason: "secret" });
+    return refusal("device_token_invalid");
   }
   const status = tokenStatus(read, facts.nowMs);
   if (status === "revoked") {
