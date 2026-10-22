@@ -13,6 +13,16 @@
 
 import type { CorporateActionKind } from "@atlas/domain";
 import type { FieldSpec } from "./specs.js";
+import { initialValues } from "./values.js";
+
+/** The values a corporate form starts from: the date of the rate is left empty (it is the operation's). */
+export const initialCorporateValues = (
+  fields: FieldSpec[],
+  today: string,
+): Record<string, string> => ({
+  ...initialValues({ fields }, today),
+  cash_fx_rate_date: "",
+});
 
 export interface CorporateForm {
   /** Segment of the URL: /registrar/evento-corporativo/<slug>. */
@@ -88,6 +98,7 @@ const cash = (label: string, hint: string): FieldSpec[] => [
     name: "cash_fx_rate_date",
     label: "Fecha del tipo",
     kind: "date",
+    hint: "En blanco, la de la fecha efectiva de la operación; si cae en fin de semana, el último día hábil.",
     visibleWhen: { field: "cash_unit_price", notEquals: "" },
   },
 ];

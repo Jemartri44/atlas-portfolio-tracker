@@ -36,7 +36,11 @@ import {
   transferView,
   weightsView,
 } from "../src/view-models/core/index.js";
-import { corporateForm } from "../src/view-models/forms/corporate.js";
+import {
+  CORPORATE_COMMON,
+  corporateForm,
+  initialCorporateValues,
+} from "../src/view-models/forms/corporate.js";
 import { openOrderOptions, openTransferOptions } from "../src/view-models/options.js";
 import { netWorthPlot } from "../src/view-models/series.js";
 import { goldenEvents } from "./helpers/golden.js";
@@ -363,6 +367,33 @@ describe("the corporate action form, as parameters", () => {
     // By the account's name, which is what the user knows, or by its key.
     expect(params.fees).toEqual({ acc_a: "1.20", acc_b: "0.80" });
     expect(params.cash?.unit_price).toBe("50");
+  });
+
+  it("takes the date of the rate from the operation when the field is left empty, not from today", () => {
+    const params = toCorporateParams(
+      corporateForm("contrasplit") as never,
+      {
+        asset_id: "ast_old",
+        effective_date: "2024-03-01",
+        source_document: "https://issuer.example/nota.pdf",
+        ratio: "1/3",
+        cash_unit_price: "10",
+        cash_currency: "EUR",
+        cash_fx_rate: "1",
+        cash_fx_rate_date: "",
+      },
+      ACCOUNTS,
+    );
+    expect(params.cash?.fx_rate_date).toBe("2024-03-01");
+  });
+
+  it("starts the form with the date of the rate empty, whatever today is", () => {
+    const values = initialCorporateValues(
+      [...CORPORATE_COMMON, ...(corporateForm("contrasplit")?.fields ?? [])],
+      "2026-10-22",
+    );
+    expect(values.effective_date).toBe("2026-10-22");
+    expect(values.cash_fx_rate_date).toBe("");
   });
 
   it("leaves the fees out when the field is empty, instead of sending an empty map", () => {

@@ -81,6 +81,8 @@ export const describeRemoteFailure = (code: unknown): string => {
       return "el borrador ya no está como se leyó (se cerró o se está confirmando en otro sitio); no se ha escrito nada.";
     case "draft_exists":
       return "ya hay un borrador con ese identificador en la nube; no se ha guardado nada.";
+    case "append_too_many_units":
+      return "la operación tiene demasiadas partes indivisibles para una sola escritura; no se ha escrito nada.";
     case "body_too_large":
       return "la petición era demasiado grande para la nube; no se ha escrito nada.";
     case "transport_rejected":

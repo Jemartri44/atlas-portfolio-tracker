@@ -28,6 +28,16 @@ export interface RemoteRules {
   readonly clockToleranceMs: number;
 }
 
+/**
+ * Units a single request may carry (`docs/api.md` §5.2). Every unit is
+ * validated against the whole ledger it lands on, so the cost of a request is
+ * its units times the projection of the ledger: measured, 500 units over a
+ * ledger of 5,000 events took 13 s, against a Lambda that gives 30. A normal
+ * write is one unit; a chain of corrections is also one, however long. A bound
+ * of the protocol, not a setting of the user.
+ */
+export const MAX_APPEND_UNITS = 100;
+
 const bodyInvalid = (reason: string): RemoteError =>
   new RemoteError("body_invalid", 400, { reason });
 
@@ -192,6 +202,9 @@ const formUnits = (
   const units: RequestUnit[] = [];
   let index = 0;
   while (index < entries.length) {
+    if (units.length >= MAX_APPEND_UNITS) {
+      throw new RemoteError("append_too_many_units", 413, { max: MAX_APPEND_UNITS });
+    }
     const start = index;
     const members: { entry: AppendEntry; event: LedgerEvent }[] = [];
     const stop = (rejection: Rejection, id?: unknown) => {
