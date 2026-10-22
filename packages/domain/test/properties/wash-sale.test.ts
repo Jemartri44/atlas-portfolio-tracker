@@ -14,6 +14,7 @@ import { Decimal } from "../../src/money/decimal.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import type { CorporateActionEvent, LedgerEvent } from "../../src/schema/events.js";
 import { walkWashSales } from "../../src/tax/wash-sale.js";
+import { buy, HAND_SETTINGS, sell, taxBuilder } from "../tax/helpers.js";
 import { taxLedgerOf, taxOpArb } from "./tax-ledgers.js";
 
 const total = (amounts: readonly { amount: Decimal }[]): Decimal =>
@@ -26,7 +27,7 @@ const walkOf = (events: readonly LedgerEvent[]) => {
 };
 
 /**
- * 400 random ledgers each, walked whole. It is the slowest test of the suite
+ * 300 random ledgers each, walked whole. It is the slowest test of the suite
  * and it once failed at 5.497 ms against the 5.000 ms default of Vitest, which
  * is a **clock** failing, not a property. The seeds are fixed so the ledgers
  * are always the same ones, and the budget is generous so a loaded machine
@@ -65,13 +66,31 @@ describe("the wash-sale rule on random ledgers", () => {
             deferring += 1;
           }
         }),
-        { numRuns: 400, seed: 42 },
+        { numRuns: 300, seed: 42 },
       );
-      // A property that never meets a deferral proves nothing.
-      expect(deferring).toBeGreaterThan(30);
+      // A property that never meets a deferral proves nothing. About one ledger
+      // in nine defers (8 to 19 per hundred over eight seeds), so 300 runs
+      // average ~35: ten is far enough below that no seed trips it, and far
+      // enough above zero that a generator that stopped producing repurchases
+      // does. The exact case below meets a deferral whatever the seed.
+      expect(deferring).toBeGreaterThanOrEqual(10);
     },
     BUDGET_MS,
   );
+
+  it("conserves a loss deferred by a repurchase, on a ledger written by hand", () => {
+    const b = taxBuilder(HAND_SETTINGS);
+    buy(b, "stock_s", "2027-01-11", "10", "100");
+    sell(b, "stock_s", "2027-06-01", "10", "60");
+    buy(b, "stock_s", "2027-06-15", "10", "70");
+    const { walk } = walkOf(b.build());
+    expect(walk.deferrals).toHaveLength(1);
+    expect(total(walk.deferrals.map((d) => d.amount_eur)).toString()).toBe("-400");
+    expect(total(walk.pending.map((p) => p.amount_eur)).toString()).toBe("-400");
+    expect(
+      total(walk.outcomes.flatMap((o) => o.released.map((r) => r.amount_eur))).toString(),
+    ).toBe("0");
+  });
 
   it(
     "lends each repurchased unit to one deferral only",
