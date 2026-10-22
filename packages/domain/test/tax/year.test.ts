@@ -533,6 +533,14 @@ describe("the other doubtful criteria", () => {
     expect(text(lineOf(report, loss.id).deferred_eur)).toBe("0");
   });
 
+  it("#2 crypto: a purchase on the very day of the sale still counts, the prudent reading", () => {
+    const b = taxBuilder();
+    buy(b, "coin_c", "2027-01-11", "10", "100");
+    buy(b, "coin_c", "2027-06-10", "5", "100");
+    const loss = sell(b, "coin_c", "2027-06-10", "10", "80");
+    expect(text(lineOf(reportOf(b.build(), 2027), loss.id).deferred_eur)).toBe("-100");
+  });
+
   it("#2 crypto: the last day of the following year still defers, the next one does not", () => {
     const deferred = (repurchase: string) => {
       const b = taxBuilder();

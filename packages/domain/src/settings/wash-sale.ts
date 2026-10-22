@@ -62,7 +62,7 @@ export const washSaleWindowEnd = (fiscalDate: CivilDate, window: WashSaleWindow)
  * **following** the sale, nothing before. Securities, funds and ETPs keep the
  * window on both sides (article 33.5.f and g).
  */
-export const washSaleLooksBack = (assetType: AssetType): boolean => assetType !== "crypto";
+const washSaleLooksBack = (assetType: AssetType): boolean => assetType !== "crypto";
 
 /**
  * First day of the window around a sale, counted the same way: the window
