@@ -427,7 +427,7 @@ describe("architecture (015): the administration is out of reach of the API (E5)
         file,
       ),
     );
-    // Feature 017, E4: `admin/secrets.ts` and `commands/admin-secrets.ts` join the four; `admin/clients.ts` the sixth.
+    // `admin/secrets.ts`, `commands/admin-secrets.ts` and `admin/clients.ts` join the others.
     expect(roots.length).toBe(7);
     // What they import, by name: never the credentials or the client of the
     // console, and from the barrel of the adapters only the folder's own.
