@@ -23,3 +23,5 @@ Con las credenciales de administración y el `terraform.tfvars` de esa parte: `t
 2. El *environment* `prod`: aprobación obligatoria y **regla de rama que solo admite `main`** (configuración de GitHub).
 3. Variables del repositorio `ATLAS_INFRA_PLAN_ENABLED` y `ATLAS_DEPLOY_ENABLED` a `true`. Hoy no existen y los flujos son inertes.
 4. Un `plan` sale en el registro como direcciones y acciones; el completo se revisa en local antes de cada `apply`.
+5. El `plan` no tiene artefacto construido: `terraform-run.sh` le pasa valores de relleno para las cuatro variables `*artifact*`, y el código de las dos Lambdas aparece siempre como «update in place». Los despliegues pasan las reales.
+6. La SPA se sube sin `--delete`: los `assets/` con hash de la versión anterior siguen en el bucket mientras CloudFront sirva el `index.html` viejo, y el resto (el `index.html` incluido) lleva `Cache-Control: no-cache`. Tras el primer despliegue con estos encabezados, invalida `/*` a mano una vez: el `index.html` que CloudFront ya tenía en caché no los trae.

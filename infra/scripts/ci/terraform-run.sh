@@ -15,6 +15,15 @@ fail() { echo "terraform $1 fallo (codigo $2); su salida no se publica"; exit 1;
 tf init -input=false -backend-config="$tmp/backend.hcl" >>"$log" 2>&1 || fail init $?
 lock=()
 [ "$mode" = plan ] && lock=(-lock=false) # the plan role reads the state and never writes it (B2)
+if [ "$mode" = plan ]; then
+  # A plan has no built artifact: placeholders let it run, and the code of both Lambdas always
+  # shows as an update in place. A deployment passes the real ones (artifact-env.sh).
+  export TF_VAR_artifact_key="${TF_VAR_artifact_key:-builds/plan/lambda.zip}"
+  export TF_VAR_jobs_artifact_key="${TF_VAR_jobs_artifact_key:-builds/plan/jobs.zip}"
+  zero_digest="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  export TF_VAR_artifact_sha256_base64="${TF_VAR_artifact_sha256_base64:-$zero_digest}"
+  export TF_VAR_jobs_artifact_sha256_base64="${TF_VAR_jobs_artifact_sha256_base64:-$zero_digest}"
+fi
 tf plan -input=false "${lock[@]}" -var-file="$tmp/terraform.tfvars" -out="$tmp/plan.bin" >>"$log" 2>&1 || fail plan $?
 tf show -json "$tmp/plan.bin" 2>>"$log" | "$(dirname "$0")/summarize-plan.sh"
 if [ "$mode" = apply ]; then

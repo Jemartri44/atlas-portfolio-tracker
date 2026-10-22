@@ -290,7 +290,7 @@ describe.each(ENVS)("the creations that take no resource type, in %s", (env) => 
       expect(found, action).toHaveLength(1);
       expect([found[0]?.Resource].flat(), action).toEqual(["*"]);
       expect(found[0]?.Condition, action).toEqual({
-        StringEquals: { "aws:RequestTag/env": env },
+        StringEquals: { "aws:RequestTag/env": env, "aws:RequestTag/project": "atlas" },
       });
     }
   });

@@ -144,6 +144,33 @@ describe("the deployments (mutants 33, 34, 41, 54)", () => {
     }
     expect(code("infra/scripts/ci/package.sh")).toContain("--exclude='.vite' --exclude='*.map'");
   });
+  it("gives a plan the four artifact variables it has no build for", () => {
+    const run = code("infra/scripts/ci/terraform-run.sh");
+    for (const name of [
+      "artifact_key",
+      "artifact_sha256_base64",
+      "jobs_artifact_key",
+      "jobs_artifact_sha256_base64",
+    ]) {
+      expect(run, name).toContain(`export TF_VAR_${name}="`);
+    }
+    expect("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=").toMatch(/^[A-Za-z0-9+/]{43}=$/);
+    expect(run).toContain("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+  });
+  it("uploads the SPA without deleting the assets of the previous version, and revalidates the pages", () => {
+    for (const name of ["deploy-dev.yml", "deploy-prod.yml"]) {
+      const lines = flow(name)
+        .split("\n")
+        .filter((l) => /aws s3 (cp|sync) "\$RUNNER_TEMP\/spa\//.test(l));
+      expect(lines, name).toHaveLength(2);
+      for (const line of lines) {
+        expect(line, line).not.toContain("--delete");
+        expect(line, line).toContain("--cache-control");
+      }
+      expect(lines[0], name).toContain("immutable");
+      expect(lines[1], name).toContain("'no-cache'");
+    }
+  });
 });
 
 describe("the scripts of the CI", () => {

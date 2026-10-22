@@ -52,6 +52,9 @@ jobs:
       - name: Upload the SPA
         run: |
           mkdir "$RUNNER_TEMP/spa" && tar -xzf "$RUNNER_TEMP/artifact/spa.tgz" -C "$RUNNER_TEMP/spa"
-          aws s3 sync "$RUNNER_TEMP/spa/" "s3://$SPA_BUCKET/" --delete --exclude '.vite/*' --exclude '*.map' --only-show-errors > "$RUNNER_TEMP/aws-spa.log" 2>&1
+          # Hashed assets first and never deleted: the index.html still cached at the edge points at the previous ones.
+          aws s3 sync "$RUNNER_TEMP/spa/" "s3://$SPA_BUCKET/" --exclude '*' --include 'assets/*' --exclude '.vite/*' --exclude '*.map' --cache-control 'public, max-age=31536000, immutable' --only-show-errors > "$RUNNER_TEMP/aws-spa.log" 2>&1
+          # The rest (index.html included) is revalidated on every request, so a new deployment shows at once.
+          aws s3 cp "$RUNNER_TEMP/spa/" "s3://$SPA_BUCKET/" --recursive --exclude 'assets/*' --exclude '.vite/*' --exclude '*.map' --cache-control 'no-cache' --only-show-errors > "$RUNNER_TEMP/aws-spa-pages.log" 2>&1
         env:
           SPA_BUCKET: ${{ secrets.ATLAS_PROD_SPA_BUCKET }}
