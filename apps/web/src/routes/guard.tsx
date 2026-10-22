@@ -41,11 +41,17 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
    * What the content is painted from. While a write is in flight, a ledger that
    * arrives (the reload after a `412`) does **not** replace it: replacing it
    * would paint the screen again and lose what the person typed.
+   *
+   * A ledger with the **same etag** is the same ledger: a silent reload (the
+   * connection came back, a lost answer was looked for) hands over a new
+   * snapshot object that says nothing new, and painting from it would remount
+   * the form for no reason. A different etag does remount: the preview the
+   * person saw belongs to the ledger it was built on.
    */
   let held: LedgerSnapshot | undefined;
   const painted = createMemo<LedgerSnapshot | undefined>(() => {
     const next = loaded();
-    if (untrack(store.writing) && held !== undefined) {
+    if (held !== undefined && (untrack(store.writing) || next?.etag === held.etag)) {
       return held;
     }
     held = next;

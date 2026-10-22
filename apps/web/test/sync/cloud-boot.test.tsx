@@ -6,11 +6,18 @@
 // order (session, ledger, projection), the four stops (no session, no
 // connection, failed read, nothing shown) and that nothing is cached.
 
+import { createSignal } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { futureLine } from "../../../../packages/adapters/test/fixtures.js";
 import { allowListOf, NAMES } from "../../../api/test/harness.js";
-import { bootCloud, refreshSession, watchConnection } from "../../src/ledger/cloud.js";
+import {
+  bootCloud,
+  refreshSession,
+  reloadLedger,
+  watchConnection,
+} from "../../src/ledger/cloud.js";
 import { store } from "../../src/ledger/state.js";
+import { RequireLedger } from "../../src/routes/guard.jsx";
 import { goldenText } from "../helpers/golden.js";
 import { press, showInShell, text, until } from "../helpers/render.jsx";
 import { apiAt, sameOrigin, signedIn } from "./api-support.js";
@@ -296,6 +303,29 @@ describe("cloud boot", () => {
     clearInterval(watch);
     expect(phases).not.toContain("loading");
     expect(text(host)).toContain("eventos:200");
+  });
+
+  it("a quiet reload keeps what was typed in a screen painted from the ledger", async () => {
+    const { request } = await rig();
+    const Typed = () => (
+      <RequireLedger>
+        {() => {
+          const [value, setValue] = createSignal("");
+          return (
+            <input id="typed" value={value()} onInput={(e) => setValue(e.currentTarget.value)} />
+          );
+        }}
+      </RequireLedger>
+    );
+    const host = await showInShell("/", { "*": Typed });
+    await bootCloud(request);
+    const input = (): HTMLInputElement => host.querySelector("#typed") as HTMLInputElement;
+    await until(() => input() !== null, "the form");
+    input().value = "123,45";
+    input().dispatchEvent(new Event("input", { bubbles: true }));
+    await reloadLedger({ quiet: true });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(input().value).toBe("123,45");
   });
 
   it("an old boot that ends after a newer one does not settle the pending write again", async () => {
