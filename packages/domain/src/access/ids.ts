@@ -17,7 +17,7 @@ export const isId43 = (value: unknown): value is string =>
 
 /** An instant as the API writes it: ISO 8601 in UTC with `Z`. */
 export const isInstant = (value: unknown): value is string =>
-  typeof value === "string" && INSTANT_PATTERN.test(value);
+  typeof value === "string" && INSTANT_PATTERN.test(value) && !Number.isNaN(Date.parse(value));
 
 /** Seconds since the epoch as an instant (`2026-10-01T10:00:00Z`, no milliseconds). */
 export const instantOf = (seconds: number): string =>
