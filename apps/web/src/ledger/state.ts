@@ -19,6 +19,7 @@ import {
   type UseCaseDeps,
 } from "@atlas/domain";
 import { createMemo, createRoot, createSignal } from "solid-js";
+import { themeFromPreference } from "../shell/theme.js";
 import type { LedgerSource } from "./source.js";
 
 export interface LedgerSnapshot {
@@ -140,10 +141,6 @@ const writeLocal = (key: string, value: string): void => {
  * suite and left every amount visible on first run.
  */
 export const privacyFromPreference = (stored: string | undefined): boolean => stored !== "off";
-
-/** A stored theme that is not one of the three (an older version, a hand edit) follows the system. */
-export const themeFromPreference = (stored: string | undefined): Theme =>
-  stored === "light" || stored === "dark" ? stored : "system";
 
 const createStore = () => {
   // It starts **loading**: the boot is async (session, then ledger), and while
