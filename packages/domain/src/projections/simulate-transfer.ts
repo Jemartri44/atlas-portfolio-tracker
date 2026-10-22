@@ -15,6 +15,7 @@ import type { AssetClass, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import { manualPrices, type PriceLookup } from "./prices.js";
 import type { LedgerState, Warning } from "./state.js";
+import { transferBlock } from "./transfer-rule.js";
 import {
   type CoreWeightRow,
   type CoreWeights,
@@ -74,6 +75,15 @@ export const simulateTransfer = (
   }
   requireTransferable(state, from_asset_id, "from");
   requireTransferable(state, to_asset_id, "to");
+  const fromAsset = state.assets.get(from_asset_id);
+  const toAsset = state.assets.get(to_asset_id);
+  const block =
+    fromAsset === undefined || toAsset === undefined
+      ? undefined
+      : transferBlock(fromAsset, toAsset, settings.tax_residence);
+  if (block !== undefined) {
+    fail(block.code, block.message, block.details);
+  }
 
   const table = coreWeights(state, date, settings);
   /*

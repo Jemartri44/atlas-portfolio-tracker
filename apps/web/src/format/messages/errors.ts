@@ -172,7 +172,9 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   not_transferable: (d, n) =>
     d.asset_id === undefined
       ? "Un traspaso fiscal exige que los dos activos sean traspasables."
-      : `El activo ${n.one(d.asset_id)} no es traspasable: un traspaso fiscal exige que los dos lo sean.`,
+      : `El activo ${n.one(d.asset_id)} no es traspasable: el diferimiento solo existe entre fondos de inversión; registra una venta y una compra.`,
+  transfer_not_resident: () =>
+    "Tu residencia fiscal no es España: el diferimiento del traspaso solo existe para residentes en España.",
   not_core_asset: (d, n) =>
     `El activo ${n.one(d.asset_id)} no pertenece a la cartera principal: el simulador de traspaso solo opera sobre ella.`,
   eur_fx_rate_not_one: (d) =>

@@ -164,6 +164,8 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     `La fecha del tipo de cambio (${day(d.fx_rate_date)}) es posterior a la fecha fiscal (${day(d.fiscal_date)}).`,
   same_asset_two_accounts: (d, n) =>
     `${n.one(d.asset_id)} está ahora en ${count(d.accounts)} cuentas; el FIFO sigue siendo global, entre todas ellas.`,
+  transferable_not_fund: (d, n) =>
+    `${n.one(d.asset_id)} está marcado como traspasable, pero el diferimiento solo existe entre fondos: esa marca no tiene efecto.`,
   sell_without_thesis: (d, n) =>
     `La venta de ${n.one(d.asset_id)} en ${n.one(d.account_id)} no está enlazada a ninguna tesis.`,
   thesis_size_exceeded: (d, n, f) =>

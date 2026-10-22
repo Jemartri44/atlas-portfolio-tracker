@@ -10,7 +10,8 @@ import type {
   AssetId,
   AssetUpdatedEvent,
 } from "../schema/events.js";
-import type { Account, Asset, LedgerState } from "./state.js";
+import { type Account, type Asset, addWarning, type LedgerState } from "./state.js";
+import { allowsDeferral } from "./transfer-rule.js";
 
 export const requireAccount = (state: LedgerState, id: AccountId, eventId: string): Account => {
   const account = state.accounts.get(id);
@@ -78,6 +79,23 @@ export const applyAssetCreated = (state: LedgerState, event: AssetCreatedEvent):
     ...fields
   } = event;
   state.assets.set(event.asset_id, { ...fields, identifier_history: [] });
+  warnTransferableType(state, event);
+};
+
+/** Kept loadable for old ledgers; the transfer itself is what gets rejected. */
+const warnTransferableType = (
+  state: LedgerState,
+  event: AssetCreatedEvent | AssetUpdatedEvent,
+): void => {
+  if (event.transferable && !allowsDeferral(event.asset_type)) {
+    addWarning(
+      state,
+      "transferable_not_fund",
+      event.id,
+      `asset ${event.asset_id} is ${event.asset_type}: transfers defer tax only between funds, so its transferable flag has no effect`,
+      { asset_id: event.asset_id, asset_type: event.asset_type },
+    );
+  }
 };
 
 export const applyAssetUpdated = (state: LedgerState, event: AssetUpdatedEvent): void => {
@@ -122,6 +140,7 @@ export const applyAssetUpdated = (state: LedgerState, event: AssetUpdatedEvent):
     ...fields
   } = event;
   state.assets.set(event.asset_id, { ...fields, identifier_history: history });
+  warnTransferableType(state, event);
 };
 
 /** Core and bucket never mix (constitution III, ADR-0009). */

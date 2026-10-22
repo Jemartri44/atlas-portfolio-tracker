@@ -16,6 +16,7 @@ import type {
 import type { Settings } from "../settings/settings.js";
 import { assertSameBook, requireAccount, requireAsset } from "./catalogue.js";
 import type { LedgerState, PendingOrder, PendingTransfer, Warning } from "./state.js";
+import { residenceAt, transferBlock } from "./transfer-rule.js";
 
 const DAY_MS = 86_400_000;
 
@@ -140,16 +141,16 @@ export const applyTransferRequested = (state: LedgerState, event: TransferReques
   const toAsset = requireAsset(state, event.to_asset_id, event.id);
   assertSameBook(fromAccount, fromAsset, event.id);
   assertSameBook(toAccount, toAsset, event.id);
-  if (
-    fromAsset.asset_id !== toAsset.asset_id &&
-    !(fromAsset.transferable && toAsset.transferable)
-  ) {
-    throw new ProjectionError(
-      "not_transferable",
-      event.id,
-      "fund transfers require both assets to be transferable",
-      { from_asset_id: event.from_asset_id, to_asset_id: event.to_asset_id },
-    );
+  const block =
+    fromAsset.asset_id === toAsset.asset_id
+      ? undefined
+      : transferBlock(fromAsset, toAsset, residenceAt(state, event.recorded_at));
+  if (block !== undefined) {
+    throw new ProjectionError(block.code, event.id, block.message, {
+      from_asset_id: event.from_asset_id,
+      to_asset_id: event.to_asset_id,
+      ...block.details,
+    });
   }
   state.transferRequests.set(event.id, {
     request_id: event.id,
