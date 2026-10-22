@@ -60,6 +60,22 @@ describe("TokenRegistry", () => {
     ]);
   });
 
+  it("revokes exclusively: the first wins, a late one finds it revoked and writes nothing", async () => {
+    const { ssm, registry } = setup();
+    await registry.create(record());
+    expect(await registry.revokeExclusive(record(), T0 + 1000)).toBe("won");
+    expect(await registry.revokeExclusive(record(), T0 + 2000)).toBe("lost");
+    expect(ssm.writes).toEqual([`putNew ${NAME}`, `overwrite ${NAME}`]);
+  });
+
+  it("loses a renewal for a missing or unreadable record, writing nothing", async () => {
+    const { ssm, registry } = setup();
+    expect(await registry.revokeExclusive(record(), T0)).toBe("lost");
+    ssm.set(NAME, JSON.stringify(record("OOOOOOOOOOOOOOOOOOOOOO")));
+    expect(await registry.revokeExclusive(record(), T0)).toBe("lost");
+    expect(ssm.writes.filter((write) => write.startsWith("overwrite"))).toEqual([]);
+  });
+
   it("reads a record whose own token id is another as unreadable, and a missing one as nothing", async () => {
     const { ssm, registry } = setup();
     ssm.set(NAME, JSON.stringify(record("OOOOOOOOOOOOOOOOOOOOOO")));

@@ -66,7 +66,11 @@ export class SdkParameterStore implements ParameterStore {
     if (value === undefined) {
       throw new Error("ssm answered a parameter without a value");
     }
-    return { value, version: output.Parameter?.Version ?? 0 };
+    const version = output.Parameter?.Version;
+    if (version === undefined) {
+      throw new Error("ssm answered a parameter without a version");
+    }
+    return { value, version };
   }
 
   async putNew(

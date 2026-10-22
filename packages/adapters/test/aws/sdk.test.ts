@@ -218,7 +218,7 @@ describe("SdkParameterStore", () => {
   it("gets a parameter decrypted, by its name only, and a missing one as nothing", async () => {
     const { client, sent } = ssmClient((command) =>
       (command as GetParameterCommand).input.Name === "/atlas/dev/a"
-        ? { Parameter: { Value: "v" } }
+        ? { Parameter: { Value: "v", Version: 1 } }
         : ssmError("ParameterNotFound", 400),
     );
     const store = new SdkParameterStore(client);
@@ -228,6 +228,11 @@ describe("SdkParameterStore", () => {
       Name: "/atlas/dev/a",
       WithDecryption: true,
     });
+  });
+
+  it("refuses a parameter answered without a version (the exclusive renewal needs it)", async () => {
+    const { client } = ssmClient(() => ({ Parameter: { Value: "v" } }));
+    await expect(new SdkParameterStore(client).get("/atlas/dev/a")).rejects.toThrow(/version/);
   });
 
   it("creates without Overwrite and with its tags; an existing one is exists", async () => {
