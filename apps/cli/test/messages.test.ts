@@ -102,10 +102,11 @@ describe("describeError: a write the API refused", () => {
 });
 
 describe("describeError: a write that stayed in part", () => {
-  it("says how many lines went in and that repeating is safe", () => {
+  it("says how many lines went in and that repeating from scratch would duplicate them", () => {
     const partial = describeError(new RemoteRejectedError("partial_write", 101));
     expect(partial).toContain("101 líneas");
-    expect(partial).toContain("no se duplica");
+    expect(partial).toContain("mira el libro antes de repetir");
+    expect(partial).not.toContain("no se duplica");
     const none = describeError(new RemoteRejectedError("line_invalid", 0));
     expect(none).toContain("no se ha escrito nada");
   });

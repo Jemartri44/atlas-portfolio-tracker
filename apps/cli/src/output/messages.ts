@@ -297,7 +297,7 @@ export const describeError = (error: DomainError): string => {
       }): ${
         d.accepted === 0
           ? "no se ha escrito nada"
-          : `se han escrito ${Math.floor(Number(d.accepted) || 0)} líneas y el resto no; repite la operación: lo ya escrito se reconoce y no se duplica`
+          : `se han escrito ${Math.floor(Number(d.accepted) || 0)} líneas y el resto no; mira el libro antes de repetir: lo ya escrito está y repetir la operación desde cero lo duplicaría`
       }.`;
     case "write_outcome_unknown":
       return "La conexión se cortó al guardar y no se sabe si la operación quedó registrada: cuando vuelva la conexión, comprueba el libro antes de repetirla.";
