@@ -200,10 +200,11 @@ describe("ApiLedgerStore: 412, rejection and what is deduced", () => {
     expect(stored()).toBe(textOf([lineOf(account)]));
   });
 
-  it("a repeated id is refused by the API (what makes a retry safe)", async () => {
+  it("a repeated id with other content is refused by the API", async () => {
     const { store } = await rig([lineOf(account), lineOf(deposit)]);
     const { etag } = await store.load();
-    const error = (await failureOf(store.append([deposit], etag))) as RemoteRejectedError;
+    const other = { ...deposit, fingerprint: "sha256:other" } as LedgerEvent;
+    const error = (await failureOf(store.append([other], etag))) as RemoteRejectedError;
     expect(error.remoteCode).toBe("domain_rejected");
     expect(error.details.domain_code).toBe("duplicate_id");
   });
@@ -459,6 +460,29 @@ describe("ApiLedgerStore: more units than one request admits", () => {
     );
   });
 
+  it("sending the same events again after a partial write skips what is in and writes the rest", async () => {
+    const { store, stored } = await rig();
+    const { etag } = await store.load();
+    const events = Array.from({ length: MAX_APPEND_UNITS + 3 }, (_, n) =>
+      n === MAX_APPEND_UNITS + 1
+        ? numbered(n, { recorded_at: "2099-01-01T00:00:00.000Z" })
+        : numbered(n),
+    );
+    const first = (await failureOf(store.append(events, etag))) as RemoteRejectedError;
+    expect(first.accepted).toBe(MAX_APPEND_UNITS + 1);
+    // The person fixes the clock: the same events, the same ids, nothing written twice.
+    const fixed = events.map((event) =>
+      event.recorded_at === "2099-01-01T00:00:00.000Z" ? { ...event, recorded_at: at(1) } : event,
+    );
+    const reloaded = await store.load();
+    const result = await store.append(fixed, reloaded.etag);
+    expect(stored()).toBe(textOf([lineOf(account), ...fixed.map(lineOf)]));
+    expect(result.etag).toBe(sha(stored()));
+    // And once more, with everything in: no request, the same etag.
+    const again = await store.append(fixed, result.etag);
+    expect(again.etag).toBe(result.etag);
+  });
+
   it("a conflict after the first request is a partial write too", async () => {
     const { store, net } = await rig();
     const { etag } = await store.load();
@@ -529,11 +553,9 @@ describe("ApiLedgerStore: unknown outcome", () => {
     const found = await store.findOutcome(error.ids);
     expect(found.outcome).toBe("written");
     expect(found.ledger.events).toEqual([account, deposit]);
-    // A blind retry is refused by the API, so nothing is written twice.
-    const retry = (await failureOf(
-      store.append([deposit], found.ledger.etag),
-    )) as RemoteRejectedError;
-    expect(retry.details.domain_code).toBe("duplicate_id");
+    // A blind retry is recognised as already written: nothing is sent, nothing twice.
+    const retry = await store.append([deposit], found.ledger.etag);
+    expect(retry.etag).toBe(found.ledger.etag);
     expect(stored()).toBe(textOf([lineOf(account), lineOf(deposit)]));
   });
 
@@ -599,7 +621,8 @@ describe("ApiLedgerStore: nothing cached, nothing logged", () => {
     const { etag } = await store.load();
     await store.append([secret], etag);
     expect((store as unknown as { loaded?: unknown }).loaded).toBeUndefined();
-    await failureOf(store.append([secret], (await store.load()).etag));
+    const other = { ...secret, fingerprint: "sha256:other" } as LedgerEvent;
+    await failureOf(store.append([other], (await store.load()).etag));
     const logged = api.logs.join("\n");
     expect(logged).not.toContain("123456.78");
     expect(logged).not.toContain(secret.id);
