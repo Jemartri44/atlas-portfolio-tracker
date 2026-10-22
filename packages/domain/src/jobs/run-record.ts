@@ -23,6 +23,7 @@
 // that **never** is an asset, a symbol, an ISIN, an account nor an amount.
 
 import { type CivilDate, isCivilDate } from "../dates/civil-date.js";
+import { SHA256_HEX } from "../guards.js";
 import type { IgnoredFrequency } from "../settings/job-frequencies.js";
 import { type Delivery, JOB_TASKS, type JobTask } from "./catalog.js";
 import {
@@ -132,7 +133,7 @@ const isDumpObject = (value: unknown, period: string): value is DumpObject =>
   hasKeys(value, ["key", "sha256"], ["kept_from_earlier_attempt"]) &&
   isDumpKey(value.key, period) &&
   typeof value.sha256 === "string" &&
-  /^[0-9a-f]{64}$/.test(value.sha256) &&
+  SHA256_HEX.test(value.sha256) &&
   (value.kept_from_earlier_attempt === undefined || value.kept_from_earlier_attempt === true);
 
 const isIgnored = (value: unknown): value is IgnoredFrequency =>

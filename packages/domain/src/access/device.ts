@@ -6,7 +6,7 @@
 // absence is the recognition by resemblance B1 and R2-B2 closed.
 
 import { ValidationError } from "../errors.js";
-import { isRecord } from "../guards.js";
+import { isCount, isRecord } from "../guards.js";
 import { isId22, isInstant } from "./ids.js";
 
 export const DEVICE_FORMAT = 1;
@@ -57,9 +57,6 @@ const KEYS = new Set([
   "device_name",
   "forgotten_at",
 ]);
-
-const isCount = (value: unknown): boolean =>
-  typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 
 const optionalInstant = (value: unknown): boolean => value === undefined || isInstant(value);
 
