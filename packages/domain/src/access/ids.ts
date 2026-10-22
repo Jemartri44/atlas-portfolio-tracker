@@ -16,8 +16,14 @@ export const isId43 = (value: unknown): value is string =>
   typeof value === "string" && ID43.test(value);
 
 /** An instant as the API writes it: ISO 8601 in UTC with `Z`. */
-export const isInstant = (value: unknown): value is string =>
-  typeof value === "string" && INSTANT_PATTERN.test(value);
+export const isInstant = (value: unknown): value is string => {
+  if (typeof value !== "string" || !INSTANT_PATTERN.test(value)) {
+    return false;
+  }
+  // `Date.parse` rolls `02-30` and `24:00` over instead of refusing them.
+  const ms = Date.parse(value);
+  return !Number.isNaN(ms) && new Date(ms).toISOString().slice(0, 19) === value.slice(0, 19);
+};
 
 /** Seconds since the epoch as an instant (`2026-10-01T10:00:00Z`, no milliseconds). */
 export const instantOf = (seconds: number): string =>

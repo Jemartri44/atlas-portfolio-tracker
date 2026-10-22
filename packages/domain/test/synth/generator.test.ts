@@ -36,10 +36,7 @@ describe("generateLedger: determinism and invariants (seed 1)", () => {
   });
 
   it("projects cleanly, prefix by prefix, with exactly the declared warnings", () => {
-    const started = performance.now();
     checkInvariants(events, "all");
-    const elapsed = performance.now() - started;
-    expect(elapsed).toBeLessThan(60_000);
   }, 60_000);
 });
 
