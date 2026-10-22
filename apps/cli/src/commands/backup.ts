@@ -8,7 +8,7 @@
 // with the device token, is checked against its etag, and is written dated,
 // never over another, read-only (`0444`).
 
-import { chmod, constants, copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { chmod, constants, copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { FileLedgerStore } from "@atlas/adapters";
 import { DomainError, todayInMadrid } from "@atlas/domain";
@@ -53,10 +53,16 @@ const copyFromCloud = async (
     throw mismatch(sha256(bytes));
   }
   await writeFile(destination, bytes, { flag: "wx", mode: 0o444 });
-  await chmod(destination, 0o444);
-  const written = await readFile(destination);
-  if (sha256(written) !== snapshot.etag) {
-    throw mismatch(sha256(written));
+  try {
+    await chmod(destination, 0o444);
+    const written = await readFile(destination);
+    if (sha256(written) !== snapshot.etag) {
+      throw mismatch(sha256(written));
+    }
+  } catch (failure) {
+    // Same as the local copy: a bad file would block the retry of the day.
+    await rm(destination, { force: true });
+    throw failure;
   }
   return { etag: snapshot.etag, lines: linesOfText(snapshot.text) };
 };
@@ -90,16 +96,22 @@ export const backupCommand = async (
   let copy: { etag: string; lines: readonly string[] };
   if (cloud === undefined) {
     await copyFile(ctx.ledgerPath, destination, constants.COPYFILE_EXCL);
-    const original = await new FileLedgerStore(ctx.ledgerPath, ctx.deps.store.schema).load();
-    copy = await new FileLedgerStore(destination, ctx.deps.store.schema).load();
-    if (copy.etag !== original.etag || copy.lines.length !== original.lines.length) {
-      throw new DomainError("backup_mismatch", "the copy does not match the ledger", {
-        path: destination,
-        etag: copy.etag,
-        expected_etag: original.etag,
-        lines: copy.lines.length,
-        expected_lines: original.lines.length,
-      });
+    try {
+      const original = await new FileLedgerStore(ctx.ledgerPath, ctx.deps.store.schema).load();
+      copy = await new FileLedgerStore(destination, ctx.deps.store.schema).load();
+      if (copy.etag !== original.etag || copy.lines.length !== original.lines.length) {
+        throw new DomainError("backup_mismatch", "the copy does not match the ledger", {
+          path: destination,
+          etag: copy.etag,
+          expected_etag: original.etag,
+          lines: copy.lines.length,
+          expected_lines: original.lines.length,
+        });
+      }
+    } catch (failure) {
+      // A bad copy left behind would make `path_exists` refuse the retry of the day.
+      await rm(destination, { force: true });
+      throw failure;
     }
   } else {
     copy = await copyFromCloud(await cloud.remote(), destination);

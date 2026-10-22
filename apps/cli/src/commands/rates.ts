@@ -34,6 +34,7 @@ import {
 } from "@atlas/domain/ecb";
 import { ConfirmationRequired, type Context } from "../context.js";
 import { day } from "../output/ecb.js";
+import { aside } from "./shared.js";
 
 /** The history in force, or `undefined` — with the reason when there is one but it cannot be used. */
 export const historyOf = async (
@@ -117,14 +118,17 @@ export const confirmRates = async (
   mismatches: readonly RateMismatch[],
 ): Promise<boolean> => {
   for (const { point, official } of mismatches) {
-    ctx.io.out(
+    aside(
+      ctx,
       `El tipo tecleado para ${point.currency} (${point.rate}${point.rate_date === undefined ? "" : ` del ${day(point.rate_date)}`}) no es el oficial de la fecha ${point.basis === "fiscal" ? "fiscal" : "de la operación"} (${day(point.reference)}): el BCE publicó ${official.rate} el ${day(official.date)}. Se registra el tecleado si lo confirmas; la comprobación del libro lo señalará.`,
     );
   }
   if (mismatches.length === 0 || ctx.confirmFxRate) {
     return true;
   }
-  const answer = await ctx.io.confirm("¿Registrar con el tipo tecleado? [s/N] ");
+  const answer = await ctx.io.confirm("¿Registrar con el tipo tecleado? [s/N] ", {
+    aside: ctx.json,
+  });
   if (answer === undefined) {
     throw new ConfirmationRequired(
       "el tipo tecleado no es el oficial y no hay terminal para preguntarlo: añade --confirm-fx-rate (--yes no basta, es otra pregunta)",

@@ -16,11 +16,20 @@ import { pathExists } from "../fs.js";
 import { assertNoLedgerInCloudFolder } from "../remote/credentials-file.js";
 import { confirm, confirmOutsideRepository, degradedHeader, loadForQuery } from "./shared.js";
 
+/**
+ * Free text that a spreadsheet would run as a formula (`notes` of a movement
+ * starting with `=`, `+`, `-`, `@`, a tab or a return) gets a leading `'`. A
+ * plain number —the signed amounts the ledger holds as strings— is not a
+ * formula and stays as it is. The ledger itself is never touched.
+ */
+const defused = (text: string): string =>
+  /^[=+\-@\t\r]/.test(text) && !/^[+-]?\d+(\.\d+)?$/.test(text) ? `'${text}` : text;
+
 const csvCell = (value: unknown): string => {
   if (value === undefined) {
     return "";
   }
-  const text = typeof value === "string" ? value : JSON.stringify(value);
+  const text = typeof value === "string" ? defused(value) : JSON.stringify(value);
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 };
 

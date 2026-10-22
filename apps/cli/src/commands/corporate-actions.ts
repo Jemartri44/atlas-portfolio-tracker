@@ -39,7 +39,7 @@ import { unfiledYearsNote } from "../output/closed-years.js";
 import { previewData, renderPreview } from "../output/preview.js";
 import { keyValue } from "../output/table.js";
 import { parseAssignments } from "./catalogue.js";
-import { closedYearNotes, confirm } from "./shared.js";
+import { answer, aside, cancelled, closedYearNotes, confirm } from "./shared.js";
 
 // `--neutrality-regime` / `--no-neutrality-regime` are common to every kind
 // rather than listed per kind: the field is on the event, not on the `kind`,
@@ -223,18 +223,21 @@ const affectedAssets = (asset: string, effects: readonly Effect[]): string[] => 
 ];
 
 const adviseAfter = (ctx: Context, params: CorporateActionParams, preview: EventPreview): void => {
-  ctx.io.out(
+  aside(
+    ctx,
     `Recuerda copiar el documento fuente (${params.source_document}) a documents/ a mano: la CLI solo guarda la referencia.`,
   );
   if (params.kind === "delisting") {
-    ctx.io.out(
+    aside(
+      ctx,
       `Marcar el activo como inactivo es aparte: atlas asset update ${params.asset_id} --inactive`,
     );
   }
   const heldBefore = preview.before.positions.some((p) => p.asset_id === params.asset_id);
   const heldAfter = preview.after.positions.some((p) => p.asset_id === params.asset_id);
   if (heldBefore && !heldAfter && params.kind !== "delisting") {
-    ctx.io.out(
+    aside(
+      ctx,
       `El activo ${params.asset_id} queda sin posición; si ya no existe, márcalo con atlas asset update ${params.asset_id} --inactive`,
     );
   }
@@ -309,39 +312,43 @@ export const corporateActionCommand = async (
   };
   const composed = compose(state, events, params);
   if (composed.no_fractions) {
-    ctx.io.out("Aviso: ninguna cuenta queda con picos; no se genera forced_sale.");
+    aside(ctx, "Aviso: ninguna cuenta queda con picos; no se genera forced_sale.");
   }
   const draft = composed.draft as unknown as Record<string, unknown>;
   const preview = await previewEvent(ctx.deps, draft as unknown as Draft, {
     assets: affectedAssets(asset, composed.draft.effects),
   });
-  if (ctx.json) {
-    ctx.io.out(JSON.stringify(previewData(preview), null, 2));
-  } else {
-    ctx.io.out("Evento a registrar:");
-    ctx.io.out(keyValue(draft));
-    ctx.io.out(renderPreview(preview));
-  }
+  // With --json the figures also travel in the answer, once the outcome is known.
+  aside(ctx, "Evento a registrar:");
+  aside(ctx, keyValue(draft));
+  aside(ctx, renderPreview(preview));
   adviseAfter(ctx, params, preview);
   // A corporate action lands on a date of its own and rewrites lots: it moves a
   // filed return as surely as a sale does. This path does not go through
   // `confirmAndRecord`, so it asks for the warning itself (prompt 010, FR-018).
   for (const line of await closedYearNotes(ctx, draft)) {
-    ctx.io.out(line);
+    aside(ctx, line);
   }
   if (!(await confirm(ctx, "¿Registrar? [s/N] "))) {
-    ctx.io.out("Cancelado.");
+    cancelled(ctx, previewData(preview));
     return 0;
   }
   const result = await recordEvent(ctx.deps, draft as never, {
     confirmDuplicate: ctx.confirmDuplicate,
   });
-  ctx.io.out(`Registrado ${summarize(result.event)}.`);
+  aside(ctx, `Registrado ${summarize(result.event)}.`);
   for (const line of [
     ...describeWarnings(result.warnings),
     ...unfiledYearsNote(result.unfiledPastYears),
   ]) {
-    ctx.io.out(line);
+    aside(ctx, line);
   }
+  answer(ctx, {
+    ...previewData(preview),
+    status: "recorded",
+    event: result.event,
+    warnings: result.warnings,
+    unfiled_past_years: result.unfiledPastYears,
+  });
   return 0;
 };
