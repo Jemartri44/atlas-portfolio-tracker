@@ -132,6 +132,29 @@ describe("the country of an account on 31 December", () => {
   });
 });
 
+describe("an account recorded after the end of the year it already operated in", () => {
+  const lateLedger = (recordedOn: string) => {
+    const b = new LedgerBuilder();
+    b.settings(SETTINGS);
+    b.recordedAt(recordedOn);
+    b.account("acc_ib", { platform: "ibkr", country: "IE" });
+    b.deposit({ account_id: "acc_ib", value_date: "2027-03-01", amount: "60000" });
+    return b.build();
+  };
+
+  it("is in the return of its year, however late it was recorded", () => {
+    const report = model720(lateLedger("2028-02-01"), 2027, { today: TODAY });
+    expect(accountsOf(report).verdict).toBe("obliged");
+    expect(itemOf(report, "acc_ib")?.value_eur?.amount.toString()).toBe("60000");
+  });
+
+  it("holds its balance for the whole quarter when it was recorded inside it", () => {
+    const item = itemOf(model720(lateLedger("2027-12-20"), 2027, { today: TODAY }), "acc_ib");
+    expect(item?.balances?.[0]?.days).toBe(92);
+    expect(item?.q4_average_eur?.amount.toString()).toBe("60000");
+  });
+});
+
 describe("what moves the cash of the quarter", () => {
   it("follows a corporate action and a currency that appears in the middle of it", () => {
     const b = new LedgerBuilder();
