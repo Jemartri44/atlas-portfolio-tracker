@@ -23,6 +23,7 @@ import type {
   StoredHistory,
   StoredHistoryMeta,
 } from "@atlas/domain/ecb";
+import { activeHistoryOf } from "@atlas/domain/jobs";
 import { sha256Bytes } from "../hash.js";
 import { nodeFileOps, writeFileAtomically } from "../ledger-store/file-ops.js";
 import { type HeldLock, withFolderLock } from "../ledger-store/folder-lock.js";
@@ -60,14 +61,20 @@ export class FileEcbHistoryStore implements EcbHistoryStore {
   }
 
   async manifest(): Promise<EcbManifest | undefined> {
+    let text: string;
     try {
-      return JSON.parse(await fs.readFile(join(this.dir, MANIFEST), "utf8")) as EcbManifest;
+      text = await fs.readFile(join(this.dir, MANIFEST), "utf8");
     } catch (error) {
       if ((error as { code?: string }).code === "ENOENT") {
         return undefined;
       }
       throw error;
     }
+    // Read as strictly as the S3 store does: the file names are joined to a path.
+    if (activeHistoryOf(text) === undefined) {
+      throw new EcbHistoryDamaged(MANIFEST);
+    }
+    return JSON.parse(text) as EcbManifest;
   }
 
   async active(): Promise<StoredHistory | undefined> {
@@ -129,7 +136,10 @@ export class FileEcbHistoryStore implements EcbHistoryStore {
   async keepRejected(next: DownloadedHistory): Promise<StoredHistoryMeta> {
     return withFolderLock(this.folder, async (lock) => {
       await fs.mkdir(join(this.dir, "rejected"), { recursive: true });
-      const manifest = (await this.manifest()) as EcbManifest;
+      const manifest = await this.manifest();
+      if (manifest === undefined) {
+        throw new EcbHistoryDamaged(MANIFEST);
+      }
       const stamp = next.fetched_at.replace(/[:.]/g, "-");
       const file = `rejected/${stamp}-${fileOfSource(next.source)}`;
       const meta = this.metaOf(next, file);

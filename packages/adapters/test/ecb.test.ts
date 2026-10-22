@@ -259,6 +259,36 @@ describe("FileEcbHistoryStore", () => {
     const folder = await mkdtemp(join(tmpdir(), "atlas-ecb-"));
     await new FileEcbHistoryStore(folder).activate(downloaded(await csv()));
     await writeFile(join(folder, "reference", "ecb", "manifest.json"), "{");
-    await expect(new FileEcbHistoryStore(folder).manifest()).rejects.toBeInstanceOf(SyntaxError);
+    await expect(new FileEcbHistoryStore(folder).manifest()).rejects.toBeInstanceOf(
+      EcbHistoryDamaged,
+    );
+  });
+
+  it("refuses a manifest that names a file outside reference/ecb/ or has no rejected list", async () => {
+    const folder = await mkdtemp(join(tmpdir(), "atlas-ecb-"));
+    const store = new FileEcbHistoryStore(folder);
+    await store.activate(downloaded(await csv()));
+    const path = join(folder, "reference", "ecb", "manifest.json");
+    const good = JSON.parse(await readFile(path, "utf8"));
+    for (const bad of [
+      { ...good, active: { ...good.active, file: "../../x" } },
+      { active: good.active },
+    ]) {
+      await writeFile(path, JSON.stringify(bad));
+      await expect(store.active()).rejects.toBeInstanceOf(EcbHistoryDamaged);
+      await expect(store.activate(downloaded(await csv()))).rejects.toBeInstanceOf(
+        EcbHistoryDamaged,
+      );
+      await expect(store.keepRejected(downloaded(await csv()))).rejects.toBeInstanceOf(
+        EcbHistoryDamaged,
+      );
+    }
+  });
+
+  it("refuses to keep a rejected download when there is no manifest", async () => {
+    const folder = await mkdtemp(join(tmpdir(), "atlas-ecb-"));
+    await expect(
+      new FileEcbHistoryStore(folder).keepRejected(downloaded(await csv())),
+    ).rejects.toBeInstanceOf(EcbHistoryDamaged);
   });
 });
