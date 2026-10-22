@@ -47,21 +47,27 @@ describe("washSaleWindowOf", () => {
 describe("washSaleWindowEnd / washSaleWindowStart", () => {
   it("counts whole months and years, forwards and backwards", () => {
     expect(washSaleWindowEnd("2027-01-15", "2m")).toBe("2027-03-15");
-    expect(washSaleWindowStart("2027-03-15", "2m")).toBe("2027-01-15");
+    expect(washSaleWindowStart("2027-03-15", "2m", "fund")).toBe("2027-01-15");
     expect(washSaleWindowEnd("2027-02-10", "1y")).toBe("2028-02-10");
-    expect(washSaleWindowStart("2028-02-10", "1y")).toBe("2027-02-10");
+    expect(washSaleWindowStart("2028-02-10", "1y", "fund")).toBe("2027-02-10");
   });
 
   it("falls on the last day of the month when the day does not exist", () => {
     // Two months after the 31st of December of a leap year.
     expect(washSaleWindowEnd("2027-12-31", "2m")).toBe("2028-02-29");
     expect(washSaleWindowEnd("2026-12-31", "2m")).toBe("2027-02-28");
-    expect(washSaleWindowStart("2028-04-30", "2m")).toBe("2028-02-29");
+    expect(washSaleWindowStart("2028-04-30", "2m", "fund")).toBe("2028-02-29");
     expect(washSaleWindowEnd("2028-02-29", "1y")).toBe("2029-02-28");
+  });
+
+  it("starts crypto on the sale day: article 33.5.e) only looks at the year after", () => {
+    expect(washSaleWindowStart("2027-06-10", "1y", "crypto")).toBe("2027-06-10");
+    expect(washSaleWindowEnd("2027-06-10", "1y")).toBe("2028-06-10");
+    expect(washSaleWindowStart("2027-06-10", "1y", "etp")).toBe("2026-06-10");
   });
 
   it("counts calendar days in the legacy form", () => {
     expect(washSaleWindowEnd("2027-01-15", "61d")).toBe("2027-03-17");
-    expect(washSaleWindowStart("2027-03-17", "61d")).toBe("2027-01-15");
+    expect(washSaleWindowStart("2027-03-17", "61d", "fund")).toBe("2027-01-15");
   });
 });

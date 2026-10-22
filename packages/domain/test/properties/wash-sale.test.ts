@@ -26,7 +26,7 @@ const walkOf = (events: readonly LedgerEvent[]) => {
 };
 
 /**
- * 300 random ledgers each, walked whole. It is the slowest test of the suite
+ * 400 random ledgers each, walked whole. It is the slowest test of the suite
  * and it once failed at 5.497 ms against the 5.000 ms default of Vitest, which
  * is a **clock** failing, not a property. The seeds are fixed so the ledgers
  * are always the same ones, and the budget is generous so a loaded machine
@@ -65,7 +65,7 @@ describe("the wash-sale rule on random ledgers", () => {
             deferring += 1;
           }
         }),
-        { numRuns: 300, seed: 42 },
+        { numRuns: 400, seed: 42 },
       );
       // A property that never meets a deferral proves nothing.
       expect(deferring).toBeGreaterThan(30);

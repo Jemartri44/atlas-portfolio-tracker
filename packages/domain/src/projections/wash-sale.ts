@@ -130,7 +130,7 @@ export const warnPriorBuys = (
   loss: Money,
 ): void => {
   const window = washSaleWindowOf(state.fiscalSettings, assetType);
-  const start = washSaleWindowStart(fiscalDate, window);
+  const start = washSaleWindowStart(fiscalDate, window, assetType);
   // The sale has just consumed lots of this asset, so its inventory exists.
   const open = (state.lots.get(assetId) as AssetLots).open;
   const named = new Set<Ulid>();

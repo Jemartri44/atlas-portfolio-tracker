@@ -785,15 +785,25 @@ describe("wash_sale_window_prior_buy: a forced sale warns like a sell", () => {
  * direction at a time so the next person can see all four are covered.
  */
 describe("a swap counts on both sides of the wash-sale window", () => {
-  /** Crypto in the core: a one-year window, which is what makes these dates work. */
-  const crypto = (setup: (b: LedgerBuilder) => void): LedgerState => {
+  /**
+   * Crypto ETPs in the core with a one-year window on both sides, which is what
+   * makes these dates work. Direct crypto only looks forward (art. 33.5.e).
+   */
+  const crypto = (
+    setup: (b: LedgerBuilder) => void,
+    assetType: "etp" | "crypto" = "etp",
+  ): LedgerState => {
     const b = new LedgerBuilder();
     catalogue(b);
-    b.asset("ast_btc", { asset_type: "crypto", asset_class: "crypto", transferable: false });
-    b.asset("ast_eth", { asset_type: "crypto", asset_class: "crypto", transferable: false });
+    b.asset("ast_btc", { asset_type: assetType, asset_class: "crypto", transferable: false });
+    b.asset("ast_eth", { asset_type: assetType, asset_class: "crypto", transferable: false });
     b.deposit({ account_id: "acc_fund", amount: "100000" });
     setup(b);
-    return projectLedger(b.build());
+    return projectLedger(b.build(), {
+      settings: mergeSettings(DEFAULT_SETTINGS, {
+        wash_sale_window: { ...DEFAULT_SETTINGS.wash_sale_window, etp: "1y" },
+      }),
+    });
   };
 
   const buyBtc = (b: LedgerBuilder, date: string, unit_price = "100"): void => {
@@ -872,6 +882,15 @@ describe("a swap counts on both sides of the wash-sale window", () => {
     });
     const repurchases = codes(state, "wash_sale_window_repurchase");
     expect(repurchases.map((warning) => warning.details.asset_id)).toContain("ast_eth");
+  });
+
+  it("looks only forward for direct crypto: a purchase before the loss warns nothing", () => {
+    const state = crypto((b) => {
+      buyBtc(b, "2025-01-10");
+      buyBtc(b, "2027-01-11");
+      swapAwayAtALoss(b, "2027-03-11");
+    }, "crypto");
+    expect(codes(state, "wash_sale_window_prior_buy")).toEqual([]);
   });
 
   it("4. sells at a loss what a swap brought in inside the window: warns on the prior buy", () => {
