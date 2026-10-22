@@ -25,6 +25,7 @@ export const API_ERRORS = {
   console_code_invalid: 400,
   console_code_expired: 400,
   console_code_used: 409,
+  console_renewal_conflict: 409,
   pkce_mismatch: 400,
   reissue_device_missing: 403,
   reissue_device_forgotten: 403,

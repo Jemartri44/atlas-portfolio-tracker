@@ -24,8 +24,15 @@ export interface ParameterStore {
     value: string,
     tags: Readonly<Record<string, string>>,
   ): Promise<"created" | "exists">;
-  /** `PutParameter` with `Overwrite`: only to revoke. */
-  overwrite(name: string, value: string): Promise<void>;
+  /** Like `get`, with the version SSM holds: the base of a detected concurrent overwrite. */
+  getVersioned(
+    name: string,
+  ): Promise<{ readonly value: string; readonly version: number } | undefined>;
+  /**
+   * `PutParameter` with `Overwrite`: only to revoke. Answers the new version,
+   * which is the previous one plus one unless another write came in between.
+   */
+  overwrite(name: string, value: string): Promise<number>;
   /** `GetParametersByPath`, not recursive, decrypted, every page. */
   listByPath(path: string): Promise<readonly ParameterEntry[]>;
 }

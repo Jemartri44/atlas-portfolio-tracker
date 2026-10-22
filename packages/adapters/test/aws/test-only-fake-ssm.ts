@@ -69,6 +69,12 @@ export class TestOnlyFakeSsm implements ParameterStore {
   }
 
   async get(name: string): Promise<string | undefined> {
+    return (await this.getVersioned(name))?.value;
+  }
+
+  async getVersioned(
+    name: string,
+  ): Promise<{ readonly value: string; readonly version: number } | undefined> {
     this.reads.push(name);
     this.step();
     const at = name.lastIndexOf(":");
@@ -79,12 +85,13 @@ export class TestOnlyFakeSsm implements ParameterStore {
       return undefined;
     }
     if (selector === undefined) {
-      return versions.at(-1);
+      return { value: versions.at(-1) as string, version: versions.length };
     }
     const version = /^\d+$/.test(selector)
       ? Number(selector)
       : this.labels.get(base)?.get(selector);
-    return version === undefined ? undefined : versions[version - 1];
+    const value = version === undefined ? undefined : versions[version - 1];
+    return value === undefined || version === undefined ? undefined : { value, version };
   }
 
   async putNew(
@@ -106,10 +113,11 @@ export class TestOnlyFakeSsm implements ParameterStore {
     return "created";
   }
 
-  async overwrite(name: string, value: string): Promise<void> {
+  async overwrite(name: string, value: string): Promise<number> {
     this.writes.push(`overwrite ${name}`);
     this.step();
     this.set(name, value);
+    return (this.versions.get(name) as string[]).length;
   }
 
   async listByPath(path: string): Promise<readonly ParameterEntry[]> {

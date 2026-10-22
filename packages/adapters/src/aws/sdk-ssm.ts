@@ -45,6 +45,12 @@ export class SdkParameterStore implements ParameterStore {
   constructor(private readonly client: SsmSender) {}
 
   async get(name: string): Promise<string | undefined> {
+    return (await this.getVersioned(name))?.value;
+  }
+
+  async getVersioned(
+    name: string,
+  ): Promise<{ readonly value: string; readonly version: number } | undefined> {
     let output: GetParameterCommandOutput;
     try {
       output = (await this.client.send(
@@ -60,7 +66,11 @@ export class SdkParameterStore implements ParameterStore {
     if (value === undefined) {
       throw new Error("ssm answered a parameter without a value");
     }
-    return value;
+    const version = output.Parameter?.Version;
+    if (version === undefined) {
+      throw new Error("ssm answered a parameter without a version");
+    }
+    return { value, version };
   }
 
   async putNew(
@@ -86,19 +96,24 @@ export class SdkParameterStore implements ParameterStore {
     }
   }
 
-  async overwrite(name: string, value: string): Promise<void> {
+  async overwrite(name: string, value: string): Promise<number> {
+    let output: { Version?: number };
     try {
-      await this.client.send(
+      output = (await this.client.send(
         new PutParameterCommand({
           Name: name,
           Value: value,
           Type: "SecureString",
           Overwrite: true,
         }),
-      );
+      )) as { Version?: number };
     } catch (error) {
-      rethrow(error);
+      return rethrow(error);
     }
+    if (output.Version === undefined) {
+      throw new Error("ssm answered an overwrite without a version");
+    }
+    return output.Version;
   }
 
   async listByPath(path: string): Promise<readonly ParameterEntry[]> {

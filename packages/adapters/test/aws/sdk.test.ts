@@ -218,7 +218,7 @@ describe("SdkParameterStore", () => {
   it("gets a parameter decrypted, by its name only, and a missing one as nothing", async () => {
     const { client, sent } = ssmClient((command) =>
       (command as GetParameterCommand).input.Name === "/atlas/dev/a"
-        ? { Parameter: { Value: "v" } }
+        ? { Parameter: { Value: "v", Version: 1 } }
         : ssmError("ParameterNotFound", 400),
     );
     const store = new SdkParameterStore(client);
@@ -228,6 +228,11 @@ describe("SdkParameterStore", () => {
       Name: "/atlas/dev/a",
       WithDecryption: true,
     });
+  });
+
+  it("refuses a parameter answered without a version (the exclusive renewal needs it)", async () => {
+    const { client } = ssmClient(() => ({ Parameter: { Value: "v" } }));
+    await expect(new SdkParameterStore(client).get("/atlas/dev/a")).rejects.toThrow(/version/);
   });
 
   it("creates without Overwrite and with its tags; an existing one is exists", async () => {
@@ -250,14 +255,25 @@ describe("SdkParameterStore", () => {
   });
 
   it("overwrites only with Overwrite and no tags", async () => {
-    const { client, sent } = ssmClient(() => ({}));
-    await new SdkParameterStore(client).overwrite("/n", "w");
+    const { client, sent } = ssmClient(() => ({ Version: 3 }));
+    expect(await new SdkParameterStore(client).overwrite("/n", "w")).toBe(3);
     expect((sent[0] as PutParameterCommand).input).toEqual({
       Name: "/n",
       Value: "w",
       Type: "SecureString",
       Overwrite: true,
     });
+  });
+
+  it("reads the version with the value, and refuses an overwrite answered without one", async () => {
+    const read = ssmClient(() => ({ Parameter: { Value: "v", Version: 4 } }));
+    expect(await new SdkParameterStore(read.client).getVersioned("/n")).toEqual({
+      value: "v",
+      version: 4,
+    });
+    await expect(
+      new SdkParameterStore(ssmClient(() => ({})).client).overwrite("/n", "w"),
+    ).rejects.toThrow("without a version");
   });
 
   it("turns a throttling, TooManyUpdates, a 5xx and the network into a transient failure", async () => {

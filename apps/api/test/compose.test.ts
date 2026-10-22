@@ -88,8 +88,11 @@ describe("compose (the Lambda of production)", () => {
         get: async () => {
           throw denied;
         },
+        getVersioned: async () => {
+          throw denied;
+        },
         putNew: async () => "created" as const,
-        overwrite: async () => undefined,
+        overwrite: async () => 1,
         listByPath: async () => [],
       }),
     };
