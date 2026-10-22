@@ -10,6 +10,10 @@
 
 import type { Theme } from "../ledger/state.js";
 
+/** Anything stored that is not a theme follows the system. */
+export const themeFromPreference = (stored: string | undefined): Theme =>
+  stored === "light" || stored === "dark" ? stored : "system";
+
 type Scheme = "light" | "dark";
 
 // The attribute, not the `media` property, which not every DOM implements.
