@@ -50,17 +50,10 @@ import {
   isDoubtful,
   sortCriteria,
 } from "./criteria.js";
-import {
-  currencyFirstGain,
-  deferralLine,
-  incomeLine,
-  transmissionLine,
-  withholdingLines,
-} from "./lines.js";
+import { currencyFirstGain, deferralLine, withholdingLines } from "./lines.js";
 import type {
   CriterionStake,
   DoubleTaxationLine,
-  IncomeLine,
   InKindLine,
   PendingLoss,
   SettingsDiff,
@@ -77,69 +70,14 @@ import {
   type ChainCore,
   categoryOf,
   FIRST_SUPPORTED_YEAR,
-  type Invalid,
   isInvalid,
   isUnsupported,
   type TaxOptions,
   taxChain,
   tryReading,
-  type Unsupported,
 } from "./chain.js";
+import { type Core, computeCore, exchangesOfYear, tryComputeCore } from "./core.js";
 import { lineKey } from "./shared.js";
-
-/** The chain of years plus the lines of the one asked. */
-interface Core extends ChainCore {
-  transmissions: TransmissionLine[];
-  /** The outcome of the rule behind each transmission line, in the same order. */
-  outcomes: WashSaleOutcome[];
-  income: IncomeLine[];
-}
-
-/**
- * Everything the engine computes for one reading of the settings: the chain of
- * years (`taxChain`) plus the lines of the year asked. The chain is shared
- * with the warning of a settings change, the warning of a closed year and the
- * comparison with what was filed, so that the four never disagree.
- */
-const computeCore = (
-  events: readonly LedgerEvent[],
-  year: number,
-  options: TaxOptions,
-  settings?: Settings,
-): Core | Invalid => {
-  const chain = taxChain(events, year, options, settings);
-  if (isInvalid(chain)) {
-    return chain;
-  }
-  const { state, ctx, walk, expenses } = chain;
-
-  const outcomes = walk.outcomes.filter(
-    (outcome) => (state.gains[outcome.gain_index] as RealizedGain).year === year,
-  );
-  const transmissions = outcomes.map((outcome) => transmissionLine(ctx, outcome));
-  const income = state.income
-    .filter((entry) => entry.year === year)
-    .map((entry) => incomeLine(ctx, entry));
-  return {
-    ...chain,
-    transmissions,
-    outcomes,
-    income,
-    expenses: expenses.filter((expense) => yearOf(expense.fiscal_date) === year),
-  };
-};
-
-/**
- * The same, for a reading that is **not** the main one: it may reach below the
- * first supported year, and that is information about the reading, never a
- * reason to deny the report the user asked for (feature 011, block 4).
- */
-const tryComputeCore = (
-  events: readonly LedgerEvent[],
-  year: number,
-  options: TaxOptions,
-  settings?: Settings,
-): Core | Invalid | Unsupported => tryReading(() => computeCore(events, year, options, settings));
 
 /**
  * A tax year one of whose three declared figures —the savings base, what it
@@ -746,20 +684,6 @@ const criterionStakes = (
   const order = (entry: CriterionStake): number => CRITERION_IDS.indexOf(entry.criterion);
   return [...items].sort((a, b) => order(a) - order(b));
 };
-
-/** Mergers, spin-offs and restructurings of the year that keep date and cost. */
-const exchangesOfYear = (core: Core, year: number): CorporateActionEvent[] =>
-  [...core.ctx.events.values()].filter(
-    (event): event is CorporateActionEvent =>
-      event.type === "corporate_action" &&
-      yearOf((event as CorporateActionEvent).effective_date) === year &&
-      ["merger", "spin_off", "issuer_restructuring"].includes(
-        (event as CorporateActionEvent).kind,
-      ) &&
-      (event as CorporateActionEvent).effects.some(
-        (effect) => effect.op === "convert" || effect.op === "carve_out",
-      ),
-  );
 
 // --- The previous settings (A15) ----------------------------------------------
 
