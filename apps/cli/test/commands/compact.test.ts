@@ -1,15 +1,12 @@
 import { readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { DEFAULT_SETTINGS, encodeLine, type LedgerSchema, type Migration } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { EXIT } from "../../src/context.js";
 import { harness, seed } from "../harness.js";
+import { LEDGER_FIXTURES } from "../support/fixtures.js";
 
-const fixtures = resolve(
-  dirname(fileURLToPath(import.meta.url)),
-  "../../../../tests/fixtures/ledger",
-);
+const fixtures = LEDGER_FIXTURES;
 const legacyLines = readFileSync(join(fixtures, "legacy-v1-for-test-schema.jsonl"), "utf8")
   .split("\n")
   .filter((line) => line !== "");

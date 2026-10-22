@@ -3,15 +3,15 @@
 
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { EcbDownloadFailed } from "@atlas/adapters";
 import type { DownloadedHistory, FxRateSource } from "@atlas/domain/ecb";
 import { describe, expect, it } from "vitest";
 import type { Io } from "../../src/context.js";
 import { run } from "../../src/main.js";
+import { ECB_FIXTURES } from "../support/fixtures.js";
 
-const fixtures = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../tests/fixtures/ecb");
+const fixtures = ECB_FIXTURES;
 
 const capture = () => {
   const lines: string[] = [];

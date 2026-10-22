@@ -3,14 +3,14 @@
 
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { FileEcbHistoryStore } from "@atlas/adapters";
 import { describe, expect, it } from "vitest";
 import type { Io } from "../../src/context.js";
 import { run } from "../../src/main.js";
+import { ECB_FIXTURES } from "../support/fixtures.js";
 
-const fixtures = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../tests/fixtures/ecb");
+const fixtures = ECB_FIXTURES;
 
 const line = (fields: Record<string, unknown>, id: string): string =>
   JSON.stringify({ schema_version: 1, id, recorded_at: "2026-01-01T10:00:00.000Z", ...fields });

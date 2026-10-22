@@ -3,8 +3,7 @@
 
 import { createHash } from "node:crypto";
 import { chmod, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { FileEcbHistoryStore } from "@atlas/adapters";
 import { encodeLine } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
@@ -12,6 +11,7 @@ import { SELF } from "../../../api/test/harness.js";
 import { EXIT } from "../../src/context.js";
 import { CLI_SETTINGS, Events } from "../events.js";
 import { type ConsoleUnderTest, folderTree, setupConsole } from "../support/console.js";
+import { ECB_FIXTURES } from "../support/fixtures.js";
 
 const LEDGER_KEY = "ledger/ledger.jsonl";
 const textOf = (lines: readonly string[]) => lines.map((line) => `${line}\n`).join("");
@@ -263,10 +263,7 @@ describe("a cloud folder reads and writes the cloud's ledger", () => {
   });
 
   describe("drafts in a cloud folder (E6)", () => {
-    const fixtures = resolve(
-      dirname(fileURLToPath(import.meta.url)),
-      "../../../../tests/fixtures/ecb",
-    );
+    const fixtures = ECB_FIXTURES;
     const BUY = [
       "add",
       "buy",
