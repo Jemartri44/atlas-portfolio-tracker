@@ -47,6 +47,8 @@ export interface ApiRefusal {
   readonly status: number;
   readonly code: ApiErrorCode;
   readonly details: Readonly<Record<string, unknown>>;
+  /** For the log line only: never serialised into the answer. */
+  readonly logReason?: string;
 }
 
 export const refusal = (code: ApiErrorCode, details: Record<string, unknown> = {}): ApiRefusal => ({
