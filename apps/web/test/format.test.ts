@@ -219,6 +219,7 @@ describe("dates", () => {
     expect(formatLongDate("2027-01-12")).toBe("12 de enero de 2027");
     expect(formatInstantDate("2026-09-18T20:15:00.000Z")).toBe("18/09/2026");
     expect(formatInstantDate("no es una fecha")).toBe("no es una fecha");
+    expect(formatInstantDate("2026-10-22T22:30:00.000Z")).toBe("23/10/2026");
   });
 
   it("says an age the way a person says it", () => {

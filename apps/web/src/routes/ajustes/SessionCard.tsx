@@ -13,6 +13,7 @@ const when = (instant: string): string => {
   const time = new Date(instant).toLocaleTimeString("es-ES", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Europe/Madrid",
   });
   return `${formatInstantDate(instant)}, ${time}`;
 };

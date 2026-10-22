@@ -241,7 +241,8 @@ export const withNumber = (
     return { ...patch, [key]: undefined };
   }
   if (integer) {
-    return { ...patch, [key]: Number.parseInt(text, 10) };
+    // «9,5» or «3e2» stay as typed and the domain refuses them by name: truncating would save another number.
+    return { ...patch, [key]: /^\d{1,9}$/.test(text) ? Number(text) : text };
   }
   // What cannot be read stays as typed, and the domain refuses it on saving
   // with a message that names the setting: a guess would be written silently.
