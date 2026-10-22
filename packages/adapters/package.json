@@ -18,10 +18,6 @@
       "types": "./dist/ledger-store/blob.d.ts",
       "import": "./dist/ledger-store/blob.js"
     },
-    "./browser": {
-      "types": "./dist/ledger-store/browser/index.d.ts",
-      "import": "./dist/ledger-store/browser/index.js"
-    },
     "./reference": {
       "types": "./dist/ledger-store/browser/reference.d.ts",
       "import": "./dist/ledger-store/browser/reference.js"
@@ -29,18 +25,6 @@
     "./prices": {
       "types": "./dist/ledger-store/browser/prices.d.ts",
       "import": "./dist/ledger-store/browser/prices.js"
-    },
-    "./drafts": {
-      "types": "./dist/ledger-store/browser/drafts.d.ts",
-      "import": "./dist/ledger-store/browser/drafts.js"
-    },
-    "./folder": {
-      "types": "./dist/ledger-store/browser/folder.d.ts",
-      "import": "./dist/ledger-store/browser/folder.js"
-    },
-    "./transfer": {
-      "types": "./dist/ledger-store/browser/transfer.d.ts",
-      "import": "./dist/ledger-store/browser/transfer.js"
     },
     "./clock": {
       "types": "./dist/clock/system.d.ts",

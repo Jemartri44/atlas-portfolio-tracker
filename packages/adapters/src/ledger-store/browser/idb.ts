@@ -78,31 +78,8 @@ export const idbPut = async (store: string, key: string, value: unknown): Promis
   await wrap(transaction.objectStore(store).put(value, key));
 };
 
-/** `add` instead of `put`: an existing key must fail, which is how archives are never overwritten. */
-export const idbAdd = async (store: string, key: string, value: unknown): Promise<void> => {
-  const db = await openAtlasDb();
-  const transaction = db.transaction(store, "readwrite");
-  await wrap(transaction.objectStore(store).add(value, key));
-};
-
 export const idbDelete = async (store: string, key: string): Promise<void> => {
   const db = await openAtlasDb();
   const transaction = db.transaction(store, "readwrite");
   await wrap(transaction.objectStore(store).delete(key));
-};
-
-/**
- * Asks the browser not to evict this origin's data under storage pressure
- * (Baseline since 2021). It is **not** a guarantee: clearing the site data
- * still wipes the ledger, which is why the export reminder exists (ADR-0019).
- */
-export const requestPersistentStorage = async (): Promise<boolean> => {
-  if (typeof navigator === "undefined" || navigator.storage?.persist === undefined) {
-    return false;
-  }
-  try {
-    return await navigator.storage.persist();
-  } catch {
-    return false;
-  }
 };

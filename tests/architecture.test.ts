@@ -1487,7 +1487,7 @@ describe("architecture: the ECB and the prices are downloaded by the console onl
    */
   it("keeps the addresses of the ECB and of the sources of prices out of what the web bundles", () => {
     const reachable = webReachableAdapters();
-    expect(reachable.some((file) => file.endsWith(join("browser", "folder.ts")))).toBe(true);
+    expect(reachable.some((file) => file.endsWith(join("browser", "prices.ts")))).toBe(true);
     const webReachable = [...listTsFiles(domainSrc), ...listSourceFiles(webSrc), ...reachable];
     const hosts =
       /["'`][^"'`\n]*(?:ecb\.europa\.eu|eodhd\.com|eodhistoricaldata\.com|alphavantage\.co|api\.coingecko\.com|openfigi\.com)/;
