@@ -34,7 +34,10 @@ describe("every new workflow", () => {
         /if: \$\{\{ vars\.ATLAS_(INFRA_PLAN|DEPLOY)_?E?N?A?B?L?E?D? ?== 'true'|if: \$\{\{ vars\.ATLAS_[A-Z_]+ == 'true'/,
       );
       expect(text).not.toContain("pull_request_target");
-      expect(text).not.toContain("upload-artifact");
+      // Only the build job of the dev deployment hands its set on as a run artifact.
+      if (name !== "deploy-dev.yml") {
+        expect(text).not.toContain("upload-artifact");
+      }
       expect(text).not.toContain("configure-aws-credentials");
     }
     // `id-token: write` only where a role is assumed, never at the top of a file.
@@ -143,6 +146,22 @@ describe("the deployments (mutants 33, 34, 41, 54)", () => {
       expect(sync).toContain("--exclude '*.map'");
     }
     expect(code("infra/scripts/ci/package.sh")).toContain("--exclude='.vite' --exclude='*.map'");
+  });
+  it("builds without the OIDC token: id-token only in the job that holds the role, and no npm there", () => {
+    const [build, deploy] = flow("deploy-dev.yml").split(/^ {2}deploy:\n/m);
+    expect(build).toContain("npm ci");
+    expect(build).not.toContain("id-token");
+    expect(deploy).toContain("id-token: write");
+    expect(deploy).toContain("needs: build");
+    expect(deploy).not.toMatch(/npm |setup-node/);
+  });
+  it("reads the artifact variables from a file, so a failing artifact-env.sh stops the job", () => {
+    for (const name of ["deploy-dev.yml", "deploy-prod.yml"]) {
+      expect(flow(name), name).not.toMatch(/\. <\(/);
+      expect(flow(name), name).toContain(
+        'artifact-env.sh "$RUNNER_TEMP/artifact" "$TREE" > "$RUNNER_TEMP/artifact.env"',
+      );
+    }
   });
   it("gives a plan the four artifact variables it has no build for", () => {
     const run = code("infra/scripts/ci/terraform-run.sh");
@@ -263,6 +282,48 @@ describe("the scripts of the CI", () => {
     const bad = promote(true);
     expect(bad.result.status).toBe(1);
     expect(bad.result.stderr).toContain("no coincide");
+  });
+
+  it("promote.sh and artifact-env.sh refuse a SHA256SUMS that does not list both ZIPs", () => {
+    const withoutJobs = (script: string) => {
+      const root = fixture();
+      const out = join(root, "o");
+      spawnSync("bash", [join(SCRIPTS, "package.sh"), out], { cwd: root });
+      const sums = join(out, "SHA256SUMS");
+      writeFileSync(
+        sums,
+        readFileSync(sums, "utf8")
+          .split("\n")
+          .filter((l) => !l.includes("jobs.zip"))
+          .join("\n"),
+      );
+      return script === "env"
+        ? spawnSync("bash", [join(SCRIPTS, "artifact-env.sh"), out, TREE], { encoding: "utf8" })
+        : (() => {
+            const bucket = join(root, "bucket", "builds", TREE);
+            mkdirSync(bucket, { recursive: true });
+            cpSync(out, bucket, { recursive: true });
+            writeFileSync(join(root, "state.json"), "{}");
+            writeFileSync(join(root, "log"), "");
+            return spawnSync("bash", [join(SCRIPTS, "promote.sh"), join(root, "got"), TREE], {
+              encoding: "utf8",
+              env: {
+                PATH: `${FAKES}:${process.env.PATH}`,
+                ARTIFACT_BUCKET: "b",
+                FAKE_S3_DIR: join(root, "bucket"),
+                FAKE_AWS_LOG: join(root, "log"),
+                FAKE_AWS_STATE: join(root, "state.json"),
+              },
+            });
+          })();
+    };
+    const env = withoutJobs("env");
+    expect(env.status).toBe(1);
+    expect(env.stdout).toBe("");
+    expect(env.stderr).toContain("no lista jobs.zip");
+    const promoted = withoutJobs("promote");
+    expect(promoted.status).toBe(1);
+    expect(promoted.stderr).toContain("no lista jobs.zip");
   });
 
   it("artifact-env.sh gives the key and the base64 digest the Terraform variables validate", () => {

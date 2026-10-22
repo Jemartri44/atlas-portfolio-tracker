@@ -70,7 +70,7 @@ describe("flat-rate-plan.sh", () => {
     const first = run("subscribe", s.env);
     expect(first.status).toBe(0);
     expect(mutating(s.calls())).toEqual([
-      `--region us-east-1 pricing-plan-manager create-subscription --plan-family CloudFront --plan-tier FREE --usage-level DEFAULT --resource-arns ${DIST} ${ACL} --approval-mode IMMEDIATE --client-token atlas-dev-flat-rate-free --output json`,
+      `--region us-east-1 pricing-plan-manager create-subscription --plan-family CloudFront --plan-tier FREE --usage-level DEFAULT --resource-arns ${DIST} ${ACL} --approval-mode IMMEDIATE --client-token atlas-dev-flat-rate-free-${new Date().toISOString().slice(0, 10).replaceAll("-", "")} --output json`,
     ]);
     const second = run("subscribe", s.env);
     expect(second.status).toBe(0);
