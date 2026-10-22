@@ -282,9 +282,23 @@ describe("corporateActionDraft: the fractional shares", () => {
       const b = new LedgerBuilder();
       b.account("acc_a");
       b.asset("ast_old", stock);
-      b.buy({ account_id: "acc_a", asset_id: "ast_old", quantity: "10", unit_price: "100" });
-      // Sells what it never had: invalid, and the reader has to tolerate it.
-      b.sell({ account_id: "acc_a", asset_id: "ast_old", quantity: "99", unit_price: "100" });
+      b.buy({
+        account_id: "acc_a",
+        asset_id: "ast_old",
+        quantity: "10",
+        unit_price: "100",
+        trade_date: "2027-01-05",
+        value_date: "2027-01-05",
+      });
+      // Sells what it never had, before the event: invalid, and the reader has to tolerate it.
+      b.sell({
+        account_id: "acc_a",
+        asset_id: "ast_old",
+        quantity: "99",
+        unit_price: "100",
+        trade_date: "2027-02-01",
+        value_date: "2027-02-01",
+      });
       const events = b.build();
       const state = projectLedger(events, { collectErrors: true });
       expect(state.invalid).toHaveLength(1);
