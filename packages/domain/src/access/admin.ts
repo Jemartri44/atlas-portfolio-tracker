@@ -15,14 +15,11 @@ export type AdminDeviceRead =
   | { readonly device_id: string; readonly unreadable: true };
 
 /**
- * Forgetting a device (§7 P9, amended in §7.1 bis, B1): refused for an object
- * that is missing or cannot be read; nothing to do for one already forgotten;
- * refused with lines published pending or held back, unless forced — and
- * then what is left out of sight is said first.
+ * Forgetting a device (§7 P9): refused for an object that is missing or
+ * cannot be read; nothing to do for one already forgotten.
  */
 export const forgetRefusal = (
   read: DeviceObject | "unreadable" | undefined,
-  force: boolean,
 ): Refusal | "already_forgotten" | undefined => {
   if (read === undefined) {
     return { code: "forget_device_missing", details: {} };
@@ -32,9 +29,6 @@ export const forgetRefusal = (
   }
   if (read.state === "forgotten") {
     return "already_forgotten";
-  }
-  if (!force && (read.pending > 0 || read.held > 0)) {
-    return { code: "forget_refused_queue", details: { pending: read.pending, held: read.held } };
   }
   return undefined;
 };

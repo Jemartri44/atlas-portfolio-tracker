@@ -178,8 +178,6 @@ describe("the object of a device (R20, R21; B1, R2-B2, Q3)", () => {
       type: "web",
       state: "active",
       created_at: "2026-10-01T10:00:00Z",
-      pending: 0,
-      held: 0,
     });
     expect(parseDeviceObject(serializeDeviceObject(web), ID)).toEqual(web);
     expect(parseDeviceObject(serializeDeviceObject(console_), ID)).toEqual(console_);
@@ -200,8 +198,7 @@ describe("the object of a device (R20, R21; B1, R2-B2, Q3)", () => {
       JSON.stringify({ ...web, type: "phone" }),
       JSON.stringify({ ...web, state: "gone" }),
       JSON.stringify({ ...web, created_at: "yesterday" }),
-      JSON.stringify({ ...web, pending: -1 }),
-      JSON.stringify({ ...web, held: 0.5 }),
+      JSON.stringify({ ...web, pending: 0 }),
       JSON.stringify({ ...web, last_sync_at: "x" }),
       JSON.stringify({ ...web, published_at: "x" }),
       JSON.stringify({ ...web, state: "forgotten" }),
