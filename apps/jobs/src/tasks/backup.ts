@@ -18,8 +18,7 @@
 // stops the run: only this function writes `backups/`, so it can only be
 // another run of it.
 
-import { createHash } from "node:crypto";
-import { LEDGER_KEY } from "@atlas/adapters/aws";
+import { LEDGER_KEY, sha256Bytes } from "@atlas/adapters/aws";
 import { JobsWriteConflict } from "@atlas/adapters/aws-jobs";
 import {
   activeHistoryOf,
@@ -39,8 +38,6 @@ import { ledgerOfBytes } from "../ledger.js";
 import { errorName } from "../log.js";
 import { readReference } from "../reference.js";
 import { type TaskContext, TaskInterrupted, type TaskResult, type TaskRunner } from "../run.js";
-
-const sha256 = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 
 /** One object of the dump as it ended: its bytes in the dump, and whether it was refused. */
 type Put = { readonly kind: "in_dump"; readonly bytes: Uint8Array } | { readonly kind: "differs" };
@@ -76,9 +73,9 @@ export const monthlyBackup: TaskRunner = async (context: TaskContext): Promise<T
   const put = async (relative: string, bytes: Uint8Array): Promise<Put> => {
     const key = `${prefix}${relative}`;
     const existing = await deps.objects.get(key);
-    const next = sha256(bytes);
+    const next = sha256Bytes(bytes);
     const step = dumpStep({
-      existing: existing === undefined ? undefined : sha256(existing.body),
+      existing: existing === undefined ? undefined : sha256Bytes(existing.body),
       next,
       earlier: earlier.get(key) ?? [],
     });
@@ -99,7 +96,7 @@ export const monthlyBackup: TaskRunner = async (context: TaskContext): Promise<T
       case "kept": {
         const body = (existing as { body: Uint8Array }).body;
         counts.kept += 1;
-        objects.push({ key, sha256: sha256(body), kept_from_earlier_attempt: true });
+        objects.push({ key, sha256: sha256Bytes(body), kept_from_earlier_attempt: true });
         return { kind: "in_dump", bytes: body };
       }
       case "differs":
@@ -148,7 +145,7 @@ export const monthlyBackup: TaskRunner = async (context: TaskContext): Promise<T
           ? { external: reference.external }
           : {}),
         generatedAt: deps.now().toISOString(),
-        ledger: { sha256: sha256(ledger.bytes), lines: read.events.length },
+        ledger: { sha256: sha256Bytes(ledger.bytes), lines: read.events.length },
       });
       const positions = await put(
         DUMP_POSITIONS,
@@ -171,7 +168,7 @@ export const monthlyBackup: TaskRunner = async (context: TaskContext): Promise<T
       manifest === undefined ? undefined : activeHistoryOf(textOf(manifest.body) ?? "");
     const file =
       active === undefined ? undefined : await deps.objects.get(`${ECB_DIR}${active.file}`);
-    if (active !== undefined && file !== undefined && sha256(file.body) === active.sha256) {
+    if (active !== undefined && file !== undefined && sha256Bytes(file.body) === active.sha256) {
       const history = await put(`${ECB_DIR}${active.file}`, file.body);
       if (history.kind === "differs") {
         return done({ differs: 1, positionsMissing });
@@ -180,7 +177,10 @@ export const monthlyBackup: TaskRunner = async (context: TaskContext): Promise<T
       const finished = (await deps.objects.get(`${prefix}${ECB_DIR}manifest.json`)) !== undefined;
       const step = finished
         ? "write"
-        : dumpManifestStep({ fileInDump: sha256(history.bytes), manifestSha256: active.sha256 });
+        : dumpManifestStep({
+            fileInDump: sha256Bytes(history.bytes),
+            manifestSha256: active.sha256,
+          });
       if (step === "write") {
         const kept = await put(`${ECB_DIR}manifest.json`, (manifest as { body: Uint8Array }).body);
         if (kept.kind === "differs") {

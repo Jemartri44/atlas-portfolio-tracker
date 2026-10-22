@@ -5,8 +5,7 @@
 // `prices/`: the income tax of January reads this (the notes of the ECB check,
 // as `atlas tax` does) and must not reach a price (E4; `tests/jobs-access.test.ts`).
 
-import { createHash } from "node:crypto";
-import { type ObjectStore, referenceReader } from "@atlas/adapters/aws";
+import { type ObjectStore, referenceReader, sha256Bytes } from "@atlas/adapters/aws";
 import { DEFAULT_LOCAL_CONFIG, type EcbHistory, readEcbHistory } from "@atlas/domain/ecb";
 import { activeHistoryOf } from "@atlas/domain/jobs";
 
@@ -52,10 +51,7 @@ export const readCloudEcbHistory = async (objects: ObjectStore): Promise<CloudEc
     return { kind: "damaged" };
   }
   const file = await reader.get(`reference/ecb/${active.file}`);
-  if (
-    file === undefined ||
-    createHash("sha256").update(file.body).digest("hex") !== active.sha256
-  ) {
+  if (file === undefined || sha256Bytes(file.body) !== active.sha256) {
     return { kind: "damaged" };
   }
   const text = textOf(file.body);

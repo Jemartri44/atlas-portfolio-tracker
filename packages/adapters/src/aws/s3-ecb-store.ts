@@ -36,7 +36,6 @@
 // them, and the reserved concurrency 1 of the function (feature 017) keeps two
 // runs from ever meeting.
 
-import { createHash } from "node:crypto";
 import type {
   DownloadedHistory,
   EcbGeneration,
@@ -51,14 +50,13 @@ import {
   previousHistoryOf,
 } from "@atlas/domain/jobs";
 import { EcbHistoryDamaged, type EcbManifest, fileOfSource } from "../ecb/history-store.js";
+import { sha256Bytes } from "../hash.js";
 import type { ObjectStore, StoredObject } from "./object-store.js";
 
 const DIR = "reference/ecb/";
 const MANIFEST = `${DIR}manifest.json`;
 /** The two names a file in force can have, one per source (ADR-0029, third amendment). */
 const FILES = [fileOfSource("zip"), fileOfSource("api")];
-
-const sha256 = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 
 const utf8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
@@ -133,7 +131,7 @@ export class S3EcbHistoryStore implements EcbHistoryStore {
       return undefined;
     }
     const file = await this.objects.get(`${DIR}${read.manifest.active.file}`);
-    if (file === undefined || sha256(file.body) !== read.manifest.active.sha256) {
+    if (file === undefined || sha256Bytes(file.body) !== read.manifest.active.sha256) {
       throw new EcbHistoryDamaged(read.manifest.active.file);
     }
     return { meta: read.manifest.active, text: textOf(file.body) };
@@ -157,8 +155,8 @@ export class S3EcbHistoryStore implements EcbHistoryStore {
       active === undefined ? undefined : await this.objects.get(`${DIR}previous/${active.file}`);
     const decision = ecbRecovery({
       active,
-      fileSha256: current === undefined ? undefined : sha256(current.body),
-      previousSha256: previous === undefined ? undefined : sha256(previous.body),
+      fileSha256: current === undefined ? undefined : sha256Bytes(current.body),
+      previousSha256: previous === undefined ? undefined : sha256Bytes(previous.body),
     });
     return {
       decision,
@@ -203,7 +201,10 @@ export class S3EcbHistoryStore implements EcbHistoryStore {
     const found: EcbGeneration[] = [];
     for (const { name, sha256: expected } of names) {
       const stored = await this.objects.get(`${DIR}${name}`);
-      if (stored !== undefined && (expected === undefined || sha256(stored.body) === expected)) {
+      if (
+        stored !== undefined &&
+        (expected === undefined || sha256Bytes(stored.body) === expected)
+      ) {
         found.push({
           text: textOf(stored.body),
           source: name.endsWith(fileOfSource("api")) ? "api" : "zip",
@@ -249,7 +250,7 @@ export class S3EcbHistoryStore implements EcbHistoryStore {
       source: next.source,
       url: next.url,
       fetched_at: next.fetched_at,
-      sha256: sha256(next.bytes),
+      sha256: sha256Bytes(next.bytes),
     };
   }
 
@@ -265,7 +266,7 @@ export class S3EcbHistoryStore implements EcbHistoryStore {
     let backup: { key: string; stored: StoredObject | undefined } | undefined;
     if (read !== undefined) {
       current = await this.objects.get(`${DIR}${read.manifest.active.file}`);
-      if (current === undefined || sha256(current.body) !== read.manifest.active.sha256) {
+      if (current === undefined || sha256Bytes(current.body) !== read.manifest.active.sha256) {
         throw new EcbHistoryDamaged(read.manifest.active.file);
       }
       const key = `${DIR}previous/${read.manifest.active.file}`;

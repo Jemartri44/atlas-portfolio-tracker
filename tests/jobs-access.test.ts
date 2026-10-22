@@ -181,6 +181,7 @@ describe("architecture (016): the warnings of January reach no price (E4, mutant
     expect(values).toEqual(
       [
         "apps/jobs/src/ecb-history.ts @atlas/adapters/aws referenceReader",
+        "apps/jobs/src/ecb-history.ts @atlas/adapters/aws sha256Bytes",
         "apps/jobs/src/ecb-history.ts @atlas/domain/ecb DEFAULT_LOCAL_CONFIG",
         "apps/jobs/src/ecb-history.ts @atlas/domain/ecb readEcbHistory",
         "apps/jobs/src/ecb-history.ts @atlas/domain/jobs activeHistoryOf",

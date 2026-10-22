@@ -19,7 +19,6 @@
 // has to be one — step 6 of the sync: what is held back, the ledger, the
 // marker — is one `underLock` with several (feature 014, plan §2.1).
 
-import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import {
   ArchiveExistsError,
@@ -34,6 +33,7 @@ import {
   rawLinesText,
   ValidationError,
 } from "@atlas/domain";
+import { sha256Bytes } from "../hash.js";
 import { type FileOps, nodeFileOps, type WritableFile, writeFileAtomically } from "./file-ops.js";
 import { type HeldLock, withFolderLock } from "./folder-lock.js";
 
@@ -122,7 +122,7 @@ export class FileLedgerStore implements LedgerStore {
   }
 
   private static etagOf(bytes: Buffer): string {
-    return createHash("sha256").update(bytes).digest("hex");
+    return sha256Bytes(bytes);
   }
 
   private static linesOf(bytes: Buffer): string[] {
