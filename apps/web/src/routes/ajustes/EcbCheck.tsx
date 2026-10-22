@@ -82,8 +82,7 @@ export const EcbCheck = (props: {
                       <Notice severity="caution" title="Sin contrastar">
                         {countOf(rates, "tipo en otra divisa está", "tipos en otra divisa están")}{" "}
                         sin contrastar: no hay histórico del BCE en este dispositivo. No se dan por
-                        buenos ni por malos. Enlaza la carpeta de la consola o importa el histórico
-                        en Ajustes.
+                        buenos ni por malos. Bájalo de tu nube o impórtalo en Ajustes.
                       </Notice>
                     </Show>
                   );
