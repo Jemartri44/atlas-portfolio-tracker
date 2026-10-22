@@ -179,7 +179,6 @@ const CLI_ONLY: Record<string, string> = {
   rewrite_refused_device_unreadable: "solo atlas admin compact y restore",
   forget_device_missing: "solo atlas admin forget-device",
   forget_device_unreadable: "solo atlas admin forget-device",
-  forget_refused_queue: "solo atlas admin forget-device",
   // Feature 016, E3: only the console pulls from the cloud and keeps its state.
   invalid_cloud_pull: "solo atlas prices update, en una carpeta sincronizada",
   // Feature 016, E2, block 3.

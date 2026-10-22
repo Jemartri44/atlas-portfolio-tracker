@@ -1418,18 +1418,10 @@ const LAZY_ONLY = [
   { path: "/packages/domain/src/config/", what: "la configuración local" },
   // Block 5: the drafts, their store and their counter. The frame keeps only
   // the place of the counter; reading and painting it arrive later.
-  { path: "/packages/adapters/src/ledger-store/browser/drafts.ts", what: "los borradores" },
   { path: "/src/ledger/draft-store.ts", what: "los borradores" },
   { path: "/src/ledger/drafts.ts", what: "los borradores" },
   { path: "/src/shell/draft-counter.ts", what: "el contador de borradores" },
   { path: "/src/routes/registrar/borradores.tsx", what: "la lista de borradores" },
-  // Review of PR #75: a folder of the disk and the export and import of the
-  // ledger are not the boot's either.
-  {
-    path: "/packages/adapters/src/ledger-store/browser/folder.ts",
-    what: "el acceso a una carpeta",
-  },
-  { path: "/packages/adapters/src/ledger-store/browser/transfer.ts", what: "exportar e importar" },
   // Block 6: the correction chain of the rates after a change of rule.
   { path: "/src/ledger/rate-corrections.ts", what: "la corrección de los tipos del BCE" },
   // Feature 013: **nothing of the automatic prices on the boot path**, from its

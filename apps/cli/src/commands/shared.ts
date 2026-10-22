@@ -176,11 +176,10 @@ export const confirmAndRecord = async (
       ? {
           confirmDuplicate: ctx.confirmDuplicate,
           acceptInvalid: true,
-          // Given to the domain (§6.3 (V7), ADR-0035): in a cloud folder
+          // Given to the domain (ADR-0035): in a cloud folder
           // `--accept-invalid` is refused in `checkInvalid`, because the cloud
-          // never accepts an invalid ledger. A local folder is local, whatever
-          // an old `sync/state.json` says (ADR-0035, E5).
-          syncConfigured: ctx.mode.kind === "cloud",
+          // never accepts an invalid ledger. A local folder is local.
+          cloudLedger: ctx.mode.kind === "cloud",
         }
       : { confirmDuplicate: ctx.confirmDuplicate },
   );

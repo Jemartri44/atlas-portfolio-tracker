@@ -63,7 +63,7 @@ const forget = (id: string, ...flags: string[]) => [
   id,
 ];
 
-const seedDevice = (api: Api, id: string, queue: { pending?: number; held?: number } = {}) =>
+const seedDevice = (api: Api, id: string) =>
   api.s3.seed(
     `sync/devices/${id}.json`,
     serializeDeviceObject({
@@ -73,8 +73,6 @@ const seedDevice = (api: Api, id: string, queue: { pending?: number; held?: numb
         createdAt: "2026-10-01T10:00:00Z",
         deviceName: "portátil",
       }),
-      pending: queue.pending ?? 0,
-      held: queue.held ?? 0,
     }),
   );
 
@@ -199,23 +197,6 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
     expect(errorOf(answer).code).toBe("device_forgotten");
   });
 
-  it("refuses a device with its queue published, and forgets it with --force after saying what is lost", async () => {
-    const api = setup();
-    seedDevice(api, DEVICE(3), { pending: 2, held: 1 });
-    const c = await adminConsole(api);
-    expect(await c.exec(forget(DEVICE(3)))).not.toBe(EXIT.ok);
-    expect(c.text()).toContain("forget_refused_queue");
-    expect(JSON.parse(api.s3.text(`sync/devices/${DEVICE(3)}.json`) as string).state).toBe(
-      "active",
-    );
-    c.reset();
-    expect(await c.exec(forget(DEVICE(3), "--force"))).toBe(EXIT.ok);
-    expect(c.text()).toContain("2 operaciones pendientes y 1 retenidas");
-    expect(JSON.parse(api.s3.text(`sync/devices/${DEVICE(3)}.json`) as string).state).toBe(
-      "forgotten",
-    );
-  });
-
   it("leaves a device already forgotten as it is", async () => {
     const api = setup();
     seedDevice(api, DEVICE(4));
@@ -319,7 +300,7 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
     // The harness draws them so: the case that was left to chance.
     expect(mine.device_id.startsWith("--")).toBe(true);
     expect(DEVICE(2).startsWith("-") && !DEVICE(2).startsWith("--")).toBe(true);
-    seedDevice(api, DEVICE(2), { pending: 1 });
+    seedDevice(api, DEVICE(2));
     const c = await adminConsole(api);
     const before = api.s3.keys().map((key) => [key, api.s3.etagOf(key)]);
     // Written bare, it reads as an option: refused, naming the way out.
@@ -337,11 +318,9 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
     expect(JSON.parse(api.s3.text(`sync/devices/${mine.device_id}.json`) as string).state).toBe(
       "forgotten",
     );
-    // A single dash is a positional even without --, and --force goes with it.
+    // A single dash is a positional even without --.
     c.reset();
-    expect(await c.exec(["admin", "forget-device", DEVICE(2), "--force", "--env", "test"])).toBe(
-      EXIT.ok,
-    );
+    expect(await c.exec(["admin", "forget-device", DEVICE(2), "--env", "test"])).toBe(EXIT.ok);
     expect(JSON.parse(api.s3.text(`sync/devices/${DEVICE(2)}.json`) as string).state).toBe(
       "forgotten",
     );

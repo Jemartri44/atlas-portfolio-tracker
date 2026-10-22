@@ -138,13 +138,11 @@ ${revealed(
 
 /**
  * The reissue for a device without a credential (N5; R2-N1): the data **of
- * the server** — its name, its last publication and its pending lines, if
- * known — and the explicit confirmation. Without it there is no code.
+ * the server** — its name, and its last publication, if known — and the explicit confirmation. Without it there is no code.
  */
 export const reissueConfirmPage = (fields: {
   deviceName: string | undefined;
   publishedAt: string | undefined;
-  pending: number;
   attemptedAt: string;
   next: { readonly loopback: string } | { readonly code: string };
 }): string => {
@@ -157,7 +155,6 @@ export const reissueConfirmPage = (fields: {
 <ul>
 <li>Nombre: <strong>${escapeHtml(name)}</strong></li>
 <li>Última publicación: ${fields.publishedAt === undefined ? "nunca" : escapeHtml(when(fields.publishedAt))}</li>
-<li>Líneas pendientes que publicó: ${escapeHtml(String(fields.pending))}</li>
 </ul>
 <p>Si es una copia de la carpeta en otra máquina, el token de la original dejará de valer. Intento abierto a las ${escapeHtml(when(fields.attemptedAt))}.</p>
 ${WARNING}

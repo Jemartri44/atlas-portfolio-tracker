@@ -97,7 +97,7 @@ describe("atlas admin secrets", () => {
       [...run, "--yes"],
       [...run, SENTINEL],
       [...run, "--value", SENTINEL],
-      [...run, "--force"],
+      [...run, "--device", "x"],
     ]) {
       const secrets = new TestOnlyFakeSecrets();
       const c = consoleWith(secrets, [SENTINEL]);

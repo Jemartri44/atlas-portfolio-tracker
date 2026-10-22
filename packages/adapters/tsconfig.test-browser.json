@@ -8,7 +8,7 @@
     "types": []
   },
   "include": [
-    "test/browser.test.ts",
+    "test/idb.test.ts",
     "test/fake-idb.ts",
     "test/fake-idb.test.ts",
     "test/fixtures.ts",
