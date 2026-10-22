@@ -88,6 +88,7 @@ const cash = (label: string, hint: string): FieldSpec[] => [
     name: "cash_fx_rate_date",
     label: "Fecha del tipo",
     kind: "date",
+    hint: "En blanco, la de la fecha efectiva de la operación.",
     visibleWhen: { field: "cash_unit_price", notEquals: "" },
   },
 ];

@@ -365,6 +365,24 @@ describe("the corporate action form, as parameters", () => {
     expect(params.cash?.unit_price).toBe("50");
   });
 
+  it("takes the date of the rate from the operation when the field is left empty, not from today", () => {
+    const params = toCorporateParams(
+      corporateForm("contrasplit") as never,
+      {
+        asset_id: "ast_old",
+        effective_date: "2024-03-01",
+        source_document: "https://issuer.example/nota.pdf",
+        ratio: "1/3",
+        cash_unit_price: "10",
+        cash_currency: "EUR",
+        cash_fx_rate: "1",
+        cash_fx_rate_date: "",
+      },
+      ACCOUNTS,
+    );
+    expect(params.cash?.fx_rate_date).toBe("2024-03-01");
+  });
+
   it("leaves the fees out when the field is empty, instead of sending an empty map", () => {
     const params = toCorporateParams(
       corporateForm("split") as never,

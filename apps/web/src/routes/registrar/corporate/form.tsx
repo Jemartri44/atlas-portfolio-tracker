@@ -42,9 +42,11 @@ export default function CorporateFormRoute(): JSX.Element {
       {(snapshot) => {
         const form = () => corporateForm(params.kind);
         const fields = (): FieldSpec[] => [...CORPORATE_COMMON, ...(form()?.fields ?? [])];
-        const [values, setValues] = createSignal<FormValues>(
-          initialValues({ fields: fields() } as never, today()),
-        );
+        // The date of the rate starts empty: left so, it is the date of the operation itself.
+        const [values, setValues] = createSignal<FormValues>({
+          ...initialValues({ fields: fields() } as never, today()),
+          cash_fx_rate_date: "",
+        });
         const [preview, setPreview] = createSignal<EventPreview | undefined>(undefined);
         const [problem, setProblem] = createSignal<string | undefined>(undefined);
         const [duplicate, setDuplicate] = createSignal<readonly string[] | undefined>(undefined);
