@@ -40,10 +40,14 @@ export const toAppError = (error: unknown): AppError => {
     const line = error.details.line;
     return {
       code: error.code,
-      message: describeError(error, {
-        names: nameIndex(store.snapshot()?.state),
-        privacy: store.privacy(),
-      }),
+      // Written when read, not when created: the error stays on screen while
+      // the privacy mode can be switched, and the sentence must follow it.
+      get message() {
+        return describeError(error, {
+          names: nameIndex(store.snapshot()?.state),
+          privacy: store.privacy(),
+        });
+      },
       ...(typeof line === "number" ? { line } : {}),
     };
   }

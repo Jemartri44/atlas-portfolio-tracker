@@ -9,6 +9,8 @@ import { A } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
 import { Amount, Icon, type IconName, Tag } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
+import { maskFigures } from "../../format/privacy.js";
+import { store } from "../../ledger/state.js";
 import type { MovementRow } from "../../view-models/index.js";
 
 /** The glyph of each type; a type missing here gets the generic list glyph. */
@@ -71,7 +73,7 @@ export const MovementState = (props: { row: MovementRow }): JSX.Element => (
       </Tag>
     </Show>
     <Show when={props.row.invalidReason !== undefined}>
-      <Tag tone="danger" title={props.row.invalidReason}>
+      <Tag tone="danger" title={maskFigures(props.row.invalidReason ?? "", store.privacy())}>
         inválido
       </Tag>
     </Show>
