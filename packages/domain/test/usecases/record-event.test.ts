@@ -238,7 +238,7 @@ describe("recordEvent: a settings change that reinterprets the past (ADR-0015)",
     const result = await recordEvent(
       testDeps(store),
       { type: "settings_changed", settings: byTradeDate },
-      { acceptInvalid: true, syncConfigured: false },
+      { acceptInvalid: true, cloudLedger: false },
     );
     expect(result.newlyInvalid).toHaveLength(1);
     expect(result.newlyInvalid[0]?.type).toBe("sell");
@@ -252,7 +252,7 @@ describe("recordEvent: a settings change that reinterprets the past (ADR-0015)",
     await recordEvent(
       deps,
       { type: "settings_changed", settings: byTradeDate },
-      { acceptInvalid: true, syncConfigured: false },
+      { acceptInvalid: true, cloudLedger: false },
     );
     // The ledger is already degraded; this change adds no new invalid event.
     const result = await recordEvent(deps, {
@@ -268,7 +268,7 @@ describe("recordEvent: a settings change that reinterprets the past (ADR-0015)",
     await recordEvent(
       deps,
       { type: "settings_changed", settings: byTradeDate },
-      { acceptInvalid: true, syncConfigured: false },
+      { acceptInvalid: true, cloudLedger: false },
     );
     const offender = (await loadAndProject({ store }, { collectErrors: true })).state
       .invalid[0] as InvalidEvent;
@@ -301,7 +301,7 @@ describe("recordEvent: a settings change that reinterprets the past (ADR-0015)",
     await recordEvent(
       deps,
       { type: "settings_changed", settings: byTradeDate },
-      { acceptInvalid: true, syncConfigured: false },
+      { acceptInvalid: true, cloudLedger: false },
     );
     // A buy agreed before the sale gives it lots again under the new rule.
     const result = await recordEvent(deps, {
@@ -317,7 +317,7 @@ describe("recordEvent: a settings change that reinterprets the past (ADR-0015)",
   it("admits acceptInvalid only for a settings change", async () => {
     const store = seeded();
     await expect(
-      recordEvent(testDeps(store), buyDraft, { acceptInvalid: true, syncConfigured: false }),
+      recordEvent(testDeps(store), buyDraft, { acceptInvalid: true, cloudLedger: false }),
     ).rejects.toMatchObject({ code: "accept_invalid_not_allowed" });
   });
 });
@@ -335,31 +335,31 @@ describe("recordEvent: acceptInvalid with the sync configured (feature 014, V7)"
     const before = (await store.load()).lines;
     const draft = { type: "settings_changed" as const, settings: byTradeDate };
     await refusal(() =>
-      recordEvent(testDeps(store), draft, { acceptInvalid: true, syncConfigured: true }),
+      recordEvent(testDeps(store), draft, { acceptInvalid: true, cloudLedger: true }),
     );
     await refusal(() =>
-      previewEvent(testDeps(store), draft, { acceptInvalid: true, syncConfigured: true }),
+      previewEvent(testDeps(store), draft, { acceptInvalid: true, cloudLedger: true }),
     );
     expect((await store.load()).lines).toEqual(before);
   });
 
-  it("is refused when nobody said whether the sync is configured: the safe side", async () => {
+  it("is refused when nobody said whether the ledger is the cloud's: the safe side", async () => {
     const store = reorderable();
     const loose = { acceptInvalid: true } as unknown as {
       acceptInvalid: true;
-      syncConfigured: boolean;
+      cloudLedger: boolean;
     };
     await refusal(() =>
       recordEvent(testDeps(store), { type: "settings_changed", settings: byTradeDate }, loose),
     );
   });
 
-  it("stays as ADR-0015 without the sync, and a harmless change is never refused", async () => {
+  it("stays as ADR-0015 on a local folder, and a harmless change is never refused", async () => {
     const store = reorderable();
     const result = await recordEvent(
       testDeps(store),
       { type: "settings_changed", settings: byTradeDate },
-      { acceptInvalid: true, syncConfigured: false },
+      { acceptInvalid: true, cloudLedger: false },
     );
     expect(result.newlyInvalid).toHaveLength(1);
     const harmless = reorderable();
@@ -369,7 +369,7 @@ describe("recordEvent: acceptInvalid with the sync configured (feature 014, V7)"
         type: "settings_changed",
         settings: mergeSettings(DEFAULT_SETTINGS, { stale_price_days: 9 }),
       },
-      { acceptInvalid: true, syncConfigured: true },
+      { acceptInvalid: true, cloudLedger: true },
     );
   });
 });

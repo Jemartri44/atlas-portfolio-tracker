@@ -43,16 +43,17 @@ interface RecordBase {
 
 /**
  * `acceptInvalid` writes a `settings_changed` even though it leaves recorded
- * events invalid (ADR-0015), and only that type. **With the sync configured it
- * is refused** (§6.3 (V7) of prompt 014, note of 2026-09-25 in ADR-0015): so
- * whoever asks for it has to say whether the sync is configured — the adapter
- * reads it, the domain does no I/O —, and the compiler makes every caller say
- * it. Not saying it is refused too: the safe side.
+ * events invalid (ADR-0015), and only that type. **On the cloud ledger it is
+ * refused**, because the cloud never accepts an invalid ledger (ADR-0035): so
+ * whoever asks for it has to say whether the ledger is the cloud's — the
+ * adapter knows, the domain does no I/O —, and the compiler makes every caller
+ * say it. Not saying it is refused too: the safe side. Only a local folder
+ * passes `cloudLedger: false`.
  */
 export type RecordOptions = RecordBase &
   (
-    | { acceptInvalid?: false; syncConfigured?: boolean }
-    | { acceptInvalid: true; syncConfigured: boolean }
+    | { acceptInvalid?: false; cloudLedger?: boolean }
+    | { acceptInvalid: true; cloudLedger: boolean }
   );
 
 export interface RecordResult<E extends SupportedEvent = SupportedEvent> {
@@ -201,8 +202,8 @@ export const checkInvalid = (
   }
   const affected = describeAffected(fresh);
   // Without the explicit yes it is refused as ever (ADR-0015); with it, it is
-  // refused too unless the sync is known not to be configured (§6.3 (V7)).
-  if (affected.length > 0 && (options.acceptInvalid !== true || options.syncConfigured !== false)) {
+  // refused too unless the ledger is known not to be the cloud's.
+  if (affected.length > 0 && (options.acceptInvalid !== true || options.cloudLedger !== false)) {
     throw new DependentEventsError(
       event.id,
       affected,
