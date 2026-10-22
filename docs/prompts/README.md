@@ -1,6 +1,6 @@
 # Prompts de traspaso a los asistentes implementadores
 
-Un fichero por feature mientras está abierta, numerado igual que `specs/NNN-<name>/`. Al fusionarse la feature el prompt se borra: su historia está en git y lo vigente, en los ADR y en `docs/`. Los escribe la dirección y el subagente implementador los lee directamente del repositorio (prompt 000, §3). Cada prompt es autocontenido: rol, qué leer, alcance, fuera de alcance, criterios de terminado, qué hacer si algo bloquea.
+Un fichero por feature mientras está abierta, numerado igual que `specs/NNN-<name>/`. Al fusionarse la feature el prompt se borra: su historia está en git (`git log -- docs/prompts/`) y lo vigente, en los ADR y en `docs/`. Los escribe la dirección y el subagente implementador los lee directamente del repositorio (prompt 000, §3). Cada prompt es autocontenido: rol, qué leer, alcance, fuera de alcance, criterios de terminado, qué hacer si algo bloquea.
 
 > **Las fechas de esta tabla, y las de cualquier documento del proyecto, van en `Europe/Madrid`**, no en UTC: es la zona del contribuyente y la que gobierna toda fecha fiscal. Una herramienta que devuelve UTC puede dar el día anterior — la primera mitad de la 010 se fusionó a las 22:19 UTC, que en Madrid son las 00:19 del 23.
 
