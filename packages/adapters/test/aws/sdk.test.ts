@@ -79,6 +79,13 @@ describe("SdkObjectStore", () => {
     expect(got?.versionId).toBe("v-1");
   });
 
+  it("never takes a missing bucket for a missing key", async () => {
+    const { client } = s3Client(() => s3Error("NoSuchBucket", 404));
+    await expect(new SdkObjectStore(client, "b").get("k")).rejects.toMatchObject({
+      name: "NoSuchBucket",
+    });
+  });
+
   it("never takes a 403 (no s3:ListBucket) for a missing key (§23.1)", async () => {
     const { client } = s3Client(() => s3Error("AccessDenied", 403));
     await expect(new SdkObjectStore(client, "b").get("k")).rejects.toMatchObject({

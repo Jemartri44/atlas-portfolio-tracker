@@ -58,7 +58,7 @@ export class SdkObjectStore implements ObjectStore {
       )) as typeof output;
     } catch (error) {
       const { name, status } = factsOf(error);
-      if (name === "NoSuchKey" || status === 404) {
+      if (name === "NoSuchKey" || (status === 404 && name !== "NoSuchBucket")) {
         return undefined;
       }
       return rethrow(error);
