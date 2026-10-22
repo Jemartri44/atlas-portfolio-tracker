@@ -17,7 +17,7 @@ import type { EventFormSpec, FieldSpec } from "./specs.js";
 export type FormValues = Record<string, string>;
 
 /** Initial values of a form: the declared defaults, and nothing else. */
-export const initialValues = (spec: EventFormSpec, today?: string): FormValues => {
+export const initialValues = (spec: Pick<EventFormSpec, "fields">, today?: string): FormValues => {
   const values: FormValues = {};
   for (const field of spec.fields) {
     values[field.name] =

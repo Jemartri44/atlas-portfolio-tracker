@@ -131,7 +131,7 @@ export const toCorporateParams = (
             unit_price: price,
             currency: values.cash_currency ?? "EUR",
             fx_rate: decimal(values, "cash_fx_rate") ?? "1",
-            fx_rate_date: values.cash_fx_rate_date ?? values.effective_date ?? "",
+            fx_rate_date: values.cash_fx_rate_date || (values.effective_date ?? ""),
           },
         }),
   };

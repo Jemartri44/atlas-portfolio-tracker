@@ -87,6 +87,10 @@ describe("the copy of the ledger", () => {
     expect(csv[0]?.startsWith("schema_version,id,recorded_at,type")).toBe(true);
     expect(csv.length - 2).toBe(goldenLines().length);
     expect(toCsv([{ a: 'x,"y"' }])).toBe('a\n"x,""y"""');
+    // Free text a spreadsheet would run as a formula is defused; signed amounts and plain text are not.
+    expect(toCsv([{ n: "=1+1", m: "-12.50", o: "+34", p: "@a", q: "a\rb", r: "ok" }])).toBe(
+      "n,m,o,p,q,r\n'=1+1,-12.50,+34,'@a,\"a\rb\",ok",
+    );
     expect(copyName("csv", "2029-07-01")).toBe("atlas-copia-2029-07-01.csv");
   });
 

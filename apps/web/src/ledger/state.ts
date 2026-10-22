@@ -20,6 +20,7 @@ import {
 } from "@atlas/domain";
 import { createMemo, createRoot, createSignal } from "solid-js";
 import { themeFromPreference } from "../shell/theme.js";
+import { readDay } from "./day-watch.js";
 import type { LedgerSource } from "./source.js";
 
 export interface LedgerSnapshot {
@@ -235,7 +236,8 @@ export const usePrivacy = (): (() => boolean) => store.privacy;
  * source and the date picker are painted then— so it falls back to the wall
  * clock, which is the same clock the use cases will bring.
  */
-export const today = (): CivilDate => madridDateOf(store.deps()?.clock.now() ?? new Date());
+const clockDay = (): CivilDate => madridDateOf(store.deps()?.clock.now() ?? new Date());
+export const today = (): CivilDate => readDay(clockDay);
 
 /** The dependencies of the use cases; only defined once a ledger is open. */
 export const requireDeps = (): UseCaseDeps => {

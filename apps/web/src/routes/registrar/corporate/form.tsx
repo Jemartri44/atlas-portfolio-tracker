@@ -15,14 +15,13 @@ import { attempt } from "../../../ledger/query.js";
 import { store, today } from "../../../ledger/state.js";
 import { closedYearsOfDraft, previewDraft, recordDraft } from "../../../ledger/write.js";
 import { PageHeader } from "../../../shell/PageHeader.jsx";
-import { CORPORATE_COMMON, corporateForm } from "../../../view-models/forms/corporate.js";
-import type { FieldSpec, FormValues } from "../../../view-models/forms/index.js";
 import {
-  initialValues,
-  inputErrors,
-  missingRequired,
-  missingSentence,
-} from "../../../view-models/forms/index.js";
+  CORPORATE_COMMON,
+  corporateForm,
+  initialCorporateValues,
+} from "../../../view-models/forms/corporate.js";
+import type { FieldSpec, FormValues } from "../../../view-models/forms/index.js";
+import { inputErrors, missingRequired, missingSentence } from "../../../view-models/forms/index.js";
 import { RequireLedger } from "../../guard.jsx";
 import { DuplicateDialog } from "../DuplicateDialog.jsx";
 import { FormActions } from "../FormActions.jsx";
@@ -43,7 +42,7 @@ export default function CorporateFormRoute(): JSX.Element {
         const form = () => corporateForm(params.kind);
         const fields = (): FieldSpec[] => [...CORPORATE_COMMON, ...(form()?.fields ?? [])];
         const [values, setValues] = createSignal<FormValues>(
-          initialValues({ fields: fields() } as never, today()),
+          initialCorporateValues(fields(), today()),
         );
         const [preview, setPreview] = createSignal<EventPreview | undefined>(undefined);
         const [problem, setProblem] = createSignal<string | undefined>(undefined);

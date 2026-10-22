@@ -182,6 +182,8 @@ export const confirmAndRecord = async (
   /** How to write it; a plain record by default (a draft records and then removes itself). */
   write: (options: RecordOptions) => Promise<RecordResult> = (options) =>
     recordEvent(ctx.deps, draft as unknown as Draft, options),
+  /** Extra fields of the `--json` object, read after the write (a draft adds whether it left drafts/). */
+  extra: () => Record<string, unknown> = () => ({}),
 ): Promise<RecordResult | undefined> => {
   preview(ctx, "Evento a registrar:", draft);
   for (const note of [...brokerNote(draft), ...notes, ...(await closedYearNotes(ctx, draft))]) {
@@ -222,6 +224,7 @@ export const confirmAndRecord = async (
     warnings: result.warnings,
     newly_invalid: result.newlyInvalid,
     unfiled_past_years: result.unfiledPastYears,
+    ...extra(),
   });
   return result;
 };
