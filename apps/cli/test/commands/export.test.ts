@@ -1,4 +1,4 @@
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -25,6 +25,36 @@ describe("atlas export", () => {
     expect(await h.exec(["export", "--format", "csv", "--out", out])).toBe(0);
     expect(await readFile(out, "utf8")).toContain("\n");
     expect(await h.exec(["export", "--format", "xml"])).toBe(64);
+  });
+
+  describe("--out over an existing file", () => {
+    const setup = async (confirm?: boolean) => {
+      const dir = await mkdtemp(join(tmpdir(), "atlas-export-"));
+      const ledger = join(dir, "ledger.jsonl");
+      await writeFile(ledger, "LEDGER\n");
+      const other = join(dir, "other.csv");
+      await writeFile(other, "OTHER\n");
+      const h = harness({ events: seed(), ledgerPath: ledger, confirm });
+      return { h, ledger, other };
+    };
+
+    it("never replaces the ledger, not even with --yes", async () => {
+      const { h, ledger } = await setup(true);
+      expect(await h.exec(["--yes", "export", "--format", "csv", "--out", ledger])).not.toBe(0);
+      expect(await readFile(ledger, "utf8")).toBe("LEDGER\n");
+    });
+
+    it("asks before replacing another file, and leaves it alone unless told yes", async () => {
+      const refused = await setup(false);
+      expect(await refused.h.exec(["export", "--out", refused.other])).toBe(0);
+      expect(await readFile(refused.other, "utf8")).toBe("OTHER\n");
+      const silent = await setup(undefined);
+      expect(await silent.h.exec(["export", "--out", silent.other])).not.toBe(0);
+      expect(await readFile(silent.other, "utf8")).toBe("OTHER\n");
+      const accepted = await setup(true);
+      expect(await accepted.h.exec(["export", "--format", "csv", "--out", accepted.other])).toBe(0);
+      expect(await readFile(accepted.other, "utf8")).toContain("schema_version");
+    });
   });
 
   it("quotes CSV cells with commas, quotes and newlines", () => {

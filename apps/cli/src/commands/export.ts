@@ -1,13 +1,20 @@
 // atlas export --format jsonl|csv [--out <ruta>]: the whole ledger, reversed events included.
 
-import { readFile, writeFile } from "node:fs/promises";
-import { decodeLines, encodeLine, type LedgerEvent, projectLedger } from "@atlas/domain";
+import { readFile, rename, stat, writeFile } from "node:fs/promises";
+import {
+  DomainError,
+  decodeLines,
+  encodeLine,
+  type LedgerEvent,
+  projectLedger,
+} from "@atlas/domain";
 import { linesOfText } from "@atlas/domain/sync";
 import { assertKnownFlags, type Flags, stringFlag, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { cloudStoreOf } from "../folder-mode.js";
+import { pathExists } from "../fs.js";
 import { assertNoLedgerInCloudFolder } from "../remote/credentials-file.js";
-import { confirmOutsideRepository, degradedHeader, loadForQuery } from "./shared.js";
+import { confirm, confirmOutsideRepository, degradedHeader, loadForQuery } from "./shared.js";
 
 const csvCell = (value: unknown): string => {
   if (value === undefined) {
@@ -30,6 +37,16 @@ export const toCsv = (rows: readonly Record<string, unknown>[]): string => {
     columns.join(","),
     ...rows.map((row) => columns.map((column) => csvCell(row[column])).join(",")),
   ].join("\n");
+};
+
+/** Whether both paths are the same file (a symlink or a hard link to the ledger included). */
+const sameFile = async (a: string, b: string): Promise<boolean> => {
+  try {
+    const [left, right] = await Promise.all([stat(a), stat(b)]);
+    return left.dev === right.dev && left.ino === right.ino;
+  } catch {
+    return false;
+  }
 };
 
 const cloudProjection = (events: LedgerEvent[]) => ({
@@ -81,7 +98,20 @@ export const exportCommand = async (
     ctx.io.out("Cancelado.");
     return 0;
   }
-  await writeFile(out, content);
+  if (await pathExists(out)) {
+    if (await sameFile(out, ctx.ledgerPath)) {
+      throw new DomainError("path_exists", `${out} is the ledger`, { path: out });
+    }
+    ctx.io.out(`${out} ya existe y se sustituiría.`);
+    if (!(await confirm(ctx, "¿Sobrescribir? [s/N] "))) {
+      ctx.io.out("Cancelado.");
+      return 0;
+    }
+  }
+  // Whole or not at all: a cut leaves the previous file, never half of the new one.
+  const temporary = `${out}.tmp-${process.pid}-${Date.now()}`;
+  await writeFile(temporary, content, { mode: 0o600 });
+  await rename(temporary, out);
   ctx.io.out(`Exportado a ${out}.`);
   return 0;
 };
