@@ -11,13 +11,15 @@
 // labels ("suma de las casillas [0320]"), and the rows by origin of the loss,
 // which are a **reordering** of what the engine already computed (ficha F5).
 
-import { Money } from "../../money/money.js";
+import { positive, sum, zero } from "../../money/eur.js";
+import type { Money } from "../../money/money.js";
 import type { LedgerState } from "../../projections/state.js";
 import type { AssetId } from "../../schema/events.js";
 import type { IncomeCategory } from "../../settings/settings.js";
 import { type ChainCore, categoryOf } from "../chain.js";
 import { type CriterionId, sortCriteria } from "../criteria.js";
 import type { IncomeLine, TaxYearReport, TransmissionLine } from "../report.js";
+import { lineKey } from "../shared.js";
 import type { WashSaleOutcome } from "../wash-sale.js";
 import {
   type ConceptId,
@@ -30,8 +32,6 @@ import {
 } from "./concepts.js";
 import type { BoxRow, PartialReason } from "./report.js";
 import { deferredByOrigin, gainIndexOf, gainOf } from "./rows.js";
-
-const EUR = "EUR";
 
 /** One figure, with everything the layout knows about it except its box. */
 export interface Draft {
@@ -49,17 +49,8 @@ export interface Draft {
   criteria: CriterionId[];
 }
 
-const zero = (): Money => Money.zero(EUR);
-
-const sum = (values: readonly Money[]): Money => values.reduce((t, v) => t.add(v), zero());
-
-const positive = (money: Money): Money => (money.isNegative() ? zero() : money);
-
 const union = (lists: readonly (readonly CriterionId[])[]): CriterionId[] =>
   sortCriteria(lists.flat());
-
-const lineKey = (line: { event_id: string; account_id: string }): string =>
-  `${line.event_id}|${line.account_id}`;
 
 const rowOf = (gain: {
   event_id: string;

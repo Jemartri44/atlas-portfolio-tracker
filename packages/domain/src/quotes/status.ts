@@ -8,6 +8,7 @@
 
 import { addDays, type CivilDate, isWeekend } from "../dates/civil-date.js";
 import { ValidationError } from "../errors.js";
+import { isRecord } from "../guards.js";
 import type { SourceFailureKind } from "../ports/price-source.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
@@ -57,9 +58,6 @@ const wrong = (field: string): ValidationError =>
     field,
   });
 
-const isObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
 /**
  * Parses `prices/_status.json`; `undefined` (no file) is an empty status. A
  * status that does not read is an error, never an empty one: an empty one
@@ -79,16 +77,16 @@ export const parseStatus = (text: string | undefined): PriceStatus => {
   if (repeated !== undefined) {
     throw repeatedKeyError("prices/_status.json", repeated);
   }
-  if (!isObject(raw) || raw.status_format !== STATUS_FORMAT) {
+  if (!isRecord(raw) || raw.status_format !== STATUS_FORMAT) {
     throw wrong("status_format");
   }
-  if (!isObject(raw.sources) || !isObject(raw.assets)) {
+  if (!isRecord(raw.sources) || !isRecord(raw.assets)) {
     throw wrong("sources");
   }
   for (const [source, value] of Object.entries(raw.sources)) {
     if (
       !isQuoteSource(source) ||
-      !isObject(value) ||
+      !isRecord(value) ||
       typeof value.consecutive_failures !== "number" ||
       !Array.isArray(value.calls_at) ||
       !value.calls_at.every((stamp) => typeof stamp === "string")

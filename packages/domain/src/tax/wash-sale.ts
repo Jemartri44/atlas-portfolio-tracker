@@ -26,7 +26,8 @@
 import { type CivilDate, daysBetween, yearOf } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
 import { Decimal } from "../money/decimal.js";
-import { Money } from "../money/money.js";
+import { zero } from "../money/eur.js";
+import type { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
 import { Ratio } from "../money/ratio.js";
 import type { LedgerState, LotJournalEntry, RealizedGain } from "../projections/state.js";
@@ -37,8 +38,6 @@ import {
   type WashSaleWindow,
 } from "../settings/settings.js";
 import { washSaleWindowEnd, washSaleWindowOf, washSaleWindowStart } from "../settings/wash-sale.js";
-
-const EUR = "EUR";
 
 /** A part of a deferred loss sitting on a lot, with the transmission it came from. */
 interface Share {
@@ -193,8 +192,6 @@ interface Pending {
 }
 
 const keyOf = (eventId: string, assetId: string): string => `${eventId}|${assetId}`;
-
-const zero = (): Money => Money.zero(EUR);
 
 const minZero = (money: Money): Money => (money.isNegative() ? money : zero());
 

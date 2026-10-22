@@ -16,6 +16,7 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
 import { Decimal } from "../money/decimal.js";
+import { EUR } from "../money/money.js";
 import type { LedgerEvent } from "../schema/events.js";
 import type { LedgerState } from "./state.js";
 
@@ -40,8 +41,6 @@ interface RawPair {
 }
 
 /** The euro is its own reference: the ECB publishes no rate of the euro against itself. */
-const EUR = "EUR";
-
 /** Every (currency, rate) pair an event declares, effects included. */
 const pairsOf = (event: LedgerEvent): RawPair[] => {
   const raw = event as unknown as {

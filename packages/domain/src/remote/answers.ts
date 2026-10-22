@@ -5,14 +5,8 @@
 // data — which the web reaches outside the engine of the sync — never
 // reaches the door of the sync. The sync re-exports what it uses.
 
-import { isRecord } from "../guards.js";
+import { isCount, isRecord, onlyKeys } from "../guards.js";
 import { REMOTE_FAILURE_CODES } from "../ports/remote-ledger.js";
-
-const isCount = (value: unknown): value is number =>
-  typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
-
-const onlyKeys = (value: Readonly<Record<string, unknown>>, keys: readonly string[]): boolean =>
-  Object.keys(value).every((key) => keys.includes(key));
 
 /** The codes only the client names, for what never reached the API: never read from an answer. */
 const CLIENT_ONLY = new Set(["transport_rejected", "network_failed"]);

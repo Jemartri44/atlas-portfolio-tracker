@@ -21,18 +21,12 @@ import type { Warning } from "../../projections/state.js";
 import type { LedgerEvent } from "../../schema/events.js";
 import type { ChainCore, TaxOptions } from "../chain.js";
 import type { TaxYearReport } from "../report.js";
+import { note } from "../shared.js";
 import { taxYearWithChain } from "../year.js";
 import { type ConceptId, SIGNED_CONCEPTS } from "./concepts.js";
 import { type Draft, draftEntries } from "./draft.js";
 import type { BoxEntry, BoxMapping, PartialReason, TaxBoxes } from "./report.js";
 import { boxesOfYear, type YearBoxes, type YearBoxMapping } from "./years/index.js";
-
-const note = (code: string, message: string, details: Record<string, unknown>): Warning => ({
-  code,
-  event_id: "",
-  message,
-  details,
-});
 
 /** The box of a draft in the table of its year, if the table has one for it. */
 const mappingOf = (table: YearBoxes, draft: Draft): YearBoxMapping | undefined =>

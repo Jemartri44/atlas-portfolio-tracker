@@ -13,14 +13,12 @@
 // `tax_return_filed` event is planned for round 9).
 
 import { type CivilDate, yearOf } from "../dates/civil-date.js";
-import { Money } from "../money/money.js";
+import { EUR, Money } from "../money/money.js";
 import type { AssetId, LedgerEvent } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import { projectLedger } from "./project-ledger.js";
 import type { LedgerState, Warning } from "./state.js";
 import { coreWeights } from "./weights.js";
-
-const EUR = "EUR";
 
 export interface SilencedWarnings {
   /** Warnings live under the settings in force that the new ones would switch off. */

@@ -18,7 +18,7 @@
 
 import type { CivilDate } from "../dates/civil-date.js";
 import type { Currency } from "../money/money.js";
-import { Money } from "../money/money.js";
+import { EUR, Money } from "../money/money.js";
 import type { AssetId, LedgerEvent } from "../schema/events.js";
 import { type BenchmarkGap, bucketTheses } from "./bucket.js";
 import { netWorth } from "./networth.js";
@@ -26,8 +26,6 @@ import { priceDates } from "./prices.js";
 import { projectLedger } from "./project-ledger.js";
 import { settingsAt } from "./settings-at.js";
 import type { LedgerState } from "./state.js";
-
-const EUR = "EUR";
 
 export interface SeriesOptions {
   /** Last date of the series, inclusive. */

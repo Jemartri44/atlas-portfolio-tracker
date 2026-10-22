@@ -5,7 +5,7 @@
 // adapter's, and so is every read.
 
 import { ValidationError } from "../errors.js";
-import { isRecord } from "../guards.js";
+import { isRecord, SHA256_HEX } from "../guards.js";
 import type { AllowEntry } from "./allow-list.js";
 import { isAllowed } from "./allow-list.js";
 import { type ApiRefusal, refusal } from "./codes.js";
@@ -106,7 +106,7 @@ export const parseTokenRecord = (text: string, tokenId: string): TokenRecord | "
     value.token_id === tokenId &&
     isId22(value.token_id) &&
     typeof value.secret_sha256 === "string" &&
-    /^[0-9a-f]{64}$/.test(value.secret_sha256) &&
+    SHA256_HEX.test(value.secret_sha256) &&
     isSubject(value.sub) &&
     typeof value.email === "string" &&
     value.email.length > 0 &&

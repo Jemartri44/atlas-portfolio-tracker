@@ -28,6 +28,7 @@
 
 import { type CivilDate, isCivilDate } from "../dates/civil-date.js";
 import { DomainError, ValidationError } from "../errors.js";
+import { isRecord } from "../guards.js";
 import { createUlidGenerator, isUlid, type Ulid } from "../ids/ulid.js";
 import type { PendingDraftStore } from "../ports/draft-store.js";
 import { projectLedger } from "../projections/project-ledger.js";
@@ -58,7 +59,7 @@ export interface PendingDraft {
 
 /**
  * The draft is no longer as it was read: removed, or stamped with another id —
- * almost surely confirmed somewhere else meanwhile (third review of PR #75).
+ * almost surely confirmed somewhere else meanwhile.
  * The confirmation stops: it never writes the draft again, and never records
  * the operation as a new one.
  */
@@ -76,9 +77,6 @@ export class DraftChangedError extends DomainError {
 
 const unreadable = (message: string): ValidationError =>
   new ValidationError("draft_unreadable", message);
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 
 /** Reads the file of a draft; anything this code does not understand is refused, never guessed. */
 export const parsePendingDraft = (text: string): PendingDraft => {

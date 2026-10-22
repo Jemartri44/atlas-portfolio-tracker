@@ -38,7 +38,7 @@ const REFERENCE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const PRICE_FILES: readonly string[] = ["symbols.json"];
 
 /** The longest name of a price file: what a file system names (feature 016, §8.2 M1). */
-export const MAX_PRICE_NAME = 255;
+const MAX_PRICE_NAME = 255;
 
 /**
  * Whether `name` is **exactly what `priceFileName` writes** for some asset:
@@ -59,7 +59,7 @@ const isPriceFileName = (name: string): boolean => {
 };
 
 /** Whether a name of `kind` may be served: the rule of each prefix, decided before S3 (§6). */
-export const isReferenceName = (kind: ReferenceKind, name: string): boolean =>
+const isReferenceName = (kind: ReferenceKind, name: string): boolean =>
   kind === "prices"
     ? PRICE_FILES.includes(name) || isPriceFileName(name)
     : REFERENCE_NAME.test(name) && !name.includes("..");
@@ -97,7 +97,7 @@ export interface ReferenceEntry {
 /** The version of a stored object: its ETag without `W/` and without quotes. */
 export const versionOf = (etag: string): string => etag.replace(/^W\//, "").replace(/^"|"$/g, "");
 
-const entriesOf = (
+const referenceEntriesOf = (
   listed: readonly { readonly key: string; readonly etag: string; readonly size: number }[],
   kind: ReferenceKind,
 ): ReferenceEntry[] =>
@@ -120,8 +120,8 @@ export const referenceIndex = (
   ecb: readonly { readonly key: string; readonly etag: string; readonly size: number }[],
   prices: readonly { readonly key: string; readonly etag: string; readonly size: number }[],
 ): { readonly ecb: ReferenceEntry[]; readonly prices: ReferenceEntry[] } => ({
-  ecb: entriesOf(ecb, "ecb"),
-  prices: entriesOf(prices, "prices"),
+  ecb: referenceEntriesOf(ecb, "ecb"),
+  prices: referenceEntriesOf(prices, "prices"),
 });
 
 /**
