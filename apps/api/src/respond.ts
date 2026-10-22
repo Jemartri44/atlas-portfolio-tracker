@@ -102,6 +102,29 @@ export const bytes = (
 /** The size from which a file is worth compressing: the histories of the ECB are megabytes, the rest bytes. */
 const GZIP_FROM_BYTES = 256 * 1024;
 
+/**
+ * The compressed form of the last files served, by `etag`: it names the content, so the same
+ * etag is the same bytes. A warm Lambda gzips 12 MB once instead of on every request (seconds
+ * at 256 MB); a few entries cover the histories, and the oldest leaves first.
+ */
+const COMPRESSED_KEPT = 4;
+const compressed = new Map<string, string>();
+
+const gzipBase64 = (body: Uint8Array, etag: string | undefined): string => {
+  const kept = etag === undefined ? undefined : compressed.get(etag);
+  if (kept !== undefined) {
+    return kept;
+  }
+  const packed = gzipSync(body).toString("base64");
+  if (etag !== undefined) {
+    compressed.set(etag, packed);
+    if (compressed.size > COMPRESSED_KEPT) {
+      compressed.delete(compressed.keys().next().value as string);
+    }
+  }
+  return packed;
+};
+
 /** Whether the header accepts gzip: named (not `x-gzip`) and not with `q=0`. */
 const acceptsGzip = (acceptEncoding: string | undefined): boolean =>
   (acceptEncoding ?? "").split(",").some((part) => {
@@ -127,7 +150,7 @@ export const bytesCompressed = (
   return {
     statusCode: status,
     headers: { ...base, ...headers, "content-encoding": "gzip", vary: "accept-encoding" },
-    body: gzipSync(body).toString("base64"),
+    body: gzipBase64(body, headers.etag),
     isBase64Encoded: true,
   };
 };
