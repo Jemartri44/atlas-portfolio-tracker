@@ -170,6 +170,8 @@ Los eventos `*_updated` llevan el **estado completo resultante** (no un diff), i
 **`account_created` / `account_updated`**
 `account_id`, `name`, `platform`, `book` (`core` | `bucket`), `base_currency`, `country` (ISO 3166-1, para el Modelo 720), `active`
 
+Para el Modelo 720 y 721, el primer evento de una cuenta es la cuenta misma: existe en cualquier fecha, por tarde que se grabe, y sus operaciones se fechan por su fecha de negocio. Solo los cambios posteriores (`country`, `active`) se fechan por el día en que se grabaron (ADR-0016).
+
 **`asset_created` / `asset_updated`**
 `asset_id`, `asset_type` (`fund` | `etf` | `etc` | `etp` | `stock` | `crypto` | `money_market`; se llama `asset_type` en la línea porque `type` es el tipo de evento del envoltorio), `book`, `asset_class?` (solo `core`: `equity` | `fixed_income` | `gold` | `crypto`), `isin?`, `ticker?`, `name`, `currency`, `ter?`, `transferable`, `reference_etf_id?`, `market?` (código MIC o nombre del mercado donde cotiza), `issuer_country?` (ISO 3166-1 alfa-2 del emisor), `active`
 
