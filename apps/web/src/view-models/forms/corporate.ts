@@ -20,7 +20,7 @@ export const initialCorporateValues = (
   fields: FieldSpec[],
   today: string,
 ): Record<string, string> => ({
-  ...initialValues({ fields } as never, today),
+  ...initialValues({ fields }, today),
   cash_fx_rate_date: "",
 });
 
