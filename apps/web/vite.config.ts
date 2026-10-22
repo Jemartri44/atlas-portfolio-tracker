@@ -245,6 +245,8 @@ export default defineConfig(({ command }) => ({
   worker: { plugins: () => [moduleGraph("worker")] },
   build: {
     target: "es2022",
+    // The target (es2022) browsers preload modules natively; the polyfill is dead weight.
+    modulePreload: { polyfill: false },
     sourcemap: true,
     /*
      * **An asset that is a source of code is not inlined by size** (round 4
