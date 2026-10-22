@@ -274,8 +274,12 @@ describe("the configuration of the Lambda (R30; ADR-0033, point 7)", () => {
       secretsCacheSeconds: 300,
     });
     expect(
-      parseApiConfig({ ...ENV, ATLAS_ENV: "prod", ATLAS_ORIGIN: "https://a.example:8443" })
-        .ssmPrefix,
+      parseApiConfig({
+        ...ENV,
+        ATLAS_ENV: "prod",
+        ATLAS_DATA_BUCKET: "atlas-prod-data-x1",
+        ATLAS_ORIGIN: "https://a.example:8443",
+      }).ssmPrefix,
     ).toBe("/atlas/prod/");
   });
 
@@ -295,6 +299,12 @@ describe("the configuration of the Lambda (R30; ADR-0033, point 7)", () => {
       "not_an_https_origin",
     );
     fails({ ...ENV, ATLAS_DATA_BUCKET: "Bad_Bucket" }, "ATLAS_DATA_BUCKET", "not_a_bucket_name");
+    // The bucket of another environment: dev's function never starts against prod's data.
+    fails(
+      { ...ENV, ATLAS_DATA_BUCKET: "atlas-prod-data-x1" },
+      "ATLAS_DATA_BUCKET",
+      "not_of_the_environment",
+    );
     fails(
       { ...ENV, ATLAS_LOGIN_TTL_SECONDS: "0" },
       "ATLAS_LOGIN_TTL_SECONDS",
