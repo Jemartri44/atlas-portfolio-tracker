@@ -43,6 +43,7 @@ import {
   UsageError,
 } from "../args.js";
 import { ConfirmationRequired, type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
+import { strictUtf8 } from "../fs.js";
 import { table } from "../output/table.js";
 import { secretsOrder } from "./admin-secrets.js";
 import { render } from "./shared.js";
@@ -320,17 +321,17 @@ const compactOrder = async (
  * not pass.
  */
 const strictText = (bytes: Uint8Array): string => {
-  try {
-    // `ignoreBOM`: a BOM is kept as a character, so the first line cannot be
-    // read and the copy is refused — never written back without it (round 2
-    // of the review of PR #98).
-    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
-  } catch {
+  // A BOM is kept as a character, so the first line cannot be read and the
+  // copy is refused — never written back without it (round 2 of the review
+  // of PR #98).
+  const text = strictUtf8(bytes);
+  if (text === undefined) {
     throw new DomainError("restore_candidate_invalid", "the candidate is not UTF-8", {
       invalid: [],
       findings: ["not_utf8"],
     });
   }
+  return text;
 };
 
 /** Step 1 of ADR-0032: the candidate, from a version of S3, a monthly dump or a file. */
@@ -427,15 +428,6 @@ const restoreOrder = async (
   return EXIT.ok;
 };
 
-/** Text, strictly UTF-8; `undefined` when the bytes are not. */
-const utf8 = (bytes: Uint8Array): string | undefined => {
-  try {
-    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
-  } catch {
-    return undefined;
-  }
-};
-
 const CHANGE_TEXT = { added: "añadido", removed: "quitado", changed: "cambiado" } as const;
 
 /**
@@ -461,10 +453,13 @@ const pricesPushOrder = async (
     },
   );
   // A local file that is not UTF-8 is unreadable: "" is refused by the reader.
-  const local = bytes === undefined ? undefined : (utf8(bytes) ?? "");
+  const local = bytes === undefined ? undefined : (strictUtf8(bytes) ?? "");
   const remote = await clients.objects.get(SYMBOLS_KEY);
   // A remote that is not UTF-8 is unreadable too, and replaced as such.
-  const plan = symbolsPushPlan(local, remote === undefined ? undefined : (utf8(remote.body) ?? ""));
+  const plan = symbolsPushPlan(
+    local,
+    remote === undefined ? undefined : (strictUtf8(remote.body) ?? ""),
+  );
   if (plan.kind === "same") {
     ctx.io.out(`La nube de ${environment} ya tiene este prices/symbols.json: no se sube nada.`);
     return EXIT.ok;

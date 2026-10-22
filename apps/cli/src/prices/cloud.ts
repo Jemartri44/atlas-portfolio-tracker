@@ -22,6 +22,7 @@ import {
   serializeCloudPull,
 } from "@atlas/domain/quotes";
 import type { Context } from "../context.js";
+import { strictUtf8 } from "../fs.js";
 import { systemRemote } from "../remote/environment.js";
 import { where } from "../remote/where.js";
 import { folderOf } from "./load.js";
@@ -72,8 +73,6 @@ export type PullOutcome =
       readonly discarded: { readonly future: number; readonly currency_mismatch: number };
     };
 
-const utf8 = new TextDecoder("utf-8", { fatal: true });
-
 /** Pulls the closes of the cloud into the folder: the network first, then the lock. */
 export const pullFromCloud = async (
   ctx: Context,
@@ -111,14 +110,9 @@ export const pullFromCloud = async (
       fetched.push({ name: entry.name, asset_id, version: entry.version });
       continue;
     }
-    let text: string | null;
-    try {
-      text = utf8.decode(read.bytes);
-    } catch {
-      // Bytes that are not UTF-8 are a file that does not read, never an
-      // empty one taken as held (review of PR #108, N2).
-      text = null;
-    }
+    // Bytes that are not UTF-8 are a file that does not read, never an
+    // empty one taken as held (review of PR #108, N2).
+    const text = strictUtf8(read.bytes, false) ?? null;
     fetched.push({ name: entry.name, asset_id, text, version: read.version });
   }
   const pulled_at = ctx.deps.clock.now().toISOString();
