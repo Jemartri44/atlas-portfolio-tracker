@@ -328,6 +328,36 @@ describe("cloud boot", () => {
     expect(input().value).toBe("123,45");
   });
 
+  it("of two overlapping reloads the one that started last wins, whichever arrives last", async () => {
+    const { api, request } = await rig();
+    await shown();
+    let gate: Promise<void> | undefined;
+    const gated = (async (input: string | URL | Request, init?: RequestInit) => {
+      const answer = await request(input, init);
+      const wait = String(input) === "/api/ledger" ? gate : undefined;
+      gate = undefined;
+      await wait;
+      return answer;
+    }) as typeof fetch;
+    await bootCloud(gated);
+    await until(() => store.load().phase === "ready", "the ledger");
+    let release: () => void = () => undefined;
+    gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    // The first reload read the ledger as it was and is slow to arrive.
+    const first = reloadLedger({ quiet: true });
+    await until(() => gate === undefined, "the first read in flight");
+    const lines = goldenText().trimEnd().split("\n");
+    api.s3.seed(LEDGER, `${lines.slice(0, -1).join("\n")}\n`);
+    await reloadLedger({ quiet: true });
+    const newer = store.snapshot()?.events.length;
+    expect(newer).toBeLessThan(200);
+    release();
+    await first;
+    expect(store.snapshot()?.events.length).toBe(newer);
+  });
+
   it("an old boot that ends after a newer one does not settle the pending write again", async () => {
     const { request, net, asked } = await rig();
     await shown();

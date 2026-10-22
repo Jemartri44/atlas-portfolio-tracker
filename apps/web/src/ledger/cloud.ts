@@ -93,6 +93,13 @@ const isOffline = (): boolean => typeof navigator !== "undefined" && navigator.o
  */
 let generation = 0;
 
+/**
+ * The number of the reload that may publish: of two reads of the same ledger
+ * the one that **started** last wins, whichever arrives last. A boot or a
+ * going offline (`generation`) cancels every reload in flight as well.
+ */
+let reloads = 0;
+
 /** Leaves the screen without any data: the snapshot goes with the phase. */
 const showOffline = (): void => {
   generation += 1;
@@ -159,10 +166,12 @@ export const reloadLedger = async (options: { quiet?: boolean } = {}): Promise<v
     return;
   }
   const mine = generation;
+  reloads += 1;
+  const latest = reloads;
   await loadInto(
     { deps, source },
     ofReadFailure,
-    () => generation === mine,
+    () => generation === mine && reloads === latest,
     options.quiet === true,
   );
   if (generation === mine && isOffline()) {
