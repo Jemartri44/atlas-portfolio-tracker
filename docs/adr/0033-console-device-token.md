@@ -274,7 +274,7 @@ Además, solo **tras un inicio de sesión con Google y PKCE completo**, como tod
 
 ## Nota del 2026-09-25 (bloque 0 de la feature 015): `mfa_required` no se emite
 
-Decidida por la dirección en el alto del plan de la 015 (`specs/015-api-access/questions.md` §1.2 y §8, Q2). El punto 2 decía «**emitir exige `amr` con `mfa` si Google lo permite**», SIN VERIFICAR. **Verificado con fuente** (documentación de Google consultada el 2026-09-25: *OpenID Connect*, `developers.google.com/identity/openid-connect/openid-connect`; su referencia; y el *security bundle*, `developers.google.com/identity/siwg/security-bundle`):
+Decidida por la dirección en el alto del plan de la 015 (`specs/015-api-access/questions.md (en el historial de git)` §1.2 y §8, Q2). El punto 2 decía «**emitir exige `amr` con `mfa` si Google lo permite**», SIN VERIFICAR. **Verificado con fuente** (documentación de Google consultada el 2026-09-25: *OpenID Connect*, `developers.google.com/identity/openid-connect/openid-connect`; su referencia; y el *security bundle*, `developers.google.com/identity/siwg/security-bundle`):
 
 - `amr` y `auth_time` se piden con el parámetro `claims`, pero solo llegan si la aplicación está **publicada y verificada por Google** y tiene activadas las «Authentication strength claims» de una función marcada como **Beta**; «The amr claim is included in the ID token only when information is available on the authentication method used, it may not be present even when requested».
 - `prompt` solo admite `none`, `consent` y `select_account`, y «Google does not support Google Account reauth requests»: **no se puede forzar la reautenticación**.
@@ -283,7 +283,7 @@ Decidida por la dirección en el alto del plan de la 015 (`specs/015-api-access/
 
 ## Nota del 2026-09-26 (bloque 0 de E2 de la feature 015): los SIN VERIFICAR, cerrados o actualizados
 
-Decidida por la dirección el 2026-09-26 sobre `specs/015-api-access/questions.md` §18 y §21. Los SIN VERIFICAR de «Consecuencias» que eran de la 015 quedan así:
+Decidida por la dirección el 2026-09-26 sobre `specs/015-api-access/questions.md (en el historial de git)` §18 y §21. Los SIN VERIFICAR de «Consecuencias» que eran de la 015 quedan así:
 
 - **`PutParameter` sin sobrescribir ante dos peticiones simultáneas: aceptado por deducción.** La referencia de la API documenta que el nombre es único («A parameter name must be unique within an AWS Region»), que sin `Overwrite` un parámetro existente responde `ParameterAlreadyExists` («You can't create duplicate parameters»), y que las actualizaciones concurrentes de un mismo recurso se rechazan (`TooManyUpdates`: «a resource that supports one update at a time»). No hay una frase literal sobre dos creaciones a la vez. **La dirección acepta la deducción y la 015 no para.** La API traduce `ParameterAlreadyExists` a `409 console_code_used` y `TooManyUpdates` a `503 remote_unavailable`; ningún camino deja dos tokens con un `token_id`. **La 018 lo prueba contra SSM de verdad**: dos canjes simultáneos del mismo código, de los que solo uno prospera (`docs/decision-roadmap.md`, 018).
 - **`Content-Security-Policy: sandbox` sin `allow-same-origin`: verificado.** Por la especificación de HTML («forces content into an opaque origin») y **con una prueba en Chromium de verdad** (Chrome for Testing 153): la SPA del mismo origen no puede leer ni el documento ni la `location` de la página del código (`SecurityError`), la página tiene origen `null`, el `<details>` se despliega sin *script* y el enlace de la página de reemisión navega a `127.0.0.1`.
@@ -295,7 +295,7 @@ Siguen siendo de la 017 los permisos de KMS para `aws/ssm` y que la función de 
 
 ## Nota del 2026-09-27 (feature 015, E5): el MFA de la revocación sin Google
 
-Decidida por la dirección el 2026-09-27 (`specs/015-api-access/questions.md` §34). El punto 8, en la nota del 2026-09-25 sobre ADR-0034, dice que revocar todos los tokens sin Google lo hace el rol de administración «asumido con MFA independiente de Google». **Ese MFA lo pide la CLI de AWS, no la consola de Atlas.** La cadena estándar del SDK que usa `atlas admin revoke-all-tokens` no pide el código de un perfil con `mfa_serial`, así que la orden se ejecuta sobre una sesión ya abierta: `aws sso login`, o `aws configure export-credentials` después de que la CLI de AWS pida el código. El procedimiento es `docs/runbooks/revoke-all-tokens.md`, y la nota del mismo día en ADR-0034 da las fuentes.
+Decidida por la dirección el 2026-09-27 (`specs/015-api-access/questions.md (en el historial de git)` §34). El punto 8, en la nota del 2026-09-25 sobre ADR-0034, dice que revocar todos los tokens sin Google lo hace el rol de administración «asumido con MFA independiente de Google». **Ese MFA lo pide la CLI de AWS, no la consola de Atlas.** La cadena estándar del SDK que usa `atlas admin revoke-all-tokens` no pide el código de un perfil con `mfa_serial`, así que la orden se ejecuta sobre una sesión ya abierta: `aws sso login`, o `aws configure export-credentials` después de que la CLI de AWS pida el código. El procedimiento es `docs/runbooks/revoke-all-tokens.md`, y la nota del mismo día en ADR-0034 da las fuentes.
 
 ## Nota del 2026-10-06: enmienda parcial por ADR-0035
 

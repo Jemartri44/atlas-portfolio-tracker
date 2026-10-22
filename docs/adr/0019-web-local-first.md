@@ -45,7 +45,7 @@ Lo que este ADR pospuso a propósito —«ver el mismo libro en dos dispositivos
 
 ## Enmienda del 2026-09-24 (feature 012): la web de escritorio no escribe en la carpeta compartida
 
-Decidida por la dirección al levantar la parada del paso 0 de la feature 012 (decisión D1 de `specs/012-ecb-reference-rates/questions.md` §8; opción B de §2, con lectura).
+Decidida por la dirección al levantar la parada del paso 0 de la feature 012 (decisión D1 de `specs/012-ecb-reference-rates/questions.md (en el historial de git)` §8; opción B de §2, con lectura).
 
 **Qué cambia.** La web de escritorio guarda el libro en **IndexedDB**, como el móvil, y **nunca escribe en la carpeta compartida** con la consola. Puede **leer** de ella: el histórico del BCE (`reference/ecb/`, con `atlas.config.json` para su umbral) y la importación de un libro, con su confirmación explícita. El único escritor de la carpeta es la consola, con el cerrojo consultivo `"wx"` entre consolas (ADR-0026, Parte B, enmendada el mismo día). La frase de arriba sobre el escritorio queda tachada.
 

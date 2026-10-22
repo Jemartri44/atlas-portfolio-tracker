@@ -1,5 +1,5 @@
 // The income tax return of **2025 laid out by box**, worked out by hand
-// (feature 010, §6.4 of `specs/010-tax-output/questions.md`).
+// (feature 010, §6.4 of `specs/010-tax-output/questions.md (in git history)`).
 //
 // The literals below are copied from that document, which was committed on
 // 2026-09-19, **before a line of this code existed**: the history of git is the

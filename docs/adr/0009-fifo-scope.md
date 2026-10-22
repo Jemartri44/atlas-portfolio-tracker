@@ -27,7 +27,7 @@ Opción 1.
 
 ## Enmienda del 2026-09-24 (feature 012): el lote de una corrección conserva el sitio de su raíz
 
-Decidida por la dirección en la revisión adversarial de la PR #75 (`specs/012-ecb-reference-rates/questions.md` §10.1 y §11.2).
+Decidida por la dirección en la revisión adversarial de la PR #75 (`specs/012-ecb-reference-rates/questions.md (en el historial de git)` §10.1 y §11.2).
 
 **Primero, una precisión que este texto debía desde la Ronda 4.** «Se ordena por `id` (orden de registro)» ya no describía el código: el desempate es la **posición en el fichero** del evento que abre el lote (`docs/data-schema.md` §2 y §8.1), porque dos dispositivos con relojes distintos generan ULID desordenados (ADR-0026).
 

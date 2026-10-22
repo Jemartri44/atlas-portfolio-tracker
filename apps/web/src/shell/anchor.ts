@@ -3,7 +3,7 @@
 //
 // The browser looks for `#sincronizacion` when the page loads, and the card
 // that carries it is painted later, when its screen arrives: at 400px the
-// page did not move at all (measured, `specs/020-visual-refresh/questions.md`
+// page did not move at all (measured, `specs/020-visual-refresh/questions.md (in git history)`
 // §7). So after entering by an address with a fragment, or following a link
 // of the application to one, this waits for the target, a frame at a time and
 // up to a bound, and brings it to the top. Under the fixed bar, not behind it:

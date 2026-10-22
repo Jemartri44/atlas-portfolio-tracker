@@ -125,7 +125,7 @@ Con la 2 en su forma buena, «no futura» **es** la 2 y no una tercera. Y la mue
 
 ## §2. Bloque 2 — Las dos de un párrafo *(pendiente 10 y la asimetría)*
 
-**La nota N17.** `specs/010-tax-output/questions.md`, una frase. La cadena buena se **copia** de la cabecera de `packages/domain/test/tax/income-category-default.test.ts`, que la tiene entera: ganancias 462,50; rendimientos 64,00 − 90,00 = −26,00; fase 1 compensa los 26,00 contra el 25 % de 462,50 = 115,63; **fase 2** toma los −260,80 arrastrados de 2027; base 175,70. No se rederiva nada.
+**La nota N17.** `specs/010-tax-output/questions.md (en el historial de git)`, una frase. La cadena buena se **copia** de la cabecera de `packages/domain/test/tax/income-category-default.test.ts`, que la tiene entera: ganancias 462,50; rendimientos 64,00 − 90,00 = −26,00; fase 1 compensa los 26,00 contra el 25 % de 462,50 = 115,63; **fase 2** toma los −260,80 arrastrados de 2027; base 175,70. No se rederiva nada.
 
 **La asimetría.** Primer caso de ADR-0024 de la ronda, y el commit lo dice con esas palabras.
 

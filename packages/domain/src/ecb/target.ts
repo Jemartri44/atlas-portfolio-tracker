@@ -11,7 +11,7 @@
 // ledger in the current year and the one before. No historical calendar is
 // invented: against the real history (1999-2026) this calendar disagrees in
 // 1999 and 2001 only, four days in all, none since
-// (`specs/012-ecb-reference-rates/questions.md` §5).
+// (`specs/012-ecb-reference-rates/questions.md (in git history)` §5).
 
 import { addDays, type CivilDate, isWeekend } from "../dates/civil-date.js";
 import { type EcbHistory, isPublication, latestPublication } from "./history.js";

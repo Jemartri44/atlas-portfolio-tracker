@@ -28,7 +28,7 @@ Opción 2. `recordEvent` gana `acceptInvalid`, admitido **solo** para `settings_
 
 ## Nota del 2026-09-25 (cierre de la feature 014): qué es «sincronización configurada»
 
-Decidida por la dirección durante la feature 014 (D-Q6, `specs/014-ledger-sync-core/questions.md` §8, con su enmienda del 2026-09-25 para la web) y escrita al cerrarla. La nota anterior daba por configurada la sincronización con que existiera `sync/`. Eso chocaba con desactivarla: desactivar conserva lo retenido, que vive en `sync/`, así que `acceptInvalid` quedaba negado para siempre justo cuando la nota lo ofrecía como remedio. Queda así:
+Decidida por la dirección durante la feature 014 (D-Q6, `specs/014-ledger-sync-core/questions.md (en el historial de git)` §8, con su enmienda del 2026-09-25 para la web) y escrita al cerrarla. La nota anterior daba por configurada la sincronización con que existiera `sync/`. Eso chocaba con desactivarla: desactivar conserva lo retenido, que vive en `sync/`, así que `acceptInvalid` quedaba negado para siempre justo cuando la nota lo ofrecía como remedio. Queda así:
 
 - **En la consola**: existe la carpeta `sync/` junto al libro **y** el marcador (`sync/state.json`) no dice `status: "disabled"`. Un marcador ausente o ilegible cuenta como configurada: es el lado seguro.
 - **En la web**: existe alguna de las claves `sync:state`, `sync:held` o `sync:discarded` del almacén `ledger` (el equivalente de la carpeta `sync/`) **y** el marcador no dice `disabled`. Con lo retenido y sin marcador también cuenta como configurada. D-Q6 decía primero «existe `sync:state`»; la dirección aceptó la regla más amplia del código, que va por el lado seguro (enmienda de D-Q6, 2026-09-25).

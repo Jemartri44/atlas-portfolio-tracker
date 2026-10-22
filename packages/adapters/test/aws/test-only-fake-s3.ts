@@ -1,7 +1,7 @@
 // TEST ONLY — a double of Amazon S3 for the narrow `ObjectStore`, **never
 // reachable from the product** (architecture test). It imitates what the
 // documentation of S3 says of conditional writes (block 0 of E3,
-// `specs/015-api-access/questions.md` §23.1, consulted 2026-09-26:
+// `specs/015-api-access/questions.md (in git history)` §23.1, consulted 2026-09-26:
 // `docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html` and
 // `…/API/API_PutObject.html`):
 // - `If-None-Match`: «If there's an existing object, the write operation

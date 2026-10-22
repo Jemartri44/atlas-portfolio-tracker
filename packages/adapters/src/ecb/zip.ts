@@ -3,7 +3,7 @@
 // deflated — and strict about the rest: the lengths and the CRC-32 of the
 // directory are checked, so a truncated or damaged download is refused
 // instead of read in half (verified on the real ZIP on 2026-09-24,
-// `specs/012-ecb-reference-rates/questions.md` §4).
+// `specs/012-ecb-reference-rates/questions.md (in git history)` §4).
 
 import { crc32, inflateRawSync } from "node:zlib";
 

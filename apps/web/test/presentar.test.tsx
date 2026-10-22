@@ -126,7 +126,7 @@ describe("recording what was filed", () => {
     expect(text(again)).toContain("la primera sigue constando");
   });
 
-  // Feature 015, E4 (P11; `specs/014-ledger-sync-core/questions.md` §9.1): a
+  // Feature 015, E4 (P11; `specs/014-ledger-sync-core/questions.md (in git history)` §9.1): a
   // repeated fingerprint is a warning with a confirmation, never a refusal
   // (ADR-0012), as `atlas filed … --confirm-duplicate` in the console.
   it("asks before recording a filing whose fingerprint repeats, and records it on a yes", async () => {

@@ -1,5 +1,5 @@
 // When a Modelo 720 has to be filed **again**, worked out by hand (feature 010,
-// §6.2 of `specs/010-tax-output/questions.md`).
+// §6.2 of `specs/010-tax-output/questions.md (in git history)`).
 //
 // Four years on one ledger, each sitting on an edge on purpose:
 //

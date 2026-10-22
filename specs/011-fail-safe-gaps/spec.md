@@ -231,7 +231,7 @@ Compactar es **la única vía de migrar el libro a una versión de esquema nueva
 
 **Bloque 2 — el párrafo y la asimetría**
 
-- **FR-008**: La nota N17 de `specs/010-tax-output/questions.md` DEBE recoger la cadena de compensación **completa**, copiada de donde ya está bien escrita, no rederivada.
+- **FR-008**: La nota N17 de `specs/010-tax-output/questions.md (en el historial de git)` DEBE recoger la cadena de compensación **completa**, copiada de donde ya está bien escrita, no rederivada.
 - **FR-009**: Las dos interfaces DEBEN decir «ninguno de tus criterios firmes mueve nada» cuando así sea: la web gana su estado vacío con la forma del de `DoubtfulCard`, y la consola dice una frase en vez de unas cabeceras sin filas.
 - **FR-010**: Esto NO DEBE migrar a notas del informe lo que ADR-0024 dejó mezclado: solo se iguala lo que las dos interfaces dicen de un campo que ya existe.
 

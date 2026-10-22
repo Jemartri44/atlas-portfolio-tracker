@@ -1,6 +1,6 @@
 // Feature 016, block 1 of E1: the guardians of the scheduled jobs, written
 // **before** the jobs exist and seen failing against empty modules
-// (`specs/016-scheduled-jobs/questions.md`, E1). They walk the real import
+// (`specs/016-scheduled-jobs/questions.md (in git history)`, E1). They walk the real import
 // graph (`tests/support/source-graph.ts`: static imports, re-exports and
 // literal `import()`, across packages through `exports`), never a list of
 // names; the authoritative check of the web is still the graph of its bundle

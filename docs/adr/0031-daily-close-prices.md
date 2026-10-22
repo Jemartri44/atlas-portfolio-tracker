@@ -100,7 +100,7 @@ Decidida por la dirección al contestar las diez preguntas de la primera redacci
 
 ## Tercera enmienda del 2026-09-24/25 (cierre de la feature 013)
 
-Decidida por la dirección durante la feature 013 (PR #78, fusionada el 2026-09-25 a las 02:45 hora de Madrid) y escrita al cerrarla. El registro entero está en `specs/013-daily-close-prices/questions.md`: la verificación en §1, las respuestas de la dirección en §6 y las dos pasadas de la revisión en §10 y §11. Las frases de arriba que ya no aplican están tachadas o remiten aquí.
+Decidida por la dirección durante la feature 013 (PR #78, fusionada el 2026-09-25 a las 02:45 hora de Madrid) y escrita al cerrarla. El registro entero está en `specs/013-daily-close-prices/questions.md (en el historial de git)`: la verificación en §1, las respuestas de la dirección en §6 y las dos pasadas de la revisión en §10 y §11. Las frases de arriba que ya no aplican están tachadas o remiten aquí.
 
 ### 1. Lo verificado, con su fuente (bloque 0, leído el 2026-09-24)
 
@@ -195,9 +195,9 @@ Decisiones de la dirección tras la prueba real del 2026-09-27 ([`docs/runbooks/
 
 ## Nota del 2026-09-28 (cierre de la feature 016): los precios en la nube
 
-Decidida por la dirección el 2026-09-27 y el 2026-09-28 (`specs/016-scheduled-jobs/questions.md` §9, §18 y §19.2).
+Decidida por la dirección el 2026-09-27 y el 2026-09-28 (`specs/016-scheduled-jobs/questions.md (en el historial de git)` §9, §18 y §19.2).
 
 - **Los presupuestos de la nube son variables de la función de precios**, no un `prices/config.json` del bucket, que en la nube no existe: `ATLAS_PRICES_EODHD_DAILY_CALLS` (18 por defecto, como mucho 20), `ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS` (23, como mucho 25) y `ATLAS_PRICES_FAILURE_THRESHOLD` (3), que escribe Terraform desde `terraform.tfvars` (`docs/api.md` §9.1). Un valor por encima del techo impide arrancar a la función.
 - **La nube nunca contrasta ni escribe `prices/symbols.json`.** `updatePrices` recibe `symbols: "read_only"`: una fuente sin `currency_check` se salta con el resultado `currency_unchecked`, que la tarea deja como hallazgo y la función de correo avisa, y no se persiguen los `refetch_days` de una purga local. El almacén de S3 **se niega** además a `writeSymbols` y `rewriteCloses`, como segunda cerradura, e IAM niega a la función de precios escribir `symbols.json` y `config.json`. `symbols.json` del bucket lo sube solo `atlas admin prices push --env <entorno>`, con el rol de administración ([`docs/runbooks/cloud-symbols-and-budgets.md`](../runbooks/cloud-symbols-and-budgets.md)).
 - **El cupo compartido.** En una carpeta sincronizada, `atlas prices update` **baja los cierres de la API y no llama a ninguna fuente**. `atlas prices update --from-sources` las llama y gasta el cupo que comparte con la nube, con **2 llamadas de EODHD y 2 de Alpha Vantage al día por defecto** (`SHARED_WITH_CLOUD_DAILY_CALLS`), salvo lo que diga `prices/config.json`. La suma de la nube y la consola no debe pasar del cupo del plan gratuito, con una sola clave.
-- **La asimetría de N5, anotada.** En local, la consola nunca baja un precio en una divisa que no haya contrastado. **Lo que baja de la nube** solo se contrasta con el `symbols.json` local si ese fichero declara la divisa de la fuente de la línea; si no la declara (la fuente sin divisa, el activo ausente o ningún `symbols.json`), la línea entra y la consola se fía de la correspondencia del bucket, que es la que subió `atlas admin prices push`. Queda así por decisión de la dirección (`specs/016-scheduled-jobs/questions.md` §19.2).
+- **La asimetría de N5, anotada.** En local, la consola nunca baja un precio en una divisa que no haya contrastado. **Lo que baja de la nube** solo se contrasta con el `symbols.json` local si ese fichero declara la divisa de la fuente de la línea; si no la declara (la fuente sin divisa, el activo ausente o ningún `symbols.json`), la línea entra y la consola se fía de la correspondencia del bucket, que es la que subió `atlas admin prices push`. Queda así por decisión de la dirección (`specs/016-scheduled-jobs/questions.md (en el historial de git)` §19.2).

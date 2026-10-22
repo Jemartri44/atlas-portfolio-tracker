@@ -1,6 +1,6 @@
 // Feature 015, block 1 of E1: the guardians of the API and the access, written
 // **before** `apps/api` exists and seen failing against an empty module
-// (`specs/015-api-access/questions.md`, E1). Kept apart from
+// (`specs/015-api-access/questions.md (in git history)`, E1). Kept apart from
 // `architecture.test.ts`, which is already two thousand lines long; the graph
 // walk is the same idea: static imports, across packages through `exports`.
 

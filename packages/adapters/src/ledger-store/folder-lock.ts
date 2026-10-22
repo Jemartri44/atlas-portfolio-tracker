@@ -10,7 +10,7 @@
 //
 // - **Only the console writes in the folder.** The browser cannot create a file
 //   exclusively (the File System Access API has no such primitive: verified in
-//   `specs/012-ecb-reference-rates/questions.md` §1), so by decision of the
+//   `specs/012-ecb-reference-rates/questions.md (in git history)` §1), so by decision of the
 //   direction the web never writes here (ADR-0019 and ADR-0026 amended). The
 //   lock closes the window between Atlas **console** writers, and only because
 //   `open(…, "wx")` — `O_CREAT | O_EXCL` — is atomic where it runs.

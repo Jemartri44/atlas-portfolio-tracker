@@ -41,7 +41,7 @@ describe("vitest leaves out every compiled folder", () => {
 
 /**
  * The domain's 100 % is measured **in a pass of its own** (feature 015, E5;
- * `specs/015-api-access/questions.md` §33.5 and §34): merging the coverage of
+ * `specs/015-api-access/questions.md (in git history)` §33.5 and §34): merging the coverage of
  * several projects once lost the hits of a whole test file of the domain, and
  * made the 100 % depend on tests of other projects. `npm run test:coverage`,
  * which the CI calls, runs both passes; the second one, with every other

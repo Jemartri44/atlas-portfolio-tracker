@@ -2,7 +2,7 @@
 // capital income — the reading criterion #24 documents (binding ruling
 // V0267-25) and, since feature 010, the **default**.
 //
-// Every literal here comes from `specs/009-tax-engine/questions.md`, section
+// Every literal here comes from `specs/009-tax-engine/questions.md (in git history)`, section
 // "Dinero en juego de los dudosos", where the same year is worked out by hand
 // under that reading: gains 462,50; movable capital income 64,00 − 90,00 =
 // −26,00; phase 1 offsets the 26,00 against 25 % of 462,50 = 115,63; phase 2
