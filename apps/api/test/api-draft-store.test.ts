@@ -65,8 +65,18 @@ describe("ApiDraftStore", () => {
   it("refuses a second save and a stamp over another as the draft being changed", async () => {
     const { store } = await rig();
     await store.save(draft());
-    expect(await failure(store.save(draft()))).toMatchObject({ code: "draft_exists" });
+    // The retry of a save cut after the write is done, stamped or not.
+    await store.save(draft());
+    // Another draft under the same id is not.
+    const changed = { ...draft(), event: { type: "sell", currency: "USD" } };
+    expect(await failure(store.save(changed))).toMatchObject({ code: "draft_exists" });
     await store.update({ ...draft(), pending_event_id: E1 }, undefined);
+    await store.save(draft());
+    // A closed draft is no longer there to retry on.
+    const closed = draft("01J0000000000000000000000C");
+    await store.save(closed);
+    await store.remove(closed.id, { outcome: "discarded" });
+    expect(await failure(store.save(closed))).toMatchObject({ code: "draft_exists" });
     const other = await failure(store.update({ ...draft(), pending_event_id: E2 }, undefined));
     expect(other).toBeInstanceOf(DraftChangedError);
     expect(other).toMatchObject({ details: { id: A, now: "stamped" } });

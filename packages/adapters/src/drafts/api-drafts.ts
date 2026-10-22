@@ -29,6 +29,14 @@ export interface ApiDraftStoreOptions {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+/** JSON with sorted keys: two drafts that say the same compare equal whatever the key order. */
+const canonical = (value: unknown): string =>
+  JSON.stringify(value, (_key, item) =>
+    isRecord(item)
+      ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+      : item,
+  );
+
 export class ApiDraftStore implements PendingDraftStore {
   constructor(private readonly options: ApiDraftStoreOptions) {}
 
@@ -80,9 +88,28 @@ export class ApiDraftStore implements PendingDraftStore {
     return { drafts, unreadable };
   }
 
+  /**
+   * Saving twice the same draft is done: a cut after the write makes the retry
+   * meet `draft_exists`, and if what is there is exactly this draft nothing is lost.
+   * Another draft under the same id, or a closed one, stays an error.
+   */
   async save(draft: PendingDraft): Promise<void> {
     const { pending_event_id: _stamp, ...saved } = draft;
-    await this.ok("POST", "/api/drafts", { draft: saved });
+    try {
+      await this.ok("POST", "/api/drafts", { draft: saved });
+    } catch (error) {
+      if (!(error instanceof RemoteError) || error.code !== "draft_exists") {
+        throw error;
+      }
+      const there = (await this.list()).drafts.find((entry) => entry.id === draft.id);
+      if (there === undefined) {
+        throw error;
+      }
+      const { pending_event_id: _there, ...kept } = there;
+      if (canonical(kept) !== canonical(saved)) {
+        throw error;
+      }
+    }
   }
 
   /** The stamp: created once in the cloud, so "only if as it was read" is the API's own 409. */
