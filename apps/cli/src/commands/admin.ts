@@ -45,6 +45,7 @@ import { ConfirmationRequired, type Context, EXIT, GLOBAL_FLAGS } from "../conte
 import { strictUtf8 } from "../fs.js";
 import { table } from "../output/table.js";
 import { secretsOrder } from "./admin-secrets.js";
+import { describeWaivers } from "./compact.js";
 import { render } from "./shared.js";
 
 const LEDGER_KEY = "ledger/ledger.jsonl";
@@ -272,21 +273,29 @@ const compactOrder = async (
   const deps: UseCaseDeps = { ...ctx.deps, store: remoteStore(ctx, clients) };
   const plan = await planCompact(deps);
   if (plan.outdated === 0) {
-    ctx.io.out(
+    render(
+      ctx,
+      { status: "nothing_to_compact", plan },
       `Nada que compactar en la nube: las ${plan.lines} líneas están en schema_version ${plan.targetVersion}.`,
     );
     return EXIT.ok;
   }
-  ctx.io.out(
-    `La nube tiene ${plan.lines} líneas, ${plan.outdated} en versiones anteriores a ${plan.targetVersion}. El original se archivará como archive/${plan.archiveName}, que nunca se sobrescribe.`,
-  );
+  const accepted = listFlag(flags, "accept-unverified");
+  if (!ctx.json) {
+    ctx.io.out(
+      `La nube tiene ${plan.lines} líneas, ${plan.outdated} en versiones anteriores a ${plan.targetVersion}. El original se archivará como archive/${plan.archiveName}, que nunca se sobrescribe.`,
+    );
+    // What is given up has to be on screen before the yes, as in the local compact.
+    const waiving = plan.unverified.filter((entry) => accepted.includes(entry.filing_id));
+    if (waiving.length > 0) {
+      ctx.io.out(describeWaivers(waiving));
+    }
+  }
   if (!(await confirmEnvironment(ctx, environment, `¿Compactar la nube de ${environment}?`))) {
-    ctx.io.out("Cancelado: no se ha tocado nada.");
+    render(ctx, { status: "cancelled" }, "Cancelado: no se ha tocado nada.");
     return EXIT.ok;
   }
-  const result = await compactLedger(deps, plan, {
-    acceptUnverified: listFlag(flags, "accept-unverified"),
-  });
+  const result = await compactLedger(deps, plan, { acceptUnverified: accepted });
   render(
     ctx,
     result,
@@ -372,10 +381,15 @@ const restoreOrder = async (
   // 1. The candidate.
   const from = requireFlag(flags, "from");
   const lines = linesOfText(await candidateText(clients, from));
-  ctx.io.out(`1. Copia candidata: ${from}.`);
+  const say = (text: string): void => {
+    if (!ctx.json) {
+      ctx.io.out(text);
+    }
+  };
+  say(`1. Copia candidata: ${from}.`);
   // 2. Checked before touching anything.
   const events = checkCandidate(ctx, lines);
-  ctx.io.out(
+  say(
     `2. Comprobada: ${lines.length} líneas, sin eventos inválidos ni errores de la verificación a fondo.`,
   );
   // 3. Compared with the remote, by identifier.
@@ -388,7 +402,7 @@ const restoreOrder = async (
       : comparison.kind === "prefix"
         ? `es un prefijo de la nube: se pierde esta cola de ${comparison.lost.length} eventos: ${comparison.lost.join(", ")}.`
         : `difiere de la nube. Solo en la copia: ${comparison.onlyCandidate.join(", ") || "nada"}. Solo en la nube, que se pierde: ${comparison.onlyRemote.join(", ") || "nada"}.`;
-  ctx.io.out(`3. La copia ${said}`);
+  say(`3. La copia ${said}`);
   // 4. The explicit yes, with that list on screen.
   if (
     !(await confirmEnvironment(
@@ -397,15 +411,17 @@ const restoreOrder = async (
       `4. ¿Sustituir la nube de ${environment} por esta copia?`,
     ))
   ) {
-    ctx.io.out("Cancelado: no se ha tocado nada.");
+    render(ctx, { status: "cancelled" }, "Cancelado: no se ha tocado nada.");
     return EXIT.ok;
   }
   // 5. Archived first, then the lines as they are, on the condition of step 3.
   const archive = syncArchiveName("restore", ctx.deps.clock.now(), remote.etag);
   await store.replaceLines(lines, remote.etag, archive);
-  ctx.io.out(`5. Restaurada. Lo que había está en archive/${archive}, que nunca se sobrescribe.`);
+  say(`5. Restaurada. Lo que había está en archive/${archive}, que nunca se sobrescribe.`);
   // 6. What each device has to do.
-  ctx.io.out(
+  render(
+    ctx,
+    { status: "restored", comparison: comparison.kind, archive },
     "6. Quien tenga Atlas abierto verá «El libro ha cambiado» en su siguiente escritura y recargará el libro restaurado.",
   );
   return EXIT.ok;
@@ -444,7 +460,11 @@ const pricesPushOrder = async (
     remote === undefined ? undefined : (strictUtf8(remote.body) ?? ""),
   );
   if (plan.kind === "same") {
-    ctx.io.out(`La nube de ${environment} ya tiene este prices/symbols.json: no se sube nada.`);
+    render(
+      ctx,
+      { environment, changes: [] },
+      `La nube de ${environment} ya tiene este prices/symbols.json: no se sube nada.`,
+    );
     return EXIT.ok;
   }
   // What it replaces, to recover it from the versions of the bucket (review
@@ -472,7 +492,9 @@ const pricesPushOrder = async (
               change.fields.length === 0 ? "" : ` (${change.fields.join(", ")})`
             }`,
         );
-  ctx.io.out([said, ...lines, ...replaced].join("\n"));
+  if (!ctx.json) {
+    ctx.io.out([said, ...lines, ...replaced].join("\n"));
+  }
   if (
     !(await confirmEnvironment(
       ctx,
@@ -480,7 +502,7 @@ const pricesPushOrder = async (
       `¿Subir prices/symbols.json a ${environment}? La tarea de precios lo usará tal cual y nunca contrasta: una fuente sin contrastar no se descarga.`,
     ))
   ) {
-    ctx.io.out("Cancelado: no se ha tocado nada.");
+    render(ctx, { status: "cancelled" }, "Cancelado: no se ha tocado nada.");
     return EXIT.ok;
   }
   const written =

@@ -15,6 +15,7 @@ import { CONFIG, setup } from "../../../api/test/harness.js";
 import type { AdminAccess } from "../../src/admin/environment.js";
 import { EXIT } from "../../src/context.js";
 import { harness, seed } from "../harness.js";
+import { legacyLines, TEST_SCHEMA_V2, tampered } from "../support/legacy-ledger.js";
 
 type Api = ReturnType<typeof setup>;
 const LEDGER = "ledger/ledger.jsonl";
@@ -101,6 +102,33 @@ describe("atlas admin compact", () => {
     ).toBe(true);
   });
 
+  it("names what is given up before asking, as the local compact does", async () => {
+    const api = setup();
+    api.s3.seed(LEDGER, text(tampered()));
+    const { c } = await adminConsole(api, { schema: TEST_SCHEMA_V2, confirm: false });
+    await c.exec([
+      "admin",
+      "compact",
+      "--env",
+      "test",
+      "--accept-unverified",
+      "01ARYZ6S41TSV4RRFFQ69G5FKM",
+    ]);
+    expect(c.text()).toContain("renunciando a verificar la huella");
+    expect(c.text()).toContain("01ARYZ6S41TSV4RRFFQ69G5FKM");
+    expect(c.text()).toContain("Cancelado");
+  });
+
+  it("prints nothing but JSON with --json", async () => {
+    const api = setup();
+    api.s3.seed(LEDGER, text(legacyLines));
+    const { c } = await adminConsole(api, { schema: TEST_SCHEMA_V2 });
+    expect(await c.exec(["admin", "compact", "--env", "test", "--json"])).toBe(EXIT.ok);
+    // The question of the confirmation is the only other thing on the screen.
+    expect(c.out).toHaveLength(2);
+    expect(JSON.parse(c.out[1] as string)).toMatchObject({ status: "compacted" });
+  });
+
   it("writes nothing when the remote changed after it was read", async () => {
     const api = setup();
     api.s3.seed(LEDGER, text(seeded));
@@ -142,6 +170,20 @@ describe("atlas admin restore (ADR-0032, the six steps)", () => {
     const archived = api.s3.keys().filter((key) => key.startsWith("archive/pre-restore-"));
     expect(archived).toHaveLength(1);
     expect(api.s3.text(archived[0] as string)).toBe(text(seeded));
+  });
+
+  it("prints nothing but JSON with --json", async () => {
+    const api = setup();
+    api.s3.seed(LEDGER, text(seeded));
+    const { c, folder } = await adminConsole(api);
+    await writeFile(join(folder, "copia.jsonl"), text(seeded.slice(0, 2)));
+    const argv = ["admin", "restore", "--env", "test", "--from", join(folder, "copia.jsonl")];
+    expect(await c.exec([...argv, "--json"])).toBe(EXIT.ok);
+    expect(c.out).toHaveLength(2);
+    expect(JSON.parse(c.out[1] as string)).toMatchObject({
+      status: "restored",
+      comparison: "prefix",
+    });
   });
 
   it("touches nothing on a no at step 4", async () => {
