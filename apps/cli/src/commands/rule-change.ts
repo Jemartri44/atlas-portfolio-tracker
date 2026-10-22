@@ -27,7 +27,7 @@ import { type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { closedYearLines } from "../output/closed-years.js";
 import { day } from "../output/ecb.js";
 import { historyOf } from "./rates.js";
-import { confirm } from "./shared.js";
+import { answer, aside, cancelled, confirm } from "./shared.js";
 
 /** The reason written into every reversal of the chain, unless the user gives one. */
 export const CORRECTION_REASON =
@@ -71,14 +71,16 @@ export const confirmRuleChangeRates = async (
   if (impact.lines.length === 0) {
     return { go: true, lines: 0 };
   }
-  ctx.io.out(
+  aside(
+    ctx,
     `Este cambio de fiscal_date_rule deja ${impact.lines.length === 1 ? "una línea" : `${impact.lines.length} líneas`} con un tipo del BCE que puede no ser el de su nueva fecha fiscal (criterio 25). No se recalcula nada: las cifras seguirán usando el tipo del libro hasta que lo corrijas con \`atlas fx correct\`.`,
   );
   for (const line of impact.lines) {
-    ctx.io.out(describeLine(line));
+    aside(ctx, describeLine(line));
   }
   if (!impact.checked) {
-    ctx.io.out(
+    aside(
+      ctx,
       "Sin histórico del BCE junto al libro solo se sabe qué tipos quedan fechados después de su fecha fiscal; el resto no se puede verificar contra el oficial (`atlas fx update`).",
     );
   }
@@ -92,18 +94,22 @@ export const correctRates = async (ctx: Context, flags: Flags): Promise<number> 
   const reason = stringFlag(flags, "reason") ?? CORRECTION_REASON;
   const prepared = await prepareRateCorrections(ctx.deps, history, staleDays, reason);
   if (prepared.corrections.length === 0) {
-    ctx.io.out(
+    aside(
+      ctx,
       history === undefined
         ? "No hay nada que se pueda corregir sin el histórico del BCE (solo los tipos en euros fechados después de su fecha fiscal). Descárgalo con `atlas fx update`."
         : "Ningún tipo del libro es de otro día que el de su fecha fiscal: no hay nada que corregir.",
     );
+    answer(ctx, { status: "nothing_to_correct" });
     return EXIT.ok;
   }
-  ctx.io.out(
+  aside(
+    ctx,
     `Corrección propuesta (criterio 25): ${prepared.corrections.length === 1 ? "una línea" : `${prepared.corrections.length} líneas`}, cada una anulada y registrada de nuevo con el tipo oficial de su fecha fiscal, todas en una sola escritura.`,
   );
   for (const line of prepared.corrections) {
-    ctx.io.out(
+    aside(
+      ctx,
       `  ${line.event_id} ${line.path} (${line.currency}): ${line.rate} del ${day(line.rate_date)} → ${line.official.rate} del ${day(line.official.date)} (fecha fiscal ${day(line.fiscal_date)}).`,
     );
   }
@@ -115,14 +121,16 @@ export const correctRates = async (ctx: Context, flags: Flags): Promise<number> 
     ),
   );
   for (const line of declared) {
-    ctx.io.out(line);
+    aside(ctx, line);
   }
   if (!(await confirm(ctx, "¿Escribir la corrección entera? [s/N] "))) {
-    ctx.io.out("Cancelado.");
+    cancelled(ctx, { corrections: prepared.chain.length / 2 });
     return EXIT.ok;
   }
   await writeRateCorrections(ctx.deps, prepared);
-  ctx.io.out(
+  answer(ctx, { status: "recorded", corrections: prepared.chain.length / 2 });
+  aside(
+    ctx,
     `Corrección escrita: ${prepared.chain.length / 2} ${prepared.chain.length === 2 ? "línea anulada y registrada" : "líneas anuladas y registradas"} de nuevo.`,
   );
   return EXIT.ok;

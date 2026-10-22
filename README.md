@@ -74,7 +74,7 @@ El modo privacidad está **activado por defecto**: oculta importes y cantidades,
 
 ## Uso de la CLI
 
-Tras `npm run build`, el ejecutable es `node apps/cli/dist/main.js` (o `npm run atlas --`). Todos los comandos aceptan `--ledger <ruta>` (por defecto `./ledger.jsonl`), `--yes` (omite la confirmación), `--confirm-duplicate` y `--json`. En `add`, `edit`, `delete` y `ca` (y los comandos que registran con la misma confirmación), `--json` deja en stdout un único objeto (`{"status": "recorded"|"cancelled", …}`) y lo que se lee antes del sí, preguntas incluidas, va a stderr. Ejemplo completo con datos inventados:
+Tras `npm run build`, el ejecutable es `node apps/cli/dist/main.js` (o `npm run atlas --`). Todos los comandos aceptan `--ledger <ruta>` (por defecto `./ledger.jsonl`), `--yes` (omite la confirmación), `--confirm-duplicate` y `--json`. En `add` (también con `--draft`), `edit`, `delete`, `ca`, `settings set`, `fx correct`, `draft confirm` y `draft discard` (y los comandos que registran con la misma confirmación), `--json` deja en stdout un único objeto (`{"status": "recorded"|"cancelled"|"discarded"|"draft_saved"|…, …}`) y lo que se lee antes del sí, preguntas incluidas, va a stderr. Ejemplo completo con datos inventados:
 
 ```bash
 alias atlas='node apps/cli/dist/main.js --ledger ./demo.jsonl'
