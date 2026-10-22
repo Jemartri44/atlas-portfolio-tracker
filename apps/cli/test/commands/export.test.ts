@@ -34,7 +34,11 @@ describe("atlas export", () => {
       await writeFile(ledger, "LEDGER\n");
       const other = join(dir, "other.csv");
       await writeFile(other, "OTHER\n");
-      const h = harness({ events: seed(), ledgerPath: ledger, confirm });
+      const h = harness({
+        events: seed(),
+        ledgerPath: ledger,
+        ...(confirm === undefined ? {} : { confirm }),
+      });
       return { h, ledger, other };
     };
 
