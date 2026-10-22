@@ -20,7 +20,7 @@ import { CRITERION_LABELS } from "../output/criteria.js";
 import { eur } from "../output/format.js";
 import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
-import { loadForQuery, renderQuery } from "./shared.js";
+import { loadForQuery, renderQuery, yearArgument } from "./shared.js";
 
 const USAGE = "uso: atlas m720 <año> [--json] · atlas m721 <año> [--json]";
 
@@ -217,8 +217,8 @@ export const informativeCommand =
   (model: "720" | "721") =>
   async (ctx: Context, positionals: string[], flags: Flags): Promise<number> => {
     assertKnownFlags(flags, [...GLOBAL_FLAGS]);
-    const year = Number(positionals[1]);
-    if (positionals[1] === undefined || !Number.isInteger(year)) {
+    const year = yearArgument(positionals[1]);
+    if (year === undefined) {
       throw new UsageError(USAGE);
     }
     const { events, state } = await loadForQuery(ctx);

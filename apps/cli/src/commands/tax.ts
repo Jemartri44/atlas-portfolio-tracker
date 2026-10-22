@@ -27,7 +27,7 @@ import { eur } from "../output/format.js";
 import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
 import { rateFindingsOf } from "./rates.js";
-import { render } from "./shared.js";
+import { render, yearArgument } from "./shared.js";
 import { renderBoxes } from "./tax-boxes.js";
 
 const USAGE = "uso: atlas tax <año> [--lots] [--boxes] [--json]";
@@ -511,8 +511,8 @@ export const taxCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["lots", "boxes", ...GLOBAL_FLAGS]);
-  const year = Number(positionals[1]);
-  if (positionals[1] === undefined || !Number.isInteger(year)) {
+  const year = yearArgument(positionals[1]);
+  if (year === undefined) {
     throw new UsageError(USAGE);
   }
   const { events } = await ctx.deps.store.load();
