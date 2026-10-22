@@ -102,6 +102,14 @@ export const bytes = (
 /** The size from which a file is worth compressing: the histories of the ECB are megabytes, the rest bytes. */
 const GZIP_FROM_BYTES = 256 * 1024;
 
+/** Whether the header accepts gzip: named (not `x-gzip`) and not with `q=0`. */
+const acceptsGzip = (acceptEncoding: string | undefined): boolean =>
+  (acceptEncoding ?? "").split(",").some((part) => {
+    const [name, ...params] = part.trim().toLowerCase().split(";");
+    const weight = params.map((param) => /^\s*q\s*=\s*([\d.]+)\s*$/.exec(param)?.[1]).find(Boolean);
+    return name === "gzip" && (weight === undefined || Number(weight) > 0);
+  });
+
 /**
  * `bytes`, compressed when the client accepts it and the file is large. The Function URL
  * answers at most 6 MB (base64 included) and `api-exr.csv` weighs some 12 MB; gzip leaves it
@@ -113,7 +121,7 @@ export const bytesCompressed = (
   headers: Record<string, string>,
   acceptEncoding: string | undefined,
 ): FunctionUrlResult => {
-  if (body.length < GZIP_FROM_BYTES || !/\bgzip\b/i.test(acceptEncoding ?? "")) {
+  if (body.length < GZIP_FROM_BYTES || !acceptsGzip(acceptEncoding)) {
     return bytes(status, body, headers);
   }
   return {
