@@ -1,6 +1,7 @@
 // atlas export --format jsonl|csv [--out <ruta>]: the whole ledger, reversed events included.
 
-import { readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
+import { dirname, isAbsolute, relative } from "node:path";
 import {
   DomainError,
   decodeLines,
@@ -31,6 +32,17 @@ const csvCell = (value: unknown): string => {
   }
   const text = typeof value === "string" ? defused(value) : JSON.stringify(value);
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+};
+
+/** Whether an existing file sits inside the ledger folder (symlinks and `..` resolved): credentials, sync state, config, backups. */
+const inLedgerFolder = async (file: string, ledgerPath: string): Promise<boolean> => {
+  try {
+    const [target, folder] = await Promise.all([realpath(file), realpath(dirname(ledgerPath))]);
+    const path = relative(folder, target);
+    return path !== "" && !path.startsWith("..") && !isAbsolute(path);
+  } catch {
+    return false;
+  }
 };
 
 export const toCsv = (rows: readonly Record<string, unknown>[]): string => {
@@ -107,6 +119,11 @@ export const exportCommand = async (
   // Before any question: this one has no «yes».
   if (exists && (await sameFile(out, ctx.ledgerPath))) {
     throw new DomainError("export_over_ledger", `${out} is the ledger`, { path: out });
+  }
+  if (exists && (await inLedgerFolder(out, ctx.ledgerPath))) {
+    throw new DomainError("export_in_ledger_folder", `${out} is a file of the ledger folder`, {
+      path: out,
+    });
   }
   if (exists && (await stat(out)).isDirectory()) {
     throw new DomainError("path_exists", `${out} is a directory`, { path: out });
