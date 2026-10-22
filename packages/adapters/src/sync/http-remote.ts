@@ -32,6 +32,7 @@ import {
   type RemoteLedger,
   type RemoteSnapshot,
 } from "@atlas/domain/sync";
+import { apiFetch, hex } from "./api-fetch.js";
 
 export interface HttpRemoteOptions {
   /** `https://…` of the console's entry, or the web's own origin. */
@@ -41,50 +42,18 @@ export interface HttpRemoteOptions {
   readonly token?: string;
 }
 
-const NO_STORE = { cache: "no-store" } as const;
-
-const hex = async (bytes: Uint8Array): Promise<string> =>
-  [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes as Uint8Array<ArrayBuffer>))]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-
 const utf8 = new TextDecoder("utf-8", { fatal: true });
 
 const transportRejected = (status: number | undefined, reason: string): RemoteError =>
   new RemoteError("transport_rejected", status, { reason });
 
 export const httpRemote = (options: HttpRemoteOptions): RemoteLedger => {
-  const call = async (
+  const call = (
     method: "GET" | "POST" | "PUT",
     path: string,
     body?: unknown,
     headers: Record<string, string> = {},
-  ): Promise<Response> => {
-    const sent: Record<string, string> = { ...headers };
-    if (options.token !== undefined) {
-      sent["x-atlas-device-token"] = options.token;
-    }
-    let payload: Uint8Array | undefined;
-    if (body !== undefined) {
-      payload = new TextEncoder().encode(JSON.stringify(body));
-      sent["content-type"] = "application/json";
-      sent["x-amz-content-sha256"] = await hex(payload);
-    }
-    try {
-      return await options.fetch(`${options.origin}${path}`, {
-        method,
-        headers: sent,
-        redirect: "error",
-        // Never from the HTTP cache: the ledger is not kept on the device
-        // (ADR-0035). `cache` is a DOM-only member of `RequestInit`.
-        ...NO_STORE,
-        credentials: options.token === undefined ? "same-origin" : "omit",
-        ...(payload === undefined ? {} : { body: payload as Uint8Array<ArrayBuffer> }),
-      });
-    } catch {
-      throw new RemoteError("network_failed", undefined);
-    }
-  };
+  ): Promise<Response> => apiFetch(options, method, path, body, headers);
 
   /** The body of an answer, or `network_failed` if it did not arrive whole. */
   const bodyOf = async (response: Response): Promise<Uint8Array> => {
