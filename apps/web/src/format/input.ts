@@ -17,7 +17,7 @@
 // Pure functions, no DOM: the forms, the configuration screen, the corporate
 // actions and the transfer simulator all read numbers through here.
 
-export type ParsedNumber = { ok: true; value: string } | { ok: false; message: string };
+type ParsedNumber = { ok: true; value: string } | { ok: false; message: string };
 
 /** How a number is written, said once so every message says it the same way. */
 export const HOW_TO_WRITE =

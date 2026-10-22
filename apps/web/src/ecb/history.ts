@@ -1,11 +1,9 @@
 // Where the web gets the ECB history (feature 012, block 3; ADR-0029, point 3).
 //
-// **The web downloads nothing from a third party.** On the desktop it reads
-// the history the console downloaded, **from the folder linked for reading**
-// (`reference/ecb/`, with the manifest that says which file is in force and
-// its SHA-256); on the phone — or where no folder is linked — the copy the
-// user **imported by hand**. Without either there is no history: nothing is
-// proposed, and the rates are typed as always (decision (p)).
+// **The web downloads nothing from a third party.** It uses the public copy
+// kept in this browser: imported by hand, or downloaded from our own cloud
+// (`./cloud.ts`). Without one there is no history: nothing is proposed, and
+// the rates are typed as always (decision (p)).
 //
 // Everything here is loaded lazily: nothing of the ECB is on the boot path
 // (decision (r)), and the build fails if it ever is.
@@ -29,19 +27,18 @@ import { entryOfZip, isZip } from "./zip.js";
 
 export interface WebHistory {
   history?: EcbHistory;
-  /** Where it came from: the linked folder, a copy imported by hand, or the cloud (feature 016, E3). */
+  /** Where it came from: a copy imported by hand, or the cloud (feature 016, E3). */
   origin?: "imported" | "cloud";
   source?: EcbSource;
   /** The last day it publishes. */
   latest?: string;
-  /** When the console downloaded it, or when it was imported. */
+  /** When it was imported or downloaded. */
   when?: string;
-  /** The threshold of a currency the ECB stopped publishing (`atlas.config.json`, or its default). */
+  /** The threshold of a currency the ECB stopped publishing (the default of the domain). */
   staleDays: number;
   /**
-   * Why no history could be read where one may be: the folder lost its
-   * permission, its file is not the one its manifest records, it does not
-   * read, or this browser keeps no data at all. Said, never swallowed.
+   * Why no history could be read where one may be: this browser keeps no
+   * site data at all. Said, never swallowed.
    */
   problem?: "storage";
 }
@@ -82,13 +79,13 @@ const load = async (): Promise<WebHistory> =>
     staleDays: DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days,
   };
 
-/** Forget what was read, after linking a folder or importing a file. */
+/** Forget what was read, after importing a file. */
 export const reloadWebHistory = (): Promise<WebHistory> => {
   cached = undefined;
   return loadWebHistory();
 };
 
-export type ImportOutcome =
+type ImportOutcome =
   | { kind: "imported"; latest: string; source: EcbSource }
   | { kind: "rejected"; total: number; conflicts: HistoryConflict[] };
 

@@ -19,7 +19,7 @@ export interface TokenRow {
   readonly recent?: boolean;
 }
 
-export type TokensState =
+type TokensState =
   | { readonly kind: "list"; readonly tokens: readonly TokenRow[] }
   | { readonly kind: "failed"; readonly code: string };
 

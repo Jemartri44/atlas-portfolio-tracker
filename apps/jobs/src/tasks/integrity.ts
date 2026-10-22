@@ -15,8 +15,7 @@
 //
 // It does nothing different by environment: `dev` only has synthetic data.
 
-import { createHash } from "node:crypto";
-import { LEDGER_KEY } from "@atlas/adapters/aws";
+import { LEDGER_KEY, sha256Bytes } from "@atlas/adapters/aws";
 import {
   CURRENT_LEDGER_SCHEMA,
   DomainError,
@@ -37,8 +36,6 @@ import { linesOfText } from "@atlas/domain/sync";
 import { deepCheck } from "@atlas/domain/tools";
 import { textOf } from "../ecb-history.js";
 import type { TaskContext, TaskResult, TaskRunner } from "../run.js";
-
-const sha256 = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 
 const DUMP_RECORDS = "jobs/backup/monthly_backup/";
 
@@ -82,7 +79,7 @@ const rehearse = async (context: TaskContext, live: LedgerEvent[]): Promise<Rehe
     return { ok: false, differs: { dump_missing: 1 } };
   }
   const stored = await context.deps.objects.get(dump.ledgerKey);
-  if (stored === undefined || sha256(stored.body) !== dump.ledgerSha256) {
+  if (stored === undefined || sha256Bytes(stored.body) !== dump.ledgerSha256) {
     return { ok: false, differs: { dump_unreadable: 1 } };
   }
   const events = decoded(stored.body);

@@ -5,7 +5,7 @@
 // warning was about; any other is written without the confirmation, and
 // warns again if it repeats too.
 
-export interface Warned {
+interface Warned {
   /** Whether this yes confirms this draft: only the one the warning was about. */
   readonly confirms: (draft: unknown, yes: boolean) => boolean;
   /** The draft a warning is about, by its exact content. */

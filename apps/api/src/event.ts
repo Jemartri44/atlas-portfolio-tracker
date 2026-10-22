@@ -5,6 +5,7 @@
 // cookies from `cookies` **and** from a `cookie` header if one came, the body
 // decoded from base64 when it says so.
 
+import { decodeUtf8Strict } from "@atlas/adapters/aws";
 import { parseCookieHeader } from "@atlas/domain/access";
 
 export interface FunctionUrlEvent {
@@ -43,8 +44,6 @@ export interface Request {
   readonly bodyText: string | undefined;
 }
 
-const utf8 = new TextDecoder("utf-8", { fatal: true });
-
 export const normalise = (event: FunctionUrlEvent): Request => {
   const headers = new Map<string, string>();
   for (const [name, value] of Object.entries(event.headers ?? {})) {
@@ -62,7 +61,7 @@ export const normalise = (event: FunctionUrlEvent): Request => {
       : Buffer.from(event.body, event.isBase64Encoded === true ? "base64" : "utf8");
   let bodyText: string | undefined;
   try {
-    bodyText = utf8.decode(bytes);
+    bodyText = decodeUtf8Strict(bytes, false);
   } catch {
     bodyText = undefined;
   }

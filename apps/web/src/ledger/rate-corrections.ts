@@ -15,10 +15,10 @@ import { requireDeps } from "./state.js";
 import { runWrite, type WriteResult } from "./write.js";
 
 /** The reason written into every reversal of the chain. */
-export const CORRECTION_REASON =
+const CORRECTION_REASON =
   "Tipo del BCE de la fecha fiscal vigente, tras cambiar la regla de la fecha fiscal (criterio 25)";
 
-export interface ProposedCorrections {
+interface ProposedCorrections {
   prepared: PreparedRateCorrections;
   /** The filed returns the chain reaches, with the figures it moves (ADR-0020). */
   closed: readonly ClosedYearImpact[];

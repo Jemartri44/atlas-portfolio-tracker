@@ -4,7 +4,12 @@
 // `referenceKey`. The remote ledger is reached only through
 // `AppendOnlyLedger`: read and append, never rewrite, never delete.
 
-import type { AppendOnlyLedger, DeviceStore, ReferenceReader } from "@atlas/adapters/aws";
+import {
+  type AppendOnlyLedger,
+  type DeviceStore,
+  decodeUtf8Strict,
+  type ReferenceReader,
+} from "@atlas/adapters/aws";
 import { ConflictError, CURRENT_LEDGER_SCHEMA, sha256Hex, utf8Encode } from "@atlas/domain";
 import {
   type ApiConfig,
@@ -51,8 +56,6 @@ export interface SyncContext {
   readonly now: () => Date;
 }
 
-const utf8 = new TextDecoder("utf-8", { fatal: true });
-
 /**
  * The bytes the lines make, **only if they are UTF-8** (review of PR #96,
  * security B1): the domain refuses a lone surrogate before judging a line,
@@ -62,7 +65,7 @@ const utf8 = new TextDecoder("utf-8", { fatal: true });
 export const utf8Of = (lines: readonly string[]): Uint8Array | undefined => {
   const bytes = utf8Encode(textOfLines(lines));
   try {
-    utf8.decode(bytes);
+    decodeUtf8Strict(bytes, false);
   } catch {
     return undefined;
   }
@@ -96,7 +99,7 @@ export const syncRoutes = (context: SyncContext) => {
   /** The remote as it is: its bytes, their etag and its lines. */
   const remote = async () => {
     const body = await ledger.read();
-    return { body, etag: sha256Hex(body), lines: linesOfText(utf8.decode(body)) };
+    return { body, etag: sha256Hex(body), lines: linesOfText(decodeUtf8Strict(body, false)) };
   };
 
   /** `GET /api/ledger` (§5.1): the exact bytes and their SHA-256, uninterpreted. */

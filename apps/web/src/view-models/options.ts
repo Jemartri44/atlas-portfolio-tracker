@@ -24,7 +24,7 @@ import type { FieldSpec, OptionSource } from "./forms/specs.js";
 import { absorbedAssets } from "./weighted.js";
 
 /** Currencies worth offering: the ones the ledger already uses, euro first. */
-export const currencyOptions = (state: LedgerState): Option[] => {
+const currencyOptions = (state: LedgerState): Option[] => {
   const used = new Set<string>(["EUR"]);
   for (const account of accounts(state)) {
     used.add(account.base_currency);
@@ -54,7 +54,7 @@ export const accountOptions = (
       }`,
     }));
 
-export interface AssetChoice {
+interface AssetChoice {
   /** Only this book: a core account never buys a bucket share, and a thesis never covers a fund. */
   book?: Book | undefined;
   /** Inactive assets held in this account are offered too; held in any, with `true`. */
@@ -162,7 +162,7 @@ export const openThesisOptions = (
     }));
 };
 
-export interface OptionContext {
+interface OptionContext {
   state: LedgerState;
   /** The ledger, for what only its events say: an asset a merger converted away. */
   events?: readonly LedgerEvent[] | undefined;

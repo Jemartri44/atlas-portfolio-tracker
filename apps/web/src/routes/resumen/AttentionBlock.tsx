@@ -16,7 +16,7 @@ const SEVERITY: Record<AttentionSeverity, Severity> = {
   info: "info",
 };
 
-export const noticeOf = (item: AttentionItem): NoticeItem => ({
+const noticeOf = (item: AttentionItem): NoticeItem => ({
   severity: SEVERITY[item.severity],
   message: item.message,
   action: item.action,

@@ -9,9 +9,9 @@ import {
   parseDeviceObject,
   serializeDeviceObject,
 } from "@atlas/domain/access";
+import { decodeUtf8Strict } from "../utf8.js";
 import type { ObjectStore } from "./object-store.js";
 
-const utf8 = new TextDecoder("utf-8", { fatal: true });
 const DEVICES_PREFIX = "sync/devices/";
 
 export class DeviceStore {
@@ -32,7 +32,7 @@ export class DeviceStore {
     }
     let text: string;
     try {
-      text = utf8.decode(stored.body);
+      text = decodeUtf8Strict(stored.body, false);
     } catch {
       return { device: "unreadable", etag: stored.etag };
     }
