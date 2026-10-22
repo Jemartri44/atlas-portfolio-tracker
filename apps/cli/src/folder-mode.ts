@@ -146,10 +146,15 @@ export class CloudLedgerStore implements LedgerStore {
    * by the `If-Match` of the append.
    */
   load(): Promise<LoadedLedger> {
-    this.loading ??= this.open().then((api) => api.store.load());
-    this.loading.catch(() => {
-      this.loading = undefined;
-    });
+    if (this.loading === undefined) {
+      const loading = this.open().then((api) => api.store.load());
+      this.loading = loading;
+      loading.catch(() => {
+        if (this.loading === loading) {
+          this.loading = undefined;
+        }
+      });
+    }
     return this.loading;
   }
 

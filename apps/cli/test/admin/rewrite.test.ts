@@ -127,6 +127,7 @@ describe("atlas admin compact", () => {
     // The question of the confirmation is the only other thing on the screen.
     expect(c.out).toHaveLength(2);
     expect(JSON.parse(c.out[1] as string)).toMatchObject({ status: "compacted" });
+    expect(c.err.join("\n")).toContain("archive/");
   });
 
   it("writes nothing when the remote changed after it was read", async () => {
@@ -182,8 +183,10 @@ describe("atlas admin restore (ADR-0032, the six steps)", () => {
     expect(c.out).toHaveLength(2);
     expect(JSON.parse(c.out[1] as string)).toMatchObject({
       status: "restored",
-      comparison: "prefix",
+      comparison: { kind: "prefix" },
     });
+    // What the yes was about stayed on the screen, apart from the JSON.
+    expect(c.err.join("\n")).toContain("se pierde esta cola");
   });
 
   it("touches nothing on a no at step 4", async () => {

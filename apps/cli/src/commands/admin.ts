@@ -57,6 +57,12 @@ const SYMBOLS_KEY = "prices/symbols.json";
  * is written before the list is on screen, and never a plain yes — the user
  * types the name of the environment, with what is at stake in front.
  */
+/**
+ * What the person must read before a yes. With `--json` the answer stays the
+ * only thing on stdout and this goes to stderr, still on the screen.
+ */
+const sayAside = (ctx: Context, text: string): void => (ctx.json ? ctx.io.err : ctx.io.out)(text);
+
 const confirmEnvironment = async (
   ctx: Context,
   environment: string,
@@ -281,15 +287,14 @@ const compactOrder = async (
     return EXIT.ok;
   }
   const accepted = listFlag(flags, "accept-unverified");
-  if (!ctx.json) {
-    ctx.io.out(
-      `La nube tiene ${plan.lines} líneas, ${plan.outdated} en versiones anteriores a ${plan.targetVersion}. El original se archivará como archive/${plan.archiveName}, que nunca se sobrescribe.`,
-    );
-    // What is given up has to be on screen before the yes, as in the local compact.
-    const waiving = plan.unverified.filter((entry) => accepted.includes(entry.filing_id));
-    if (waiving.length > 0) {
-      ctx.io.out(describeWaivers(waiving));
-    }
+  sayAside(
+    ctx,
+    `La nube tiene ${plan.lines} líneas, ${plan.outdated} en versiones anteriores a ${plan.targetVersion}. El original se archivará como archive/${plan.archiveName}, que nunca se sobrescribe.`,
+  );
+  // What is given up has to be on screen before the yes, as in the local compact.
+  const waiving = plan.unverified.filter((entry) => accepted.includes(entry.filing_id));
+  if (waiving.length > 0) {
+    sayAside(ctx, describeWaivers(waiving));
   }
   if (!(await confirmEnvironment(ctx, environment, `¿Compactar la nube de ${environment}?`))) {
     render(ctx, { status: "cancelled" }, "Cancelado: no se ha tocado nada.");
@@ -381,11 +386,7 @@ const restoreOrder = async (
   // 1. The candidate.
   const from = requireFlag(flags, "from");
   const lines = linesOfText(await candidateText(clients, from));
-  const say = (text: string): void => {
-    if (!ctx.json) {
-      ctx.io.out(text);
-    }
-  };
+  const say = (text: string): void => sayAside(ctx, text);
   say(`1. Copia candidata: ${from}.`);
   // 2. Checked before touching anything.
   const events = checkCandidate(ctx, lines);
@@ -421,7 +422,7 @@ const restoreOrder = async (
   // 6. What each device has to do.
   render(
     ctx,
-    { status: "restored", comparison: comparison.kind, archive },
+    { status: "restored", comparison, archive },
     "6. Quien tenga Atlas abierto verá «El libro ha cambiado» en su siguiente escritura y recargará el libro restaurado.",
   );
   return EXIT.ok;
@@ -492,9 +493,7 @@ const pricesPushOrder = async (
               change.fields.length === 0 ? "" : ` (${change.fields.join(", ")})`
             }`,
         );
-  if (!ctx.json) {
-    ctx.io.out([said, ...lines, ...replaced].join("\n"));
-  }
+  sayAside(ctx, [said, ...lines, ...replaced].join("\n"));
   if (
     !(await confirmEnvironment(
       ctx,
