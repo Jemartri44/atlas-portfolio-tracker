@@ -39,18 +39,15 @@ import { applyCorporateAction, referencesOf } from "./corporate-actions.js";
 import { correctionRoots } from "./correction-root.js";
 import { applyTaxReturnFiled } from "./filings.js";
 import { noteFxRates } from "./fx-rates.js";
+import { applyBuy, applySell, applySwap, applyValuation } from "./operations.js";
 import {
-  applyBuy,
   applyCashDeposit,
   applyCashWithdrawal,
   applyDividend,
   applyFxExchange,
   applyInterest,
-  applySell,
   applyStandaloneFee,
-  applySwap,
-  applyValuation,
-} from "./operations.js";
+} from "./operations-cash.js";
 import { applyTransfer } from "./operations-transfer.js";
 import {
   applyOrderPlaced,

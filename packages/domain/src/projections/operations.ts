@@ -9,24 +9,11 @@ import { FxRate } from "../money/fx-rate.js";
 import { Money } from "../money/money.js";
 import { Price } from "../money/price.js";
 import { Quantity } from "../money/quantity.js";
-import type {
-  AssetId,
-  BuyEvent,
-  CashDepositEvent,
-  CashWithdrawalEvent,
-  DividendEvent,
-  FxExchangeEvent,
-  InterestEvent,
-  SellEvent,
-  StandaloneFeeEvent,
-  SwapEvent,
-  ValuationEvent,
-} from "../schema/events.js";
+import type { AssetId, BuyEvent, SellEvent, SwapEvent, ValuationEvent } from "../schema/events.js";
 import { fiscalDateOf } from "../settings/fiscal-date.js";
 import { adjustCash } from "./cash.js";
 import { assertSameBook, requireAccount, requireAsset } from "./catalogue.js";
 import { recordGain } from "./gains.js";
-import { recordIncome } from "./income.js";
 import { consume, openLot, openQuantity } from "./lots.js";
 import { fillOrder, lookupOpenOrder } from "./pending.js";
 import { accountsHolding, adjustPosition, positionOf } from "./positions.js";
@@ -437,61 +424,6 @@ export const applySwap = (state: LedgerState, event: SwapEvent, position: number
   warnCurrency(state, event, from);
   warnFxDate(state, event, dateOut);
   warnHolders(state, event.to_asset_id, event.id);
-};
-
-export const applyDividend = (state: LedgerState, event: DividendEvent): void => {
-  const account = requireAccount(state, event.account_id, event.id);
-  const asset = requireAsset(state, event.asset_id, event.id);
-  assertSameBook(account, asset, event.id);
-  const net = recordIncome(state, {
-    event_id: event.id,
-    kind: "dividend",
-    account_id: event.account_id,
-    asset_id: event.asset_id,
-    value_date: event.value_date,
-    gross: money(event.gross, event.currency),
-    withholding_origin: money(event.withholding_origin, event.currency),
-    withholding_spain: money(event.withholding_spain, event.currency),
-    fx: fxOf(event),
-  });
-  adjustCash(state, event.account_id, net);
-};
-
-export const applyInterest = (state: LedgerState, event: InterestEvent): void => {
-  requireAccount(state, event.account_id, event.id);
-  const net = recordIncome(state, {
-    event_id: event.id,
-    kind: "interest",
-    account_id: event.account_id,
-    value_date: event.value_date,
-    gross: money(event.gross, event.currency),
-    withholding_origin: Money.zero(event.currency),
-    withholding_spain: money(event.withholding_spain, event.currency),
-    fx: fxOf(event),
-  });
-  adjustCash(state, event.account_id, net);
-};
-
-export const applyFxExchange = (state: LedgerState, event: FxExchangeEvent): void => {
-  requireAccount(state, event.account_id, event.id);
-  adjustCash(state, event.account_id, money(event.sold_amount, event.sold_currency).neg());
-  adjustCash(state, event.account_id, money(event.bought_amount, event.bought_currency));
-  adjustCash(state, event.account_id, money(event.fee, event.fee_currency).neg());
-};
-
-export const applyCashDeposit = (state: LedgerState, event: CashDepositEvent): void => {
-  requireAccount(state, event.account_id, event.id);
-  adjustCash(state, event.account_id, money(event.amount, event.currency));
-};
-
-export const applyCashWithdrawal = (state: LedgerState, event: CashWithdrawalEvent): void => {
-  requireAccount(state, event.account_id, event.id);
-  adjustCash(state, event.account_id, money(event.amount, event.currency).neg());
-};
-
-export const applyStandaloneFee = (state: LedgerState, event: StandaloneFeeEvent): void => {
-  requireAccount(state, event.account_id, event.id);
-  adjustCash(state, event.account_id, money(event.amount, event.currency).neg());
 };
 
 export const applyValuation = (state: LedgerState, event: ValuationEvent): void => {
