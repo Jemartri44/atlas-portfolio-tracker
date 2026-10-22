@@ -10,13 +10,12 @@ import {
   serializeWebSignIn,
   WEB_SIGN_IN_KEY,
 } from "@atlas/domain/access";
+import { decodeUtf8Strict } from "../utf8.js";
 import type { ObjectStore } from "./object-store.js";
-
-const utf8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
 const decoded = (bytes: Uint8Array): string | undefined => {
   try {
-    return utf8.decode(bytes);
+    return decodeUtf8Strict(bytes, true);
   } catch {
     return undefined;
   }

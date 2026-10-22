@@ -5,7 +5,12 @@
 // `prices/`: the income tax of January reads this (the notes of the ECB check,
 // as `atlas tax` does) and must not reach a price (E4; `tests/jobs-access.test.ts`).
 
-import { type ObjectStore, referenceReader, sha256Bytes } from "@atlas/adapters/aws";
+import {
+  decodeUtf8Strict,
+  type ObjectStore,
+  referenceReader,
+  sha256Bytes,
+} from "@atlas/adapters/aws";
 import { DEFAULT_LOCAL_CONFIG, type EcbHistory, readEcbHistory } from "@atlas/domain/ecb";
 import { activeHistoryOf } from "@atlas/domain/jobs";
 
@@ -17,11 +22,9 @@ import { activeHistoryOf } from "@atlas/domain/jobs";
  */
 export const CLOUD_ECB_STALE_DAYS = DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days;
 
-const utf8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
-
 export const textOf = (bytes: Uint8Array): string | undefined => {
   try {
-    return utf8.decode(bytes);
+    return decodeUtf8Strict(bytes, true);
   } catch {
     return undefined;
   }

@@ -32,6 +32,7 @@ import {
   type RemoteLedger,
   type RemoteSnapshot,
 } from "@atlas/domain/sync";
+import { decodeUtf8Strict } from "../utf8.js";
 import { apiFetch, hex } from "./api-fetch.js";
 
 export interface HttpRemoteOptions {
@@ -41,8 +42,6 @@ export interface HttpRemoteOptions {
   /** The device token of the console; without it, the cookie of the web travels (same origin). */
   readonly token?: string;
 }
-
-const utf8 = new TextDecoder("utf-8", { fatal: true });
 
 const transportRejected = (status: number | undefined, reason: string): RemoteError =>
   new RemoteError("transport_rejected", status, { reason });
@@ -67,7 +66,7 @@ export const httpRemote = (options: HttpRemoteOptions): RemoteLedger => {
   const jsonOf = async (response: Response): Promise<unknown> => {
     const bytes = await bodyOf(response);
     try {
-      return JSON.parse(utf8.decode(bytes)) as unknown;
+      return JSON.parse(decodeUtf8Strict(bytes, false)) as unknown;
     } catch {
       return undefined;
     }
@@ -109,7 +108,7 @@ export const httpRemote = (options: HttpRemoteOptions): RemoteLedger => {
       }
       let text: string;
       try {
-        text = utf8.decode(bytes);
+        text = decodeUtf8Strict(bytes, false);
       } catch {
         throw transportRejected(response.status, "not_utf8");
       }

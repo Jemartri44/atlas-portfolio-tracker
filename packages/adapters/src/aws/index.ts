@@ -3,6 +3,7 @@
 // never reached by the web (architecture test).
 
 export { sha256Bytes } from "../hash.js";
+export { decodeUtf8Strict } from "../utf8.js";
 export { DeviceStore } from "./device-store.js";
 export { type DraftObjects, draftObjects } from "./draft-objects.js";
 export { DependencyUnavailable } from "./errors.js";
