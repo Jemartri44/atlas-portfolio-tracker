@@ -276,6 +276,12 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
   reversal_target_missing: () => "El movimiento que se quiere anular no está en tus datos.",
   not_found: () => "Ese movimiento no está en tus datos.",
   dependent_events: () => "Hay movimientos posteriores que se apoyan en este: rectifícalos antes.",
+  invalid_local_config: () =>
+    "La configuración local de la carpeta (atlas.config.json) no se entiende. Corrígela en la carpeta o bórrala para volver a los valores por defecto.",
+  invalid_price_config: () =>
+    "La configuración de las fuentes de precios de la carpeta no se entiende. La escribe el usuario: corrígela desde la consola.",
+  invalid_price_status: () =>
+    "El registro de las fuentes de precios de la carpeta no se entiende: la consola no descargará nada hasta que se arregle.",
   invalid_symbols_file: () =>
     "La correspondencia de símbolos de la carpeta no se entiende. Se arregla desde la consola, declarando otra vez los símbolos.",
   symbols_file_newer_version: () =>
