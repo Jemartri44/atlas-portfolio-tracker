@@ -8,12 +8,20 @@ import { requireDeps } from "./state.js";
 
 export type CopyFormat = "jsonl" | "csv";
 
+/**
+ * Free text that a spreadsheet would run as a formula (`notes` starting with `=`, `+`, `-`,
+ * `@`, a tab or a return) gets a leading `'`. A plain number, such as the signed amounts the
+ * ledger holds as strings, is not a formula and stays as it is. Same rule as the CLI export.
+ */
+const defused = (text: string): string =>
+  /^[=+\-@\t\r]/.test(text) && !/^[+-]?\d+(\.\d+)?$/.test(text) ? `'${text}` : text;
+
 const csvCell = (value: unknown): string => {
   if (value === undefined) {
     return "";
   }
-  const text = typeof value === "string" ? value : JSON.stringify(value);
-  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+  const text = typeof value === "string" ? defused(value) : JSON.stringify(value);
+  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 };
 
 /** The events as a CSV: one column per field that appears in any of them, in order of appearance. */
