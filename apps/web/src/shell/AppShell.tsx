@@ -16,6 +16,7 @@ import { Icon } from "../components/Icon.jsx";
 // before the first screen paints.
 import { Notice } from "../components/Notice.jsx";
 import { countOf } from "../format/number.js";
+import { maskFigures } from "../format/privacy.js";
 import { blocksTheApp, store } from "../ledger/state.js";
 import { decodeFragment, historyGate, scrollToFragment } from "./anchor.js";
 import { LedgerChip } from "./LedgerChip.jsx";
@@ -80,7 +81,7 @@ const ScreenFailed = (props: { failure: unknown; retry: () => void }): JSX.Eleme
     Tus datos no se han tocado: esto es un fallo de la propia pantalla. Si acabas de perder la
     conexión, recarga cuando vuelvas a tenerla.
     <Show when={props.failure instanceof Error}>
-      <p class="meta">{(props.failure as Error).message}</p>
+      <p class="meta">{maskFigures((props.failure as Error).message, store.privacy())}</p>
     </Show>
   </Notice>
 );

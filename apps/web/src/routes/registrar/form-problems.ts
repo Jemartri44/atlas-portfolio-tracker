@@ -25,7 +25,14 @@ export interface FormProblems {
 
 export const useFormProblems = (fields: readonly FieldSpec[]): FormProblems => {
   const [fieldErrors, setFieldErrors] = createSignal<Record<string, string>>({});
-  const [problem, setProblem] = createSignal<string | undefined>(undefined);
+  const [sentence, setSentence] = createSignal<string | undefined>(undefined);
+  // Kept as the error, not as its text: the text follows the privacy mode while it is on screen.
+  const [refusal, setRefusal] = createSignal<AppError | undefined>(undefined);
+  const problem = (): string | undefined => refusal()?.message ?? sentence();
+  const setProblem = (text: string | undefined): void => {
+    setRefusal(undefined);
+    setSentence(text);
+  };
   const [failure, setFailure] = createSignal<AppError | undefined>(undefined);
 
   const show = (errors: Record<string, string>): void => {
@@ -54,10 +61,11 @@ export const useFormProblems = (fields: readonly FieldSpec[]): FormProblems => {
       setFieldErrors({});
       return true;
     },
-    place: (refusal, values) => {
-      const onField = fieldErrorOf(refusal, fields, values);
+    place: (refused, values) => {
+      const onField = fieldErrorOf(refused, fields, values);
       if (onField === undefined) {
-        setProblem(toAppError(refusal).message);
+        setProblem(undefined);
+        setRefusal(toAppError(refused));
       } else {
         show({ [onField.field]: onField.message });
       }
