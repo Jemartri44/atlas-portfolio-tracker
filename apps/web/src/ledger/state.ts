@@ -141,6 +141,10 @@ const writeLocal = (key: string, value: string): void => {
  */
 export const privacyFromPreference = (stored: string | undefined): boolean => stored !== "off";
 
+/** A stored theme that is not one of the three (an older version, a hand edit) follows the system. */
+export const themeFromPreference = (stored: string | undefined): Theme =>
+  stored === "light" || stored === "dark" ? stored : "system";
+
 const createStore = () => {
   // It starts **loading**: the boot is async (session, then ledger), and while
   // it lasts the screens show their skeleton.
@@ -150,7 +154,7 @@ const createStore = () => {
   const [writing, setWriting] = createSignal(false);
   // Privacy is **on** by default: the first read is what decides (FR-021).
   const [privacy, setPrivacyRaw] = createSignal(privacyFromPreference(readLocal(PRIVACY_KEY)));
-  const [theme, setThemeRaw] = createSignal<Theme>((readLocal(THEME_KEY) as Theme) ?? "system");
+  const [theme, setThemeRaw] = createSignal<Theme>(themeFromPreference(readLocal(THEME_KEY)));
 
   const snapshot = createMemo<LedgerSnapshot | undefined>(() => {
     const phase = load();

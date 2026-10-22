@@ -39,7 +39,7 @@ import {
   signOf,
 } from "../src/format/number.js";
 import { maskFigures } from "../src/format/privacy.js";
-import { privacyFromPreference } from "../src/ledger/state.js";
+import { privacyFromPreference, themeFromPreference } from "../src/ledger/state.js";
 import { goldenEvents } from "./helpers/golden.js";
 
 describe("roundDecimalString", () => {
@@ -528,5 +528,16 @@ describe("what is missing", () => {
       { privacy: false },
     );
     expect(partial).toContain("es parcial: falta ast_alpha_spin.");
+  });
+});
+
+describe("themeFromPreference", () => {
+  it("keeps the three themes and follows the system for anything else", () => {
+    for (const theme of ["system", "light", "dark"]) {
+      expect(themeFromPreference(theme)).toBe(theme);
+    }
+    for (const stored of [undefined, "", "sepia", "Dark", "<script>"]) {
+      expect(themeFromPreference(stored)).toBe("system");
+    }
   });
 });
