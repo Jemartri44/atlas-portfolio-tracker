@@ -112,4 +112,4 @@ El guardián de `validate.test.ts` se reescribe por pareja (tipo, campo) y (oper
 
 ## 7. Orden
 
-El de §3 del encargo, con el detalle en [`tasks.md`](tasks.md).
+El de §3 del encargo.
