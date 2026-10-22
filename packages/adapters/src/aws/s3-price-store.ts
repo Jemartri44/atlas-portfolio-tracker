@@ -16,13 +16,13 @@
 
 import type { AssetId } from "@atlas/domain";
 import { type PriceStore, type PriceTransaction, priceFileName } from "@atlas/domain/quotes";
+import { decodeUtf8Strict } from "../utf8.js";
 import type { ObjectStore } from "./object-store.js";
 
 const PREFIX = "prices/";
 const SYMBOLS = `${PREFIX}symbols.json`;
 const STATUS = `${PREFIX}_status.json`;
 
-const utf8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 const encoder = new TextEncoder();
 
 /** A write of `prices/` that did not happen: another run, or the administration, wrote first. */
@@ -50,7 +50,9 @@ export class S3PriceStore implements PriceStore {
 
   private async text(key: string): Promise<{ text: string; etag: string } | undefined> {
     const stored = await this.objects.get(key);
-    return stored === undefined ? undefined : { text: utf8.decode(stored.body), etag: stored.etag };
+    return stored === undefined
+      ? undefined
+      : { text: decodeUtf8Strict(stored.body, true), etag: stored.etag };
   }
 
   config(): Promise<string | undefined> {

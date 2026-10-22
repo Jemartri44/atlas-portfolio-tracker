@@ -1,12 +1,10 @@
 // «Tipos del BCE» in Ajustes (feature 012, block 3): which history the web is
-// using — the one the console downloaded into the linked folder, one
-// imported by hand, or one downloaded from the cloud —, until when it
-// publishes, and the ways to get one. The web never downloads from a third
-// party: on the desktop the console does (`atlas fx update`); on the phone it
-// is imported, or **downloaded from our own cloud** with the session of this
-// browser (feature 016, E3, block 2) — only when the card opens or the user
-// asks, never at start nor on a timer. Everything of the ECB is loaded here,
-// lazily.
+// using — one imported by hand or one downloaded from the cloud —, until when
+// it publishes, and the ways to get one. The web never downloads from a third
+// party: the history is imported, or **downloaded from our own cloud** with the
+// session of this browser (feature 016, E3, block 2) — only when the card opens
+// or the user asks, never at start nor on a timer. Everything of the ECB is
+// loaded here, lazily.
 
 import { createResource, createSignal, type JSX, Show } from "solid-js";
 import { ConfirmDialog, Icon, Notice, Section } from "../../components/index.js";
@@ -25,8 +23,6 @@ type Fetch = typeof fetch;
 const PROBLEMS = {
   storage:
     "Este navegador no permite guardar datos del sitio: no puede guardar un histórico importado.",
-  config:
-    "La configuración local de la carpeta no se entiende: corrígela en la carpeta o bórrala para volver a los valores por defecto.",
 } as const;
 
 export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element => {

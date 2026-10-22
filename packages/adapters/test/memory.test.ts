@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { systemClock } from "../src/clock/system.js";
-import { MemoryLedgerStore } from "../src/ledger-store/memory.js";
 import { webCryptoRandom } from "../src/random/web-crypto.js";
 import { account, deposit, lineOf } from "./fixtures.js";
 import { ledgerStoreContract } from "./ledger-store.contract.js";
+import { MemoryLedgerStore } from "./test-only-memory-ledger-store.js";
 
 ledgerStoreContract(
   "memory",

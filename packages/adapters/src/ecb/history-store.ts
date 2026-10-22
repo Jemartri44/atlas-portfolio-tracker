@@ -15,7 +15,6 @@
 // seen in half; the manifest is renamed last, so until then the old one is in
 // force.
 
-import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import type {
@@ -24,6 +23,8 @@ import type {
   StoredHistory,
   StoredHistoryMeta,
 } from "@atlas/domain/ecb";
+import { sha256Bytes } from "../hash.js";
+import { nodeFileOps, writeFileAtomically } from "../ledger-store/file-ops.js";
 import { type HeldLock, withFolderLock } from "../ledger-store/folder-lock.js";
 
 export const ECB_DIR = join("reference", "ecb");
@@ -38,8 +39,6 @@ export interface EcbManifest {
 /** The history's own file name by source: the API is never named as the ZIP. */
 export const fileOfSource = (source: DownloadedHistory["source"]): string =>
   source === "zip" ? "eurofxref-hist.csv" : "api-exr.csv";
-
-const sha256 = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 
 /** The stored history does not match what its manifest records. */
 export class EcbHistoryDamaged extends Error {
@@ -77,7 +76,7 @@ export class FileEcbHistoryStore implements EcbHistoryStore {
       return undefined;
     }
     const bytes = await fs.readFile(join(this.dir, manifest.active.file));
-    if (sha256(bytes) !== manifest.active.sha256) {
+    if (sha256Bytes(bytes) !== manifest.active.sha256) {
       throw new EcbHistoryDamaged(manifest.active.file);
     }
     return { meta: manifest.active, text: bytes.toString("utf8") };
@@ -85,20 +84,7 @@ export class FileEcbHistoryStore implements EcbHistoryStore {
 
   /** Writes `bytes` at `path` atomically: a temporary file, synced, renamed. */
   private async writeAtomically(path: string, bytes: Uint8Array, lock: HeldLock): Promise<void> {
-    const temporary = `${path}.tmp-${process.pid}-${Date.now()}`;
-    const handle = await fs.open(temporary, "wx");
-    try {
-      await handle.writeFile(bytes);
-      await handle.sync();
-    } finally {
-      await handle.close();
-    }
-    try {
-      await lock.assertOwned();
-      await fs.rename(temporary, path);
-    } finally {
-      await fs.rm(temporary, { force: true });
-    }
+    await writeFileAtomically(nodeFileOps, path, bytes, lock);
   }
 
   private metaOf(next: DownloadedHistory, file: string): StoredHistoryMeta {
@@ -107,7 +93,7 @@ export class FileEcbHistoryStore implements EcbHistoryStore {
       source: next.source,
       url: next.url,
       fetched_at: next.fetched_at,
-      sha256: sha256(next.bytes),
+      sha256: sha256Bytes(next.bytes),
     };
   }
 

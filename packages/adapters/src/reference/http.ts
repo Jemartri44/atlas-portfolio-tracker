@@ -13,7 +13,7 @@
 
 import { parseErrorAnswer, parseReferenceIndex, RemoteError } from "@atlas/domain/remote-answers";
 
-export interface HttpReferenceOptions {
+interface HttpReferenceOptions {
   readonly origin: string;
   readonly fetch: typeof fetch;
   /** The device token of the console; without it, the cookie of the web travels (same origin). */
@@ -26,14 +26,14 @@ export type ReferenceKind = "ecb" | "prices";
  * The most an answer of the reference data may weigh: 20 MB (review of PR
  * #108, N6) — the index, the manifest of the ECB, a file of prices.
  */
-export const MAX_REFERENCE_BYTES = 20 * 1024 * 1024;
+const MAX_REFERENCE_BYTES = 20 * 1024 * 1024;
 
 /**
  * The most **a history of the ECB** may weigh: 64 MB (round 2 of the review
  * of PR #108). `api-exr.csv` is some 12 MB today and grows every day; the
  * ZIP's CSV is smaller. Only these two names under `ecb`.
  */
-export const MAX_ECB_HISTORY_BYTES = 64 * 1024 * 1024;
+const MAX_ECB_HISTORY_BYTES = 64 * 1024 * 1024;
 
 const ECB_HISTORIES: ReadonlySet<string> = new Set(["api-exr.csv", "eurofxref-hist.csv"]);
 
@@ -177,5 +177,3 @@ export const httpReference = (options: HttpReferenceOptions) => {
     },
   };
 };
-
-export type HttpReference = ReturnType<typeof httpReference>;

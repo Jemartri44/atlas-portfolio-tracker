@@ -46,7 +46,7 @@ interface FormFieldsProps {
  * too. Computed in a single pass over `next`, so it does not depend on what a
  * read inside a batch would return.
  */
-export const withDerived = (
+const withDerived = (
   fields: readonly FieldSpec[],
   state: LedgerState,
   values: FormValues,

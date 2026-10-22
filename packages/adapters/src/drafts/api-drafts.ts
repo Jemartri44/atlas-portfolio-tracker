@@ -16,6 +16,7 @@ import {
   parsePendingDraft,
 } from "@atlas/domain/ecb";
 import { parseErrorAnswer, RemoteError } from "@atlas/domain/sync";
+import { apiFetch } from "../sync/api-fetch.js";
 
 export interface ApiDraftStoreOptions {
   /** `https://…` of the console's entry, or the web's own origin. */
@@ -24,14 +25,6 @@ export interface ApiDraftStoreOptions {
   /** The device token of the console; without it, the cookie of the web travels. */
   readonly token?: string;
 }
-
-/** `cache` is a DOM-only member of `RequestInit`. */
-const NO_STORE = { cache: "no-store" } as const;
-
-const hex = async (bytes: Uint8Array): Promise<string> =>
-  [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes as Uint8Array<ArrayBuffer>))]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -44,29 +37,7 @@ export class ApiDraftStore implements PendingDraftStore {
     path: string,
     body?: unknown,
   ): Promise<{ status: number; json: unknown }> {
-    const headers: Record<string, string> = {};
-    if (this.options.token !== undefined) {
-      headers["x-atlas-device-token"] = this.options.token;
-    }
-    let payload: Uint8Array | undefined;
-    if (body !== undefined) {
-      payload = new TextEncoder().encode(JSON.stringify(body));
-      headers["content-type"] = "application/json";
-      headers["x-amz-content-sha256"] = await hex(payload);
-    }
-    let response: Response;
-    try {
-      response = await this.options.fetch(`${this.options.origin}${path}`, {
-        method,
-        headers,
-        redirect: "error",
-        ...NO_STORE,
-        credentials: this.options.token === undefined ? "same-origin" : "omit",
-        ...(payload === undefined ? {} : { body: payload as Uint8Array<ArrayBuffer> }),
-      });
-    } catch {
-      throw new RemoteError("network_failed", undefined);
-    }
+    const response = await apiFetch(this.options, method, path, body);
     let json: unknown;
     try {
       json = JSON.parse(await response.text());

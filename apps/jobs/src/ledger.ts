@@ -4,7 +4,12 @@
 // code, never an exception that stops a job**: the monthly reminder arrives
 // with an invalid ledger too, saying what it could not compute (R8).
 
-import { appendOnlyLedger, DependencyUnavailable, type ObjectStore } from "@atlas/adapters/aws";
+import {
+  appendOnlyLedger,
+  DependencyUnavailable,
+  decodeUtf8Strict,
+  type ObjectStore,
+} from "@atlas/adapters/aws";
 import {
   type CivilDate,
   CURRENT_LEDGER_SCHEMA,
@@ -26,8 +31,6 @@ export type JobLedger =
       readonly settings: Settings;
     }
   | { readonly ok: false; readonly code: string };
-
-const utf8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
 export const loadLedger = async (objects: ObjectStore, today: CivilDate): Promise<JobLedger> => {
   let bytes: Uint8Array;
@@ -51,7 +54,7 @@ export const ledgerOfBytes = (bytes: Uint8Array, today: CivilDate): JobLedger =>
     return { ok: false, code: "ledger_absent" };
   }
   try {
-    const events = decodeLines(linesOfText(utf8.decode(bytes)), CURRENT_LEDGER_SCHEMA);
+    const events = decodeLines(linesOfText(decodeUtf8Strict(bytes, true)), CURRENT_LEDGER_SCHEMA);
     const state = projectLedger(events, { collectErrors: true, asOf: today });
     if (state.invalid.length > 0) {
       return { ok: false, code: "ledger_invalid" };

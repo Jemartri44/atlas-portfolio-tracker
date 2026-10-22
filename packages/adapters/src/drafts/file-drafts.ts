@@ -18,6 +18,7 @@ import {
   parsePendingDraft,
   serializePendingDraft,
 } from "@atlas/domain/ecb";
+import { nodeFileOps, writeFileAtomically } from "../ledger-store/file-ops.js";
 import { withFolderLock } from "../ledger-store/folder-lock.js";
 
 export const DRAFTS_DIR = "drafts";
@@ -98,21 +99,9 @@ export class FileDraftStore implements PendingDraftStore {
       await check?.();
       await fs.mkdir(this.dir, { recursive: true });
       const path = join(this.dir, `${draft.id}.json`);
-      const temporary = `${path}.tmp-${process.pid}-${Date.now()}`;
-      const handle = await fs.open(temporary, "wx");
-      try {
-        await handle.writeFile(serializePendingDraft(draft));
-        await handle.sync();
-      } finally {
-        await handle.close();
-      }
-      try {
-        await this.options.beforeCommit?.();
-        await lock.assertOwned();
-        await fs.rename(temporary, path);
-      } finally {
-        await fs.rm(temporary, { force: true });
-      }
+      await writeFileAtomically(nodeFileOps, path, serializePendingDraft(draft), lock, {
+        beforeCommit: this.options.beforeCommit,
+      });
     });
   }
 

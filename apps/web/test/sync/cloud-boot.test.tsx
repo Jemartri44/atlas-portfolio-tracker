@@ -93,7 +93,7 @@ describe("cloud boot", () => {
     await bootCloud(request);
     await until(() => store.load().phase === "ready", "the ledger loaded");
     const phase = store.load();
-    expect(phase.phase === "ready" && phase.source.kind).toBe("cloud");
+    expect(phase.phase === "ready" && phase.source.expiresAt).toBeTruthy();
     expect(store.snapshot()?.events.length).toBe(200);
     // The boot is the session and then the ledger; the frame's counter of drafts
     // asks for them once the ledger is there, and nothing else is asked.

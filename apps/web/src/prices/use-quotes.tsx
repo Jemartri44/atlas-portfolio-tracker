@@ -1,5 +1,5 @@
 // The automatic prices of a screen (feature 013, block 5): loaded after the
-// first paint, from the folder or from what was imported, and passed to the
+// first paint, from what was imported by hand, and passed to the
 // domain through the one gate. Until they arrive — or without any — every
 // screen works exactly as before, with the manual prices.
 
@@ -9,12 +9,12 @@ import { Notice } from "../components/index.js";
 import type { WebQuotes } from "./quotes.js";
 
 // Imported when the screen asks, not with it: a static import made every
-// screen that shows prices name the chunks of the folder, the ECB and the
+// screen that shows prices name the chunks of the import store, the ECB and the
 // quotes in the table of preloads of the entry, which is on the boot path
 // (+33 bytes measured, review of PR #78).
 const quotesModule = () => import("./quotes.js");
 
-export interface ScreenQuotes {
+interface ScreenQuotes {
   readonly quotes: Accessor<WebQuotes | undefined>;
   /** The quotes for the ledger cut at a date (`asOf`): the gate takes them as they are. */
   readonly external: (state: LedgerState) => ExternalPrices | undefined;
@@ -37,8 +37,6 @@ export const useQuotes = (state: LedgerState): ScreenQuotes => {
 };
 
 const PROBLEMS = {
-  permission:
-    "Hay una carpeta enlazada, pero el navegador ha perdido el permiso para leerla: los precios automáticos no se leen. Vuelve a enlazarla en Ajustes.",
   storage:
     "Este navegador no permite leer datos guardados del sitio: no hay precios automáticos importados.",
 } as const;

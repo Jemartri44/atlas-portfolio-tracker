@@ -27,7 +27,7 @@ import type { NetWorthView } from "../../view-models/index.js";
 import { Meter } from "./Meters.jsx";
 
 /** The thresholds of the two rules, as configured; absent when not set. */
-export interface BucketLimits {
+interface BucketLimits {
   stopLossPct?: string | undefined;
   maxWeightPct?: string | undefined;
 }

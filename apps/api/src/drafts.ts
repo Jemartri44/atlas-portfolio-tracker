@@ -4,7 +4,7 @@
 // client's preview. They reach S3 only through `DraftObjects`: read, create
 // once, list. **Nothing is overwritten and nothing is deleted.**
 
-import type { DraftObjects } from "@atlas/adapters/aws";
+import { type DraftObjects, decodeUtf8Strict } from "@atlas/adapters/aws";
 import { isUlid, utf8Encode } from "@atlas/domain";
 import { refusal } from "@atlas/domain/access";
 import {
@@ -30,8 +30,6 @@ export interface DraftsContext {
   readonly now: () => Date;
 }
 
-const utf8 = new TextDecoder("utf-8", { fatal: true });
-
 /** The text of an object, or nothing if it is not there or not UTF-8. */
 const textOf = async (objects: DraftObjects, key: string): Promise<string | undefined> => {
   const stored = await objects.get(key);
@@ -39,7 +37,7 @@ const textOf = async (objects: DraftObjects, key: string): Promise<string | unde
     return undefined;
   }
   try {
-    return utf8.decode(stored.body);
+    return decodeUtf8Strict(stored.body, false);
   } catch {
     return "�";
   }

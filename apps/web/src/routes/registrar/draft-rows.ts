@@ -12,7 +12,7 @@ import {
 } from "@atlas/domain/ecb";
 import type { WebHistory } from "../../ecb/history.js";
 
-export type RowStatus =
+type RowStatus =
   | Exclude<DraftStatus, { kind: "confirmable" }>
   | { kind: "confirmable"; rates: { currency: string; rate: string; date: CivilDate }[] };
 

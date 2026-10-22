@@ -41,7 +41,7 @@ npm run clean                        # borra dist/, dist-test/, coverage/ y la c
 
 `npm run clean && npm run build` reconstruye desde cero (los `.tsbuildinfo` viven dentro de `dist*/`, así que borrar la salida no deja estado incremental a medias, por ejemplo al cambiar de rama).
 
-Estructura (ADR-0007): `packages/domain` (núcleo puro, sin imports externos; `vendor/big.js` para el decimal exacto), `packages/adapters` (`FileLedgerStore`, `MemoryLedgerStore`, `BlobLedgerStore` con sus dos *handles* de navegador, reloj y aleatoriedad del sistema), `apps/cli` y `apps/web`.
+Estructura (ADR-0007): `packages/domain` (núcleo puro, sin imports externos; `vendor/big.js` para el decimal exacto), `packages/adapters` (`FileLedgerStore`, `BlobLedgerStore`, los clientes de la API y los almacenes de AWS, reloj y aleatoriedad del sistema), `apps/cli` y `apps/web`.
 
 ## La aplicación web
 

@@ -9,7 +9,6 @@ import { Icon, type IconName, Notice, Section, Switch } from "../../components/i
 import { countOf } from "../../format/number.js";
 import { type CopyFormat, downloadCopy } from "../../ledger/copy.js";
 import { toAppError } from "../../ledger/errors.js";
-import { sourceLabel } from "../../ledger/source.js";
 import { store, today } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { EcbCard } from "./EcbCard.jsx";
@@ -92,41 +91,40 @@ export default function AjustesRoute(): JSX.Element {
 
       <div class="grid">
         <Section title="Tus datos" class="span-6">
-          <Show when={store.source()} fallback={<p class="meta">No hay datos abiertos.</p>}>
-            {(current) => (
-              <>
-                <dl class="facts">
-                  <Fact label="Dónde están">{sourceLabel(current())}</Fact>
-                  <Show when={store.snapshot()}>
-                    {(snapshot) => (
-                      <Fact label="Movimientos registrados">
-                        {countOf(snapshot().events.length, "movimiento", "movimientos")}
-                      </Fact>
-                    )}
-                  </Show>
-                </dl>
-                <p class="card-note">
-                  Tus datos viven en la nube de Atlas y este dispositivo no guarda ninguna copia. La
-                  copia fuera de la nube es esta: descárgala de vez en cuando y guárdala donde tú
-                  quieras.
-                </p>
-                <div class="button-row">
-                  <button type="button" disabled={busy()} onClick={() => void onCopy("jsonl")}>
-                    <Icon name="export" class="icon-sm" />
-                    Descargar copia
-                  </button>
-                  <button
-                    type="button"
-                    class="secondary"
-                    disabled={busy()}
-                    onClick={() => void onCopy("csv")}
-                  >
-                    <Icon name="export" class="icon-sm" />
-                    Descargar en CSV
-                  </button>
-                </div>
-              </>
-            )}
+          <Show
+            when={store.source() !== undefined}
+            fallback={<p class="meta">No hay datos abiertos.</p>}
+          >
+            <dl class="facts">
+              <Fact label="Dónde están">Nube de Atlas</Fact>
+              <Show when={store.snapshot()}>
+                {(snapshot) => (
+                  <Fact label="Movimientos registrados">
+                    {countOf(snapshot().events.length, "movimiento", "movimientos")}
+                  </Fact>
+                )}
+              </Show>
+            </dl>
+            <p class="card-note">
+              Tus datos viven en la nube de Atlas y este dispositivo no guarda ninguna copia. La
+              copia fuera de la nube es esta: descárgala de vez en cuando y guárdala donde tú
+              quieras.
+            </p>
+            <div class="button-row">
+              <button type="button" disabled={busy()} onClick={() => void onCopy("jsonl")}>
+                <Icon name="export" class="icon-sm" />
+                Descargar copia
+              </button>
+              <button
+                type="button"
+                class="secondary"
+                disabled={busy()}
+                onClick={() => void onCopy("csv")}
+              >
+                <Icon name="export" class="icon-sm" />
+                Descargar en CSV
+              </button>
+            </div>
           </Show>
         </Section>
 

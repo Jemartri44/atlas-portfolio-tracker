@@ -19,7 +19,7 @@ import type { Money, Quantity } from "@atlas/domain";
 /** Shown where a figure exists but is not known. Never a zero (constitution V). */
 export const NO_DATA = "sin dato";
 
-export interface AmountFormat {
+interface AmountFormat {
   /** Decimals; euros default to two, the cent (ADR-0005 rounds once, at the output). */
   decimals?: number;
   /** Always show the sign: a gain reads as a gain without relying on colour. */
@@ -58,7 +58,7 @@ export const formatUnitValue = (value: Money, decimals = 4): string =>
   formatMoney(value, { decimals });
 
 /** Which of the three things the gate paints. */
-export type AmountState = "nodata" | "masked" | "value";
+type AmountState = "nodata" | "masked" | "value";
 
 export interface AmountDisplay {
   state: AmountState;
@@ -75,7 +75,7 @@ export interface AmountDisplay {
   label: string;
 }
 
-export interface AmountInput {
+interface AmountInput {
   /**
    * The formatted figure, without its unit, or `undefined` when there is
    * none: `undefined` is "sin dato" and **never** a zero (constitution V).
