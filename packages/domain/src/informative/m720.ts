@@ -21,7 +21,8 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import { DomainError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
-import { Money } from "../money/money.js";
+import { zero } from "../money/eur.js";
+import { EUR, Money } from "../money/money.js";
 import type { Filing } from "../projections/filings.js";
 import { filingInForce } from "../projections/filings.js";
 import type { LedgerState, Warning } from "../projections/state.js";
@@ -41,6 +42,7 @@ import {
   modelThresholdOf,
 } from "../settings/settings.js";
 import { sortCriteria } from "../tax/criteria.js";
+import { note } from "../tax/shared.js";
 import { type AverageBalance, quarterAverages } from "./balances.js";
 import { lastFiledBefore } from "./filed.js";
 import { type ForeignHoldings, foreignHoldingsAt } from "./holdings.js";
@@ -54,22 +56,11 @@ import type {
 import { cashValueAt, toEurAt, valueAt, yearEnd } from "./valuation.js";
 import { type Declared, type FlaggedItem, type Limits, verdictOf } from "./verdict.js";
 
-const EUR = "EUR";
-
-const zero = (): Money => Money.zero(EUR);
-
 const keyOf = (accountId: AccountId, assetId?: AssetId): string =>
   assetId === undefined ? accountId : `${accountId}|${assetId}`;
 
 /** A value that is not there at all, as against one that is there and marked. */
 const MISSING: ReadonlySet<ValueFlag> = new Set(["price_missing"]);
-
-const note = (code: string, message: string, details: Record<string, unknown>): Warning => ({
-  code,
-  event_id: "",
-  message,
-  details,
-});
 
 /** One item per foreign account: the asset of the cash category **is** the account. */
 const accountItems = (

@@ -24,7 +24,7 @@ import { filingComparison } from "../filings/comparison.js";
 import type { Ulid } from "../ids/ulid.js";
 import { Decimal } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
-import { Money } from "../money/money.js";
+import type { Money } from "../money/money.js";
 import { sharedIsins } from "../projections/isin.js";
 import type { LedgerState, RealizedGain, Warning } from "../projections/state.js";
 import {
@@ -69,10 +69,10 @@ import type {
 } from "./report.js";
 import type { WashSaleOutcome } from "./wash-sale.js";
 
-const EUR = "EUR";
-
 export { FIRST_SUPPORTED_YEAR, type TaxOptions } from "./chain.js";
 
+import { sum, zero } from "../money/eur.js";
+import { EUR } from "../money/money.js";
 import {
   type ChainCore,
   categoryOf,
@@ -85,10 +85,7 @@ import {
   tryReading,
   type Unsupported,
 } from "./chain.js";
-
-const zero = (): Money => Money.zero(EUR);
-
-const sum = (values: readonly Money[]): Money => values.reduce((total, v) => total.add(v), zero());
+import { lineKey } from "./shared.js";
 
 /** The chain of years plus the lines of the one asked. */
 interface Core extends ChainCore {
@@ -251,8 +248,6 @@ const pendingText = (pending: readonly PendingLoss[]): string =>
     .join(",");
 
 /** A transmission line is one account of one event: a forced sale can have several. */
-const lineKey = (line: TransmissionLine): string => `${line.event_id}|${line.account_id}`;
-
 // --- Notes ------------------------------------------------------------------
 
 /** A note of the report: a code the interfaces translate, never a figure in disguise. */

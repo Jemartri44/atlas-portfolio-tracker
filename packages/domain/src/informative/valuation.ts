@@ -24,15 +24,13 @@
 import { type CivilDate, lastWorkingDay } from "../dates/civil-date.js";
 import { DomainError } from "../errors.js";
 import { FxRate } from "../money/fx-rate.js";
-import { Money } from "../money/money.js";
+import { EUR, Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
 import type { KnownFxRate } from "../projections/fx-rates.js";
 import { manualPriceAt } from "../projections/manual-price.js";
 import type { LedgerState } from "../projections/state.js";
 import type { AssetId } from "../schema/events.js";
 import type { ValueFlag } from "./report.js";
-
-const EUR = "EUR";
 
 /**
  * The rate the ledger knows for a currency, **which it always does** when it

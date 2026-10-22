@@ -18,15 +18,13 @@ import { type CivilDate, daysBetween } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
 import type { Currency } from "../money/money.js";
-import { Money } from "../money/money.js";
+import { EUR, Money } from "../money/money.js";
 import type { AccountId, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import { type BucketPosition, bucketPositions, warn } from "./bucket.js";
 import type { ExternalPrices } from "./prices.js";
 import type { LedgerState, Warning } from "./state.js";
 import { type ClassSubtotal, coreWeights } from "./weights.js";
-
-const EUR = "EUR";
 
 export interface NetWorthAssetRow {
   account_id?: AccountId;

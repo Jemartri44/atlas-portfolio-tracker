@@ -11,7 +11,7 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import { ValidationError } from "../errors.js";
 import { Decimal } from "../money/decimal.js";
-import { Money } from "../money/money.js";
+import { EUR, Money } from "../money/money.js";
 import type { AssetClass, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import type { ExternalPrices } from "./prices.js";
@@ -19,8 +19,6 @@ import type { LedgerState, Warning } from "./state.js";
 import { coreWeights } from "./weights.js";
 
 const HUNDRED = Decimal.parse("100");
-const EUR = "EUR";
-
 export interface ContributionRow {
   asset_id: AssetId;
   asset_class: AssetClass;

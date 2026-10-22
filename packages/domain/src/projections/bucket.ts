@@ -9,7 +9,7 @@
 
 import { type CivilDate, daysBetween } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
-import { Money } from "../money/money.js";
+import { EUR, Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
 import type { AccountId, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
@@ -23,7 +23,6 @@ import {
 import type { FiscalLot, LedgerState, Thesis, ThesisLeg, ThesisView, Warning } from "./state.js";
 import { openThesisOn, theses } from "./theses.js";
 
-const EUR = "EUR";
 const HUNDRED = Decimal.parse("100");
 
 export interface BucketPosition {
