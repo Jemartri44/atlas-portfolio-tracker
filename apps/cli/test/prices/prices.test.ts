@@ -144,9 +144,7 @@ describe("atlas prices update", () => {
     const code = await run(
       ["--ledger", f.ledger, "prices", "update"],
       { out: (t) => lines.push(t), err: (t) => lines.push(t), confirm: async () => undefined },
-      f.compose,
-      undefined,
-      { secretsPath: moved },
+      { compose: f.compose, prices: { secretsPath: moved } },
     );
     expect(code).toBe(1);
     expect(lines.join("\n")).toContain("uno dentro del otro");
@@ -175,12 +173,15 @@ describe("the key never comes out, with the real adapters and a fetch that fails
     const refusing = async (url: string): Promise<Response> =>
       new Response(`bad key in ${url}`, { status: 401 });
     for (const fetchUrl of [loud, refusing]) {
-      const code = await run(["--ledger", f.ledger, "prices", "update"], io, f.compose, undefined, {
-        secretsPath: f.secrets,
-        sources: (keys) => ({
-          eodhd: new EodhdPriceSource(keys.eodhd as string, fetchUrl),
-          alpha_vantage: new AlphaVantagePriceSource(keys.alpha_vantage as string, fetchUrl),
-        }),
+      const code = await run(["--ledger", f.ledger, "prices", "update"], io, {
+        compose: f.compose,
+        prices: {
+          secretsPath: f.secrets,
+          sources: (keys) => ({
+            eodhd: new EodhdPriceSource(keys.eodhd as string, fetchUrl),
+            alpha_vantage: new AlphaVantagePriceSource(keys.alpha_vantage as string, fetchUrl),
+          }),
+        },
       });
       expect([0, 7]).toContain(code);
     }
@@ -209,11 +210,14 @@ describe("a Node that cannot read a JSON number by its text (D-Q1)", () => {
     };
     const old = ((text: string, reviver: (key: string, value: unknown) => unknown) =>
       JSON.parse(text, (key, value) => reviver(key, value))) as never;
-    const code = await run(["--ledger", f.ledger, "prices", "update"], io, f.compose, undefined, {
-      secretsPath: f.secrets,
-      sources: (keys) => ({
-        eodhd: new EodhdPriceSource(keys.eodhd as string, async () => new Response("[]"), old),
-      }),
+    const code = await run(["--ledger", f.ledger, "prices", "update"], io, {
+      compose: f.compose,
+      prices: {
+        secretsPath: f.secrets,
+        sources: (keys) => ({
+          eodhd: new EodhdPriceSource(keys.eodhd as string, async () => new Response("[]"), old),
+        }),
+      },
     });
     expect(code).toBe(1);
     expect(lines.join("\n")).toContain("no deja leer el texto exacto de un número JSON");

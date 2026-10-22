@@ -6,13 +6,9 @@
 // token of a device and never through the API**, which only appends. Nothing
 // of this is reachable from `apps/api` (architecture test).
 
-import { dirname } from "node:path";
-import {
-  DependencyUnavailable,
-  DeviceStore,
-  S3LedgerBlob,
-  TokenRegistry,
-} from "@atlas/adapters/aws";
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { DeviceStore, S3LedgerBlob, TokenRegistry } from "@atlas/adapters/aws";
 import { BlobLedgerStore } from "@atlas/adapters/blob";
 import {
   compactLedger,
@@ -35,6 +31,7 @@ import {
 import { symbolsPushPlan } from "@atlas/domain/quotes";
 import { linesOfText, RefusedError, syncArchiveName } from "@atlas/domain/sync";
 import { deepCheck } from "@atlas/domain/tools";
+import { adminClientsOf, environmentFlag, translateAwsFailure } from "../admin/clients.js";
 import type { AdminClients } from "../admin/environment.js";
 import {
   assertKnownFlags,
@@ -45,53 +42,13 @@ import {
   UsageError,
 } from "../args.js";
 import { ConfirmationRequired, type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
+import { strictUtf8 } from "../fs.js";
 import { table } from "../output/table.js";
 import { secretsOrder } from "./admin-secrets.js";
 import { render } from "./shared.js";
 
 const LEDGER_KEY = "ledger/ledger.jsonl";
 const SYMBOLS_KEY = "prices/symbols.json";
-
-/** The name of an environment, as `admin.json` names it (review of PR #98, N6). */
-const ENVIRONMENT = /^[a-z][a-z0-9-]*$/;
-
-/** `--env`, required and with the shape of a name: never `toString` nor `__proto__`. */
-export const environmentFlag = (flags: Flags): string => {
-  const environment = requireFlag(flags, "env");
-  if (!ENVIRONMENT.test(environment)) {
-    throw new UsageError(`--env no es el nombre de un entorno: «${environment}»`);
-  }
-  return environment;
-};
-
-/** The clients of the environment `--env` names, with the role of administration. */
-export const adminClientsOf = async (ctx: Context, flags: Flags): Promise<AdminClients> => {
-  const environment = environmentFlag(flags);
-  if (ctx.admin !== undefined) {
-    return ctx.admin.clientsFor(environment);
-  }
-  const { systemAdminAccess } = await import("../admin/environment.js");
-  return systemAdminAccess().clientsFor(environment);
-};
-
-/**
- * What AWS answers, said without the message of the SDK: unavailable (a 5xx,
- * a throttle, the network) or refused (no credentials, access denied, an
- * expired session). Anything else is left as it is.
- */
-export const translateAwsFailure = (error: unknown): unknown => {
-  if (error instanceof DependencyUnavailable) {
-    return new DomainError("admin_remote_unavailable", "aws is not answering", {});
-  }
-  if (
-    error instanceof Error &&
-    !(error instanceof DomainError) &&
-    ("$metadata" in error || /^(CredentialsProviderError|TokenProviderError)$/.test(error.name))
-  ) {
-    return new DomainError("admin_aws_refused", "aws refused the order", { name: error.name });
-  }
-  return error;
-};
 
 /**
  * The confirmation of an order that rewrites the remote or forgets a device
@@ -347,17 +304,17 @@ const compactOrder = async (
  * not pass.
  */
 const strictText = (bytes: Uint8Array): string => {
-  try {
-    // `ignoreBOM`: a BOM is kept as a character, so the first line cannot be
-    // read and the copy is refused — never written back without it (round 2
-    // of the review of PR #98).
-    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
-  } catch {
+  // A BOM is kept as a character, so the first line cannot be read and the
+  // copy is refused — never written back without it (round 2 of the review
+  // of PR #98).
+  const text = strictUtf8(bytes);
+  if (text === undefined) {
     throw new DomainError("restore_candidate_invalid", "the candidate is not UTF-8", {
       invalid: [],
       findings: ["not_utf8"],
     });
   }
+  return text;
 };
 
 /** Step 1 of ADR-0032: the candidate, from a version of S3, a monthly dump or a file. */
@@ -376,7 +333,6 @@ const candidateText = async (clients: AdminClients, from: string): Promise<strin
     }
     return strictText(stored.body);
   }
-  const { readFile } = await import("node:fs/promises");
   const bytes = await readFile(from).catch(() => undefined);
   if (bytes === undefined) {
     throw new DomainError("restore_source_missing", `no file ${from}`, { from });
@@ -455,15 +411,6 @@ const restoreOrder = async (
   return EXIT.ok;
 };
 
-/** Text, strictly UTF-8; `undefined` when the bytes are not. */
-const utf8 = (bytes: Uint8Array): string | undefined => {
-  try {
-    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
-  } catch {
-    return undefined;
-  }
-};
-
 const CHANGE_TEXT = { added: "añadido", removed: "quitado", changed: "cambiado" } as const;
 
 /**
@@ -480,8 +427,6 @@ const pricesPushOrder = async (
   clients: AdminClients,
   environment: string,
 ): Promise<number> => {
-  const { readFile } = await import("node:fs/promises");
-  const { join } = await import("node:path");
   const bytes = await readFile(join(dirname(ctx.ledgerPath), "prices", "symbols.json")).catch(
     (error: NodeJS.ErrnoException) => {
       if (error.code === "ENOENT") {
@@ -491,10 +436,13 @@ const pricesPushOrder = async (
     },
   );
   // A local file that is not UTF-8 is unreadable: "" is refused by the reader.
-  const local = bytes === undefined ? undefined : (utf8(bytes) ?? "");
+  const local = bytes === undefined ? undefined : (strictUtf8(bytes) ?? "");
   const remote = await clients.objects.get(SYMBOLS_KEY);
   // A remote that is not UTF-8 is unreadable too, and replaced as such.
-  const plan = symbolsPushPlan(local, remote === undefined ? undefined : (utf8(remote.body) ?? ""));
+  const plan = symbolsPushPlan(
+    local,
+    remote === undefined ? undefined : (strictUtf8(remote.body) ?? ""),
+  );
   if (plan.kind === "same") {
     ctx.io.out(`La nube de ${environment} ya tiene este prices/symbols.json: no se sube nada.`);
     return EXIT.ok;

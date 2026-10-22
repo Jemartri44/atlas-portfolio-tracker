@@ -121,7 +121,7 @@ export const readCredentials = async (path: string): Promise<CredentialsFile> =>
  * folder (`wx`, never over another file), flushed, and renamed over the old
  * one. The folder is created `700` when it does not exist.
  */
-export const writeCredentials = async (path: string, file: CredentialsFile): Promise<void> => {
+const writeCredentials = async (path: string, file: CredentialsFile): Promise<void> => {
   await fs.mkdir(dirname(path), { recursive: true, mode: 0o700 });
   const temporary = `${path}.tmp-${process.pid}-${Date.now()}`;
   const handle = await fs.open(temporary, "wx", 0o600);

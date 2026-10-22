@@ -44,15 +44,7 @@ const folder = async (api?: Api) => {
     confirm: async () => true,
   };
   const atlas = (...argv: string[]) =>
-    run(
-      ["--ledger", ledger, ...argv, "--yes"],
-      io,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      api && adminOf(api),
-    );
+    run(["--ledger", ledger, ...argv, "--yes"], io, { admin: api && adminOf(api) });
   return { dir, lines, atlas, text: () => lines.join("\n") };
 };
 

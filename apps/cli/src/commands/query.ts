@@ -24,11 +24,11 @@ import { day, describeEcbFinding } from "../output/ecb.js";
 import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
 import { ratesOf } from "./rates.js";
-import { dateFlag, loadForQuery, originOf, render, renderQuery } from "./shared.js";
+import { dateFlag, loadForQuery, originOf, render, renderQuery, yearArgument } from "./shared.js";
 
 const yearOf = (positionals: string[], usage: string): number => {
-  const year = Number(positionals[1]);
-  if (!Number.isInteger(year) || year < 1900) {
+  const year = yearArgument(positionals[1]);
+  if (year === undefined || year < 1900) {
     throw new UsageError(usage);
   }
   return year;

@@ -90,14 +90,17 @@ export const folder = async (
         err: (text) => err.push(text),
         confirm: async () => undefined,
       };
-      const code = await run(["--ledger", ledger, ...argv], io, state.compose, undefined, {
-        secretsPath: secrets,
-        sources: (given) => {
-          keysSeen.push(given);
-          return {
-            ...(given.eodhd === undefined ? {} : { eodhd: state.eodhd }),
-            ...(given.alpha_vantage === undefined ? {} : { alpha_vantage: state.alpha }),
-          };
+      const code = await run(["--ledger", ledger, ...argv], io, {
+        compose: state.compose,
+        prices: {
+          secretsPath: secrets,
+          sources: (given) => {
+            keysSeen.push(given);
+            return {
+              ...(given.eodhd === undefined ? {} : { eodhd: state.eodhd }),
+              ...(given.alpha_vantage === undefined ? {} : { alpha_vantage: state.alpha }),
+            };
+          },
         },
       });
       return { code, out: out.join("\n"), err: err.join("\n"), text: [...out, ...err].join("\n") };

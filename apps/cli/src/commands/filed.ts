@@ -22,7 +22,7 @@ import { assertKnownFlags, type Flags, listFlag, stringFlag, UsageError } from "
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { eur } from "../output/format.js";
 import { table } from "../output/table.js";
-import { confirmAndRecord, loadForQuery } from "./shared.js";
+import { confirmAndRecord, loadForQuery, yearArgument } from "./shared.js";
 
 const USAGE =
   "uso: atlas filed <renta|720|721> <año> [--set <clave>=<importe>]… [--filed-at YYYY-MM-DD] [--receipt <referencia>] [--notes <texto>] [--supersedes <id>]";
@@ -55,8 +55,8 @@ export const filedCommand = async (
 ): Promise<number> => {
   assertKnownFlags(flags, ["set", "filed-at", "receipt", "notes", "supersedes", ...GLOBAL_FLAGS]);
   const model = positionals[1] as FilingModel | undefined;
-  const year = Number(positionals[2]);
-  if (model === undefined || !MODELS.includes(model) || !Number.isInteger(year)) {
+  const year = yearArgument(positionals[2]);
+  if (model === undefined || !MODELS.includes(model) || year === undefined) {
     throw new UsageError(USAGE);
   }
   const today = todayInMadrid(ctx.deps.clock);

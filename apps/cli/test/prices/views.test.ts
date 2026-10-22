@@ -3,12 +3,12 @@
 // quote without an ECB rate said — and the fiscal views not moving a byte.
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { FileEcbHistoryStore } from "@atlas/adapters";
 import { decodeLine, type LedgerEvent } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { CLI_SETTINGS, Events } from "../events.js";
+import { LEDGER_FIXTURES } from "../support/fixtures.js";
 import { folder } from "./folder.js";
 
 const line = (date: string, close: string, currency = "EUR", source = "eodhd") =>
@@ -161,10 +161,7 @@ describe("the views with automatic prices", () => {
 // The fiscal output does not move (feature 013, §5 and §6.4 (c)).
 // ---------------------------------------------------------------------------
 
-const fixtures = resolve(
-  dirname(fileURLToPath(import.meta.url)),
-  "../../../../tests/fixtures/ledger",
-);
+const fixtures = LEDGER_FIXTURES;
 const synthetic = async (): Promise<LedgerEvent[]> =>
   (await readFile(join(fixtures, "synthetic-v1.jsonl"), "utf8"))
     .split("\n")

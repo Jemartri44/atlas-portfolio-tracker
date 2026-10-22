@@ -20,7 +20,7 @@ import { CRITERION_LABELS } from "../output/criteria.js";
 import { eur } from "../output/format.js";
 import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
-import { loadForQuery, renderQuery } from "./shared.js";
+import { loadForQuery, renderQuery, yearArgument } from "./shared.js";
 
 const USAGE = "uso: atlas m720 <año> [--json] · atlas m721 <año> [--json]";
 
@@ -154,7 +154,7 @@ const PERIOD: Record<InformativeReturn["period"], string> = {
   before_model: "el modelo no existía ese ejercicio",
 };
 
-export const renderInformative = (report: InformativeReturn): string => {
+const renderInformative = (report: InformativeReturn): string => {
   const out: string[] = [
     `MODELO ${report.model} de ${report.year} — núcleo y cubo agregados por contribuyente (constitución III).`,
     `${PERIOD[report.period]}. Fecha de consulta: ${report.today}.`,
@@ -213,12 +213,12 @@ export const renderInformative = (report: InformativeReturn): string => {
 };
 
 /** `atlas m720 <año>` and `atlas m721 <año>`: the same command with its model fixed. */
-export const informativeCommand =
+const informativeCommand =
   (model: "720" | "721") =>
   async (ctx: Context, positionals: string[], flags: Flags): Promise<number> => {
     assertKnownFlags(flags, [...GLOBAL_FLAGS]);
-    const year = Number(positionals[1]);
-    if (positionals[1] === undefined || !Number.isInteger(year)) {
+    const year = yearArgument(positionals[1]);
+    if (year === undefined) {
       throw new UsageError(USAGE);
     }
     const { events, state } = await loadForQuery(ctx);
