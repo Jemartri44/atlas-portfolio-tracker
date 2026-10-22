@@ -57,8 +57,10 @@ locals {
   iam_policies = "${local.iam}:policy/${local.prefix}-*"
 
   # Every environment condition in one place.
-  tag_env_equals   = { StringEquals = { "aws:ResourceTag/env" = var.env } }
-  request_tag_env  = { StringEquals = { "aws:RequestTag/env" = var.env } }
+  # CloudFront, ACM and WAF are scoped by tags alone, so Atlas's own `project` tag is part of
+  # the condition: another project of the account that carries `env=<env>` is out of reach.
+  tag_env_equals   = { StringEquals = { "aws:ResourceTag/env" = var.env, "aws:ResourceTag/project" = "atlas" } }
+  request_tag_env  = { StringEquals = { "aws:RequestTag/env" = var.env, "aws:RequestTag/project" = "atlas" } }
   mail_sender_host = split("@", var.mail_sender)[1]
 
   # The whole list the provider needs on a bucket to refresh it and its

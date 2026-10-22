@@ -129,7 +129,7 @@ locals {
         "wafv2:Update*",
       ]
       resources = [local.cf_distribution, local.cf_function, local.acm_certificate, local.waf_web_acl]
-      condition = merge(local.boundary_edge, { StringEqualsIfExists = { "aws:ResourceTag/env" = var.env } })
+      condition = merge(local.boundary_edge, { StringEqualsIfExists = { "aws:ResourceTag/env" = var.env, "aws:ResourceTag/project" = "atlas" } })
     },
     {
       # Actions that take no resource type (SAR): only the request tag can scope them.

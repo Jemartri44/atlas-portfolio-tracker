@@ -125,9 +125,23 @@ describe.each(ENVS)(
           action,
         ).not.toBe("allow");
         expect(
-          verdict(env, "deploy", action, own.distribution, { "aws:ResourceTag/env": env }),
+          verdict(env, "deploy", action, own.distribution, {
+            "aws:ResourceTag/env": env,
+            "aws:ResourceTag/project": "atlas",
+          }),
           `${action} on its own`,
         ).toBe("allow");
+        // Another project of the account that carries this environment's `env` tag.
+        for (const project of ["other", undefined]) {
+          const context: Record<string, string> = { "aws:ResourceTag/env": env };
+          if (project !== undefined) {
+            context["aws:ResourceTag/project"] = project;
+          }
+          expect(
+            verdict(env, "deploy", action, foreign.distribution, context),
+            `${action} on a resource of project ${project}`,
+          ).not.toBe("allow");
+        }
       }
     });
 
@@ -154,6 +168,7 @@ describe.each(ENVS)(
       expect(
         verdict(env, "deploy", "cloudfront:TagResource", own.distribution, {
           "aws:RequestTag/env": env,
+          "aws:RequestTag/project": "atlas",
           "aws:TagKeys": ["env", "project", "managed_by"],
         }),
       ).toBe("allow");
@@ -220,7 +235,11 @@ describe.each(ENVS)(
           verdict(env, "deploy", action, resource, changingProject),
           `project key ${action}`,
         ).toBe("deny");
-        const otherKey = { "aws:ResourceTag/env": env, "aws:TagKeys": ["managed_by"] };
+        const otherKey = {
+          "aws:ResourceTag/env": env,
+          "aws:ResourceTag/project": "atlas",
+          "aws:TagKeys": ["managed_by"],
+        };
         expect(verdict(env, "deploy", action, resource, otherKey), `other key ${action}`).toBe(
           "allow",
         );
