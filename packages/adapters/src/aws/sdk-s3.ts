@@ -99,8 +99,8 @@ export class SdkObjectStore implements ObjectStore {
       );
       return "written";
     } catch (error) {
-      const { status } = factsOf(error);
-      if (status === 412 || status === 409 || status === 404) {
+      const { name, status } = factsOf(error);
+      if (status === 412 || status === 409 || (status === 404 && name !== "NoSuchBucket")) {
         return "precondition_failed";
       }
       return rethrow(error);

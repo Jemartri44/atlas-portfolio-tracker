@@ -48,7 +48,11 @@ export class SdkAdminObjectStore extends SdkObjectStore implements AdminObjectSt
       )) as typeof output;
     } catch (error) {
       const { name, status } = factsOf(error);
-      if (name === "NoSuchKey" || name === "NoSuchVersion" || status === 404) {
+      if (
+        name === "NoSuchKey" ||
+        name === "NoSuchVersion" ||
+        (status === 404 && name !== "NoSuchBucket")
+      ) {
         return undefined;
       }
       return rethrow(error);

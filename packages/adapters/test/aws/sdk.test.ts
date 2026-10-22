@@ -93,6 +93,13 @@ describe("SdkObjectStore", () => {
     });
   });
 
+  it("never takes a missing bucket for a failed condition when writing with If-Match", async () => {
+    const { client } = s3Client(() => s3Error("NoSuchBucket", 404));
+    await expect(
+      new SdkObjectStore(client, "b").putIfMatch("k", new Uint8Array([2]), '"e"'),
+    ).rejects.toMatchObject({ name: "NoSuchBucket" });
+  });
+
   it("creates with If-None-Match: *, and reads a 412 or a 409 as exists", async () => {
     for (const [status, expected] of [
       [undefined, "created"],
