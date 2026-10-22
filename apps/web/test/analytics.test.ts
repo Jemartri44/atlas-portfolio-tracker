@@ -36,7 +36,11 @@ import {
   transferView,
   weightsView,
 } from "../src/view-models/core/index.js";
-import { corporateForm } from "../src/view-models/forms/corporate.js";
+import {
+  CORPORATE_COMMON,
+  corporateForm,
+  initialCorporateValues,
+} from "../src/view-models/forms/corporate.js";
 import { openOrderOptions, openTransferOptions } from "../src/view-models/options.js";
 import { netWorthPlot } from "../src/view-models/series.js";
 import { goldenEvents } from "./helpers/golden.js";
@@ -381,6 +385,15 @@ describe("the corporate action form, as parameters", () => {
       ACCOUNTS,
     );
     expect(params.cash?.fx_rate_date).toBe("2024-03-01");
+  });
+
+  it("starts the form with the date of the rate empty, whatever today is", () => {
+    const values = initialCorporateValues(
+      [...CORPORATE_COMMON, ...(corporateForm("contrasplit")?.fields ?? [])],
+      "2026-10-22",
+    );
+    expect(values.effective_date).toBe("2026-10-22");
+    expect(values.cash_fx_rate_date).toBe("");
   });
 
   it("leaves the fees out when the field is empty, instead of sending an empty map", () => {

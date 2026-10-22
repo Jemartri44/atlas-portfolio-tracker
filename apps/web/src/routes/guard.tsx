@@ -60,9 +60,10 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
     ) {
       return held;
     }
-    held = next;
+    // A copy when it is the same ledger on a new day: a new object is what repaints the screen.
+    held = next !== undefined && next === held ? { ...next } : next;
     heldDay = day;
-    return next;
+    return held;
   });
 
   return (
@@ -70,7 +71,7 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
       when={phase().phase !== "loading"}
       fallback={<Skeleton lines={props.skeleton ?? 4} tall />}
     >
-      <Show when={painted()}>
+      <Show when={painted()} keyed>
         {(snapshot) => (
           <Show
             when={props.writes !== true || store.invalidCount() === 0}
@@ -92,7 +93,7 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
             <Show when={props.writes === true}>
               <SessionNotice />
             </Show>
-            {props.children(snapshot())}
+            {props.children(snapshot)}
           </Show>
         )}
       </Show>
