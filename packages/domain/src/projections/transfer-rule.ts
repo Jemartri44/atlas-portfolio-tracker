@@ -87,7 +87,7 @@ export const residenceAt = (state: LedgerState, recordedAt: IsoInstant): string 
 /**
  * Applies the rule while replaying: the asset's flag fails, the rule of the law
  * warns. A transfer that completes a request does not repeat a warning the
- * request already raised (`requestId`).
+ * request already raised (`requestId`), same code and same reason.
  */
 export const enforceTransfer = (
   state: LedgerState,
@@ -105,8 +105,12 @@ export const enforceTransfer = (
   if (block.code === "not_transferable") {
     throw new ProjectionError(block.code, eventId, block.message, details);
   }
+  const same = JSON.stringify(details);
   const repeated = state.warnings.some(
-    (warning) => warning.event_id === requestId && warning.code === block.code,
+    (warning) =>
+      warning.event_id === requestId &&
+      warning.code === block.code &&
+      JSON.stringify(warning.details) === same,
   );
   if (!repeated) {
     addWarning(state, block.code, eventId, block.message, details);
