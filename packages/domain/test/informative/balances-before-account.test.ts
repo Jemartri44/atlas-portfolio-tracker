@@ -51,3 +51,18 @@ describe("the 720 of a year before the account existed", () => {
     expect(() => fiscalAttention(generateLedger({ seed: 1 }), "2026-10-23")).not.toThrow();
   });
 });
+
+describe("the 720 of a year in which the account opens", () => {
+  it("counts an account opened in November from its first day, with no negative days", () => {
+    const b = new LedgerBuilder();
+    b.settings(SETTINGS);
+    b.recordedAt("2027-11-10");
+    b.account("acc_nov", { platform: "ibkr", country: "FR" });
+    b.deposit({ account_id: "acc_nov", value_date: "2027-11-12", amount: "7000" });
+    const [item] = accountsOf(b.build(), 2027).items;
+    // 12 November to 31 December: 50 days, all of them at 7.000.
+    expect(item?.balances?.[0]?.days).toBe(50);
+    expect(item?.q4_average_eur?.amount.toString()).toBe("7000");
+    expect(item?.value_eur?.amount.toString()).toBe("7000");
+  });
+});
