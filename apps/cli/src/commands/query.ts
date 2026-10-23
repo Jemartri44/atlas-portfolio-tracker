@@ -2,6 +2,7 @@
 
 import {
   cashBalances,
+  DomainError,
   type FingerprintWaiver,
   fiscalLots,
   type IntegrityFinding,
@@ -24,7 +25,15 @@ import { day, describeEcbFinding } from "../output/ecb.js";
 import { table } from "../output/table.js";
 import { describeWarning } from "../output/warnings.js";
 import { ratesOf } from "./rates.js";
-import { dateFlag, loadForQuery, originOf, render, renderQuery, yearArgument } from "./shared.js";
+import {
+  dateFlag,
+  loadForQuery,
+  originOf,
+  render,
+  renderQuery,
+  warnIfLedgerMissing,
+  yearArgument,
+} from "./shared.js";
 
 const yearOf = (positionals: string[], usage: string): number => {
   const year = yearArgument(positionals[1]);
@@ -68,7 +77,12 @@ export const lotsCommand = async (
   assertKnownFlags(flags, ["closed", ...GLOBAL_FLAGS]);
   const { events, state } = await loadForQuery(ctx);
   const includeClosed = booleanFlag(flags, "closed");
-  const rows = fiscalLots(state, positionals[1]).filter((lot) => includeClosed || !lot.closed);
+  const asset = positionals[1];
+  // An empty table for a mistyped id would read as «that asset has no lots».
+  if (asset !== undefined && !state.assets.has(asset)) {
+    throw new DomainError("unknown_asset", `asset ${asset} does not exist`, { asset_id: asset });
+  }
+  const rows = fiscalLots(state, asset).filter((lot) => includeClosed || !lot.closed);
   renderQuery(
     ctx,
     state,
@@ -380,6 +394,7 @@ export const checkCommand = async (
   let state: LedgerState | undefined;
   let rates: RateCheck | undefined;
   try {
+    await warnIfLedgerMissing(ctx);
     const loaded = await loadAndProject(ctx.deps, { collectErrors: true });
     state = loaded.state;
     const { events, lines } = loaded;

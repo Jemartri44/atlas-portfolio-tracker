@@ -120,11 +120,18 @@ export const editCommand = async (
     }
   }
   const draft = { ...draftOf(target) };
+  let changed = 0;
   for (const flag of allowed) {
     const value = stringFlag(flags, flag);
     if (value !== undefined) {
       draft[fieldOf(flag)] = value;
+      changed += 1;
     }
+  }
+  if (changed === 0) {
+    throw new UsageError(
+      `no se indica ningún campo que cambiar: «atlas edit» anula el evento y registra otro igual solo si se corrige algo (--campo valor); para anularlo sin más, «atlas delete ${id} --reason …»`,
+    );
   }
   preview(ctx, `Evento original ${summarize(target)}:`, draftOf(target));
   preview(ctx, "Evento corregido (se anula el original y se registra este):", draft);

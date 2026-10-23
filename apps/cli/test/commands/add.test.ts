@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BUY_GOLD, BUY_WORLD, harness, seed } from "../harness.js";
+import { BUY_GOLD, BUY_WORLD, harness, seed, withOption } from "../harness.js";
 
 describe("atlas add buy|sell: the wash-sale warning before confirming", () => {
   /** Buys 10 of the fund, sells 6 at a loss (4 stay: #18), and buys again later. */
@@ -194,9 +194,7 @@ describe("atlas add", () => {
 
   it("prints warnings of the recorded event", async () => {
     const h = harness({ events: seed() });
-    expect(await h.exec([...BUY_GOLD.slice(0, -1), "--fx-rate-date", "2027-01-05", "--yes"])).toBe(
-      0,
-    );
+    expect(await h.exec(withOption(BUY_GOLD, "--fx-rate-date", "2027-01-05"))).toBe(0);
     expect(h.text()).toContain("Aviso (fx_rate_date_after_fiscal_date)");
   });
 
@@ -356,7 +354,7 @@ describe("atlas add", () => {
  * both halves of the wash-sale rule can fire on the same event (ADR-0021).
  */
 describe("atlas add swap", () => {
-  const swap = (overrides: string[] = []) => [
+  const swap = () => [
     "add",
     "swap",
     "--account",
@@ -383,7 +381,6 @@ describe("atlas add swap", () => {
     "1",
     "--fx-rate-date",
     "2027-06-10",
-    ...overrides,
     "--yes",
   ];
 
@@ -405,7 +402,7 @@ describe("atlas add swap", () => {
     const h = harness({ events: seed(), confirm: true });
     expect(await h.exec(BUY_GOLD)).toBe(0);
     h.reset();
-    expect(await h.exec(swap(["--to-asset", "ast_gold"]))).toBe(1);
+    expect(await h.exec(withOption(swap(), "--to-asset", "ast_gold"))).toBe(1);
     expect(h.text()).toContain("to_asset_id");
   });
 });

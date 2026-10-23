@@ -5,6 +5,7 @@
 
 import { createInterface } from "node:readline/promises";
 import { Writable } from "node:stream";
+import { DomainError } from "@atlas/domain";
 
 interface PromptStreams {
   readonly input: NodeJS.ReadableStream & { readonly isTTY?: boolean };
@@ -28,6 +29,12 @@ export const askWithoutEcho = async (
   const reader = createInterface({ input: streams.input, output: swallowed, terminal: true });
   try {
     return await reader.question("");
+  } catch (error) {
+    // Ctrl-C: nothing typed is kept, and the order does not go on to the next value.
+    if ((error as { code?: unknown }).code === "ABORT_ERR") {
+      throw new DomainError("prompt_interrupted", "the prompt was interrupted");
+    }
+    throw error;
   } finally {
     reader.close();
     streams.output.write("\n");
