@@ -161,6 +161,10 @@ export const quarterAverages = (
   const result = new Map<string, AverageBalance>();
   for (const id of accounts.keys()) {
     const start = starts.get(id) as CivilDate;
+    // An account whose first operation is after the year has no period in it.
+    if (start > end) {
+      continue;
+    }
     const days = daysBetween(start, end) + 1;
     const segments = ordered.filter((mark) => mark >= start);
     for (const currency of currencies.get(id) ?? []) {
