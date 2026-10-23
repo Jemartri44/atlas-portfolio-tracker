@@ -40,13 +40,13 @@ const dist = join(webRoot, "dist");
  * a margin of a few tens of bytes, so a growth shows up in the diff that
  * causes it; raise it only with the commit that needs it.
  */
-const BOOT_BUDGET_GZIP_BYTES = 74_940;
+const BOOT_BUDGET_GZIP_BYTES = 70_580;
 
 /**
  * Ceiling of everything the application may download, lazy chunks included
  * (JS + CSS, gzip), with the same discipline as the boot ceiling.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 305_420;
+const TOTAL_BUDGET_GZIP_BYTES = 306_200;
 
 /**
  * Walls set by the direction that no ceiling above may pass: a ceiling raised
@@ -255,6 +255,15 @@ const LAZY_ONLY = [
   // `@atlas/domain/charts` from their first commit.
   { path: "/packages/domain/src/charts.ts", what: "la puerta de los indicadores de las pantallas" },
   { path: "/packages/domain/src/charts/", what: "los indicadores y las series de las pantallas" },
+  // The analysis of the Cartera and the Cubo, behind `@atlas/domain/portfolio`.
+  {
+    path: "/packages/domain/src/portfolio.ts",
+    what: "la puerta del análisis de la Cartera y el Cubo",
+  },
+  { path: "/packages/domain/src/projections/bucket-theses.ts", what: "las tesis frente al índice" },
+  { path: "/packages/domain/src/projections/bucket-stats.ts", what: "las estadísticas del cubo" },
+  { path: "/packages/domain/src/projections/costs.ts", what: "los costes de la cartera" },
+  { path: "/packages/domain/src/projections/contribution.ts", what: "el reparto de la aportación" },
   // Feature 015: **nothing of the access on the boot path**, from its first
   // commit. The rules of the access are the API's and never the web's (the
   // architecture test keeps the web from reaching them at all); the session,
