@@ -2,7 +2,8 @@
 
 import { RemoteRejectedError, ValidationError } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
-import { describeError, describeWarning } from "../src/output/messages.js";
+import { describeError } from "../src/output/messages.js";
+import { describeWarning } from "../src/output/warnings.js";
 
 const repurchase = (window: string) =>
   describeWarning({
@@ -98,6 +99,24 @@ describe("describeError: a write the API refused", () => {
 
   it("still reads without a reason", () => {
     expect(refused({})).toContain("no se ha escrito nada");
+  });
+
+  it.each([
+    ["seal_mismatch", "Regístrala otra vez sobre el libro actual"],
+    ["recorded_at_in_future", "Revisa la hora de este dispositivo"],
+    ["duplicate_unconfirmed", "Confírmala si de verdad son dos"],
+    ["schema_version_unsupported", "Espera a que la nube se actualice"],
+    ["domain_rejected", "Rehazla sobre el estado actual"],
+  ])("%s says what to do about it, not only its code", (code, advice) => {
+    const text = describeError(new RemoteRejectedError(code, 0, { domain_code: "x" }));
+    expect(text).toContain(`(${code}`);
+    expect(text).toContain(advice);
+  });
+
+  it("adds no advice to a code that has none", () => {
+    expect(describeError(new RemoteRejectedError("partial_write", 0))).toMatch(
+      /no se ha escrito nada\.$/,
+    );
   });
 });
 

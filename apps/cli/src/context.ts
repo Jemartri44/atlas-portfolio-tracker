@@ -3,7 +3,7 @@ import type { FxRateSource } from "@atlas/domain/ecb";
 import type { AdminAccess } from "./admin/environment.js";
 import type { Flags } from "./args.js";
 import type { FolderMode } from "./folder-mode.js";
-import { describeWarning } from "./output/messages.js";
+import { describeWarning } from "./output/warnings.js";
 import type { PriceEnvironment } from "./prices/load.js";
 import type { RemoteEnvironment } from "./remote/environment.js";
 

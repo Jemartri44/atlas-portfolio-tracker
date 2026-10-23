@@ -3,7 +3,7 @@
 // its own sentence; none is folded into another.
 
 import type { CredentialsProblem } from "../remote/credentials-file.js";
-import { describeRemoteFailure } from "./messages.js";
+import { describeRemoteFailure } from "./cloud.js";
 
 export const describeConsoleFailure = (code: string): string => {
   switch (code) {
@@ -42,6 +42,6 @@ export const describeCredentialsError = (code: CredentialsProblem): string => {
     case "credentials_unreadable":
       return "credentials.json no se puede leer. No se ha tocado; revísalo o bórralo y vuelve a iniciar sesión.";
     case "sync_remote_unreadable":
-      return "sync/remote.json de esta carpeta no se puede leer: no se sabe con qué remoto se sincroniza.";
+      return "sync/remote.json de esta carpeta no se puede leer: no se sabe a qué nube pertenece.";
   }
 };

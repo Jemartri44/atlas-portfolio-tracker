@@ -1,26 +1,8 @@
 // User-facing messages in Spanish, derived from domain error codes.
 
-import type {
-  DependentEventsError,
-  DomainError,
-  DuplicateFingerprintError,
-  Warning,
-} from "@atlas/domain";
+import type { DependentEventsError, DomainError, DuplicateFingerprintError } from "@atlas/domain";
+import { text } from "./format.js";
 import { table } from "./table.js";
-
-/** Why a quote has no value in euros. */
-export const fxMissingText = (reason: unknown): string => {
-  switch (reason) {
-    case "not_yet_published":
-      return "el BCE aún no ha publicado el tipo de esa fecha";
-    case "currency_not_published":
-      return "el BCE no publica esa divisa; una subunidad como GBX no es su divisa";
-    case "currency_stale":
-      return "el BCE dejó de publicar esa divisa";
-    default:
-      return "no hay histórico del BCE; descárgalo con «atlas fx update»";
-  }
-};
 
 /**
  * The safe way out of a ledger with Windows line endings: `compact` does not normalise, so the
@@ -30,66 +12,41 @@ export const fxMissingText = (reason: unknown): string => {
  */
 export const RAW_LINE_BREAK_FIX = `node -e "const fs=require('fs'),f='ledger.jsonl';fs.copyFileSync(f,f+'.crlf',fs.constants.COPYFILE_EXCL);fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace(/\\r\\n/g,'\\n'))"`;
 
-const text = (value: unknown): string =>
-  typeof value === "string" ? value : JSON.stringify(value);
-
 /**
- * The failures of the remote one by one (`docs/api.md` §7), each
- * with its own sentence: none holds a line back, and each asks for something
- * different.
+ * Why the cloud refused a line (`docs/api.md` §5.2): what the person does about it. Said after the
+ * code in `remote_rejected`, which carries these details.
  */
-export const describeRemoteFailure = (code: unknown): string => {
+const describeRejection = (
+  code: unknown,
+  d: Readonly<Record<string, unknown>>,
+): string | undefined => {
   switch (code) {
-    case "unauthenticated":
-      return "la nube pide iniciar sesión.";
-    case "credentials_ambiguous":
-      return "la petición llevaba dos credenciales a la vez; es un fallo de la aplicación.";
-    case "session_invalid":
-      return "la sesión ha caducado: vuelve a iniciar sesión.";
-    case "device_token_invalid":
-      return "el token de este dispositivo no vale: vuelve a iniciar sesión desde la consola.";
-    case "device_token_revoked":
-      return "el token de este dispositivo está revocado: vuelve a iniciar sesión desde la consola.";
-    case "device_token_expired":
-      return "el token de este dispositivo ha caducado: vuelve a iniciar sesión desde la consola.";
-    case "not_allowed":
-      return "esa cuenta de Google no está en la lista permitida.";
-    case "forbidden_for_credential":
-      return "esta credencial no puede usar esa ruta; es un fallo de la aplicación.";
-    case "origin_rejected":
-      return "la petición no venía de la propia aplicación.";
-    case "body_invalid":
-      return "la nube no ha entendido la forma de la petición; es un fallo de la aplicación.";
-    case "body_not_json":
-      return "la petición no era JSON; es un fallo de la aplicación.";
-    case "precondition_required":
-      return "la petición no decía sobre qué versión de la nube escribía; es un fallo de la aplicación.";
-    case "precondition_failed":
-      return "otro dispositivo ha escrito en la nube a la vez.";
-    case "init_rejected":
-      return "la nube no ha aceptado el libro para empezar.";
-    case "not_found":
-      return "la ruta de la nube no existe; es un fallo de la aplicación.";
-    case "internal":
-      return "la nube ha tenido un fallo interno y no ha escrito nada.";
-    case "device_forgotten":
-      return "este dispositivo fue olvidado en la nube: vuelve a iniciar sesión con «atlas remote login».";
-    case "remote_unavailable":
-      return "la nube no está disponible ahora mismo (un fallo pasajero): inténtalo de nuevo en unos minutos.";
-    case "draft_changed":
-      return "el borrador ya no está como se leyó (se cerró o se está confirmando en otro sitio); no se ha escrito nada.";
-    case "draft_exists":
-      return "ya hay un borrador con ese identificador en la nube; no se ha guardado nada.";
-    case "append_too_many_units":
-      return "la operación tiene demasiadas partes indivisibles para una sola escritura; no se ha escrito nada.";
-    case "body_too_large":
-      return "la petición era demasiado grande para la nube; no se ha escrito nada.";
-    case "transport_rejected":
-      return "la petición la ha rechazado la red antes de llegar a la nube (CloudFront o el cortafuegos).";
-    case "network_failed":
-      return "no hay conexión con la nube.";
+    case "domain_rejected":
+      return `Sobre lo que ya hay en la nube, el libro la rechaza (${text(d.domain_code)}${d.affected === undefined ? "" : `; dejaría inválidos ${text(d.affected)}`}). Rehazla sobre el estado actual.`;
+    case "pair_rejected":
+      return `Corrección rechazada entera (anulación y operación corregida, juntas): sobre lo que ya hay en la nube no cabe (${text(d.member)}: ${text(d.member_code)}${d.affected === undefined ? "" : `; dejaría inválidos ${text(d.affected)}`}). Ninguna de las dos se ha subido. Rehazla.`;
+    case "pair_not_contiguous":
+      return "La operación corregida no va justo detrás de su anulación, que es como la aplicación las escribe siempre. Rehaz la corrección.";
+    case "pair_incomplete":
+      return "La nube ha rechazado una anulación que anunciaba su corrección y no la traía detrás: se sube siempre la pareja entera.";
+    case "pair_declaration_invalid":
+      return "La nube ha rechazado la petición: una línea declaraba ser una anulación con corrección, o parte de una cadena, sin serlo.";
+    case "line_unreadable":
+      return `La nube no ha podido leer una línea${d.line === undefined ? "" : ` (la ${text(d.line)})`}.`;
+    case "line_invalid":
+      return `La nube ha rechazado una línea por su forma (${text(d.domain_code)}).`;
+    case "schema_version_unsupported":
+      return `La nube no conoce todavía el formato ${text(d.found)} de esta línea (entiende hasta el ${text(d.supported)}). Espera a que la nube se actualice.`;
+    case "recorded_at_in_future":
+      return `Su fecha de registro (${text(d.recorded_at)}) va por delante del reloj de la nube. Revisa la hora de este dispositivo y rehaz la operación.`;
+    case "duplicate_unconfirmed":
+      return `La nube pide confirmar una operación que repite la huella de otra (${text(d.existing ?? d.id)}). Confírmala si de verdad son dos.`;
+    case "seal_mismatch":
+      return "La declaración ya no cuadra con los movimientos que tendría delante en la nube. Regístrala otra vez sobre el libro actual.";
+    case "waiver_not_appendable":
+      return "Una renuncia a verificar una huella solo nace dentro de una compactación, y nunca se sube línea a línea.";
     default:
-      return `la nube ha respondido ${text(code)}.`;
+      return undefined;
   }
 };
 
@@ -291,14 +248,16 @@ export const describeError = (error: DomainError): string => {
       return `El libro usa schema_version ${text(d.found)} y esta CLI solo entiende hasta ${text(d.supported)}: actualiza la aplicación.`;
     case "conflict":
       return "El libro ha cambiado desde que se cargó: repite el comando.";
-    case "remote_rejected":
+    case "remote_rejected": {
+      const why = describeRejection(d.remote_code, d);
       return `La API ha rechazado la escritura (${text(d.remote_code)}${
         d.domain_code === undefined ? "" : `, ${text(d.domain_code)}`
       }): ${
         d.accepted === 0
           ? "no se ha escrito nada"
           : `se han escrito ${Math.floor(Number(d.accepted) || 0)} líneas y el resto no; mira el libro antes de repetir: lo ya escrito está y repetir la operación desde cero lo duplicaría`
-      }.`;
+      }.${why === undefined ? "" : ` ${why}`}`;
+    }
     case "write_outcome_unknown":
       return "La conexión se cortó al guardar y no se sabe si la operación quedó registrada: cuando vuelva la conexión, comprueba el libro antes de repetirla.";
     case "invalid_events":
@@ -312,32 +271,6 @@ export const describeError = (error: DomainError): string => {
       )}`;
     case "projection_changed":
       return `La reescritura cambiaría la proyección (${text(d.keys)}): no se ha escrito nada.`;
-    // --- The sync of the ledger -------------------------------
-    // Why the cloud refuses a line: nothing of it is written.
-    case "domain_rejected":
-      return `Sobre lo que ya hay en la nube, el libro la rechaza (${text(d.domain_code)}${d.affected === undefined ? "" : `; dejaría inválidos ${text(d.affected)}`}). Rehazla sobre el estado actual.`;
-    case "pair_rejected":
-      return `Corrección rechazada entera (anulación y operación corregida, juntas): sobre lo que ya hay en la nube no cabe (${text(d.member)}: ${text(d.member_code)}${d.affected === undefined ? "" : `; dejaría inválidos ${text(d.affected)}`}). Ninguna de las dos se ha subido. Rehazla.`;
-    case "pair_not_contiguous":
-      return "La operación corregida no va justo detrás de su anulación, que es como la aplicación las escribe siempre. Rehaz la corrección.";
-    case "pair_incomplete":
-      return "La nube ha rechazado una anulación que anunciaba su corrección y no la traía detrás: se sube siempre la pareja entera.";
-    case "pair_declaration_invalid":
-      return "La nube ha rechazado la petición: una línea declaraba ser una anulación con corrección, o parte de una cadena, sin serlo.";
-    case "line_unreadable":
-      return `La nube no ha podido leer una línea${d.line === undefined ? "" : ` (la ${text(d.line)})`}.`;
-    case "line_invalid":
-      return `La nube ha rechazado una línea por su forma (${text(d.domain_code)}).`;
-    case "schema_version_unsupported":
-      return `La nube no conoce todavía el formato ${text(d.found)} de esta línea (entiende hasta el ${text(d.supported)}). Espera a que la nube se actualice.`;
-    case "recorded_at_in_future":
-      return `Su fecha de registro (${text(d.recorded_at)}) va por delante del reloj de la nube. Revisa la hora de este dispositivo y rehaz la operación.`;
-    case "duplicate_unconfirmed":
-      return `La nube pide confirmar una operación que repite la huella de otra (${text(d.existing ?? d.id)}). Confírmala si de verdad son dos.`;
-    case "seal_mismatch":
-      return "La declaración ya no cuadra con los movimientos que tendría delante en la nube. Regístrala otra vez sobre el libro actual.";
-    case "waiver_not_appendable":
-      return "Una renuncia a verificar una huella solo nace dentro de una compactación, y nunca se sube línea a línea.";
     // What a synced folder or browser refuses.
     case "forget_device_missing":
       return "Ese dispositivo no existe en sync/devices/: los enseña «atlas admin devices».";
@@ -373,8 +306,6 @@ export const describeError = (error: DomainError): string => {
       return `No se encuentra la copia ${text(d.from)}.`;
     case "restore_candidate_invalid":
       return `La copia no pasa la comprobación (eventos inválidos: ${text(d.invalid)}; errores de la verificación a fondo: ${text(d.findings)}): no se ha tocado la nube.`;
-    case "bucket_key_unsafe":
-      return `La clave ${text(d.key)} del bucket no es una ruta sencilla: no se copia nada fuera del destino.`;
     case "init_refused_invalid_ledger":
       return `No se sube el libro a la nube: tiene operaciones inválidas (${text(d.invalid)}), y la nube nunca recibe un libro inválido. Repáralas primero (atlas check te las enseña).`;
     case "accept_invalid_while_synced":
@@ -402,7 +333,7 @@ export const describeError = (error: DomainError): string => {
     case "raw_lone_surrogate":
       return `La línea ${text(d.line)} lleva un carácter que no es Unicode (un suplente suelto): sus bytes no serían UTF-8 y el libro no se podría leer. No se ha escrito nada; esa línea no la escribe la aplicación.`;
     case "raw_line_break":
-      return `La línea ${text(d.line)} lleva dentro un salto de línea o un retorno de carro (\\r): el libro tiene finales de línea de Windows, que solo deja una edición a mano. Así no se escribe tal cual, y atlas no lo arregla solo. Conviértelo a finales LF desde la carpeta del libro, con una copia previa en ledger.jsonl.crlf (se niega si ya existe): ${RAW_LINE_BREAK_FIX} — y después vuelve a sincronizar.`;
+      return `La línea ${text(d.line)} lleva dentro un salto de línea o un retorno de carro (\\r): el libro tiene finales de línea de Windows, que solo deja una edición a mano. Así no se escribe tal cual, y atlas no lo arregla solo. Conviértelo a finales LF desde la carpeta del libro, con una copia previa en ledger.jsonl.crlf (se niega si ya existe): ${RAW_LINE_BREAK_FIX}.`;
     case "archive_exists":
       return `El archivo ${text(d.archive_name)} ya existe y nunca se sobrescribe.`;
     case "ledger_missing":
@@ -495,10 +426,10 @@ export const describeError = (error: DomainError): string => {
     case "invalid_json":
       return `La línea ${text(d.line ?? "")} no es JSON válido: el fichero no es un libro de Atlas.`;
     case "duplicate_key":
-      // An annulment cannot be annulled: its only remedy, without sync, is the file itself.
+      // An annulment cannot be annulled: its only remedy is the file itself.
       return d.type === "reversal"
-        ? "Una anulación del libro repite un campo (lo deja así una edición a mano): cuenta como inválida, no anula nada y no se sincroniza. Una anulación no se puede anular: corrígela a mano en el fichero, quitando el campo repetido. Con la sincronización configurada, descártala desde lo retenido."
-        : "Una línea del libro repite un campo (lo deja así una edición a mano): se lee con el último valor, pero el evento cuenta como inválido y no se sincroniza. Anúlala (atlas delete) y registra el evento correcto; con la sincronización configurada, descártala desde lo retenido.";
+        ? "Una anulación del libro repite un campo (lo deja así una edición a mano): cuenta como inválida, no anula nada y la nube no la acepta. Una anulación no se puede anular: corrígela a mano en el fichero, quitando el campo repetido."
+        : "Una línea del libro repite un campo (lo deja así una edición a mano): se lee con el último valor, pero el evento cuenta como inválido y la nube no lo acepta. Anúlala (atlas delete) y registra el evento correcto.";
     case "invalid_envelope":
       return `El sobre de la línea no es válido: falta o sobra ${text(d.field)}.`;
     case "invalid_currency":
@@ -520,194 +451,6 @@ export const describeError = (error: DomainError): string => {
     default:
       return error.message;
   }
-};
-
-/**
- * The wash-sale window by its real name. Calling a one-year window "the
- * two-month rule" is not a wording slip: it states something fiscally false
- * next to a date that contradicts it.
- */
-const windowText = (window: unknown): string => {
-  const value = text(window);
-  if (value === "2m") {
-    return "ventana de dos meses";
-  }
-  if (value === "1y") {
-    return "ventana de un año";
-  }
-  return `ventana de ${value.slice(0, -1)} días`;
-};
-
-/** Why a control rule of the bucket could not be measured, with what is missing. */
-const gapText = (d: Record<string, unknown>): string => {
-  const missing = [
-    ...((d.assets as string[] | undefined) ?? []),
-    ...((d.currencies as string[] | undefined) ?? []),
-  ];
-  const detail = missing.length === 0 ? "" : ` (faltan ${missing.join(", ")})`;
-  switch (d.reason) {
-    case "missing_prices":
-      return `hay posiciones del cubo sin precio${detail}`;
-    case "no_contribution":
-      return "todavía no hay aporte bruto al cubo sobre el que medir";
-    case "partial_net_worth":
-      return `el patrimonio total es parcial${detail}`;
-    default:
-      return "el patrimonio total no es positivo";
-  }
-};
-
-/**
- * Spanish text of a projection warning. The domain speaks English and the CLI
- * translates the `code` (see `errors.ts`); an unknown code falls back to the
- * message, so a warning added later is never swallowed.
- */
-export const describeWarning = (warning: Warning): string => {
-  const d = warning.details;
-  switch (warning.code) {
-    case "unknown_target_weight":
-      return `El peso objetivo de ${text(d.asset_id)} no corresponde a ningún activo del núcleo: revisa si el asset_id está mal escrito.`;
-    case "asset_without_target":
-      return `${text(d.asset_id)} tiene posición y ningún peso objetivo asignado.`;
-    case "deviation_above_threshold":
-      return `${text(d.asset_id)} se desvía ${text(d.deviation_pp)} pp del objetivo (umbral ${text(d.threshold_pp)} pp). El rebalanceo por venta es decisión anual tuya (regla 3).`;
-    case "satellite_below_minimum":
-      return `La clase satélite ${text(d.asset_class)} pesa ${text(d.weight_pct)} %, por debajo del mínimo de ${text(d.minimum_pct)} % (regla 6b: 0 % o al menos el mínimo).`;
-    case "partial_core_total":
-      return `Faltan precios de ${(d.assets as string[]).join(", ")} a ${text(d.date)}: no se calculan pesos sobre un total parcial.`;
-    case "stale_fx_rate":
-      return d.source === "ecb"
-        ? `El tipo de cambio aplicado a ${text(d.currency)} es el del histórico del BCE del ${text(d.date)}, de hace ${text(d.age_days)} días; actualízalo con \`atlas fx update\`.`
-        : `El tipo de cambio aplicado a ${text(d.currency)} es de ${text(d.age_days)} días atrás (${text(d.date)}); registra una operación o una valoración más reciente en esa divisa.`;
-    case "transfer_overdue":
-      return `El traspaso ${text(d.request_id)} (${text(d.from_asset_id)} → ${text(d.to_asset_id)}) lleva ${text(d.days_open)} días abierto, más de los ${text(d.max_days)} configurados, y sigue en etapa "${text(d.stage)}". Reclama a la gestora: mientras dure, el dinero no está invertido ni en el origen ni en el destino.`;
-    case "partial_bucket_total":
-      return `Faltan precios de ${(d.assets as string[]).join(", ")} a ${text(d.date)}: el total del cubo solo cubre lo que sí tiene precio.`;
-    case "partial_net_worth":
-      return `El patrimonio a ${text(d.date)} es parcial: faltan ${[...(d.assets as string[]), ...(d.currencies as string[])].join(", ")}.`;
-    case "bucket_sample_too_small":
-      return `Solo ${text(d.closed_theses)} tesis cerradas y ${text(d.realized_operations)} operaciones realizadas (ventas y realizaciones por evento corporativo): por debajo de ${text(d.sample)} operaciones la muestra no distingue habilidad de suerte.`;
-    case "bucket_contaminated_theses":
-      return `${(d.theses as string[]).length} tesis quedan fuera de las medias (${(d.theses as string[]).join(", ")}): sus ventas consumieron lotes comprados por otra tesis (FIFO global, ADR-0009).`;
-    case "bucket_contribution_exceeded":
-      return `El aporte bruto al cubo (${text(d.gross_eur)} EUR) supera el tope de ${text(d.limit_eur)} EUR (regla 17). Las retiradas no devuelven margen: la regla 19 prohíbe reponer el cubo.`;
-    case "bucket_contribution_near_limit":
-      return `El aporte bruto al cubo (${text(d.gross_eur)} EUR) pasa del 80 % del tope de ${text(d.limit_eur)} EUR (regla 17).`;
-    case "bucket_stop_loss_reached":
-      return `REGLA DE PARADA: la pérdida acumulada del cubo (${text(d.loss_eur)} EUR) es el ${text(d.loss_pct)} % del aporte bruto (${text(d.gross_eur)} EUR), por encima del ${text(d.limit_pct)} % configurado (regla 17). La app avisa; la decisión es tuya.`;
-    case "bucket_stop_loss_not_evaluated":
-      return `La regla de parada (${text(d.limit_pct)} %) no se ha podido evaluar: ${gapText(d)}. Sin ese dato no hay control de pérdida acumulada, no es que no la haya (regla 17).`;
-    case "bucket_weight_not_evaluated":
-      return `La regla de peso (${text(d.limit_pct)} %) no se ha podido evaluar: ${gapText(d)}. Sin ese dato no hay control de peso del cubo, no es que esté dentro (regla 18).`;
-    case "bucket_weight_exceeded":
-      return `El cubo pesa el ${text(d.weight_pct)} % del patrimonio total, por encima del ${text(d.limit_pct)} % configurado (regla 18): valora traspasar el exceso al núcleo.`;
-    case "missing_benchmark_asset":
-      return "No hay índice de referencia configurado: fíjalo con `atlas settings set --bucket-benchmark-asset <asset_id>` (regla 16).";
-    case "unknown_benchmark_asset":
-      return `El índice de referencia ${text(d.asset_id)} no está en el catálogo: la comparación queda sin dato.`;
-    case "missing_benchmark_price":
-      return `Falta el precio del índice ${text(d.asset_id)} a ${text(d.date)}: la comparación queda sin dato (nunca se estima).`;
-    case "weights_use_approximation":
-      return `Los pesos de ${(d.assets as string[]).join(", ")} se apoyan en una aproximación por su ETF de referencia, no en un valor liquidativo: el reparto de la aportación depende de una estimación.`;
-    case "price_without_eur_value":
-      return `${text(d.asset_id)}: la cotización en ${text(d.currency)} del ${text(d.date)} no tiene tipo del BCE (${fxMissingText(d.reason)}); se enseña en su divisa y falta su valor en euros, así que no suma en ningún total.`;
-    case "stale_price":
-      return `${text(d.asset_id)}: el precio es de ${text(d.age_days)} días atrás (${text(d.date)}); registra una valoración más reciente.`;
-    case "currency_mismatch":
-      return `El evento está en ${text(d.currency)} y el activo ${text(d.asset_id)} está en ${text(d.asset_currency)}.`;
-    case "fx_rate_date_after_fiscal_date":
-      return `fx_rate_date (${text(d.fx_rate_date)}) es posterior a la fecha fiscal (${text(d.fiscal_date)}).`;
-    case "same_asset_two_accounts":
-      return `El activo ${text(d.asset_id)} está ahora en ${(d.accounts as string[]).length} cuentas; el FIFO sigue siendo global.`;
-    case "transfer_not_between_funds":
-      return `Un traspaso entre ${text(d.from_asset_id)} y ${text(d.to_asset_id)} no difiere impuestos: ${text(d.asset_id)} no es un fondo. Hacienda lo trata como una venta y una compra; regístralo así (transfer_not_between_funds).`;
-    case "transfer_not_resident":
-      return `Un traspaso se registró con tax_residence ${text(d.tax_residence)}: sin residencia en España no hay diferimiento; regístralo como venta y compra (transfer_not_resident).`;
-    case "transferable_not_fund":
-      return `El activo ${text(d.asset_id)} es de tipo ${text(d.asset_type)} y está marcado como traspasable: el diferimiento solo existe entre fondos, así que esa marca no tiene efecto.`;
-    case "sell_without_thesis":
-      return `La venta de ${text(d.asset_id)} en ${text(d.account_id)} no está enlazada a ninguna tesis.`;
-    case "thesis_size_exceeded":
-      return `La tesis ${text(d.thesis_id)} lleva ${text(d.invested_eur)} EUR invertidos, por encima de los ${text(d.planned_size_eur)} EUR previstos.`;
-    case "wash_sale_window_repurchase":
-      return `Compra del ${text(d.buy_date)} de ${text(d.buy_quantity)} títulos de ${text(d.asset_id)} dentro de la ventana de su venta con pérdida del ${text(d.sale_date)} (${text(d.loss_eur)} EUR; ${windowText(d.window)}, hasta el ${text(d.window_end)}): puede hacer que esa pérdida no sea computable en ${text(d.tax_year)}. Cuánto difiere, lo dice \`atlas tax ${text(d.tax_year)}\` (business-rules.md §5.4).`;
-    case "wash_sale_window_prior_buy":
-      return `Venta con pérdida de ${text(d.asset_id)} del ${text(d.sale_date)} (${text(d.loss_eur)} EUR) cuando siguen en cartera ${text(d.held_quantity)} títulos de una compra del ${text(d.buy_date)}, dentro de la ventana abierta el ${text(d.window_start)} (${windowText(d.window)}): la pérdida puede no ser computable en ${text(d.tax_year)}. Cuánto, lo dice \`atlas tax ${text(d.tax_year)}\` (business-rules.md §5.4).`;
-    case "swap_fiscal_dates_differ":
-      return `En la permuta, ${text(d.from_asset_id)} tiene fecha fiscal ${text(d.fiscal_date_out)} y ${text(d.to_asset_id)} la tiene ${text(d.fiscal_date_in)}: la transmisión y la adquisición caen en días distintos porque sus tipos de activo usan reglas distintas (ADR-0013).`;
-    case "tax_quota_not_computed":
-      return "Esto es la BASE del ahorro, no la cuota ni lo que se paga: el mínimo personal, la base general y el tipo medio efectivo no están en el libro.";
-    case "tax_double_taxation_partial":
-      return "Doble imposición: solo se calcula el primer límite (impuesto extranjero limitado al tipo del convenio). El segundo (tipo medio efectivo) exige la declaración entera; y lo que no se deduce se pierde, no hay arrastre.";
-    case "tax_treaty_rate_missing":
-      return `No hay tipo de convenio configurado para ${text(d.country)}: no se calcula deducción por los ${text(d.foreign_tax_eur)} EUR retenidos. Fíjalo con \`atlas settings set --treaty-withholding-pct ${text(d.country)}=<tipo>\`.`;
-    case "tax_dividend_without_country":
-      return `El dividendo no dice qué país lo pagó (source_country): no se calcula deducción por los ${text(d.foreign_tax_eur)} EUR retenidos en origen.`;
-    case "tax_fx_differences_not_computed":
-      return `Las diferencias de cambio del efectivo en divisa (${((d.currencies as string[] | undefined) ?? []).join(", ")}) NO se calculan: criterio #4, en disputa, sin lotes de divisa. Cambios de divisa del ejercicio: ${((d.fx_exchanges as string[] | undefined) ?? []).join(", ") || "ninguno"}.`;
-    case "tax_in_kind_income_not_integrated":
-      return `Renta en especie registrada (${text(d.income_eur)} EUR, base ${text(d.base) === "general" ? "general" : "del ahorro"}) y NO integrada: el criterio vigente (#8) no declara nada al recibirla.`;
-    case "tax_fx_rate_finding":
-      return `Esta línea depende de un tipo del BCE que no es el oficial de su fecha (${(d.codes as string[]).join(", ")}; eventos ${(d.events as string[]).join(", ")}). La cifra se calcula con el tipo del libro; si está mal, corrígelo anulando y registrando de nuevo (criterio 25), y compruébalo antes de declarar.`;
-    case "tax_fx_rate_unverified":
-      return `Esta línea depende de un tipo del BCE que el histórico no ha podido contrastar (${(d.codes as string[]).join(", ")}; eventos ${(d.events as string[]).join(", ")}): no se dice si es bueno ni malo. La cifra se calcula con el tipo del libro (criterio 25).`;
-    case "tax_fx_rate_date_after_fiscal_date":
-      return `Esta línea depende de un tipo del BCE fechado después de su fecha fiscal (eventos ${(d.events as string[]).join(", ")}). La cifra se calcula con el tipo del libro; el aplicable es el último publicado en o antes de la fecha fiscal (criterio 25).`;
-    case "tax_window_open":
-      return `La pérdida de ${text(d.asset_id)} (${text(d.loss_eur)} EUR) es PROVISIONAL: su ventana de recompra sigue abierta hasta el ${text(d.window_end)} y una compra antes de esa fecha la diferiría.`;
-    case "tax_neutrality_contradiction":
-      return `El evento corporativo (${text(d.kind)}) dice que NO se acoge al régimen de neutralidad y aun así se registró conservando fecha y coste: si no hay régimen, es una permuta sujeta y falta su ganancia.`;
-    case "tax_loss_expires":
-      return `CADUCA al cierre de este ejercicio un saldo negativo de ${text(d.origin_year)} (${text(d.category) === "capital_gain" ? "ganancias y pérdidas patrimoniales" : "rendimientos del capital mobiliario"}) de ${text(d.amount_eur)} EUR que no ha podido compensarse.`;
-    case "tax_release_category_differs":
-      return `Se liberan aquí ${text(d.amount_eur)} EUR diferidos de una pérdida de la otra categoría de renta: se integran donde nació la pérdida.`;
-    case "tax_duplicate_isin":
-      return `El ISIN ${text(d.isin)} lo comparten ${((d.assets as string[] | undefined) ?? []).join(", ")}: para Hacienda son el mismo valor, y la regla de recompra y el FIFO de este informe los tratan como distintos. Sus cifras pueden estar mal: registra ese valor en un solo activo (\`atlas check\`).`;
-    case "tax_settings_default_used":
-      return `Parámetros fiscales que no están en el libro y se han tomado del código (ADR-0022): ${((d.fields as string[] | undefined) ?? []).join(", ")}. El próximo \`atlas settings set\` los dejará fijados.`;
-    case "tax_boxes_missing_year":
-      return `Las casillas de ${text(d.year)} no están comprobadas en un formulario oficial: los importes salen por conceptos, sin número de casilla. Nunca se usa la casilla de otro ejercicio.`;
-    case "tax_box_missing":
-      return `Sin casilla en el formulario de ${text(d.year)}: ${listOf(d.concepts)}. Esos importes salen por concepto y sin número.`;
-    case "tax_box_value_missing":
-      return `Falta en tus datos lo que piden estas casillas: ${listOf(d.boxes)}. El libro no guarda el NIF de un tercero y aquí no se inventa ninguno.`;
-    case "tax_box_partial":
-      return `${PARTIAL_BOX[text(d.reason)] ?? warning.message} (casillas ${listOf(d.boxes)}).`;
-    case "tax_box_rounding_differs":
-      return `El formulario redondea cada valor y hace él mismo la resta: en ${listOf(d.boxes)} sale un céntimo distinto del que calcula el motor. Se enseñan los dos.`;
-    case "tax_box_repurchase_has_no_number":
-      return "La parte de una pérdida que no es computable por recompra se marca en la ventana de captura de Renta WEB: no tiene casilla con número.";
-    case "informative_current_year":
-      return `El modelo va de lo que hay a 31/12 y ese día no ha llegado: esto es el estado a ${text(d.as_of)}, sin veredicto.`;
-    case "informative_model_did_not_exist":
-      return `El modelo ${text(d.model)} no existía en ${text(d.year)}: no hay nada que presentar por ese ejercicio (existe desde ${text(d.first_year)}).`;
-    case "informative_domestic_accounts_left_out":
-      return `Quedan fuera las cuentas registradas en España (${listOf(d.accounts)}) aunque lo que tengan sea extranjero: ante el registro el titular es la comercializadora (business-rules.md §5.8).`;
-    case "informative_account_changed_country":
-      return `Alguna cuenta ha cambiado de país (${listOf(d.accounts)}): cuenta el país que tenía a 31/12, tomado del día en que se registró cada cambio.`;
-    case "informative_crypto_custody_unknown":
-      return "Se cuenta todo lo que hay en cuentas extranjeras; si alguna es de autocustodia, no entraría. El libro no distingue las dos cosas.";
-    case "informative_criteria_not_numbered":
-      return "El método del saldo medio del trimestre y la clasificación de ETF, ETC y ETP se apoyan en criterios que la dirección todavía no ha numerado (fichas F3 y F4).";
-    case "thesis_closed_with_position":
-      return `La tesis ${text(d.thesis_id)} está cerrada pero ${text(d.account_id)} sigue teniendo ${text(d.asset_id)} (${text(d.position)}).`;
-    default:
-      return warning.message;
-  }
-};
-
-/** A list of codes or box numbers, as the message prints them. */
-const listOf = (value: unknown): string =>
-  ((Array.isArray(value) ? value : [value]) as unknown[]).map((entry) => text(entry)).join(", ");
-
-/** Why a box of the return is not the whole of what the form will hold. */
-const PARTIAL_BOX: Record<string, string> = {
-  reductions_unknown:
-    "La base liquidable resta dos remanentes de reducciones que no están en el libro: se da la base imponible y no el importe de la casilla",
-  treaty_limit_only:
-    "La deducción por doble imposición es la menor de dos límites y el motor solo conoce el primero: se da ese, nunca como importe de la casilla",
-  ledger_withholdings_only:
-    "Solo se cuentan las retenciones que constan en el libro, que no tienen por qué ser todas",
 };
 
 export const describeDuplicate = (error: DuplicateFingerprintError): string =>

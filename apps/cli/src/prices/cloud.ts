@@ -28,14 +28,14 @@ import { folderOf } from "./load.js";
 /** Where the prices of a folder come from. */
 export type PriceOrigin =
   /** A local folder: the sources, with the whole plans. */
-  | { readonly kind: "unsynced" }
+  | { readonly kind: "local" }
   | { readonly kind: "cloud"; readonly origin: string; readonly token: string }
   /** A cloud folder whose session cannot be used: said, never falling to the sources. */
   | { readonly kind: "refused"; readonly message: string };
 
 export const priceOriginOf = async (ctx: Context): Promise<PriceOrigin> => {
   if (ctx.mode.kind !== "cloud") {
-    return { kind: "unsynced" };
+    return { kind: "local" };
   }
   const session = await sessionOf(ctx, ctx.remote ?? systemRemote(), ctx.mode.remote);
   if (session.kind === "missing") {

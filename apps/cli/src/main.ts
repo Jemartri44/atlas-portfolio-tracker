@@ -12,103 +12,15 @@ import { DomainError, type UseCaseDeps } from "@atlas/domain";
 import type { FxRateSource } from "@atlas/domain/ecb";
 import type { AdminAccess } from "./admin/environment.js";
 import { booleanFlag, parseArgs, stringFlag, UsageError } from "./args.js";
-import { addCommand } from "./commands/add.js";
-import { adminCommand } from "./commands/admin.js";
-import { backupCommand } from "./commands/backup.js";
-import { bucketCommand, netWorthCommand } from "./commands/bucket.js";
-import { accountCommand, assetCommand, settingsCommand } from "./commands/catalogue.js";
-import { compactCommand } from "./commands/compact.js";
-import { corporateActionCommand } from "./commands/corporate-actions.js";
-import { draftCommand, pendingDraftsNote } from "./commands/draft.js";
-import { exportCommand } from "./commands/export.js";
-import { filedCommand } from "./commands/filed.js";
-import { fxCommand } from "./commands/fx.js";
-import { m720Command, m721Command } from "./commands/informative.js";
-import { lockCommand } from "./commands/lock.js";
-import { contributeCommand, costsCommand, weightsCommand } from "./commands/portfolio.js";
-import { pricesCommand } from "./commands/prices.js";
-import {
-  cashCommand,
-  checkCommand,
-  gainsCommand,
-  incomeCommand,
-  lotsCommand,
-  positionsCommand,
-  valuationsCommand,
-} from "./commands/query.js";
-import { deleteCommand, editCommand } from "./commands/rectify.js";
-import { remoteCommand } from "./commands/remote.js";
-import { synthCommand } from "./commands/synth.js";
-import { taxCommand } from "./commands/tax.js";
-import { thesisCommand } from "./commands/thesis.js";
-import { orderCommand, transferCommand } from "./commands/tracking.js";
-import {
-  type Command,
-  CommandFailure,
-  type Context,
-  EXIT,
-  type Io,
-  type PromptOptions,
-} from "./context.js";
-import {
-  CloudLedgerStore,
-  type FolderMode,
-  looksAtMode,
-  resolveFolderMode,
-} from "./folder-mode.js";
+import { pendingDraftsNote } from "./commands/draft.js";
+import { type Context, EXIT, type Io, type PromptOptions } from "./context.js";
+import { CloudLedgerStore, type FolderMode, resolveFolderMode } from "./folder-mode.js";
 import { askWithoutEcho } from "./output/secret-prompt.js";
 import type { PriceEnvironment } from "./prices/load.js";
+import { assertArity, COMMANDS } from "./registry.js";
 import type { RemoteEnvironment } from "./remote/environment.js";
 import { reportError } from "./report.js";
-import { assertArity, USAGE } from "./usage.js";
-
-/** `atlas sync` is gone (ADR-0035): there is no queue and no path between a local ledger and the cloud. */
-const syncRetiredCommand: Command = async () => {
-  throw new CommandFailure(EXIT.usage, "command_retired", [
-    "Error: `atlas sync` se ha retirado (ADR-0035): el libro de la nube es la única fuente de verdad y no hay cola ni sincronización. Para empezar en la nube: `atlas remote login` en una carpeta nueva y `atlas remote upload --from <ledger.jsonl>` sobre una nube vacía. Para bajar una copia: `atlas backup --to <directorio>`.",
-  ]);
-};
-
-export const COMMANDS: Record<string, Command> = {
-  account: accountCommand,
-  asset: assetCommand,
-  settings: settingsCommand,
-  add: addCommand,
-  order: orderCommand,
-  transfer: transferCommand,
-  transfers: transferCommand,
-  ca: corporateActionCommand,
-  thesis: thesisCommand,
-  valuations: valuationsCommand,
-  edit: editCommand,
-  delete: deleteCommand,
-  positions: positionsCommand,
-  networth: netWorthCommand,
-  bucket: bucketCommand,
-  weights: weightsCommand,
-  contribute: contributeCommand,
-  costs: costsCommand,
-  lots: lotsCommand,
-  cash: cashCommand,
-  gains: gainsCommand,
-  income: incomeCommand,
-  tax: taxCommand,
-  filed: filedCommand,
-  m720: m720Command,
-  m721: m721Command,
-  check: checkCommand,
-  export: exportCommand,
-  synth: synthCommand,
-  compact: compactCommand,
-  backup: backupCommand,
-  lock: lockCommand,
-  fx: fxCommand,
-  draft: draftCommand,
-  prices: pricesCommand,
-  remote: remoteCommand,
-  admin: adminCommand,
-  sync: syncRetiredCommand,
-};
+import { USAGE } from "./usage.js";
 
 const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   store: new FileLedgerStore(ledgerPath),
@@ -271,9 +183,10 @@ const dispatch = async (
   }
   // Cloud folder or local folder, before anything reads or writes the ledger
   // (ADR-0035, §4): both at once is refused here.
-  const mode: FolderMode = looksAtMode(positionals)
-    ? await resolveFolderMode(ledgerPath)
-    : { kind: "local" };
+  const mode: FolderMode =
+    command.looksAtMode?.(positionals) === false
+      ? { kind: "local" }
+      : await resolveFolderMode(ledgerPath);
   const base = compose(ledgerPath);
   const ctx: Context = {
     deps:
@@ -302,7 +215,7 @@ const dispatch = async (
     invocation.remindAt = ledgerPath;
   }
   await sweepTemporaries(io, ledgerPath);
-  return await command(ctx, positionals, flags);
+  return await command.run(ctx, positionals, flags);
 };
 
 /**
@@ -313,19 +226,11 @@ const dispatch = async (
 const sweepTemporaries = async (io: Io, ledgerPath: string): Promise<void> => {
   try {
     const removed = await sweepOrphanTemporaries(ledgerPath);
-    // Said as it is: a temporary of the ledger means the
-    // ledger was not replaced; one of `sync/` means a sync was cut, and the
-    // ledger may have been rewritten already — the next sync recognises it.
-    const ledger = removed.filter((name) => !name.startsWith("sync"));
-    const sync = removed.filter((name) => name.startsWith("sync"));
-    if (ledger.length > 0) {
+    // A temporary is what a write leaves when it dies before its rename: the file it was for was
+    // not replaced.
+    if (removed.length > 0) {
       io.err(
-        `Se ${ledger.length === 1 ? "ha quitado un fichero temporal" : `han quitado ${ledger.length} ficheros temporales`} de una escritura interrumpida (${ledger.join(", ")}): el libro no se había tocado.`,
-      );
-    }
-    if (sync.length > 0) {
-      io.err(
-        `Se ${sync.length === 1 ? "ha quitado un fichero temporal" : `han quitado ${sync.length} ficheros temporales`} de una sincronización interrumpida (${sync.join(", ")}): el libro pudo quedar ya reescrito, y la próxima sincronización lo reconoce sin perder nada.`,
+        `Se ${removed.length === 1 ? "ha quitado un fichero temporal" : `han quitado ${removed.length} ficheros temporales`} de una escritura interrumpida (${removed.join(", ")}): el libro no se había tocado.`,
       );
     }
   } catch {

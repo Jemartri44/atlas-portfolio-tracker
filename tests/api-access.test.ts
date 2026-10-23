@@ -409,12 +409,11 @@ describe("architecture (015): the administration is out of reach of the API (E5)
    */
   it("uses no token of a device: it imports neither the credentials nor the client of the API", () => {
     const roots = cliSources().filter((file) =>
-      /[/\\](admin[/\\][^/\\]+|commands[/\\](admin|admin-secrets|backup|backup-copies))\.ts$/.test(
-        file,
-      ),
+      /[/\\](admin[/\\][^/\\]+|commands[/\\](backup|backup-copies))\.ts$/.test(file),
     );
-    // `admin/secrets.ts`, `commands/admin-secrets.ts` and `admin/clients.ts` join the others.
-    expect(roots.length).toBe(7);
+    // `src/admin/` (3) and `src/commands/admin/` (6: the dispatcher, devices, ledger, prices-push,
+    // secrets and the confirmation) join `backup` and `backup-copies`.
+    expect(roots.length).toBe(11);
     // What they import, by name: never the credentials or the client of the
     // console, and from the barrel of the adapters only the folder's own.
     const imported = roots.flatMap((file) =>

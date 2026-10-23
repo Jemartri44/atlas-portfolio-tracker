@@ -8,7 +8,7 @@ import { join } from "node:path";
 import { DEFAULT_SETTINGS, encodeLine, type LedgerEvent } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { EXIT } from "../../src/context.js";
-import { COMMANDS } from "../../src/main.js";
+import { COMMANDS } from "../../src/registry.js";
 import { harness, seed } from "../harness.js";
 
 /** Enough configuration for `contribute` to have something to answer. */
