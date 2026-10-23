@@ -238,6 +238,9 @@ const dispatch = async (
   }
   assertArity(positionals);
   const ledgerPath = stringFlag(flags, "ledger") ?? "./ledger.jsonl";
+  if (ledgerPath === "") {
+    throw new UsageError("--ledger necesita una ruta (¿una variable de shell sin definir?)");
+  }
   // Cloud folder or local folder, before anything reads or writes the ledger
   // (ADR-0035, §4): both at once is refused here.
   const mode: FolderMode = looksAtMode(positionals)

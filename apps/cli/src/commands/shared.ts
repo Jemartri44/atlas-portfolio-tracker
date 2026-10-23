@@ -262,14 +262,20 @@ export const render = (ctx: Context, data: unknown, text: string): void => {
  * (data-schema.md §7).
  */
 export const loadForQuery = async (ctx: Context, asOf?: CivilDate): Promise<ProjectedLedger> => {
-  // A path that is not there reads as an empty ledger, which is right for a first write and wrong
-  // for a view: a mistyped `--ledger` or the wrong folder would answer «nothing» as if it were true.
+  await warnIfLedgerMissing(ctx);
+  return loadForRecording(ctx, asOf);
+};
+
+/**
+ * A path that is not there reads as an empty ledger, which is right for a first write and wrong
+ * for a view: a mistyped `--ledger` or the wrong folder would answer «nothing» as if it were true.
+ */
+export const warnIfLedgerMissing = async (ctx: Context): Promise<void> => {
   if (ctx.deps.store instanceof FileLedgerStore && !(await pathExists(ctx.ledgerPath))) {
     ctx.io.err(
       `Aviso: no existe el libro ${ctx.ledgerPath}: se lee como un libro vacío. Si no es lo que esperabas, indica el libro con --ledger <ruta>.`,
     );
   }
-  return loadForRecording(ctx, asOf);
 };
 
 /** The same degraded read, for an order that is about to write: a ledger begins with its first write. */

@@ -91,6 +91,22 @@ describe("a view of a ledger that is not there", () => {
     expect(quiet.err).toEqual([]);
   });
 
+  it("says it for check and tax too, which would otherwise call it «sin hallazgos» and a base of 0", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "atlas-missing-"));
+    const missing = join(dir, "typo.jsonl");
+    for (const command of [["check"], ["tax", "2026"]]) {
+      const read = capture();
+      expect(await run(["--ledger", missing, ...command], read.io)).toBe(0);
+      expect(read.err.join("\n")).toContain(`no existe el libro ${missing}`);
+    }
+  });
+
+  it("refuses an empty --ledger, as a shell variable that was never set leaves it", async () => {
+    const read = capture();
+    expect(await run(["--ledger", "", "positions"], read.io)).toBe(64);
+    expect(read.err.join("\n")).toContain("--ledger necesita una ruta");
+  });
+
   it("does not say it before a first write, which is how a ledger begins", async () => {
     const dir = await mkdtemp(join(tmpdir(), "atlas-missing-"));
     const first = capture();

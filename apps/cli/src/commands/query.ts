@@ -25,7 +25,15 @@ import { day, describeEcbFinding } from "../output/ecb.js";
 import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
 import { ratesOf } from "./rates.js";
-import { dateFlag, loadForQuery, originOf, render, renderQuery, yearArgument } from "./shared.js";
+import {
+  dateFlag,
+  loadForQuery,
+  originOf,
+  render,
+  renderQuery,
+  warnIfLedgerMissing,
+  yearArgument,
+} from "./shared.js";
 
 const yearOf = (positionals: string[], usage: string): number => {
   const year = yearArgument(positionals[1]);
@@ -386,6 +394,7 @@ export const checkCommand = async (
   let state: LedgerState | undefined;
   let rates: RateCheck | undefined;
   try {
+    await warnIfLedgerMissing(ctx);
     const loaded = await loadAndProject(ctx.deps, { collectErrors: true });
     state = loaded.state;
     const { events, lines } = loaded;
