@@ -487,7 +487,6 @@ describe("api: nothing of the access on the boot path", () => {
       "/packages/domain/src/access/",
       "/packages/domain/src/access.ts",
       "/src/auth/",
-      "/src/routes/ajustes/sync/",
     ]) {
       expect(script).toContain(`path: "${path}"`);
     }

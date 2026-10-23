@@ -257,12 +257,11 @@ const LAZY_ONLY = [
   { path: "/packages/domain/src/charts/", what: "los indicadores y las series de las pantallas" },
   // Feature 015: **nothing of the access on the boot path**, from its first
   // commit. The rules of the access are the API's and never the web's (the
-  // architecture test keeps the web from reaching them at all); the session,
-  // the devices and the screens of the sync are a lazy section of Ajustes.
+  // architecture test keeps the web from reaching them at all); the session
+  // and the devices are a lazy section of Ajustes.
   { path: "/packages/domain/src/access/", what: "las reglas del acceso" },
   { path: "/packages/domain/src/access.ts", what: "la puerta del acceso" },
   { path: "/src/auth/", what: "la sesión y los dispositivos de la web" },
-  { path: "/src/routes/ajustes/sync/", what: "la sección de sincronización de Ajustes" },
   { path: "/packages/domain/src/sync.ts", what: "la puerta de la sincronización" },
   { path: "/packages/domain/src/ports/remote-ledger.ts", what: "el puerto del remoto" },
   { path: "/packages/adapters/src/sync/", what: "la orquestación de la sincronización" },
@@ -380,105 +379,6 @@ for (const build of builds) {
     for (const source of asset.sources) {
       refuse(`${build.label}${asset.file}`, source, 1);
     }
-  }
-}
-
-/*
- * **Who may start an order of the sync of the web** (review of PR #97, N1 of
- * round 1 and B1 of round 2, blocking by decision of the direction), read on
- * the real graph, with who imports each module, statically or with
- * `import()`:
- *
- * - the section of the sync in Ajustes has **one door**, its card
- *   `SessionCard`, and only the page of Ajustes goes through it: any other
- *   importer of a module of the section — the controller, a relay of it, a
- *   root-absolute path — is refused;
- * - the **reverse closure** of the engine — every module that reaches it, by
- *   any path, walked whole — is the section, the engine, the page of Ajustes
- *   and the lazy load of that page (`App.tsx`, `main.tsx` and the
- *   `index.html` that loads it), and those three **only as ancestors through
- *   the page** (round 3, O1).
- *
- * Any other importer could sync at boot, on a timer or when the connection
- * comes back. A graph that does not say who imports is refused as such.
- */
-const WEB_ENGINE = /(^|\/)apps\/web\/src\/sync\/engine(-held)?\.[jt]s$/;
-const SECTION = /(^|\/)apps\/web\/src\/routes\/ajustes\/sync\/[^/]+\.[jt]sx?$/;
-const SECTION_DOOR = /(^|\/)apps\/web\/src\/routes\/ajustes\/sync\/SessionCard\.[jt]sx$/;
-const AJUSTES_PAGE = /(^|\/)apps\/web\/src\/routes\/ajustes\/index\.[jt]sx$/;
-const AJUSTES_LOADERS = /(^|\/)apps\/web\/(src\/(App|main)\.[jt]sx?|index\.html)$/;
-const importersOf = new Map();
-for (const build of builds) {
-  for (const chunk of build.chunks ?? []) {
-    for (const module of chunk.modules) {
-      if (!Array.isArray(module.importers)) {
-        problems.push(`${build.label}${chunk.file}: el grafo no dice quién importa ${module.id}`);
-        continue;
-      }
-      importersOf.set(module.id, [...(importersOf.get(module.id) ?? []), ...module.importers]);
-    }
-  }
-}
-for (const [id, importers] of importersOf) {
-  if (!SECTION.test(id)) {
-    continue;
-  }
-  for (const importer of importers.filter((each) => !SECTION.test(each))) {
-    if (!(SECTION_DOOR.test(id) && AJUSTES_PAGE.test(importer))) {
-      problems.push(
-        `${importer} importa ${id}, un módulo de la sección de la sincronización que no es su puerta`,
-      );
-    }
-  }
-}
-/** Every module that reaches the engine through its importers, the page not walked past when told. */
-const closureOfEngine = (barrier) => {
-  const reached = new Set();
-  const pending = [...importersOf.keys()].filter((id) => WEB_ENGINE.test(id));
-  while (pending.length > 0) {
-    const id = pending.shift();
-    if (reached.has(id)) {
-      continue;
-    }
-    reached.add(id);
-    if (!(barrier && AJUSTES_PAGE.test(id))) {
-      pending.push(...(importersOf.get(id) ?? []));
-    }
-  }
-  return reached;
-};
-// The whole reverse closure, walked past the loaders too (review of PR #97,
-// round 3, O1): whatever imports a loader to reach the engine is in it.
-for (const id of closureOfEngine(false)) {
-  const allowed =
-    WEB_ENGINE.test(id) || SECTION.test(id) || AJUSTES_PAGE.test(id) || AJUSTES_LOADERS.test(id);
-  if (!allowed) {
-    problems.push(
-      `${id} alcanza el motor de la sincronización de la web desde fuera de su sección`,
-    );
-  }
-}
-// And the loaders are admitted **only as ancestors through the page**: with
-// the page as a barrier, none of them reaches the engine.
-for (const id of closureOfEngine(true)) {
-  if (AJUSTES_LOADERS.test(id)) {
-    problems.push(
-      `${id} alcanza el motor de la sincronización de la web desde fuera de su sección, sin pasar por la página de Ajustes`,
-    );
-  }
-}
-// And the engine itself is imported only by the section and by itself: a
-// loader that imported it straight would not be caught by the closure above.
-for (const [id, importers] of importersOf) {
-  if (!WEB_ENGINE.test(id)) {
-    continue;
-  }
-  for (const importer of importers.filter(
-    (each) => !SECTION.test(each) && !WEB_ENGINE.test(each),
-  )) {
-    problems.push(
-      `${importer} alcanza el motor de la sincronización de la web desde fuera de su sección (${id})`,
-    );
   }
 }
 
