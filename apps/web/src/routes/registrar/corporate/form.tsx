@@ -33,7 +33,7 @@ import { createProblem } from "../form-problems.js";
 import { createWarned } from "../warned.js";
 import { EffectSection } from "./EffectSection.jsx";
 import { Fractions } from "./Fractions.jsx";
-import { feeLinesError, toCorporateParams } from "./params.js";
+import { feeLinesError, ratioError, toCorporateParams } from "./params.js";
 
 export default function CorporateFormRoute(): JSX.Element {
   const params = useParams<{ kind: string }>();
@@ -61,9 +61,12 @@ export default function CorporateFormRoute(): JSX.Element {
         /** What the form can tell on its own: unreadable numbers and fee lines, by field. */
         const errors = createMemo((): Record<string, string> => {
           const fees = feeLinesError(values(), catalogue);
+          const current = form();
+          const ratio = current === undefined ? undefined : ratioError(current, values());
           return {
             ...inputErrors(fields(), values()),
             ...(fees === undefined ? {} : { cash_fees: fees }),
+            ...(ratio === undefined ? {} : { ratio }),
           };
         });
         const missing = () => missingRequired({ fields: fields() } as never, values());

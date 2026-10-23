@@ -10,7 +10,7 @@ import type {
   QuoteSource,
   UnservedDays,
 } from "@atlas/domain/quotes";
-import { fxMissingText } from "./messages.js";
+import { fxMissingText } from "./warnings.js";
 
 export const SOURCE_NAMES: Record<QuoteSource, string> = {
   eodhd: "EODHD",
@@ -18,7 +18,7 @@ export const SOURCE_NAMES: Record<QuoteSource, string> = {
 };
 
 /** Manual, or the source, marked when it is an approximation through the reference ETF. */
-export const originText = (price: PriceLookup): string =>
+const originText = (price: PriceLookup): string =>
   price.origin === "manual"
     ? "manual"
     : `${SOURCE_NAMES[price.source as QuoteSource]}${price.approximate === true ? " ≈ aprox." : ""}`;

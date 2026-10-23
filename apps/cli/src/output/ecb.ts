@@ -11,6 +11,16 @@ export const day = (date: string): string =>
 export const sourceName = (source: EcbSource): string =>
   source === "zip" ? "el ZIP oficial del BCE" : "la API de datos del BCE";
 
+/** What is wrong with the stored history, by the file that does not match. */
+export const describeEcbDamage = (file: string): string =>
+  file === "manifest.json"
+    ? "reference/ecb/manifest.json no se puede leer: está cortado o alguien lo ha cambiado. No se ha usado el histórico; bórralo junto con los archivos de reference/ecb y descárgalo otra vez con `atlas fx update`."
+    : `reference/ecb/${file} no es el archivo que registra su manifiesto: alguien lo ha cambiado. No se ha usado; bórralo junto con reference/ecb/manifest.json y descárgalo otra vez con \`atlas fx update\`.`;
+
+/** The tax report goes on without the ECB check, and says so. */
+export const ecbCheckSkipped = (file: string): string =>
+  `Aviso: no se ha comprobado el histórico del BCE y el informe sigue sin esa comprobación. ${describeEcbDamage(file)}`;
+
 export const describeRejected = (
   result: Extract<EcbUpdateResult, { kind: "rejected" }>,
 ): string[] => [

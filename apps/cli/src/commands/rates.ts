@@ -13,7 +13,7 @@
 // What to propose and when to ask is the domain's; this only says it.
 
 import { dirname } from "node:path";
-import { FileEcbHistoryStore, readLocalConfig } from "@atlas/adapters";
+import { EcbHistoryDamaged, FileEcbHistoryStore, readLocalConfig } from "@atlas/adapters";
 import {
   DomainError,
   type LedgerEvent,
@@ -32,7 +32,7 @@ import {
   unpublishedRates,
 } from "@atlas/domain/ecb";
 import { ConfirmationRequired, type Context } from "../context.js";
-import { day } from "../output/ecb.js";
+import { day, ecbCheckSkipped } from "../output/ecb.js";
 import { aside } from "./shared.js";
 
 /** The history in force, or `undefined` — with the reason when there is one but it cannot be used. */
@@ -181,6 +181,11 @@ export const rateFindingsOf = async (
   } catch (error) {
     if (error instanceof DomainError) {
       // The report itself will say what is wrong with the ledger.
+      return [];
+    }
+    if (error instanceof EcbHistoryDamaged) {
+      // Taxation never depends on the check; a damaged history must not stop the report.
+      aside(ctx, ecbCheckSkipped(error.file));
       return [];
     }
     throw error;

@@ -15,7 +15,8 @@
 
 import { SecretTagsFailed } from "@atlas/adapters/aws";
 import { DomainError } from "@atlas/domain";
-import type { AdminClients } from "../admin/environment.js";
+import { translateAwsFailure } from "../../admin/clients.js";
+import type { AdminClients } from "../../admin/environment.js";
 import {
   allowListOf,
   checkedToken,
@@ -23,10 +24,11 @@ import {
   type SecretSpec,
   sessionKeyOf,
   tagsOf,
-} from "../admin/secrets.js";
-import { type Flags, UsageError } from "../args.js";
-import { ConfirmationRequired, type Context, EXIT } from "../context.js";
-import { aside, render } from "./shared.js";
+} from "../../admin/secrets.js";
+import { type Flags, UsageError } from "../../args.js";
+import { ConfirmationRequired, type Context, EXIT } from "../../context.js";
+import { aside, render } from "../shared.js";
+import { confirmEnvironment } from "./confirm.js";
 
 type Outcome = "created" | "rotated" | "skipped" | "not_for_this_environment" | "conflict";
 
@@ -53,19 +55,12 @@ const refuseValues = (positionals: readonly string[], flags: Flags): void => {
   }
 };
 
-/** What the order borrows from `atlas admin`: the confirmation and the reading of a failure of AWS. */
-interface AdminHelpers {
-  confirm(ctx: Context, environment: string, question: string): Promise<boolean>;
-  translate(error: unknown): unknown;
-}
-
 export const secretsOrder = async (
   ctx: Context,
   clients: AdminClients,
   environment: string,
   positionals: readonly string[],
   flags: Flags,
-  helpers: AdminHelpers,
 ): Promise<number> => {
   /**
    * A failure while talking to SSM says what `atlas admin` says of AWS (unavailable,
@@ -82,7 +77,7 @@ export const secretsOrder = async (
         },
       );
     }
-    const said = helpers.translate(error);
+    const said = translateAwsFailure(error);
     return said instanceof DomainError
       ? said
       : new DomainError("admin_secret_write_failed", "the parameter was not written", {
@@ -169,7 +164,7 @@ export const secretsOrder = async (
     }
     // A generated key already asked for the name of the environment.
     if (exists && spec.source !== "generated") {
-      const confirmed = await helpers.confirm(
+      const confirmed = await confirmEnvironment(
         ctx,
         environment,
         `${spec.path} ya existe y se sobrescribe: lo anterior no se puede leer de vuelta.`,

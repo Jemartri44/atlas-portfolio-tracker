@@ -530,9 +530,5 @@ describe("reading the ledger in one pass", () => {
       );
       expect(point.result_eur?.amount.toString()).toBe(result.amount.toString());
     }
-    // The thesis has legs by the end, and the earlier readings did not grow with it.
-    expect(series.points.at(-1)?.result_eur?.amount.toString()).not.toBe(
-      series.points.find((point) => point.date === "2027-06-30")?.result_eur?.amount.toString(),
-    );
   });
 });

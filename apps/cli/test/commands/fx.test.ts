@@ -191,4 +191,40 @@ describe("atlas fx", () => {
     );
     expect(wrong.code).toBe(64);
   });
+
+  it("names the manifest when the manifest is what is damaged, not a file it records", async () => {
+    const { csv, atlas, dir } = await setup();
+    await atlas(
+      sourceOf(async () => ({ bytes: csv })),
+      "fx",
+      "update",
+    );
+    await writeFile(join(dir, "reference", "ecb", "manifest.json"), "{");
+    const damaged = await atlas(
+      sourceOf(async () => ({ bytes: csv })),
+      "fx",
+      "status",
+    );
+    expect(damaged.code).toBe(1);
+    expect(damaged.text()).toContain("reference/ecb/manifest.json");
+    expect(damaged.text()).not.toContain("no es el archivo que registra su manifiesto");
+  });
+
+  it("does not block the tax report: it warns that the ECB check was skipped and goes on", async () => {
+    const { csv, atlas, dir } = await setup();
+    await atlas(
+      sourceOf(async () => ({ bytes: csv })),
+      "fx",
+      "update",
+    );
+    await writeFile(join(dir, "reference", "ecb", "eurofxref-hist.csv"), "editado");
+    const report = await atlas(
+      sourceOf(async () => ({ bytes: csv })),
+      "tax",
+      "2027",
+    );
+    expect(report.code).toBe(0);
+    expect(report.text()).toContain("no se ha comprobado el histórico del BCE");
+    expect(report.text()).toContain("atlas fx update");
+  });
 });

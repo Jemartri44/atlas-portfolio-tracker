@@ -2,7 +2,8 @@
 
 import { RemoteRejectedError, ValidationError } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
-import { describeError, describeWarning } from "../src/output/messages.js";
+import { describeError } from "../src/output/messages.js";
+import { describeWarning } from "../src/output/warnings.js";
 
 const repurchase = (window: string) =>
   describeWarning({
@@ -99,6 +100,24 @@ describe("describeError: a write the API refused", () => {
   it("still reads without a reason", () => {
     expect(refused({})).toContain("no se ha escrito nada");
   });
+
+  it.each([
+    ["seal_mismatch", "Regístrala otra vez sobre el libro actual"],
+    ["recorded_at_in_future", "Revisa la hora de este dispositivo"],
+    ["duplicate_unconfirmed", "Confírmala si de verdad son dos"],
+    ["schema_version_unsupported", "Espera a que la nube se actualice"],
+    ["domain_rejected", "Rehazla sobre el estado actual"],
+  ])("%s says what to do about it, not only its code", (code, advice) => {
+    const text = describeError(new RemoteRejectedError(code, 0, { domain_code: "x" }));
+    expect(text).toContain(`(${code}`);
+    expect(text).toContain(advice);
+  });
+
+  it("adds no advice to a code that has none", () => {
+    expect(describeError(new RemoteRejectedError("partial_write", 0))).toMatch(
+      /no se ha escrito nada\.$/,
+    );
+  });
 });
 
 describe("describeError: a write that stayed in part", () => {
@@ -109,5 +128,40 @@ describe("describeError: a write that stayed in part", () => {
     expect(partial).not.toContain("no se duplica");
     const none = describeError(new RemoteRejectedError("line_invalid", 0));
     expect(none).toContain("no se ha escrito nada");
+  });
+});
+
+describe("describeError: a field the schema refuses is said in Spanish, with what was expected", () => {
+  const refused = (message: string, details: Record<string, unknown>) =>
+    describeError(new ValidationError("invalid_field", message, details));
+
+  it("names what the field has to be, and what was received", () => {
+    const text = refused("buy: quantity is not a valid positive_decimal", {
+      type: "buy",
+      field: "quantity",
+      value: "-5",
+    });
+    expect(text).toContain("El campo quantity de buy no es válido");
+    expect(text).toContain("número decimal mayor que cero");
+    expect(text).toContain("recibido: -5");
+    expect(text).not.toContain("positive_decimal");
+  });
+
+  it.each([
+    ["swap: an asset cannot be swapped for itself", "por sí mismo"],
+    ["buy: value_date must not precede trade_date", "no puede ser anterior"],
+    ["fx_exchange: sold_currency and bought_currency must differ", "distintas"],
+    [
+      "buy: exactly one of amount or unit_price is required",
+      "exactamente uno de amount o unit_price",
+    ],
+  ])("translates «%s»", (message, sentence) => {
+    const text = refused(message, { type: "x", fields: ["amount", "unit_price"] });
+    expect(text).toContain(sentence);
+    expect(text).not.toMatch(/must|cannot|exactly one|is required/);
+  });
+
+  it("keeps the domain's own sentence for a rule it does not know", () => {
+    expect(refused("buy: something new", { type: "buy", field: "x" })).toContain("something new");
   });
 });

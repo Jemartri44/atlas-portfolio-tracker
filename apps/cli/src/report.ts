@@ -33,6 +33,7 @@ import {
   SESSION_CODES,
   UNKNOWN_OUTCOME,
 } from "./output/cloud.js";
+import { describeEcbDamage } from "./output/ecb.js";
 import { describeLock, LOCK_LOST, remedyFor } from "./output/lock.js";
 import { describeDependants, describeDuplicate, describeError } from "./output/messages.js";
 import { describeSecretsError } from "./output/prices.js";
@@ -219,11 +220,7 @@ const failureOf = async (
     );
   }
   if (error instanceof EcbHistoryDamaged) {
-    return failure(
-      EXIT.domain,
-      "ecb_history_damaged",
-      `Error: reference/ecb/${error.file} no es el archivo que registra su manifiesto: alguien lo ha cambiado. No se ha usado; bórralo junto con reference/ecb/manifest.json y descárgalo otra vez con \`atlas fx update\`.`,
-    );
+    return failure(EXIT.domain, "ecb_history_damaged", `Error: ${describeEcbDamage(error.file)}`);
   }
   if (error instanceof ExactJsonUnsupported) {
     return failure(

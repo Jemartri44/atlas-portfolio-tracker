@@ -201,7 +201,7 @@ Los obligatorios del prompt y de la constitución VII, cada uno con test propio 
 ### Bloque 4 — La consola
 
 - **FR-040**: `atlas tax <año> [--lots] [--json]`, con los apartados de la Historia 5.
-- **FR-041**: Todo código de aviso o error nuevo DEBE traducirse en la CLI (`apps/cli/src/output/messages.ts`) y en la web (`apps/web/src/format/messages/`), con todo importe dentro de la frase de la web pasando por `f.money` / `f.quantity`.
+- **FR-041**: Todo código de aviso o error nuevo DEBE traducirse en la CLI (`apps/cli/src/output/`: los errores en `messages.ts`, los avisos en `warnings.ts`) y en la web (`apps/web/src/format/messages/`), con todo importe dentro de la frase de la web pasando por `f.money` / `f.quantity`.
 
 ### Requisitos transversales
 

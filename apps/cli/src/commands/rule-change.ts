@@ -29,7 +29,7 @@ import { historyOf } from "./rates.js";
 import { answer, aside, cancelled, confirm } from "./shared.js";
 
 /** The reason written into every reversal of the chain, unless the user gives one. */
-export const CORRECTION_REASON =
+const CORRECTION_REASON =
   "Tipo del BCE de la fecha fiscal vigente, tras cambiar fiscal_date_rule (criterio 25)";
 
 const ecb = async (ctx: Context): Promise<{ history?: EcbHistory; staleDays: number }> => {
