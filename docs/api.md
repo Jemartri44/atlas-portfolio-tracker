@@ -70,7 +70,7 @@ Solo pueden cachearse los negativos que no pueden volver a valer (revocado, cadu
 | §4.5 Listar tokens y revocar uno cualquiera; leer el estado de todos los dispositivos | Sí | **No**: `403 forbidden_for_credential` |
 | §4.1 Emitir un token | Solo al final de un inicio de sesión que abre la consola (§4) | **No** |
 
-**El identificador del dispositivo sale siempre de la credencial, nunca del cuerpo** (ADR-0033, punto 6; ADR-0026, paso 7). Un campo `device_id` en el cuerpo de una petición de sincronización es `400 body_invalid`.
+**El identificador del dispositivo sale siempre de la credencial, nunca del cuerpo** (ADR-0033, punto 6; ADR-0026, paso 7). Un campo `device_id` en el cuerpo de una petición es `400 body_invalid`.
 
 ## 3. Acceso de la web (ADR-0027)
 

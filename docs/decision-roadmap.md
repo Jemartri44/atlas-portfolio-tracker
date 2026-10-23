@@ -113,7 +113,7 @@ Ninguna bloquea la Fase 1: el dominio y la CLI no dependen de nada externo. Sus 
 **Cuando la cuenta de IBKR esté abierta**
 2. **Flex Query**: Activity Flex Query en XML con *Trades*, *Cash Transactions*, *Corporate Actions*, *Transfers*, *Open Positions*; activar Flex Web Service y generar el token de solo lectura. Descargar una vez por API y dejar el XML en `~/personal/atlas/privado/statements/ibkr/`.
 
-> **La web ya no depende de la Fase 4** (ADR-0019): funciona en el dispositivo, sin servidor y sin cuenta. Lo que la Fase 4 añade es la sincronización entre dispositivos, los precios automáticos y los avisos por correo.
+> *Reemplazada por ADR-0035:* la web de la Fase 2 funcionaba sola en el dispositivo (ADR-0019); hoy es cloud-only y depende de la nube desplegada (018 y 019).
 
 **Antes de la Fase 4, no antes**
 3. **Cuenta AWS al Paid Plan** y alerta de presupuesto de 1 $ (crearla antes solo arranca el reloj de seis meses del Free Plan).
