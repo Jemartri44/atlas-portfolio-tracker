@@ -255,6 +255,22 @@ const composeDeps = (ledgerPath: string): UseCaseDeps => ({
 const promptOutput = (options: PromptOptions | undefined) =>
   options?.aside === true ? process.stderr : process.stdout;
 
+/** One line from the terminal; Ctrl-C answers with an empty one, which no question takes as a yes. */
+const askLine = async (question: string, options: PromptOptions | undefined): Promise<string> => {
+  const rl = createInterface({ input: process.stdin, output: promptOutput(options) });
+  try {
+    return (await rl.question(question)).trim();
+  } catch (error) {
+    if ((error as { code?: unknown }).code === "ABORT_ERR") {
+      promptOutput(options).write("\n");
+      return "";
+    }
+    throw error;
+  } finally {
+    rl.close();
+  }
+};
+
 export const terminalIo = (): Io => ({
   out: (text) => process.stdout.write(`${text}\n`),
   err: (text) => process.stderr.write(`${text}\n`),
@@ -262,25 +278,10 @@ export const terminalIo = (): Io => ({
     if (!process.stdin.isTTY) {
       return undefined;
     }
-    const rl = createInterface({ input: process.stdin, output: promptOutput(options) });
-    try {
-      const answer = (await rl.question(question)).trim().toLowerCase();
-      return answer === "s" || answer === "si" || answer === "sí" || answer === "y";
-    } finally {
-      rl.close();
-    }
+    const answer = (await askLine(question, options)).toLowerCase();
+    return answer === "s" || answer === "si" || answer === "sí" || answer === "y";
   },
-  ask: async (question, options) => {
-    if (!process.stdin.isTTY) {
-      return undefined;
-    }
-    const rl = createInterface({ input: process.stdin, output: promptOutput(options) });
-    try {
-      return (await rl.question(question)).trim();
-    } finally {
-      rl.close();
-    }
-  },
+  ask: async (question, options) => (process.stdin.isTTY ? askLine(question, options) : undefined),
   askSecret: (question) =>
     askWithoutEcho(question, { input: process.stdin, output: process.stdout }),
 });
