@@ -473,17 +473,14 @@ export const createHandler = (deps: HandlerDeps): Handler => {
     attemptIat: number,
   ): Promise<Outcome> => {
     const reissue = asked.reissue_device_id;
-    let device: { deviceName?: string; publishedAt?: string } | undefined;
+    let device: { deviceName?: string } | undefined;
     if (reissue !== undefined) {
       const read = await devices.read(reissue);
       const refused = reissueRefusal(read);
       if (refused !== undefined || typeof read !== "object") {
         return loginPage(refused ?? "reissue_device_missing");
       }
-      device = {
-        ...(read.device_name === undefined ? {} : { deviceName: read.device_name }),
-        ...(read.published_at === undefined ? {} : { publishedAt: read.published_at }),
-      };
+      device = read.device_name === undefined ? {} : { deviceName: read.device_name };
     }
     const code = (await signerNow()).sign(
       "console_code",
@@ -521,7 +518,6 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         200,
         reissueConfirmPage({
           deviceName: device.deviceName,
-          publishedAt: device.publishedAt,
           attemptedAt,
           next: loopback === undefined ? { code } : { loopback },
         }),
@@ -637,6 +633,9 @@ export const createHandler = (deps: HandlerDeps): Handler => {
     if ((await tokens.create(record)) === "exists") {
       return { ...fail(refusal("console_code_used")), tokenId: code.tid };
     }
+    if (how !== "token_issued" && (await settleDevice(record, nowMs)) === "lost") {
+      return { ...fail(refusal("console_renewal_conflict")), tokenId: record.token_id };
+    }
     if (how === "token_issued") {
       let created: "created" | "exists";
       try {
@@ -675,6 +674,35 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       code: how,
       tokenId: record.token_id,
     };
+  };
+
+  /**
+   * After a token is created for an existing device: of the live tokens the device ends up with
+   * when issues for it cross (two reissues, or a reissue and a renewal), the one with the greatest
+   * `token_id` stays. Each issue lists after its own create, so the greatest sees and revokes the
+   * others, and any other sees the greatest and revokes itself: no order leaves two alive.
+   */
+  const settleDevice = async (record: TokenRecord, nowMs: number): Promise<"won" | "lost"> => {
+    const others = (await tokens.list()).flatMap(({ read }) =>
+      typeof read === "object" &&
+      read.device_id === record.device_id &&
+      read.token_id !== record.token_id &&
+      tokenStatus(read, nowMs) === "active"
+        ? [read]
+        : [],
+    );
+    if (others.some((other) => other.token_id > record.token_id)) {
+      const lost = new Error("device token superseded");
+      await revokeOrMark(record, nowMs, lost);
+      if (leftAlive.has(lost)) {
+        throw lost;
+      }
+      return "lost";
+    }
+    for (const other of others) {
+      await tokens.revoke(other, nowMs);
+    }
+    return "won";
   };
 
   /**
