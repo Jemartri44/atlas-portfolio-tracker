@@ -96,16 +96,25 @@ interface SaleFacts {
   cash_leg_of_exchange: boolean;
 }
 
-/** The forced sale of a corporate action that booked this gain: same asset, same account. */
-const forcedSaleOf = (event: CorporateActionEvent, gain: RealizedGain): ForcedSaleEffect =>
-  event.effects.find(
+/**
+ * The forced sale of a corporate action that booked this gain: same asset, same
+ * account. An action may sell the same asset in the same account more than
+ * once, so `nth` says which of them: the gains of one action come in the order
+ * of its effects.
+ */
+const forcedSaleOf = (
+  event: CorporateActionEvent,
+  gain: RealizedGain,
+  nth: number,
+): ForcedSaleEffect =>
+  event.effects.filter(
     (effect) =>
       effect.op === "forced_sale" &&
       (effect.asset_id ?? event.asset_id) === gain.asset_id &&
       effect.per_account.some((entry) => entry.account_id === gain.account_id),
-  ) as ForcedSaleEffect;
+  )[nth] as ForcedSaleEffect;
 
-const saleFacts = (event: LedgerEvent, gain: RealizedGain): SaleFacts => {
+const saleFacts = (event: LedgerEvent, gain: RealizedGain, nth: number): SaleFacts => {
   if (event.type === "sell") {
     const sell = event as SellEvent;
     const gross =
@@ -137,7 +146,7 @@ const saleFacts = (event: LedgerEvent, gain: RealizedGain): SaleFacts => {
     };
   }
   const action = event as CorporateActionEvent;
-  const effect = forcedSaleOf(action, gain);
+  const effect = forcedSaleOf(action, gain, nth);
   const entry = effect.per_account.find((e) => e.account_id === gain.account_id) as {
     fee?: string;
     withholding?: string;
@@ -318,7 +327,19 @@ export const transmissionLine = (ctx: LineContext, outcome: WashSaleOutcome): Tr
     market?: string;
   };
   const account = ctx.state.accounts.get(gain.account_id) as { book: "core" | "bucket" };
-  const facts = saleFacts(event, gain);
+  // Which of the sales of the same asset in the same account this one is.
+  const nth =
+    event.type === "corporate_action"
+      ? ctx.state.gains
+          .slice(0, outcome.gain_index)
+          .filter(
+            (other) =>
+              other.event_id === gain.event_id &&
+              other.asset_id === gain.asset_id &&
+              other.account_id === gain.account_id,
+          ).length
+      : 0;
+  const facts = saleFacts(event, gain, nth);
   const criteria = new Set<CriterionId>(["3", "6"]);
   if (facts.event_type !== "forced_sale") {
     criteria.add("1");
