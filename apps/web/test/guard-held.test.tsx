@@ -12,7 +12,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { loadInto } from "../src/ledger/actions.js";
 import { type LedgerSnapshot, store } from "../src/ledger/state.js";
 import { RequireLedger } from "../src/routes/guard.jsx";
-import { goldenText } from "./helpers/golden.js";
+import { goldenLines, goldenText } from "./helpers/golden.js";
 import { MemoryBlob } from "./helpers/memory-blob.js";
 
 let now = new Date("2029-07-01T10:00:00.000Z");
@@ -22,7 +22,8 @@ const depsOf = (text: string): UseCaseDeps => ({
   clock: { now: () => now },
   random: (target) => target.fill(7),
 });
-const other = (): string => `${goldenText()}`.split("\n").slice(0, -2).join("\n").concat("\n");
+/** The golden ledger without its last event: another ledger, with another etag. */
+const other = (): string => goldenText().split("\n").slice(0, -2).join("\n").concat("\n");
 
 /** A screen that counts how many times it was painted and keeps the ledger it was given. */
 const mount = (): {
@@ -73,7 +74,7 @@ describe("the gate while a write is in flight", () => {
     expect(arrived).not.toBe(first);
     expect(screen.mounts()).toBe(1);
     expect(screen.seen()?.etag).toBe(arrived);
-    expect(screen.seen()?.events.length).toBe(store.snapshot()?.events.length);
+    expect(screen.seen()?.events.length).toBe(goldenLines().length - 1);
 
     // The same ledger read again, in silence: nothing to paint.
     await loadInto({ deps: depsOf(other()), source }, undefined, undefined, true);

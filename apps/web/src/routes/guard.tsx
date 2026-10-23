@@ -42,6 +42,8 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
    * While a write is in flight a ledger that arrives (the reload after a `412`) does **not** paint
    * the screen again — that would lose what the person typed — but it is taken into the view in
    * place, so the screen reads the ledger that is there now and not the one it was painted from.
+   * What a screen computed once, when it mounted, keeps the ledger of that moment: only what is
+   * read when it is used (a form building its draft or its preview) sees the new one.
    *
    * A ledger with the **same etag** as the view is the same ledger: a silent reload (the
    * connection came back, a lost answer was looked for) hands over a new snapshot object that
