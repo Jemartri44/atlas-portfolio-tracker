@@ -103,6 +103,18 @@ export const doubleTaxation = (core: Core): { lines: DoubleTaxationLine[]; notes
 };
 
 /**
+ * The findings of the ECB check that say a rate **is wrong**: the history
+ * contradicts it. Any other one — a currency the ECB does not publish, or
+ * stopped publishing, a line more recent than the history — says it could not
+ * be contrasted, and gets a note of its own.
+ */
+const WRONG_RATE_CODES: ReadonlySet<string> = new Set([
+  "fx_rate_mismatch",
+  "fx_rate_date_unpublished",
+  "fx_rate_date_not_latest",
+]);
+
+/**
  * **A line of the report that depends on a rate in doubt says so** (ADR-0029,
  * point 8; ADR-0024). "Depends" includes the acquisitions: a sale depends on
  * itself **and on the purchases whose lots it consumes**, whose rate fixed the
@@ -119,18 +131,6 @@ export const doubleTaxation = (core: Core): { lines: DoubleTaxationLine[]; notes
  * the projection sees **without** a history and which carries the note
  * anyway.
  */
-/**
- * The findings of the ECB check that say a rate **is wrong**: the history
- * contradicts it. Any other one — a currency the ECB does not publish, or
- * stopped publishing, a line more recent than the history — says it could not
- * be contrasted, and gets a note of its own.
- */
-const WRONG_RATE_CODES: ReadonlySet<string> = new Set([
-  "fx_rate_mismatch",
-  "fx_rate_date_unpublished",
-  "fx_rate_date_not_latest",
-]);
-
 export const rateNotes = (
   core: Core,
   findings: readonly { event_id: string; code: string }[],
