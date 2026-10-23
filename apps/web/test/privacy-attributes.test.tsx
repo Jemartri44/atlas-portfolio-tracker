@@ -8,9 +8,9 @@
 // through and nothing else (`helpers/exposures.ts`).
 
 import { describe, expect, it } from "vitest";
-import { store } from "../src/ledger/state.js";
 import Cartera from "../src/routes/cartera/index.jsx";
 import Cubo from "../src/routes/cubo/index.jsx";
+import { setPrivacy } from "../src/shell/preferences.js";
 import { exposures, ledgerFigures } from "./helpers/exposures.js";
 import { show, withGoldenLedger } from "./helpers/render.jsx";
 
@@ -68,7 +68,7 @@ describe("the screens of E3 with the privacy mode on", () => {
   ] as const) {
     for (const date of DATES) {
       it(`${name} at ${date} says no amount and no quantity`, async () => {
-        store.setPrivacy(true);
+        setPrivacy(true);
         const host = await show(`${path}?fecha=${date}`, screen);
         expect(host.querySelector("section.card")).not.toBeNull();
         expect(exposures(host)).toEqual([]);

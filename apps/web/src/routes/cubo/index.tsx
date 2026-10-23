@@ -36,9 +36,10 @@ import {
 } from "../../components/index.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { nameIndex } from "../../format/names.js";
-import { store, usePrivacy } from "../../ledger/state.js";
+import { store } from "../../ledger/state.js";
 import { QuotesNotice, useQuotes } from "../../prices/use-quotes.jsx";
 import { PageHeader } from "../../shell/PageHeader.jsx";
+import { privacy } from "../../shell/preferences.js";
 import {
   bucketPositionsView,
   bucketReportView,
@@ -77,7 +78,6 @@ const SAID_IN_PLACE = new Set([
 
 export default function CuboRoute(): JSX.Element {
   const asOf = useAsOf();
-  const privacy = usePrivacy();
 
   return (
     <RequireLedger skeleton={8}>

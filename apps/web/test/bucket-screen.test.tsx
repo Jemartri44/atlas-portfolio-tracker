@@ -7,8 +7,8 @@
 // bucket where nothing ever happened is one empty state.
 
 import { describe, expect, it } from "vitest";
-import { store } from "../src/ledger/state.js";
 import Cubo from "../src/routes/cubo/index.jsx";
+import { setPrivacy } from "../src/shell/preferences.js";
 import { openLedger, show, text, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
@@ -16,7 +16,7 @@ withGoldenLedger();
 describe("the bucket", () => {
   it("opens with its result against the index in percent, in sight with the privacy mode", async () => {
     // 10/01/2027: every thesis can be compared, 2.000 € put in.
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show("/cubo?fecha=2027-01-10", Cubo);
     const hero = host.querySelector(".card .hero-figure");
     expect(text(hero)).toBe("+30,6 %");

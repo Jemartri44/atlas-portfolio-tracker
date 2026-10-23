@@ -23,7 +23,7 @@ import { sentenceOf } from "../../ledger/failure-text.js";
 import type { AppError } from "../../ledger/state.js";
 import { SessionNotice } from "../../shell/SessionNotice.jsx";
 
-const propose = async () => (await import("../../ledger/rate-corrections.js")).proposeCorrections();
+const propose = async () => (await import("../../ecb/rate-corrections.js")).proposeCorrections();
 
 export const RateCorrections = (props: {
   state: LedgerState;
@@ -46,7 +46,7 @@ export const RateCorrections = (props: {
     if (current === undefined || "error" in current) {
       return;
     }
-    const { writeCorrections } = await import("../../ledger/rate-corrections.js");
+    const { writeCorrections } = await import("../../ecb/rate-corrections.js");
     const result = await writeCorrections(current.prepared);
     if (result.ok) {
       setWritten(true);

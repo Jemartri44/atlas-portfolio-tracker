@@ -25,7 +25,7 @@ import { parseDecimalInput } from "../../format/input.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { nameIndex } from "../../format/names.js";
 import { attempt } from "../../ledger/query.js";
-import { usePrivacy } from "../../ledger/state.js";
+import { privacy } from "../../shell/preferences.js";
 import { type TransferRowView, transferView } from "../../view-models/core/index.js";
 import { assetOptions } from "../../view-models/options.js";
 
@@ -74,7 +74,6 @@ interface TransferSimulatorProps {
 }
 
 export const TransferSimulator = (props: TransferSimulatorProps): JSX.Element => {
-  const privacy = usePrivacy();
   const [from, setFrom] = createSignal("");
   const [to, setTo] = createSignal("");
   const [quantity, setQuantity] = createSignal("");

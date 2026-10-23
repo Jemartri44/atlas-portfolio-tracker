@@ -8,22 +8,22 @@
 
 import { type JSX, Show } from "solid-js";
 import { Icon } from "../components/Icon.jsx";
-import { store } from "../ledger/state.js";
+import { privacy, setPrivacy } from "./preferences.js";
 
 export const PrivacyToggle = (): JSX.Element => (
   <button
     type="button"
     class="privacy"
-    aria-pressed={store.privacy()}
+    aria-pressed={privacy()}
     aria-label="Ocultar importes y cantidades"
-    onClick={() => store.setPrivacy(!store.privacy())}
+    onClick={() => setPrivacy(!privacy())}
   >
     <span class="pill" aria-hidden="true">
-      <Show when={store.privacy()} fallback={<Icon name="eye" class="icon-sm" />}>
+      <Show when={privacy()} fallback={<Icon name="eye" class="icon-sm" />}>
         <Icon name="eyeoff" class="icon-sm" />
       </Show>
-      <span class="short">{store.privacy() ? "Oculto" : "Visible"}</span>
-      <span class="long">{store.privacy() ? "Importes ocultos" : "Importes visibles"}</span>
+      <span class="short">{privacy() ? "Oculto" : "Visible"}</span>
+      <span class="long">{privacy() ? "Importes ocultos" : "Importes visibles"}</span>
     </span>
   </button>
 );

@@ -23,8 +23,8 @@ import { formatDate } from "../../format/date.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
 import { countOf } from "../../format/number.js";
-import { usePrivacy } from "../../ledger/state.js";
 import { GRID, mediaQuery } from "../../shell/media.js";
+import { privacy } from "../../shell/preferences.js";
 import { attentionItems } from "../../view-models/attention.js";
 import { type CashRow, type ChangeRow, previewChanges } from "../../view-models/preview.js";
 import { resultWord } from "../../view-models/sale.js";
@@ -97,7 +97,6 @@ export const Preview = (props: {
 }): JSX.Element => {
   const names = (): NameIndex => props.names ?? NO_NAMES;
   const wide = mediaQuery(GRID);
-  const privacy = usePrivacy();
   const changes = () => previewChanges(props.preview, names());
 
   /**

@@ -9,8 +9,8 @@
 import { DEFAULT_SETTINGS } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { MEASURE_REASONS } from "../src/format/criteria.js";
-import { store } from "../src/ledger/state.js";
 import Fiscal from "../src/routes/fiscal/index.jsx";
+import { setPrivacy } from "../src/shell/preferences.js";
 import { goldenLines, goldenText } from "./helpers/golden.js";
 import {
   openLedger,
@@ -177,7 +177,7 @@ describe("the fiscal screen", () => {
 
   it("keeps the fact with privacy on and hides the amounts", async () => {
     await openLedger(goldenText() + filedTwice());
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show("/fiscal?ejercicio=2029", Fiscal, "/fiscal");
     const card = [...host.querySelectorAll(".card")].find((entry) =>
       text(entry).includes("Pérdidas pendientes"),
@@ -187,7 +187,7 @@ describe("the fiscal screen", () => {
     // does not, like every other amount of the application.
     expect(shown).toContain("Anclado en lo que declaraste en 2027");
     expect(shown).not.toMatch(/\d+,\d{2}\s*€/);
-    store.setPrivacy(false);
+    setPrivacy(false);
   });
 
   it("shows three criteria and folds the rest", async () => {
@@ -236,7 +236,7 @@ describe("the fiscal screen", () => {
   });
 
   it("keeps the direction and the certainty with privacy on, and hides the money", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await open();
     await settle();
     const shown = text(host);
@@ -254,7 +254,7 @@ describe("the fiscal screen", () => {
    * tests are what kill those mutations.
    */
   it("does not show how much of the threshold with privacy on", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await open();
     await settle();
     // The threshold is a **public** figure, so a percentage of it is the user's own amount said

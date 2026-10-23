@@ -8,13 +8,13 @@ import { Quantity } from "@atlas/domain";
 import { render } from "solid-js/web";
 import { afterEach, describe, expect, it } from "vitest";
 import { Parts } from "../src/components/Parts.jsx";
-import { store } from "../src/ledger/state.js";
+import { setPrivacy } from "../src/shell/preferences.js";
 import type { Part } from "../src/view-models/structured.js";
 
 const disposers: (() => void)[] = [];
 afterEach(() => {
   for (const dispose of disposers.splice(0)) dispose();
-  store.setPrivacy(false);
+  setPrivacy(false);
 });
 
 const said = (quantity: string): string => {
@@ -28,7 +28,7 @@ const said = (quantity: string): string => {
 
 describe("a quantity in a sentence", () => {
   it("takes the singular for exactly one", () => {
-    store.setPrivacy(false);
+    setPrivacy(false);
     expect(said("1")).toBe("1 participación");
     expect(said("1.000")).toBe("1 participación");
     expect(said("1.5")).toBe("1,5 participaciones");
@@ -36,7 +36,7 @@ describe("a quantity in a sentence", () => {
   });
 
   it("keeps the plural under the mask, which would say it otherwise", () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     expect(said("1")).toContain("participaciones");
     expect(said("1")).not.toContain("participación");
   });
