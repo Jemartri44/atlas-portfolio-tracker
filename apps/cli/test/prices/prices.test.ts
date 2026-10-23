@@ -341,7 +341,7 @@ describe("atlas prices symbols with a currency per source", () => {
   });
 });
 
-describe("atlas prices symbols: a currency is declared with its symbol, never assumed", () => {
+describe("atlas prices symbols: currencies are declared with their symbol, and closes in another one are purged", () => {
   it("refuses a currency of a source without its symbol, and a set without any symbol", async () => {
     const f = await folder(ledger());
     const loose = await f.atlas(
@@ -437,7 +437,7 @@ describe("atlas prices symbols: a currency is declared with its symbol, never as
   });
 });
 
-describe("atlas prices symbols: reading and purging closes stored in the wrong currency", () => {
+describe("atlas prices symbols: closes stored in the wrong currency, and a symbols.json that cannot be read", () => {
   const line = (close: string, currency: string, source: string) =>
     `${JSON.stringify({ schema_version: 1, date: "2027-06-08", close, currency, source, fetched_at: "2027-06-09T06:00:00.000Z" })}\n`;
   const legacy = (currency: string, over: Record<string, string>) =>
@@ -459,7 +459,7 @@ describe("atlas prices symbols: reading and purging closes stored in the wrong c
     ["GBP", { alpha_vantage: "GBX" }, "alpha_vantage", "1000", "Alpha Vantage"],
     ["GBX", { eodhd: "GBP" }, "eodhd", "10", "EODHD"],
   ] as const) {
-    it(`leaves out the closes 013 stored as ${currency} over the ${over[source as keyof typeof over]} of ${name}, before and after an update`, async () => {
+    it(`leaves out the closes stored as ${currency} over the ${over[source as keyof typeof over]} of ${name}, before and after an update`, async () => {
       const f = await folder(ledger());
       await symbols(f.dir, {});
       await writeFile(join(f.dir, "prices", "symbols.json"), legacy(currency, over));

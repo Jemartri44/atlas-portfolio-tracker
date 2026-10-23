@@ -91,7 +91,7 @@ const synced = async (assets: readonly string[] = ["ast_a"]) => {
 
 const local = (dir: string, name: string) => readFile(join(dir, "prices", name), "utf8");
 
-describe("atlas prices update in a folder synced with a cloud that has prices (016, E3)", () => {
+describe("atlas prices update in a cloud folder whose cloud has prices", () => {
   it("takes the closes from the API, with the token of the folder, and calls no source", async () => {
     const { c, eodhd, alpha } = await synced();
     const cloud = text([close("2026-09-29", "10"), close("2026-09-30", "11")]);
@@ -112,7 +112,7 @@ describe("atlas prices update in a folder synced with a cloud that has prices (0
     expect(Object.keys(pull.versions)).toEqual(["ast_a.jsonl"]);
   });
 
-  it("adds with the rules of the 013, never rewriting a local byte", async () => {
+  it("adds under the rules of a local download, never rewriting a local byte", async () => {
     const { c } = await synced();
     // A local line as a hand or an older version wrote it: a rewrite would show.
     const before = text([
