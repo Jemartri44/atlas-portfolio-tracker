@@ -172,6 +172,25 @@ describe("contributedSeries: purchases the cash does not cover", () => {
     expect(contributedSeries(bucket.build(), { to: "2027-12-31" }).uncovered_buys).toBe(false);
   });
 
+  it("is a fact of the book, whatever the range asked: it ignores `from` and `to`", () => {
+    const b = base();
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      trade_date: "2027-02-01",
+      quantity: "1",
+      unit_price: "10",
+    });
+    b.deposit({ account_id: "acc_fund", value_date: "2027-06-01" });
+    const events = b.build();
+    // A range that starts after the purchase, or ends before it: the money
+    // that paid for it is still missing from every point of the line.
+    expect(contributedSeries(events, { from: "2027-09-01", to: "2027-12-31" }).uncovered_buys).toBe(
+      true,
+    );
+    expect(contributedSeries(events, { to: "2027-01-15" }).uncovered_buys).toBe(true);
+  });
+
   it("looks at the earliest purchase and the earliest deposit, whatever the order of the events", () => {
     const b = base();
     b.deposit({ account_id: "acc_fund", value_date: "2027-03-01" });
