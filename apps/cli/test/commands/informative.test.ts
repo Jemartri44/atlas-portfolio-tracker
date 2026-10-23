@@ -65,6 +65,13 @@ describe("atlas m720", () => {
     expect(data.categories.map((entry) => entry.verdict)).toEqual(["not_obliged", "obliged"]);
   });
 
+  it("writes every amount as a string, never as the object that wraps it", async () => {
+    const h = await run(["m720", "2027", "--json"]);
+    const data = h.json() as { threshold_eur: unknown };
+    expect(data.threshold_eur).toEqual({ amount: "50000", currency: "EUR" });
+    expect(h.text()).not.toMatch(/"value": \{/);
+  });
+
   it("refuses to be called as a year of atlas tax", async () => {
     // `atlas tax 720` would read 720 as the tax year, which is why the models have commands of
     // their own.
