@@ -22,6 +22,8 @@ import { A } from "@solidjs/router";
 import { type JSX, lazy, Show } from "solid-js";
 import { Icon, Section, Skeleton } from "../../components/index.js";
 import type { NameIndex } from "../../format/names.js";
+import type { AppError } from "../../ledger/state.js";
+import { FAILED_TO_CALCULATE } from "../../view-models/attention.js";
 import type { FiscalStatus } from "./fiscal-status.js";
 
 /**
@@ -41,6 +43,8 @@ export default function FiscalCard(props: {
   season: boolean;
   /** The tax side of the summary, once the engine has answered. */
   status: () => FiscalStatus | undefined;
+  /** Why the engine could not answer, said instead of the skeleton. */
+  failure?: (() => AppError | undefined) | undefined;
   /** The year whose return comes next (`nextReturnYear` of the domain). */
   year: number;
   today: CivilDate;
@@ -72,7 +76,18 @@ export default function FiscalCard(props: {
         class="span-4 summary-fiscal"
         aside={<span class="scope">Campaña de la Renta</span>}
       >
-        <Show when={props.status()} fallback={<Skeleton lines={2} />}>
+        <Show
+          when={props.status()}
+          fallback={
+            <Show when={props.failure?.()} fallback={<Skeleton lines={2} />}>
+              {(error) => (
+                <p class="card-note">
+                  {FAILED_TO_CALCULATE} {error().message}
+                </p>
+              )}
+            </Show>
+          }
+        >
           {(current) => <SeasonBody status={current()} today={props.today} names={props.names} />}
         </Show>
         <A href="/fiscal" class="card-foot">

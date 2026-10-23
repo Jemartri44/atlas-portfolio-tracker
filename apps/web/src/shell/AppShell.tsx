@@ -7,8 +7,18 @@
 // is no navigation at all: every destination needs data. An open ledger, even an
 // empty one, shows it, because the first steps lead to Registrar and to Ajustes.
 
+import { DomainError } from "@atlas/domain";
 import { A, useLocation } from "@solidjs/router";
-import { createEffect, createMemo, ErrorBoundary, type JSX, lazy, onCleanup, Show } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createResource,
+  ErrorBoundary,
+  type JSX,
+  lazy,
+  onCleanup,
+  Show,
+} from "solid-js";
 import { Icon } from "../components/Icon.jsx";
 // Imported straight from their modules, not through the barrel: the shell is
 // on the boot path, and a barrel drags everything it re-exports with it — the
@@ -62,28 +72,43 @@ const DegradedBand = (): JSX.Element => (
  * navigation is outside the boundary on purpose: whatever broke, the other
  * destinations still work.
  */
-const ScreenFailed = (props: { failure: unknown; retry: () => void }): JSX.Element => (
-  <Notice
-    severity="danger"
-    title="Esta pantalla no ha podido abrirse"
-    action={
-      <div class="button-row">
-        <button type="button" onClick={() => props.retry()}>
-          Reintentar
-        </button>
-        <button type="button" class="secondary" onClick={() => window.location.reload()}>
-          Recargar la aplicación
-        </button>
-      </div>
-    }
-  >
-    Tus datos no se han tocado: esto es un fallo de la propia pantalla. Si acabas de perder la
-    conexión, recarga cuando vuelvas a tenerla.
-    <Show when={props.failure instanceof Error}>
-      <p class="meta">{maskFigures((props.failure as Error).message, privacy())}</p>
-    </Show>
-  </Notice>
-);
+const ScreenFailed = (props: { failure: unknown; retry: () => void }): JSX.Element => {
+  // The domain speaks English by contract: a refusal of the domain is said in Spanish, kept as the
+  // error so it follows the privacy mode. The catalogue is loaded only now, when there is a failure.
+  const [explained] = createResource(
+    () => props.failure,
+    async (failure) =>
+      failure instanceof DomainError
+        ? (await import("../ledger/errors.js")).toAppError(failure)
+        : undefined,
+  );
+  return (
+    <Notice
+      severity="danger"
+      title="Esta pantalla no ha podido abrirse"
+      action={
+        <div class="button-row">
+          <button type="button" onClick={() => props.retry()}>
+            Reintentar
+          </button>
+          <button type="button" class="secondary" onClick={() => window.location.reload()}>
+            Recargar la aplicación
+          </button>
+        </div>
+      }
+    >
+      Tus datos no se han tocado: esto es un fallo de la propia pantalla. Si acabas de perder la
+      conexión, recarga cuando vuelvas a tenerla.
+      <Show when={props.failure instanceof Error}>
+        <p class="meta">
+          {explained.loading
+            ? ""
+            : (explained()?.message ?? maskFigures((props.failure as Error).message, privacy()))}
+        </p>
+      </Show>
+    </Notice>
+  );
+};
 
 /** The cloud mode screen that stands in for the application (sign-in, offline, failed read). */
 const CloudGate = lazy(() => import("./CloudGate.jsx"));
