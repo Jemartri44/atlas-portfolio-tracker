@@ -17,14 +17,14 @@ import { adminClientsOf, translateAwsFailure } from "../admin/clients.js";
 import { assertKnownFlags, booleanFlag, type Flags, requireFlag, UsageError } from "../args.js";
 import { type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { cloudStoreOf } from "../folder-mode.js";
-import { pathExists, sha256 } from "../fs.js";
+import { isFile, pathExists, sha256 } from "../fs.js";
 import {
   type Copied,
   type CopiedFromBucket,
   copyBucketFolders,
   copyLocalDocuments,
 } from "./backup-copies.js";
-import { confirmOutsideRepository, render } from "./shared.js";
+import { cancelled, confirmOutsideRepository, render } from "./shared.js";
 
 const describeCopied = (copied: Copied): string =>
   copied.written + copied.unchanged === 0
@@ -84,12 +84,17 @@ export const backupCommand = async (
       path: ctx.ledgerPath,
     });
   }
+  if (await isFile(directory)) {
+    throw new DomainError("not_a_directory", `${directory} is not a directory`, {
+      path: directory,
+    });
+  }
   const destination = join(directory, `ledger-${todayInMadrid(ctx.deps.clock)}.jsonl`);
   if (await pathExists(destination)) {
     throw new DomainError("path_exists", `${destination} already exists`, { path: destination });
   }
   if (!(await confirmOutsideRepository(ctx, destination))) {
-    ctx.io.out("Cancelado.");
+    cancelled(ctx);
     return 0;
   }
   await mkdir(directory, { recursive: true });

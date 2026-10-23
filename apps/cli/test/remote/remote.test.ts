@@ -4,8 +4,11 @@
 
 import { chmod, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { PassThrough } from "node:stream";
 import { describe, expect, it } from "vitest";
 import { SELF, setup } from "../../../api/test/harness.js";
+import { run } from "../../src/main.js";
+import { readHiddenLine } from "../../src/remote/environment.js";
 import { folderTree, setupConsole, writeRemoteJson } from "../support/console.js";
 import { dashRandom } from "../support/dash-ids.js";
 
@@ -321,5 +324,80 @@ describe("what the review of PR #95 found in the console", () => {
     expect(await c.exec(["remote", "login"])).toBe(1);
     expect(c.err.join("\n")).toContain("device_token_revoked");
     expect((await c.readCredentialsFile()).entries).toEqual({});
+  });
+});
+
+describe("atlas remote with --json", () => {
+  const only = (out: string[]): Record<string, unknown> => {
+    expect(out).toHaveLength(1);
+    return JSON.parse(out[0] as string) as Record<string, unknown>;
+  };
+
+  it("login, status and logout each leave one object, none with the token", async () => {
+    const c = await setupConsole();
+    expect(await c.exec(["remote", "login", "--origin", SELF, "--json"])).toBe(0);
+    const [entry] = Object.values((await c.readCredentialsFile()).entries) as Record<
+      string,
+      string
+    >[];
+    expect(only(c.out)).toMatchObject({
+      status: "logged_in",
+      origin: SELF,
+      device_id: entry?.device_id,
+      token_id: entry?.token_id,
+    });
+    // The address to open is for the person, so it goes to stderr and stdout stays the answer.
+    expect(c.err.join("\n")).toContain("/api/auth/console/start");
+    await writeRemoteJson(c.ledger, entry?.device_id as string);
+    c.out.length = 0;
+    expect(await c.exec(["remote", "status", "--json"])).toBe(0);
+    expect(only(c.out)).toMatchObject({
+      cloud_folder: { origin: SELF },
+      sessions: [{ device_id: entry?.device_id, token_id: entry?.token_id }],
+    });
+    c.out.length = 0;
+    expect(await c.exec(["remote", "logout", "--json"])).toBe(0);
+    expect(only(c.out)).toMatchObject({ status: "logged_out", device_id: entry?.device_id });
+    expect([...c.out, ...c.err].join("\n")).not.toContain(entry?.token as string);
+  });
+
+  it("a sign-in that never comes back is login_timeout, said and not a stack", async () => {
+    const c = await setupConsole();
+    const remote = { ...c.remote, openBrowser: () => undefined, loopbackTimeoutMs: 50 };
+    const out: string[] = [];
+    const code = await run(
+      ["--ledger", join(c.ledger, "ledger.jsonl"), "remote", "login", "--origin", SELF, "--json"],
+      { out: (t) => out.push(t), err: () => undefined, confirm: async () => undefined },
+      { remote },
+    );
+    expect(code).toBe(1);
+    expect(only(out)).toMatchObject({ status: "error", code: "login_timeout" });
+  });
+});
+
+describe("the code of a manual sign-in", () => {
+  it("is refused when the input closes before it arrives, instead of ending the process", async () => {
+    const input = new PassThrough();
+    const pending = readHiddenLine("code: ", input, new PassThrough());
+    input.end();
+    await expect(pending).rejects.toMatchObject({ code: "login_no_code" });
+  });
+
+  it("is refused on Ctrl-C, and read up to the line break otherwise", async () => {
+    const interrupted = new PassThrough();
+    const first = readHiddenLine("code: ", interrupted, new PassThrough());
+    interrupted.write("ab\u0003");
+    await expect(first).rejects.toMatchObject({ code: "login_interrupted" });
+    const typed = new PassThrough();
+    const second = readHiddenLine("code: ", typed, new PassThrough());
+    typed.write("abc\u007fd\n");
+    await expect(second).resolves.toBe("abd");
+  });
+
+  it("treats Ctrl-D on an empty line as the end of the input", async () => {
+    const input = new PassThrough();
+    const pending = readHiddenLine("code: ", input, new PassThrough());
+    input.write("\u0004");
+    await expect(pending).rejects.toMatchObject({ code: "login_no_code" });
   });
 });

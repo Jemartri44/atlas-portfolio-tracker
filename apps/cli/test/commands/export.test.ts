@@ -27,6 +27,15 @@ describe("atlas export", () => {
     expect(await h.exec(["export", "--format", "xml"])).toBe(64);
   });
 
+  it("--out with --json answers one object and keeps the questions off stdout", async () => {
+    const h = harness({ events: seed() });
+    const out = join(await mkdtemp(join(tmpdir(), "atlas-export-")), "ledger.csv");
+    expect(await h.exec(["export", "--format", "csv", "--out", out, "--json"])).toBe(0);
+    expect(h.out.map((line) => JSON.parse(line))).toEqual([
+      { status: "exported", format: "csv", path: out },
+    ]);
+  });
+
   describe("--out over an existing file", () => {
     const setup = async (confirm?: boolean) => {
       const dir = await mkdtemp(join(tmpdir(), "atlas-export-"));
