@@ -30,7 +30,7 @@ import { formatMonth } from "../../format/date.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { type NameIndex, NO_NAMES } from "../../format/names.js";
 import type { AppError } from "../../ledger/state.js";
-import { store } from "../../ledger/state.js";
+import { privacy } from "../../shell/preferences.js";
 import type { ContributionRowView, ContributionView } from "../../view-models/core/index.js";
 import { COLUMNS } from "./contribution-columns.jsx";
 
@@ -224,7 +224,7 @@ export const ContributionCard = (props: {
               <Notice severity="caution">
                 {describeWarning(note(), {
                   names: props.names ?? NO_NAMES,
-                  privacy: store.privacy(),
+                  privacy: privacy(),
                 })}
               </Notice>
             )}

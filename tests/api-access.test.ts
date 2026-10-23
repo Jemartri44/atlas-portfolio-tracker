@@ -488,7 +488,7 @@ describe("architecture (015): nothing of the access on the boot path", () => {
     for (const path of [
       "/packages/domain/src/access/",
       "/packages/domain/src/access.ts",
-      "/src/sync/",
+      "/src/auth/",
       "/src/routes/ajustes/sync/",
     ]) {
       expect(script).toContain(`path: "${path}"`);

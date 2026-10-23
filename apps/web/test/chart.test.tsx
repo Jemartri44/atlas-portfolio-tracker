@@ -16,7 +16,7 @@ import { axisAmount, axisDate, axisDates, spanOf } from "../src/components/chart
 import { ChartLegend } from "../src/components/chart/ChartLegend.jsx";
 import { ChartTable } from "../src/components/chart/ChartTable.jsx";
 import { MASK } from "../src/format/money.js";
-import { store } from "../src/ledger/state.js";
+import { setPrivacy } from "../src/shell/preferences.js";
 
 const disposers: (() => void)[] = [];
 
@@ -32,7 +32,7 @@ afterEach(() => {
     dispose();
   }
   document.body.innerHTML = "";
-  store.setPrivacy(false);
+  setPrivacy(false);
 });
 
 /** Any run of digits: the thing that must not survive the mask. */
@@ -88,7 +88,7 @@ describe("the equivalent table of a chart", () => {
   ];
 
   it("paints the figures through Amount, so privacy covers them", () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = mount(() => (
       <ChartTable headers={["Núcleo", "Cubo"]} rows={rows} caption="Evolución" />
     ));
@@ -101,7 +101,7 @@ describe("the equivalent table of a chart", () => {
   });
 
   it("shows the figures when privacy is off, and a hole where there is no data", () => {
-    store.setPrivacy(false);
+    setPrivacy(false);
     const host = mount(() => (
       <ChartTable headers={["Núcleo", "Cubo"]} rows={rows} caption="Evolución" />
     ));
@@ -121,7 +121,7 @@ describe("the equivalent table of a chart", () => {
    * running anything.
    */
   it("names every series on the card, where there is no header to do it", () => {
-    store.setPrivacy(false);
+    setPrivacy(false);
     const host = mount(() => (
       <ChartTable headers={["Núcleo", "Cubo"]} rows={rows} caption="Evolución" />
     ));

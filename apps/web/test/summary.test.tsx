@@ -6,8 +6,8 @@
 // steps of an empty ledger until the first purchase.
 
 import { describe, expect, it } from "vitest";
-import { store } from "../src/ledger/state.js";
 import Resumen from "../src/routes/resumen/index.jsx";
+import { setPrivacy } from "../src/shell/preferences.js";
 import { goldenLines } from "./helpers/golden.js";
 import { openLedger, show, text, today, withGoldenLedger } from "./helpers/render.jsx";
 
@@ -34,7 +34,7 @@ describe("the patrimony of the summary", () => {
 
   it("keeps the percentages in sight with the privacy mode on, and hides the amounts", async () => {
     today("2027-01-10");
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show("/", Resumen);
     const parts = text(hero(host)?.querySelector(".parts"));
     expect(parts).toContain("48 %");
