@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Decimal } from "../../src/money/decimal.js";
-import { bucketTheses } from "../../src/projections/bucket.js";
+import { bucketTheses } from "../../src/projections/bucket-theses.js";
 import type { ExternalPrices } from "../../src/projections/prices.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { DEFAULT_SETTINGS, mergeSettings, type Settings } from "../../src/settings/settings.js";

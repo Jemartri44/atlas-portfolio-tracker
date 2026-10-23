@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { thesisVsIndexPct } from "../../src/charts.js";
 import { Money } from "../../src/money/money.js";
-import { type BucketThesisView, bucketTheses } from "../../src/projections/bucket.js";
+import { type BucketThesisView, bucketTheses } from "../../src/projections/bucket-theses.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { DEFAULT_SETTINGS, mergeSettings, type Settings } from "../../src/settings/settings.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";

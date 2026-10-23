@@ -4,16 +4,13 @@
 
 import {
   bucketPositions,
-  bucketStats,
-  bucketTheses,
-  contributionPlan,
   coreWeights,
-  costSummary,
   netWorth,
   netWorthSeries,
   projectLedger,
   settingsAt,
 } from "@atlas/domain";
+import { bucketStats, bucketTheses, contributionPlan, costSummary } from "@atlas/domain/portfolio";
 import { simulateTransfer } from "@atlas/domain/tools";
 import { describe, expect, it } from "vitest";
 import { nameIndex } from "../src/format/names.js";

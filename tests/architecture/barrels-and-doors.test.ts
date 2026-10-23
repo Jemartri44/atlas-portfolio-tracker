@@ -160,6 +160,60 @@ describe("architecture: the charts of the screens on demand are not in the barre
   });
 });
 
+describe("architecture: the analysis of the Cartera and the Cubo is behind its door", () => {
+  /**
+   * The contribution, the costs, the statistics of the bucket and its theses against the index
+   * are read by two screens opened on demand. The barrel exports their types and never their
+   * functions (a function re-exported there is reachable from boot, whatever the chunk rules
+   * say), and `check-bundle.mjs` keeps the door and its modules off the boot path.
+   */
+  const FUNCTIONS = ["bucketStats", "bucketTheses", "contributionPlan", "costSummary"];
+  const MODULES = ["bucket-theses", "bucket-stats", "costs", "contribution"];
+
+  it("keeps their functions out of index.ts, and behind their door", () => {
+    const barrel = readFileSync(join(domainSrc, "index.ts"), "utf8");
+    const door = readFileSync(join(domainSrc, "portfolio.ts"), "utf8");
+    for (const name of FUNCTIONS) {
+      expect(barrel).not.toMatch(new RegExp(`^\\s+${name},?$`, "m"));
+      expect(door).toMatch(new RegExp(`^\\s+${name},?$`, "m"));
+    }
+  });
+
+  it("is imported by nothing that boots: the door, the charts, the jobs and each other", () => {
+    const own = new Set(
+      [
+        "portfolio.ts",
+        ...MODULES.map((name) => `projections/${name}.ts`),
+        ...listTsFiles(join(domainSrc, "charts")).map((file) => relative(domainSrc, file)),
+        "charts.ts",
+        "index.ts",
+      ].map((file) => join(domainSrc, file)),
+    );
+    const offenders = listTsFiles(domainSrc)
+      .filter((file) => !own.has(file) && !file.startsWith(join(domainSrc, "jobs")))
+      .filter((file) =>
+        specifiersOf(readFileSync(file, "utf8")).some((specifier) =>
+          MODULES.some((name) => specifier.endsWith(`/${name}.js`)),
+        ),
+      )
+      .map((file) => relative(repoRoot, file));
+    expect(offenders).toEqual([]);
+  });
+
+  it("is in LAZY_ONLY of the check of the bundle, door and modules", () => {
+    const script = readFileSync(
+      join(repoRoot, "apps", "web", "scripts", "check-bundle.mjs"),
+      "utf8",
+    );
+    for (const path of [
+      "/packages/domain/src/portfolio.ts",
+      ...MODULES.map((name) => `/packages/domain/src/projections/${name}.ts`),
+    ]) {
+      expect(script).toContain(`path: "${path}"`);
+    }
+  });
+});
+
 describe("architecture: the automatic prices are not in the barrel", () => {
   /**
    * Nothing of the automatic prices on the boot path of the web. They live behind a door of their

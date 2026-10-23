@@ -3,11 +3,12 @@
 // total is never drawn.
 
 import { describe, expect, it } from "vitest";
+import { bucketIndexSeries } from "../../src/charts/bucket-index.js";
 import { Money } from "../../src/money/money.js";
-import { bucketTheses } from "../../src/projections/bucket.js";
+import { bucketTheses } from "../../src/projections/bucket-theses.js";
 import { netWorth } from "../../src/projections/networth.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
-import { bucketIndexSeries, netWorthSeries, sampleEvenly } from "../../src/projections/series.js";
+import { netWorthSeries, sampleEvenly } from "../../src/projections/series.js";
 import { settingsAt } from "../../src/projections/settings-at.js";
 import { DEFAULT_SETTINGS, mergeSettings, type Settings } from "../../src/settings/settings.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";

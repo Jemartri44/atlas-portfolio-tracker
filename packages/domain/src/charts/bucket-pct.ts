@@ -20,11 +20,13 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
 import { Money } from "../money/money.js";
-import { type BenchmarkGap, bucketAccountIds } from "../projections/bucket.js";
+import { bucketAccountIds } from "../projections/bucket.js";
 import { depositsOf } from "../projections/bucket-stats.js";
+import type { BenchmarkGap } from "../projections/bucket-theses.js";
 import { businessDateOf, liveOperations, projectLedger } from "../projections/project-ledger.js";
-import { bucketIndexSeries, type SeriesOptions } from "../projections/series.js";
+import type { SeriesOptions } from "../projections/series.js";
 import type { LedgerEvent } from "../schema/events.js";
+import { bucketIndexSeries } from "./bucket-index.js";
 
 const HUNDRED = Decimal.parse("100");
 
