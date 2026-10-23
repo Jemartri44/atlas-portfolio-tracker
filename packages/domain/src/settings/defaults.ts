@@ -295,6 +295,15 @@ export const rentaSeasonOf = (
   end: settings.renta_season_end ?? DEFAULT_RENTA_SEASON.end,
 });
 
+/** The residence the engine assumes when the settings say none. */
+export const DEFAULT_TAX_RESIDENCE = "ES";
+
+/** The residence in force as an upper-case country code: absent or blank is Spain. */
+export const taxResidenceOf = (settings: { tax_residence?: string | undefined }): string => {
+  const value = (settings.tax_residence ?? "").trim().toUpperCase();
+  return value === "" ? DEFAULT_TAX_RESIDENCE : value;
+};
+
 /**
  * Whether a date falls in the income tax season, both ends included. A rule
  * about when a return is due is a fiscal rule, and it lives
