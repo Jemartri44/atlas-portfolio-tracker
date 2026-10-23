@@ -16,7 +16,7 @@ const localFolder = async () => {
   return c;
 };
 
-describe("atlas remote login (T27 to T29, T33)", () => {
+describe("atlas remote login", () => {
   it("makes a folder with no ledger a cloud folder: sync/remote.json, never a copy of the ledger (ADR-0035)", async () => {
     const c = await setupConsole();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
@@ -66,7 +66,7 @@ describe("atlas remote login (T27 to T29, T33)", () => {
     expect(c.surf.pages.at(-1)).toBe("landed:200:no-referrer");
   });
 
-  it("ignores a return with another state and keeps waiting for its own (mutant 22)", async () => {
+  it("ignores a return with another state and keeps waiting for its own", async () => {
     const c = await setupConsole({ wrongStateFirst: true });
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     expect(c.surf.pages).toContain("wrong:400");
@@ -89,7 +89,7 @@ describe("atlas remote login (T27 to T29, T33)", () => {
     expect(c.seen).toEqual([]);
   });
 
-  it("renews only with the entry the folder's sync/remote.json names, never another of the same origin (B2)", async () => {
+  it("renews only with the entry the folder's sync/remote.json names, never another of the same origin", async () => {
     const c = await localFolder();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     const [first] = Object.values((await c.readCredentialsFile()).entries) as Record<
@@ -116,7 +116,7 @@ describe("atlas remote login (T27 to T29, T33)", () => {
     expect(after[other.device_id as string]).toEqual(other);
   });
 
-  it("reissues for the device of the folder when it has no entry, after the confirmation of the page (N5)", async () => {
+  it("reissues for the device of the folder when it has no entry, after the confirmation of the page", async () => {
     const c = await setupConsole({ confirmReissue: true });
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     const [first] = Object.values((await c.readCredentialsFile()).entries) as Record<
@@ -136,7 +136,7 @@ describe("atlas remote login (T27 to T29, T33)", () => {
   });
 });
 
-describe("atlas remote logout (T35)", () => {
+describe("atlas remote logout", () => {
   it("lets the entry go only with the 200 of the server", async () => {
     const c = await setupConsole();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
@@ -172,7 +172,7 @@ describe("atlas remote logout (T35)", () => {
   });
 });
 
-describe("the file of the credentials (T30)", () => {
+describe("the file of the credentials", () => {
   it("is not used with permissions open to others, nor inside the folder of the ledger", async () => {
     const c = await setupConsole();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
@@ -187,7 +187,7 @@ describe("the file of the credentials (T30)", () => {
   });
 });
 
-describe("atlas remote status (T36)", () => {
+describe("atlas remote status", () => {
   it("says the sessions of the folder and warns inside the threshold, never showing the token", async () => {
     const c = await setupConsole();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
@@ -206,11 +206,11 @@ describe("atlas remote status (T36)", () => {
   });
 });
 
-describe("what the review of PR #95 found in the console", () => {
+describe("the sign-in files of the console: expiry, renewal and what is kept", () => {
   const entryOf = async (c: Awaited<ReturnType<typeof setupConsole>>) =>
     Object.values((await c.readCredentialsFile()).entries)[0] as Record<string, string>;
 
-  it("says «less than a day» with hours left, and «expired» only once expired (N1)", async () => {
+  it("says «less than a day» with hours left, and «expired» only once expired", async () => {
     const c = await setupConsole();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     const entry = await entryOf(c);
@@ -227,7 +227,7 @@ describe("what the review of PR #95 found in the console", () => {
     expect(c.out.join("\n")).toContain("Ha caducado");
   });
 
-  it("keeps an entry another console wrote meanwhile: it reads the file again before writing (N2)", async () => {
+  it("keeps an entry another console wrote meanwhile: it reads the file again before writing", async () => {
     const c = await localFolder();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     const first = await entryOf(c);
@@ -245,7 +245,7 @@ describe("what the review of PR #95 found in the console", () => {
     expect(entries.OTHERTERMINALOTHERTERM).toBeDefined();
   });
 
-  it("warns when the folder of the credentials is open to others (N4)", async () => {
+  it("warns when the folder of the credentials is open to others", async () => {
     const c = await setupConsole();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     expect(c.err.join("\n")).not.toContain("700");
@@ -262,7 +262,7 @@ describe("what the review of PR #95 found in the console", () => {
     expect(c.err.join("\n")).not.toContain("chmod 700");
   });
 
-  it("stores nothing from an answer that is not a valid entry (N5)", async () => {
+  it("stores nothing from an answer that is not a valid entry", async () => {
     const c = await setupConsole();
     c.hooks.tamper = (path, body) =>
       path === "/api/auth/console/token" ? body.replace(/atlasdt1\.[^"]+/, "not-a-token") : body;
@@ -271,7 +271,7 @@ describe("what the review of PR #95 found in the console", () => {
     await expect(stat(c.credentials)).rejects.toMatchObject({ code: "ENOENT" });
   });
 
-  it("stores nothing when a renewal answers for another device (N5)", async () => {
+  it("stores nothing when a renewal answers for another device", async () => {
     const c = await setupConsole();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     const entry = await entryOf(c);
@@ -286,7 +286,7 @@ describe("what the review of PR #95 found in the console", () => {
     expect(await readFile(c.credentials, "utf8")).toBe(before);
   });
 
-  it("refuses a new token whose device already has an entry of another origin (round 2, N5)", async () => {
+  it("refuses a new token whose device already has an entry of another origin", async () => {
     const c = await localFolder();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     const entry = await entryOf(c);
@@ -305,7 +305,7 @@ describe("what the review of PR #95 found in the console", () => {
     expect(await readFile(c.credentials, "utf8")).toBe(before);
   });
 
-  it("drops the local entry when the token to renew is revoked, so the next sign-in reissues (§21)", async () => {
+  it("drops the local entry when the token to renew is revoked, so the next sign-in reissues", async () => {
     const c = await setupConsole();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     const entry = await entryOf(c);

@@ -104,7 +104,7 @@ const setup = async (withHistory = true) => {
   return { atlas, text, id };
 };
 
-describe("atlas settings set --fiscal-date-rule and the ECB rates (mutant 15)", () => {
+describe("atlas settings set --fiscal-date-rule and the ECB rates", () => {
   it("says, before the question, which lines stop having the rate of their fiscal date", async () => {
     const { atlas, text, id } = await setup();
     const before = await text();
@@ -162,7 +162,7 @@ describe("atlas settings set --fiscal-date-rule and the ECB rates (mutant 15)", 
   });
 });
 
-describe("atlas fx correct (mutant 20)", () => {
+describe("atlas fx correct", () => {
   it("proposes the whole chain and writes it in one go after a yes", async () => {
     const { atlas, text, id } = await setup();
     await atlas([], "settings", "set", "--fiscal-date-rule", "etc=value_date", "--yes");
@@ -205,7 +205,7 @@ describe("atlas fx correct (mutant 20)", () => {
   });
 });
 
-describe("atlas edit keeps the lot in the place of the original (review of PR #75)", () => {
+describe("atlas edit keeps the lot in the place of the original", () => {
   it("a rate correction does not change which lot a sale consumes", async () => {
     const { atlas, text, id } = await setup();
     // A second purchase of the same day, dearer, and a sale of 1: FIFO takes

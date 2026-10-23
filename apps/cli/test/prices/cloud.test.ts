@@ -92,7 +92,7 @@ const synced = async (assets: readonly string[] = ["ast_a"]) => {
 const local = (dir: string, name: string) => readFile(join(dir, "prices", name), "utf8");
 
 describe("atlas prices update in a folder synced with a cloud that has prices (016, E3)", () => {
-  it("takes the closes from the API, with the token of the folder, and calls no source (mutant 22)", async () => {
+  it("takes the closes from the API, with the token of the folder, and calls no source", async () => {
     const { c, eodhd, alpha } = await synced();
     const cloud = text([close("2026-09-29", "10"), close("2026-09-30", "11")]);
     c.api.s3.seed("prices/ast_a.jsonl", cloud);
@@ -112,7 +112,7 @@ describe("atlas prices update in a folder synced with a cloud that has prices (0
     expect(Object.keys(pull.versions)).toEqual(["ast_a.jsonl"]);
   });
 
-  it("adds with the rules of the 013, never rewriting a local byte (mutant 23)", async () => {
+  it("adds with the rules of the 013, never rewriting a local byte", async () => {
     const { c } = await synced();
     // A local line as a hand or an older version wrote it: a rewrite would show.
     const before = text([
@@ -162,7 +162,7 @@ describe("atlas prices update in a folder synced with a cloud that has prices (0
     expect(await local(c.ledger, "ast_b.jsonl")).toContain('"close":"21"');
   });
 
-  it("downloads with the lock of the folder free, and writes under it (mutant 24)", async () => {
+  it("downloads with the lock of the folder free, and writes under it", async () => {
     const { c } = await synced();
     c.api.s3.seed("prices/ast_a.jsonl", text([close("2026-09-29", "10")]));
     const locked: boolean[] = [];
@@ -245,7 +245,7 @@ describe("atlas prices update in a folder synced with a cloud that has prices (0
     expect(existsSync(join(c.ledger, "prices", "ast_a.jsonl"))).toBe(false);
   });
 
-  it("never takes a close of today or of a day to come, and says it (review of PR #108, B1)", async () => {
+  it("never takes a close of today or of a day to come, and says it", async () => {
     const { c } = await synced();
     // The clock of the tests is 2026-10-01 in Madrid.
     c.api.s3.seed(
@@ -281,7 +281,7 @@ describe("atlas prices update in a folder synced with a cloud that has prices (0
     expect(c.out.join("\n")).toContain("cloud_lines_future: 1");
   });
 
-  it("never takes a close in another currency than the folder declares for its source (N5)", async () => {
+  it("never takes a close in another currency than the folder declares for its source", async () => {
     const { c } = await synced();
     c.api.s3.seed(
       "prices/ast_a.jsonl",
@@ -295,7 +295,7 @@ describe("atlas prices update in a folder synced with a cloud that has prices (0
     expect(c.out.join("\n")).toContain("cloud_currency_mismatch");
   });
 
-  it("takes a file of the cloud that is not UTF-8 as unreadable, and asks for it again (N2)", async () => {
+  it("takes a file of the cloud that is not UTF-8 as unreadable, and asks for it again", async () => {
     const { c } = await synced();
     c.api.s3.seedBytes("prices/ast_a.jsonl", Uint8Array.from([0xff, 0xfe, 0x0a]));
     expect(await c.exec(["prices", "update"])).toBe(0);
@@ -316,7 +316,7 @@ describe("atlas prices update in a folder synced with a cloud that has prices (0
   });
 });
 
-describe("the sources from a cloud folder: explicit, and with the leftover of the plans (N2 of §15)", () => {
+describe("the sources from a cloud folder: explicit, and with the leftover of the plans", () => {
   it("calls the sources only with --from-sources, saying it spends the quota shared with the cloud", async () => {
     const { c, eodhd } = await synced(["ast_a", "ast_b", "ast_c"]);
     c.api.s3.seed("prices/ast_a.jsonl", text([close("2026-09-29", "10")]));
