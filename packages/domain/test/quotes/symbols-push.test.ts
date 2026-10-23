@@ -30,7 +30,7 @@ const refusal = (run: () => unknown): { code: string; details: unknown } => {
   throw new Error("no refusal");
 };
 
-describe("symbolsPushPlan (016, E2, block 3)", () => {
+describe("symbolsPushPlan", () => {
   it("has nothing to upload when the remote has the same bytes", () => {
     const text = file({ ast_a: entry("A.XETRA") });
     expect(symbolsPushPlan(text, text)).toEqual({ kind: "same" });
@@ -154,7 +154,7 @@ describe("symbolsPushPlan (016, E2, block 3)", () => {
     }
   });
 
-  it("refuses a top-level key it does not know, naming the key and never its value (review of PR #106, B1)", () => {
+  it("refuses a top-level key it does not know, naming the key and never its value", () => {
     const remote = file({ ast_a: entry("A.XETRA") });
     const local = JSON.stringify({
       symbols_format: 2,
@@ -175,7 +175,7 @@ describe("symbolsPushPlan (016, E2, block 3)", () => {
     expect(symbolsPushPlan(local, remote)).toMatchObject({ kind: "push", remote: "unreadable" });
   });
 
-  it("is not fooled by assets named like the properties of every object (review of PR #106, N4)", () => {
+  it("is not fooled by assets named like the properties of every object", () => {
     const local = JSON.stringify({
       symbols_format: 2,
       assets: { constructor: entry("C.XETRA"), toString: entry("T.XETRA") },

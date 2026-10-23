@@ -280,7 +280,7 @@ describe("theses: bucket buys and sells", () => {
     expect(failure(b.build()).code).toBe("thesis_not_open");
   });
 
-  it("lets a correction of a correction keep the thesis window of the root (second review of PR #75)", () => {
+  it("lets a correction of a correction keep the thesis window of the root", () => {
     const b = new LedgerBuilder();
     bucketCatalogue(b);
     b.thesisOpened({ thesis_id: "th1" });

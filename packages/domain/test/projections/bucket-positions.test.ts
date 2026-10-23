@@ -269,7 +269,7 @@ const noRate013 = (asset: string): ExternalPrices => ({
       : undefined,
 });
 
-describe("bucketPositions with a quote that has no rate (feature 013)", () => {
+describe("bucketPositions with a quote that has no rate", () => {
   it("shows the quote, adds nothing in euros and says why", () => {
     const view = bucketPositions(
       project(openBucket()),

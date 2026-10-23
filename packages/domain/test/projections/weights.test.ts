@@ -322,7 +322,7 @@ const noRate013 = (asset: string): ExternalPrices => ({
       : undefined,
 });
 
-describe("coreWeights with a quote that has no rate (feature 013)", () => {
+describe("coreWeights with a quote that has no rate", () => {
   it("uses the last price with euros, and carries the newer quote without them as information", () => {
     const state = projectLedger(balanced().build());
     const result = coreWeights(

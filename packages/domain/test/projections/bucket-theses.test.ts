@@ -300,7 +300,7 @@ const noRate013 = (asset: string): ExternalPrices => ({
       : undefined,
 });
 
-describe("bucketTheses with a quote of the index that has no rate (feature 013)", () => {
+describe("bucketTheses with a quote of the index that has no rate", () => {
   it("leaves the comparison out: a price without euros is no price for it", () => {
     const view = bucketTheses(
       projectLedger(scenario({ sell: true }).build()),
