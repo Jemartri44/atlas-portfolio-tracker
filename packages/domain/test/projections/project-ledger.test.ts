@@ -1024,3 +1024,38 @@ describe("projectLedger: asOf", () => {
     ).toBe("10");
   });
 });
+
+describe("projectLedger: onDate", () => {
+  const events = (() => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.deposit({ account_id: "acc_fund", value_date: "2027-03-01", amount: "1000" });
+    b.deposit({ account_id: "acc_fund", value_date: "2027-03-01", amount: "500" });
+    const wrong = b.deposit({ account_id: "acc_fund", value_date: "2027-03-15", amount: "70" });
+    b.reversal(wrong.id);
+    b.withdrawal({ account_id: "acc_fund", value_date: "2027-04-02", amount: "200" });
+    b.deposit({ account_id: "acc_fund", value_date: "2027-02-01", amount: "30" });
+    return b.build();
+  })();
+
+  it("reports each date once, in order, with the cash that asOf gives for it", () => {
+    const seen: [string, string[]][] = [];
+    const cashOf = (cash: Map<string, { toString(): string }>): string[] =>
+      [...cash].map(([key, balance]) => `${key}=${balance.toString()}`).sort();
+    projectLedger(events, {
+      onDate: (date, state) => {
+        seen.push([date, cashOf(state.cash)]);
+      },
+    });
+    expect(seen.map(([date]) => date)).toEqual(["2027-02-01", "2027-03-01", "2027-04-02"]);
+    for (const [date, cash] of seen) {
+      expect(cash).toEqual(cashOf(projectLedger(events, { asOf: date }).cash));
+    }
+  });
+
+  it("stops at the cut of asOf", () => {
+    const dates: string[] = [];
+    projectLedger(events, { asOf: "2027-03-31", onDate: (date) => dates.push(date) });
+    expect(dates).toEqual(["2027-02-01", "2027-03-01"]);
+  });
+});
