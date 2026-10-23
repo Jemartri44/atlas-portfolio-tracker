@@ -10,7 +10,7 @@
 // (`format/input.ts`): `1.200,50` is twelve hundred, `1.5` is refused.
 
 import { isCivilDate, lastWorkingDay } from "@atlas/domain";
-import type { CorporateActionParams } from "@atlas/domain/tools";
+import { type CorporateActionParams, ratioDirection } from "@atlas/domain/tools";
 import { parseDecimalInput } from "../../../format/input.js";
 import type { CorporateForm } from "../../../view-models/forms/corporate.js";
 import type { FormValues } from "../../../view-models/forms/index.js";
@@ -36,6 +36,25 @@ const decimal = (values: FormValues, name: string): string | undefined => {
 const ratioOf = (values: FormValues): string | undefined => {
   const raw = text(values, "ratio");
   return raw === undefined || raw.includes("/") ? raw : normaliseDecimal(raw);
+};
+
+/**
+ * What is wrong with a ratio written the wrong way round, or nothing. The domain takes any ratio;
+ * a split with 1/4 or a reverse split with 4 is a typing slip that books every lot wrong, so the
+ * form refuses it before anything is composed.
+ */
+export const ratioError = (form: CorporateForm, values: FormValues): string | undefined => {
+  const ratio = ratioOf(values);
+  switch (ratio === undefined ? undefined : ratioDirection(form.kind, ratio)) {
+    case "unchanged":
+      return "Un ratio de 1 no cambia el número de títulos.";
+    case "reduces":
+      return "Un split multiplica los títulos: el ratio ha de ser mayor que 1 (2 para un 2x1). Si el emisor ha agrupado títulos, es un contrasplit.";
+    case "multiplies":
+      return "Un contrasplit reduce los títulos: el ratio ha de ser menor que 1 (1/3 para uno por cada tres). Si el emisor ha multiplicado los títulos, es un split.";
+    default:
+      return undefined;
+  }
 };
 
 /** The account a fee line names, by its name or its identifier, ignoring case. */
