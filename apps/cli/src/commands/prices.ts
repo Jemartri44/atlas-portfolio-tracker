@@ -34,13 +34,13 @@ import {
 } from "@atlas/domain/quotes";
 import { RemoteError } from "@atlas/domain/remote-answers";
 import { assertKnownFlags, booleanFlag, type Flags, stringFlag, UsageError } from "../args.js";
-import { type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
+import { CommandFailure, type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { OFFLINE_CODES, SESSION_CODES } from "../output/cloud.js";
 import { FAILURE_TEXT, mismatchedNotes, SOURCE_NAMES, unservedNotes } from "../output/prices.js";
 import { table } from "../output/table.js";
 import { type PullOutcome, priceOriginOf, pullFromCloud } from "../prices/cloud.js";
 import { folderOf, keysFor, sourcesFor } from "../prices/load.js";
-import { confirm, loadForQuery, render } from "./shared.js";
+import { aside, cancelled, confirm, loadForQuery, render } from "./shared.js";
 
 const USAGE_PRICES =
   "uso: atlas prices update [--from-sources] | atlas prices status | atlas prices symbols [<activo>] | atlas prices symbols set <activo> [--eodhd <símbolo>] [--alpha-vantage <símbolo>] --currency <divisa> [--eodhd-currency <divisa>] [--alpha-vantage-currency <divisa>] [--accept-currency] | atlas prices symbols remove <activo> | atlas prices purge <activo> --source eodhd|alpha_vantage [--yes]";
@@ -122,8 +122,9 @@ const update = async (ctx: Context, flags: Flags): Promise<number> => {
   const fromSources = booleanFlag(flags, "from-sources");
   const origin = await priceOriginOf(ctx);
   if (origin.kind === "refused" && !fromSources) {
-    ctx.io.err(`Error: no se pueden bajar los precios de la nube: ${origin.message}`);
-    return EXIT.session;
+    throw new CommandFailure(EXIT.session, "cloud_prices_unavailable", [
+      `Error: no se pueden bajar los precios de la nube: ${origin.message}`,
+    ]);
   }
   if (origin.kind === "cloud" && !fromSources) {
     let outcome: PullOutcome;
@@ -131,14 +132,17 @@ const update = async (ctx: Context, flags: Flags): Promise<number> => {
       outcome = await pullFromCloud(ctx, origin);
     } catch (error) {
       if (error instanceof RemoteError) {
-        ctx.io.err(
-          `Error (${error.code}): no se han podido bajar los precios de la nube. No se ha llamado a ninguna fuente ni se ha tocado nada; vuelve a intentarlo más tarde.`,
+        throw new CommandFailure(
+          SESSION_CODES.has(error.code)
+            ? EXIT.session
+            : OFFLINE_CODES.has(error.code)
+              ? EXIT.offline
+              : EXIT.domain,
+          error.code,
+          [
+            `Error (${error.code}): no se han podido bajar los precios de la nube. No se ha llamado a ninguna fuente ni se ha tocado nada; vuelve a intentarlo más tarde.`,
+          ],
         );
-        return SESSION_CODES.has(error.code)
-          ? EXIT.session
-          : OFFLINE_CODES.has(error.code)
-            ? EXIT.offline
-            : EXIT.domain;
       }
       throw error;
     }
@@ -308,7 +312,7 @@ const purge = async (ctx: Context, assetId: string, flags: Flags): Promise<numbe
       `¿Quitar de prices/ ${count === 1 ? "1 cierre" : `${count} cierres`} de ${SOURCE_NAMES[source]} de ${assetId} guardados en una divisa que no es la declarada? La próxima descarga vuelve a pedir esos días una vez; los que ninguna fuente sirva quedan como hueco. [s/N] `,
     ))
   ) {
-    ctx.io.out("No se ha quitado nada.");
+    cancelled(ctx);
     return EXIT.ok;
   }
   const removed = await purgeMismatched(store, assetId, source);
@@ -429,10 +433,9 @@ const setSymbols = async (ctx: Context, assetId: string, flags: Flags): Promise<
   const now = () => ctx.deps.clock.now();
   const check = await checkSymbols({ declaration, store, sources: sourcesFor(ctx, keys), now });
   if (!check.ok) {
-    ctx.io.err(
+    throw new CommandFailure(EXIT.domain, "symbol_check_failed", [
       `Error: ${SOURCE_NAMES[check.source]} ${FAILURE_TEXT[check.kind]} al confirmar el símbolo: no se ha guardado nada. Vuelve a intentarlo más tarde.`,
-    );
-    return EXIT.domain;
+    ]);
   }
   let pending = await recordSymbols({
     assetId,
@@ -444,7 +447,8 @@ const setSymbols = async (ctx: Context, assetId: string, flags: Flags): Promise<
   });
   if (pending.length > 0) {
     for (const d of pending) {
-      ctx.io.out(
+      aside(
+        ctx,
         `${SOURCE_NAMES[d.source]} dice que ${declaration[d.source]} cotiza en ${d.found}, y has declarado ${d.declared}. Nunca se supone: si ${d.declared} es la unidad de sus cierres (por ejemplo peniques, GBX, frente a libras, GBP), confírmalo.`,
       );
     }
@@ -455,8 +459,7 @@ const setSymbols = async (ctx: Context, assetId: string, flags: Flags): Promise<
         `¿Confirmas ${pending.map((d) => `${d.declared} para ${SOURCE_NAMES[d.source]}`).join(" y ")} como divisa de sus cierres, contra lo que dice la fuente? [s/N] `,
       ));
     if (!accepted) {
-      ctx.io.out("No se ha guardado nada.");
-      return EXIT.domain;
+      throw new CommandFailure(EXIT.domain, "currency_not_confirmed", ["No se ha guardado nada."]);
     }
     pending = await recordSymbols({
       assetId,

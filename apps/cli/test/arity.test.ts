@@ -2,7 +2,8 @@
 // boolean flag used to be ignored, and the command recorded the opposite of what was written.
 
 import { describe, expect, it } from "vitest";
-import { ARITY, COMMANDS } from "../src/main.js";
+import { COMMANDS } from "../src/main.js";
+import { ARITY } from "../src/usage.js";
 import { harness, seed } from "./harness.js";
 
 describe("the words a command reads", () => {

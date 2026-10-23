@@ -6,6 +6,7 @@
 // nothing and says nothing to anybody (`no-referrer`, a CSP of `none`).
 
 import { createServer } from "node:http";
+import { DomainError } from "@atlas/domain";
 
 const PAGE_HEADERS = {
   "content-type": "text/html; charset=utf-8",
@@ -56,7 +57,10 @@ export const openLoopback = async (state: string, timeoutMs: number): Promise<Lo
     resolveCode(got);
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const timer = setTimeout(() => rejectCode(new Error("loopback_timeout")), timeoutMs);
+  const timer = setTimeout(
+    () => rejectCode(new DomainError("login_timeout", "the sign-in did not come back in time")),
+    timeoutMs,
+  );
   const close = (): void => {
     clearTimeout(timer);
     server.close();

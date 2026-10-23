@@ -17,9 +17,9 @@ import {
   textOfLines,
 } from "@atlas/domain/sync";
 import { assertKnownFlags, type Flags, requireFlag, UsageError } from "../args.js";
-import { type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
+import { CommandFailure, type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { cloudStoreOf } from "../folder-mode.js";
-import { confirm, render } from "./shared.js";
+import { aside, cancelled, confirm, render } from "./shared.js";
 
 /** The answer never came back: not known whether the PUT was applied. */
 const CUT_CODES: ReadonlySet<string> = new Set(["network_failed", "transport_rejected"]);
@@ -84,11 +84,12 @@ export const uploadCommand = async (
       { cloud_lines: linesOfText(current.text).length },
     );
   }
-  ctx.io.out(
+  aside(
+    ctx,
     `Se subirán ${lines.length} líneas de ${from} a ${ctx.mode.remote.origin}, que está vacía. Después, el libro de la nube es el único: ${from} no se sincroniza con él.`,
   );
   if (!(await confirm(ctx, "¿Subir? [s/N] "))) {
-    ctx.io.out("Cancelado.");
+    cancelled(ctx);
     return EXIT.ok;
   }
   try {
@@ -103,16 +104,16 @@ export const uploadCommand = async (
     if (error instanceof RemoteError && error.code === "init_rejected") {
       const why = typeof error.details.code === "string" ? error.details.code : "desconocido";
       const line = typeof error.details.line === "number" ? `, línea ${error.details.line}` : "";
-      ctx.io.err(
+      throw new CommandFailure(EXIT.domain, "init_rejected", [
         `Error (init_rejected): la nube no ha aceptado el libro (${why}${line}). No se ha escrito nada.`,
-      );
-      return EXIT.domain;
+      ]);
     }
     // The PUT was sent and the answer never came: the cloud may hold the book.
     // Repeating is safe, because the same bytes answer `already_uploaded`.
     if (error instanceof RemoteError && CUT_CODES.has(error.code)) {
-      ctx.io.err(`Error (write_outcome_unknown): ${UPLOAD_OUTCOME_UNKNOWN}`);
-      return EXIT.outcomeUnknown;
+      throw new CommandFailure(EXIT.outcomeUnknown, "write_outcome_unknown", [
+        `Error (write_outcome_unknown): ${UPLOAD_OUTCOME_UNKNOWN}`,
+      ]);
     }
     throw error;
   }

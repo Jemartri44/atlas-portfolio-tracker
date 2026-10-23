@@ -96,6 +96,24 @@ describe("atlas lock", () => {
     expect(await run(["--ledger", ledger, ...account], capture().io)).toBe(0);
   });
 
+  it("breaks the lock with --json: the questions go to stderr, stdout is one object", async () => {
+    const { ledger, lock } = await folder();
+    await writeFile(lock, foreign("2020-01-01T00:00:00.000Z"));
+    const out: string[] = [];
+    const err: string[] = [];
+    const io: Io = {
+      out: (t) => out.push(t),
+      err: (t) => err.push(t),
+      confirm: async () => true,
+    };
+    expect(await run(["--ledger", ledger, "lock", "break", "--json"], io)).toBe(0);
+    expect(out.map((line) => JSON.parse(line))).toEqual([{ status: "broken" }]);
+    expect(err.join("\n")).toContain("Romperlo es seguro");
+    out.length = 0;
+    expect(await run(["--ledger", ledger, "lock", "break", "--json"], io)).toBe(0);
+    expect(out.map((line) => JSON.parse(line))).toEqual([{ locked: false }]);
+  });
+
   it("says a lock nobody can read is still a lock, and rejects an unknown subcommand", async () => {
     const { ledger, lock } = await folder();
     await writeFile(lock, "a mano");

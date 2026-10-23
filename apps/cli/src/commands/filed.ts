@@ -22,7 +22,7 @@ import { assertKnownFlags, type Flags, listFlag, stringFlag, UsageError } from "
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { eur } from "../output/format.js";
 import { table } from "../output/table.js";
-import { confirmAndRecord, loadForQuery, yearArgument } from "./shared.js";
+import { aside, confirmAndRecord, loadForQuery, yearArgument } from "./shared.js";
 
 const USAGE =
   "uso: atlas filed <renta|720|721> <año> [--set <clave>=<importe>]… [--filed-at YYYY-MM-DD] [--receipt <referencia>] [--notes <texto>] [--supersedes <id>]";
@@ -74,10 +74,12 @@ export const filedCommand = async (
       "falta --receipt: es el número de justificante que da la Agencia Tributaria al presentar; sin él no hay forma de encontrar esta declaración después",
     );
   }
-  ctx.io.out(
+  aside(
+    ctx,
     `Lo que la aplicación calcula hoy para ${model === "renta" ? "la Renta" : `el Modelo ${model}`} de ${year}, y lo que vas a declarar:`,
   );
-  ctx.io.out(
+  aside(
+    ctx,
     table(
       ["clave", "calculado", "declarado"],
       [...computed].map(([key, amount]) => [key, amount, declared.get(key) ?? "="]),

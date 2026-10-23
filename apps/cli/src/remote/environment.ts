@@ -5,6 +5,7 @@
 
 import { spawn } from "node:child_process";
 import { homedir, hostname } from "node:os";
+import { DomainError } from "@atlas/domain";
 
 export interface RemoteEnvironment {
   readonly fetch: typeof fetch;
@@ -35,30 +36,44 @@ const openWith = (url: string): void => {
   }
 };
 
+interface HiddenInput extends NodeJS.ReadableStream {
+  readonly isTTY?: boolean;
+  setRawMode?(raw: boolean): unknown;
+}
+
 /** A line from a terminal with the echo off, or from a pipe as it comes. */
-const readHiddenLine = (prompt: string): Promise<string> =>
+export const readHiddenLine = (
+  prompt: string,
+  input: HiddenInput = process.stdin,
+  output: NodeJS.WritableStream = process.stderr,
+): Promise<string> =>
   new Promise((resolve, reject) => {
-    process.stderr.write(prompt);
-    const input = process.stdin;
+    output.write(prompt);
     const raw = input.isTTY === true;
     let text = "";
     const done = (value: string | Error): void => {
       input.off("data", onData);
+      input.off("end", onEnd);
       if (raw) {
-        input.setRawMode(false);
+        input.setRawMode?.(false);
       }
       input.pause();
-      process.stderr.write("\n");
+      output.write("\n");
       if (value instanceof Error) {
         reject(value);
       } else {
         resolve(value.trim());
       }
     };
-    const onData = (chunk: Buffer): void => {
-      for (const char of chunk.toString("utf8")) {
+    const onData = (chunk: Buffer | string): void => {
+      for (const char of chunk.toString()) {
         if (char === "\u0003") {
-          done(new Error("interrupted"));
+          done(new DomainError("login_interrupted", "the sign-in was interrupted"));
+          return;
+        }
+        // End of input from the keyboard before anything was typed.
+        if (char === "\u0004" && text === "") {
+          onEnd();
           return;
         }
         if (char === "\r" || char === "\n") {
@@ -68,11 +83,22 @@ const readHiddenLine = (prompt: string): Promise<string> =>
         text = char === "\u007f" || char === "\b" ? text.slice(0, -1) : text + char;
       }
     };
+    // The input closed (a pipe, a terminal that went away) before the line came: nothing to wait for.
+    const onEnd = (): void => {
+      // A code piped in with no line break at the end is a code all the same.
+      const typed = text.trim();
+      done(
+        typed === ""
+          ? new DomainError("login_no_code", "the input closed before the code arrived")
+          : typed,
+      );
+    };
     if (raw) {
-      input.setRawMode(true);
+      input.setRawMode?.(true);
     }
     input.resume();
     input.on("data", onData);
+    input.on("end", onEnd);
   });
 
 export const systemRemote = (): RemoteEnvironment => ({

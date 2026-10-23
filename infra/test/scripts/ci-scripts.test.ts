@@ -91,7 +91,7 @@ describe("the plan workflow (mutant 32)", () => {
   it("runs with -lock=false and never shows a plan unfiltered", () => {
     const run = code("infra/scripts/ci/terraform-run.sh");
     expect(run).toMatch(/\[ "\$mode" = plan \] && lock=\(-lock=false\)/);
-    expect(run).toContain('"${lock[@]}"');
+    expect(run).toMatch(/"\$\{lock\[@\]\}"/);
     const shows = run.split("\n").filter((line) => /\bshow\b/.test(line));
     expect(shows.length).toBeGreaterThan(0);
     for (const line of shows) {

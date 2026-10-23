@@ -15,7 +15,15 @@ import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { cloudStoreOf } from "../folder-mode.js";
 import { pathExists } from "../fs.js";
 import { assertNoLedgerInCloudFolder } from "../remote/credentials-file.js";
-import { confirm, confirmOutsideRepository, degradedHeader, loadForQuery } from "./shared.js";
+import {
+  aside,
+  cancelled,
+  confirm,
+  confirmOutsideRepository,
+  degradedHeader,
+  loadForQuery,
+  render,
+} from "./shared.js";
 
 /**
  * Free text that a spreadsheet would run as a formula (`notes` of a movement
@@ -146,13 +154,13 @@ export const exportCommand = async (
     throw new DomainError("path_exists", `${out} is a directory`, { path: out });
   }
   if (!(await confirmOutsideRepository(ctx, out))) {
-    ctx.io.out("Cancelado.");
+    cancelled(ctx);
     return 0;
   }
   if (exists) {
-    ctx.io.out(`${out} ya existe y se sustituiría.`);
+    aside(ctx, `${out} ya existe y se sustituiría.`);
     if (!(await confirm(ctx, "¿Sobrescribir? [s/N] "))) {
-      ctx.io.out("Cancelado.");
+      cancelled(ctx);
       return 0;
     }
   }
@@ -165,6 +173,6 @@ export const exportCommand = async (
     await rm(temporary, { force: true });
     throw failure;
   }
-  ctx.io.out(`Exportado a ${out}.`);
+  render(ctx, { status: "exported", format, path: out }, `Exportado a ${out}.`);
   return 0;
 };
