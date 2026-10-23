@@ -6,8 +6,8 @@
 
 import { NEAR_LIMIT_PCT } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
-import { store } from "../src/ledger/state.js";
 import Cubo from "../src/routes/cubo/index.jsx";
+import { setPrivacy } from "../src/shell/preferences.js";
 import {
   capShape,
   dumbbells,
@@ -118,7 +118,7 @@ const meters = (host: HTMLElement): Element[] => [...host.querySelectorAll(".met
 
 describe("the gauges of the bucket on the screen, with the privacy mode on", () => {
   it("draws the three, each with its figure in percent", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show("/cubo?fecha=2027-01-10", Cubo);
     const labels = meters(host).map((meter) => text(meter.querySelector(".meter-label")));
     expect(labels).toEqual([
@@ -129,7 +129,7 @@ describe("the gauges of the bucket on the screen, with the privacy mode on", () 
   });
 
   it("says what each means to a reader of the page, with no amount in the label", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show("/cubo?fecha=2027-01-10", Cubo);
     const aria = meters(host).map((meter) =>
       meter.querySelector("svg")?.getAttribute("aria-label"),
@@ -189,7 +189,7 @@ describe("the gauges of the bucket on the screen, with the privacy mode on", () 
 
 describe("the dumbbells of the theses, with the privacy mode on", () => {
   it("draws the dot of the thesis and the ring of the index, in different shapes", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show("/cubo?fecha=2027-01-10", Cubo);
     const rows = [...host.querySelectorAll(".dumb > li")];
     expect(rows.length).toBeGreaterThan(0);
@@ -202,7 +202,7 @@ describe("the dumbbells of the theses, with the privacy mode on", () => {
   });
 
   it("writes the difference in points in ink, with its sign", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show("/cubo?fecha=2027-01-10", Cubo);
     for (const figure of host.querySelectorAll(".dumb .vs")) {
       expect(text(figure)).toMatch(/^[+−-]\d[\d.]*,\d\spp$/);
@@ -226,7 +226,7 @@ describe("the dumbbells of the theses, with the privacy mode on", () => {
 describe("a percentage over a partial total", () => {
   it("is «sin dato» where the thesis has no comparison, never a zero or an estimate", async () => {
     // 15/01/2029: one thesis has no index price, so its two percentages are missing.
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show("/cubo?fecha=2029-01-15", Cubo);
     const cells = [
       ...host.querySelectorAll(
@@ -240,7 +240,7 @@ describe("a percentage over a partial total", () => {
   });
 
   it("is not given to the weight of a position while the bucket total is partial", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show("/cubo?fecha=2029-01-15", Cubo);
     const weights = [
       ...host.querySelectorAll('table[aria-label="Posiciones del cubo"] tbody td.num'),
@@ -268,7 +268,7 @@ describe("what the cards of E3 say with the privacy mode on", () => {
 
   it("has at least as many percentages as masks in the budget, and more in the theses", async () => {
     // The page as a whole closes with the chart table turned into percentages.
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show("/cubo?fecha=2027-01-10", Cubo);
     const budget = counts(cardOf(host, "Presupuesto y control"));
     expect(budget.percentages).toBeGreaterThanOrEqual(budget.masks);

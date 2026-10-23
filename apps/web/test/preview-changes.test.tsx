@@ -7,8 +7,8 @@
 import { type AccountId, Money, Quantity } from "@atlas/domain";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { MASK } from "../src/format/money.js";
-import { store } from "../src/ledger/state.js";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
+import { setPrivacy } from "../src/shell/preferences.js";
 import { previewChanges } from "../src/view-models/preview.js";
 import {
   choose,
@@ -94,7 +94,7 @@ describe("what changes, on the preview of a purchase", () => {
   beforeEach(() => today("2026-09-18"));
 
   it("shows only what changes, the new lot first, and masks every quantity", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show("/registrar/buy", RegistrarForm, "/registrar/:tipo");
     fillPurchase(host, "600");
     await press(host, "Ver el efecto");
@@ -131,7 +131,7 @@ describe("what changes, on the preview of a purchase", () => {
 
 describe("the result a sale would book", () => {
   it("is titled a result, and each line a loss or a gain by its sign", async () => {
-    store.setPrivacy(false);
+    setPrivacy(false);
     const host = await show("/registrar/sell", RegistrarForm, "/registrar/:tipo");
     choose(host, "f-account_id", "acc_mi");
     choose(host, "f-asset_id", "ast_world");
@@ -151,7 +151,7 @@ describe("the warnings a sale would raise", () => {
   it("are grouped as in Atención: one line with how many, each one folded under it", async () => {
     // A loss on 11/01/2029 with ten purchases of the fund inside its year.
     today("2029-01-11");
-    store.setPrivacy(false);
+    setPrivacy(false);
     const host = await show("/registrar/sell", RegistrarForm, "/registrar/:tipo");
     choose(host, "f-account_id", "acc_mi");
     choose(host, "f-asset_id", "ast_world");
@@ -177,7 +177,7 @@ describe("the preview of a large sale", () => {
   const sell = async (width: number): Promise<HTMLElement> => {
     withStyles(width, 890);
     today("2029-01-11");
-    store.setPrivacy(false);
+    setPrivacy(false);
     const host = await show("/registrar/sell", RegistrarForm, "/registrar/:tipo");
     choose(host, "f-account_id", "acc_mi");
     choose(host, "f-asset_id", "ast_world");

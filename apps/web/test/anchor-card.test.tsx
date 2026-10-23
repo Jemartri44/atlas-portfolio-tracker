@@ -6,14 +6,14 @@
 import { Money } from "@atlas/domain";
 import { render } from "solid-js/web";
 import { afterEach, describe, expect, it } from "vitest";
-import { store } from "../src/ledger/state.js";
 import { LossesCard } from "../src/routes/fiscal/LossesCard.jsx";
+import { setPrivacy } from "../src/shell/preferences.js";
 import type { AnchorView } from "../src/view-models/fiscal/index.js";
 
 const disposers: (() => void)[] = [];
 afterEach(() => {
   for (const dispose of disposers.splice(0)) dispose();
-  store.setPrivacy(false);
+  setPrivacy(false);
 });
 
 const eur = (value: string): Money => Money.parse(value, "EUR");
@@ -55,7 +55,7 @@ const anchor = (overrides: Partial<AnchorView> = {}): AnchorView => ({
 
 describe("the anchor of what was filed, painted", () => {
   it("names each origin with what it computed and what was declared", () => {
-    store.setPrivacy(false);
+    setPrivacy(false);
     const shown = painted([anchor()]);
     expect(shown).toContain("Pérdidas patrimoniales de 2027");
     expect(shown).toContain("Pérdidas patrimoniales de 2028");
@@ -64,7 +64,7 @@ describe("the anchor of what was filed, painted", () => {
   });
 
   it("says it matches, and does not dress an agreement up as a difference", () => {
-    store.setPrivacy(false);
+    setPrivacy(false);
     const same = anchor({
       matches: true,
       rows: [
@@ -83,7 +83,7 @@ describe("the anchor of what was filed, painted", () => {
   });
 
   it("keeps the fact and the origins under the mask, never the amounts", () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const shown = painted([anchor()]);
     expect(shown).toContain("Anclado en lo que declaraste en 2028");
     expect(shown).toContain("de 2027");

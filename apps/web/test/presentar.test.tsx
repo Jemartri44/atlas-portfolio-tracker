@@ -11,8 +11,8 @@ import { BlobLedgerStore } from "@atlas/adapters/blob";
 import { decodeLine, type UseCaseDeps } from "@atlas/domain";
 import { beforeEach, describe, expect, it } from "vitest";
 import { loadInto } from "../src/ledger/actions.js";
-import { store } from "../src/ledger/state.js";
 import Presentar from "../src/routes/fiscal/presentar.jsx";
+import { setPrivacy } from "../src/shell/preferences.js";
 import { goldenText } from "./helpers/golden.js";
 import { MemoryBlob } from "./helpers/memory-blob.js";
 import { press, settle, show, text, type, until, withGoldenLedger } from "./helpers/render.jsx";
@@ -57,7 +57,7 @@ describe("recording what was filed", () => {
   });
 
   it("masks what it preloads until the field has the focus, and never what is typed", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await openForm();
     const base = host.querySelector("#f-base") as HTMLInputElement;
     expect(base.value).not.toContain("174");
@@ -69,7 +69,7 @@ describe("recording what was filed", () => {
     base.dispatchEvent(new Event("blur", { bubbles: true }));
     await settle();
     expect(base.value).toBe("200,00");
-    store.setPrivacy(false);
+    setPrivacy(false);
   });
 
   it("refuses to write without the receipt, and says why", async () => {

@@ -38,8 +38,8 @@ const files = (dir: string): string[] =>
 /** Files that go to the network, with how: the ones that build the request themselves are read. */
 const KNOWN = new Map<string, string>([
   ["ledger/cloud.ts", "pass-through of the page's fetch to httpRemote (no-store inside it)"],
-  ["sync/devices.ts", "own requests"],
-  ["sync/session.ts", "own requests"],
+  ["auth/devices.ts", "own requests"],
+  ["auth/session.ts", "own requests"],
   ["ecb/cloud.ts", "httpReference: public data, ETag and 304 on purpose"],
 ]);
 
@@ -54,7 +54,7 @@ describe("the code that reaches the network", () => {
         )
       ) {
         found.set(relative(src, file).replaceAll("\\", "/"), "");
-        if (/(^|\/)sync\/(devices|session)\.ts$/.test(file)) {
+        if (/(^|\/)auth\/(devices|session)\.ts$/.test(file)) {
           for (const call of text.matchAll(/\brequest\(\s*[`"'][\s\S]*?\n\s*\}\s*\)?;?\s*\n?/g)) {
             expect(call[0], file).toContain('cache: "no-store"');
           }

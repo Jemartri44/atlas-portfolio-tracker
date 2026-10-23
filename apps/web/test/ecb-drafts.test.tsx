@@ -19,6 +19,7 @@ import { store } from "../src/ledger/state.js";
 import Borradores from "../src/routes/registrar/borradores.jsx";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
 import Resumen from "../src/routes/resumen/index.jsx";
+import { type Api, apiAt, cloudText, sameOrigin, signedIn } from "./cloud/api-support.js";
 import { goldenText } from "./helpers/golden.js";
 import {
   choose,
@@ -31,7 +32,6 @@ import {
   until,
   withGoldenLedger,
 } from "./helpers/render.jsx";
-import { type Api, apiAt, cloudText, sameOrigin, signedIn } from "./sync/api-support.js";
 
 withGoldenLedger();
 

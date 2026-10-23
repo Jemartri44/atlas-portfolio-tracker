@@ -10,11 +10,11 @@ import { ledgerEntries, projectLedger } from "@atlas/domain";
 import { afterEach, describe, expect, it } from "vitest";
 import { MASK } from "../src/format/money.js";
 import { nameIndex } from "../src/format/names.js";
-import { store } from "../src/ledger/state.js";
 import Configuracion from "../src/routes/ajustes/configuracion.jsx";
 import Detail from "../src/routes/movimientos/detail.jsx";
 import Edit from "../src/routes/movimientos/edit.jsx";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
+import { setPrivacy } from "../src/shell/preferences.js";
 import { detailView } from "../src/view-models/detail.js";
 import { goldenEvents } from "./helpers/golden.js";
 import {
@@ -40,7 +40,7 @@ const SETTINGS = "01NDYZTZ804AP696WA0PA725XK";
 
 describe("the detail and the correction of a movement, with the mask on and off", () => {
   it("tells the effects of a corporate action as sentences, with their figures masked", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show(`/movimientos/${REVERSE_SPLIT}`, Detail, "/movimientos/:id");
     const shown = text(host);
 
@@ -62,7 +62,7 @@ describe("the detail and the correction of a movement, with the mask on and off"
   });
 
   it("masks the money of a configuration change, which is no longer JSON", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const shown = text(await show(`/movimientos/${SETTINGS}`, Detail, "/movimientos/:id"));
     expect(shown).toContain("Aportación mensual");
     expect(shown).not.toMatch(/[{}"]|monthly_contribution_eur|600,00/);
@@ -70,7 +70,7 @@ describe("the detail and the correction of a movement, with the mask on and off"
   });
 
   it("masks what the correction screen says is recorded now", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show(`/movimientos/${PURCHASE}/editar`, Edit, "/movimientos/:id/editar");
     const card = [...host.querySelectorAll("section.card")].find((section) =>
       section.textContent?.includes("Como está registrado ahora"),
@@ -104,7 +104,7 @@ describe("the fields a form fills in for you", () => {
    * used to print them in the clear right under a card that masked them.
    */
   it("masks a filled-in amount of a correction until the field has the focus", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show(`/movimientos/${PURCHASE}/editar`, Edit, "/movimientos/:id/editar");
     expect(shownIn(host, "f-amount")).toBe(MASK);
     expect(shownIn(host, "f-quantity")).toBe(MASK);
@@ -122,7 +122,7 @@ describe("the fields a form fills in for you", () => {
     // On a phone the effect replaces the form: the fields leave the screen and
     // come back, and what was typed in them must come back in sight too.
     withStyles(400);
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show(`/movimientos/${PURCHASE}/editar`, Edit, "/movimientos/:id/editar");
     type(host, "f-amount", "3200");
     type(host, "correct-reason", "importe mal tecleado");
@@ -136,7 +136,7 @@ describe("the fields a form fills in for you", () => {
 
   it("heads the effect with what is about to be recorded, what was typed unmasked", async () => {
     withStyles(400);
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show(`/movimientos/${PURCHASE}/editar`, Edit, "/movimientos/:id/editar");
     type(host, "f-amount", "3200");
     type(host, "correct-reason", "importe mal tecleado");
@@ -152,7 +152,7 @@ describe("the fields a form fills in for you", () => {
   });
 
   it("does not mask a default of the application: it is not the user's data", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show("/registrar/buy", RegistrarForm, "/registrar/:tipo");
     expect(shownIn(host, "f-fee")).toBe("0");
   });
@@ -163,7 +163,7 @@ describe("the fields a form fills in for you", () => {
   });
 
   it("leaves in sight what the user types, after the field loses the focus", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show(`/movimientos/${PURCHASE}/editar`, Edit, "/movimientos/:id/editar");
     const amount = host.querySelector("#f-amount") as HTMLInputElement;
     amount.dispatchEvent(new FocusEvent("focus"));
@@ -179,7 +179,7 @@ describe("the fields a form fills in for you", () => {
 
   /** One rule for every amount of the configuration: the 720 and 721 thresholds too. */
   it("masks every amount of the configuration and leaves the percentages", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show("/ajustes/configuracion", Configuracion);
     for (const id of [
       "s-monthly_contribution_eur",
@@ -194,12 +194,12 @@ describe("the fields a form fills in for you", () => {
   });
 
   it("masks the limits of the savings brackets and keeps their rates", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const shown = text(await show(`/movimientos/${SETTINGS}`, Detail, "/movimientos/:id"));
     expect(shown).toContain("Tramos de la base del ahorro");
     expect(shown).not.toMatch(/6\.000|50\.000|200\.000|300\.000/);
     expect(shown).toContain("al 19");
-    store.setPrivacy(false);
+    setPrivacy(false);
     const open = text(await show(`/movimientos/${SETTINGS}`, Detail, "/movimientos/:id"));
     expect(open).toContain("hasta 6.000,00 € al 19");
   });
@@ -237,7 +237,7 @@ describe("the mask in its place", () => {
     // A box wider than the dots, aligned to the right, pushed the mask ~20px
     // off the left edge of a hero figure and of a line of the detail.
     withStyles(2045, 1141);
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show(`/movimientos/${PURCHASE}`, Detail, "/movimientos/:id");
     const dots = host.querySelector(".sentence .mask > .dots") as HTMLElement;
     expect(dots).not.toBeNull();
