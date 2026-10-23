@@ -14,11 +14,12 @@
 import { yearOf } from "@atlas/domain";
 import { informativeReturn, taxBoxes, taxYear } from "@atlas/domain/fiscal";
 import { A } from "@solidjs/router";
-import { createMemo, createResource, type JSX, Show } from "solid-js";
-import { EmptyState, Notice, Section } from "../../components/index.js";
+import { createMemo, createResource, For, type JSX, Show } from "solid-js";
+import { EmptyState, ErrorView, Notice, Section } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
 import { toAppError } from "../../ledger/errors.js";
-import { store, today } from "../../ledger/state.js";
+import { attempt } from "../../ledger/query.js";
+import { type AppError, store, today } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { privacy } from "../../shell/preferences.js";
 import { boxesView, informativeView, yearView } from "../../view-models/fiscal/index.js";
@@ -45,6 +46,13 @@ const SETUP = new Set([
   "asset_updated",
   "settings_changed",
 ]);
+
+/** A part of the screen that could not be calculated: its reason, in its place and in Spanish. */
+const PartFailed = (props: { title: string; error: AppError; half?: boolean }): JSX.Element => (
+  <Section title={props.title} class={props.half === true ? "span-6" : "span-12"}>
+    <ErrorView error={props.error} title="No se ha podido calcular esta parte" />
+  </Section>
+);
 
 /**
  * The years worth offering: from the first one with figures or with a return
@@ -113,18 +121,30 @@ export default function FiscalRoute(): JSX.Element {
             return { ok: false as const, error: toAppError(error) };
           }
         });
+        // Each part answers or says why it cannot: one that fails does not take the screen with it.
         const boxes = createMemo(() =>
-          boxesView(taxBoxes(snapshot.events, year(), options()), names),
+          attempt(() => boxesView(taxBoxes(snapshot.events, year(), options()), names)),
         );
         const informative = createMemo(() =>
-          (["720", "721"] as const).map((model) =>
-            informativeView(
-              informativeReturn(snapshot.events, model, year(), options()),
-              names,
-              privacy(),
+          (["720", "721"] as const).map((model) => ({
+            model,
+            outcome: attempt(() =>
+              informativeView(
+                informativeReturn(snapshot.events, model, year(), options()),
+                names,
+                privacy(),
+              ),
             ),
-          ),
+          })),
         );
+        const boxesCard = (): JSX.Element => {
+          const result = boxes();
+          return result.ok ? (
+            <BoxesCard view={result.value} />
+          ) : (
+            <PartFailed title="Tu declaración por casillas" error={result.error} />
+          );
+        };
         const view = createMemo(() => {
           const computed = report();
           return computed.ok ? yearView(computed.value, names) : undefined;
@@ -221,7 +241,7 @@ export default function FiscalRoute(): JSX.Element {
                           expiring={year().expiring}
                           anchors={year().anchors}
                         />
-                        <BoxesCard view={boxes()} />
+                        {boxesCard()}
                       </Show>
                       <FilingCard
                         year={picked.year()}
@@ -232,9 +252,15 @@ export default function FiscalRoute(): JSX.Element {
                   )}
                 </Show>
                 <Show when={store.invalidCount() === 0}>
-                  {informative().map((model) => (
-                    <InformativeCard view={model} />
-                  ))}
+                  <For each={informative()}>
+                    {({ model, outcome }) =>
+                      outcome.ok ? (
+                        <InformativeCard view={outcome.value} />
+                      ) : (
+                        <PartFailed title={`Modelo ${model}`} error={outcome.error} half />
+                      )
+                    }
+                  </For>
                 </Show>
               </div>
             </Show>
