@@ -123,6 +123,106 @@ describe("transfers only defer tax between funds (art. 94.1.a LIRPF)", () => {
     expect(recording(b)?.code).toBe("transfer_not_resident");
   });
 
+  it("warns once for a request and the transfer that completes it", () => {
+    const b = withEtfs();
+    const request = b.transferRequested({
+      from_account_id: "acc_fund",
+      from_asset_id: "ast_etf_a",
+      to_account_id: "acc_fund",
+      to_asset_id: "ast_etf_b",
+      quantity_out: "2",
+      requested_date: "2027-03-01",
+    });
+    b.transfer({ ...transferFields("ast_etf_a", "ast_etf_b"), request_id: request.id });
+    const warned = projectLedger(b.build()).warnings.filter((warning) =>
+      warning.code.startsWith("transfer_not"),
+    );
+    expect(warned.map((warning) => [warning.code, warning.event_id])).toEqual([
+      ["transfer_not_between_funds", request.id],
+    ]);
+  });
+
+  it("still warns on the transfer when its request did not (the rule changed in between)", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({ account_id: "acc_fund", asset_id: "ast_world", quantity: "5", unit_price: "100" });
+    b.recordedAt("2027-01-09");
+    const request = b.transferRequested({
+      from_account_id: "acc_fund",
+      from_asset_id: "ast_world",
+      to_account_id: "acc_fund",
+      to_asset_id: "ast_bonds",
+      quantity_out: "2",
+      requested_date: "2027-01-10",
+    });
+    b.recordedAt("2027-01-10");
+    b.settings(mergeSettings(DEFAULT_SETTINGS, { tax_residence: "PT" }));
+    b.recordedAt("2027-01-12");
+    const transfer = b.transfer({
+      ...transferFields("ast_world", "ast_bonds"),
+      request_id: request.id,
+    });
+    const warned = projectLedger(b.build()).warnings.filter((warning) =>
+      warning.code.startsWith("transfer_not"),
+    );
+    expect(warned.map((warning) => [warning.code, warning.event_id])).toEqual([
+      ["transfer_not_resident", transfer.id],
+    ]);
+  });
+
+  it("warns again when the reason of the same code changed between request and transfer", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({ account_id: "acc_fund", asset_id: "ast_world", quantity: "5", unit_price: "100" });
+    b.recordedAt("2027-01-09");
+    b.settings(mergeSettings(DEFAULT_SETTINGS, { tax_residence: "PT" }));
+    const request = b.transferRequested({
+      from_account_id: "acc_fund",
+      from_asset_id: "ast_world",
+      to_account_id: "acc_fund",
+      to_asset_id: "ast_bonds",
+      quantity_out: "2",
+      requested_date: "2027-01-09",
+    });
+    b.recordedAt("2027-01-10");
+    b.settings(mergeSettings(DEFAULT_SETTINGS, { tax_residence: "DE" }));
+    b.recordedAt("2027-01-12");
+    const transfer = b.transfer({
+      ...transferFields("ast_world", "ast_bonds"),
+      request_id: request.id,
+    });
+    const warned = projectLedger(b.build()).warnings.filter(
+      (warning) => warning.code === "transfer_not_resident",
+    );
+    expect(warned.map((warning) => [warning.event_id, warning.details.tax_residence])).toEqual([
+      [request.id, "PT"],
+      [transfer.id, "DE"],
+    ]);
+  });
+
+  it("does not let the warning of another request silence a transfer", () => {
+    const b = withEtfs();
+    b.transferRequested({
+      from_account_id: "acc_fund",
+      from_asset_id: "ast_etf_a",
+      to_account_id: "acc_fund",
+      to_asset_id: "ast_etf_b",
+      quantity_out: "1",
+      requested_date: "2027-03-01",
+    });
+    const own = b.transferRequested({
+      from_account_id: "acc_fund",
+      from_asset_id: "ast_etf_a",
+      to_account_id: "acc_fund",
+      to_asset_id: "ast_etf_b",
+      quantity_out: "2",
+      requested_date: "2027-03-02",
+    });
+    b.transfer({ ...transferFields("ast_etf_a", "ast_etf_b"), request_id: own.id });
+    b.transfer(transferFields("ast_etf_a", "ast_etf_b"));
+    expect(codesOf(b).filter((code) => code === "transfer_not_between_funds")).toHaveLength(3);
+  });
+
   it("warns once when the catalogue flags a non-fund as transferable, not on each update", () => {
     const b = withEtfs();
     b.assetUpdated({
