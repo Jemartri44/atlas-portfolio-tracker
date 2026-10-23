@@ -4,6 +4,7 @@
 
 import type { CloudOutcome } from "../../ecb/cloud.js";
 import { formatDate } from "../../format/date.js";
+import { REMOTE_FAILURES } from "../../format/messages/errors.js";
 
 export interface Said {
   readonly tone: "info" | "danger" | "caution";
@@ -38,7 +39,9 @@ export const cloudSaid = (outcome: CloudOutcome, asked: boolean): Said | undefin
     default:
       return {
         tone: "caution",
-        text: `No se ha podido bajar el histórico de la nube (${outcome.code}): sigue el que tenías.`,
+        text: `No se ha podido bajar el histórico de la nube: ${
+          REMOTE_FAILURES[outcome.code] ?? `la nube ha respondido con un error (${outcome.code}).`
+        } Sigue el que tenías; vuelve a intentarlo con «Bajar de la nube».`,
       };
   }
 };

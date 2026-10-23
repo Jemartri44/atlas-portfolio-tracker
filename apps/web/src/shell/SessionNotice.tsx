@@ -56,9 +56,15 @@ export const SessionNotice = (props: {
 
   const back = async (): Promise<void> => {
     setBusy(true);
-    const { refreshSession } = await import("../ledger/cloud.js");
-    const outcome = await refreshSession();
-    setBusy(false);
+    let outcome: "signed_in" | "signed_out" | "offline";
+    try {
+      outcome = await (await import("../ledger/cloud.js")).refreshSession();
+    } catch {
+      // The module did not load (an old PWA): the button must not stay disabled.
+      outcome = "offline";
+    } finally {
+      setBusy(false);
+    }
     if (outcome === "signed_in") {
       setOpened(false);
       setSaid("Sesión renovada: puedes seguir donde estabas.");

@@ -13,6 +13,7 @@ import {
   importedHistory,
   saveImportedHistory,
 } from "@atlas/adapters/reference";
+import { DomainError } from "@atlas/domain";
 import {
   asciiText,
   checkHistoryUpdate,
@@ -37,10 +38,11 @@ export interface WebHistory {
   /** The threshold of a currency the ECB stopped publishing (the default of the domain). */
   staleDays: number;
   /**
-   * Why no history could be read where one may be: this browser keeps no
-   * site data at all. Said, never swallowed.
+   * Why no history could be read where one may be: this browser keeps no site data at all
+   * (`storage`), or the copy it keeps is not a history that reads (`unreadable`, to be erased and
+   * downloaded again). Said, never swallowed.
    */
-  problem?: "storage";
+  problem?: "storage" | "unreadable";
 }
 
 const fromImport = async (staleDays: number): Promise<WebHistory | undefined> => {
@@ -64,11 +66,11 @@ let cached: Promise<WebHistory> | undefined;
 /** The history in force for the web: the copy of this browser (public), else none. */
 export const loadWebHistory = (): Promise<WebHistory> => {
   cached ??= load().catch(
-    // Without a store to read from (private mode, blocked site data) there is
-    // no history: the form types the rate as always, and the card says why.
-    (): WebHistory => ({
+    // Without a store to read from (private mode, blocked site data), or with a copy that does not
+    // read, there is no history: the form types the rate as always, and the card says why.
+    (error: unknown): WebHistory => ({
       staleDays: DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days,
-      problem: "storage",
+      problem: error instanceof DomainError ? "unreadable" : "storage",
     }),
   );
   return cached;

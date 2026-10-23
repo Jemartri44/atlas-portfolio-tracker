@@ -23,6 +23,8 @@ type Fetch = typeof fetch;
 const PROBLEMS = {
   storage:
     "Este navegador no permite guardar datos del sitio: no puede guardar un histórico importado.",
+  unreadable:
+    "La copia del BCE que guarda este navegador no se puede leer: no se usa. Bórrala y bájala otra vez de la nube, o importa el archivo del BCE.",
 } as const;
 
 export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element => {
@@ -154,7 +156,13 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
             Bajar de la nube
           </button>
         </Show>
-        <Show when={web()?.origin === "imported" || web()?.origin === "cloud"}>
+        <Show
+          when={
+            web()?.origin === "imported" ||
+            web()?.origin === "cloud" ||
+            web()?.problem === "unreadable"
+          }
+        >
           <button
             type="button"
             class="secondary danger"
