@@ -1,6 +1,6 @@
 # Preguntas — 025
 
-## 1. Un dispositivo nuevo por cada inicio de sesión de la web (de `specs/022-web-cloud-boot/questions.md` §4)
+## 1. Un dispositivo nuevo por cada inicio de sesión de la web
 
 La web ya no guarda su `device_id` (ADR-0035), así que `GET /api/auth/login` llega sin él y la API asigna uno nuevo en cada inicio, y crea su objeto `sync/devices/<id>.json`. Con sesiones de 24 h son unos 365 objetos pequeños al año, que nada borra (la API no tiene permiso de borrado) y que `GET /api/sync/devices` y la administración tendrían que listar.
 
@@ -12,6 +12,7 @@ La web ya no guarda su `device_id` (ADR-0035), así que `GET /api/auth/login` ll
 
 Recomendación: **(b)** hasta que haya un motivo, y valorar (c) si E5 retira la última lectura del `device_id` de la web.
 
-## 2. `GET /api/devices/tokens` sin `last_sync_at`
+## 2. Pendientes de decisión que dejaron las otras entregas de ADR-0035
 
-Lo he retirado (FR-006) porque nadie lo escribe ya y la web decía «Última sincronización: nunca» en todos los tokens. Si se quiere un «último uso» del token, habría que guardarlo en otro sitio (el registro del token, que solo se sobrescribe al revocar). No se ha pedido.
+- **`syncConfigured`** (`record-event.ts`, dominio): la opción se llama así y significa «libro compartido de nube». Renombrarla toca el dominio y sus tests.
+- **`DraftsOnlyIfAbsent`** (política del bucket de datos, feature 027): sentencia nueva que repite `BackupsOnlyIfAbsent` sobre `drafts/*`. Si no se quiere, se quita sin tocar nada más (el código solo usa `If-None-Match`).
