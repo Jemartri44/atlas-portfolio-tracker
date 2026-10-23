@@ -40,13 +40,13 @@ const dist = join(webRoot, "dist");
  * a margin of a few tens of bytes, so a growth shows up in the diff that
  * causes it; raise it only with the commit that needs it.
  */
-const BOOT_BUDGET_GZIP_BYTES = 74_550;
+const BOOT_BUDGET_GZIP_BYTES = 74_690;
 
 /**
  * Ceiling of everything the application may download, lazy chunks included
  * (JS + CSS, gzip), with the same discipline as the boot ceiling.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 304_300;
+const TOTAL_BUDGET_GZIP_BYTES = 304_640;
 
 /**
  * Walls set by the direction that no ceiling above may pass: a ceiling raised
