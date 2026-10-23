@@ -8,7 +8,7 @@ import {
   systemClock,
   webCryptoRandom,
 } from "@atlas/adapters";
-import type { UseCaseDeps } from "@atlas/domain";
+import { DomainError, type UseCaseDeps } from "@atlas/domain";
 import type { FxRateSource } from "@atlas/domain/ecb";
 import type { AdminAccess } from "./admin/environment.js";
 import { booleanFlag, parseArgs, stringFlag, UsageError } from "./args.js";
@@ -116,18 +116,41 @@ const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   random: webCryptoRandom,
 });
 
-const promptOutput = (options: PromptOptions | undefined) =>
-  options?.aside === true ? process.stderr : process.stdout;
+/** The streams of the terminal; the real ones unless a test brings its own. */
+interface TerminalStreams {
+  readonly input: NodeJS.ReadableStream & { readonly isTTY?: boolean };
+  readonly stdout: NodeJS.WritableStream;
+  readonly stderr: NodeJS.WritableStream;
+}
 
-/** One line from the terminal; Ctrl-C answers with an empty one, which no question takes as a yes. */
-const askLine = async (question: string, options: PromptOptions | undefined): Promise<string> => {
-  const rl = createInterface({ input: process.stdin, output: promptOutput(options) });
+const processStreams: TerminalStreams = {
+  input: process.stdin,
+  stdout: process.stdout,
+  stderr: process.stderr,
+};
+
+/**
+ * One line from the terminal. Ctrl-C ends the question: `onInterrupt` says how (an empty line, which
+ * no confirmation takes as a yes, or the end of the order).
+ */
+const askLine = async (
+  streams: TerminalStreams,
+  question: string,
+  options: PromptOptions | undefined,
+  onInterrupt: () => string,
+): Promise<string> => {
+  const output = options?.aside === true ? streams.stderr : streams.stdout;
+  const rl = createInterface({
+    input: streams.input,
+    output,
+    terminal: streams.input.isTTY === true,
+  });
   try {
     return (await rl.question(question)).trim();
   } catch (error) {
     if ((error as { code?: unknown }).code === "ABORT_ERR") {
-      promptOutput(options).write("\n");
-      return "";
+      output.write("\n");
+      return onInterrupt();
     }
     throw error;
   } finally {
@@ -135,19 +158,24 @@ const askLine = async (question: string, options: PromptOptions | undefined): Pr
   }
 };
 
-export const terminalIo = (): Io => ({
-  out: (text) => process.stdout.write(`${text}\n`),
-  err: (text) => process.stderr.write(`${text}\n`),
+export const terminalIo = (streams: TerminalStreams = processStreams): Io => ({
+  out: (text) => streams.stdout.write(`${text}\n`),
+  err: (text) => streams.stderr.write(`${text}\n`),
   confirm: async (question, options) => {
-    if (!process.stdin.isTTY) {
+    if (streams.input.isTTY !== true) {
       return undefined;
     }
-    const answer = (await askLine(question, options)).toLowerCase();
+    const answer = (await askLine(streams, question, options, () => "")).toLowerCase();
     return answer === "s" || answer === "si" || answer === "sí" || answer === "y";
   },
-  ask: async (question, options) => (process.stdin.isTTY ? askLine(question, options) : undefined),
+  ask: async (question, options) =>
+    streams.input.isTTY === true
+      ? askLine(streams, question, options, () => {
+          throw new DomainError("prompt_interrupted", "the prompt was interrupted");
+        })
+      : undefined,
   askSecret: (question) =>
-    askWithoutEcho(question, { input: process.stdin, output: process.stdout }),
+    askWithoutEcho(question, { input: streams.input, output: streams.stdout }),
 });
 
 /** What the tests replace: everything else is the real thing. */
