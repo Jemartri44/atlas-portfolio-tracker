@@ -8,7 +8,7 @@
 // typed and rebuilds its preview over the new ledger.
 
 import { A } from "@solidjs/router";
-import { createMemo, type JSX, Show, untrack } from "solid-js";
+import { createMemo, type JSX, Show } from "solid-js";
 import { Notice, Skeleton } from "../components/index.js";
 import type { LedgerSnapshot } from "../ledger/state.js";
 import { store, today } from "../ledger/state.js";
@@ -37,30 +37,39 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
   };
 
   /**
-   * What the content is painted from. While a write is in flight, a ledger that
-   * arrives (the reload after a `412`) does **not** replace it: replacing it
-   * would paint the screen again and lose what the person typed.
+   * What the content is painted from: a view of the ledger that belongs to this gate.
    *
-   * A ledger with the **same etag** is the same ledger: a silent reload (the
-   * connection came back, a lost answer was looked for) hands over a new
-   * snapshot object that says nothing new, and painting from it would remount
-   * the form for no reason. A different etag does remount: the preview the
-   * person saw belongs to the ledger it was built on.
+   * While a write is in flight a ledger that arrives (the reload after a `412`) does **not** paint
+   * the screen again — that would lose what the person typed — but it is taken into the view in
+   * place, so the screen reads the ledger that is there now and not the one it was painted from.
+   *
+   * A ledger with the **same etag** as the view is the same ledger: a silent reload (the
+   * connection came back, a lost answer was looked for) hands over a new snapshot object that
+   * says nothing new, and painting from it would remount the form for no reason. A different etag
+   * does paint again: the preview the person saw belongs to the ledger it was built on.
+   *
+   * A write that ends is looked at again (`writing` is read here): a new day that came during it
+   * is applied then, not at the next reload.
    */
   let held: LedgerSnapshot | undefined;
+  let heldEtag = "";
   let heldDay = "";
   const painted = createMemo<LedgerSnapshot | undefined>(() => {
     const next = loaded();
     // A new day in Madrid repaints from scratch: the screens value the portfolio at today's date.
     const day = today();
-    if (
-      held !== undefined &&
-      (untrack(store.writing) || (day === heldDay && next?.etag === held.etag))
-    ) {
+    if (held !== undefined && store.writing()) {
+      if (next !== undefined) {
+        Object.assign(held, next);
+        heldEtag = next.etag;
+      }
       return held;
     }
-    // A copy when it is the same ledger on a new day: a new object is what repaints the screen.
-    held = next !== undefined && next === held ? { ...next } : next;
+    if (held !== undefined && day === heldDay && next?.etag === heldEtag) {
+      return held;
+    }
+    held = next === undefined ? undefined : { ...next };
+    heldEtag = next?.etag ?? "";
     heldDay = day;
     return held;
   });
