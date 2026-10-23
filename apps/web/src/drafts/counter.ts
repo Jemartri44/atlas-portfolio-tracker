@@ -12,8 +12,8 @@
 
 import { createEffect, createRoot } from "solid-js";
 import { countOf } from "../format/number.js";
-import { countDrafts, DRAFTS_CHANGED } from "../ledger/draft-store.js";
 import { store } from "../ledger/state.js";
+import { countDrafts, DRAFTS_CHANGED } from "./store.js";
 
 /** The clock of the icon set (`Icon.tsx`): a trusted constant, never data. */
 const CLOCK =

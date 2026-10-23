@@ -17,7 +17,40 @@
 
 import { reloadLedger } from "./cloud.js";
 import { signedOutReason } from "./session-errors.js";
-import { type PendingState, store } from "./state.js";
+import { store } from "./state.js";
+
+/**
+ * A write that was sent and whose answer never arrived whole (ADR-0035, §2):
+ * the ids were fixed before sending, so the screen can look for them once there
+ * is a connection. Kept **in memory only**: a reload of the page forgets it, and
+ * nothing of it reaches the device.
+ */
+export type PendingState =
+  | "unknown" // sent, answer lost: not looked for yet (or the connection is still down)
+  | "checking"
+  | "written" // found in the ledger: it was recorded
+  | "not_written" // not in the ledger: nothing was written, the same data can be sent again
+  /** Only some of its ids are there (it should not happen): the ledger has to be looked at. */
+  | "partial"
+  /** The ledger changed since the effect was seen: nothing is resent; it is redone from its form. */
+  | "changed";
+
+export type RetryResult =
+  | { kind: "done"; id: string }
+  | { kind: "unknown" }
+  | { kind: "conflict" }
+  | { kind: "refused"; message: string };
+
+export interface PendingWrite {
+  readonly ids: readonly string[];
+  readonly state: PendingState;
+  /** The etag the person saw the effect on: a retry compares with this, never with a reload. */
+  readonly seenEtag?: string;
+  /** Sends it again **with the same ids**; the screen decides when, never a timer. */
+  readonly retry: () => Promise<RetryResult>;
+  /** A sentence about the last attempt that was refused, if any. */
+  readonly said?: string;
+}
 
 interface Finder {
   findOutcome(ids: readonly string[]): Promise<{ outcome: "written" | "not_written" | "partial" }>;

@@ -28,7 +28,7 @@ import {
   formatMoneyNumber,
   formatQuantity,
 } from "../format/money.js";
-import { usePrivacy } from "../ledger/state.js";
+import { privacy } from "../shell/preferences.js";
 
 interface CommonProps {
   /** Extra classes for the caller's layout; the semantics stay here. */
@@ -84,7 +84,6 @@ const signOfValue = (props: AmountProps): "positive" | "negative" | "zero" => {
 };
 
 export const Amount = (props: AmountProps): JSX.Element => {
-  const privacy = usePrivacy();
   const missing = (): boolean =>
     isQuantity(props) ? props.quantity === undefined : props.value === undefined;
 

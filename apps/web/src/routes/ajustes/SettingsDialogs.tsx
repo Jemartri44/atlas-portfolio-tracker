@@ -18,7 +18,7 @@ import { describeWarning } from "../../format/messages/warnings.js";
 import { type NameIndex, NO_NAMES } from "../../format/names.js";
 import { countOf } from "../../format/number.js";
 import { maskFigures } from "../../format/privacy.js";
-import { usePrivacy } from "../../ledger/state.js";
+import { privacy } from "../../shell/preferences.js";
 import { RuleChangeDialog } from "./RuleChangeDialog.jsx";
 import type { RuleChangeQuestion } from "./rule-change.js";
 
@@ -73,8 +73,6 @@ export const movedTitle = (
 };
 
 export const SettingsDialogs = (props: DialogsProps): JSX.Element => {
-  const privacy = usePrivacy();
-
   return (
     <>
       <RuleChangeDialog

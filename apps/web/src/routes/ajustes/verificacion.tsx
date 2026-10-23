@@ -27,8 +27,8 @@ import { describeFinding } from "../../format/messages/findings.js";
 import { nameIndex } from "../../format/names.js";
 import { countOf } from "../../format/number.js";
 import { maskFigures } from "../../format/privacy.js";
-import { usePrivacy } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
+import { privacy } from "../../shell/preferences.js";
 import { attentionItems } from "../../view-models/index.js";
 import { RequireLedger } from "../guard.jsx";
 import { EcbCheck } from "./EcbCheck.jsx";
@@ -83,7 +83,6 @@ const findingItems = (
 
 export default function VerificacionRoute(): JSX.Element {
   const [deep, setDeep] = createSignal<IntegrityFinding[] | undefined>(undefined);
-  const privacy = usePrivacy();
 
   return (
     <RequireLedger skeleton={5}>

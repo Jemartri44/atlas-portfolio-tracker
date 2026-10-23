@@ -13,7 +13,7 @@
 
 import { A } from "@solidjs/router";
 import { createMemo, For, type JSX, Show } from "solid-js";
-import { usePrivacy } from "../ledger/state.js";
+import { privacy } from "../shell/preferences.js";
 import { type CardSlot, type DataColumn, rowColumns, tableColumns } from "./columns.js";
 import { Icon, type IconName } from "./Icon.jsx";
 
@@ -117,7 +117,6 @@ const RowBody = <R,>(props: {
 );
 
 export const DataTable = <R,>(props: DataTableProps<R>): JSX.Element => {
-  const privacy = usePrivacy();
   const merging = (): boolean => props.maskedMerge !== undefined && privacy();
   const wide = createMemo(() =>
     props.maskedMerge === undefined

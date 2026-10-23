@@ -6,9 +6,9 @@
 
 import { describe, expect, it } from "vitest";
 import { type DataColumn, rowColumns, tableColumns } from "../src/components/columns.js";
-import { store } from "../src/ledger/state.js";
 import Cartera from "../src/routes/cartera/index.jsx";
 import Cubo from "../src/routes/cubo/index.jsx";
+import { setPrivacy } from "../src/shell/preferences.js";
 import { show, text, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
@@ -72,7 +72,7 @@ const headersOf = (host: HTMLElement, label: string): string[] =>
 
 describe("the tables of the Cubo and of the Cartera", () => {
   it("fuses the theses into «Importes ocultos», with the percentages in front", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show("/cubo?fecha=2027-01-10", Cubo);
     const heads =
       headersOf(host, "Tesis abiertas").length > 0 ? "Tesis abiertas" : "Tesis del cubo";
@@ -101,7 +101,7 @@ describe("the tables of the Cubo and of the Cartera", () => {
   });
 
   it("fuses the open positions and puts the latent percentage before the amounts", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show("/cubo?fecha=2029-01-10", Cubo);
     const shown = headersOf(host, "Posiciones del cubo");
     expect(shown.at(-1)).toBe("Importes ocultos");
@@ -111,7 +111,7 @@ describe("the tables of the Cubo and of the Cartera", () => {
   });
 
   it("fuses the costs: commissions and annual cost in one column of masks", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show("/cartera?fecha=2029-01-10", Cartera);
     const shown = headersOf(host, "Costes de la cartera principal");
     expect(shown).toEqual(["Activo", "Tipo de activo", "% invertido", "TER", "Importes ocultos"]);
@@ -134,7 +134,7 @@ describe("the tables of the Cubo and of the Cartera", () => {
   });
 
   it("shows the difference in points instead of the amount on a phone row", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show("/cubo?fecha=2027-01-10", Cubo);
     const row = host.querySelector('ul.rows[aria-label^="Tesis"] li .fig');
     expect(text(row)).toMatch(/pp$/);

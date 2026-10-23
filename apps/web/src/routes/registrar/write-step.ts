@@ -2,12 +2,12 @@
 // long enough already.
 //
 // Writing records the event, or corrects the original, or — when the form came
-// from a draft — confirms the draft (`ledger/drafts.ts`): all go to the cloud
+// from a draft — confirms the draft (`drafts/records.ts`): all go to the cloud
 // with their ids fixed beforehand (`ledger/write.ts`).
 
 import type { PendingDraft } from "@atlas/domain/ecb";
+import type { SaveResult } from "../../drafts/records.js";
 import type { WebHistory } from "../../ecb/history.js";
-import type { SaveResult } from "../../ledger/drafts.js";
 import { correct, recordDraft, type WriteResult } from "../../ledger/write.js";
 import type { toDraft } from "../../view-models/forms/index.js";
 import { doneUrl } from "../movimientos/Rectified.jsx";
@@ -23,9 +23,9 @@ export const writeStep = async (
 ): Promise<WriteResult<string>> => {
   if (target.fromDraft !== undefined) {
     // A draft: the id stamped before writing, the event written with it, and
-    // the draft closed after (`ledger/drafts.ts`). A draft closed elsewhere
+    // the draft closed after (`drafts/records.ts`). A draft closed elsewhere
     // meanwhile is refused there: never recorded as a new operation.
-    const { confirmDraft } = await import("../../ledger/drafts.js");
+    const { confirmDraft } = await import("../../drafts/records.js");
     return confirmDraft(
       target.fromDraft.id,
       draft as unknown as Record<string, unknown>,
@@ -52,6 +52,6 @@ export const draftStep = async (
   web: WebHistory | undefined,
   again?: PendingDraft,
 ): Promise<SaveResult> => {
-  const { saveDraft } = await import("../../ledger/drafts.js");
+  const { saveDraft } = await import("../../drafts/records.js");
   return saveDraft(draft as unknown as Record<string, unknown>, web, again);
 };
