@@ -45,6 +45,40 @@ describe("an id that is not in the ledger", () => {
     expect(await h.exec(["lots", "ast_world"])).toBe(0);
   });
 
+  it("a swap of an unknown asset, either side, names it too", async () => {
+    const h = harness({ events: seed() });
+    for (const side of ["--from-asset", "--to-asset"]) {
+      const argv = [
+        "add",
+        "swap",
+        "--account",
+        "acc_fund",
+        "--trade-date",
+        "2026-09-01",
+        "--value-date",
+        "2026-09-02",
+        "--from-asset",
+        side === "--from-asset" ? "ast_nope" : "ast_world",
+        "--quantity-out",
+        "1",
+        "--market-value-out",
+        "10",
+        "--to-asset",
+        side === "--to-asset" ? "ast_nope" : "ast_gold",
+        "--quantity-in",
+        "1",
+        "--market-value-in",
+        "10",
+        "--currency",
+        "EUR",
+        "--yes",
+      ];
+      h.reset();
+      expect(await h.exec(argv)).toBe(1);
+      expect(h.err.join("\n")).toContain("Error (unknown_asset)");
+    }
+  });
+
   it("a buy of an unknown asset names the asset, not the rate it then lacks", async () => {
     const h = harness({ events: seed() });
     const argv = BUY_WORLD.map((word) => (word === "ast_world" ? "ast_nope" : word));
