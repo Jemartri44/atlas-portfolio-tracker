@@ -8,7 +8,7 @@ import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { corporateActionDraft } from "@atlas/domain/tools";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createMemo, createSignal, type JSX, Show } from "solid-js";
-import { ClosedYearNotice, Notice, Tag } from "../../../components/index.js";
+import { Notice, Tag } from "../../../components/index.js";
 import { nameIndex } from "../../../format/names.js";
 import { toAppError } from "../../../ledger/errors.js";
 import { errorOf } from "../../../ledger/failure-text.js";
@@ -30,8 +30,8 @@ import { FormActions } from "../FormActions.jsx";
 import { FormFields } from "../FormFields.jsx";
 import { NoForm, Reloaded } from "../FormNotices.jsx";
 import { createProblem } from "../form-problems.js";
-import { Preview } from "../Preview.jsx";
 import { createWarned } from "../warned.js";
+import { EffectSection } from "./EffectSection.jsx";
 import { Fractions } from "./Fractions.jsx";
 import { feeLinesError, toCorporateParams } from "./params.js";
 
@@ -209,30 +209,15 @@ export default function CorporateFormRoute(): JSX.Element {
 
                   <Show when={preview()}>
                     {(shown) => (
-                      <section class="effect" aria-label="El efecto">
-                        <Preview preview={shown()} names={names} />
-                        <ClosedYearNotice impacts={closed()} />
-                        <Notice severity="info" title="Guarda el documento">
-                          Copia la nota del emisor a tu carpeta de documentos: tus datos guardan la
-                          referencia, no el archivo.
-                        </Notice>
-                        <FormActions problem={problem()}>
-                          <button
-                            type="button"
-                            class="secondary"
-                            onClick={() => setPreview(undefined)}
-                          >
-                            Volver a los datos
-                          </button>
-                          <button
-                            type="button"
-                            disabled={store.writing()}
-                            onClick={() => void onConfirm()}
-                          >
-                            Registrar
-                          </button>
-                        </FormActions>
-                      </section>
+                      <EffectSection
+                        preview={shown()}
+                        names={names}
+                        closed={closed()}
+                        problem={problem()}
+                        writing={store.writing()}
+                        onBack={() => setPreview(undefined)}
+                        onConfirm={() => void onConfirm()}
+                      />
                     )}
                   </Show>
                 </div>
