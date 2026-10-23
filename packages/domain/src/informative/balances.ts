@@ -157,18 +157,14 @@ export const quarterAverages = (
   }
   const ordered = [...marks].sort();
   // The balance on a mark is the closing of the latest day with an operation
-  // that is not after it (`ordered` is ascending, so one pass is enough).
-  const balances = new Map<CivilDate, Map<string, Money>>();
-  const closingDays = [...closings.keys()];
-  let latest = carried;
-  let next = 0;
-  for (const mark of ordered) {
-    while (closingDays[next] !== undefined && (closingDays[next] as CivilDate) <= mark) {
-      latest = closings.get(closingDays[next] as CivilDate) as Map<string, Money>;
-      next += 1;
-    }
-    balances.set(mark, latest);
-  }
+  // that is not after it.
+  const days = [...closings.keys()];
+  const balances = new Map(
+    ordered.map((mark) => [
+      mark,
+      closings.get(days.filter((day) => day <= mark).pop() as CivilDate) ?? carried,
+    ]),
+  );
   const currencies = new Map<AccountId, Set<string>>();
   for (const cash of balances.values()) {
     for (const key of cash.keys()) {
