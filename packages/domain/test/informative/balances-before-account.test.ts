@@ -2,6 +2,7 @@
 // average is not the balance the account will hold later.
 
 import { describe, expect, it } from "vitest";
+import { fiscalAttention } from "../../src/informative/attention.js";
 import { model720 } from "../../src/informative/m720.js";
 import type { InformativeCategory } from "../../src/informative/report.js";
 import { generateLedger } from "../../src/synth/scenario.js";
@@ -44,5 +45,9 @@ describe("the 720 of a year before the account existed", () => {
     for (const year of [2024, 2025]) {
       expect(accountsOf(synthetic, year).items).toEqual([]);
     }
+  });
+
+  it("lets the attention card read a ledger whose accounts start later than today's year", () => {
+    expect(() => fiscalAttention(generateLedger({ seed: 1 }), "2026-10-23")).not.toThrow();
   });
 });
