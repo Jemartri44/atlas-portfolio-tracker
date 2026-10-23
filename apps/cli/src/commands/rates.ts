@@ -75,6 +75,14 @@ export const rateDraft = async (
     }
     throw error;
   }
+  // Before any rate is proposed: for an asset that is not in the catalogue nothing can be, and the
+  // first thing the domain would miss is a rate, which sends the person after the wrong field.
+  for (const key of ["asset_id", "from_asset_id", "to_asset_id"]) {
+    const id = draft[key];
+    if (typeof id === "string" && !state.assets.has(id)) {
+      throw new DomainError("unknown_asset", `asset ${id} does not exist`, { asset_id: id });
+    }
+  }
   const notes: string[] = [];
   let waiting = false;
   if (problem !== undefined) {

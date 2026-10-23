@@ -2,6 +2,7 @@
 
 import { access } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { FileLedgerStore } from "@atlas/adapters";
 import {
   type CivilDate,
   DomainError,
@@ -28,6 +29,7 @@ import {
   GLOBAL_FLAGS,
   summarize,
 } from "../context.js";
+import { pathExists } from "../fs.js";
 import { closedYearLines, unfiledYearsNote } from "../output/closed-years.js";
 import { eur } from "../output/format.js";
 import { keyValue } from "../output/table.js";
@@ -259,7 +261,19 @@ export const render = (ctx: Context, data: unknown, text: string): void => {
  * portfolio of that day and not the one of today read with the prices of then
  * (data-schema.md §7).
  */
-export const loadForQuery = (ctx: Context, asOf?: CivilDate): Promise<ProjectedLedger> =>
+export const loadForQuery = async (ctx: Context, asOf?: CivilDate): Promise<ProjectedLedger> => {
+  // A path that is not there reads as an empty ledger, which is right for a first write and wrong
+  // for a view: a mistyped `--ledger` or the wrong folder would answer «nothing» as if it were true.
+  if (ctx.deps.store instanceof FileLedgerStore && !(await pathExists(ctx.ledgerPath))) {
+    ctx.io.err(
+      `Aviso: no existe el libro ${ctx.ledgerPath}: se lee como un libro vacío. Si no es lo que esperabas, indica el libro con --ledger <ruta>.`,
+    );
+  }
+  return loadForRecording(ctx, asOf);
+};
+
+/** The same degraded read, for an order that is about to write: a ledger begins with its first write. */
+export const loadForRecording = (ctx: Context, asOf?: CivilDate): Promise<ProjectedLedger> =>
   loadAndProject(ctx.deps, {
     collectErrors: true,
     ...(asOf === undefined ? {} : { asOf }),

@@ -2,6 +2,7 @@
 
 import {
   cashBalances,
+  DomainError,
   type FingerprintWaiver,
   fiscalLots,
   type IntegrityFinding,
@@ -68,7 +69,12 @@ export const lotsCommand = async (
   assertKnownFlags(flags, ["closed", ...GLOBAL_FLAGS]);
   const { events, state } = await loadForQuery(ctx);
   const includeClosed = booleanFlag(flags, "closed");
-  const rows = fiscalLots(state, positionals[1]).filter((lot) => includeClosed || !lot.closed);
+  const asset = positionals[1];
+  // An empty table for a mistyped id would read as «that asset has no lots».
+  if (asset !== undefined && !state.assets.has(asset)) {
+    throw new DomainError("unknown_asset", `asset ${asset} does not exist`, { asset_id: asset });
+  }
+  const rows = fiscalLots(state, asset).filter((lot) => includeClosed || !lot.closed);
   renderQuery(
     ctx,
     state,
