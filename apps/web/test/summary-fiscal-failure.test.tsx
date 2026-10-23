@@ -1,25 +1,40 @@
 // @vitest-environment happy-dom
 //
-// A failure of the tax engine takes only the tax card of the summary, never the whole screen. The
-// golden ledger holds dated events up to 2028: read on a day before them, the 720 raises
-// `fx_rate_unknown` — which blanked the summary with the technical English of the domain.
+// A failure of the tax engine takes only the tax card of the summary, never the whole screen: it
+// blanked the summary with the technical English of the domain (`fx_rate_unknown`).
 
 import { DomainError } from "@atlas/domain";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import Resumen from "../src/routes/resumen/index.jsx";
 import { setPrivacy } from "../src/shell/preferences.js";
 import { show, showInShell, text, today, until, withGoldenLedger } from "./helpers/render.jsx";
 
+vi.mock("../src/routes/resumen/fiscal-status.js", () => ({
+  fiscalStatus: () => {
+    throw new DomainError("fx_rate_unknown", "the ledger holds USD and knows no ECB rate", {
+      currency: "USD",
+    });
+  },
+}));
+
 withGoldenLedger();
 
 describe("the summary when the tax engine cannot answer", () => {
-  it("keeps the patrimony and says in Spanish why the declaration is not calculated", async () => {
-    today("2026-10-23");
+  it("in the income tax season, says in the tax card why it is not calculated", async () => {
+    today("2029-05-10");
     const host = await show("/", Resumen);
     await until(() => text(host).includes("No se ha podido calcular"), "the failure of the engine");
     expect(text(host)).toContain("Patrimonio total");
     expect(text(host)).not.toContain("Esta pantalla no ha podido abrirse");
     expect(text(host)).not.toContain("the ledger holds");
+  });
+
+  it("out of the season, says it in Atención with the way to the declaration", async () => {
+    today("2029-09-01");
+    const host = await show("/", Resumen);
+    await until(() => text(host).includes("No se ha podido calcular"), "the failure of the engine");
+    expect(text(host)).toContain("Ver la declaración");
+    expect(text(host)).not.toContain("Esta pantalla no ha podido abrirse");
   });
 });
 
