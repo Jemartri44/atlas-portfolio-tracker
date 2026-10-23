@@ -132,14 +132,14 @@ export const monthlyBackup: TaskRunner = async (context: TaskContext): Promise<T
     const read = ledgerOfBytes(ledger.bytes, context.today);
     let positionsMissing = false;
     if (read.ok) {
-      const reference = await readReference(deps.objects, read.state).catch(() => ({}));
+      // A read that fails interrupts the dump: the retry writes the closes, which a positions.json
+      // written without them would keep for the whole month.
+      const reference = await readReference(deps.objects, read.state);
       const document = positionsDocument({
         state: read.state,
         settings: read.settings,
         date: context.today,
-        ...("external" in reference && reference.external !== undefined
-          ? { external: reference.external }
-          : {}),
+        ...(reference.external === undefined ? {} : { external: reference.external }),
         generatedAt: deps.now().toISOString(),
         ledger: { sha256: sha256Bytes(ledger.bytes), lines: read.events.length },
       });

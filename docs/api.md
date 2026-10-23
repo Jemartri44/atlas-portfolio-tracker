@@ -175,7 +175,7 @@ Respuesta `200`, **una sola vez**:
 
 > **Enmendado por ADR-0035 (2026-10-06).** Sigue vigente: la API como único escritor que solo añade y valida cada línea (§5.2), `GET /api/ledger`, `POST /api/ledger/lines` y `PUT /api/ledger` (este, solo para la subida inicial a una nube vacía y la restauración, §5.5). **Se retira la cola por dispositivo**: publicar su estado (§5.3), la cabecera `x-atlas-expected-device` (§5.4) y la parte del cliente de §5.7 que habla de cola, marcador y lo retenido. La API lo retiró en **E4** y el código del cliente se borró en **E5** (feature 026). Las escrituras de la web y de la consola pasan a ser directas con `If-Match` (§5.8).
 
-El remoto es `ledger/ledger.jsonl` del bucket de datos. **La API solo añade**: nunca reescribe ni borra una línea (ADR-0026, Parte A). Las líneas se escriben **tal como las serializó el cliente**, byte a byte, para que la réplica de cada dispositivo sea exactamente el remoto (Parte A, «Réplicas idénticas byte a byte»).
+El remoto es `ledger/ledger.jsonl` del bucket de datos. **La API solo añade**: nunca reescribe ni borra una línea (ADR-0026, Parte A). Las líneas se escriben **tal como las serializó el cliente**, byte a byte: ni la API ni nadie reserializa lo ya escrito (trampa 10 de `CLAUDE.md`).
 
 **El etag de la API es el SHA-256 hexadecimal de los bytes del libro.** El cliente nunca ve el ETag de S3; la Lambda traduce el suyo a la condición de S3 (`If-Match` en `PutObject`). Con un libro vacío o inexistente, el etag es el SHA-256 de cero bytes.
 
@@ -271,7 +271,7 @@ Respuesta `200` siempre que `If-Match` cuadró:
 - `lines`: cuántas líneas tiene el libro remoto después de escribir (no las de la petición).
 - `accepted`: cuántas entradas de `lines` de la petición se escribieron, desde la primera. Con `accepted: 0` no se escribió nada y `etag` es el mismo.
 - `rejected`: ausente si se escribieron todas.
-- **Una respuesta perdida no pierde nada:** el cliente nunca da una línea por subida con este `200`; vuelve a leer el remoto (§5.1) y comprueba que sus líneas están dentro, byte a byte, antes de quitarlas de su cola (ADR-0026, pasos 2 y 5).
+- **Una respuesta perdida no pierde nada:** el cliente (`ApiLedgerStore`) no da una escritura por hecha sin este `200`; si no llegó, vuelve a leer el remoto (§5.1) y mira si sus líneas están dentro, byte a byte, antes de repetir (ADR-0035).
 - `details` puede contener lo que el dominio diga de la línea (un importe, una cantidad): va al cliente del propio usuario, **nunca a un registro**.
 
 ### 5.3 Los objetos de dispositivo (identidad)
