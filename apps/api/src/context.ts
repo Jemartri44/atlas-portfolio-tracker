@@ -43,7 +43,6 @@ export interface HandlerDeps {
   readonly log: (line: string) => void;
 }
 
-/** What every route of the API shares: the stores, the clock, the secrets and the checks of the two credentials. */
 export interface ApiContext {
   readonly deps: HandlerDeps;
   readonly config: ApiConfig;
