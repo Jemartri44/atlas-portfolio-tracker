@@ -5,7 +5,6 @@
 // worked out by hand for the whole sequence.
 
 import { describe, expect, it } from "vitest";
-import { cashBalances } from "../../src/projections/cash.js";
 import { integrity } from "../../src/projections/integrity.js";
 import { fiscalLots, openQuantity } from "../../src/projections/lots.js";
 import { physicalPositions } from "../../src/projections/positions.js";
@@ -29,11 +28,6 @@ const gains = (state: LedgerState): string[] =>
     (g) =>
       `${g.account_id}:${g.quantity}@${g.proceeds_eur.amount}-${g.cost_eur.amount}=${g.gain_eur_rounded.amount}`,
   );
-
-const cash = (state: LedgerState): string[] =>
-  cashBalances(state)
-    .map((c) => `${c.account_id}=${c.balance.amount}`)
-    .sort();
 
 const forcedSale = (
   per_account: { account_id: string; quantity: string }[],
