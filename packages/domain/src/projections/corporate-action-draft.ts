@@ -20,6 +20,7 @@ import { ValidationError } from "../errors.js";
 import { Decimal, type DecimalString } from "../money/decimal.js";
 import type { Currency } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
+import { isRatioString, Ratio } from "../money/ratio.js";
 import type {
   AccountId,
   AssetId,
@@ -35,6 +36,32 @@ import { CURRENT_LEDGER_SCHEMA } from "../schema/migrations/index.js";
 import { physicalPositions } from "./positions.js";
 import { projectLedger } from "./project-ledger.js";
 import type { LedgerState } from "./state.js";
+
+/**
+ * Whether a ratio is written the wrong way round for its kind. `ratio` is new/old, so a split
+ * multiplies the shares (above 1) and a reverse split divides them (below 1). The other way round
+ * books every lot wrong and no validator notices, which is why the interfaces ask first. It is
+ * **not** a rule of the ledger (the domain accepts any positive ratio, `raw` effects included): a
+ * typing check, `undefined` when there is nothing to say or the ratio is no ratio at all (that one
+ * has its own error).
+ */
+export const ratioDirection = (
+  kind: CorporateActionKind,
+  ratio: string,
+): "reduces" | "multiplies" | "unchanged" | undefined => {
+  if ((kind !== "split" && kind !== "reverse_split") || !isRatioString(ratio)) {
+    return undefined;
+  }
+  const parsed = Ratio.parse(ratio);
+  const order = parsed.numerator.cmp(parsed.denominator);
+  if (order === 0) {
+    return "unchanged";
+  }
+  if (kind === "split") {
+    return order < 0 ? "reduces" : undefined;
+  }
+  return order > 0 ? "multiplies" : undefined;
+};
 
 /** Cash settlement of the fractions, or of the whole position in a liquidation. */
 export interface CashSettlement {
