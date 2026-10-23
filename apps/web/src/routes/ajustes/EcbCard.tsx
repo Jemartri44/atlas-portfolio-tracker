@@ -7,13 +7,13 @@
 // loaded here, lazily.
 
 import { createResource, createSignal, type JSX, Show } from "solid-js";
+// Statically, as the card of the session does: the section of Ajustes is
+// lazy already, and a dynamic import would split it for nothing.
+import { readSession } from "../../auth/session.js";
 import { ConfirmDialog, Icon, Notice, Section } from "../../components/index.js";
 import { downloadCloudHistory } from "../../ecb/cloud.js";
 import { formatDate, formatInstantDate } from "../../format/date.js";
 import { toAppError } from "../../ledger/errors.js";
-// Statically, as the card of the session does: the section of Ajustes is
-// lazy already, and a dynamic import would split it for nothing.
-import { readSession } from "../../sync/session.js";
 import { cloudSaid } from "./ecb-cloud-said.js";
 
 const ecb = () => import("../../ecb/history.js");

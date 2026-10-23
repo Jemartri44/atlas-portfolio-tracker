@@ -11,7 +11,7 @@
 
 import { ApiDraftStore } from "@atlas/adapters/drafts-http";
 import type { DraftEnd, PendingDraft } from "@atlas/domain/ecb";
-import { cloudFetch } from "./cloud.js";
+import { cloudFetch } from "../ledger/cloud.js";
 
 /** The store over the API, at the page's own origin and with the session of the boot. */
 export const drafts = (): ApiDraftStore => new ApiDraftStore({ origin: "", fetch: cloudFetch() });

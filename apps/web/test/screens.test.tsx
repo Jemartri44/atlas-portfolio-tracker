@@ -23,10 +23,10 @@ import { render } from "solid-js/web";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { formatMoney, MASK } from "../src/format/money.js";
 import { loadInto } from "../src/ledger/actions.js";
-import { store } from "../src/ledger/state.js";
 import Cartera from "../src/routes/cartera/index.jsx";
 import Cubo from "../src/routes/cubo/index.jsx";
 import Resumen from "../src/routes/resumen/index.jsx";
+import { setPrivacy } from "../src/shell/preferences.js";
 import { goldenEvents, goldenText } from "./helpers/golden.js";
 import { MemoryBlob } from "./helpers/memory-blob.js";
 
@@ -62,7 +62,7 @@ const show = async (path: string, screen: () => unknown): Promise<HTMLElement> =
 const text = (host: HTMLElement): string => (host.textContent ?? "").replace(/\s+/g, " ");
 
 beforeEach(async () => {
-  store.setPrivacy(false);
+  setPrivacy(false);
   await loadInto({
     deps: deps(),
     source: { expiresAt: "2099-01-01T00:00:00.000Z" },
@@ -75,7 +75,7 @@ afterEach(() => {
   }
   document.body.innerHTML = "";
   window.history.replaceState({}, "", "/");
-  store.setPrivacy(false);
+  setPrivacy(false);
 });
 
 /** What the domain says the core weighs at a date: the answer the screen owes. */
@@ -169,7 +169,7 @@ describe("the privacy mode covers the two screens", () => {
    * sentence.
    */
   it("leaves no amount, price or quantity visible on Núcleo", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const shown = text(await show("/cartera?fecha=2027-01-31", Cartera));
 
     expect(shown).toContain(MASK);
@@ -177,7 +177,7 @@ describe("the privacy mode covers the two screens", () => {
   });
 
   it("leaves no amount, price or quantity visible on Cubo", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const shown = text(await show("/cubo?fecha=2027-12-31", Cubo));
 
     expect(shown).toContain(MASK);
@@ -192,7 +192,7 @@ describe("the privacy mode covers the two screens", () => {
 
   /** And with the mask off they are all there: the test is not passing on an empty page. */
   it("shows them all again when privacy is off", async () => {
-    store.setPrivacy(false);
+    setPrivacy(false);
     const shown = text(await show("/cartera?fecha=2027-01-31", Cartera));
 
     expect(shown).not.toContain(MASK);
@@ -203,7 +203,7 @@ describe("the privacy mode covers the two screens", () => {
   });
 
   it("shows what the warnings of the bucket say when the mask is off", async () => {
-    store.setPrivacy(false);
+    setPrivacy(false);
     const shown = text(await show("/cubo?fecha=2027-12-31", Cubo));
 
     expect(shown).toContain(
@@ -212,7 +212,7 @@ describe("the privacy mode covers the two screens", () => {
   });
 
   it("still shows the percentages, which are the useful thing in public", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const shown = text(await show("/cartera?fecha=2027-01-31", Cartera));
 
     expect(shown).toMatch(/\d+,\d+ %/);
@@ -400,7 +400,7 @@ const WASH_SALE = ledgerOf(
  * It is rendered, and it looks at the attention block of the summary, because
  * a test over `describeWarning` proves the function masks and proves nothing
  * about the screen that calls it: the defect was never in the formatting, it
- * was in the call. Mutating `privacy: store.privacy()` in `resumen/index.tsx`,
+ * was in the call. Mutating `privacy: privacy()` in `resumen/index.tsx`,
  * or the `privacy` that `attentionItems` hands on, has to land here.
  */
 describe("the privacy mode covers the prose of the warnings", () => {
@@ -423,7 +423,7 @@ describe("the privacy mode covers the prose of the warnings", () => {
   });
 
   it("masks the amount and the quantity a warning says", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const shown = attention(await show("/", Resumen));
 
     // The warning is there, with its name, its dates and its window intact.
@@ -438,7 +438,7 @@ describe("the privacy mode covers the prose of the warnings", () => {
   });
 
   it("says them both again with the mask off", async () => {
-    store.setPrivacy(false);
+    setPrivacy(false);
     const shown = attention(await show("/", Resumen));
 
     expect(shown).not.toContain(MASK);

@@ -8,8 +8,8 @@
 // refused because «the order is already closed» — by that very purchase.
 
 import { describe, expect, it } from "vitest";
-import { store } from "../src/ledger/state.js";
 import Edit from "../src/routes/movimientos/edit.jsx";
+import { setPrivacy } from "../src/shell/preferences.js";
 import { press, show, text, type, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
@@ -20,7 +20,7 @@ const DEPOSIT = "01NWVBBZ78ZF4XD31K965DE3ET";
 const WITH_ORDER = "01M1PS7R5RJ4XWKK5GX24DQ2FE";
 
 const correct = async (id: string, field: string, value: string): Promise<HTMLElement> => {
-  store.setPrivacy(false);
+  setPrivacy(false);
   const host = await show(`/movimientos/${id}/editar`, Edit, "/movimientos/:id/editar");
   type(host, `f-${field}`, value);
   type(host, "correct-reason", "mal tecleado");

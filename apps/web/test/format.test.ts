@@ -40,8 +40,7 @@ import {
   signOf,
 } from "../src/format/number.js";
 import { maskFigures } from "../src/format/privacy.js";
-import { privacyFromPreference } from "../src/ledger/state.js";
-import { themeFromPreference } from "../src/shell/theme.js";
+import { privacyFromPreference, themeFromPreference } from "../src/shell/preferences.js";
 import { goldenEvents } from "./helpers/golden.js";
 
 describe("roundDecimalString", () => {

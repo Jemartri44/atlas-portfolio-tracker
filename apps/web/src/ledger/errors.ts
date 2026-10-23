@@ -10,6 +10,7 @@ import { DomainError } from "@atlas/domain";
 import { RemoteError } from "@atlas/domain/sync";
 import { describeError, REMOTE_FAILURES } from "../format/messages/errors.js";
 import { nameIndex } from "../format/names.js";
+import { privacy } from "../shell/preferences.js";
 import type { AppError } from "./state.js";
 import { store } from "./state.js";
 
@@ -45,7 +46,7 @@ export const toAppError = (error: unknown): AppError => {
       get message() {
         return describeError(error, {
           names: nameIndex(store.snapshot()?.state),
-          privacy: store.privacy(),
+          privacy: privacy(),
         });
       },
       ...(typeof line === "number" ? { line } : {}),
