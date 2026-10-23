@@ -83,7 +83,7 @@ describe("atlas backup copies the local documents/", () => {
   });
 });
 
-describe("atlas backup --from-bucket (§7 P5)", () => {
+describe("atlas backup --from-bucket", () => {
   it("copies documents/ and imports/ of the bucket, only reading there", async () => {
     const api = setup();
     api.s3.seed("documents/01ARYZ6S41TSV4RRFFQ69G5FAV/aviso.pdf", "pdf del bucket");

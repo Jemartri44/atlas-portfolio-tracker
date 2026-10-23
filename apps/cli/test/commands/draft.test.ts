@@ -154,7 +154,7 @@ describe("atlas add --draft", () => {
     expect(await drafts()).toEqual([]);
   });
 
-  it("writes no draft while the folder is locked (mutant 23)", async () => {
+  it("writes no draft while the folder is locked", async () => {
     const { atlas, drafts, dir } = await setup();
     await writeFile(
       join(dir, LOCK_FILE),
@@ -165,7 +165,7 @@ describe("atlas add --draft", () => {
   });
 });
 
-describe("a pending draft (mutant 12)", () => {
+describe("a pending draft", () => {
   it("counts in no figure, and every command reminds it", async () => {
     const { atlas } = await setup();
     const positions = await atlas({}, "positions");
@@ -239,7 +239,7 @@ describe("a pending draft (mutant 12)", () => {
     expect(await drafts()).toEqual([]);
   });
 
-  it("never takes a twin recorded by hand for the draft: it asks the duplicate question (second review of PR #75)", async () => {
+  it("never takes a twin recorded by hand for the draft: it asks the duplicate question", async () => {
     const { atlas, drafts, ledgerText } = await setup();
     const id = idOf((await atlas({}, ...goldBuy, "--draft")).out);
     await atlas({ fx: source(await laterCsv()) }, "fx", "update");
