@@ -13,11 +13,11 @@
 // (DGT V0630-25: dividing by 92 days an account that opened in November gives a
 // lower average, which is the direction that has consequences).
 //
-// There is **no second cash engine here**. The balances come from projections
-// with `asOf`: one at the start of the period and one on every day of it with
-// an operation of a foreign account. Between two of those days the balance is
-// the one of the earlier day, because nothing happened — which is a reading,
-// not an interpolation.
+// There is **no second cash engine here**. The balances come from one
+// projection that reports the cash at the end of every day with an operation:
+// the same figure `asOf` would give for that day. Between two of those days the
+// balance is the one of the earlier day, because nothing happened — which is a
+// reading, not an interpolation.
 
 import { addDays, type CivilDate, daysBetween } from "../dates/civil-date.js";
 import { madridDateOf } from "../dates/madrid.js";
@@ -106,7 +106,19 @@ export const quarterAverages = (
   // whole quarter, which is the same thing with a balance of zero.
   const appeared = new Map<AccountId, CivilDate>();
   const moves = new Set<CivilDate>();
-  const state = projectLedger(events);
+  // The cash at the end of the last day before the quarter, and at the end of
+  // each day of it that had an operation.
+  let carried = new Map<string, Money>();
+  const closings = new Map<CivilDate, Map<string, Money>>();
+  const state = projectLedger(events, {
+    onDate: (date, at) => {
+      if (date < open) {
+        carried = new Map(at.cash);
+      } else if (date <= end) {
+        closings.set(date, new Map(at.cash));
+      }
+    },
+  });
   for (const event of events) {
     // A voided event is not an operation of the account: its date must not move
     // the start of the period.
@@ -135,7 +147,8 @@ export const quarterAverages = (
   }
   // Every day the balance can change: the start of each account, every day of
   // the quarter with an operation, and every day an account opened or closed.
-  const marks = new Set<CivilDate>([...moves, ...starts.values()]);
+  // An account that starts after the year has no mark in it.
+  const marks = new Set<CivilDate>([...moves, ...[...starts.values()].filter((day) => day <= end)]);
   for (const list of changes.values()) {
     for (const [when] of list) {
       if (when >= open && when <= end) {
@@ -144,11 +157,15 @@ export const quarterAverages = (
     }
   }
   const ordered = [...marks].sort();
-  const balances = new Map<CivilDate, Map<string, Money>>();
-  for (const mark of ordered) {
-    const at = projectLedger(events, { asOf: mark });
-    balances.set(mark, at.cash);
-  }
+  // The balance on a mark is the closing of the latest day with an operation
+  // that is not after it.
+  const days = [...closings.keys()];
+  const balances = new Map(
+    ordered.map((mark) => [
+      mark,
+      closings.get(days.filter((day) => day <= mark).pop() as CivilDate) ?? carried,
+    ]),
+  );
   const currencies = new Map<AccountId, Set<string>>();
   for (const cash of balances.values()) {
     for (const key of cash.keys()) {
@@ -161,6 +178,10 @@ export const quarterAverages = (
   const result = new Map<string, AverageBalance>();
   for (const id of accounts.keys()) {
     const start = starts.get(id) as CivilDate;
+    // An account whose first operation is after the year has no period in it.
+    if (start > end) {
+      continue;
+    }
     const days = daysBetween(start, end) + 1;
     const segments = ordered.filter((mark) => mark >= start);
     for (const currency of currencies.get(id) ?? []) {
