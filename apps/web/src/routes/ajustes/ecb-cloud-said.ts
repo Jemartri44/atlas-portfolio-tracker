@@ -4,17 +4,7 @@
 
 import type { CloudOutcome } from "../../ecb/cloud.js";
 import { formatDate } from "../../format/date.js";
-import type { AppError } from "../../ledger/state.js";
-
-/**
- * What a card says after an action. A failure is kept as the error, not as its text: the text
- * follows the privacy mode while it is on screen.
- */
-export type Said =
-  | { readonly tone: "info" | "danger" | "caution"; readonly text: string }
-  | { readonly tone: "danger"; readonly error: AppError };
-
-export const saidText = (said: Said): string => ("error" in said ? said.error.message : said.text);
+import type { Said } from "./card-action.jsx";
 
 export const cloudSaid = (outcome: CloudOutcome, asked: boolean): Said | undefined => {
   switch (outcome.kind) {
