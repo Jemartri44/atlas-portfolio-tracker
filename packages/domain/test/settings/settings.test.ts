@@ -552,6 +552,32 @@ describe("the tax engine settings", () => {
     expect(code({ loss_carryforward_years: "4" })).toBe("invalid_settings");
   });
 
+  it("validate the brackets of the savings base as a list the screens can print", () => {
+    const code = (brackets: unknown): string => {
+      try {
+        validateSettings({ ...DEFAULT_SETTINGS, savings_tax_brackets: brackets });
+      } catch (error) {
+        return (error as ValidationError).code;
+      }
+      return "accepted";
+    };
+    expect(code([{ up_to: "6000", rate_pct: "19" }, { rate_pct: "30" }])).toBe("accepted");
+    expect(code([])).toBe("accepted");
+    for (const bad of [
+      "19",
+      {},
+      [null],
+      [{ up_to: "6000" }],
+      [{ rate_pct: 19 }],
+      [{ rate_pct: "101" }],
+      [{ rate_pct: "-1" }],
+      [{ up_to: 6000, rate_pct: "19" }],
+      [{ up_to: "-5", rate_pct: "19" }],
+    ]) {
+      expect(code(bad)).toBe("invalid_settings");
+    }
+  });
+
   it("validate the treaty rates by key and by value", () => {
     const code = (rates: unknown): string => {
       try {

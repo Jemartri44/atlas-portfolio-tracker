@@ -205,6 +205,33 @@ const checkTreatyRates = (raw: UnknownRecord): void => {
   }
 };
 
+/** The brackets of the savings base: the screens print them, so each one needs a rate and, but the last, a limit. */
+const checkSavingsBrackets = (raw: UnknownRecord): void => {
+  if (!("savings_tax_brackets" in raw)) {
+    return;
+  }
+  const brackets = raw.savings_tax_brackets;
+  const invalid = (message: string, value: unknown): never =>
+    fail(message, { field: "savings_tax_brackets", value });
+  if (!Array.isArray(brackets)) {
+    invalid("savings_tax_brackets must be a list", brackets);
+  }
+  for (const bracket of brackets as unknown[]) {
+    if (!isRecord(bracket) || !isDecimalString(bracket.rate_pct)) {
+      invalid("each bracket needs rate_pct as a decimal string", bracket);
+    }
+    const bracketRecord = bracket as UnknownRecord;
+    const rate = Decimal.parse(bracketRecord.rate_pct as string);
+    if (rate.isNegative() || rate.gt(Decimal.parse("100"))) {
+      invalid("rate_pct must be between 0 and 100", bracket);
+    }
+    const limit = bracketRecord.up_to;
+    if (limit !== undefined && (!isDecimalString(limit) || Decimal.parse(limit).isNegative())) {
+      invalid("up_to must be a decimal string of zero or more", bracket);
+    }
+  }
+};
+
 /**
  * A warning above its own threshold would never fire: the category would be
  * obliged before the application said anything. Checked on the figures **in
@@ -314,6 +341,7 @@ export const validateSettings = (raw: unknown): Settings => {
   checkInformativeAlerts(raw);
   checkRentaSeason(raw);
   checkTreatyRates(raw);
+  checkSavingsBrackets(raw);
   if ("target_weights" in raw) {
     const weights = raw.target_weights;
     if (!isRecord(weights)) {
