@@ -34,17 +34,6 @@ export type FolderMode =
   | { readonly kind: "local" }
   | { readonly kind: "cloud"; readonly remote: RemoteJson };
 
-const MODE_BLIND = new Set(["help", "synth", "remote", "admin", "lock"]);
-
-/**
- * Whether an order looks at the mode of the folder. Not those that do not read
- * or write the ledger of the folder: `synth`, `remote` (but its `upload`, which
- * runs in a cloud folder), `admin` and `lock`.
- */
-export const looksAtMode = (positionals: readonly string[]): boolean =>
-  !MODE_BLIND.has(positionals[0] ?? "") ||
-  (positionals[0] === "remote" && positionals[1] === "upload");
-
 export const resolveFolderMode = async (ledgerPath: string): Promise<FolderMode> => {
   const remote = await readRemoteJson(dirname(ledgerPath));
   if (remote === undefined) {
