@@ -28,3 +28,7 @@ export const pp = (value: Decimal | undefined): string =>
  */
 export const eur = (value: Money | undefined): string =>
   value === undefined ? DASH : value.centsText();
+
+/** A detail of an error or a warning as a sentence prints it: a string as it is, anything else as JSON. */
+export const text = (value: unknown): string =>
+  typeof value === "string" ? value : JSON.stringify(value);

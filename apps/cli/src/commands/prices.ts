@@ -9,7 +9,7 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { FilePriceStore, PRICES_DIR } from "@atlas/adapters";
-import { type AssetId, settingsAt, todayInMadrid } from "@atlas/domain";
+import { type AssetId, isCurrency, settingsAt, todayInMadrid } from "@atlas/domain";
 import {
   type AssetOutcome,
   assertNothingMisstored,
@@ -151,7 +151,7 @@ const update = async (ctx: Context, flags: Flags): Promise<number> => {
       return EXIT.ok;
     }
     ctx.io.err(`La nube todavía no tiene precios: esta vez ${SHARED_QUOTA}`);
-  } else if (origin.kind !== "unsynced") {
+  } else if (origin.kind !== "local") {
     ctx.io.err(`Con --from-sources en una carpeta de nube, ${SHARED_QUOTA}`);
   }
   const { keys, note } = await keysFor(ctx);
@@ -167,7 +167,7 @@ const update = async (ctx: Context, flags: Flags): Promise<number> => {
     now: () => ctx.deps.clock.now(),
     store: new FilePriceStore(folderOf(ctx)),
     sources: sourcesFor(ctx, keys),
-    sharedWithCloud: origin.kind !== "unsynced",
+    sharedWithCloud: origin.kind !== "local",
   });
   if (report.no_sources) {
     render(ctx, report, NO_KEYS);
@@ -365,6 +365,9 @@ const listSymbols = async (ctx: Context, assetId: string | undefined): Promise<n
   return EXIT.ok;
 };
 
+/** A symbol of a source is a word of the URL it goes in: no blanks, no delimiters. */
+const SYMBOL = /^[^\s/?#&%\\]+$/;
+
 /**
  * The declaration from the flags: each symbol with **its own** currency
  * (`--eodhd-currency`, `--alpha-vantage-currency`), and `--currency` for every
@@ -383,6 +386,22 @@ const declarationOf = (flags: Flags): SymbolDeclaration => {
     alpha_vantage: stringFlag(flags, "alpha-vantage-currency"),
   };
   const flagOf = { eodhd: "eodhd", alpha_vantage: "alpha-vantage" } as const;
+  // What is written to `prices/symbols.json` has to be something the file reads back: a blank
+  // symbol, or a currency that is not a code, would leave the file unusable for every order after.
+  for (const source of QUOTE_SOURCES) {
+    const symbol = symbols[source];
+    if (symbol !== undefined && !SYMBOL.test(symbol)) {
+      throw new UsageError(
+        `--${flagOf[source]} necesita un símbolo sin espacios ni «/ ? # & %» (recibido: «${symbol}»)`,
+      );
+    }
+    const currency = own[source] ?? common;
+    if (currency !== undefined && !isCurrency(currency)) {
+      throw new UsageError(
+        `la divisa tiene que ser un código de tres letras mayúsculas, como EUR o GBP (recibido: «${currency}»)`,
+      );
+    }
+  }
   // Nothing is dropped in silence: a currency for a source
   // without its symbol, or a declaration without any symbol, is a mistake.
   for (const source of QUOTE_SOURCES) {

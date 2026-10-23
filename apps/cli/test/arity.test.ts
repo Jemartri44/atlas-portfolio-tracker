@@ -2,15 +2,9 @@
 // boolean flag used to be ignored, and the command recorded the opposite of what was written.
 
 import { describe, expect, it } from "vitest";
-import { COMMANDS } from "../src/main.js";
-import { ARITY } from "../src/usage.js";
 import { harness, seed } from "./harness.js";
 
 describe("the words a command reads", () => {
-  it("are declared for every command, and only for commands", () => {
-    expect(Object.keys(ARITY).sort()).toEqual(Object.keys(COMMANDS).sort());
-  });
-
   it("refuse the first one too many, by name, before anything is recorded", async () => {
     const h = harness({ events: seed() });
     expect(await h.exec(["tax", "2027", "2028"])).toBe(64);

@@ -7,6 +7,7 @@ import { ValidationError } from "../../src/errors.js";
 import {
   type CorporateActionParams,
   corporateActionDraft,
+  ratioDirection,
 } from "../../src/projections/corporate-action-draft.js";
 import { checkEffectsAgainstKind } from "../../src/projections/kind-rules.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
@@ -560,5 +561,30 @@ describe("corporateActionDraft: what it writes is what gets recorded", () => {
     });
 
     expect(projected.invalid).toEqual([]);
+  });
+});
+
+describe("ratioDirection: a ratio written the wrong way round", () => {
+  it.each([
+    ["split", "1/4", "reduces"],
+    ["split", "0.5", "reduces"],
+    ["split", "1", "unchanged"],
+    ["split", "4/4", "unchanged"],
+    ["split", "4", undefined],
+    ["split", "3/2", undefined],
+    ["reverse_split", "4", "multiplies"],
+    ["reverse_split", "5/4", "multiplies"],
+    ["reverse_split", "1", "unchanged"],
+    ["reverse_split", "1/4", undefined],
+    ["reverse_split", "0.25", undefined],
+  ] as const)("%s with %s: %s", (kind, ratio, expected) => {
+    expect(ratioDirection(kind, ratio)).toBe(expected);
+  });
+
+  it("says nothing for the other kinds, nor for what is no ratio", () => {
+    expect(ratioDirection("merger", "1/4")).toBeUndefined();
+    expect(ratioDirection("spin_off", "4")).toBeUndefined();
+    expect(ratioDirection("split", "abc")).toBeUndefined();
+    expect(ratioDirection("reverse_split", "0")).toBeUndefined();
   });
 });

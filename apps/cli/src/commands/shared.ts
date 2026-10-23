@@ -5,14 +5,19 @@ import { dirname, join, resolve } from "node:path";
 import { FileLedgerStore } from "@atlas/adapters";
 import {
   type CivilDate,
+  Decimal,
   DomainError,
   type Draft,
+  FxRate,
   isCivilDate,
   type LedgerEvent,
   type LedgerState,
   loadAndProject,
+  Money,
+  Price,
   type ProjectedLedger,
   previewEvent,
+  Quantity,
   type RecordOptions,
   type RecordResult,
   recordEvent,
@@ -94,10 +99,35 @@ export const dateFlag = (ctx: Context, flags: Flags): CivilDate => {
 export const aside = (ctx: Context, text: string): void =>
   (ctx.json ? ctx.io.err : ctx.io.out)(text);
 
+/**
+ * What `--json` writes: amounts, quantities, prices and rates as strings (data-schema.md), never as
+ * the object that wraps the decimal.
+ */
+const jsonText = (data: unknown): string =>
+  JSON.stringify(
+    data,
+    (_key, value: unknown) => {
+      if (value instanceof Money || value instanceof Price) {
+        return { amount: value.amount.toString(), currency: value.currency };
+      }
+      if (value instanceof FxRate) {
+        return { rate: value.rate.toString(), currency: value.currency, date: value.date };
+      }
+      if (value instanceof Quantity) {
+        return value.value.toString();
+      }
+      if (value instanceof Decimal) {
+        return value.toString();
+      }
+      return value;
+    },
+    2,
+  );
+
 /** The one object a `--json` write leaves on stdout; nothing without `--json`. */
 export const answer = (ctx: Context, data: unknown): void => {
   if (ctx.json) {
-    ctx.io.out(JSON.stringify(data, null, 2));
+    ctx.io.out(jsonText(data));
   }
 };
 
@@ -249,7 +279,7 @@ export const yearArgument = (raw: string | undefined): number | undefined =>
   raw !== undefined && /^[1-9]\d{0,3}$/.test(raw) ? Number(raw) : undefined;
 
 export const render = (ctx: Context, data: unknown, text: string): void => {
-  ctx.io.out(ctx.json ? JSON.stringify(data, null, 2) : text);
+  ctx.io.out(ctx.json ? jsonText(data) : text);
 };
 
 /**
@@ -306,7 +336,7 @@ export const renderQuery = (
   channel: "out" | "err" = "out",
 ): void => {
   if (ctx.json) {
-    ctx.io.out(JSON.stringify({ invalid_count: state.invalid.length, data }, null, 2));
+    ctx.io.out(jsonText({ invalid_count: state.invalid.length, data }));
     return;
   }
   const header = degradedHeader(state);

@@ -166,9 +166,9 @@ describe("atlas lock", () => {
     const { io, lines } = capture();
     expect(await run(["--ledger", ledger, "positions"], io)).toBe(0);
     const text = lines.join("\n");
-    expect(text).toContain("sincronización interrumpida");
-    expect(text).toContain("pudo quedar ya reescrito");
-    expect(text).not.toContain("el libro no se había tocado");
+    expect(text).toContain("state.json.tmp-4242-1");
+    expect(text).toContain("el libro no se había tocado");
+    expect(text).not.toContain("sincronización");
   });
 
   it("says nothing was written when its lock was broken mid-write", async () => {

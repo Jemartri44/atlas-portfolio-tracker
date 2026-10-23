@@ -11,8 +11,8 @@
 import type { BoxBlockId, BoxEntry, TaxBoxes } from "@atlas/domain/fiscal";
 import { BOX_BLOCKS, blockOfConcept, conceptName } from "@atlas/domain/fiscal";
 import { eur } from "../output/format.js";
-import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
+import { describeWarning } from "../output/warnings.js";
 
 /**
  * What each block of the form is called. **Which** concept goes in which block
