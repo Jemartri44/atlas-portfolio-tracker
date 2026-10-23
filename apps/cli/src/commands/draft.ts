@@ -13,7 +13,7 @@
 
 import { dirname } from "node:path";
 import { FileDraftStore, readLocalConfig } from "@atlas/adapters";
-import { type CivilDate, DomainError, loadAndProject, type Ulid } from "@atlas/domain";
+import { type CivilDate, loadAndProject, type Ulid } from "@atlas/domain";
 import {
   type DraftStatus,
   draftRecordedAs,
@@ -25,7 +25,7 @@ import {
   recordPendingDraft,
 } from "@atlas/domain/ecb";
 import { UsageError } from "../args.js";
-import { type Context, EXIT } from "../context.js";
+import { CommandFailure, type Context, EXIT } from "../context.js";
 import { cloudStoreOf } from "../folder-mode.js";
 import { day } from "../output/ecb.js";
 import { historyOf } from "./rates.js";
@@ -95,13 +95,15 @@ export const saveAsDraft = async (
   return EXIT.ok;
 };
 
-const find = async (ctx: Context, id: string | undefined): Promise<PendingDraft | undefined> => {
+const find = async (ctx: Context, id: string | undefined): Promise<PendingDraft> => {
   if (id === undefined) {
     throw new UsageError("uso: atlas draft confirm|discard <id>");
   }
   const found = (await (await storeOf(ctx)).list()).drafts.find((draft) => draft.id === id);
   if (found === undefined) {
-    ctx.io.err(`Error: no hay ningún borrador ${id} en drafts/. Consulta \`atlas draft list\`.`);
+    throw new CommandFailure(EXIT.domain, "draft_not_found", [
+      `Error: no hay ningún borrador ${id} en drafts/. Consulta \`atlas draft list\`.`,
+    ]);
   }
   return found;
 };
@@ -157,9 +159,6 @@ const ecbOf = async (
 
 const confirmDraft = async (ctx: Context, id: string | undefined): Promise<number> => {
   const draft = await find(ctx, id);
-  if (draft === undefined) {
-    return EXIT.domain;
-  }
   const { history, staleDays } = await ecbOf(ctx);
   const { state, events } = await loadAndProject(ctx.deps, { collectErrors: true });
   // Confirmed already, and the draft was not removed (a cut, a failure of
@@ -179,8 +178,7 @@ const confirmDraft = async (ctx: Context, id: string | undefined): Promise<numbe
   }
   const status = pendingDraftStatus(history, state, draft, staleDays);
   if (status.kind !== "confirmable") {
-    aside(ctx, describeStatus(status));
-    return EXIT.domain;
+    throw new CommandFailure(EXIT.domain, "draft_not_confirmable", [describeStatus(status)]);
   }
   const notes = status.proposed.flatMap((official) =>
     official.resolution.kind === "resolved"
@@ -220,9 +218,6 @@ const confirmDraft = async (ctx: Context, id: string | undefined): Promise<numbe
 
 const discardDraft = async (ctx: Context, id: string | undefined): Promise<number> => {
   const draft = await find(ctx, id);
-  if (draft === undefined) {
-    return EXIT.domain;
-  }
   aside(ctx, summaryOf(draft));
   if (!(await confirm(ctx, "¿Descartar el borrador? No se registra nada. [s/N] "))) {
     cancelled(ctx);

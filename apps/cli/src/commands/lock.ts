@@ -9,7 +9,7 @@ import { breakFolderLock, readFolderLock, readLocalConfig } from "@atlas/adapter
 import { assertKnownFlags, type Flags, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { describeLock, remedyFor } from "../output/lock.js";
-import { confirm, render } from "./shared.js";
+import { aside, cancelled, confirm, render } from "./shared.js";
 
 export const lockCommand = async (
   ctx: Context,
@@ -38,15 +38,20 @@ export const lockCommand = async (
     render(ctx, { locked: true, lock: info ?? null }, `${description}\n${remedyFor(info)}`);
     return 0;
   }
-  ctx.io.out(description);
-  ctx.io.out(
+  aside(ctx, description);
+  aside(
+    ctx,
     "Romperlo es seguro si ese proceso ya no existe. Si siguiera vivo, podría escribir a la vez que la siguiente orden: la comprobación de pertenencia lo hace menos probable, no imposible.",
   );
   if (!(await confirm(ctx, "¿Romper el cerrojo? [s/N] "))) {
-    ctx.io.out("Cancelado.");
+    cancelled(ctx);
     return 0;
   }
   const broken = await breakFolderLock(folder);
-  ctx.io.out(broken ? "Cerrojo roto." : "El cerrojo ya no estaba: nada que romper.");
+  render(
+    ctx,
+    { status: broken ? "broken" : "nothing_to_break" },
+    broken ? "Cerrojo roto." : "El cerrojo ya no estaba: nada que romper.",
+  );
   return 0;
 };

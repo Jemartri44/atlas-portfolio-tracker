@@ -115,7 +115,7 @@ describe("atlas admin devices", () => {
   });
 });
 
-describe("atlas admin revoke-all-tokens (§7 P4)", () => {
+describe("atlas admin revoke-all-tokens", () => {
   it("revokes every live record with the API's own format, and repeats without harm", async () => {
     const api = setup();
     const one = await consoleLogin(api);
@@ -159,7 +159,7 @@ describe("atlas admin revoke-all-tokens (§7 P4)", () => {
   });
 });
 
-describe("atlas admin forget-device (§7 P9, amended)", () => {
+describe("atlas admin forget-device", () => {
   it("revokes its tokens, then marks it forgotten on its ETag, and the API refuses it", async () => {
     const api = setup();
     const mine = await consoleLogin(api);
@@ -206,6 +206,18 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
     expect(await c.exec(forget(DEVICE(4)))).toBe(EXIT.ok);
     expect(c.text()).toContain("ya estaba olvidado");
     expect(api.s3.etagOf(`sync/devices/${DEVICE(4)}.json`)).toBe(etag);
+  });
+
+  it("answers one object with --json, also for a device that was already forgotten", async () => {
+    const api = setup();
+    seedDevice(api, DEVICE(4));
+    const c = await adminConsole(api);
+    await c.exec(forget(DEVICE(4)));
+    c.reset();
+    expect(await c.exec(forget(DEVICE(4), "--json"))).toBe(EXIT.ok);
+    expect(c.out.map((line) => JSON.parse(line))).toEqual([
+      { device_id: DEVICE(4), already_forgotten: true, revoked: [] },
+    ]);
   });
 
   // The cut between the two steps: revoked and not forgotten is safe, and
@@ -365,7 +377,7 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
   });
 });
 
-describe("the confirmations of the administration (review of PR #98, N1)", () => {
+describe("the confirmations of the administration", () => {
   it.each([
     ["forget-device", ["admin", "forget-device", "--env", "test", "--device", DEVICE(8)]],
     ["compact", ["admin", "compact", "--env", "test"]],
@@ -414,7 +426,7 @@ describe("the confirmations of the administration (review of PR #98, N1)", () =>
   });
 });
 
-describe("the name of the environment (review of PR #98, N6)", () => {
+describe("the name of the environment", () => {
   it.each(["toString", "__proto__", "Prod", "-x"])(
     "refuses --env %s before any client",
     async (name) => {
@@ -434,7 +446,7 @@ describe("the name of the environment (review of PR #98, N6)", () => {
   );
 });
 
-describe("forget-device sweeps the tokens issued meanwhile (review of PR #98, N8)", () => {
+describe("forget-device sweeps the tokens issued meanwhile", () => {
   const recordFor = (deviceId: string, tokenId: string) =>
     serializeTokenRecord(
       newTokenRecord({

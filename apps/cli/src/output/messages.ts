@@ -393,6 +393,12 @@ export const describeError = (error: DomainError): string => {
       return `No existe el fichero ${text(d.path)}.`;
     case "upload_source_not_utf8":
       return `El fichero ${text(d.path)} no es UTF-8: no es un libro de Atlas.`;
+    case "login_timeout":
+      return "El inicio de sesión no ha vuelto a tiempo: no se ha guardado ninguna sesión. Repite «atlas remote login» y completa el paso del navegador, o usa --manual.";
+    case "login_interrupted":
+      return "Se ha cancelado el inicio de sesión: no se ha guardado ninguna sesión.";
+    case "login_no_code":
+      return "No ha llegado el código de la página (la entrada se cerró antes de recibirlo): no se ha guardado ninguna sesión. Repite «atlas remote login --manual» desde una terminal.";
     case "raw_lone_surrogate":
       return `La línea ${text(d.line)} lleva un carácter que no es Unicode (un suplente suelto): sus bytes no serían UTF-8 y el libro no se podría leer. No se ha escrito nada; esa línea no la escribe la aplicación.`;
     case "raw_line_break":
@@ -405,6 +411,8 @@ export const describeError = (error: DomainError): string => {
       return `La copia ${text(d.path)} no coincide con el libro (etag o número de líneas): bórrala y repite.`;
     case "path_exists":
       return `La ruta ${text(d.path)} ya existe: no se sobrescribe nada.`;
+    case "not_a_directory":
+      return `La ruta ${text(d.path)} existe y no es una carpeta: indica la carpeta donde dejar la copia.`;
     case "export_over_ledger":
       return `La ruta ${text(d.path)} es el propio libro: la exportación nunca lo sustituye. Elige otra ruta.`;
     case "export_in_ledger_folder":

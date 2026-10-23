@@ -4,8 +4,11 @@
 
 import { chmod, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { PassThrough } from "node:stream";
 import { describe, expect, it } from "vitest";
 import { SELF, setup } from "../../../api/test/harness.js";
+import { run } from "../../src/main.js";
+import { readHiddenLine } from "../../src/remote/environment.js";
 import { folderTree, setupConsole, writeRemoteJson } from "../support/console.js";
 import { dashRandom } from "../support/dash-ids.js";
 
@@ -16,7 +19,7 @@ const localFolder = async () => {
   return c;
 };
 
-describe("atlas remote login (T27 to T29, T33)", () => {
+describe("atlas remote login", () => {
   it("makes a folder with no ledger a cloud folder: sync/remote.json, never a copy of the ledger (ADR-0035)", async () => {
     const c = await setupConsole();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
@@ -66,7 +69,7 @@ describe("atlas remote login (T27 to T29, T33)", () => {
     expect(c.surf.pages.at(-1)).toBe("landed:200:no-referrer");
   });
 
-  it("ignores a return with another state and keeps waiting for its own (mutant 22)", async () => {
+  it("ignores a return with another state and keeps waiting for its own", async () => {
     const c = await setupConsole({ wrongStateFirst: true });
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     expect(c.surf.pages).toContain("wrong:400");
@@ -89,7 +92,7 @@ describe("atlas remote login (T27 to T29, T33)", () => {
     expect(c.seen).toEqual([]);
   });
 
-  it("renews only with the entry the folder's sync/remote.json names, never another of the same origin (B2)", async () => {
+  it("renews only with the entry the folder's sync/remote.json names, never another of the same origin", async () => {
     const c = await localFolder();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     const [first] = Object.values((await c.readCredentialsFile()).entries) as Record<
@@ -116,7 +119,7 @@ describe("atlas remote login (T27 to T29, T33)", () => {
     expect(after[other.device_id as string]).toEqual(other);
   });
 
-  it("reissues for the device of the folder when it has no entry, after the confirmation of the page (N5)", async () => {
+  it("reissues for the device of the folder when it has no entry, after the confirmation of the page", async () => {
     const c = await setupConsole({ confirmReissue: true });
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     const [first] = Object.values((await c.readCredentialsFile()).entries) as Record<
@@ -136,7 +139,7 @@ describe("atlas remote login (T27 to T29, T33)", () => {
   });
 });
 
-describe("atlas remote logout (T35)", () => {
+describe("atlas remote logout", () => {
   it("lets the entry go only with the 200 of the server", async () => {
     const c = await setupConsole();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
@@ -172,7 +175,7 @@ describe("atlas remote logout (T35)", () => {
   });
 });
 
-describe("the file of the credentials (T30)", () => {
+describe("the file of the credentials", () => {
   it("is not used with permissions open to others, nor inside the folder of the ledger", async () => {
     const c = await setupConsole();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
@@ -187,7 +190,7 @@ describe("the file of the credentials (T30)", () => {
   });
 });
 
-describe("atlas remote status (T36)", () => {
+describe("atlas remote status", () => {
   it("says the sessions of the folder and warns inside the threshold, never showing the token", async () => {
     const c = await setupConsole();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
@@ -206,11 +209,11 @@ describe("atlas remote status (T36)", () => {
   });
 });
 
-describe("what the review of PR #95 found in the console", () => {
+describe("the sign-in files of the console: expiry, renewal and what is kept", () => {
   const entryOf = async (c: Awaited<ReturnType<typeof setupConsole>>) =>
     Object.values((await c.readCredentialsFile()).entries)[0] as Record<string, string>;
 
-  it("says «less than a day» with hours left, and «expired» only once expired (N1)", async () => {
+  it("says «less than a day» with hours left, and «expired» only once expired", async () => {
     const c = await setupConsole();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     const entry = await entryOf(c);
@@ -227,7 +230,7 @@ describe("what the review of PR #95 found in the console", () => {
     expect(c.out.join("\n")).toContain("Ha caducado");
   });
 
-  it("keeps an entry another console wrote meanwhile: it reads the file again before writing (N2)", async () => {
+  it("keeps an entry another console wrote meanwhile: it reads the file again before writing", async () => {
     const c = await localFolder();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     const first = await entryOf(c);
@@ -245,7 +248,7 @@ describe("what the review of PR #95 found in the console", () => {
     expect(entries.OTHERTERMINALOTHERTERM).toBeDefined();
   });
 
-  it("warns when the folder of the credentials is open to others (N4)", async () => {
+  it("warns when the folder of the credentials is open to others", async () => {
     const c = await setupConsole();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     expect(c.err.join("\n")).not.toContain("700");
@@ -262,7 +265,7 @@ describe("what the review of PR #95 found in the console", () => {
     expect(c.err.join("\n")).not.toContain("chmod 700");
   });
 
-  it("stores nothing from an answer that is not a valid entry (N5)", async () => {
+  it("stores nothing from an answer that is not a valid entry", async () => {
     const c = await setupConsole();
     c.hooks.tamper = (path, body) =>
       path === "/api/auth/console/token" ? body.replace(/atlasdt1\.[^"]+/, "not-a-token") : body;
@@ -271,7 +274,7 @@ describe("what the review of PR #95 found in the console", () => {
     await expect(stat(c.credentials)).rejects.toMatchObject({ code: "ENOENT" });
   });
 
-  it("stores nothing when a renewal answers for another device (N5)", async () => {
+  it("stores nothing when a renewal answers for another device", async () => {
     const c = await setupConsole();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     const entry = await entryOf(c);
@@ -286,7 +289,7 @@ describe("what the review of PR #95 found in the console", () => {
     expect(await readFile(c.credentials, "utf8")).toBe(before);
   });
 
-  it("refuses a new token whose device already has an entry of another origin (round 2, N5)", async () => {
+  it("refuses a new token whose device already has an entry of another origin", async () => {
     const c = await localFolder();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     const entry = await entryOf(c);
@@ -305,7 +308,7 @@ describe("what the review of PR #95 found in the console", () => {
     expect(await readFile(c.credentials, "utf8")).toBe(before);
   });
 
-  it("drops the local entry when the token to renew is revoked, so the next sign-in reissues (§21)", async () => {
+  it("drops the local entry when the token to renew is revoked, so the next sign-in reissues", async () => {
     const c = await setupConsole();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     const entry = await entryOf(c);
@@ -321,5 +324,87 @@ describe("what the review of PR #95 found in the console", () => {
     expect(await c.exec(["remote", "login"])).toBe(1);
     expect(c.err.join("\n")).toContain("device_token_revoked");
     expect((await c.readCredentialsFile()).entries).toEqual({});
+  });
+});
+
+describe("atlas remote with --json", () => {
+  const only = (out: string[]): Record<string, unknown> => {
+    expect(out).toHaveLength(1);
+    return JSON.parse(out[0] as string) as Record<string, unknown>;
+  };
+
+  it("login, status and logout each leave one object, none with the token", async () => {
+    const c = await setupConsole();
+    expect(await c.exec(["remote", "login", "--origin", SELF, "--json"])).toBe(0);
+    const [entry] = Object.values((await c.readCredentialsFile()).entries) as Record<
+      string,
+      string
+    >[];
+    expect(only(c.out)).toMatchObject({
+      status: "logged_in",
+      origin: SELF,
+      device_id: entry?.device_id,
+      token_id: entry?.token_id,
+    });
+    // The address to open is for the person, so it goes to stderr and stdout stays the answer.
+    expect(c.err.join("\n")).toContain("/api/auth/console/start");
+    await writeRemoteJson(c.ledger, entry?.device_id as string);
+    c.out.length = 0;
+    expect(await c.exec(["remote", "status", "--json"])).toBe(0);
+    expect(only(c.out)).toMatchObject({
+      cloud_folder: { origin: SELF },
+      sessions: [{ device_id: entry?.device_id, token_id: entry?.token_id }],
+    });
+    c.out.length = 0;
+    expect(await c.exec(["remote", "logout", "--json"])).toBe(0);
+    expect(only(c.out)).toMatchObject({ status: "logged_out", device_id: entry?.device_id });
+    expect([...c.out, ...c.err].join("\n")).not.toContain(entry?.token as string);
+  });
+
+  it("a sign-in that never comes back is login_timeout, said and not a stack", async () => {
+    const c = await setupConsole();
+    const remote = { ...c.remote, openBrowser: () => undefined, loopbackTimeoutMs: 50 };
+    const out: string[] = [];
+    const code = await run(
+      ["--ledger", join(c.ledger, "ledger.jsonl"), "remote", "login", "--origin", SELF, "--json"],
+      { out: (t) => out.push(t), err: () => undefined, confirm: async () => undefined },
+      { remote },
+    );
+    expect(code).toBe(1);
+    expect(only(out)).toMatchObject({ status: "error", code: "login_timeout" });
+  });
+});
+
+describe("the code of a manual sign-in", () => {
+  it("is refused when the input closes before it arrives, instead of ending the process", async () => {
+    const input = new PassThrough();
+    const pending = readHiddenLine("code: ", input, new PassThrough());
+    input.end();
+    await expect(pending).rejects.toMatchObject({ code: "login_no_code" });
+  });
+
+  it("is refused on Ctrl-C, and read up to the line break otherwise", async () => {
+    const interrupted = new PassThrough();
+    const first = readHiddenLine("code: ", interrupted, new PassThrough());
+    interrupted.write("ab\u0003");
+    await expect(first).rejects.toMatchObject({ code: "login_interrupted" });
+    const typed = new PassThrough();
+    const second = readHiddenLine("code: ", typed, new PassThrough());
+    typed.write("abc\u007fd\n");
+    await expect(second).resolves.toBe("abd");
+  });
+
+  it("is read whole when it arrives without a line break and the input closes", async () => {
+    const input = new PassThrough();
+    const pending = readHiddenLine("code: ", input, new PassThrough());
+    input.end("abc123");
+    await expect(pending).resolves.toBe("abc123");
+  });
+
+  it("treats Ctrl-D on an empty line as the end of the input", async () => {
+    const input = new PassThrough();
+    const pending = readHiddenLine("code: ", input, new PassThrough());
+    input.write("\u0004");
+    await expect(pending).rejects.toMatchObject({ code: "login_no_code" });
   });
 });

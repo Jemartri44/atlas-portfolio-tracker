@@ -1,7 +1,7 @@
 // Small file-system helpers shared by the console modules.
 
 import { createHash } from "node:crypto";
-import { access } from "node:fs/promises";
+import { access, stat } from "node:fs/promises";
 
 export const pathExists = async (path: string): Promise<boolean> => {
   try {
@@ -11,6 +11,10 @@ export const pathExists = async (path: string): Promise<boolean> => {
     return false;
   }
 };
+
+/** Whether the path is there and is not a folder (the destination of a copy that wants a folder). */
+export const isFile = async (path: string): Promise<boolean> =>
+  (await stat(path).catch(() => undefined))?.isDirectory() === false;
 
 /** The SHA-256 of some bytes, in hex: the etag of a ledger. */
 export const sha256 = (bytes: Uint8Array): string =>
