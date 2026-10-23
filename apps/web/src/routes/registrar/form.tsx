@@ -6,6 +6,7 @@
 
 import { useParams, useSearchParams } from "@solidjs/router";
 import { createResource, type JSX, lazy, Show } from "solid-js";
+import type { AppError } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { type EventFormSpec, formSpec, valuesOfEvent } from "../../view-models/forms/index.js";
 import { RequireLedger } from "../guard.jsx";
@@ -15,7 +16,7 @@ import { NoForm } from "./FormNotices.jsx";
 type Found =
   | { kind: "draft"; id: string; values: ReturnType<typeof valuesOfEvent> }
   | { kind: "gone" }
-  | { kind: "failed"; message: string };
+  | { kind: "failed"; error: AppError };
 
 const draftFor = async (
   id: string | undefined,
@@ -30,10 +31,7 @@ const draftFor = async (
       ? { kind: "gone" }
       : { kind: "draft", id, values: valuesOfEvent(spec, draft.event) };
   } catch (error) {
-    return {
-      kind: "failed",
-      message: (await import("../../ledger/errors.js")).toAppError(error).message,
-    };
+    return { kind: "failed", error: (await import("../../ledger/errors.js")).toAppError(error) };
   }
 };
 
@@ -80,7 +78,7 @@ const EventFormRoute = (): JSX.Element => {
                     title={found().title}
                     what={
                       (fromDraft() as Found | undefined)?.kind === "failed"
-                        ? `No se ha podido leer el borrador: ${(fromDraft() as { message: string }).message}`
+                        ? `No se ha podido leer el borrador: ${(fromDraft() as Extract<Found, { kind: "failed" }>).error.message}`
                         : "Ese borrador ya no está pendiente: puede que ya se registrara o se descartara."
                     }
                   />

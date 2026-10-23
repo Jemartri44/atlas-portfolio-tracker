@@ -9,6 +9,28 @@ import type { FieldSpec, FormValues } from "../../view-models/forms/index.js";
 import { fieldErrorOf, inputErrors } from "../../view-models/forms/index.js";
 import { revealField } from "./FormActions.jsx";
 
+/** The problem next to a form's button: a sentence, or the error of a refusal. */
+export const createProblem = (): {
+  problem: Accessor<string | undefined>;
+  setProblem: (problem: string | undefined) => void;
+  refuse: (error: AppError) => void;
+} => {
+  const [sentence, setSentence] = createSignal<string | undefined>(undefined);
+  // Kept as the error, not as its text: the text follows the privacy mode while it is on screen.
+  const [refusal, setRefusal] = createSignal<AppError | undefined>(undefined);
+  return {
+    problem: () => refusal()?.message ?? sentence(),
+    setProblem: (text) => {
+      setRefusal(undefined);
+      setSentence(text);
+    },
+    refuse: (error) => {
+      setSentence(undefined);
+      setRefusal(error);
+    },
+  };
+};
+
 export interface FormProblems {
   fieldErrors: Accessor<Record<string, string>>;
   setFieldErrors: (errors: Record<string, string>) => void;
@@ -24,14 +46,7 @@ export interface FormProblems {
 
 export const useFormProblems = (fields: readonly FieldSpec[]): FormProblems => {
   const [fieldErrors, setFieldErrors] = createSignal<Record<string, string>>({});
-  const [sentence, setSentence] = createSignal<string | undefined>(undefined);
-  // Kept as the error, not as its text: the text follows the privacy mode while it is on screen.
-  const [refusal, setRefusal] = createSignal<AppError | undefined>(undefined);
-  const problem = (): string | undefined => refusal()?.message ?? sentence();
-  const setProblem = (text: string | undefined): void => {
-    setRefusal(undefined);
-    setSentence(text);
-  };
+  const { problem, setProblem, refuse } = createProblem();
   const [failure, setFailure] = createSignal<AppError | undefined>(undefined);
 
   const show = (errors: Record<string, string>): void => {
@@ -63,8 +78,7 @@ export const useFormProblems = (fields: readonly FieldSpec[]): FormProblems => {
     place: (refused, values) => {
       const onField = fieldErrorOf(refused, fields, values);
       if (onField === undefined) {
-        setProblem(undefined);
-        setRefusal(toAppError(refused));
+        refuse(toAppError(refused));
       } else {
         show({ [onField.field]: onField.message });
       }

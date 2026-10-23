@@ -20,7 +20,7 @@ import { Field, Notice, Section } from "../../components/index.js";
 import { decimalForInput, parseDecimalInput } from "../../format/input.js";
 import { nameIndex } from "../../format/names.js";
 import { toAppError } from "../../ledger/errors.js";
-import { sentenceOf } from "../../ledger/failure-text.js";
+import { errorOf } from "../../ledger/failure-text.js";
 import type { AppError } from "../../ledger/state.js";
 import { today } from "../../ledger/state.js";
 import { recordDraft } from "../../ledger/write.js";
@@ -31,6 +31,7 @@ import { asEventDraft } from "../../view-models/forms/values.js";
 import { RequireLedger } from "../guard.jsx";
 import { DuplicateDialog } from "../registrar/DuplicateDialog.jsx";
 import { FormActions } from "../registrar/FormActions.jsx";
+import { createProblem } from "../registrar/form-problems.js";
 import { createWarned } from "../registrar/warned.js";
 
 const MODELS = new Set(["renta", "720", "721"]);
@@ -40,7 +41,7 @@ export default function PresentarRoute(): JSX.Element {
   const navigate = useNavigate();
   const [typed, setTyped] = createSignal<Record<string, string>>({});
   const [meta, setMeta] = createSignal({ filed_at: today(), receipt: "", notes: "" });
-  const [problem, setProblem] = createSignal<string | undefined>();
+  const { problem, setProblem, refuse } = createProblem();
   /**
    * What is wrong with one figure, **on that figure**. An amount with two
    * commas in it is a mistake in a field, and the notice above the button
@@ -136,7 +137,7 @@ export default function PresentarRoute(): JSX.Element {
               setFailure(result.failure.error);
             } else {
               setSignedOut(result.failure.kind === "signed_out");
-              setProblem(sentenceOf(result.failure));
+              refuse(errorOf(result.failure));
             }
           } catch (error) {
             setFailure(toAppError(error));
