@@ -176,7 +176,7 @@ export default function CuboRoute(): JSX.Element {
                 </div>
               }
             >
-              <QuotesNotice quotes={prices.quotes()} />
+              <QuotesNotice prices={prices} />
               <div class="grid">
                 <For each={stopLoss()}>
                   {(warning) => (
