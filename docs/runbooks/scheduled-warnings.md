@@ -135,7 +135,7 @@ Llega en enero, solo si hay algo que hacer con el 720 o el 721 del año que acab
 ---
 
 **Lo que se ha probado y lo que no.**
-- **El bloque «Comprobar un volcado contra su registro»** se ejecuta tal cual, con `dash` y un `aws` simulado, en `tests/runbook-016.test.ts`: dice `bien` de cada objeto del volcado y `MAL` del que se ha cambiado. Se ejecuta **también sin `-e`**, como en un *shell* interactivo, con un objeto que no se puede leer: sale `MAL … (no se lee)` y sigue con los demás.
+- **El bloque «Comprobar un volcado contra su registro»** se ejecuta tal cual, con `dash` y un `aws` simulado, en `tests/runbooks/scheduled-jobs.test.ts`: dice `bien` de cada objeto del volcado y `MAL` del que se ha cambiado. Se ejecuta **también sin `-e`**, como en un *shell* interactivo, con un objeto que no se puede leer: sale `MAL … (no se lee)` y sigue con los demás.
 - **Lo demás**, porque necesita AWS real, se prueba en la 018, en `dev`:
   - el historial de CloudTrail;
   - las versiones del bucket;

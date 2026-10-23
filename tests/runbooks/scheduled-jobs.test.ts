@@ -24,7 +24,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 /** A runbook of the scheduled jobs, in `docs/runbooks/`. */
 const runbook = (name: string): string =>
@@ -82,7 +82,7 @@ esac
 `;
 
 const world = () => {
-  const dir = mkdtempSync(join(tmpdir(), "atlas-runbook-016-"));
+  const dir = mkdtempSync(join(tmpdir(), "atlas-runbook-jobs-"));
   const work = join(dir, "work");
   mkdirSync(join(dir, "bin"));
   mkdirSync(work);

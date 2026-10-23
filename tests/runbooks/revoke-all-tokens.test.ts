@@ -24,7 +24,7 @@ import {
 } from "@atlas/domain/access";
 import { describe, expect, it } from "vitest";
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const runbook = readFileSync(join(repoRoot, "docs", "runbooks", "revoke-all-tokens.md"), "utf8");
 
 /** The fenced block right after `<!-- ensayo: <name> -->`, without its indentation. */

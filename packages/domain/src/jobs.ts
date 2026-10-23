@@ -4,7 +4,7 @@
 // warnings, the event of EventBridge Scheduler, the configuration of each
 // function, the switch of the amounts and every mail, written here and only
 // here. Pure. The barrel never re-exports any of it, and neither the web nor
-// the API reach it (`tests/jobs-access.test.ts`; `check-bundle.mjs`).
+// the API reach it (`tests/architecture/jobs-reach.test.ts`; `check-bundle.mjs`).
 
 export {
   type ActiveHistory,

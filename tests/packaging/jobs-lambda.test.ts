@@ -1,5 +1,5 @@
 // The package of the scheduled jobs (`apps/jobs/scripts/build-lambda.mjs`), one artefact for the
-// five functions. Like the package of the API (`tests/lambda-package.test.ts`) it carries the SDK
+// five functions. Like the package of the API (`tests/packaging/api-lambda.test.ts`) it carries the SDK
 // and the sources of the product, never a test or a double — the file notifier of the captures
 // included — it is the same bytes twice, and it is a module Node loads, up to the composition,
 // which refuses to start without its configuration.
@@ -15,7 +15,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { inflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const script = join(repoRoot, "apps", "jobs", "scripts", "build-lambda.mjs");
 
 /** The doubles that may travel in the artefact: only the simulated source of `dev`. */
@@ -32,7 +32,7 @@ const load = async (): Promise<Script> => (await import(pathToFileURL(script).hr
 const looksLikeDouble = (input: string): boolean =>
   /test-only-|(^|\/)(tests?|test-support)\/|(fake|stub|simulated)[^/]*\.[jt]s$/.test(input);
 
-describe("the package of the scheduled jobs (016, E1)", () => {
+describe("the package of the scheduled jobs", () => {
   it("bundles the jobs, the SDK of SES and nothing of the tests", async () => {
     const { buildJobs } = await load();
     const { inputs } = await buildJobs(join(tmpdir(), "atlas-jobs"));

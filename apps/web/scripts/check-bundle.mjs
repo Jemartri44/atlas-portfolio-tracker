@@ -16,7 +16,7 @@
 //    (round 2 of the review of PR #90): the modules Rolldown put in each
 //    chunk, which `vite.config.ts` writes to `dist/.vite/atlas-modules.json`.
 //    This is the authoritative guard; the static ones of
-//    `tests/api-access.test.ts` are the quick warning.
+//    `tests/architecture/api.test.ts` are the quick warning.
 // 5. Size within budget, printed so plan.md can record the measured value.
 //    **Two** budgets since feature 007, because the two answer different
 //    questions and only one of them is felt on a phone: what the browser has to

@@ -3,7 +3,7 @@
 // their stores of `reference/ecb/` and `prices/`, the keys of the sources —
 // and the simulated source of `dev`. Apart from `@atlas/adapters/aws` and
 // `@atlas/adapters/aws-jobs`, so that neither the API nor the mail function
-// reaches the keys (`tests/jobs-access.test.ts`). Node only.
+// reaches the keys (`tests/architecture/jobs-reach.test.ts`). Node only.
 
 export {
   PriceKeyInvalid,

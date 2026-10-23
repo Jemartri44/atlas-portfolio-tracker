@@ -4,7 +4,7 @@
 // function, never logged, never in a message: an error says the name of the source, never the
 // value. A parameter that is not there is a source without a key (the case of `dev`, ADR-0034, row
 // 2); one that is empty or has spaces is `price_key_invalid`. **Only the prices function reaches
-// this module** (`tests/jobs-access.test.ts`).
+// this module** (`tests/architecture/jobs-reach.test.ts`).
 
 import type { ParameterStore } from "./parameter-store.js";
 

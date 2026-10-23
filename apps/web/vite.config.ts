@@ -63,7 +63,7 @@ const workerGraphs: Graph[] = [];
  * files it comes from, written next to the output for `scripts/check-bundle.mjs` to read. **The
  * workers are other builds**: the same plugin goes in `worker.plugins`, and their graphs travel
  * inside the one of the main build, which runs after them. The static guards of
- * `tests/api-access.test.ts` read the sources and are a quick warning; what the browser can
+ * `tests/architecture/api.test.ts` read the sources and are a quick warning; what the browser can
  * download is decided here, and a module the web must not reach — however it got in: a relay, a
  * relative path, `require`, `import.meta.glob`, a string, a worker, a query, an alias — is in this
  * list or it is not in the bundle. Never precached nor served: `.json` is not among the patterns of
