@@ -4,6 +4,7 @@
 // by the retry without overwriting anything; and what fails is said by the mail function only.
 
 import { createHash } from "node:crypto";
+import { DependencyUnavailable } from "@atlas/adapters/aws";
 import { describe, expect, it } from "vitest";
 import { TestOnlyFakeS3 } from "../../../packages/adapters/test/aws/test-only-fake-s3.js";
 import { TestOnlyFakeSsm } from "../../../packages/adapters/test/aws/test-only-fake-ssm.js";
@@ -284,6 +285,58 @@ describe("the monthly dump (E4, plan §8)", () => {
       ),
     ).toEqual([]);
     expect(s3.text(`${DUMP}prices/ast_world.jsonl`)).toBe("not a close\n");
+  });
+
+  it("does not write positions.json without the closes when reading them fails: the retry has them", async () => {
+    const priced = () => {
+      const s3 = seeded();
+      s3.seed(
+        "prices/ast_world.jsonl",
+        '{"schema_version":1,"date":"2026-10-01","close":"1500","currency":"EUR","source":"eodhd","fetched_at":"2026-10-01T00:30:00.000Z"}\n',
+      );
+      s3.seed(
+        "prices/symbols.json",
+        JSON.stringify({
+          symbols_format: 2,
+          assets: {
+            ast_world: {
+              eodhd: "WORLD.XETRA",
+              currencies: { eodhd: "EUR" },
+              confirmed_at: "2026-09-01T00:00:00.000Z",
+              currency_check: { eodhd: { at: "2026-09-01T00:00:00.000Z" } },
+            },
+          },
+        }),
+      );
+      return s3;
+    };
+    const positionsOf = (s3: TestOnlyFakeS3) => {
+      const { generated_at: _, ...rest } = JSON.parse(s3.text(`${DUMP}positions.json`) as string);
+      return rest;
+    };
+    const whole = priced();
+    await backup(whole).run(["monthly_backup"]);
+    const bare = seeded();
+    await backup(bare).run(["monthly_backup"]);
+    // The closes do change the document, or this test would prove nothing.
+    expect(positionsOf(whole)).not.toEqual(positionsOf(bare));
+
+    const s3 = priced();
+    const get = s3.get.bind(s3);
+    let down = true;
+    s3.get = async (key) => {
+      if (down && key === "prices/ast_world.jsonl") {
+        down = false;
+        throw new DependencyUnavailable("s3", "status_503");
+      }
+      return get(key);
+    };
+    await backup(s3).run(["monthly_backup"]);
+    expect(recordOf(s3).state).toBe("failed");
+    expect(s3.keys()).not.toContain(`${DUMP}positions.json`);
+    await backup(s3, "2026-10-01T02:00:00Z").run(["monthly_backup"]);
+    expect(recordOf(s3).state).toBe("done");
+    expect(positionsOf(s3)).toEqual(positionsOf(whole));
   });
 
   it("leaves out of prices/ a name that is not plain, and says a ledger it cannot value", async () => {
