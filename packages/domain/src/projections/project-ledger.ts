@@ -72,6 +72,13 @@ export interface ProjectOptions {
    * because a reference is resolved against the complete catalogue.
    */
   asOf?: CivilDate;
+  /**
+   * Called with the state once every operation of a business date has been
+   * applied, in chronological order. The state is the one being built: copy
+   * what is needed, do not keep it. It is what `asOf` of that date would
+   * return, read in one pass instead of one projection per date.
+   */
+  onDate?: (date: CivilDate, state: LedgerState) => void;
 }
 
 export type CatalogueEvent =
@@ -545,9 +552,10 @@ export const projectLedger = (
     ...entry,
     position: state.positionOf.get(roots.get(entry.event.id) as Ulid) as number,
   }));
-  for (const entry of orderForProjection(state, inPlace)) {
+  const ordered = orderForProjection(state, inPlace);
+  ordered.forEach((entry, index) => {
     if (options.asOf !== undefined && entry.date > options.asOf) {
-      continue;
+      return;
     }
     guarded(entry.event, () => {
       applyOperation(state, entry.event, entry.position);
@@ -555,7 +563,10 @@ export const projectLedger = (
       // date a currency either.
       noteFxRates(state, entry.event, entry.date);
     });
-  }
+    if (ordered[index + 1]?.date !== entry.date) {
+      options.onDate?.(entry.date, state);
+    }
+  });
   thesisWarnings(state, options.asOf);
   return state;
 };
