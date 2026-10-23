@@ -110,7 +110,7 @@ export default function CarteraRoute(): JSX.Element {
               }
             />
 
-            <QuotesNotice quotes={prices.quotes()} />
+            <QuotesNotice prices={prices} />
             <div class="grid">
               <WeightsCard
                 view={weights()}

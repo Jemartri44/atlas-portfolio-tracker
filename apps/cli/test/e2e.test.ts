@@ -5,7 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Io } from "../src/context.js";
-import { run, USAGE } from "../src/main.js";
+import { run } from "../src/main.js";
+import { USAGE } from "../src/usage.js";
 
 const capture = () => {
   const lines: string[] = [];

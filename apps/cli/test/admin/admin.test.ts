@@ -208,6 +208,18 @@ describe("atlas admin forget-device (§7 P9, amended)", () => {
     expect(api.s3.etagOf(`sync/devices/${DEVICE(4)}.json`)).toBe(etag);
   });
 
+  it("answers one object with --json, also for a device that was already forgotten", async () => {
+    const api = setup();
+    seedDevice(api, DEVICE(4));
+    const c = await adminConsole(api);
+    await c.exec(forget(DEVICE(4)));
+    c.reset();
+    expect(await c.exec(forget(DEVICE(4), "--json"))).toBe(EXIT.ok);
+    expect(c.out.map((line) => JSON.parse(line))).toEqual([
+      { device_id: DEVICE(4), already_forgotten: true, revoked: [] },
+    ]);
+  });
+
   // The cut between the two steps: revoked and not forgotten is safe, and
   // repeating finishes it; forgotten and not revoked cannot exist.
   it("never marks it forgotten when revoking its tokens failed", async () => {

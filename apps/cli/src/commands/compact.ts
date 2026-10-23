@@ -17,7 +17,7 @@ import {
 import { assertKnownFlags, type Flags, listFlag } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";
-import { confirm, render } from "./shared.js";
+import { aside, cancelled, confirm, render } from "./shared.js";
 
 const REASON: Record<string, string> = {
   digest: "los movimientos anteriores ya no son los que había cuando se presentó",
@@ -74,18 +74,16 @@ export const compactCommand = async (
     );
     return 0;
   }
-  if (!ctx.json) {
-    ctx.io.out(describePlan(plan));
-  }
+  aside(ctx, describePlan(plan));
   // What is being given up, named one by one **before** the question: the way
   // out is not a `--force`, and what it costs has to be on screen when the
   // user says yes.
   const waiving = plan.unverified.filter((entry) => accepted.includes(entry.filing_id));
-  if (waiving.length > 0 && !ctx.json) {
-    ctx.io.out(describeWaivers(waiving));
+  if (waiving.length > 0) {
+    aside(ctx, describeWaivers(waiving));
   }
   if (!(await confirm(ctx, "¿Compactar? [s/N] "))) {
-    ctx.io.out("Cancelado.");
+    cancelled(ctx);
     return 0;
   }
   const result = await compactLedger(ctx.deps, plan, { acceptUnverified: accepted });
