@@ -11,10 +11,12 @@ import { createMemo, createSignal, type JSX, Show } from "solid-js";
 import { ClosedYearNotice, Notice, Tag } from "../../../components/index.js";
 import { nameIndex } from "../../../format/names.js";
 import { toAppError } from "../../../ledger/errors.js";
+import { errorOf } from "../../../ledger/failure-text.js";
 import { attempt } from "../../../ledger/query.js";
 import { store, today } from "../../../ledger/state.js";
 import { closedYearsOfDraft, previewDraft, recordDraft } from "../../../ledger/write.js";
 import { PageHeader } from "../../../shell/PageHeader.jsx";
+import { SessionNotice } from "../../../shell/SessionNotice.jsx";
 import {
   CORPORATE_COMMON,
   corporateForm,
@@ -50,6 +52,7 @@ export default function CorporateFormRoute(): JSX.Element {
         const [duplicate, setDuplicate] = createSignal<readonly string[] | undefined>(undefined);
         const warned = createWarned();
         const [conflict, setConflict] = createSignal(false);
+        const [signedOut, setSignedOut] = createSignal(false);
         /** The filed returns it reaches, said before «Registrar» (ADR-0020). */
         const [closed, setClosed] = createSignal<readonly ClosedYearImpact[]>([]);
         const names = nameIndex(snapshot.state);
@@ -138,9 +141,10 @@ export default function CorporateFormRoute(): JSX.Element {
             setPreview(undefined);
             return;
           }
-          if (result.failure.kind === "error") {
-            refuse(result.failure.error);
-          }
+          // Whatever else it was — a session that ended, an answer that was lost, dependants — is
+          // said: pressing «Registrar» and seeing nothing is the one thing a form must not do.
+          setSignedOut(result.failure.kind === "signed_out");
+          refuse(errorOf(result.failure));
         };
 
         return (
@@ -163,6 +167,9 @@ export default function CorporateFormRoute(): JSX.Element {
 
                 <Show when={conflict()}>
                   <Reloaded />
+                </Show>
+                <Show when={signedOut()}>
+                  <SessionNotice expired onRenewed={() => setSignedOut(false)} />
                 </Show>
 
                 <div class="register">
