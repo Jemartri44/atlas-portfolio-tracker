@@ -190,7 +190,7 @@ describe("atlas admin prices push (016, E2, block 3)", () => {
     expect(api.s3.keys()).not.toContain(KEY);
   });
 
-  it("refuses a top-level key the file does not have, never showing its value (review of PR #106, B1)", async () => {
+  it("refuses a top-level key the file does not have, never showing its value", async () => {
     const api = setup();
     const remote = symbols({ ast_a: entry("A.XETRA") });
     api.s3.seed(KEY, remote);
@@ -207,7 +207,7 @@ describe("atlas admin prices push (016, E2, block 3)", () => {
     expect(api.s3.text(KEY)).toBe(remote);
   });
 
-  it("refuses a local file that repeats a key, never showing the value (review of PR #106, R2-B1)", async () => {
+  it("refuses a local file that repeats a key, never showing the value", async () => {
     const api = setup();
     const remote = symbols({ ast_a: entry("A.XETRA") });
     api.s3.seed(KEY, remote);
@@ -256,7 +256,7 @@ describe("atlas admin prices push (016, E2, block 3)", () => {
     expect(api.s3.conditions.filter((condition) => condition.key === KEY)).toHaveLength(1);
   });
 
-  it("writes on the read that showed the difference, never on a later one (mutant 13 bis)", async () => {
+  it("writes on the read that showed the difference, never on a later one", async () => {
     const api = setup();
     api.s3.seed(KEY, symbols({ ast_a: entry("A.XETRA") }));
     const theirs = symbols({ ast_theirs: entry("T.XETRA") });

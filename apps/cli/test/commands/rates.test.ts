@@ -136,7 +136,7 @@ describe("atlas add with the ECB history", () => {
     expect(await last()).toMatchObject({ fx_rate: "1.1169", fx_rate_date: "2026-01-02" });
   });
 
-  it("dates a purchase in euros from its fiscal date, not from trade_date (mutant 19)", async () => {
+  it("dates a purchase in euros from its fiscal date, not from trade_date", async () => {
     const { atlas, last } = await setup(false);
     // A fund: fiscal date = value date, a Saturday → the Friday before.
     expect(
@@ -145,7 +145,7 @@ describe("atlas add with the ECB history", () => {
     expect(await last()).toMatchObject({ fx_rate: "1", fx_rate_date: "2026-01-09" });
   });
 
-  it("asks for the explicit yes when the typed rate is not the official one (mutant 6)", async () => {
+  it("asks for the explicit yes when the typed rate is not the official one", async () => {
     const { atlas, last } = await setup();
     const typed = [
       ...buy("gold", "USD", "2026-01-02", "2026-01-06"),
@@ -270,7 +270,7 @@ describe("atlas check and the ECB rates (block 4)", () => {
     expect(deep.text).not.toContain("is the one of");
   });
 
-  it("never says «sin hallazgos» of rates nobody contrasted (mutants 9 and 25)", async () => {
+  it("never says «sin hallazgos» of rates nobody contrasted", async () => {
     const { atlas } = await setup(false);
     await atlas(
       undefined,
