@@ -552,6 +552,23 @@ describe("the tax engine settings", () => {
     expect(code({ loss_carryforward_years: "4" })).toBe("invalid_settings");
   });
 
+  it("validate the tax residence as text, because the transfer rule reads it as such", () => {
+    const code = (value: unknown): string => {
+      try {
+        validateSettings({ ...DEFAULT_SETTINGS, tax_residence: value });
+      } catch (error) {
+        return (error as ValidationError).code;
+      }
+      return "accepted";
+    };
+    for (const text of ["ES", " es ", "", "PT"]) {
+      expect(code(text)).toBe("accepted");
+    }
+    for (const notText of [5, true, null, {}, ["ES"]]) {
+      expect(code(notText)).toBe("invalid_settings");
+    }
+  });
+
   it("validate the treaty rates by key and by value", () => {
     const code = (rates: unknown): string => {
       try {

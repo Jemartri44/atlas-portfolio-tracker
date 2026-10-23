@@ -20,17 +20,14 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import { madridDateOf } from "../dates/madrid.js";
 import type { LedgerEvent } from "../schema/events.js";
-import type { Settings } from "../settings/settings.js";
-
-/** The residence the engine assumes today when the settings say none. */
-const ENGINE_RESIDENCE = "ES";
+import { type Settings, taxResidenceOf } from "../settings/settings.js";
 
 export const hasForeignAccountsAt = (
   events: readonly LedgerEvent[],
   date: CivilDate,
   settings: Pick<Settings, "tax_residence">,
 ): boolean => {
-  const home = settings.tax_residence ?? ENGINE_RESIDENCE;
+  const home = taxResidenceOf(settings);
   const countries = new Map<string, string>();
   for (const event of events) {
     if (event.type !== "account_created" && event.type !== "account_updated") {
