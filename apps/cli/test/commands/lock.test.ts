@@ -124,7 +124,7 @@ describe("atlas lock", () => {
     expect(await run(["--ledger", ledger, "lock", "open"], io)).toBe(64);
   });
 
-  it("calls an empty lock file a write in progress, and does not suggest breaking it (review of PR #75)", async () => {
+  it("calls an empty lock file a write in progress, and does not suggest breaking it", async () => {
     const { ledger, lock } = await folder();
     await writeFile(lock, "");
     const { io, lines } = capture();
@@ -139,7 +139,7 @@ describe("atlas lock", () => {
     expect(lines.join("\n")).toContain("Hay una escritura en curso");
   });
 
-  it("removes the temporaries of a killed write, only when nobody holds the lock (review of PR #75)", async () => {
+  it("removes the temporaries of a killed write, only when nobody holds the lock", async () => {
     const { ledger, lock, dir } = await folder();
     expect(await run(["--ledger", ledger, ...account], capture().io)).toBe(0);
     const orphan = join(dir, "ledger.jsonl.tmp-4242-1");
@@ -157,7 +157,7 @@ describe("atlas lock", () => {
     expect(await readdir(dir)).not.toContain("ledger.lock");
   });
 
-  it("says the truth of a temporary of sync/: the ledger may have been rewritten (review of PR #83)", async () => {
+  it("says the truth of a temporary of sync/: the ledger may have been rewritten", async () => {
     const { ledger, dir } = await folder();
     expect(await run(["--ledger", ledger, ...account], capture().io)).toBe(0);
     const { mkdir } = await import("node:fs/promises");

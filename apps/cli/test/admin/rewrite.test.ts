@@ -290,7 +290,7 @@ describe("atlas admin restore (ADR-0032, the six steps)", () => {
     expect(api.s3.text(LEDGER)).toBe(moved);
   });
 
-  it("refuses a file that is not UTF-8, before comparing (review of PR #98, N9)", async () => {
+  it("refuses a file that is not UTF-8, before comparing", async () => {
     const api = setup();
     api.s3.seed(LEDGER, text(seeded));
     const { c, folder } = await adminConsole(api);
@@ -309,7 +309,7 @@ describe("atlas admin restore (ADR-0032, the six steps)", () => {
     expect(api.s3.text(LEDGER)).toBe(text(seeded));
   });
 
-  it("refuses a file that starts with a BOM instead of writing other bytes (round 2, PR #98)", async () => {
+  it("refuses a file that starts with a BOM instead of writing other bytes", async () => {
     const api = setup();
     api.s3.seed(LEDGER, text(seeded));
     const { c, folder } = await adminConsole(api);

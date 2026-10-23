@@ -197,7 +197,7 @@ describe("the key never comes out, with the real adapters and a fetch that fails
   });
 });
 
-describe("a Node that cannot read a JSON number by its text (D-Q1)", () => {
+describe("a Node that cannot read a JSON number by its text", () => {
   it("stops with its own message, spends no call and writes nothing", async () => {
     const f = await folder(ledger());
     await symbols(f.dir, { fund_a: { currency: "EUR", eodhd: "A.EUFUND" } });
@@ -225,7 +225,7 @@ describe("a Node that cannot read a JSON number by its text (D-Q1)", () => {
   });
 });
 
-describe("atlas prices symbols with a currency per source (fix of 013)", () => {
+describe("atlas prices symbols with a currency per source", () => {
   it("declares London in pounds at EODHD and in pence at Alpha Vantage without asking, and says both", async () => {
     const f = await folder(ledger());
     f.eodhd = new ScriptedSource(
@@ -312,7 +312,7 @@ describe("atlas prices symbols with a currency per source (fix of 013)", () => {
     expect(missing.text).toContain("EODHD");
   });
 
-  it("keeps reading a symbols.json of feature 013, with one currency per asset", async () => {
+  it("keeps reading a symbols.json of the older format, with one currency per asset", async () => {
     const f = await folder(ledger());
     await mkdir(join(f.dir, "prices"), { recursive: true });
     await writeFile(
@@ -341,7 +341,7 @@ describe("atlas prices symbols with a currency per source (fix of 013)", () => {
   });
 });
 
-describe("review of PR #80 in the console", () => {
+describe("atlas prices symbols: currencies are declared with their symbol, and closes in another one are purged", () => {
   it("refuses a currency of a source without its symbol, and a set without any symbol", async () => {
     const f = await folder(ledger());
     const loose = await f.atlas(
@@ -437,7 +437,7 @@ describe("review of PR #80 in the console", () => {
   });
 });
 
-describe("second pass of PR #80 in the console", () => {
+describe("atlas prices symbols: closes stored in the wrong currency, and a symbols.json that cannot be read", () => {
   const line = (close: string, currency: string, source: string) =>
     `${JSON.stringify({ schema_version: 1, date: "2027-06-08", close, currency, source, fetched_at: "2027-06-09T06:00:00.000Z" })}\n`;
   const legacy = (currency: string, over: Record<string, string>) =>
@@ -459,7 +459,7 @@ describe("second pass of PR #80 in the console", () => {
     ["GBP", { alpha_vantage: "GBX" }, "alpha_vantage", "1000", "Alpha Vantage"],
     ["GBX", { eodhd: "GBP" }, "eodhd", "10", "EODHD"],
   ] as const) {
-    it(`leaves out the closes 013 stored as ${currency} over the ${over[source as keyof typeof over]} of ${name}, before and after an update`, async () => {
+    it(`leaves out the closes stored as ${currency} over the ${over[source as keyof typeof over]} of ${name}, before and after an update`, async () => {
       const f = await folder(ledger());
       await symbols(f.dir, {});
       await writeFile(join(f.dir, "prices", "symbols.json"), legacy(currency, over));
@@ -495,7 +495,7 @@ describe("second pass of PR #80 in the console", () => {
   }
 });
 
-describe("third pass of PR #80 in the console", () => {
+describe("atlas prices symbols: closes stored in the wrong currency block declaring and removing", () => {
   const line = (date: string, close: string, currency: string, source: string) =>
     `${JSON.stringify({ schema_version: 1, date, close, currency, source, fetched_at: "2027-06-09T06:00:00.000Z" })}\n`;
   const pending = JSON.stringify({

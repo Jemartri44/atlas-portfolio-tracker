@@ -4,6 +4,7 @@
 
 import { randomBytes } from "node:crypto";
 import { base64url, pkceChallenge, Signer } from "@atlas/adapters/access";
+import { DependencyUnavailable } from "@atlas/adapters/aws";
 import { newDevice, serializeDeviceObject } from "@atlas/domain/access";
 import { describe, expect, it } from "vitest";
 import {
@@ -525,7 +526,6 @@ describe("the reissue (§4.2 and §4.3; T23, mutant 29 sexies)", () => {
           createdAt: "2026-09-01T10:00:00Z",
           deviceName: "sobremesa",
         }),
-        published_at: "2026-09-20T08:30:00Z",
         ...overrides,
       } as never),
     );
@@ -538,7 +538,6 @@ describe("the reissue (§4.2 and §4.3; T23, mutant 29 sexies)", () => {
     expect(done.statusCode).toBe(200);
     expect(done.headers["content-security-policy"]).toMatch(/sandbox$/);
     expect(done.body).toContain("sobremesa");
-    expect(done.body).toContain("2026-09-20 08:30 UTC");
     // Loopback: the code only behind the link of the confirmation.
     expect(done.body).toMatch(
       /<a href="http:\/\/127\.0\.0\.1:49152\/callback\?code=[^"]+&amp;state=/,
@@ -548,13 +547,13 @@ describe("the reissue (§4.2 and §4.3; T23, mutant 29 sexies)", () => {
     expect(before).not.toContain(codeOfPage(manual.done.body));
   });
 
-  it("does not claim a device never published when the server holds no instant", async () => {
+  it("shows no last publication: nothing writes it any more", async () => {
     const api = setup();
-    seedConsole(api, ID, { published_at: undefined });
+    seedConsole(api, ID, { published_at: "2026-09-20T08:30:00Z" });
     const { done } = await consoleReturn(api, { reissue_device_id: ID });
     expect(done.body).toContain("sobremesa");
     expect(done.body).not.toContain("Última publicación");
-    expect(done.body).not.toContain("nunca");
+    expect(done.body).not.toContain("2026-09-20");
   });
 
   it("escapes the name the server keeps, whatever it holds (mutant 29)", async () => {
@@ -997,8 +996,83 @@ describe("what the round 2 of the review of PR #95 found", () => {
     ]);
     expect([a.statusCode, b.statusCode].sort()).toEqual([200, 409]);
     const token = JSON.parse((a.statusCode === 200 ? a : b).body);
-    expect(lists).toBe(2);
+    expect(lists).toBe(3);
     expect(live(api)).toEqual([`${TOKENS}${token.token_id}`]);
+  });
+
+  it("leaves one live token when two reissues of the same device with different codes cross", async () => {
+    const api = setup();
+    seedDevice(api);
+    const issue = async () => {
+      const { done, secrets } = await consoleReturn(api, { reissue_device_id: ID });
+      const link = /<a href="([^"]+)"/.exec(done.body)?.[1]?.replaceAll("&amp;", "&") as string;
+      return { code: codeOfLoopback(link), verifier: secrets.verifier };
+    };
+    const one = await issue();
+    const two = await issue();
+    // The worst order: both list the device before either creates, and both create before either
+    // lists again.
+    const putNew = api.ssm.putNew.bind(api.ssm);
+    const listByPath = api.ssm.listByPath.bind(api.ssm);
+    const gate = (count: number) => {
+      let seen = 0;
+      let open: () => void = () => undefined;
+      const opened = new Promise<void>((resolve) => {
+        open = resolve;
+      });
+      return async () => {
+        seen += 1;
+        if (seen === count) {
+          open();
+        }
+        await opened;
+      };
+    };
+    const bothListedBefore = gate(2);
+    const bothCreated = gate(2);
+    let lists = 0;
+    api.ssm.listByPath = async (path: string) => {
+      lists += 1;
+      const snapshot = await listByPath(path);
+      if (lists <= 2) {
+        await bothListedBefore();
+      }
+      return snapshot;
+    };
+    api.ssm.putNew = async (name, value, tags) => {
+      const result = await putNew(name, value, tags);
+      await bothCreated();
+      return result;
+    };
+    const [a, b] = await Promise.all([
+      exchange(api, one.code, one.verifier),
+      exchange(api, two.code, two.verifier),
+    ]);
+    expect([a.statusCode, b.statusCode].sort()).toEqual([200, 409]);
+    expect(errorOf(a.statusCode === 409 ? a : b).code).toBe("console_renewal_conflict");
+    const winner = JSON.parse((a.statusCode === 200 ? a : b).body);
+    expect(live(api)).toEqual([`${TOKENS}${winner.token_id}`]);
+  });
+
+  it("revokes the new token and answers 503 when the device cannot be settled", async () => {
+    const api = setup();
+    seedDevice(api);
+    const { done, secrets } = await consoleReturn(api, { reissue_device_id: ID });
+    const code = codeOfLoopback(
+      /<a href="([^"]+)"/.exec(done.body)?.[1]?.replaceAll("&amp;", "&") as string,
+    );
+    const listByPath = api.ssm.listByPath.bind(api.ssm);
+    let lists = 0;
+    api.ssm.listByPath = async (path: string) => {
+      lists += 1;
+      if (lists === 2) {
+        throw new DependencyUnavailable("ssm", "throttling");
+      }
+      return listByPath(path);
+    };
+    const answer = await exchange(api, code, secrets.verifier);
+    expect(answer.statusCode).toBe(503);
+    expect(live(api)).toEqual([]);
   });
 
   it("logs the id of the token left alive when every revocation failed (R2-2)", async () => {
