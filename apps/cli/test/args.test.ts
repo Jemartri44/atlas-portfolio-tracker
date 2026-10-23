@@ -53,6 +53,28 @@ describe("parseArgs", () => {
   });
 });
 
+describe("parseArgs: a flag written twice", () => {
+  it("is refused when it takes one value, instead of the last one winning in silence", () => {
+    for (const argv of [
+      ["add", "buy", "--quantity", "1", "--quantity", "2"],
+      ["add", "buy", "--quantity=1", "--quantity", "2"],
+      ["add", "buy", "--quantity", "1", "--quantity=2"],
+    ]) {
+      const { flags } = parseArgs(argv);
+      expect(() => stringFlag(flags, "quantity")).toThrow("se ha escrito 2 veces");
+    }
+    expect(() => stringFlag(parseArgs(["--ledger", "a", "--ledger", "b"]).flags, "ledger")).toThrow(
+      UsageError,
+    );
+  });
+
+  it("is still read in order when the flag is repeatable, and harmless for a boolean", () => {
+    const { flags } = parseArgs(["--set", "a=1", "--set", "b=2", "--yes", "--yes", "--json"]);
+    expect(flags.get("set")).toEqual(["a=1", "b=2"]);
+    expect(booleanFlag(flags, "yes")).toBe(true);
+  });
+});
+
 describe("parseArgs: a flag that never takes a value never swallows the next word", () => {
   it("reads the global flags in front of the command, as the usage line puts them", () => {
     expect(parseArgs(["--json", "tax", "2027"])).toEqual({

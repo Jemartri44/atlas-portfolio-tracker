@@ -2,7 +2,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { BUY_GOLD, BUY_WORLD, harness, seed } from "../harness.js";
+import { BUY_GOLD, BUY_WORLD, harness, seed, withOption } from "../harness.js";
 
 const buyGoldIn = (account: string, quantity: string, tradeDate = "2027-02-10") => [
   "add",
@@ -368,9 +368,7 @@ describe("atlas ca", () => {
         "ast_world",
         "--ratio",
         "1",
-        ...CA,
-        "--effective-date",
-        "2027-04-01",
+        ...withOption(CA, "--effective-date", "2027-04-01"),
         "--yes",
       ]),
     ).toBe(0);
@@ -396,9 +394,7 @@ describe("atlas ca", () => {
         // #12), and the withholding rides next to the fee, account by account.
         "--withholdings",
         "acc_fund=3.80",
-        ...CA,
-        "--effective-date",
-        "2027-05-03",
+        ...withOption(CA, "--effective-date", "2027-05-03"),
         "--yes",
       ]),
     ).toBe(0);
