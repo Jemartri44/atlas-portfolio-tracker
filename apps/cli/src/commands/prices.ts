@@ -365,6 +365,10 @@ const listSymbols = async (ctx: Context, assetId: string | undefined): Promise<n
   return EXIT.ok;
 };
 
+/** A symbol of a source is a word of the URL it goes in: no blanks, no delimiters. */
+const SYMBOL = /^[^\s/?#&%\\]+$/;
+const CURRENCY = /^[A-Z]{3}$/;
+
 /**
  * The declaration from the flags: each symbol with **its own** currency
  * (`--eodhd-currency`, `--alpha-vantage-currency`), and `--currency` for every
@@ -383,6 +387,22 @@ const declarationOf = (flags: Flags): SymbolDeclaration => {
     alpha_vantage: stringFlag(flags, "alpha-vantage-currency"),
   };
   const flagOf = { eodhd: "eodhd", alpha_vantage: "alpha-vantage" } as const;
+  // What is written to `prices/symbols.json` has to be something the file reads back: a blank
+  // symbol, or a currency that is not a code, would leave the file unusable for every order after.
+  for (const source of QUOTE_SOURCES) {
+    const symbol = symbols[source];
+    if (symbol !== undefined && !SYMBOL.test(symbol)) {
+      throw new UsageError(
+        `--${flagOf[source]} necesita un símbolo sin espacios ni «/ ? # & %» (recibido: «${symbol}»)`,
+      );
+    }
+    const currency = own[source] ?? common;
+    if (currency !== undefined && !CURRENCY.test(currency)) {
+      throw new UsageError(
+        `la divisa tiene que ser un código de tres letras mayúsculas, como EUR o GBP (recibido: «${currency}»)`,
+      );
+    }
+  }
   // Nothing is dropped in silence: a currency for a source
   // without its symbol, or a declaration without any symbol, is a mistake.
   for (const source of QUOTE_SOURCES) {

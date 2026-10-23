@@ -701,6 +701,22 @@ describe("atlas prices symbols", () => {
   });
 });
 
+describe("atlas prices symbols: what is written is something the file reads back", () => {
+  it.each([
+    ["a blank symbol", ["--eodhd=", "--currency", "EUR"], "necesita un símbolo"],
+    ["a symbol with a space", ["--eodhd", "A B", "--currency", "EUR"], "necesita un símbolo"],
+    ["a symbol that is a path", ["--eodhd", "../x", "--currency", "EUR"], "necesita un símbolo"],
+    ["a currency that is not a code", ["--eodhd", "X.US", "--currency", "euro"], "tres letras"],
+    ["a blank currency", ["--eodhd", "X.US", "--currency="], "tres letras"],
+  ])("refuses %s before writing anything", async (_, flags, said) => {
+    const f = await folder(ledger());
+    const result = await f.atlas("prices", "symbols", "set", "etf_b", ...flags);
+    expect(result.code).toBe(64);
+    expect(result.text).toContain(said);
+    await expect(readFile(join(f.dir, "prices", "symbols.json"), "utf8")).rejects.toThrow();
+  });
+});
+
 describe("atlas prices status", () => {
   it("says each source with what it spent, and the age of the last close of each asset", async () => {
     const f = await folder(ledger());
