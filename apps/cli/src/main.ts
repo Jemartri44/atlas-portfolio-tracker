@@ -158,7 +158,26 @@ const askLine = async (
   }
 };
 
-export const terminalIo = (streams: TerminalStreams = processStreams): Io => ({
+/**
+ * `atlas lots | head -1` closes the pipe while the order is still writing. That is not a failure of
+ * the order: without a listener Node would die with the trace of an unhandled `error`, exit 1 even
+ * if the write had already been recorded.
+ */
+const ignoreClosedPipe = (stream: NodeJS.WritableStream): void => {
+  stream.on("error", (error: NodeJS.ErrnoException) => {
+    if (error.code !== "EPIPE") {
+      throw error;
+    }
+  });
+};
+
+export const terminalIo = (streams: TerminalStreams = processStreams): Io => {
+  ignoreClosedPipe(streams.stdout);
+  ignoreClosedPipe(streams.stderr);
+  return ioOf(streams);
+};
+
+const ioOf = (streams: TerminalStreams): Io => ({
   out: (text) => streams.stdout.write(`${text}\n`),
   err: (text) => streams.stderr.write(`${text}\n`),
   confirm: async (question, options) => {

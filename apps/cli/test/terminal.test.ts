@@ -60,3 +60,30 @@ describe("terminalIo: Ctrl-C at a question", () => {
     expect(await io.ask?.("x")).toBeUndefined();
   });
 });
+
+describe("terminalIo: the reader of the output went away", () => {
+  const epipe = () => Object.assign(new Error("write EPIPE"), { code: "EPIPE" });
+
+  it.each(["stdout", "stderr"] as const)("does not crash when %s is a closed pipe", (name) => {
+    const streams = {
+      input: Object.assign(new PassThrough(), { isTTY: false }),
+      stdout: new PassThrough(),
+      stderr: new PassThrough(),
+    };
+    terminalIo(streams);
+    // `atlas lots | head -1`: what was written is written; the exit code stays the order's own.
+    expect(() => streams[name].emit("error", epipe())).not.toThrow();
+  });
+
+  it("still raises any other failure of the output", () => {
+    const streams = {
+      input: Object.assign(new PassThrough(), { isTTY: false }),
+      stdout: new PassThrough(),
+      stderr: new PassThrough(),
+    };
+    terminalIo(streams);
+    expect(() =>
+      streams.stdout.emit("error", Object.assign(new Error("full"), { code: "ENOSPC" })),
+    ).toThrow("full");
+  });
+});
