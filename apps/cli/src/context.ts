@@ -95,6 +95,22 @@ export class ConfirmationRequired extends Error {
   }
 }
 
+/**
+ * An order that cannot go on and has nothing to print on stdout: the lines go to
+ * stderr and, with `--json`, the failure is the one object stdout carries
+ * (`report.ts`). An order that already printed its own result returns the exit code instead.
+ */
+export class CommandFailure extends Error {
+  constructor(
+    readonly exit: number,
+    readonly code: string,
+    readonly lines: readonly string[],
+  ) {
+    super(lines.join("\n"));
+    this.name = "CommandFailure";
+  }
+}
+
 export const describeWarnings = (warnings: readonly Warning[]): string[] =>
   warnings.map((warning) => `Aviso (${warning.code}): ${describeWarning(warning)}`);
 

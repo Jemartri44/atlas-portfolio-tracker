@@ -13,7 +13,7 @@ import {
   stringFlag,
   UsageError,
 } from "../src/args.js";
-import { USAGE } from "../src/main.js";
+import { USAGE } from "../src/usage.js";
 
 describe("parseArgs", () => {
   it("separates positionals from flags in every accepted form", () => {
