@@ -339,6 +339,42 @@ describe("the monthly dump (E4, plan §8)", () => {
     expect(positionsOf(s3)).toEqual(positionsOf(whole));
   });
 
+  it("keeps the ledger copy and warns once when the closes can never be read (permanent failure)", async () => {
+    const s3 = seeded();
+    s3.get = async (key) => {
+      if (key === "prices/ast_world.jsonl") {
+        throw new DependencyUnavailable("s3", "status_503");
+      }
+      return TestOnlyFakeS3.prototype.get.call(s3, key);
+    };
+    for (const at of ["2026-10-01T01:15:00Z", "2026-10-01T02:00:00Z", "2026-10-02T01:15:00Z"]) {
+      await backup(s3, at).run(["monthly_backup"]);
+    }
+    // The ledger is copied before positions.json is attempted, and stays copied.
+    expect(s3.text(`${DUMP}ledger.jsonl`)).toBe(s3.text("ledger/ledger.jsonl"));
+    expect(s3.keys()).not.toContain(`${DUMP}positions.json`);
+    expect(recordOf(s3)).toMatchObject({ state: "failed", outcome: { code: "task_error" } });
+    // The failed record reaches the person, once for the whole streak.
+    const ssm = new TestOnlyFakeSsm();
+    ssm.set("/atlas/prod/mail/recipient", RECIPIENT);
+    const mail = setupJobs({ env: MAIL_ENV, now: "2026-10-02T06:00:00Z", s3, ssm });
+    await mail.run(["dispatch_findings"]);
+    mail.setNow("2026-10-03T06:00:00Z");
+    await mail.run(["dispatch_findings"], "req-2");
+    expect(mail.ses.sent.map((sent) => sent.subject)).toEqual([
+      "[Atlas] Aviso: tarea monthly_backup",
+    ]);
+  });
+
+  it("still writes positions.json when the closes or the ECB manifest are damaged (they are content, not a failed read)", async () => {
+    const s3 = seeded();
+    s3.seed("prices/ast_world.jsonl", "not a close\n");
+    s3.seed("reference/ecb/manifest.json", "{ damaged");
+    await backup(s3).run(["monthly_backup"]);
+    expect(s3.keys()).toContain(`${DUMP}positions.json`);
+    expect(recordOf(s3).state).toBe("done");
+  });
+
   it("leaves out of prices/ a name that is not plain, and says a ledger it cannot value", async () => {
     const s3 = seeded();
     s3.seed("prices/a b.jsonl", "");
