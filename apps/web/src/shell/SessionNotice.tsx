@@ -10,9 +10,9 @@
 // the device of the new one; nothing is written on the device.
 
 import { createSignal, type JSX, onCleanup, Show } from "solid-js";
+import { signInHref } from "../auth/session.js";
 import { Notice } from "../components/Notice.jsx";
 import { store } from "../ledger/state.js";
-import { signInHref } from "../sync/session.js";
 
 /** Less than this and the person is told before opening a form. */
 const SESSION_WARNING_MINUTES = 15;

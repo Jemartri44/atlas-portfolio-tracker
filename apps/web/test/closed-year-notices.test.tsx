@@ -9,11 +9,11 @@
 
 import { describe, expect, it } from "vitest";
 import { MASK } from "../src/format/money.js";
-import { store } from "../src/ledger/state.js";
 import Configuracion from "../src/routes/ajustes/configuracion.jsx";
 import Detalle from "../src/routes/movimientos/detail.jsx";
 import CorporateForm from "../src/routes/registrar/corporate/form.jsx";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
+import { setPrivacy } from "../src/shell/preferences.js";
 import { goldenEvents, goldenText } from "./helpers/golden.js";
 import {
   choose,
@@ -158,7 +158,7 @@ describe("a write that reaches a filed return", () => {
    * call, so only a rendered notice sees it.
    */
   it("masks the figures it moves when privacy is on", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     await withFiling();
     const sale = goldenEvents().find(
       (event) =>

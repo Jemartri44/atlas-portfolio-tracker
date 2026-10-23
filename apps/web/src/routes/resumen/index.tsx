@@ -37,6 +37,7 @@ import { store, today } from "../../ledger/state.js";
 import { QuotesNotice, useQuotes } from "../../prices/use-quotes.jsx";
 import { MONITOR, mediaQuery } from "../../shell/media.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
+import { privacy } from "../../shell/preferences.js";
 import {
   attentionItems,
   firstEntries,
@@ -130,7 +131,7 @@ export default function ResumenRoute(): JSX.Element {
           openOrders: pendingOrders(dated, date),
           openTransfers: transfers.rows,
           names,
-          privacy: store.privacy(),
+          privacy: privacy(),
           date,
           saleDates: new Map(dated.gains.map((gain) => [gain.event_id, gain.fiscal_date])),
         });

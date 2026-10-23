@@ -18,8 +18,8 @@ import {
   type UseCaseDeps,
 } from "@atlas/domain";
 import { createMemo, createRoot, createSignal } from "solid-js";
-import { themeFromPreference } from "../shell/theme.js";
 import { readDay } from "./day-watch.js";
+import type { PendingWrite } from "./pending.js";
 import type { LedgerSource } from "./source.js";
 
 export interface LedgerSnapshot {
@@ -31,20 +31,16 @@ export interface LedgerSnapshot {
   loadedAt: string;
 }
 
+/** An error as the interface paints it: a code, a sentence in Spanish and, where there is one, the action that fixes it. */
 export interface AppError {
   code: string;
   message: string;
+  /** The line of the ledger a rejected line comes from, when the API says so. */
   line?: number;
   action?: { label: string; to: string };
 }
 
-/**
- * The message of an error **with the line of the file** it comes from, when it
- * comes from one. Importing a file that is not a ledger used to say "El campo
- * fee de buy no es válido" and nothing else: in a file of five thousand lines,
- * the one piece of information that lets the user find the problem was folded
- * away in the technical detail.
- */
+/** The message of an error **with the line of the ledger** it comes from, when the API names one. */
 export const messageWithLine = (error: AppError): string =>
   error.line === undefined || error.message.includes(`línea ${error.line}`)
     ? error.message
@@ -70,76 +66,7 @@ export type LoadPhase =
 export const blocksTheApp = (phase: LoadPhase): boolean =>
   phase.phase === "signed_out" || phase.phase === "offline" || phase.phase === "cloud_failed";
 
-/**
- * A write that was sent and whose answer never arrived whole (ADR-0035, §2):
- * the ids were fixed before sending, so the screen can look for them once there
- * is a connection. Kept **in memory only**: a reload of the page forgets it, and
- * nothing of it reaches the device.
- */
-export type PendingState =
-  | "unknown" // sent, answer lost: not looked for yet (or the connection is still down)
-  | "checking"
-  | "written" // found in the ledger: it was recorded
-  | "not_written" // not in the ledger: nothing was written, the same data can be sent again
-  /** Only some of its ids are there (it should not happen): the ledger has to be looked at. */
-  | "partial"
-  /** The ledger changed since the effect was seen: nothing is resent; it is redone from its form. */
-  | "changed";
-
-export type RetryResult =
-  | { kind: "done"; id: string }
-  | { kind: "unknown" }
-  | { kind: "conflict" }
-  | { kind: "refused"; message: string };
-
-export interface PendingWrite {
-  readonly ids: readonly string[];
-  readonly state: PendingState;
-  /** The etag the person saw the effect on: a retry compares with this, never with a reload. */
-  readonly seenEtag?: string;
-  /** Sends it again **with the same ids**; the screen decides when, never a timer. */
-  readonly retry: () => Promise<RetryResult>;
-  /** A sentence about the last attempt that was refused, if any. */
-  readonly said?: string;
-}
-
 export type SignedOutReason = "signed_out" | "expired" | "not_allowed" | "forgotten";
-
-export type Theme = "system" | "light" | "dark";
-
-const PRIVACY_KEY = "atlas.privacy";
-const THEME_KEY = "atlas.theme";
-
-/** localStorage, tolerant: in private mode it can throw or come back empty. */
-const readLocal = (key: string): string | undefined => {
-  try {
-    return window.localStorage.getItem(key) ?? undefined;
-  } catch {
-    // Blocked site data: the preference is simply not remembered, and the
-    // caller's default applies. There is nothing else to do and nothing worth
-    // telling the user about.
-    return undefined;
-  }
-};
-
-const writeLocal = (key: string, value: string): void => {
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {
-    // Not remembering a preference is a minor loss.
-  }
-};
-
-/**
- * Privacy is **on** unless the device explicitly says it is off: anything that is not the literal
- * "off" — nothing stored, storage blocked, a value written by an older version — leaves the amounts
- * covered.
- *
- * It is a function of its own, and not an expression inside `createStore`, so a
- * test can reach it: turning `!== "off"` into `=== "on"` used to pass the whole
- * suite and left every amount visible on first run.
- */
-export const privacyFromPreference = (stored: string | undefined): boolean => stored !== "off";
 
 const createStore = () => {
   // It starts **loading**: the boot is async (session, then ledger), and while
@@ -148,9 +75,6 @@ const createStore = () => {
   const [pending, setPending] = createSignal<PendingWrite | undefined>(undefined);
   const [deps, setDeps] = createSignal<UseCaseDeps | undefined>(undefined);
   const [writing, setWriting] = createSignal(false);
-  // Privacy is **on** by default: the first read is what decides.
-  const [privacy, setPrivacyRaw] = createSignal(privacyFromPreference(readLocal(PRIVACY_KEY)));
-  const [theme, setThemeRaw] = createSignal<Theme>(themeFromPreference(readLocal(THEME_KEY)));
 
   const snapshot = createMemo<LedgerSnapshot | undefined>(() => {
     const phase = load();
@@ -200,16 +124,6 @@ const createStore = () => {
     clearCache,
     writing,
     setWriting,
-    privacy,
-    setPrivacy: (value: boolean): void => {
-      setPrivacyRaw(value);
-      writeLocal(PRIVACY_KEY, value ? "on" : "off");
-    },
-    theme,
-    setTheme: (value: Theme): void => {
-      setThemeRaw(value);
-      writeLocal(THEME_KEY, value);
-    },
   };
 };
 
@@ -217,8 +131,6 @@ export type Store = ReturnType<typeof createStore>;
 
 /** The single store of the application. */
 export const store: Store = createRoot(createStore);
-
-export const usePrivacy = (): (() => boolean) => store.privacy;
 
 /**
  * Today in Europe/Madrid, from the clock the use cases use — which is what

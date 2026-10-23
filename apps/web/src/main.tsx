@@ -6,9 +6,9 @@
 import { createEffect } from "solid-js";
 import { render } from "solid-js/web";
 import { App } from "./App.jsx";
-import { store } from "./ledger/state.js";
 import { applyTheme } from "./shell/theme.js";
 import "./styles/index.css";
+import { theme } from "./shell/preferences.js";
 
 const root = document.querySelector("#app");
 
@@ -16,7 +16,7 @@ if (root !== null) {
   render(() => {
     // The theme follows the system unless the user forced one: the tokens and
     // the colour of the browser's bar follow it too (`shell/theme.ts`).
-    createEffect(() => applyTheme(document, store.theme()));
+    createEffect(() => applyTheme(document, theme()));
     return <App />;
   }, root);
 

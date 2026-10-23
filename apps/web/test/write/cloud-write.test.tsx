@@ -7,14 +7,14 @@
 
 import type { PreparedRateCorrections } from "@atlas/domain/ecb";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { writeCorrections } from "../../src/ecb/rate-corrections.js";
 import { bootCloud } from "../../src/ledger/cloud.js";
 import { discardPending, retryPending, settlePending } from "../../src/ledger/pending.js";
-import { writeCorrections } from "../../src/ledger/rate-corrections.js";
 import { requireDeps, store } from "../../src/ledger/state.js";
 import { correct, previewDraft, recordDraft, reverse } from "../../src/ledger/write.js";
+import { apiAt, cloudText, sameOrigin, signedIn } from "../cloud/api-support.js";
 import { goldenText } from "../helpers/golden.js";
 import { until } from "../helpers/render.jsx";
-import { apiAt, cloudText, sameOrigin, signedIn } from "../sync/api-support.js";
 
 const LEDGER = "ledger/ledger.jsonl";
 

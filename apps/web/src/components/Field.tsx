@@ -18,7 +18,7 @@
 
 import { createSignal, type JSX, Show } from "solid-js";
 import { MASK } from "../format/privacy.js";
-import { usePrivacy } from "../ledger/state.js";
+import { privacy } from "../shell/preferences.js";
 import { Icon } from "./Icon.jsx";
 
 export interface Option {
@@ -85,7 +85,6 @@ interface TextFieldProps extends BaseProps {
 }
 
 export const Field = (props: TextFieldProps): JSX.Element => {
-  const privacy = usePrivacy();
   const [focused, setFocused] = createSignal(false);
   const [typed, setTyped] = createSignal(false);
   const masked = (): boolean =>

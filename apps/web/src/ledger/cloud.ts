@@ -20,7 +20,7 @@ import { webCryptoRandom } from "@atlas/adapters/random";
 import { httpRemote } from "@atlas/adapters/sync-http";
 import type { UseCaseDeps } from "@atlas/domain";
 import { RemoteError } from "@atlas/domain/sync";
-import { readSession, type SessionState } from "../sync/session.js";
+import { readSession, type SessionState } from "../auth/session.js";
 import { loadInto } from "./actions.js";
 import { SIGNED_OUT } from "./session-errors.js";
 import type { AppError, LoadPhase } from "./state.js";

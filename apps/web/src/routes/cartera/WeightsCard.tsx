@@ -35,7 +35,7 @@ import { pricesOf } from "../../format/messages/prose.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { type NameIndex, NO_NAMES } from "../../format/names.js";
 import { formatDecimalString } from "../../format/number.js";
-import { usePrivacy } from "../../ledger/state.js";
+import { privacy } from "../../shell/preferences.js";
 import type { WeightRow, WeightsView } from "../../view-models/core/index.js";
 import { ClassRows, ClassTable } from "./Classes.jsx";
 import { Gauge } from "./Gauge.jsx";
@@ -128,7 +128,6 @@ interface WeightsCardProps {
 }
 
 export const WeightsCard = (props: WeightsCardProps): JSX.Element => {
-  const privacy = usePrivacy();
   const segments = (): AllocationSegment[] =>
     props.view.classes.map((row) => ({
       key: row.assetClass,

@@ -1,7 +1,7 @@
 // What the web learns of its session, and how it closes it (docs/api.md §3).
 
 import { describe, expect, it } from "vitest";
-import { bodySha256, readSession, signInHref, signOut } from "../../src/sync/session.js";
+import { bodySha256, readSession, signInHref, signOut } from "../../src/auth/session.js";
 
 const ID = "AAAAAAAAAAAAAAAAAAAAAA";
 

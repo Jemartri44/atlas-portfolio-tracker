@@ -54,8 +54,9 @@ import type { ClosedYearImpact, Reading } from "@atlas/domain/fiscal";
 import { closedYearImpact } from "@atlas/domain/fiscal";
 import { reloadLedger } from "./cloud.js";
 import { toAppError } from "./errors.js";
+import type { RetryResult } from "./pending.js";
 import { signedOutReason } from "./session-errors.js";
-import type { AppError, RetryResult, SignedOutReason } from "./state.js";
+import type { AppError, SignedOutReason } from "./state.js";
 import { requireDeps, store } from "./state.js";
 
 export type WriteFailure =
