@@ -633,8 +633,18 @@ export const createHandler = (deps: HandlerDeps): Handler => {
     if ((await tokens.create(record)) === "exists") {
       return { ...fail(refusal("console_code_used")), tokenId: code.tid };
     }
-    if (how !== "token_issued" && (await settleDevice(record, nowMs)) === "lost") {
-      return { ...fail(refusal("console_renewal_conflict")), tokenId: record.token_id };
+    if (how !== "token_issued") {
+      let settled: "won" | "lost";
+      try {
+        settled = await settleDevice(record, nowMs);
+      } catch (error) {
+        // Nothing is handed out, so the new record must not stay alive.
+        await revokeOrMark(record, nowMs, error);
+        throw error;
+      }
+      if (settled === "lost") {
+        return { ...fail(refusal("console_renewal_conflict")), tokenId: record.token_id };
+      }
     }
     if (how === "token_issued") {
       let created: "created" | "exists";
@@ -692,10 +702,10 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         : [],
     );
     if (others.some((other) => other.token_id > record.token_id)) {
-      const lost = new Error("device token superseded");
-      await revokeOrMark(record, nowMs, lost);
-      if (leftAlive.has(lost)) {
-        throw lost;
+      const superseded = new Error("device token superseded");
+      await revokeOrMark(record, nowMs, superseded);
+      if (leftAlive.has(superseded)) {
+        throw superseded;
       }
       return "lost";
     }

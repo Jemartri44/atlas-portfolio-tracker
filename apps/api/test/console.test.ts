@@ -4,6 +4,7 @@
 
 import { randomBytes } from "node:crypto";
 import { base64url, pkceChallenge, Signer } from "@atlas/adapters/access";
+import { DependencyUnavailable } from "@atlas/adapters/aws";
 import { newDevice, serializeDeviceObject } from "@atlas/domain/access";
 import { describe, expect, it } from "vitest";
 import {
@@ -1051,6 +1052,27 @@ describe("what the round 2 of the review of PR #95 found", () => {
     expect(errorOf(a.statusCode === 409 ? a : b).code).toBe("console_renewal_conflict");
     const winner = JSON.parse((a.statusCode === 200 ? a : b).body);
     expect(live(api)).toEqual([`${TOKENS}${winner.token_id}`]);
+  });
+
+  it("revokes the new token and answers 503 when the device cannot be settled", async () => {
+    const api = setup();
+    seedDevice(api);
+    const { done, secrets } = await consoleReturn(api, { reissue_device_id: ID });
+    const code = codeOfLoopback(
+      /<a href="([^"]+)"/.exec(done.body)?.[1]?.replaceAll("&amp;", "&") as string,
+    );
+    const listByPath = api.ssm.listByPath.bind(api.ssm);
+    let lists = 0;
+    api.ssm.listByPath = async (path: string) => {
+      lists += 1;
+      if (lists === 2) {
+        throw new DependencyUnavailable("ssm", "throttling");
+      }
+      return listByPath(path);
+    };
+    const answer = await exchange(api, code, secrets.verifier);
+    expect(answer.statusCode).toBe(503);
+    expect(live(api)).toEqual([]);
   });
 
   it("logs the id of the token left alive when every revocation failed (R2-2)", async () => {
