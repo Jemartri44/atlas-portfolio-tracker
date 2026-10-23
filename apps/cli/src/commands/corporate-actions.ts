@@ -18,7 +18,6 @@ import {
   type LedgerState,
   loadAndProject,
   previewEvent,
-  Ratio,
   recordEvent,
 } from "@atlas/domain";
 import {
@@ -26,6 +25,7 @@ import {
   type CorporateActionDraft,
   type CorporateActionParams,
   corporateActionDraft,
+  ratioDirection,
 } from "@atlas/domain/tools";
 import {
   assertKnownFlags,
@@ -144,24 +144,22 @@ const settled = async (flags: Flags): Promise<Partial<CorporateActionParams>> =>
  * (below 1); the other way round is a typo that books every lot wrong without any error, and a ratio
  * of 1 changes nothing.
  */
-const directedRatio = (flags: Flags, direction: "up" | "down"): string => {
+const directedRatio = (flags: Flags, kind: "split" | "reverse_split"): string => {
   const text = requireFlag(flags, "ratio");
-  const parsed = Ratio.parse(text);
-  const order = parsed.numerator.cmp(parsed.denominator);
-  if (order === 0) {
-    throw new UsageError(`--ratio ${text} no cambia el número de títulos`);
+  switch (ratioDirection(kind, text)) {
+    case "unchanged":
+      throw new UsageError(`--ratio ${text} no cambia el número de títulos`);
+    case "reduces":
+      throw new UsageError(
+        `--ratio ${text} reduce los títulos: en un split el ratio es nuevas/antiguas y ha de ser mayor que 1 (4 títulos por cada uno: --ratio 4). Si es un contrasplit, usa «ca reverse-split --ratio ${text}»`,
+      );
+    case "multiplies":
+      throw new UsageError(
+        `--ratio ${text} multiplica los títulos: en un contrasplit el ratio es nuevas/antiguas y ha de ser menor que 1 (uno por cada 4: --ratio 1/4). Si es un split, usa «ca split --ratio ${text}»`,
+      );
+    default:
+      return text;
   }
-  if (direction === "up" && order < 0) {
-    throw new UsageError(
-      `--ratio ${text} reduce los títulos: en un split el ratio es nuevas/antiguas y ha de ser mayor que 1 (4 títulos por cada uno: --ratio 4). Si es un contrasplit, usa «ca reverse-split --ratio ${text}»`,
-    );
-  }
-  if (direction === "down" && order > 0) {
-    throw new UsageError(
-      `--ratio ${text} multiplica los títulos: en un contrasplit el ratio es nuevas/antiguas y ha de ser menor que 1 (uno por cada 4: --ratio 1/4). Si es un split, usa «ca split --ratio ${text}»`,
-    );
-  }
-  return text;
 };
 
 const converted = async (flags: Flags): Promise<Partial<CorporateActionParams>> => ({
@@ -173,12 +171,15 @@ const WIZARDS: Record<string, Wizard> = {
   split: {
     kind: "split",
     flags: ["ratio"],
-    params: async (flags) => ({ ratio: directedRatio(flags, "up") }),
+    params: async (flags) => ({ ratio: directedRatio(flags, "split") }),
   },
   "reverse-split": {
     kind: "reverse_split",
     flags: ["ratio", ...CASH_FLAGS],
-    params: async (flags) => ({ ...(await settled(flags)), ratio: directedRatio(flags, "down") }),
+    params: async (flags) => ({
+      ...(await settled(flags)),
+      ratio: directedRatio(flags, "reverse_split"),
+    }),
   },
   merger: {
     kind: "merger",
