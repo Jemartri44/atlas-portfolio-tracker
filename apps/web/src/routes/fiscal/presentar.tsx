@@ -31,6 +31,7 @@ import { asEventDraft } from "../../view-models/forms/values.js";
 import { RequireLedger } from "../guard.jsx";
 import { DuplicateDialog } from "../registrar/DuplicateDialog.jsx";
 import { FormActions } from "../registrar/FormActions.jsx";
+import { createProblem } from "../registrar/form-problems.js";
 import { createWarned } from "../registrar/warned.js";
 
 const MODELS = new Set(["renta", "720", "721"]);
@@ -40,7 +41,7 @@ export default function PresentarRoute(): JSX.Element {
   const navigate = useNavigate();
   const [typed, setTyped] = createSignal<Record<string, string>>({});
   const [meta, setMeta] = createSignal({ filed_at: today(), receipt: "", notes: "" });
-  const [problem, setProblem] = createSignal<string | undefined>();
+  const { problem, setProblem, refuse } = createProblem();
   /**
    * What is wrong with one figure, **on that figure**. An amount with two
    * commas in it is a mistake in a field, and the notice above the button
@@ -136,7 +137,7 @@ export default function PresentarRoute(): JSX.Element {
               setFailure(result.failure.error);
             } else {
               setSignedOut(result.failure.kind === "signed_out");
-              setProblem(errorOf(result.failure).message);
+              refuse(errorOf(result.failure));
             }
           } catch (error) {
             setFailure(toAppError(error));
