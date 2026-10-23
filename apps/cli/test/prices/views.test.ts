@@ -310,7 +310,7 @@ describe("the cash in a foreign currency in the net worth", () => {
     expect(json.data.cash.rows[0]).toMatchObject({ fx_rate: "1.25", fx_rate_source: "ecb" });
   });
 
-  it("uses the ledger's rate when the history is older than it (round 1 of PR #102)", async () => {
+  it("uses the ledger's rate when the history is older than it", async () => {
     const f = await folder(dollars());
     await ecbHistory(f.dir, [["2027-04-30", "1.25"]]);
     const view = await f.atlas("networth", "--date", "2027-06-09");

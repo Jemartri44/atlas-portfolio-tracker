@@ -195,7 +195,7 @@ describe("atlas settings set: the legacy wash-sale window", () => {
   });
 });
 
-describe("atlas settings set: notification_email (feature 016, E3; §8.2 M7)", () => {
+describe("atlas settings set: notification_email", () => {
   it("writes a new snapshot without it, and leaves the old line as it is", async () => {
     const old = settingsEvent("01ARYZ6S41TSV4RRFFQ69G5SET", {
       notification_email: "atlas@example.invalid",
@@ -213,7 +213,7 @@ describe("atlas settings set: notification_email (feature 016, E3; §8.2 M7)", (
   });
 });
 
-describe("atlas settings set --notification-email (review of PR #108, N1)", () => {
+describe("atlas settings set --notification-email", () => {
   it("is refused, saying where the recipient lives, and writes nothing", async () => {
     const h = harness({ events: seed(), confirm: true });
     const before = (await h.store.load()).lines.length;
