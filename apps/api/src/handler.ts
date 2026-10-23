@@ -639,7 +639,9 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         settled = await settleDevice(record, nowMs);
       } catch (error) {
         // Nothing is handed out, so the new record must not stay alive.
-        await revokeOrMark(record, nowMs, error);
+        if (!leftAlive.has(error as object)) {
+          await revokeOrMark(record, nowMs, error);
+        }
         throw error;
       }
       if (settled === "lost") {
