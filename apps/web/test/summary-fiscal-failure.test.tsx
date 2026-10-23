@@ -5,6 +5,7 @@
 
 import { DomainError } from "@atlas/domain";
 import { describe, expect, it, vi } from "vitest";
+import { toAppError } from "../src/ledger/errors.js";
 import Resumen from "../src/routes/resumen/index.jsx";
 import { setPrivacy } from "../src/shell/preferences.js";
 import { show, showInShell, text, today, until, withGoldenLedger } from "./helpers/render.jsx";
@@ -54,5 +55,15 @@ describe("a screen that throws a refusal of the domain", () => {
     await until(() => text(host).includes("Esta pantalla no ha podido abrirse"), "the failure");
     await until(() => !text(host).includes("the ledger holds"), "the translation");
     expect(text(host)).toContain("USD");
+  });
+});
+
+describe("the detail of an unexpected failure", () => {
+  it("follows the privacy mode while it is on screen", () => {
+    const error = toAppError(new Error("saldo de 1234,56 EUR"));
+    setPrivacy(true);
+    expect(error.message).not.toContain("1234");
+    setPrivacy(false);
+    expect(error.message).toContain("1234,56");
   });
 });

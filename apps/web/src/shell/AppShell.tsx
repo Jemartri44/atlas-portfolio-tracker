@@ -82,6 +82,12 @@ const ScreenFailed = (props: { failure: unknown; retry: () => void }): JSX.Eleme
         ? (await import("../ledger/errors.js")).toAppError(failure)
         : undefined,
   );
+  // A catalogue that cannot be loaded (the same lost network) leaves the failure in its own words.
+  const detail = (): string =>
+    explained.loading
+      ? ""
+      : ((explained.error ? undefined : explained()?.message) ??
+        maskFigures((props.failure as Error).message, privacy()));
   return (
     <Notice
       severity="danger"
@@ -100,11 +106,7 @@ const ScreenFailed = (props: { failure: unknown; retry: () => void }): JSX.Eleme
       Tus datos no se han tocado: esto es un fallo de la propia pantalla. Si acabas de perder la
       conexión, recarga cuando vuelvas a tenerla.
       <Show when={props.failure instanceof Error}>
-        <p class="meta">
-          {explained.loading
-            ? ""
-            : (explained()?.message ?? maskFigures((props.failure as Error).message, privacy()))}
-        </p>
+        <p class="meta">{detail()}</p>
       </Show>
     </Notice>
   );
