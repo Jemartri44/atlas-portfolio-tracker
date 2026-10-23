@@ -10,11 +10,11 @@ import { createResource, createSignal, type JSX, Show } from "solid-js";
 // Statically, as the card of the session does: the section of Ajustes is
 // lazy already, and a dynamic import would split it for nothing.
 import { readSession } from "../../auth/session.js";
-import { ConfirmDialog, Icon, Notice, Section } from "../../components/index.js";
+import { ConfirmDialog, Icon, Section } from "../../components/index.js";
 import { downloadCloudHistory } from "../../ecb/cloud.js";
 import { formatDate, formatInstantDate } from "../../format/date.js";
-import { toAppError } from "../../ledger/errors.js";
-import { cloudSaid, type Said, saidText } from "./ecb-cloud-said.js";
+import { SaidNotice, useCardAction } from "./card-action.jsx";
+import { cloudSaid } from "./ecb-cloud-said.js";
 
 const ecb = () => import("../../ecb/history.js");
 
@@ -30,37 +30,13 @@ const PROBLEMS = {
 export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element => {
   const request: Fetch = (input, init) => (props.request ?? fetch)(input, init);
   const [web, { refetch }] = createResource(async () => (await ecb()).loadWebHistory());
-  const [busy, setBusy] = createSignal(false);
+  const { busy, said, run } = useCardAction(() => void refetch());
   const [signedIn, setSignedIn] = createSignal(false);
   const [forgetting, setForgetting] = createSignal(false);
-  const [said, setSaid] = createSignal<Said>();
-
-  const guarded = async (action: () => Promise<string | undefined>): Promise<void> => {
-    setBusy(true);
-    setSaid(undefined);
-    try {
-      const text = await action();
-      if (text !== undefined) {
-        setSaid({ tone: "info", text });
-      }
-    } catch (failure) {
-      setSaid({ tone: "danger", error: toAppError(failure) });
-    } finally {
-      setBusy(false);
-      refetch();
-    }
-  };
 
   /** Downloads the history of the cloud; `asked`: the user pressed the button. */
   const onCloud = (asked: boolean): Promise<void> =>
-    guarded(async () => {
-      const shown = cloudSaid(await downloadCloudHistory(request), asked);
-      if (shown !== undefined && shown.tone !== "info") {
-        setSaid(shown);
-        return undefined;
-      }
-      return shown?.text;
-    });
+    run(async () => cloudSaid(await downloadCloudHistory(request), asked));
 
   // Opening the card is asking: with a session, the history of
   // the cloud comes down. Never at start and never on a timer. A
@@ -78,7 +54,7 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
   /** Erases the copy of this browser, after asking. */
   const onForget = (): Promise<void> => {
     setForgetting(false);
-    return guarded(async () => {
+    return run(async () => {
       await (await ecb()).forgetWebCopy();
       return "Copia borrada: este navegador ya no tiene histórico del BCE. La próxima descarga de la nube lo baja entero.";
     });
@@ -90,17 +66,16 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
     if (file === undefined) {
       return;
     }
-    await guarded(async () => {
+    await run(async () => {
       const outcome = await (await ecb()).importHistoryFile(
         file.name,
         new Uint8Array(await file.arrayBuffer()),
       );
       if (outcome.kind === "rejected") {
-        setSaid({
+        return {
           tone: "caution",
           text: `El archivo cambia ${outcome.total} ${outcome.total === 1 ? "tipo ya publicado" : "tipos ya publicados"} del histórico importado antes: no se ha usado, y sigue el anterior. O el BCE ha corregido un tipo o el archivo está mal.`,
-        });
-        return undefined;
+        };
       }
       return `Histórico importado: publica hasta el ${formatDate(outcome.latest)}.`;
     });
@@ -141,9 +116,7 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
           </>
         )}
       </Show>
-      <Show when={said()}>
-        {(message) => <Notice severity={message().tone}>{saidText(message())}</Notice>}
-      </Show>
+      <SaidNotice said={said()} />
       <div class="button-row">
         <Show when={signedIn()}>
           <button
