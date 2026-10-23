@@ -82,7 +82,7 @@ export const fxCommand = async (
     return 0;
   }
   if (sub !== "update") {
-    throw new UsageError("uso: atlas fx update | atlas fx status");
+    throw new UsageError("uso: atlas fx update | status | correct [--reason …]");
   }
   const { events } = await ctx.deps.store.load();
   const result = await updateEcbHistory(

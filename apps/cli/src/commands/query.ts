@@ -43,6 +43,19 @@ const yearOf = (positionals: string[], usage: string): number => {
   return year;
 };
 
+/** An empty table for a mistyped id would read as «nothing there»: say the id does not exist. */
+const assertExists = (state: LedgerState, kind: "account" | "asset", id: string | undefined) => {
+  if (id === undefined) {
+    return;
+  }
+  if (kind === "account" && !state.accounts.has(id)) {
+    throw new DomainError("unknown_account", `account ${id} does not exist`, { account_id: id });
+  }
+  if (kind === "asset" && !state.assets.has(id)) {
+    throw new DomainError("unknown_asset", `asset ${id} does not exist`, { asset_id: id });
+  }
+};
+
 export const positionsCommand = async (
   ctx: Context,
   _positionals: string[],
@@ -52,6 +65,8 @@ export const positionsCommand = async (
   const { state } = await loadForQuery(ctx);
   const account = stringFlag(flags, "account");
   const asset = stringFlag(flags, "asset");
+  assertExists(state, "account", account);
+  assertExists(state, "asset", asset);
   const rows = physicalPositions(state).filter(
     (p) =>
       (account === undefined || p.account_id === account) &&
@@ -78,10 +93,7 @@ export const lotsCommand = async (
   const { events, state } = await loadForQuery(ctx);
   const includeClosed = booleanFlag(flags, "closed");
   const asset = positionals[1];
-  // An empty table for a mistyped id would read as «that asset has no lots».
-  if (asset !== undefined && !state.assets.has(asset)) {
-    throw new DomainError("unknown_asset", `asset ${asset} does not exist`, { asset_id: asset });
-  }
+  assertExists(state, "asset", asset);
   const rows = fiscalLots(state, asset).filter((lot) => includeClosed || !lot.closed);
   renderQuery(
     ctx,
@@ -137,6 +149,7 @@ export const cashCommand = async (
   assertKnownFlags(flags, ["account", ...GLOBAL_FLAGS]);
   const { state } = await loadForQuery(ctx);
   const account = stringFlag(flags, "account");
+  assertExists(state, "account", account);
   const rows = cashBalances(state).filter((c) => account === undefined || c.account_id === account);
   renderQuery(
     ctx,
@@ -185,7 +198,7 @@ export const gainsCommand = async (
         g.event_id,
       ]),
     ),
-    `Total ${year}: ${total.amount.toString()} EUR`,
+    `Total ${year}: ${total.amount.toString()} EUR (suma de las ventas tal cual, sin diferir pérdidas ni compensar; el saldo del ejercicio es el de \`atlas tax ${year}\`)`,
   ];
   if (booleanFlag(flags, "lots")) {
     lines.push(

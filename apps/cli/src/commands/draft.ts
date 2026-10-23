@@ -24,8 +24,8 @@ import {
   preparePendingDraft,
   recordPendingDraft,
 } from "@atlas/domain/ecb";
-import { UsageError } from "../args.js";
-import { CommandFailure, type Context, EXIT } from "../context.js";
+import { assertKnownFlags, type Flags, UsageError } from "../args.js";
+import { CommandFailure, type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { cloudStoreOf } from "../folder-mode.js";
 import { day } from "../output/ecb.js";
 import { historyOf } from "./rates.js";
@@ -229,7 +229,12 @@ const discardDraft = async (ctx: Context, id: string | undefined): Promise<numbe
   return EXIT.ok;
 };
 
-export const draftCommand = async (ctx: Context, positionals: string[]): Promise<number> => {
+export const draftCommand = async (
+  ctx: Context,
+  positionals: string[],
+  flags: Flags,
+): Promise<number> => {
+  assertKnownFlags(flags, [...GLOBAL_FLAGS]);
   switch (positionals[1]) {
     case "list":
       return listDrafts(ctx);
