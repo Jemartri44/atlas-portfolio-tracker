@@ -124,6 +124,7 @@ export default function CorporateFormRoute(): JSX.Element {
           }
           setProblem(undefined);
           setDuplicate(undefined);
+          setSignedOut(false);
           const result = await recordDraft(built.draft as never, {
             confirmDuplicate: warned.confirms(built.draft, confirmDuplicate),
           });
@@ -141,9 +142,12 @@ export default function CorporateFormRoute(): JSX.Element {
             setPreview(undefined);
             return;
           }
-          // Whatever else it was — a session that ended, an answer that was lost, dependants — is
-          // said: pressing «Registrar» and seeing nothing is the one thing a form must not do.
-          setSignedOut(result.failure.kind === "signed_out");
+          if (result.failure.kind === "signed_out") {
+            setSignedOut(true);
+            return;
+          }
+          // Whatever else it was — an answer that was lost, dependants — is said: pressing
+          // «Registrar» and seeing nothing is the one thing a form must not do.
           refuse(errorOf(result.failure));
         };
 

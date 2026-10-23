@@ -53,7 +53,10 @@ describe("the corporate action form when the write fails", () => {
   it("says the session ended, and offers to enter again", async () => {
     next.failure = { kind: "signed_out", reason: "expired" };
     const host = await registerSplit();
-    await until(() => text(host).includes("Tu sesión ha terminado"), "the session notice");
+    await until(() => text(host).includes("Entrar de nuevo"), "the session notice");
+    expect(text(host)).toContain("Tu sesión ha terminado");
+    // Said once, by the notice: the sentence of the failure would repeat it.
+    expect(text(host)).not.toContain("no se ha guardado nada");
   });
 
   it("says it does not know whether it was saved", async () => {
