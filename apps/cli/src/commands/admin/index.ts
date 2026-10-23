@@ -5,6 +5,7 @@
 // appends. Nothing of this is reachable from `apps/api` (architecture test).
 
 import { adminClientsOf, environmentFlag, translateAwsFailure } from "../../admin/clients.js";
+import type { AdminClients } from "../../admin/environment.js";
 import { assertKnownFlags, type Flags, stringFlag, UsageError } from "../../args.js";
 import { type Context, GLOBAL_FLAGS } from "../../context.js";
 import { devicesOrder, forgetOrder, revokeAllOrder } from "./devices.js";
@@ -15,15 +16,66 @@ import { secretsOrder } from "./secrets.js";
 const USAGE =
   "uso: atlas admin devices | revoke-all-tokens | forget-device [--] <dispositivo> | forget-device --device <dispositivo> | compact [--accept-unverified <id>]… | restore --from <fichero|s3-version:<id>|backups/AAAA-MM> | prices push | secrets, siempre con --env <entorno>";
 
-/** The options of each order besides `--env`; `secrets` takes none of its own. */
-const ORDER_FLAGS: Readonly<Record<string, readonly string[]>> = {
-  devices: ["env"],
-  "revoke-all-tokens": ["env"],
-  "forget-device": ["env", "device"],
-  compact: ["env", "accept-unverified"],
-  restore: ["env", "from"],
-  prices: ["env"],
-  secrets: ["env"],
+/** What an order of `atlas admin` is: its own options, how it reads its arguments, and what it runs. */
+interface AdminOrder {
+  /** The name in the refusals (`prices push` for `prices`). */
+  readonly label: string;
+  /** The options of the order besides `--env`; `secrets` takes none of its own. */
+  readonly flags: readonly string[];
+  /** A `--yes` is written before the list is on screen, so these confirm by typing the environment. */
+  readonly refusesYes: boolean;
+  readonly run: (
+    ctx: Context,
+    clients: AdminClients,
+    environment: string,
+    input: { positionals: string[]; flags: Flags; id: string | undefined },
+  ) => Promise<number>;
+}
+
+const ORDERS: Readonly<Record<string, AdminOrder>> = {
+  devices: {
+    label: "devices",
+    flags: ["env"],
+    refusesYes: false,
+    run: (ctx, clients) => devicesOrder(ctx, clients),
+  },
+  "revoke-all-tokens": {
+    label: "revoke-all-tokens",
+    flags: ["env"],
+    refusesYes: false,
+    run: (ctx, clients) => revokeAllOrder(ctx, clients),
+  },
+  "forget-device": {
+    label: "forget-device",
+    flags: ["env", "device"],
+    refusesYes: true,
+    run: (ctx, clients, environment, { id }) => forgetOrder(ctx, clients, environment, id as string),
+  },
+  compact: {
+    label: "compact",
+    flags: ["env", "accept-unverified"],
+    refusesYes: true,
+    run: (ctx, clients, environment, { flags }) => compactOrder(ctx, clients, environment, flags),
+  },
+  restore: {
+    label: "restore",
+    flags: ["env", "from"],
+    refusesYes: true,
+    run: (ctx, clients, environment, { flags }) => restoreOrder(ctx, clients, environment, flags),
+  },
+  prices: {
+    label: "prices push",
+    flags: ["env"],
+    refusesYes: true,
+    run: (ctx, clients, environment) => pricesPushOrder(ctx, clients, environment),
+  },
+  secrets: {
+    label: "secrets",
+    flags: ["env"],
+    refusesYes: true,
+    run: (ctx, clients, environment, { positionals, flags }) =>
+      secretsOrder(ctx, clients, environment, positionals, flags),
+  },
 };
 
 /** The global options that mean something here; the ones about recording an event do not. */
@@ -35,70 +87,41 @@ export const adminCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["env", "from", "accept-unverified", "device", ...GLOBAL_FLAGS]);
-  const order = positionals[1];
-  if (
-    order === undefined ||
-    ![
-      "devices",
-      "revoke-all-tokens",
-      "forget-device",
-      "compact",
-      "restore",
-      "prices",
-      "secrets",
-    ].includes(order) ||
-    (order === "prices" && positionals[2] !== "push")
-  ) {
+  const name = positionals[1];
+  const order = name !== undefined && Object.hasOwn(ORDERS, name) ? ORDERS[name] : undefined;
+  if (order === undefined || (name === "prices" && positionals[2] !== "push")) {
     throw new UsageError(USAGE);
   }
   // What this order does not take is refused, not ignored in silence.
-  for (const name of flags.keys()) {
-    if (!ORDER_FLAGS[order]?.includes(name) && !ADMIN_GLOBAL_FLAGS.includes(name)) {
-      throw new UsageError(
-        `--${name} no vale en «atlas admin ${order === "prices" ? "prices push" : order}»`,
-      );
+  for (const flag of flags.keys()) {
+    if (!order.flags.includes(flag) && !ADMIN_GLOBAL_FLAGS.includes(flag)) {
+      throw new UsageError(`--${flag} no vale en «atlas admin ${order.label}»`);
     }
   }
   // A device id may begin with a dash: after `--`, or as `--device <id>`.
   const flagged = stringFlag(flags, "device");
-  if (flagged !== undefined && (order !== "forget-device" || positionals[2] !== undefined)) {
+  if (flagged !== undefined && (name !== "forget-device" || positionals[2] !== undefined)) {
     throw new UsageError(
-      order === "forget-device"
+      name === "forget-device"
         ? "el dispositivo se da una sola vez: «forget-device -- <id>» o «forget-device --device <id>»"
-        : `--device no vale en «atlas admin ${order}»`,
+        : `--device no vale en «atlas admin ${order.label}»`,
     );
   }
   const id = flagged ?? positionals[2];
-  if (order === "forget-device" && id === undefined) {
+  if (name === "forget-device" && id === undefined) {
     throw new UsageError(
       "falta el dispositivo: los enseña «atlas admin devices»; si empieza por guion, escríbelo detrás de «--» o con --device <id>",
     );
   }
-  // A `--yes` is written before the list is on screen.
-  if (ctx.yes && ["forget-device", "compact", "restore", "prices", "secrets"].includes(order)) {
+  if (ctx.yes && order.refusesYes) {
     throw new UsageError(
-      `--yes no vale en «atlas admin ${order === "prices" ? "prices push" : order}»: se confirma escribiendo el nombre del entorno, con lo que se pierde delante (ADR-0032)`,
+      `--yes no vale en «atlas admin ${order.label}»: se confirma escribiendo el nombre del entorno, con lo que se pierde delante (ADR-0032)`,
     );
   }
   const environment = environmentFlag(flags);
   try {
     const clients = await adminClientsOf(ctx, flags);
-    switch (order) {
-      case "devices":
-        return await devicesOrder(ctx, clients);
-      case "revoke-all-tokens":
-        return await revokeAllOrder(ctx, clients);
-      case "forget-device":
-        return await forgetOrder(ctx, clients, environment, id as string);
-      case "compact":
-        return await compactOrder(ctx, clients, environment, flags);
-      case "prices":
-        return await pricesPushOrder(ctx, clients, environment);
-      case "secrets":
-        return await secretsOrder(ctx, clients, environment, positionals, flags);
-      default:
-        return await restoreOrder(ctx, clients, environment, flags);
-    }
+    return await order.run(ctx, clients, environment, { positionals, flags, id });
   } catch (error) {
     throw translateAwsFailure(error);
   }
