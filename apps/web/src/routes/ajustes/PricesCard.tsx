@@ -3,12 +3,11 @@
 // many assets have one and what is wrong when something is. The web never
 // downloads a price.
 
-import { createResource, createSignal, type JSX, Show } from "solid-js";
-import { Icon, Notice, Section } from "../../components/index.js";
+import { createResource, type JSX, Show } from "solid-js";
+import { Icon, Section } from "../../components/index.js";
 import { formatDate, formatInstantDate } from "../../format/date.js";
-import { toAppError } from "../../ledger/errors.js";
 import { store } from "../../ledger/state.js";
-import { type Said, saidText } from "./ecb-cloud-said.js";
+import { SaidNotice, useCardAction } from "./card-action.jsx";
 
 const prices = () => import("../../prices/quotes.js");
 
@@ -25,8 +24,7 @@ export const PricesCard = (): JSX.Element => {
     async ({ snapshot }) =>
       (await prices()).loadWebQuotes([...(snapshot?.state.assets.keys() ?? [])]),
   );
-  const [busy, setBusy] = createSignal(false);
-  const [said, setSaid] = createSignal<Said>();
+  const { busy, said, run } = useCardAction(() => void refetch());
 
   const latest = (): string | undefined => {
     let last: string | undefined;
@@ -45,54 +43,31 @@ export const PricesCard = (): JSX.Element => {
     if (chosen.length === 0) {
       return;
     }
-    setBusy(true);
-    setSaid(undefined);
-    try {
+    await run(async () => {
       const outcome = await (await prices()).importPriceFiles(
         await Promise.all(
           chosen.map(async (file) => ({ name: file.name, text: await file.text() })),
         ),
       );
-      setSaid(
-        outcome.kind === "imported"
-          ? {
-              tone: "info",
-              text: `Precios importados de ${outcome.assets.length === 1 ? "un activo" : `${outcome.assets.length} activos`}.${
-                outcome.ignored.length === 0
-                  ? ""
-                  : ` No se han importado ${outcome.ignored.map((name) => `«${name}»`).join(", ")}: no son precios.`
-              }`,
-            }
-          : {
-              tone: "caution",
-              text: `«${outcome.file}» no es un fichero de precios que se entienda: no se ha importado nada. Elige los ficheros de la carpeta prices que escribe la consola.`,
-            },
-      );
-    } catch (failure) {
-      setSaid({ tone: "danger", error: toAppError(failure) });
-    } finally {
-      setBusy(false);
-      input.value = "";
-      refetch();
-    }
+      return outcome.kind === "imported"
+        ? `Precios importados de ${outcome.assets.length === 1 ? "un activo" : `${outcome.assets.length} activos`}.${
+            outcome.ignored.length === 0
+              ? ""
+              : ` No se han importado ${outcome.ignored.map((name) => `«${name}»`).join(", ")}: no son precios.`
+          }`
+        : {
+            tone: "caution",
+            text: `«${outcome.file}» no es un fichero de precios que se entienda: no se ha importado nada. Elige los ficheros de la carpeta prices que escribe la consola.`,
+          };
+    });
+    input.value = "";
   };
 
-  const onForget = async (): Promise<void> => {
-    setBusy(true);
-    setSaid(undefined);
-    try {
+  const onForget = (): Promise<void> =>
+    run(async () => {
       await (await prices()).forgetPrices();
-      setSaid({
-        tone: "info",
-        text: "Precios importados borrados de este navegador. Las valoraciones que registras a mano siguen ahí.",
-      });
-    } catch (failure) {
-      setSaid({ tone: "danger", error: toAppError(failure) });
-    } finally {
-      setBusy(false);
-      refetch();
-    }
-  };
+      return "Precios importados borrados de este navegador. Las valoraciones que registras a mano siguen ahí.";
+    });
 
   return (
     <Section title="Precios automáticos">
@@ -124,9 +99,7 @@ export const PricesCard = (): JSX.Element => {
           </>
         )}
       </Show>
-      <Show when={said()}>
-        {(message) => <Notice severity={message().tone}>{saidText(message())}</Notice>}
-      </Show>
+      <SaidNotice said={said()} />
       <div class="button-row">
         <label class="file-button">
           <Icon name="import" class="icon-sm" />

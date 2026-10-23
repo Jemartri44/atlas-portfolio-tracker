@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { toAppError } from "../src/ledger/errors.js";
 import { errorOf } from "../src/ledger/failure-text.js";
 import { store } from "../src/ledger/state.js";
-import { saidText } from "../src/routes/ajustes/ecb-cloud-said.js";
+import { saidText } from "../src/routes/ajustes/card-action.jsx";
 import { MovementState } from "../src/routes/movimientos/MovementLine.jsx";
 import { createProblem, useFormProblems } from "../src/routes/registrar/form-problems.js";
 import PendingWrite from "../src/shell/PendingWrite.jsx";
