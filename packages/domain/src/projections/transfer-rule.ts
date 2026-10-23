@@ -84,13 +84,18 @@ export const transferBlock = (
 export const residenceAt = (state: LedgerState, recordedAt: IsoInstant): string | undefined =>
   settingsAt(state, madridDateOf(recordedAt)).settings.tax_residence;
 
-/** Applies the rule while replaying: the asset's flag fails, the rule of the law warns. */
+/**
+ * Applies the rule while replaying: the asset's flag fails, the rule of the law
+ * warns. A transfer that completes a request does not repeat a warning the
+ * request already raised (`requestId`).
+ */
 export const enforceTransfer = (
   state: LedgerState,
   eventId: string,
   from: TransferEnd,
   to: TransferEnd,
   recordedAt: IsoInstant,
+  requestId?: string,
 ): void => {
   const block = transferBlock(from, to, residenceAt(state, recordedAt));
   if (block === undefined) {
@@ -100,5 +105,10 @@ export const enforceTransfer = (
   if (block.code === "not_transferable") {
     throw new ProjectionError(block.code, eventId, block.message, details);
   }
-  addWarning(state, block.code, eventId, block.message, details);
+  const repeated = state.warnings.some(
+    (warning) => warning.event_id === requestId && warning.code === block.code,
+  );
+  if (!repeated) {
+    addWarning(state, block.code, eventId, block.message, details);
+  }
 };
