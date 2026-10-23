@@ -8,13 +8,15 @@ import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { corporateActionDraft } from "@atlas/domain/tools";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createMemo, createSignal, type JSX, Show } from "solid-js";
-import { ClosedYearNotice, Notice, Tag } from "../../../components/index.js";
+import { Notice, Tag } from "../../../components/index.js";
 import { nameIndex } from "../../../format/names.js";
 import { toAppError } from "../../../ledger/errors.js";
+import { errorOf } from "../../../ledger/failure-text.js";
 import { attempt } from "../../../ledger/query.js";
 import { store, today } from "../../../ledger/state.js";
 import { closedYearsOfDraft, previewDraft, recordDraft } from "../../../ledger/write.js";
 import { PageHeader } from "../../../shell/PageHeader.jsx";
+import { SessionNotice } from "../../../shell/SessionNotice.jsx";
 import {
   CORPORATE_COMMON,
   corporateForm,
@@ -28,8 +30,8 @@ import { FormActions } from "../FormActions.jsx";
 import { FormFields } from "../FormFields.jsx";
 import { NoForm, Reloaded } from "../FormNotices.jsx";
 import { createProblem } from "../form-problems.js";
-import { Preview } from "../Preview.jsx";
 import { createWarned } from "../warned.js";
+import { EffectSection } from "./EffectSection.jsx";
 import { Fractions } from "./Fractions.jsx";
 import { feeLinesError, toCorporateParams } from "./params.js";
 
@@ -50,6 +52,7 @@ export default function CorporateFormRoute(): JSX.Element {
         const [duplicate, setDuplicate] = createSignal<readonly string[] | undefined>(undefined);
         const warned = createWarned();
         const [conflict, setConflict] = createSignal(false);
+        const [signedOut, setSignedOut] = createSignal(false);
         /** The filed returns it reaches, said before «Registrar» (ADR-0020). */
         const [closed, setClosed] = createSignal<readonly ClosedYearImpact[]>([]);
         const names = nameIndex(snapshot.state);
@@ -121,6 +124,7 @@ export default function CorporateFormRoute(): JSX.Element {
           }
           setProblem(undefined);
           setDuplicate(undefined);
+          setSignedOut(false);
           const result = await recordDraft(built.draft as never, {
             confirmDuplicate: warned.confirms(built.draft, confirmDuplicate),
           });
@@ -138,9 +142,13 @@ export default function CorporateFormRoute(): JSX.Element {
             setPreview(undefined);
             return;
           }
-          if (result.failure.kind === "error") {
-            refuse(result.failure.error);
+          if (result.failure.kind === "signed_out") {
+            setSignedOut(true);
+            return;
           }
+          // Whatever else it was — an answer that was lost, dependants — is said: pressing
+          // «Registrar» and seeing nothing is the one thing a form must not do.
+          refuse(errorOf(result.failure));
         };
 
         return (
@@ -163,6 +171,9 @@ export default function CorporateFormRoute(): JSX.Element {
 
                 <Show when={conflict()}>
                   <Reloaded />
+                </Show>
+                <Show when={signedOut()}>
+                  <SessionNotice expired onRenewed={() => setSignedOut(false)} />
                 </Show>
 
                 <div class="register">
@@ -198,30 +209,15 @@ export default function CorporateFormRoute(): JSX.Element {
 
                   <Show when={preview()}>
                     {(shown) => (
-                      <section class="effect" aria-label="El efecto">
-                        <Preview preview={shown()} names={names} />
-                        <ClosedYearNotice impacts={closed()} />
-                        <Notice severity="info" title="Guarda el documento">
-                          Copia la nota del emisor a tu carpeta de documentos: tus datos guardan la
-                          referencia, no el archivo.
-                        </Notice>
-                        <FormActions problem={problem()}>
-                          <button
-                            type="button"
-                            class="secondary"
-                            onClick={() => setPreview(undefined)}
-                          >
-                            Volver a los datos
-                          </button>
-                          <button
-                            type="button"
-                            disabled={store.writing()}
-                            onClick={() => void onConfirm()}
-                          >
-                            Registrar
-                          </button>
-                        </FormActions>
-                      </section>
+                      <EffectSection
+                        preview={shown()}
+                        names={names}
+                        closed={closed()}
+                        problem={problem()}
+                        writing={store.writing()}
+                        onBack={() => setPreview(undefined)}
+                        onConfirm={() => void onConfirm()}
+                      />
                     )}
                   </Show>
                 </div>
