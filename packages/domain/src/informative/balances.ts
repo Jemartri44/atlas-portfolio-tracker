@@ -107,14 +107,14 @@ export const quarterAverages = (
   const appeared = new Map<AccountId, CivilDate>();
   const moves = new Set<CivilDate>();
   // The cash at the end of the last day before the quarter, and at the end of
-  // each later day that had an operation.
+  // each day of it that had an operation.
   let carried = new Map<string, Money>();
   const closings = new Map<CivilDate, Map<string, Money>>();
   const state = projectLedger(events, {
     onDate: (date, at) => {
       if (date < open) {
         carried = new Map(at.cash);
-      } else {
+      } else if (date <= end) {
         closings.set(date, new Map(at.cash));
       }
     },
@@ -147,7 +147,8 @@ export const quarterAverages = (
   }
   // Every day the balance can change: the start of each account, every day of
   // the quarter with an operation, and every day an account opened or closed.
-  const marks = new Set<CivilDate>([...moves, ...starts.values()]);
+  // An account that starts after the year has no mark in it.
+  const marks = new Set<CivilDate>([...moves, ...[...starts.values()].filter((day) => day <= end)]);
   for (const list of changes.values()) {
     for (const [when] of list) {
       if (when >= open && when <= end) {

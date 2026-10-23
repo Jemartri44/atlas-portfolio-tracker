@@ -66,3 +66,19 @@ describe("the 720 of a year in which the account opens", () => {
     expect(item?.value_eur?.amount.toString()).toBe("7000");
   });
 });
+
+describe("an account that starts after the year", () => {
+  it("does not move the average of the others", () => {
+    const b = new LedgerBuilder();
+    b.settings(SETTINGS);
+    b.account("acc_a", { platform: "ibkr", country: "IE" });
+    b.account("acc_b", { platform: "ibkr", country: "FR" });
+    b.deposit({ account_id: "acc_a", value_date: "2027-03-01", amount: "60000" });
+    b.deposit({ account_id: "acc_a", value_date: "2028-01-15", amount: "40000" });
+    b.deposit({ account_id: "acc_b", value_date: "2028-02-01", amount: "5000" });
+    const items = accountsOf(b.build(), 2027).items;
+    expect(items.map((item) => item.account_id)).toEqual(["acc_a"]);
+    expect(items[0]?.q4_average_eur?.amount.toString()).toBe("60000");
+    expect(items[0]?.balances?.[0]?.days).toBe(92);
+  });
+});
