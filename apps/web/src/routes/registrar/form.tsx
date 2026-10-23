@@ -25,7 +25,7 @@ const draftFor = async (
     return undefined;
   }
   try {
-    const draft = await (await import("../../ledger/draft-store.js")).findDraft(id);
+    const draft = await (await import("../../drafts/store.js")).findDraft(id);
     return draft === undefined || draft.event.type !== spec.type
       ? { kind: "gone" }
       : { kind: "draft", id, values: valuesOfEvent(spec, draft.event) };

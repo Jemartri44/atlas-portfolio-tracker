@@ -22,7 +22,7 @@
 
 import { createEffect, type JSX, onCleanup, onMount } from "solid-js";
 import uPlot from "../../../vendor/uplot/uPlot.js";
-import { store, usePrivacy } from "../../ledger/state.js";
+import { privacy, theme } from "../../shell/preferences.js";
 import { gapsOf } from "./gaps.js";
 import { type ChartSeries, type ChartSpec, chartOptions, hasIsolatedPoint } from "./options.js";
 
@@ -47,7 +47,6 @@ const DEFAULT_HEIGHT = 184;
 export { type ChartSeries, type ChartSpec, chartOptions, gapsOf, hasIsolatedPoint };
 
 export const Chart = (props: ChartProps): JSX.Element => {
-  const privacy = usePrivacy();
   let host: HTMLDivElement | undefined;
   let plot: uPlot | undefined;
   let observer: ResizeObserver | undefined;
@@ -121,7 +120,7 @@ export const Chart = (props: ChartProps): JSX.Element => {
     void props.x;
     void props.series;
     void privacy();
-    void store.theme();
+    void theme();
     if (plot !== undefined) {
       build();
     }

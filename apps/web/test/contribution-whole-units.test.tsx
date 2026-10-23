@@ -13,9 +13,9 @@ import {
   settingsAt,
 } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
-import { store } from "../src/ledger/state.js";
 import { ContributionCard } from "../src/routes/cartera/ContributionCard.jsx";
 import Cartera from "../src/routes/cartera/index.jsx";
+import { setPrivacy } from "../src/shell/preferences.js";
 import { contributionView } from "../src/view-models/core/index.js";
 import { totalLeftover, unitPricesOf, wholeUnitsFor } from "../src/view-models/core/whole-units.js";
 import { goldenEvents, goldenText } from "./helpers/golden.js";
@@ -149,11 +149,11 @@ describe("the card of the contribution, whole units", () => {
 
   it("masks the units and the leftover with the privacy mode on", async () => {
     await openLedger(asEtfs());
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show(`/cartera?fecha=${DATE}`, Cartera);
     const line = host.querySelector("[data-testid=whole-units]");
     expect(line?.querySelectorAll(".mask").length).toBe(2);
-    store.setPrivacy(false);
+    setPrivacy(false);
   });
 });
 
@@ -239,12 +239,12 @@ describe("the card, further", () => {
     const view = contributionView(plan, undefined, prices);
     expect(view.wholeLeftover).toBeDefined();
     const screen = () => <ContributionCard view={view} error={undefined} />;
-    store.setPrivacy(true);
+    setPrivacy(true);
     const masked = await show("/", screen);
     const note = masked.querySelector("[data-testid=whole-leftover]");
     expect(text(note)).toContain("sobrarían");
     expect(note?.querySelector(".mask")).not.toBeNull();
-    store.setPrivacy(false);
+    setPrivacy(false);
     const shown = await show("/", screen);
     const open = shown.querySelectorAll("[data-testid=whole-leftover]");
     expect(open[open.length - 1]?.querySelector(".mask")).toBeNull();

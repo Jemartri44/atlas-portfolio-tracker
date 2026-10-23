@@ -12,10 +12,10 @@
   },
   "include": ["src", "test", "vite.config.ts", "../../packages/adapters/test/fake-idb.ts"],
   "exclude": [
-    "test/sync/api-support.ts",
+    "test/cloud/api-support.ts",
     "test/write/cloud-write.test.tsx",
-    "test/sync/cloud-boot.test.tsx",
-    "test/sync/cloud-device.test.tsx",
+    "test/cloud/cloud-boot.test.tsx",
+    "test/cloud/cloud-device.test.tsx",
     "test/ecb-drafts.test.tsx"
   ],
   "references": [

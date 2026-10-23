@@ -18,8 +18,9 @@ import { createMemo, createResource, type JSX, Show } from "solid-js";
 import { EmptyState, Notice, Section } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
 import { toAppError } from "../../ledger/errors.js";
-import { store, today, usePrivacy } from "../../ledger/state.js";
+import { store, today } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
+import { privacy } from "../../shell/preferences.js";
 import { boxesView, informativeView, yearView } from "../../view-models/fiscal/index.js";
 import { RequireLedger } from "../guard.jsx";
 import { BaseCard } from "./BaseCard.jsx";
@@ -66,7 +67,6 @@ const yearsOf = (
 };
 
 export default function FiscalRoute(): JSX.Element {
-  const privacy = usePrivacy();
   return (
     <RequireLedger skeleton={8}>
       {(snapshot) => {

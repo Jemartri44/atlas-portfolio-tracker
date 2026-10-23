@@ -6,8 +6,8 @@
 
 import { render } from "solid-js/web";
 import { afterEach, describe, expect, it } from "vitest";
+import { readTokens, revokeToken } from "../../src/auth/devices.js";
 import { DevicesCard } from "../../src/routes/ajustes/DevicesCard.jsx";
-import { readTokens, revokeToken } from "../../src/sync/devices.js";
 
 const settle = async (): Promise<void> => {
   for (let turn = 0; turn < 20; turn += 1) {
