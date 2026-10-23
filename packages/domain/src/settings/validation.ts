@@ -205,7 +205,7 @@ const checkTreatyRates = (raw: UnknownRecord): void => {
   }
 };
 
-/** The brackets of the savings base: the screens print them, so each one needs a rate and, but the last, a limit. */
+/** The brackets of the savings base: the screens print them, so each needs a rate and may carry a limit. */
 const checkSavingsBrackets = (raw: UnknownRecord): void => {
   if (!("savings_tax_brackets" in raw)) {
     return;
