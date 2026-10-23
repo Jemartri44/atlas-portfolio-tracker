@@ -15,11 +15,11 @@ import { yearOf } from "@atlas/domain";
 import { informativeReturn, taxBoxes, taxYear } from "@atlas/domain/fiscal";
 import { A } from "@solidjs/router";
 import { createMemo, createResource, For, type JSX, Show } from "solid-js";
-import { EmptyState, ErrorView, Notice, Section } from "../../components/index.js";
+import { EmptyState, Notice, Section } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
 import { toAppError } from "../../ledger/errors.js";
 import { attempt } from "../../ledger/query.js";
-import { type AppError, store, today } from "../../ledger/state.js";
+import { store, today } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { privacy } from "../../shell/preferences.js";
 import { boxesView, informativeView, yearView } from "../../view-models/fiscal/index.js";
@@ -31,8 +31,10 @@ import { DoubtfulCard, SettledCard } from "./CriteriaCards.jsx";
 import { FilingCard } from "./FilingCard.jsx";
 import { InformativeCard } from "./InformativeCard.jsx";
 import { LossesCard } from "./LossesCard.jsx";
+import { PartFailed } from "./PartFailed.jsx";
 import { RateNotes } from "./RateNotes.jsx";
 import { useYear, type YearChoice, YearPicker } from "./YearPicker.jsx";
+import { yearsOf } from "./years.js";
 
 /**
  * What sets a ledger up without moving anything. A ledger that only has these has nothing to
@@ -46,33 +48,6 @@ const SETUP = new Set([
   "asset_updated",
   "settings_changed",
 ]);
-
-/** A part of the screen that could not be calculated: its reason, in its place and in Spanish. */
-const PartFailed = (props: { title: string; error: AppError; half?: boolean }): JSX.Element => (
-  <Section title={props.title} class={props.half === true ? "span-6" : "span-12"}>
-    <ErrorView error={props.error} title="No se ha podido calcular esta parte" />
-  </Section>
-);
-
-/**
- * The years worth offering: from the first one with figures or with a return
- * to the current one, newest first. A ledger dated ahead of today —which
- * happens while a year is being caught up on— keeps its own years in the list
- * instead of falling off the end of it.
- */
-const yearsOf = (
-  gains: readonly { fiscal_date: string }[],
-  filings: readonly { tax_year: number }[],
-  current: number,
-): number[] => {
-  const years = [
-    ...gains.map((gain) => yearOf(gain.fiscal_date)),
-    ...filings.map((filing) => filing.tax_year),
-  ];
-  const first = Math.min(...years, current - 1);
-  const last = Math.max(...years, current);
-  return Array.from({ length: last - first + 1 }, (_, index) => last - index);
-};
 
 export default function FiscalRoute(): JSX.Element {
   return (
