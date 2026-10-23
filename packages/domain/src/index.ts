@@ -176,6 +176,7 @@ export {
   type VersionCount,
 } from "./usecases/compact.js";
 export type { UseCaseDeps } from "./usecases/deps.js";
+export { loadAndProject, type ProjectedLedger } from "./usecases/load-and-project.js";
 export {
   type EventEffect,
   type EventPreview,
@@ -184,7 +185,6 @@ export {
   previewEvent,
   previewReversal,
 } from "./usecases/preview-event.js";
-export { loadAndProject, type ProjectedLedger } from "./usecases/project-ledger.js";
 export {
   completeDraft,
   duplicatesOf,

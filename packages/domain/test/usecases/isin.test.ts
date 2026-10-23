@@ -108,7 +108,7 @@ describe("recording an ISIN another asset already has", () => {
   });
 });
 
-describe("the catalogue in force, not the raw lines (verifier of feature 009)", () => {
+describe("the catalogue in force, not the raw lines", () => {
   it("accepts the ISIN of an asset whose creation was reversed", async () => {
     // The natural way to fix a wrong type or currency: reverse the creation
     // and create the asset again. The ISIN is free once the first is gone.

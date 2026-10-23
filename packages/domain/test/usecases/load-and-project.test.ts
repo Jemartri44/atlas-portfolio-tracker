@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ArchiveExistsError, ConflictError } from "../../src/errors.js";
 import { encodeLine } from "../../src/schema/line.js";
-import { loadAndProject } from "../../src/usecases/project-ledger.js";
+import { loadAndProject } from "../../src/usecases/load-and-project.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 import { TestStore } from "../memory-store.js";
 import { TEST_SCHEMA_V2 } from "../schema/test-schema.js";
