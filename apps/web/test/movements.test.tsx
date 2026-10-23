@@ -8,10 +8,10 @@ import { ledgerEntries, projectLedger } from "@atlas/domain";
 import { afterEach, describe, expect, it } from "vitest";
 import { eventReferences, inSentence } from "../src/format/events.js";
 import { nameIndex } from "../src/format/names.js";
-import { store } from "../src/ledger/state.js";
 import Detail from "../src/routes/movimientos/detail.jsx";
 import Movimientos from "../src/routes/movimientos/index.jsx";
 import { movementGlyph } from "../src/routes/movimientos/MovementLine.jsx";
+import { setPrivacy } from "../src/shell/preferences.js";
 import { byMonth, type MovementRow, movementRows } from "../src/view-models/index.js";
 import { draftSentence, movementSentence } from "../src/view-models/sentence.js";
 import { goldenEvents } from "./helpers/golden.js";
@@ -167,7 +167,7 @@ describe("the sentence of a movement", () => {
 
   it("opens the detail, masked with its units when the privacy mode is on", async () => {
     const buy = entries.find((one) => one.event.type === "buy" && one.status === "current");
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show(`/movimientos/${buy?.event.id}`, Detail, "/movimientos/:id");
     // What is seen, without what is said only to a screen reader.
     const seen = host.querySelector(".sentence")?.cloneNode(true) as Element;

@@ -225,12 +225,8 @@ const LAZY_ONLY = [
   { path: "/packages/domain/src/config/", what: "la configuración local" },
   // Block 5: the drafts, their store and their counter. The frame keeps only
   // the place of the counter; reading and painting it arrive later.
-  { path: "/src/ledger/draft-store.ts", what: "los borradores" },
-  { path: "/src/ledger/drafts.ts", what: "los borradores" },
-  { path: "/src/shell/draft-counter.ts", what: "el contador de borradores" },
+  { path: "/src/drafts/", what: "los borradores y su contador" },
   { path: "/src/routes/registrar/borradores.tsx", what: "la lista de borradores" },
-  // Block 6: the correction chain of the rates after a change of rule.
-  { path: "/src/ledger/rate-corrections.ts", what: "la corrección de los tipos del BCE" },
   // Feature 013: **nothing of the automatic prices on the boot path**, from its
   // first commit. The door, the folder of the domain and the reader of the web.
   { path: "/packages/domain/src/quotes/", what: "los precios automáticos" },
@@ -265,7 +261,7 @@ const LAZY_ONLY = [
   // the devices and the screens of the sync are a lazy section of Ajustes.
   { path: "/packages/domain/src/access/", what: "las reglas del acceso" },
   { path: "/packages/domain/src/access.ts", what: "la puerta del acceso" },
-  { path: "/src/sync/", what: "la sesión y la sincronización de la web" },
+  { path: "/src/auth/", what: "la sesión y los dispositivos de la web" },
   { path: "/src/routes/ajustes/sync/", what: "la sección de sincronización de Ajustes" },
   { path: "/packages/domain/src/sync.ts", what: "la puerta de la sincronización" },
   { path: "/packages/domain/src/ports/remote-ledger.ts", what: "el puerto del remoto" },
@@ -302,11 +298,6 @@ const kb = (value) => `${(value / 1024).toFixed(1)} KB`;
  * compiled package.
  */
 const FORBIDDEN_IN_WEB = [
-  // Feature 014 (D-Q17) kept the client of the sync, its orchestration, the
-  // engine of the domain and the writer of the store out of the web until
-  // P2 and P3 were in. They are (feature 015, E4), and the web configures the
-  // sync from one lazy module, `src/sync/engine.ts`: LAZY_ONLY keeps all of it
-  // off the boot, and `tests/api-access.test.ts` keeps it to that module.
   // The rules of the access are the API's, never the web's.
   {
     anywhere: /(^|\/)packages\/domain\/(src|dist)\/access(\.[jt]s$|\/)/,

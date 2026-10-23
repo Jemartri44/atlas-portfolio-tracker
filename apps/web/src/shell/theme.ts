@@ -6,11 +6,7 @@
 // No colour is written here: each tag remembers its own, and a forced theme
 // borrows the colour of the tag written for that scheme.
 
-import type { Theme } from "../ledger/state.js";
-
-/** Anything stored that is not a theme follows the system. */
-export const themeFromPreference = (stored: string | undefined): Theme =>
-  stored === "light" || stored === "dark" ? stored : "system";
+import type { Theme } from "./preferences.js";
 
 type Scheme = "light" | "dark";
 

@@ -7,10 +7,10 @@
 // ones of the rest of the application.
 
 import { createSignal, type JSX, Match, Show, Switch } from "solid-js";
+import { signInHref } from "../auth/session.js";
 import { Notice } from "../components/Notice.jsx";
 import type { SignedOutReason } from "../ledger/state.js";
 import { store } from "../ledger/state.js";
-import { signInHref } from "../sync/session.js";
 
 const SENTENCES: Readonly<Record<SignedOutReason, string>> = {
   signed_out: "Entra con tu cuenta de Google para ver tus datos.",

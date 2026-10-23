@@ -1,5 +1,5 @@
-import { readTokens, revokeToken } from "../../src/sync/devices.js";
-import { readSession, signOut } from "../../src/sync/session.js";
+import { readTokens, revokeToken } from "../../src/auth/devices.js";
+import { readSession, signOut } from "../../src/auth/session.js";
 
 /** Drives the web's callers of the API (but the boot, which has its own test) and reports how each asked. */
 export const listCalls = async (): Promise<{ url: string; cache: RequestCache | undefined }[]> => {

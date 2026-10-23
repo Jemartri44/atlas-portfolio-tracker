@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { axisPercents } from "../src/components/chart/axis.js";
 import { type ChartSeries, chartOptions } from "../src/components/chart/Chart.jsx";
 import { SeriesCard } from "../src/components/chart/SeriesCard.jsx";
-import { store } from "../src/ledger/state.js";
+import { setPrivacy } from "../src/shell/preferences.js";
 import { bucketIndexPlot, gapRule, secondsOf } from "../src/view-models/series.js";
 
 const disposers: (() => void)[] = [];
@@ -20,7 +20,7 @@ afterEach(() => {
     dispose();
   }
   document.body.innerHTML = "";
-  store.setPrivacy(false);
+  setPrivacy(false);
 });
 
 const mount = (component: () => unknown): HTMLElement => {
@@ -220,7 +220,7 @@ describe("the bucket against the index, in percent", () => {
 });
 
 const card = (privacy: boolean) => {
-  store.setPrivacy(privacy);
+  setPrivacy(privacy);
   const x = ["2027-01-01", "2027-02-01", "2027-03-01", "2027-04-01", "2027-05-01", "2027-06-01"];
   const known = [null, null, null, null, 3.5, 4];
   return mount(() => (

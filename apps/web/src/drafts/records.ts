@@ -1,4 +1,4 @@
-// Saving an operation as a draft, and confirming one, from the forms. Apart from `draft-store.ts`
+// Saving an operation as a draft, and confirming one, from the forms. Apart from `store.ts`
 // so that the counter of the frame does not carry the write flows with it.
 //
 // The rules are the domain's (`preparePendingDraft`, `recordPendingDraft`): only
@@ -19,12 +19,13 @@ import {
 } from "@atlas/domain/ecb";
 import { RemoteError } from "@atlas/domain/sync";
 import type { WebHistory } from "../ecb/history.js";
+import { toAppError } from "../ledger/errors.js";
+import { signedOutReason } from "../ledger/session-errors.js";
+import type { AppError } from "../ledger/state.js";
+import { store as ledger, requireDeps, type SignedOutReason } from "../ledger/state.js";
+import { runWrite, type WriteFailure, type WriteResult } from "../ledger/write.js";
 import { doneUrl } from "../routes/movimientos/Rectified.jsx";
-import { closeDraft, drafts, findDraft, refreshDrafts } from "./draft-store.js";
-import { toAppError } from "./errors.js";
-import { signedOutReason } from "./session-errors.js";
-import { type AppError, store as ledger, requireDeps, type SignedOutReason } from "./state.js";
-import { runWrite, type WriteFailure, type WriteResult } from "./write.js";
+import { closeDraft, drafts, findDraft, refreshDrafts } from "./store.js";
 
 interface SavedDraft {
   id: string;

@@ -3,10 +3,10 @@
 // device: the session is the cookie the API set, and this page only reads it.
 
 import { createSignal, type JSX, Show } from "solid-js";
+import { signOut } from "../../auth/session.js";
 import { Notice, Section } from "../../components/index.js";
 import { formatInstantDate } from "../../format/date.js";
 import { store } from "../../ledger/state.js";
-import { signOut } from "../../sync/session.js";
 import { DevicesCard } from "./DevicesCard.jsx";
 
 const when = (instant: string): string => {

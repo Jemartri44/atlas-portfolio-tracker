@@ -8,8 +8,8 @@ import { type LedgerEvent, netWorthSeries } from "@atlas/domain";
 import { bookCashSeries, contributedSeries } from "@atlas/domain/charts";
 import { describe, expect, it } from "vitest";
 import { type ChartSeries, chartOptions, gapsOf } from "../src/components/chart/Chart.jsx";
-import { store } from "../src/ledger/state.js";
 import Resumen from "../src/routes/resumen/index.jsx";
+import { setPrivacy } from "../src/shell/preferences.js";
 import {
   netWorthPlot,
   secondsOf,
@@ -212,7 +212,7 @@ describe("the evolution of the summary", () => {
 
   it("puts what was contributed in the equivalent table, with its figures masked in private", async () => {
     today("2027-01-10");
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show("/", Resumen);
     const table = host.querySelector(".summary-evolution table");
     expect(text(table?.querySelector("thead"))).toContain("Aportado");

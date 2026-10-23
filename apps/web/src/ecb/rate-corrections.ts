@@ -10,9 +10,9 @@ import {
   writeRateCorrections,
 } from "@atlas/domain/ecb";
 import { type ClosedYearImpact, closedYearImpact } from "@atlas/domain/fiscal";
-import { loadWebHistory } from "../ecb/history.js";
-import { requireDeps } from "./state.js";
-import { runWrite, type WriteResult } from "./write.js";
+import { requireDeps } from "../ledger/state.js";
+import { runWrite, type WriteResult } from "../ledger/write.js";
+import { loadWebHistory } from "./history.js";
 
 /** The reason written into every reversal of the chain. */
 const CORRECTION_REASON =
