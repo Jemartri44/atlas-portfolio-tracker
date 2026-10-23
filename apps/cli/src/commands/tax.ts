@@ -27,7 +27,7 @@ import { eur } from "../output/format.js";
 import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
 import { rateFindingsOf } from "./rates.js";
-import { render, yearArgument } from "./shared.js";
+import { render, warnIfLedgerMissing, yearArgument } from "./shared.js";
 import { renderBoxes } from "./tax-boxes.js";
 
 const USAGE = "uso: atlas tax <año> [--lots] [--boxes] [--json]";
@@ -515,6 +515,7 @@ export const taxCommand = async (
   if (year === undefined) {
     throw new UsageError(USAGE);
   }
+  await warnIfLedgerMissing(ctx);
   const { events } = await ctx.deps.store.load();
   const today = todayInMadrid(ctx.deps.clock);
   // The findings of the ECB check note the lines that depend on them; they

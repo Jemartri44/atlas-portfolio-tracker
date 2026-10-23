@@ -192,6 +192,13 @@ describe("the prompt with no echo", () => {
     expect(shown.join("")).not.toContain(SENTINEL);
   });
 
+  it("stops the order on Ctrl-C instead of crashing with the stack of the prompt", async () => {
+    const input = Object.assign(new PassThrough(), { isTTY: true });
+    const asked = askWithoutEcho("valor: ", { input, output: new PassThrough() });
+    input.write("abc\u0003");
+    await expect(asked).rejects.toMatchObject({ code: "prompt_interrupted" });
+  });
+
   it("answers nothing without a terminal", async () => {
     expect(await askWithoutEcho("x", { input: new PassThrough(), output: new PassThrough() })).toBe(
       undefined,

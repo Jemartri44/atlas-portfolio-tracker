@@ -4,6 +4,7 @@ import {
   ASSET_TYPES,
   accounts,
   assets,
+  isCivilDate,
   type LedgerEvent,
   type LedgerState,
   loadAndProject,
@@ -37,6 +38,7 @@ import {
   confirmAndRecord,
   fieldOf,
   loadForQuery,
+  loadForRecording,
   renderQuery,
 } from "./shared.js";
 
@@ -417,7 +419,11 @@ export const settingsCommand = async (
   if (action === "show") {
     assertKnownFlags(flags, ["at", ...GLOBAL_FLAGS]);
     const { state } = await loadForQuery(ctx);
-    const at = stringFlag(flags, "at") ?? todayInMadrid(ctx.deps.clock);
+    const raw = stringFlag(flags, "at");
+    if (raw !== undefined && !isCivilDate(raw)) {
+      throw new UsageError(`--at debe ser una fecha YYYY-MM-DD válida (recibido: ${raw})`);
+    }
+    const at = raw ?? todayInMadrid(ctx.deps.clock);
     const resolution = settingsAt(state, at);
     renderQuery(
       ctx,
@@ -452,7 +458,7 @@ export const settingsCommand = async (
       ...SETTINGS_BOOLEANS,
       ...GLOBAL_FLAGS,
     ]);
-    const { state, events } = await loadForQuery(ctx);
+    const { state, events } = await loadForRecording(ctx);
     const current = settingsAt(state, todayInMadrid(ctx.deps.clock)).settings;
     const patch: Record<string, unknown> = {};
     const rules = stringFlag(flags, "fiscal-date-rule");
@@ -516,6 +522,11 @@ export const settingsCommand = async (
     }
     if (counts || doesNot) {
       patch.wash_sale_transfer_counts = counts;
+    }
+    if (Object.keys(patch).length === 0) {
+      throw new UsageError(
+        "no se indica ningún ajuste: un cambio vacío registraría la configuración tal cual, sin cambiarla",
+      );
     }
     const settings = mergeSettings(current, patch as Partial<Settings>);
     if (!(await confirmSilencedWarnings(ctx, state, current, settings))) {
