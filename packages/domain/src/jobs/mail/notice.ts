@@ -29,6 +29,13 @@ const CODES: readonly string[] = [
   "ledger_absent",
   "ledger_unavailable",
   "ledger_unreadable",
+  "ledger_invalid",
+  // Why the closes could not be downloaded at all.
+  "price_keys_unavailable",
+  "price_key_invalid",
+  "prices_conflict",
+  "cloud_symbols_read_only",
+  "cloud_purge_refused",
 ];
 
 /** What the dispatch knows of the streak besides its code and subject. */

@@ -44,6 +44,26 @@ describe("the mail of a streak", () => {
     });
   });
 
+  it("says why the closes could not be downloaded, by the code of the task", () => {
+    for (const outcome of [
+      "ledger_invalid",
+      "price_keys_unavailable",
+      "price_key_invalid",
+      "prices_conflict",
+      "cloud_symbols_read_only",
+      "cloud_purge_refused",
+    ]) {
+      const mail = noticeMail(
+        { code: "task_failed", subject: "prices_update" },
+        { ...FACTS, outcome },
+        "https://a.example",
+      );
+      expect(mail?.body).toContain(
+        `Ha fallado la descarga de los precios de cierre en el periodo 2026-10 (código ${outcome})`,
+      );
+    }
+  });
+
   it("says a code of the outcome it does not know as unknown, never as it came", () => {
     const mail = noticeMail(
       { code: "task_failed", subject: "ecb_update" },
