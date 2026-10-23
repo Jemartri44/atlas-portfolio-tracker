@@ -128,7 +128,7 @@ apps/cli/src/
 ├── output/messages.ts              # traducción al español de los avisos nuevos
 └── main.ts                         # registro de comandos y USAGE
 
-tests/architecture.test.ts          # + puerta única de precios y módulos fiscales sin precios
+tests/architecture/          # + puerta única de precios y módulos fiscales sin precios
 ```
 
 **Decisión de estructura**: se mantiene la de ADR-0007. Toda regla de negocio vive en `packages/domain` como función pura `(state, …) → resultado`; `apps/cli` compone, formatea y pregunta. Ni una decisión de negocio en la CLI, para que la web de la Ronda 7 la reutilice tal cual.

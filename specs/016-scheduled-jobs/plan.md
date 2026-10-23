@@ -92,7 +92,7 @@ apps/api/src/handler.ts             (E1) tras la cookie de una sesión web, avan
 apps/cli/src/commands/admin.ts      (E2) atlas admin prices push
 apps/cli/src/commands/prices.ts     (E3) update desde la API; --from-sources
 apps/web/src/ecb/, src/prices/      (E3) la descarga de la nube, perezosa
-tests/architecture.test.ts, tests/api-access.test.ts, tests/jobs-access.test.ts (nuevo), tests/jobs-package.test.ts (nuevo)
+tests/architecture/, tests/api-access.test.ts, tests/jobs-access.test.ts (nuevo), tests/jobs-package.test.ts (nuevo)
 ```
 
 ## 2. La partición, tal como la sigo

@@ -25,7 +25,7 @@ El orden de trabajo no es negociable y va de abajo arriba, porque cada capa hace
 
 **Almacenamiento**: el mismo `ledger.jsonl` (ADR-0002, ADR-0006). En escritorio, el fichero del disco a través de la File System Access API (solo Chrome/Edge: `research.md` §4); en el resto —incluido **todo** el móvil—, IndexedDB con importación y exportación. Esta feature **no** toca el esquema del libro: cero tipos de evento nuevos, cero cambios de forma, `schema_version` sigue en 1 y el *golden* no se regenera.
 
-**Tests**: Vitest, proyecto nuevo `web` sin entorno de DOM (decisión (k)). `packages/domain` sigue al 100 % de líneas y ramas, bloqueante en CI, para lo que se añada en el paso 3. En `apps/web` no hay umbral numérico pero sí tests reales de la lógica de presentación y de la capa de acciones, más tres reglas nuevas en `tests/architecture.test.ts`.
+**Tests**: Vitest, proyecto nuevo `web` sin entorno de DOM (decisión (k)). `packages/domain` sigue al 100 % de líneas y ramas, bloqueante en CI, para lo que se añada en el paso 3. En `apps/web` no hay umbral numérico pero sí tests reales de la lógica de presentación y de la capa de acciones, más tres reglas nuevas en `tests/architecture/`.
 
 **Plataforma**: navegador, móvil primero (360 px de referencia), sin servidor, sin autenticación y sin red (ADR-0019). Hasta la Fase 4 se sirve desde `localhost`, que es contexto seguro y basta para la File System Access API y para el *service worker*.
 
@@ -108,7 +108,7 @@ apps/web/
 ├── package.json                  @atlas/web
 ├── tsconfig.json                 compuesto + noEmit, DOM, jsx preserve
 ├── vite.config.ts                solid, pwa, alias de @atlas/*, sin minify: "esbuild"
-├── scripts/check-bundle.mjs      falla el build si aparece node:*, una URL ajena o se pasa el presupuesto
+├── apps/web/scripts/check-bundle.mjs      falla el build si aparece node:*, una URL ajena o se pasa el presupuesto
 ├── public/                       iconos del manifiesto (propios, sin fuentes)
 ├── vendor/pico/                  pico.css + VENDOR.md + licencia
 ├── src/
@@ -140,7 +140,7 @@ packages/domain/src/                     (sujeto a Q1-Q4)
 ├── projections/ledger-entries.ts        NUEVO: lista del libro ordenada, con estado y filtros
 └── projections/settings-impact.ts       + avisos que un cambio de configuración silencia
 
-tests/architecture.test.ts               + 3 reglas: puerta de Amount, aislamiento del bundle, sin use:
+tests/architecture/               + 3 reglas: puerta de Amount, aislamiento del bundle, sin use:
 ```
 
 **Decisión de estructura**: por **responsabilidad**, no por tipo de fichero, y con dos carpetas que el árbol del prompt no nombra y que se justifican solas:
@@ -181,7 +181,7 @@ tests/architecture.test.ts               + 3 reglas: puerta de Amount, aislamien
 
 **D14 — Mensajes en español por `code`, con test anti-deriva bidireccional** (decisión (i)). `format/messages/` traduce los códigos de error y de aviso del dominio con la remediación propia de la web (pantalla a la que ir, no comando que teclear). El test recorre los códigos que el **dominio** emite y los catálogos de las **dos** interfaces, y falla si alguno de los dos deja un código sin traducir. Un código desconocido cae al mensaje del dominio: nunca se traga un aviso nuevo.
 
-**D15 — Seguridad y red.** `index.html` lleva la CSP de producción en `<meta http-equiv>` (`default-src 'self'`; `script-src 'self'`; `style-src 'self'`; `img-src 'self' data:`; `connect-src 'self'`; `object-src 'none'`; `base-uri 'none'`; `form-action 'none'`), y un `transformIndexHtml` la relaja **solo** en desarrollo, donde el servidor de Vite inyecta scripts en línea; la diferencia queda documentada en el README. Iconos y manifiesto propios; ni una fuente, ni un icono, ni un *script* remoto. `scripts/check-bundle.mjs` corre dentro de `npm run build` de la web y falla si aparece `node:`, una URL `http(s)://` ajena, o si el tamaño gzip pasa del presupuesto.
+**D15 — Seguridad y red.** `index.html` lleva la CSP de producción en `<meta http-equiv>` (`default-src 'self'`; `script-src 'self'`; `style-src 'self'`; `img-src 'self' data:`; `connect-src 'self'`; `object-src 'none'`; `base-uri 'none'`; `form-action 'none'`), y un `transformIndexHtml` la relaja **solo** en desarrollo, donde el servidor de Vite inyecta scripts en línea; la diferencia queda documentada en el README. Iconos y manifiesto propios; ni una fuente, ni un icono, ni un *script* remoto. `apps/web/scripts/check-bundle.mjs` corre dentro de `npm run build` de la web y falla si aparece `node:`, una URL `http(s)://` ajena, o si el tamaño gzip pasa del presupuesto.
 
 **D16 — Tests sin entorno de DOM** (decisión (k)). Lo que se prueba: formato, orden de avisos, mapeo y filtrado de movimientos, especificaciones de formulario contra el esquema, contrato del adaptador (con los tests ya escritos), catálogo de mensajes, y los flujos completos **a nivel de acciones** (abrir un libro de prueba → proyectar → construir borrador → vista previa → escribir → releer, comprobando que el fichero gana exactamente las líneas esperadas y que las anteriores no cambian). Lo que se verifica a mano y se anota (criterio §5 del prompt): 360 px sin desplazamiento, objetivos táctiles, la aplicación abriendo el `ledger.jsonl` del *golden* y registrando una compra.
 
@@ -202,7 +202,7 @@ Del dominio (portátil del usuario, Node 22, `tests/fixtures/ledger/synthetic-v1
 
 **Conclusión honesta**: el umbral de 100 ms del prompt §3.3 no se alcanza en el portátil hasta el orden de 10.000 eventos, así que no hay nada que optimizar; lo que sí se ha hecho es no desperdiciarlo (una sola proyección base y memoización por fecha). El dato del móvil real queda pendiente de la verificación del usuario.
 
-Del *bundle* (`npm run build`, comprobado por `scripts/check-bundle.mjs`):
+Del *bundle* (`npm run build`, comprobado por `apps/web/scripts/check-bundle.mjs`):
 
 | Fragmento | Sin comprimir | gzip | Qué es |
 |---|---|---|---|

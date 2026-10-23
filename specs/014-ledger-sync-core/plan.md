@@ -66,7 +66,7 @@ Hoy `FileLedgerStore.append` y `replace` toman el cerrojo **dentro** (`withFolde
 
 ## 3. Bloque 2 — los guardianes, antes que el motor
 
-En `tests/architecture.test.ts`, con los ayudantes que ya tiene (`importGraph`, `reachableFrom`), y con un módulo vacío `sync/reapply.ts` para verlos fallar antes de escribir nada:
+En `tests/architecture/`, con los ayudantes que ya tiene (`importGraph`, `reachableFrom`), y con un módulo vacío `sync/reapply.ts` para verlos fallar antes de escribir nada:
 
 1. **Nada fiscal alcanza la sincronización, ni al revés**: desde cada fichero de `tax/`, de `informative/` y desde `project-ledger.ts`, a cualquier profundidad, ningún fichero bajo `sync/` ni `sync.ts`; y desde cualquier fichero de `sync/`, nada de `tax/` ni de `informative/`. Leído del grafo y de la carpeta, no de una lista.
 2. **Explícita**: desde los casos de uso que escriben (`record-event.ts`, `rectify.ts`, `compact.ts`, `ecb/rule-change.ts`, `ecb/drafts.ts`) y desde el arranque de la web (`apps/web/src/main.tsx` y lo que alcanza estáticamente) no se alcanza el motor (`sync/reapply.ts`, `adapters/src/sync/`, `browser/sync-store.ts`). En los módulos de sincronización no aparece `setInterval`, `setTimeout`, `addEventListener("online"…)` ni `visibilitychange`.

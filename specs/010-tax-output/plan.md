@@ -406,7 +406,7 @@ Método de la 009: diseño del libro con importes elegidos para el papel; cálcu
 
 ## §7 — La Renta sigue sin leer un precio, con el 720 dentro
 
-1. **Estructural** (`tests/architecture.test.ts`): (a) el camino fiscal sigue siendo todo lo que alcanzan `project-ledger.ts` y cada fichero de `tax/`, **incluidos `tax/boxes/`**; (b) **ningún fichero del camino fiscal alcanza un fichero de `informative/`**, a ninguna profundidad (mismo recorrido transitivo que ya prohíbe `prices.ts` y `valuations.ts`); (c) `informative/` solo lee valoraciones por `prices.ts` (el test textual de hoy ya lo cubre).
+1. **Estructural** (`tests/architecture/`): (a) el camino fiscal sigue siendo todo lo que alcanzan `project-ledger.ts` y cada fichero de `tax/`, **incluidos `tax/boxes/`**; (b) **ningún fichero del camino fiscal alcanza un fichero de `informative/`**, a ninguna profundidad (mismo recorrido transitivo que ya prohíbe `prices.ts` y `valuations.ts`); (c) `informative/` solo lee valoraciones por `prices.ts` (el test textual de hoy ya lo cubre).
 2. **Por borrado**: `withoutPricesOrInformativeFilings(events)` borra lo que borraba la 009 (`valuation`, `unit_price` informativo, `nav_*`, `per_unit`, `income_eur`) **y todas las presentaciones `720` y `721`**. En el libro sintético (todos sus ejercicios), en los libros a mano de la 009 y en los de esta feature (con presentaciones `renta`, `720` y `721`), `taxReportJson` y la salida por casillas son **idénticos byte a byte**. Y la propiedad de la 009 con 200 libros aleatorios, a los que se añaden presentaciones aleatorias de los tres modelos.
 3. **Que no esté vacía**: el mismo borrado **cambia** la salida del 720 de §6.1 (sin valoraciones, los valores pasan a `undetermined`) y la del §6.2 (sin el 720 de 2027, 2028 obliga por primera vez).
 
@@ -490,7 +490,7 @@ Chromium de Playwright desde el *scratchpad*, nunca en un `package.json`. Captur
 | 721 | `packages/domain/test/informative/m721.test.ts` |
 | Atención fiscal y temporada | `packages/domain/test/informative/attention.test.ts` |
 | Sin precios con el 720 dentro (borrado y propiedad) | `packages/domain/test/tax/no-prices.test.ts` (ampliado) |
-| Arquitectura | `tests/architecture.test.ts` |
+| Arquitectura | `tests/architecture/` |
 | Mensajes y nombres de criterios en las dos interfaces | `tests/messages.test.ts`, `apps/web/test/fiscal-criteria-names.test.ts` |
 | CLI | `apps/cli/test/commands/{tax-boxes,m720,m721,filed}.test.ts`, e2e |
 | Web | `apps/web/test/fiscal/*.test.tsx`, posición de la tarjeta en los cuatro bordes |

@@ -2,7 +2,7 @@
 
 ## 1. El total del bundle no cabe en su techo
 
-`npm run build -w @atlas/web` falla en la última comprobación de `scripts/check-bundle.mjs`:
+`npm run build -w @atlas/web` falla en la última comprobación de `apps/web/scripts/check-bundle.mjs`:
 
 | | medido (gzip, bytes) | techo | autorizado |
 |---|---|---|---|

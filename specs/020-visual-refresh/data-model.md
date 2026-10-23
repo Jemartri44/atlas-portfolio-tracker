@@ -35,7 +35,7 @@
 
 **[decide] los nombres** (§7.2 (e) del encargo). Propuesta:
 
-- **`@atlas/domain/charts`** (`packages/domain/src/charts.ts`): las series y los indicadores de las pantallas perezosas (lo aportado, el cubo en porcentaje por fecha, los porcentajes de las tesis y de los medidores del cubo). Con el patrón de `@atlas/domain/tools`: una regla de `tests/architecture.test.ts` que impide que el barril la exporte o que otro módulo del dominio la importe, y su entrada en `LAZY_ONLY` **desde su primer commit**.
+- **`@atlas/domain/charts`** (`packages/domain/src/charts.ts`): las series y los indicadores de las pantallas perezosas (lo aportado, el cubo en porcentaje por fecha, los porcentajes de las tesis y de los medidores del cubo). Con el patrón de `@atlas/domain/tools`: una regla de `tests/architecture/` que impide que el barril la exporte o que otro módulo del dominio la importe, y su entrada en `LAZY_ONLY` **desde su primer commit**.
 - **El calendario, en `@atlas/domain/fiscal`**, en `packages/domain/src/informative/calendar.ts` (la carpeta ya está en `LAZY_ONLY`) y exportado por `fiscal.ts`.
 - **`netWorthSeries` y `bucketIndexSeries` no se mudan** por defecto: mudarlos libera arranque, que hoy sobra, y cuesta total (la fontanería de un trozo más), que es lo que falta. Se mide en E4 y se propone solo si el arranque se aprieta (plan §6).
 

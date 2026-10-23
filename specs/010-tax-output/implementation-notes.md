@@ -373,7 +373,7 @@ con la misma cobertura— fue suerte: el `.js` se había compilado después de l
 `.ts`.
 
 Fuera los ocho, patrones en `.gitignore` con su motivo, y **la comprobación que de verdad lo
-sujeta** en `tests/architecture.test.ts`, sobre `git ls-files` y no sobre el árbol de trabajo,
+sujeta** en `tests/architecture/`, sobre `git ls-files` y no sobre el árbol de trabajo,
 porque `.gitignore` no protege ni de un `git add -f` ni de un fichero ya seguido. Dos reglas: ningún
 fichero seguido que sea el gemelo compilado de una fuente seguida, y ningún *source map* fuera de
 `vendor/`. Probadas las dos volviendo a añadir un artefacto con `-f`.

@@ -53,7 +53,7 @@ El nombre `quotes/` y no `prices/` es a propósito: evita confundir el módulo c
 
 La contrapartida (Q8): un cambio de la hoja para la presentación cambiaría el 720.
 
-**Los tests del bloque 1** (en `tests/architecture.test.ts`, con el grafo que ya tiene):
+**Los tests del bloque 1** (en `tests/architecture/`, con el grafo que ya tiene):
 
 1. «keeps prices out of every fiscal calculation, transitively»: «que sabe de precios» = alcanza `prices.ts`, `manual-price.ts`, **cualquier fichero de `quotes/`**, `ports/price-source.ts` o `ports/price-store.ts`; los de `quotes/` **leídos de la carpeta**, no de una lista.
 2. Nuevo, «reaches nothing of prices from an informative return but the manual leaf»: desde cada fichero de `informative/`, a cualquier profundidad, ningún fichero que sea `prices.ts`, que importe `priceAt` o `manualPrices` (por nombre, con `as` o con `* as`: se busca el especificador `projections/prices.js` en sus importaciones), que sea de `quotes/` o un puerto de precios. `bucket.ts`, `weights.ts`, `networth.ts` y `costs.ts` quedan cubiertos porque importan de `prices.ts`.
