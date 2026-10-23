@@ -16,7 +16,8 @@ import { formatDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
 import { maskFigures } from "../../format/privacy.js";
-import { sentenceOf } from "../../ledger/failure-text.js";
+import { errorOf } from "../../ledger/failure-text.js";
+import type { AppError } from "../../ledger/state.js";
 import { closedYearsOfReversal, reverse } from "../../ledger/write.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { privacy } from "../../shell/preferences.js";
@@ -34,7 +35,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
   const navigate = useNavigate();
   const [reason, setReason] = createSignal("");
   const [asking, setAsking] = createSignal(false);
-  const [error, setError] = createSignal<string | undefined>(undefined);
+  const [error, setError] = createSignal<AppError | undefined>(undefined);
   const [signedOut, setSignedOut] = createSignal(false);
   const [closedYears, setClosedYears] = createSignal<readonly ClosedYearImpact[]>([]);
   /** The warning could not be computed at all: said, never skipped in silence. */
@@ -92,7 +93,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
       // Read again in silence: the dialog shows the reach of the annulment on the new ledger.
       await askToReverse();
     }
-    setError(sentenceOf(result.failure));
+    setError(errorOf(result.failure));
   };
 
   return (
@@ -157,7 +158,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                   </Show>
                   <Show when={error() !== undefined}>
                     <Notice severity="danger" title="No se ha podido rectificar">
-                      {error()}
+                      {error()?.message}
                     </Notice>
                   </Show>
 
