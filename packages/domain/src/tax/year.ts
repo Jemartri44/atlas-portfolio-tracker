@@ -41,8 +41,9 @@ import {
   tryReading,
 } from "./chain.js";
 import { computeCore } from "./core.js";
-import { doubleTaxation, note, notesOf, rateNotes, settingsFromCode } from "./notes.js";
+import { doubleTaxation, notesOf, rateNotes, settingsFromCode } from "./notes.js";
 import { settingsDiff } from "./settings-diff.js";
+import { eventNote } from "./shared.js";
 import { criterionStakes } from "./stakes.js";
 
 /**
@@ -239,7 +240,7 @@ export const taxYearWithChain = (
   // code that says so.
   if (filing?.unverified_prefix !== undefined) {
     notes.push(
-      note(
+      eventNote(
         "tax_filing_prefix_unverified",
         filing.filing_id,
         "the prefix of the ledger this filing was computed on is not verified, so the difference is not split into its causes",

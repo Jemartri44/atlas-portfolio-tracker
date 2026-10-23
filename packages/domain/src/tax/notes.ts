@@ -2,7 +2,6 @@
 // in disguise.
 
 import { yearOf } from "../dates/civil-date.js";
-import type { Ulid } from "../ids/ulid.js";
 import { Decimal } from "../money/decimal.js";
 import { sum } from "../money/eur.js";
 import { FxRate } from "../money/fx-rate.js";
@@ -14,16 +13,9 @@ import { treatyWithholdingPctOf } from "../settings/settings.js";
 import { type Core, exchangesOfYear } from "./core.js";
 import { sortCriteria } from "./criteria.js";
 import type { DoubleTaxationLine, InKindLine } from "./report.js";
+import { eventNote } from "./shared.js";
 
 // --- Notes ------------------------------------------------------------------
-
-/** A note of the report: a code the interfaces translate, never a figure in disguise. */
-export const note = (
-  code: string,
-  eventId: Ulid,
-  message: string,
-  details: Record<string, unknown>,
-) => ({ code, event_id: eventId, message, details }) satisfies Warning;
 
 export const settingsFromCode = (state: LedgerState): { origin: string; from_code: string[] } => {
   const last = state.settingsHistory[state.settingsHistory.length - 1];
@@ -83,13 +75,13 @@ export const doubleTaxation = (core: Core): { lines: DoubleTaxationLine[]; notes
       lines.push(base);
       notes.push(
         income.source_country === undefined
-          ? note(
+          ? eventNote(
               "tax_dividend_without_country",
               income.event_id,
               "the dividend does not say which country paid it: no deduction is calculated",
               { foreign_tax_eur: foreignTax.amount.toString() },
             )
-          : note(
+          : eventNote(
               "tax_treaty_rate_missing",
               income.event_id,
               `no treaty rate is configured for ${income.source_country}: no deduction is calculated`,
@@ -185,7 +177,7 @@ export const rateNotes = (
     const wrong = matching(depends, (code) => WRONG_RATE_CODES.has(code));
     if (wrong.events.length > 0) {
       notes.push(
-        note(
+        eventNote(
           "tax_fx_rate_finding",
           line.event_id,
           "this line depends on an ECB rate that is not the official one of its date; the figure is computed with the rate of the ledger",
@@ -196,7 +188,7 @@ export const rateNotes = (
     const unverified = matching(depends, (code) => !WRONG_RATE_CODES.has(code));
     if (unverified.events.length > 0) {
       notes.push(
-        note(
+        eventNote(
           "tax_fx_rate_unverified",
           line.event_id,
           "this line depends on an ECB rate the history could not contrast; nothing is said of whether it is right, and the figure is computed with the rate of the ledger",
@@ -207,7 +199,7 @@ export const rateNotes = (
     const late = depends.filter((id) => afterFiscal.has(id));
     if (late.length > 0) {
       notes.push(
-        note(
+        eventNote(
           "tax_fx_rate_date_after_fiscal_date",
           line.event_id,
           "this line depends on an ECB rate dated after its fiscal date; the figure is computed with the rate of the ledger",
@@ -227,7 +219,7 @@ export const notesOf = (
   ddiNotes: readonly Warning[],
 ): Warning[] => {
   const notes: Warning[] = [
-    note(
+    eventNote(
       "tax_quota_not_computed",
       "",
       "this is the savings base, not the tax: the rest of the return is not in the ledger",
@@ -236,7 +228,7 @@ export const notesOf = (
   ];
   if (core.income.some((line) => line.kind === "dividend" && !line.withholding_origin.isZero())) {
     notes.push(
-      note(
+      eventNote(
         "tax_double_taxation_partial",
         "",
         "only the treaty limit of the double taxation deduction is computed; the effective average rate needs the whole return, and what is not deductible is lost",
@@ -260,7 +252,7 @@ export const notesOf = (
   currencies.delete(EUR);
   if (currencies.size > 0) {
     notes.push(
-      note(
+      eventNote(
         "tax_fx_differences_not_computed",
         "",
         "gains and losses of foreign cash (criterion #4) are not computed",
@@ -270,7 +262,7 @@ export const notesOf = (
   }
   for (const entry of inKind) {
     notes.push(
-      note(
+      eventNote(
         "tax_in_kind_income_not_integrated",
         entry.event_id,
         "income in kind is recorded and not integrated (criterion #8 in force)",
@@ -281,7 +273,7 @@ export const notesOf = (
   for (const line of core.transmissions) {
     if (line.provisional_until !== undefined) {
       notes.push(
-        note(
+        eventNote(
           "tax_window_open",
           line.event_id,
           `the wash-sale window of this loss is open until ${line.provisional_until}`,
@@ -301,7 +293,7 @@ export const notesOf = (
     }
     if (outcome.foreign_released.length > 0) {
       notes.push(
-        note(
+        eventNote(
           "tax_release_category_differs",
           gain.event_id,
           "a deferred loss of the other income category was released here and integrated where it came from",
@@ -317,7 +309,7 @@ export const notesOf = (
   for (const action of exchangesOfYear(core, year)) {
     if (action.neutrality_regime === false) {
       notes.push(
-        note(
+        eventNote(
           "tax_neutrality_contradiction",
           action.id,
           "the event says the neutrality regime does not apply, yet it keeps date and cost",
@@ -331,7 +323,7 @@ export const notesOf = (
   // Recording refuses it; a ledger written before is told here, where it costs.
   for (const [isin, assets] of sharedIsins(core.state.assets.values())) {
     notes.push(
-      note(
+      eventNote(
         "tax_duplicate_isin",
         "",
         `ISIN ${isin} is shared by ${assets.join(", ")}: the wash-sale rule and FIFO treat them as different securities`,
@@ -341,7 +333,7 @@ export const notesOf = (
   }
   for (const entry of core.compensation.expired) {
     notes.push(
-      note(
+      eventNote(
         "tax_loss_expires",
         "",
         `a pending ${entry.category} balance of ${entry.origin_year} expires`,
@@ -355,7 +347,7 @@ export const notesOf = (
   }
   if (fromCode.length > 0) {
     notes.push(
-      note(
+      eventNote(
         "tax_settings_default_used",
         "",
         "some fiscal settings are not in the ledger and were taken from the code (ADR-0022)",

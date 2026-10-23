@@ -95,7 +95,7 @@ export interface FilingComparison {
 const parse = (value: string): Money => Money.parse(value, EUR);
 
 /** The figures of a `renta` as it declares them, keyed like the chain's. */
-const declaredFigures = (figures: FiledRentaFigures): Map<string, Money> => {
+const figureAmounts = (figures: FiledRentaFigures): Map<string, Money> => {
   const result = new Map<string, Money>();
   result.set("savings_base", parse(figures.savings_base_eur));
   for (const entry of figures.pending_losses) {
@@ -151,8 +151,8 @@ export const filingComparison = (
   if (filing === undefined) {
     return undefined;
   }
-  const declared = declaredFigures(filing.declared as FiledRentaFigures);
-  const then = declaredFigures(filing.computed as FiledRentaFigures);
+  const declared = figureAmounts(filing.declared as FiledRentaFigures);
+  const then = figureAmounts(filing.computed as FiledRentaFigures);
   const current = chainFigures(now, year);
   // The prefix the fingerprint names. Only usable when the count still matches
   // where the filing sits: otherwise it points at other lines entirely.
