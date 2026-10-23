@@ -522,6 +522,11 @@ export const taxCommand = async (
   // move no figure (ADR-0029, point 8).
   const options = { today, rateFindings: await rateFindingsOf(ctx) };
   if (booleanFlag(flags, "boxes")) {
+    if (booleanFlag(flags, "lots")) {
+      throw new UsageError(
+        "--lots no se combina con --boxes: las casillas no llevan desglose por lote",
+      );
+    }
     const boxes = taxBoxes(events, year, options);
     render(ctx, taxBoxesJson(boxes), renderBoxes(boxes));
     return 0;

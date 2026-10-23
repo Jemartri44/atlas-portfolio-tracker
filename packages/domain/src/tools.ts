@@ -14,6 +14,7 @@ export {
   type CorporateActionParams,
   corporateActionDraft,
   type FractionRow,
+  ratioDirection,
 } from "./projections/corporate-action-draft.js";
 export { deepCheck } from "./projections/deep-check.js";
 export {
