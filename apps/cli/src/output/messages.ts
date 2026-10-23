@@ -50,6 +50,49 @@ const describeRejection = (
   }
 };
 
+/** What each kind of field of the schema has to be, as the person would say it. */
+const FIELD_KINDS: Readonly<Record<string, string>> = {
+  string: "un texto que no esté vacío",
+  decimal: "un número decimal sin signo (123.45)",
+  signed_decimal: "un número decimal (123.45)",
+  positive_decimal: "un número decimal mayor que cero (123.45)",
+  negative_decimal: "un número decimal negativo",
+  non_positive_decimal: "un número decimal cero o negativo",
+  non_negative_integer: "un entero no negativo",
+  positive_integer: "un entero mayor que cero",
+  date: "una fecha AAAA-MM-DD",
+  currency: "un código de divisa de tres letras (EUR)",
+  country: "un país de dos letras (ES)",
+  ratio: "un ratio (4, 0.25 o 4/3)",
+  unit_interval: "un número entre 0 y 1",
+  boolean: "verdadero o falso",
+};
+
+/** The rules of the schema that have no code of their own, said without the English of the domain. */
+const describeInvalidField = (error: DomainError): string => {
+  const d = error.details;
+  const where = `El campo ${text(d.field ?? d.fields)} de ${text(d.type)} no es válido`;
+  const kind = /is not a valid (\w+)$/.exec(error.message)?.[1];
+  if (kind !== undefined) {
+    const received = d.value === undefined ? "" : ` (recibido: ${text(d.value)})`;
+    return `${where}: tiene que ser ${FIELD_KINDS[kind] ?? kind}${received}.`;
+  }
+  const exactlyOne = /exactly one of (\w+) or (\w+) is required/.exec(error.message);
+  if (exactlyOne !== null) {
+    return `Hace falta exactamente uno de ${exactlyOne[1]} o ${exactlyOne[2]} en ${text(d.type)}: ni los dos ni ninguno.`;
+  }
+  if (error.message.includes("an asset cannot be swapped for itself")) {
+    return "Una permuta no puede cambiar un activo por sí mismo.";
+  }
+  if (error.message.includes("value_date must not precede trade_date")) {
+    return "La fecha valor no puede ser anterior a la fecha de la operación.";
+  }
+  if (error.message.includes("sold_currency and bought_currency must differ")) {
+    return "Las divisas vendida y comprada han de ser distintas.";
+  }
+  return `${where}: ${error.message}.`;
+};
+
 export const describeError = (error: DomainError): string => {
   const d = error.details;
   switch (error.code) {
@@ -443,7 +486,7 @@ export const describeError = (error: DomainError): string => {
     case "missing_field":
       return `Falta el campo ${text(d.field)} en ${text(d.type)}.`;
     case "invalid_field":
-      return `El campo ${text(d.field ?? d.fields)} de ${text(d.type)} no es válido: ${error.message}.`;
+      return describeInvalidField(error);
     case "invalid_decimal":
       return `Valor numérico no válido: ${text(d.value)} (usa cadenas decimales como 123.45).`;
     case "invalid_date":
