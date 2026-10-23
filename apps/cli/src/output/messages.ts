@@ -429,7 +429,7 @@ export const describeError = (error: DomainError): string => {
       // An annulment cannot be annulled: its only remedy is the file itself.
       return d.type === "reversal"
         ? "Una anulación del libro repite un campo (lo deja así una edición a mano): cuenta como inválida, no anula nada y la nube no la acepta. Una anulación no se puede anular: corrígela a mano en el fichero, quitando el campo repetido."
-        : "Una línea del libro repite un campo (lo deja así una edición a mano): se lee con el último valor, pero el evento cuenta como inválido y la nube no lo acepta. Anúlalo (atlas delete) y registra el evento correcto.";
+        : "Una línea del libro repite un campo (lo deja así una edición a mano): se lee con el último valor, pero el evento cuenta como inválido y la nube no lo acepta. Anúlala (atlas delete) y registra el evento correcto.";
     case "invalid_envelope":
       return `El sobre de la línea no es válido: falta o sobra ${text(d.field)}.`;
     case "invalid_currency":

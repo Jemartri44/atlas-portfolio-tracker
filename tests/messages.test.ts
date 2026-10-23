@@ -17,7 +17,11 @@ import { describe, expect, it } from "vitest";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const domainSrc = join(repoRoot, "packages", "domain", "src");
-const cliMessages = join(repoRoot, "apps", "cli", "src", "output", "messages.ts");
+const cliOutput = join(repoRoot, "apps", "cli", "src", "output");
+// The CLI says the domain's codes in three files: errors, warnings and the cloud's failures.
+const cliMessageFiles = ["messages.ts", "warnings.ts", "cloud.ts"].map((name) =>
+  join(cliOutput, name),
+);
 const webErrors = join(repoRoot, "apps", "web", "src", "format", "messages", "errors.ts");
 const webWarnings = join(repoRoot, "apps", "web", "src", "format", "messages", "warnings.ts");
 const webFindings = join(repoRoot, "apps", "web", "src", "format", "messages", "findings.ts");
@@ -74,7 +78,7 @@ const domainCodes = (): Set<string> => {
 const CLI_ELSEWHERE = new Set(["duplicate_fingerprint"]); // describeDuplicate
 
 const cliCodes = (): Set<string> => {
-  const source = readFileSync(cliMessages, "utf8");
+  const source = cliMessageFiles.map((file) => readFileSync(file, "utf8")).join("\n");
   return new Set([
     ...[...source.matchAll(/case "([a-z_0-9]+)":/g)].map((match) => match[1] as string),
     ...CLI_ELSEWHERE,
@@ -356,9 +360,10 @@ describe("Spanish messages: the failures of the remote, one by one", () => {
     return [...block.matchAll(/"([a-z_0-9]+)"/g)].map((match) => match[1] as string).sort();
   };
   const cliFailures = (): string[] => {
-    const source = readFileSync(cliMessages, "utf8");
+    const source = readFileSync(join(cliOutput, "cloud.ts"), "utf8");
     const start = source.indexOf("export const describeRemoteFailure");
-    const body = source.slice(start, source.indexOf("export const describeError", start));
+    const end = source.indexOf("\nexport const", start + 1);
+    const body = source.slice(start, end === -1 ? undefined : end);
     return [...body.matchAll(/case "([a-z_0-9]+)":/g)].map((match) => match[1] as string).sort();
   };
   const webFailures = (): string[] => {
