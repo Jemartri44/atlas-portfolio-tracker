@@ -351,6 +351,9 @@ export const dataLossItem = (days: number | "never"): AttentionItem =>
       : `Tus datos viven en el navegador y hace ${countOf(days, "día", "días")} que no los exportas.`,
   );
 
+/** The start of what is said when the tax engine could not answer; the reason follows. */
+export const FAILED_TO_CALCULATE = "No se ha podido calcular lo que toca presentar:";
+
 /** What the lazy tax engine answered, as much as *Atención* needs of it. */
 export interface FiscalAnswer {
   /** What is pending of the 720 and the 721, one sentence each, in Spanish. */
@@ -367,9 +370,17 @@ export const fiscalSlot = (input: {
   season: boolean;
   abroad: boolean;
   answer: FiscalAnswer | undefined;
+  /** The engine could not answer: said in its place, so the summary does not stay silent. */
+  failure?: { message: string } | undefined;
 }): "reserved" | { message: string; action: { label: string; to: string } } | undefined => {
   if (input.season) {
     return undefined;
+  }
+  if (input.failure !== undefined) {
+    return {
+      message: `${FAILED_TO_CALCULATE} ${input.failure.message}`,
+      action: { label: "Ver la declaración", to: "/fiscal" },
+    };
   }
   if (input.answer === undefined) {
     return input.abroad ? "reserved" : undefined;

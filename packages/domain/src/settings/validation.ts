@@ -162,6 +162,12 @@ const checkIncomeCategory = (raw: UnknownRecord): void => {
   }
 };
 
+/** A decimal string between 0 and `max` (no upper bound without it). */
+const isDecimalBetween = (value: unknown, max?: string): boolean =>
+  isDecimalString(value) &&
+  !Decimal.parse(value).isNegative() &&
+  (max === undefined || !Decimal.parse(value).gt(Decimal.parse(max)));
+
 const COUNTRY_PATTERN = /^[A-Z]{2}$/;
 
 /**
@@ -190,18 +196,29 @@ const checkTreatyRates = (raw: UnknownRecord): void => {
         value: country,
       });
     }
-    if (!isDecimalString(rate)) {
-      throw invalid(`${field} must be a decimal string`, { field, value: rate });
+    if (!isDecimalBetween(rate, "100")) {
+      throw invalid(`${field} must be a decimal string between 0 and 100`, { field, value: rate });
     }
-    const parsed = Decimal.parse(rate);
-    if (parsed.isNegative() || parsed.gt(Decimal.parse("100"))) {
-      throw invalid(`${field} must be between 0 and 100`, {
-        field,
-        value: rate,
-        min: "0",
-        max: "100",
-      });
-    }
+  }
+};
+
+/** The brackets of the savings base: the screens print them, so each needs a rate and may carry a limit. */
+const checkSavingsBrackets = (raw: UnknownRecord): void => {
+  const brackets = raw.savings_tax_brackets;
+  const valid =
+    brackets === undefined ||
+    (Array.isArray(brackets) &&
+      brackets.every(
+        (bracket) =>
+          isRecord(bracket) &&
+          isDecimalBetween(bracket.rate_pct, "100") &&
+          (bracket.up_to === undefined || isDecimalBetween(bracket.up_to)),
+      ));
+  if (!valid) {
+    fail("savings_tax_brackets must be a list of { up_to?, rate_pct }: rate_pct 0 to 100", {
+      field: "savings_tax_brackets",
+      value: brackets,
+    });
   }
 };
 
@@ -311,9 +328,14 @@ export const validateSettings = (raw: unknown): Settings => {
       return fail(`${field} must be true or false`, { field, value: raw[field] });
     }
   }
+  // The transfer rule and the foreign-account test read it as text.
+  if ("tax_residence" in raw && typeof raw.tax_residence !== "string") {
+    return fail("tax_residence must be text", { field: "tax_residence", value: raw.tax_residence });
+  }
   checkInformativeAlerts(raw);
   checkRentaSeason(raw);
   checkTreatyRates(raw);
+  checkSavingsBrackets(raw);
   if ("target_weights" in raw) {
     const weights = raw.target_weights;
     if (!isRecord(weights)) {

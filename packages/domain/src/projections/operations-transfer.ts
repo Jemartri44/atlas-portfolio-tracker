@@ -33,7 +33,7 @@ export const applyTransfer = (state: LedgerState, event: TransferEvent): void =>
   const request =
     event.request_id === undefined ? undefined : lookupOpenRequest(state, event.request_id, event);
   if (!custody) {
-    enforceTransfer(state, event.id, fromAsset, toAsset, event.recorded_at);
+    enforceTransfer(state, event.id, fromAsset, toAsset, event.recorded_at, event.request_id);
   }
   requireAvailable(state, event.from_account_id, event.from_asset_id, quantityOut, event.id);
 

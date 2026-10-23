@@ -46,7 +46,7 @@ const listTsFiles = (dir: string): string[] =>
  */
 const CODE_PATTERNS = [
   /new (?:ValidationError|ProjectionError|DomainError|CompactRejectedError)\(\s*"([a-z_0-9]+)"/gs,
-  /\b(?:invalid|fail|finding|warn|note)\(\s*"([a-z_0-9]+)"/gs,
+  /\b(?:invalid|fail|finding|warn|note|eventNote)\(\s*"([a-z_0-9]+)"/gs,
   /addWarning\(\s*[^,]+,\s*"([a-z_0-9]+)"/gs,
   /\bwarn\(\s*[^,]+,\s*"([a-z_0-9]+)"/gs,
   /\bonce\(\s*[^,]+,\s*"([a-z_0-9]+)"/gs,
