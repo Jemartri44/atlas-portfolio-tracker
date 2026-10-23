@@ -9,7 +9,7 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { FilePriceStore, PRICES_DIR } from "@atlas/adapters";
-import { type AssetId, settingsAt, todayInMadrid } from "@atlas/domain";
+import { type AssetId, isCurrency, settingsAt, todayInMadrid } from "@atlas/domain";
 import {
   type AssetOutcome,
   assertNothingMisstored,
@@ -367,7 +367,6 @@ const listSymbols = async (ctx: Context, assetId: string | undefined): Promise<n
 
 /** A symbol of a source is a word of the URL it goes in: no blanks, no delimiters. */
 const SYMBOL = /^[^\s/?#&%\\]+$/;
-const CURRENCY = /^[A-Z]{3}$/;
 
 /**
  * The declaration from the flags: each symbol with **its own** currency
@@ -397,7 +396,7 @@ const declarationOf = (flags: Flags): SymbolDeclaration => {
       );
     }
     const currency = own[source] ?? common;
-    if (currency !== undefined && !CURRENCY.test(currency)) {
+    if (currency !== undefined && !isCurrency(currency)) {
       throw new UsageError(
         `la divisa tiene que ser un código de tres letras mayúsculas, como EUR o GBP (recibido: «${currency}»)`,
       );
