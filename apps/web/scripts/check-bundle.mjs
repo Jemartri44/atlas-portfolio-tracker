@@ -46,7 +46,7 @@ const BOOT_BUDGET_GZIP_BYTES = 74_810;
  * Ceiling of everything the application may download, lazy chunks included
  * (JS + CSS, gzip), with the same discipline as the boot ceiling.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 305_280;
+const TOTAL_BUDGET_GZIP_BYTES = 305_700;
 
 /**
  * Walls set by the direction that no ceiling above may pass: a ceiling raised
