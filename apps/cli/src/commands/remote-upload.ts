@@ -19,6 +19,7 @@ import {
 import { assertKnownFlags, type Flags, requireFlag, UsageError } from "../args.js";
 import { CommandFailure, type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { cloudStoreOf } from "../folder-mode.js";
+import { strictUtf8 } from "../fs.js";
 import { aside, cancelled, confirm, render } from "./shared.js";
 
 /** The answer never came back: not known whether the PUT was applied. */
@@ -32,11 +33,11 @@ const strictText = async (path: string): Promise<string> => {
   if (bytes === undefined) {
     throw new DomainError("upload_source_missing", `no file ${path}`, { path });
   }
-  try {
-    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
-  } catch {
+  const text = strictUtf8(bytes);
+  if (text === undefined) {
     throw new DomainError("upload_source_not_utf8", `${path} is not UTF-8`, { path });
   }
+  return text;
 };
 
 export const uploadCommand = async (

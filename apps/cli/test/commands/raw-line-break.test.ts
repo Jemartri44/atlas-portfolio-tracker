@@ -10,12 +10,12 @@ import { describe, expect, it } from "vitest";
 import { describeError, RAW_LINE_BREAK_FIX } from "../../src/output/messages.js";
 
 describe("raw_line_break in the console", () => {
-  it("says the order to convert the ledger with a copy first, and to sync after", () => {
+  it("says the order to convert the ledger with a copy first", () => {
     const text = describeError(new ValidationError("raw_line_break", "x", { line: 3 }));
     expect(text).toContain("La línea 3");
     expect(text).toContain(RAW_LINE_BREAK_FIX);
     expect(text).toContain("ledger.jsonl.crlf");
-    expect(text).toContain("vuelve a sincronizar");
+    expect(text).not.toContain("sincroniza");
   });
 
   it("gives an order that really converts, keeps a copy, and never overwrites it", async () => {

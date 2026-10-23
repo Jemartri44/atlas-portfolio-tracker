@@ -76,7 +76,7 @@ export const expiryText = (left: number | "expired" | undefined): string => {
     return ".";
   }
   if (left === "expired") {
-    return ". Ha caducado: sincronizar pedirá volver a iniciar sesión.";
+    return ". Ha caducado: el libro de la nube pedirá volver a iniciar sesión.";
   }
   return left === 0
     ? ". Caduca en menos de un día: renueva con «atlas remote login»."
