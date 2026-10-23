@@ -85,7 +85,13 @@ export const readHiddenLine = (
     };
     // The input closed (a pipe, a terminal that went away) before the line came: nothing to wait for.
     const onEnd = (): void => {
-      done(new DomainError("login_no_code", "the input closed before the code arrived"));
+      // A code piped in with no line break at the end is a code all the same.
+      const typed = text.trim();
+      done(
+        typed === ""
+          ? new DomainError("login_no_code", "the input closed before the code arrived")
+          : typed,
+      );
     };
     if (raw) {
       input.setRawMode?.(true);

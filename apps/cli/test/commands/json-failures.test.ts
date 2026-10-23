@@ -101,8 +101,15 @@ describe("a failed order with --json", () => {
     };
     const result = await capture(["positions", "--json"], { compose });
     expect(result.code).toBe(1);
-    expect(oneObject(result.out)).toMatchObject({ status: "error", code: "unexpected" });
+    const object = oneObject(result.out);
+    expect(object).toMatchObject({
+      status: "error",
+      code: "unexpected",
+      message: "Error inesperado (TypeError): boom",
+    });
     expect(result.err.join("\n")).toContain("Error inesperado (TypeError): boom");
+    // The trace is for the person at the terminal, not for the script reading the object.
+    expect(result.err.join("\n")).toContain("at compose");
   });
 
   it("covers the lock of the folder, with its remedy", async () => {
@@ -143,6 +150,15 @@ describe("the usage line", () => {
     const result = await capture([]);
     expect(result.code).toBe(64);
     expect(result.out.join("\n")).toContain("uso: atlas");
+  });
+
+  it("with --json the usage is an object, and no command at all is an error object", async () => {
+    const asked = await capture(["--help", "--json"]);
+    expect(asked.code).toBe(0);
+    expect(oneObject(asked.out).usage).toContain("uso: atlas");
+    const none = await capture(["--json"]);
+    expect(none.code).toBe(64);
+    expect(oneObject(none.out)).toMatchObject({ status: "error", code: "usage" });
   });
 });
 

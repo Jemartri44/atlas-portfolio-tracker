@@ -222,9 +222,14 @@ const dispatch = async (
   const { positionals, flags } = parseArgs(argv);
   const name = positionals[0];
   // `--help` and `-h` ask for the usage line wherever they stand: that is not a usage error.
-  if (name === undefined || name === "help" || name === "-h" || flags.has("help")) {
-    io.out(USAGE);
-    return name === undefined && !flags.has("help") ? EXIT.usage : EXIT.ok;
+  const asked = name === "help" || name === "-h" || flags.has("help");
+  if (name === undefined || asked) {
+    const json = booleanFlag(flags, "json");
+    if (name === undefined && !asked && json) {
+      throw new UsageError("falta la orden");
+    }
+    io.out(json ? JSON.stringify({ usage: USAGE }, null, 2) : USAGE);
+    return name === undefined && !asked ? EXIT.usage : EXIT.ok;
   }
   const command = COMMANDS[name];
   if (command === undefined) {

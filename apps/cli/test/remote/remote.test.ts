@@ -394,6 +394,13 @@ describe("the code of a manual sign-in", () => {
     await expect(second).resolves.toBe("abd");
   });
 
+  it("is read whole when it arrives without a line break and the input closes", async () => {
+    const input = new PassThrough();
+    const pending = readHiddenLine("code: ", input, new PassThrough());
+    input.end("abc123");
+    await expect(pending).resolves.toBe("abc123");
+  });
+
   it("treats Ctrl-D on an empty line as the end of the input", async () => {
     const input = new PassThrough();
     const pending = readHiddenLine("code: ", input, new PassThrough());

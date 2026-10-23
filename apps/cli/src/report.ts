@@ -47,6 +47,8 @@ interface Failure {
   readonly lines: readonly string[];
   /** The usage text follows on stderr; it is not part of the sentence in JSON. */
   readonly usage?: true;
+  /** The stack of an error nobody expected: for stderr, never in the object a script reads. */
+  readonly trace?: string;
 }
 
 /** The connection broke after the write was sent and a reload found it recorded. */
@@ -237,12 +239,14 @@ const failureOf = async (
     return systemFailure(error);
   }
   const unexpected = error instanceof Error ? error : new Error(String(error));
-  return failure(
-    EXIT.domain,
-    "unexpected",
-    `Error inesperado (${unexpected.name}): ${unexpected.message}`,
-    ...(unexpected.stack === undefined ? [] : [unexpected.stack]),
-  );
+  return {
+    ...failure(
+      EXIT.domain,
+      "unexpected",
+      `Error inesperado (${unexpected.name}): ${unexpected.message}`,
+    ),
+    ...(unexpected.stack === undefined ? {} : { trace: unexpected.stack }),
+  };
 };
 
 /** The sentence without the «Error (code): » that the object already carries as `code`. */
@@ -270,7 +274,9 @@ export const reportError = async (
   const reported = await failureOf(error, options.cloud);
   if ("recovered" in reported) {
     if (options.json) {
-      io.out(JSON.stringify({ status: "recorded", after_connection_loss: true }, null, 2));
+      if (!options.wroteStdout()) {
+        io.out(JSON.stringify({ status: "recorded", after_connection_loss: true }, null, 2));
+      }
     } else {
       io.out("La conexión se cortó al guardar, pero la operación SÍ quedó registrada en la nube.");
     }
@@ -281,6 +287,9 @@ export const reportError = async (
   }
   if (reported.usage === true) {
     io.err(USAGE);
+  }
+  if (reported.trace !== undefined) {
+    io.err(reported.trace);
   }
   if (options.json && !options.wroteStdout()) {
     io.out(
