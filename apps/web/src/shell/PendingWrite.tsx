@@ -77,7 +77,7 @@ export default function PendingWrite(): JSX.Element {
             >
               La operación no llegó a registrarse. Puedes enviarla otra vez con los mismos datos: no
               se duplicará.
-              <Show when={pending().said}>{(said) => <p>{said()}</p>}</Show>
+              <Show when={pending().said}>{(said) => <p>{said().message}</p>}</Show>
             </Notice>
           </Match>
           <Match when={pending().state === "changed"}>

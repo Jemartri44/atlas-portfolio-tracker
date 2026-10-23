@@ -2,6 +2,7 @@
 // place so that every screen that writes says the same thing: Registrar,
 // annulling, the settings, a filing and the chain of ECB rates.
 
+import type { AppError } from "./state.js";
 import type { WriteFailure } from "./write.js";
 
 const CONFLICT_SENTENCE =
@@ -11,7 +12,7 @@ const UNKNOWN_SENTENCE =
   "No sabemos si se ha guardado: la conexión falló justo al enviarlo. Mira el aviso de arriba; no hace falta que repitas nada.";
 
 /** The sentence of a failure that has no screen of its own; `signed_out` goes with `SessionNotice`. */
-export const sentenceOf = (failure: WriteFailure): string => {
+const sentenceOf = (failure: WriteFailure): string => {
   switch (failure.kind) {
     case "conflict":
       return CONFLICT_SENTENCE;
@@ -27,3 +28,10 @@ export const sentenceOf = (failure: WriteFailure): string => {
       return "Otras operaciones dependen de esta: rectifícalas antes.";
   }
 };
+
+/**
+ * A failure as the error a screen keeps. The error of the write is kept as it is, not as its text:
+ * it follows the privacy mode while it is on screen.
+ */
+export const errorOf = (failure: WriteFailure): AppError =>
+  failure.kind === "error" ? failure.error : { code: failure.kind, message: sentenceOf(failure) };

@@ -27,6 +27,7 @@ import { DuplicateDialog } from "../DuplicateDialog.jsx";
 import { FormActions } from "../FormActions.jsx";
 import { FormFields } from "../FormFields.jsx";
 import { NoForm, Reloaded } from "../FormNotices.jsx";
+import { createProblem } from "../form-problems.js";
 import { Preview } from "../Preview.jsx";
 import { createWarned } from "../warned.js";
 import { Fractions } from "./Fractions.jsx";
@@ -45,7 +46,7 @@ export default function CorporateFormRoute(): JSX.Element {
           initialCorporateValues(fields(), today()),
         );
         const [preview, setPreview] = createSignal<EventPreview | undefined>(undefined);
-        const [problem, setProblem] = createSignal<string | undefined>(undefined);
+        const { problem, setProblem, refuse } = createProblem();
         const [duplicate, setDuplicate] = createSignal<readonly string[] | undefined>(undefined);
         const warned = createWarned();
         const [conflict, setConflict] = createSignal(false);
@@ -109,7 +110,7 @@ export default function CorporateFormRoute(): JSX.Element {
             setClosed(reached);
             setPreview(shown);
           } catch (failure) {
-            setProblem(toAppError(failure).message);
+            refuse(toAppError(failure));
           }
         };
 
@@ -138,7 +139,7 @@ export default function CorporateFormRoute(): JSX.Element {
             return;
           }
           if (result.failure.kind === "error") {
-            setProblem(result.failure.error.message);
+            refuse(result.failure.error);
           }
         };
 

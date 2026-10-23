@@ -20,7 +20,7 @@ import { Field, Notice, Section } from "../../components/index.js";
 import { decimalForInput, parseDecimalInput } from "../../format/input.js";
 import { nameIndex } from "../../format/names.js";
 import { toAppError } from "../../ledger/errors.js";
-import { sentenceOf } from "../../ledger/failure-text.js";
+import { errorOf } from "../../ledger/failure-text.js";
 import type { AppError } from "../../ledger/state.js";
 import { today } from "../../ledger/state.js";
 import { recordDraft } from "../../ledger/write.js";
@@ -136,7 +136,7 @@ export default function PresentarRoute(): JSX.Element {
               setFailure(result.failure.error);
             } else {
               setSignedOut(result.failure.kind === "signed_out");
-              setProblem(sentenceOf(result.failure));
+              setProblem(errorOf(result.failure).message);
             }
           } catch (error) {
             setFailure(toAppError(error));
