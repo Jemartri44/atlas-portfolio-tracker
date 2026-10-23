@@ -33,7 +33,7 @@ import { Icon, type NoticeItem, Section } from "../../components/index.js";
 import { formatLongDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
-import { store, today } from "../../ledger/state.js";
+import { type AppError, store, today } from "../../ledger/state.js";
 import { QuotesNotice, useQuotes } from "../../prices/use-quotes.jsx";
 import { MONITOR, mediaQuery } from "../../shell/media.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
@@ -57,7 +57,13 @@ import { FirstSteps } from "./FirstSteps.jsx";
 // path and in its place on the first paint: what asks the
 // tax engine is `fiscal-status.ts`, loaded after it.
 import FiscalCard from "./FiscalCard.jsx";
+import type { FiscalStatus } from "./fiscal-status.js";
 import { NetWorthBlock } from "./NetWorthBlock.jsx";
+
+/** What the lazy tax engine ended in: its answer, or the error it raised. */
+type FiscalOutcome =
+  | { status: FiscalStatus; failure?: never }
+  | { failure: AppError; status?: never };
 
 /** How many recent movements the summary shows. */
 const RECENT = 5;
@@ -104,16 +110,26 @@ export default function ResumenRoute(): JSX.Element {
         const abroad = hasForeignAccountsAt(snapshot.events, date, settings);
         const invalid = snapshot.state.invalid.length;
         // The tax engine, after the first paint (it is not on the boot path).
-        const [fiscal] = createResource(
+        // A failure of the engine is an answer too: it must not take the whole summary with it.
+        const [outcome] = createResource(
           () => ({ events: snapshot.events, date }),
-          async (input) =>
-            (await import("./fiscal-status.js")).fiscalStatus(input.events, input.date),
+          async (input): Promise<FiscalOutcome> => {
+            try {
+              return {
+                status: (await import("./fiscal-status.js")).fiscalStatus(input.events, input.date),
+              };
+            } catch (error) {
+              return { failure: (await import("../../ledger/errors.js")).toAppError(error) };
+            }
+          },
         );
+        const fiscal = (): FiscalStatus | undefined => outcome()?.status;
+        const failure = (): AppError | undefined => outcome()?.failure;
         // Out of the season, what is pending of the 720 and the 721 goes to
         // *Atención*: a row kept for it with an account abroad, filled or
         // dropped when the engine answers. In the season the card says it.
         const fiscalNotice = (): "reserved" | NoticeItem | undefined => {
-          const slot = fiscalSlot({ season, abroad, answer: fiscal() });
+          const slot = fiscalSlot({ season, abroad, answer: fiscal(), failure: failure() });
           return slot === undefined || slot === "reserved"
             ? slot
             : { severity: "caution", message: slot.message, action: slot.action };
@@ -189,6 +205,7 @@ export default function ResumenRoute(): JSX.Element {
             <FiscalCard
               season={season}
               status={fiscal}
+              failure={failure}
               year={nextReturnYear(settings, date)}
               today={date}
               names={names}

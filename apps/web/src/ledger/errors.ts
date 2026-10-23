@@ -10,6 +10,7 @@ import { DomainError } from "@atlas/domain";
 import { RemoteError } from "@atlas/domain/sync";
 import { describeError, REMOTE_FAILURES } from "../format/messages/errors.js";
 import { nameIndex } from "../format/names.js";
+import { maskFigures } from "../format/privacy.js";
 import { privacy } from "../shell/preferences.js";
 import type { AppError } from "./state.js";
 import { store } from "./state.js";
@@ -80,10 +81,12 @@ export const toAppError = (error: unknown): AppError => {
   }
   // Never swallowed: what failed goes after a sentence in Spanish, so the
   // screen still says what happened and nothing is hidden.
+  const detail = error instanceof Error ? error.message : String(error);
   return {
     code: "unexpected",
-    message: `Algo ha fallado sin que la aplicación lo esperase; no se ha escrito nada. Detalle: ${
-      error instanceof Error ? error.message : String(error)
-    }`,
+    // Read when shown, like the sentences above: the detail can hold an amount.
+    get message() {
+      return `Algo ha fallado sin que la aplicación lo esperase; no se ha escrito nada. Detalle: ${maskFigures(detail, privacy())}`;
+    },
   };
 };
