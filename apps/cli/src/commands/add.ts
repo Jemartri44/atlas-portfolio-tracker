@@ -10,8 +10,7 @@ import {
 } from "@atlas/domain";
 import type { Flags } from "../args.js";
 import { booleanFlag, UsageError } from "../args.js";
-import { type Context, describeWarnings, EXIT } from "../context.js";
-import { describeError } from "../output/messages.js";
+import { CommandFailure, type Context, describeWarnings, EXIT } from "../context.js";
 import { saveAsDraft } from "./draft.js";
 import { confirmRates, rateDraft } from "./rates.js";
 import { aside, cancelled, confirmAndRecord, type DraftSpec, draftFromFlags } from "./shared.js";
@@ -251,14 +250,16 @@ export const addCommand = async (
   const rated = await rateDraft(ctx, draftFromFlags(spec, flags));
   const draft = rated.draft;
   if (rated.waiting) {
+    if (!asDraft) {
+      throw new CommandFailure(EXIT.domain, "ecb_rate_pending", [
+        ...rated.notes,
+        "Para guardarla como borrador, repite el comando con --draft.",
+      ]);
+    }
     for (const note of rated.notes) {
       aside(ctx, note);
     }
-    if (asDraft) {
-      return saveAsDraft(ctx, draft, rated.history, rated.staleDays);
-    }
-    aside(ctx, "Para guardarla como borrador, repite el comando con --draft.");
-    return EXIT.domain;
+    return saveAsDraft(ctx, draft, rated.history, rated.staleDays);
   }
   if (asDraft) {
     // Nothing waits for the ECB: a draft would only be a second copy.

@@ -173,7 +173,9 @@ describe("drafts with --json", () => {
   it("confirm: cancelled, then recorded with the removal of the draft", async () => {
     const { atlas, only } = await setup();
     const id = idOf(only((await atlas(undefined, [...draftBuy, "--draft", "--json"])).out));
-    expect((await atlas(undefined, ["draft", "confirm", id, "--yes", "--json"])).out).toEqual([]);
+    const waiting = await atlas(undefined, ["draft", "confirm", id, "--yes", "--json"]);
+    expect(waiting.code).toBe(1);
+    expect(only(waiting.out)).toMatchObject({ status: "error", code: "draft_not_confirmable" });
     const bytes = await laterCsv();
     await atlas(undefined, ["fx", "update"], () => ({
       download: async () => ({

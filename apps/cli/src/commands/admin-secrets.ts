@@ -26,7 +26,7 @@ import {
 } from "../admin/secrets.js";
 import { type Flags, UsageError } from "../args.js";
 import { ConfirmationRequired, type Context, EXIT } from "../context.js";
-import { render } from "./shared.js";
+import { aside, render } from "./shared.js";
 
 type Outcome = "created" | "rotated" | "skipped" | "not_for_this_environment" | "conflict";
 
@@ -124,7 +124,8 @@ export const secretsOrder = async (
         return typed === environment ? sessionKeyOf(ctx.deps.random) : undefined;
       }
       case "allow-list": {
-        ctx.io.out(
+        aside(
+          ctx,
           `${spec.path}: ${here}. Se escribe entera (retirar el acceso es no incluir la entrada) y no se puede leer lo que había.`,
         );
         const entries: { sub: string; email: string }[] = [];

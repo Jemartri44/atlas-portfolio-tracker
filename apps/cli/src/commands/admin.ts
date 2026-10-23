@@ -180,7 +180,9 @@ const forgetOrder = async (
   if (refusal === "already_forgotten") {
     // A cut after the mark and before the sweep below is finished here.
     const late = await sweep();
-    ctx.io.out(
+    render(
+      ctx,
+      { device_id: id, already_forgotten: true, revoked: late.revoked },
       late.revoked.length === 0
         ? `El dispositivo ${id} ya estaba olvidado: no se ha tocado nada.`
         : `El dispositivo ${id} ya estaba olvidado; revocados ${late.revoked.length} tokens suyos que seguían vivos.`,
@@ -203,7 +205,7 @@ const forgetOrder = async (
       `¿Olvidar en ${environment} el dispositivo ${id} (${described}) y revocar sus tokens?`,
     ))
   ) {
-    ctx.io.out("Cancelado: no se ha tocado nada.");
+    render(ctx, { status: "cancelled" }, "Cancelado: no se ha tocado nada.");
     return EXIT.ok;
   }
   const now = ctx.deps.clock.now();
