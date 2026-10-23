@@ -8,7 +8,7 @@ import {
   systemClock,
   webCryptoRandom,
 } from "@atlas/adapters";
-import type { UseCaseDeps } from "@atlas/domain";
+import { DomainError, type UseCaseDeps } from "@atlas/domain";
 import type { FxRateSource } from "@atlas/domain/ecb";
 import type { AdminAccess } from "./admin/environment.js";
 import { booleanFlag, parseArgs, stringFlag, UsageError } from "./args.js";
@@ -116,37 +116,66 @@ const composeDeps = (ledgerPath: string): UseCaseDeps => ({
   random: webCryptoRandom,
 });
 
-const promptOutput = (options: PromptOptions | undefined) =>
-  options?.aside === true ? process.stderr : process.stdout;
+/** The streams of the terminal; the real ones unless a test brings its own. */
+interface TerminalStreams {
+  readonly input: NodeJS.ReadableStream & { readonly isTTY?: boolean };
+  readonly stdout: NodeJS.WritableStream;
+  readonly stderr: NodeJS.WritableStream;
+}
 
-export const terminalIo = (): Io => ({
-  out: (text) => process.stdout.write(`${text}\n`),
-  err: (text) => process.stderr.write(`${text}\n`),
+const processStreams: TerminalStreams = {
+  input: process.stdin,
+  stdout: process.stdout,
+  stderr: process.stderr,
+};
+
+/**
+ * One line from the terminal. Ctrl-C ends the question: `onInterrupt` says how (an empty line, which
+ * no confirmation takes as a yes, or the end of the order).
+ */
+const askLine = async (
+  streams: TerminalStreams,
+  question: string,
+  options: PromptOptions | undefined,
+  onInterrupt: () => string,
+): Promise<string> => {
+  const output = options?.aside === true ? streams.stderr : streams.stdout;
+  const rl = createInterface({
+    input: streams.input,
+    output,
+    terminal: streams.input.isTTY === true,
+  });
+  try {
+    return (await rl.question(question)).trim();
+  } catch (error) {
+    if ((error as { code?: unknown }).code === "ABORT_ERR") {
+      output.write("\n");
+      return onInterrupt();
+    }
+    throw error;
+  } finally {
+    rl.close();
+  }
+};
+
+export const terminalIo = (streams: TerminalStreams = processStreams): Io => ({
+  out: (text) => streams.stdout.write(`${text}\n`),
+  err: (text) => streams.stderr.write(`${text}\n`),
   confirm: async (question, options) => {
-    if (!process.stdin.isTTY) {
+    if (streams.input.isTTY !== true) {
       return undefined;
     }
-    const rl = createInterface({ input: process.stdin, output: promptOutput(options) });
-    try {
-      const answer = (await rl.question(question)).trim().toLowerCase();
-      return answer === "s" || answer === "si" || answer === "sí" || answer === "y";
-    } finally {
-      rl.close();
-    }
+    const answer = (await askLine(streams, question, options, () => "")).toLowerCase();
+    return answer === "s" || answer === "si" || answer === "sí" || answer === "y";
   },
-  ask: async (question, options) => {
-    if (!process.stdin.isTTY) {
-      return undefined;
-    }
-    const rl = createInterface({ input: process.stdin, output: promptOutput(options) });
-    try {
-      return (await rl.question(question)).trim();
-    } finally {
-      rl.close();
-    }
-  },
+  ask: async (question, options) =>
+    streams.input.isTTY === true
+      ? askLine(streams, question, options, () => {
+          throw new DomainError("prompt_interrupted", "the prompt was interrupted");
+        })
+      : undefined,
   askSecret: (question) =>
-    askWithoutEcho(question, { input: process.stdin, output: process.stdout }),
+    askWithoutEcho(question, { input: streams.input, output: streams.stdout }),
 });
 
 /** What the tests replace: everything else is the real thing. */
@@ -237,6 +266,9 @@ const dispatch = async (
   }
   assertArity(positionals);
   const ledgerPath = stringFlag(flags, "ledger") ?? "./ledger.jsonl";
+  if (ledgerPath === "") {
+    throw new UsageError("--ledger necesita una ruta (¿una variable de shell sin definir?)");
+  }
   // Cloud folder or local folder, before anything reads or writes the ledger
   // (ADR-0035, §4): both at once is refused here.
   const mode: FolderMode = looksAtMode(positionals)

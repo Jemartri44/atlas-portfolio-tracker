@@ -202,6 +202,14 @@ export const bucketSeed = (): LedgerEvent[] => [
   },
 ];
 
+/** The same arguments with the value of an option they already have replaced: a repeated option is refused. */
+export const withOption = (argv: readonly string[], option: string, value: string): string[] => {
+  if (!argv.includes(option)) {
+    throw new Error(`${option} is not in the arguments`);
+  }
+  return argv.map((word, index) => (argv[index - 1] === option ? value : word));
+};
+
 export const BUY_WORLD = [
   "add",
   "buy",

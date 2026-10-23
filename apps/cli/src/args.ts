@@ -136,13 +136,18 @@ export const parseArgs = (
     if (body.length === 0 || body.startsWith("-")) {
       throw new UsageError(`opción no válida: ${token}. ${DASH_HINT}`);
     }
+    // A flag written twice keeps both values; the one that reads a single value refuses them
+    // (`stringFlag`) instead of recording whichever came last.
     const add = (name: string, value: string): void => {
-      if (!REPEATABLE_FLAGS.has(name)) {
-        flags.set(name, value);
-        return;
-      }
       const seen = flags.get(name);
-      flags.set(name, [...(Array.isArray(seen) ? seen : []), value]);
+      flags.set(
+        name,
+        seen === undefined
+          ? REPEATABLE_FLAGS.has(name)
+            ? [value]
+            : value
+          : [...(Array.isArray(seen) ? seen : [String(seen)]), value],
+      );
     };
     const equals = body.indexOf("=");
     if (equals >= 0) {
