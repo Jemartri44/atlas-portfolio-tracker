@@ -75,8 +75,9 @@ export interface ProjectOptions {
   /**
    * Called with the state once every operation of a business date has been
    * applied, in chronological order. The state is the one being built: copy
-   * what is needed, do not keep it. It is what `asOf` of that date would
-   * return, read in one pass instead of one projection per date.
+   * what is needed, do not keep it. What pass B builds (cash, lots, positions)
+   * is what `asOf` of that date would return, read in one pass instead of one
+   * projection per date; the warnings of the final pass are not there yet.
    */
   onDate?: (date: CivilDate, state: LedgerState) => void;
 }

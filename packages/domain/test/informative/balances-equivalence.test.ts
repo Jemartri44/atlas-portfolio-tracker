@@ -86,7 +86,7 @@ const averagesOf = (scenario: Scenario, year: number): Row[] => {
 };
 
 describe("quarterAverages keeps its figures", () => {
-  it.each(SCENARIOS)("", (scenario) => {
+  it.each(SCENARIOS)("$name", (scenario) => {
     const got = scenario.years.flatMap((year) => averagesOf(scenario, year));
     expect(got).toEqual(EXPECTED.filter(([name]) => name === scenario.name));
   });
