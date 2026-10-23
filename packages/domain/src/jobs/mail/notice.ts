@@ -25,12 +25,30 @@ const CODES: readonly string[] = [
   "job_record_unreadable",
   "job_record_newer_format",
   "not_utf8",
-  // Why the dump or the integrity could not read the ledger.
+  // Why a task could not use the ledger: not there, not readable now, or invalid.
   "ledger_absent",
   "ledger_unavailable",
   "ledger_unreadable",
   "ledger_invalid",
-  // Why the closes could not be downloaded at all.
+  // Why a line of the ledger does not decode (`ledgerOfBytes`): fixed codes of the schema, no data.
+  "invalid_json",
+  "invalid_line",
+  "invalid_envelope",
+  "invalid_field",
+  "missing_field",
+  "missing_migration",
+  "schema_too_new",
+  "unknown_event_type",
+  "unsupported_event",
+  "duplicate_id",
+  "duplicate_filed_item",
+  "duplicate_pending_loss",
+  "filed_at_in_future",
+  "filing_year_unsupported",
+  "json_key_repeated",
+  "raw_line_break",
+  "raw_lone_surrogate",
+  // Why the prices task could not run or write.
   "price_keys_unavailable",
   "price_key_invalid",
   "prices_conflict",

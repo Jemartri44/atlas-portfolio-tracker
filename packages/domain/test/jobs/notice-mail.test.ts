@@ -44,9 +44,13 @@ describe("the mail of a streak", () => {
     });
   });
 
-  it("says why the closes could not be downloaded, by the code of the task", () => {
+  it("says why a task failed, by the fixed code of its outcome", () => {
     for (const outcome of [
       "ledger_invalid",
+      "invalid_json",
+      "raw_line_break",
+      "schema_too_new",
+      "duplicate_id",
       "price_keys_unavailable",
       "price_key_invalid",
       "prices_conflict",
