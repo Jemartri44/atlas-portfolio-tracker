@@ -40,7 +40,7 @@ La orden recorre los seis pasos de ADR-0032 **en orden y sin saltarse ninguno**,
 
 ## Después
 
-No hay nada que hacer en los dispositivos: quien tenga Atlas abierto verá «El libro ha cambiado» en su siguiente escritura y recargará el libro restaurado. Lo que se registró en la nube después de la copia y que la restauración quita **no vuelve solo**: está en `archive/pre-restore-…`, y decides línea a línea qué vuelves a registrar.
+No hay nada que hacer en los dispositivos: quien tenga Atlas abierto lo notará en su siguiente escritura: la web recarga el libro restaurado y pide confirmar otra vez, y la consola pide repetir la orden. Lo que se registró en la nube después de la copia y que la restauración quita **no vuelve solo**: está en `archive/pre-restore-…`, y decides línea a línea qué vuelves a registrar.
 
 ## La prueba anual (constitución VI)
 

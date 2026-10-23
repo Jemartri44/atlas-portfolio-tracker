@@ -1,6 +1,6 @@
 # Pendientes que dejaron las predicciones y las notas de 009 a 011
 
-Lo que las predicciones (`*-expectation.md`) y las notas de implementación de las features 009, 010 y 011 decían y **no está en `docs/business-rules.md`, `docs/fiscal-questions.md`, `docs/data-schema.md`, ni en un test**. El resto se borró: ya está en esos documentos, en los tests o en los dorados `tests/fixtures/ledger/synthetic-v1.*`. Cada punto espera la ronda fiscal o a la persona; no se pasa a las reglas desde aquí. El texto original está en el historial de git (`git log --follow -- specs/010-tax-output/implementation-notes.md`).
+Lo que las predicciones (`*-expectation.md`) y las notas de implementación de las features 009, 010 y 011 decían y **no está en `docs/business-rules.md`, `docs/fiscal-questions.md`, `docs/data-schema.md`, ni en un test**. El resto se borró: ya está en esos documentos, en los tests o en los dorados `tests/fixtures/ledger/synthetic-v1.*`. Cada punto espera la ronda fiscal o a la persona; no se pasa a las reglas desde aquí. El texto original está en el historial de git (`git log --all -- 'specs/0*/*-expectation.md' specs/010-tax-output/implementation-notes.md` y `git show <commit>^:<ruta>`).
 
 ## Fiscales
 

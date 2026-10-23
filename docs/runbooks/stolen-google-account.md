@@ -4,7 +4,7 @@
 
 **Señal**: en la web de Atlas, Ajustes › Sesión › «Dispositivos de la consola». Las emisiones recientes van marcadas: **un token que no reconoces es la alarma**.
 
-**El orden importa** (ADR-0033, punto 8; `docs/prompts/015-api-access.md` §7.1 bis, B3). **Sigue estos seis pasos en este orden y sin saltarte ninguno.** Si repones la cuenta antes de terminar el paso 5, los tokens y las sesiones del intruso vuelven a valer.
+**El orden importa** (ADR-0033, punto 8). **Sigue estos seis pasos en este orden y sin saltarte ninguno.** Si repones la cuenta antes de terminar el paso 5, los tokens y las sesiones del intruso vuelven a valer.
 
 Lo que necesitas es el rol de administración y `admin.json`, como en [Revocar todos los tokens](revoke-all-tokens.md), apartado «Lo que necesitas». **Desde el paso 1, tu propia consola tampoco entra en la nube** (`not_allowed`), y desde el paso 3 su token está revocado: todo lo que se hace hasta el paso 6 va con el rol de administración.
 

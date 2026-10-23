@@ -1,8 +1,8 @@
 # Contrato de la API
 
-El contrato HTTP de la Lambda de la API (`apps/api`), que se alcanza **solo a través de CloudFront**, bajo `/api/*` (ADR-0028, fila 6). Lo encargan **ADR-0026** («Consecuencias»: rutas, cuerpos, códigos, la confirmación y el rechazo por línea, la pareja de anulación y corrección como una sola línea, y el rechazo de una anulación cuya corrección no viene en la misma petición) y **ADR-0033** («Reparto entre features»: la cabecera, las rutas de inicio, canje, revocación y lista, sus códigos de error, los límites del nombre del dispositivo y cómo se liga a su sesión el identificador de dispositivo de la web). Se escribe **antes de implementar**, con el prompt de la feature 014.
+El contrato HTTP de la Lambda de la API (`apps/api`), que se alcanza **solo a través de CloudFront**, bajo `/api/*` (ADR-0028, fila 6). Lo encargan **ADR-0026** («Consecuencias»: rutas, cuerpos, códigos, la confirmación y el rechazo por línea, la pareja de anulación y corrección como una sola línea, y el rechazo de una anulación cuya corrección no viene en la misma petición) y **ADR-0033** («Reparto entre features»: la cabecera, las rutas de inicio, canje, revocación y lista, sus códigos de error, los límites del nombre del dispositivo y cómo se liga a su sesión el identificador de dispositivo de la web). 
 
-**Estado:** implementado (features 015, 016 y 021-027) y probado con dobles de S3, SSM y Google; **sin desplegar todavía** (017 y 018). Desde **ADR-0035** (2026-10-06) el libro de S3 es la única fuente de verdad: no hay cola local ni sincronización entre dispositivos, y la web y la consola escriben directamente con `If-Match` (§5.8). Lo que el código concretó respecto del diseño previo va marcado «*(014)*», «*(015)*» o «*(016)*» según la feature. Si algo queda sin decidir se marca **[PENDIENTE]** y lo decide la dirección; una propuesta marcada como tal no es una decisión.
+**Estado:** implementado (features 015, 016 y 021-027) y probado con dobles de S3, SSM y Google; **sin desplegar todavía** (017 y 018). Desde **ADR-0035** (2026-10-06) el libro de S3 es la única fuente de verdad: no hay cola local ni sincronización entre dispositivos, y la web y la consola escriben directamente con `If-Match` (§5.8). Lo que el código concretó respecto del diseño previo va marcado «*(014)*», «*(015)*» o «*(016)*» según la feature. Lo que quede sin decidir se marca **[PENDIENTE]**.
 
 **Si este documento discrepa de una ADR, manda la ADR**, y la discrepancia se anota en el `questions.md` de la feature que la encuentre.
 
@@ -163,7 +163,7 @@ Respuesta `200`, **una sola vez**:
 
 ## 5. El libro (ADR-0026, ADR-0035)
 
-> **ADR-0035.** No hay cola por dispositivo ni sincronización: la API es el único escritor y solo añade y valida cada línea (§5.2); `GET /api/ledger`, `POST /api/ledger/lines` y `PUT /api/ledger` (este, solo la subida inicial a una nube vacía y la restauración, §5.5). Las escrituras de la web y de la consola son directas con `If-Match` (§5.8).
+> **ADR-0035.** No hay cola por dispositivo ni sincronización: la API es el único escritor y solo añade y valida cada línea (§5.2); `GET /api/ledger`, `POST /api/ledger/lines` y `PUT /api/ledger` (este, solo la subida inicial a una nube vacía, §5.5; la restauración es `atlas admin restore`, que nunca pasa por la API). Las escrituras de la web y de la consola son directas con `If-Match` (§5.8).
 
 El remoto es `ledger/ledger.jsonl` del bucket de datos. **La API solo añade**: nunca reescribe ni borra una línea (ADR-0026, Parte A). Las líneas se escriben **tal como las serializó el cliente**, byte a byte: ni la API ni nadie reserializa lo ya escrito (trampa 10 de `CLAUDE.md`).
 
@@ -177,7 +177,7 @@ El remoto es `ledger/ledger.jsonl` del bucket de datos. **La API solo añade**: 
 - `200`, cuerpo = **los bytes exactos** del libro, `Content-Type: application/x-ndjson; charset=utf-8`, cabecera `ETag: "<sha256>"`. Sin compresión que cambie los bytes que el cliente hashea (si CloudFront comprime, el cliente hashea lo descomprimido: lo que cuenta son los bytes del fichero).
 - *(015)* **Los bytes viajan como texto si son UTF-8 válido**, porque así se reescriben idénticos, y **en base64 (`isBase64Encoded`) si no lo son**. Exactos en los dos casos. El cliente comprueba que la cabecera `ETag`, fuerte o débil (`W/`, que pone CloudFront al comprimir), dice el SHA-256 de los bytes que recibió, ya descomprimidos. Si no lo dice, o si los bytes no son UTF-8, es `transport_rejected` (bloque 0 de E3, §23.3). **CloudFront no comprime `application/x-ndjson`**, que no está en su lista de tipos.
 - **La API no interpreta la versión de esquema al servir**: un cliente antiguo que no entiende el remoto lo rechaza al cargar (`docs/data-schema.md` §5).
-- *(014)* **El puerto del cliente entrega texto, no bytes** (`RemoteSnapshot`: `text` y `etag`). El dominio no tiene decodificador UTF-8, así que el cliente HTTP decodifica los bytes del cuerpo y entrega el texto; el etag sigue siendo el SHA-256 de los bytes. Decodificar no pierde nada, porque toda línea del remoto se escribió desde una cadena, y el bloque 0 de la 014 lo comprobó byte a byte (`specs/014-ledger-sync-core/questions.md (en el historial de git)` §1.4).
+- *(014)* **El puerto del cliente entrega texto, no bytes** (`RemoteSnapshot`: `text` y `etag`). El dominio no tiene decodificador UTF-8, así que el cliente HTTP decodifica los bytes del cuerpo y entrega el texto; el etag sigue siendo el SHA-256 de los bytes. Decodificar no pierde nada, porque toda línea del remoto se escribió desde una cadena, y el bloque 0 de la 014 lo comprobó byte a byte (la feature 014).
 
 ### 5.2 Añadir líneas
 

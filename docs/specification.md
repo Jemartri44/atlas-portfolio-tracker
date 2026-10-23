@@ -444,7 +444,7 @@ SPA estática (Vite + Solid, ADR-0017; base de estilos propia, ADR-0023) servida
 
 - Entra con Google, descarga el libro de la nube al arrancar y escribe directamente con `If-Match`. No guarda libro, borradores ni cierres en el dispositivo: solo el *shell*, las preferencias de la interfaz y la copia pública del histórico del BCE.
 - Sin conexión muestra solo «Sin conexión» con «Reintentar»; si se corta con la aplicación abierta, oculta los datos al momento y recarga el libro al volver.
-- Si dos sitios registran a la vez, el segundo ve «El libro ha cambiado; revisa y confirma otra vez».
+- Si dos sitios registran a la vez, el segundo ve que sus datos han cambiado, se recarga el libro y se le pide confirmar otra vez; nada se mezcla sin que lo vea.
 - «Descargar copia» baja el libro (JSONL y CSV).
 
 **Requisitos transversales:**
