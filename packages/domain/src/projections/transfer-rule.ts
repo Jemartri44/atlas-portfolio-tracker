@@ -104,12 +104,12 @@ export const enforceTransfer = (
   if (block.code === "not_transferable") {
     throw new ProjectionError(block.code, eventId, block.message, details);
   }
-  const same = JSON.stringify(details);
+  // The message names the asset, the role or the residence: same text, same reason.
   const repeated = state.warnings.some(
     (warning) =>
       warning.event_id === requestId &&
       warning.code === block.code &&
-      JSON.stringify(warning.details) === same,
+      warning.message === block.message,
   );
   if (!repeated) {
     addWarning(state, block.code, eventId, block.message, details);
