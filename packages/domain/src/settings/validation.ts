@@ -311,6 +311,10 @@ export const validateSettings = (raw: unknown): Settings => {
       return fail(`${field} must be true or false`, { field, value: raw[field] });
     }
   }
+  // The transfer rule and the foreign-account test read it as text.
+  if ("tax_residence" in raw && typeof raw.tax_residence !== "string") {
+    return fail("tax_residence must be text", { field: "tax_residence", value: raw.tax_residence });
+  }
   checkInformativeAlerts(raw);
   checkRentaSeason(raw);
   checkTreatyRates(raw);
