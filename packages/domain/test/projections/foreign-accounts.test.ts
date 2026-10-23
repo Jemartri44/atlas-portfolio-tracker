@@ -33,6 +33,21 @@ describe("an account abroad on a date", () => {
     );
   });
 
+  it.each(["es", " ES ", ""])("reads %j as Spain, the way a transfer does", (residence) => {
+    expect(
+      hasForeignAccountsAt(withAccounts("ES", "ES"), "2029-01-20", { tax_residence: residence }),
+    ).toBe(false);
+    expect(
+      hasForeignAccountsAt(withAccounts("ES", "IE"), "2029-01-20", { tax_residence: residence }),
+    ).toBe(true);
+  });
+
+  it("reads a lower-case residence of another country as that country", () => {
+    expect(hasForeignAccountsAt(withAccounts("PT"), "2029-01-20", { tax_residence: " pt " })).toBe(
+      false,
+    );
+  });
+
   it("with no tax residence, applies the rule of the engine: a country other than ES", () => {
     expect(hasForeignAccountsAt(withAccounts("ES", "ES"), "2029-01-20", {})).toBe(false);
     expect(hasForeignAccountsAt(withAccounts("ES", "IE"), "2029-01-20", {})).toBe(true);

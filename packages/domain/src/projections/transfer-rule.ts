@@ -6,6 +6,7 @@ import { madridDateOf } from "../dates/madrid.js";
 import { ProjectionError } from "../errors.js";
 import type { IsoInstant } from "../schema/envelope.js";
 import type { AssetType } from "../schema/events.js";
+import { DEFAULT_TAX_RESIDENCE, taxResidenceOf } from "../settings/settings.js";
 import { settingsAt } from "./settings-at.js";
 import { addWarning, type LedgerState } from "./state.js";
 
@@ -37,10 +38,8 @@ export const RECORD_ONLY_BLOCKS: readonly string[] = [
   "transfer_not_resident",
 ];
 
-const isSpanish = (taxResidence: string | undefined): boolean => {
-  const value = (taxResidence ?? "").trim().toUpperCase();
-  return value === "" || value === "ES";
-};
+const isSpanish = (taxResidence: string | undefined): boolean =>
+  taxResidenceOf({ tax_residence: taxResidence }) === DEFAULT_TAX_RESIDENCE;
 
 /** Why a transfer between two different assets cannot defer tax, or `undefined` when it can. */
 export const transferBlock = (
