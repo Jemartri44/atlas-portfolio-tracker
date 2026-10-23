@@ -21,8 +21,8 @@ import { deepCheck } from "@atlas/domain/tools";
 import { assertKnownFlags, booleanFlag, type Flags, stringFlag, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { day, describeEcbFinding } from "../output/ecb.js";
-import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
+import { describeWarning } from "../output/warnings.js";
 import { ratesOf } from "./rates.js";
 import { dateFlag, loadForQuery, originOf, render, renderQuery, yearArgument } from "./shared.js";
 

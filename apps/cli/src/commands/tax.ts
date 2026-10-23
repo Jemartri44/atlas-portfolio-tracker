@@ -24,8 +24,8 @@ import { assertKnownFlags, booleanFlag, type Flags, UsageError } from "../args.j
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { CRITERION_LABELS } from "../output/criteria.js";
 import { eur } from "../output/format.js";
-import { describeWarning } from "../output/messages.js";
 import { table } from "../output/table.js";
+import { describeWarning } from "../output/warnings.js";
 import { rateFindingsOf } from "./rates.js";
 import { render, yearArgument } from "./shared.js";
 import { renderBoxes } from "./tax-boxes.js";

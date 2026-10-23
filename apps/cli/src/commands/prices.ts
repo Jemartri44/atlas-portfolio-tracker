@@ -151,7 +151,7 @@ const update = async (ctx: Context, flags: Flags): Promise<number> => {
       return EXIT.ok;
     }
     ctx.io.err(`La nube todavía no tiene precios: esta vez ${SHARED_QUOTA}`);
-  } else if (origin.kind !== "unsynced") {
+  } else if (origin.kind !== "local") {
     ctx.io.err(`Con --from-sources en una carpeta de nube, ${SHARED_QUOTA}`);
   }
   const { keys, note } = await keysFor(ctx);
@@ -167,7 +167,7 @@ const update = async (ctx: Context, flags: Flags): Promise<number> => {
     now: () => ctx.deps.clock.now(),
     store: new FilePriceStore(folderOf(ctx)),
     sources: sourcesFor(ctx, keys),
-    sharedWithCloud: origin.kind !== "unsynced",
+    sharedWithCloud: origin.kind !== "local",
   });
   if (report.no_sources) {
     render(ctx, report, NO_KEYS);
