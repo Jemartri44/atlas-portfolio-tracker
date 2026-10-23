@@ -14,10 +14,11 @@
 import { yearOf } from "@atlas/domain";
 import { informativeReturn, taxBoxes, taxYear } from "@atlas/domain/fiscal";
 import { A } from "@solidjs/router";
-import { createMemo, createResource, type JSX, Show } from "solid-js";
+import { createMemo, createResource, For, type JSX, Show } from "solid-js";
 import { EmptyState, Notice, Section } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
 import { toAppError } from "../../ledger/errors.js";
+import { attempt } from "../../ledger/query.js";
 import { store, today } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { privacy } from "../../shell/preferences.js";
@@ -30,8 +31,10 @@ import { DoubtfulCard, SettledCard } from "./CriteriaCards.jsx";
 import { FilingCard } from "./FilingCard.jsx";
 import { InformativeCard } from "./InformativeCard.jsx";
 import { LossesCard } from "./LossesCard.jsx";
+import { PartFailed } from "./PartFailed.jsx";
 import { RateNotes } from "./RateNotes.jsx";
 import { useYear, type YearChoice, YearPicker } from "./YearPicker.jsx";
+import { yearsOf } from "./years.js";
 
 /**
  * What sets a ledger up without moving anything. A ledger that only has these has nothing to
@@ -45,26 +48,6 @@ const SETUP = new Set([
   "asset_updated",
   "settings_changed",
 ]);
-
-/**
- * The years worth offering: from the first one with figures or with a return
- * to the current one, newest first. A ledger dated ahead of today —which
- * happens while a year is being caught up on— keeps its own years in the list
- * instead of falling off the end of it.
- */
-const yearsOf = (
-  gains: readonly { fiscal_date: string }[],
-  filings: readonly { tax_year: number }[],
-  current: number,
-): number[] => {
-  const years = [
-    ...gains.map((gain) => yearOf(gain.fiscal_date)),
-    ...filings.map((filing) => filing.tax_year),
-  ];
-  const first = Math.min(...years, current - 1);
-  const last = Math.max(...years, current);
-  return Array.from({ length: last - first + 1 }, (_, index) => last - index);
-};
 
 export default function FiscalRoute(): JSX.Element {
   return (
@@ -113,18 +96,30 @@ export default function FiscalRoute(): JSX.Element {
             return { ok: false as const, error: toAppError(error) };
           }
         });
+        // Each part answers or says why it cannot: one that fails does not take the screen with it.
         const boxes = createMemo(() =>
-          boxesView(taxBoxes(snapshot.events, year(), options()), names),
+          attempt(() => boxesView(taxBoxes(snapshot.events, year(), options()), names)),
         );
         const informative = createMemo(() =>
-          (["720", "721"] as const).map((model) =>
-            informativeView(
-              informativeReturn(snapshot.events, model, year(), options()),
-              names,
-              privacy(),
+          (["720", "721"] as const).map((model) => ({
+            model,
+            outcome: attempt(() =>
+              informativeView(
+                informativeReturn(snapshot.events, model, year(), options()),
+                names,
+                privacy(),
+              ),
             ),
-          ),
+          })),
         );
+        const boxesCard = (): JSX.Element => {
+          const result = boxes();
+          return result.ok ? (
+            <BoxesCard view={result.value} />
+          ) : (
+            <PartFailed title="Tu declaración por casillas" error={result.error} />
+          );
+        };
         const view = createMemo(() => {
           const computed = report();
           return computed.ok ? yearView(computed.value, names) : undefined;
@@ -221,7 +216,7 @@ export default function FiscalRoute(): JSX.Element {
                           expiring={year().expiring}
                           anchors={year().anchors}
                         />
-                        <BoxesCard view={boxes()} />
+                        {boxesCard()}
                       </Show>
                       <FilingCard
                         year={picked.year()}
@@ -232,9 +227,15 @@ export default function FiscalRoute(): JSX.Element {
                   )}
                 </Show>
                 <Show when={store.invalidCount() === 0}>
-                  {informative().map((model) => (
-                    <InformativeCard view={model} />
-                  ))}
+                  <For each={informative()}>
+                    {({ model, outcome }) =>
+                      outcome.ok ? (
+                        <InformativeCard view={outcome.value} />
+                      ) : (
+                        <PartFailed title={`Modelo ${model}`} error={outcome.error} half />
+                      )
+                    }
+                  </For>
                 </Show>
               </div>
             </Show>

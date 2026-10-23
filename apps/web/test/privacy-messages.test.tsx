@@ -8,8 +8,12 @@ import { createRoot } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, describe, expect, it } from "vitest";
 import { toAppError } from "../src/ledger/errors.js";
+import { errorOf } from "../src/ledger/failure-text.js";
+import { store } from "../src/ledger/state.js";
+import { saidText } from "../src/routes/ajustes/ecb-cloud-said.js";
 import { MovementState } from "../src/routes/movimientos/MovementLine.jsx";
-import { useFormProblems } from "../src/routes/registrar/form-problems.js";
+import { createProblem, useFormProblems } from "../src/routes/registrar/form-problems.js";
+import PendingWrite from "../src/shell/PendingWrite.jsx";
 import { setPrivacy } from "../src/shell/preferences.js";
 import type { MovementRow } from "../src/view-models/index.js";
 
@@ -56,5 +60,52 @@ describe("the problem next to the button of a form", () => {
     expect(problems.problem()).toContain("10");
     setPrivacy(true);
     expect(problems.problem()).not.toMatch(/\b10\b/);
+  });
+});
+
+const domainRefusal = () =>
+  new DomainError("unknown_code_for_test", "account acc_x holds 10 of ast_y", {});
+
+describe("an error that a screen keeps", () => {
+  it("is the error of a failed write, not its text", () => {
+    setPrivacy(false);
+    const kept = errorOf({ kind: "error", error: toAppError(domainRefusal()) });
+    expect(kept.message).toContain("10");
+    setPrivacy(true);
+    expect(kept.message).not.toMatch(/\b10\b/);
+  });
+
+  it("follows privacy in the problem next to the button of the corporate form", () => {
+    const problem = createRoot(() => createProblem());
+    setPrivacy(false);
+    problem.refuse(toAppError(domainRefusal()));
+    expect(problem.problem()).toContain("10");
+    setPrivacy(true);
+    expect(problem.problem()).not.toMatch(/\b10\b/);
+  });
+
+  it("follows privacy in what a card says after a failed action", () => {
+    setPrivacy(false);
+    const said = { tone: "danger", error: toAppError(domainRefusal()) } as const;
+    expect(saidText(said)).toContain("10");
+    setPrivacy(true);
+    expect(saidText(said)).not.toMatch(/\b10\b/);
+  });
+
+  it("follows privacy in the refusal of a pending write", () => {
+    setPrivacy(false);
+    store.setPending({
+      ids: [],
+      state: "not_written",
+      said: toAppError(domainRefusal()),
+      retry: async () => ({ kind: "unknown" as const }),
+    });
+    const host = document.createElement("div");
+    const dispose = render(() => <PendingWrite />, host);
+    expect(host.textContent).toContain("holds 10");
+    setPrivacy(true);
+    expect(host.textContent).not.toMatch(/\b10\b/);
+    dispose();
+    store.setPending(undefined);
   });
 });

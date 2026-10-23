@@ -161,6 +161,11 @@ const attempt = async <T>(run: () => Promise<T>): Promise<WriteResult<T>> => {
   }
 };
 
+const refused = (code: string, message: string): RetryResult => ({
+  kind: "refused",
+  error: { code, message },
+});
+
 /** What a retry of a pending write makes of an attempt: one of the four things it can end in. */
 const resultOfRetry = <T>(result: WriteResult<T>, id: string): RetryResult => {
   if (result.ok) {
@@ -172,24 +177,22 @@ const resultOfRetry = <T>(result: WriteResult<T>, id: string): RetryResult => {
     case "conflict":
       return { kind: "conflict" };
     case "error":
-      return { kind: "refused", message: result.failure.error.message };
+      return { kind: "refused", error: result.failure.error };
     case "signed_out":
-      return {
-        kind: "refused",
-        message:
-          "Tu sesión ha terminado: entra de nuevo y vuelve a intentarlo. No se ha guardado nada.",
-      };
+      return refused(
+        "signed_out",
+        "Tu sesión ha terminado: entra de nuevo y vuelve a intentarlo. No se ha guardado nada.",
+      );
     case "duplicate":
-      return {
-        kind: "refused",
-        message:
-          "Se parece a otra operación ya registrada: no se ha guardado. Revísala en Movimientos.",
-      };
+      return refused(
+        "duplicate",
+        "Se parece a otra operación ya registrada: no se ha guardado. Revísala en Movimientos.",
+      );
     case "dependents":
-      return {
-        kind: "refused",
-        message: "Otras operaciones dependen de esta: no se ha guardado. Rectifícalas antes.",
-      };
+      return refused(
+        "dependents",
+        "Otras operaciones dependen de esta: no se ha guardado. Rectifícalas antes.",
+      );
   }
 };
 

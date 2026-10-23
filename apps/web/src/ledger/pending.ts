@@ -17,7 +17,7 @@
 
 import { reloadLedger } from "./cloud.js";
 import { signedOutReason } from "./session-errors.js";
-import { store } from "./state.js";
+import { type AppError, store } from "./state.js";
 
 /**
  * A write that was sent and whose answer never arrived whole (ADR-0035, §2):
@@ -39,7 +39,7 @@ export type RetryResult =
   | { kind: "done"; id: string }
   | { kind: "unknown" }
   | { kind: "conflict" }
-  | { kind: "refused"; message: string };
+  | { kind: "refused"; error: AppError };
 
 export interface PendingWrite {
   readonly ids: readonly string[];
@@ -48,8 +48,8 @@ export interface PendingWrite {
   readonly seenEtag?: string;
   /** Sends it again **with the same ids**; the screen decides when, never a timer. */
   readonly retry: () => Promise<RetryResult>;
-  /** A sentence about the last attempt that was refused, if any. */
-  readonly said?: string;
+  /** The error of the last attempt that was refused, if any; kept as the error so it follows privacy. */
+  readonly said?: AppError;
 }
 
 interface Finder {
@@ -62,7 +62,7 @@ const finderOf = (): Finder | undefined => {
   return typeof open?.findOutcome === "function" ? (open as Finder) : undefined;
 };
 
-const update = (state: PendingState, said?: string): void => {
+const update = (state: PendingState, said?: AppError): void => {
   const current = store.pending();
   if (current !== undefined) {
     const { said: _before, ...rest } = current;
@@ -119,7 +119,7 @@ export const retryPending = async (): Promise<void> => {
       update("unknown");
       return;
     case "refused":
-      update("not_written", result.message);
+      update("not_written", result.error);
       return;
     case "conflict":
       // The ledger changed: before asking to confirm again, look once more for the ids.

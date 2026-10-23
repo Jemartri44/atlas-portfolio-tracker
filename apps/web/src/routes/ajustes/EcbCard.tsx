@@ -14,7 +14,7 @@ import { ConfirmDialog, Icon, Notice, Section } from "../../components/index.js"
 import { downloadCloudHistory } from "../../ecb/cloud.js";
 import { formatDate, formatInstantDate } from "../../format/date.js";
 import { toAppError } from "../../ledger/errors.js";
-import { cloudSaid } from "./ecb-cloud-said.js";
+import { cloudSaid, type Said, saidText } from "./ecb-cloud-said.js";
 
 const ecb = () => import("../../ecb/history.js");
 
@@ -33,7 +33,7 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
   const [busy, setBusy] = createSignal(false);
   const [signedIn, setSignedIn] = createSignal(false);
   const [forgetting, setForgetting] = createSignal(false);
-  const [said, setSaid] = createSignal<{ tone: "info" | "danger" | "caution"; text: string }>();
+  const [said, setSaid] = createSignal<Said>();
 
   const guarded = async (action: () => Promise<string | undefined>): Promise<void> => {
     setBusy(true);
@@ -44,7 +44,7 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
         setSaid({ tone: "info", text });
       }
     } catch (failure) {
-      setSaid({ tone: "danger", text: toAppError(failure).message });
+      setSaid({ tone: "danger", error: toAppError(failure) });
     } finally {
       setBusy(false);
       refetch();
@@ -142,7 +142,7 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
         )}
       </Show>
       <Show when={said()}>
-        {(message) => <Notice severity={message().tone}>{message().text}</Notice>}
+        {(message) => <Notice severity={message().tone}>{saidText(message())}</Notice>}
       </Show>
       <div class="button-row">
         <Show when={signedIn()}>

@@ -9,7 +9,7 @@ import { Icon, type IconName, Notice, Section, Switch } from "../../components/i
 import { countOf } from "../../format/number.js";
 import { type CopyFormat, downloadCopy } from "../../ledger/copy.js";
 import { toAppError } from "../../ledger/errors.js";
-import { store, today } from "../../ledger/state.js";
+import { type AppError, store, today } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { privacy, setPrivacy, setTheme, theme } from "../../shell/preferences.js";
 import { EcbCard } from "./EcbCard.jsx";
@@ -54,7 +54,7 @@ const LinkRow = (props: {
 export default function AjustesRoute(): JSX.Element {
   const [busy, setBusy] = createSignal(false);
   const [message, setMessage] = createSignal<string | undefined>(undefined);
-  const [error, setError] = createSignal<string | undefined>(undefined);
+  const [error, setError] = createSignal<AppError | undefined>(undefined);
 
   /** Only a download: the copy is read from the cloud now and nothing is kept here. */
   const onCopy = async (format: CopyFormat): Promise<void> => {
@@ -67,7 +67,7 @@ export default function AjustesRoute(): JSX.Element {
         `Tus datos van en ${name}. Guárdalo fuera de la nube: es la copia que este dispositivo no guarda por ti.`,
       );
     } catch (failure) {
-      setError(toAppError(failure).message);
+      setError(toAppError(failure));
     } finally {
       setBusy(false);
     }
@@ -84,10 +84,12 @@ export default function AjustesRoute(): JSX.Element {
           </Notice>
         )}
       </Show>
-      <Show when={error() !== undefined}>
-        <Notice severity="danger" title="No se ha podido">
-          {error()}
-        </Notice>
+      <Show when={error()}>
+        {(failure) => (
+          <Notice severity="danger" title="No se ha podido">
+            {failure().message}
+          </Notice>
+        )}
       </Show>
 
       <div class="grid">
