@@ -60,7 +60,8 @@ export const SessionNotice = (props: {
     try {
       outcome = await (await import("../ledger/cloud.js")).refreshSession();
     } catch {
-      // The module did not load (an old PWA): the button must not stay disabled.
+      // The module did not load (an old PWA) or the check failed: the button must not stay
+      // disabled, and the sentence below covers both.
       outcome = "offline";
     } finally {
       setBusy(false);
@@ -73,7 +74,7 @@ export const SessionNotice = (props: {
     }
     setSaid(
       outcome === "offline"
-        ? "No hay conexión para comprobar la sesión. Inténtalo de nuevo cuando vuelva."
+        ? "No se ha podido comprobar la sesión: puede que no haya conexión. Vuelve a pulsar «Ya he entrado» cuando la haya; si sigue igual, recarga la página y entra de nuevo."
         : "Todavía no hay una sesión iniciada. Termina de entrar en la otra pestaña y vuelve.",
     );
   };
