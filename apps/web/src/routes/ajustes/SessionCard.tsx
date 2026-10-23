@@ -54,7 +54,8 @@ export const SessionCard = (props: { readonly request?: typeof fetch }): JSX.Ele
       </div>
       <Show when={failed()}>
         <Notice severity="danger" title="No se ha podido cerrar la sesión">
-          La nube no ha respondido como se esperaba. La sesión puede seguir abierta.
+          La nube no ha respondido como se esperaba y la sesión puede seguir abierta. Inténtalo otra
+          vez con «Cerrar sesión».
         </Notice>
       </Show>
       <DevicesCard request={request} />

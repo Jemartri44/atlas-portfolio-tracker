@@ -220,7 +220,7 @@ export default function ResumenRoute(): JSX.Element {
           <>
             <PageHeader title="Resumen" lead={formatLongDate(date)} />
 
-            <QuotesNotice quotes={prices.quotes()} />
+            <QuotesNotice prices={prices} />
             <div class="grid">
               <Show when={onboarding}>{(steps) => <FirstSteps onboarding={steps()} />}</Show>
 
