@@ -22,6 +22,7 @@ import { decodeFragment, historyGate, scrollToFragment } from "./anchor.js";
 import { LedgerChip } from "./LedgerChip.jsx";
 import { inSection, Nav } from "./Nav.jsx";
 import { PrivacyToggle } from "./PrivacyToggle.jsx";
+import { privacy } from "./preferences.js";
 
 /**
  * The drafts waiting for their ECB rate (in the cloud): on every screen, but of the ECB, so it
@@ -32,7 +33,7 @@ const DraftSlot = (): JSX.Element => (
     data-slot="drafts"
     ref={(slot) =>
       // A counter that cannot load leaves the place empty, never an error.
-      void import("./draft-counter.js")
+      void import("../drafts/counter.js")
         .then((module) => module.mountDraftCounter(slot))
         .catch(() => undefined)
     }
@@ -79,7 +80,7 @@ const ScreenFailed = (props: { failure: unknown; retry: () => void }): JSX.Eleme
     Tus datos no se han tocado: esto es un fallo de la propia pantalla. Si acabas de perder la
     conexión, recarga cuando vuelvas a tenerla.
     <Show when={props.failure instanceof Error}>
-      <p class="meta">{maskFigures((props.failure as Error).message, store.privacy())}</p>
+      <p class="meta">{maskFigures((props.failure as Error).message, privacy())}</p>
     </Show>
   </Notice>
 );

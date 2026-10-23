@@ -14,8 +14,8 @@ import {
 } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { formatPercent } from "../src/format/number.js";
-import { store } from "../src/ledger/state.js";
 import Cartera from "../src/routes/cartera/index.jsx";
+import { setPrivacy } from "../src/shell/preferences.js";
 import { contributionView } from "../src/view-models/core/index.js";
 import { goldenEvents } from "./helpers/golden.js";
 import { show, text, withGoldenLedger } from "./helpers/render.jsx";
@@ -87,7 +87,7 @@ describe("the shares of the contribution of the month", () => {
 
 describe("the card of the contribution with the privacy mode on", () => {
   it("puts a share in front of every hidden amount of the split", async () => {
-    store.setPrivacy(true);
+    setPrivacy(true);
     const host = await show(`/cartera?fecha=${DATE}`, Cartera);
     const card = [...host.querySelectorAll("section.card")].find((section) =>
       text(section.querySelector("h2")).startsWith("Aportación de"),

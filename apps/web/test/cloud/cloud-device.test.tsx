@@ -19,6 +19,7 @@ import Ajustes from "../../src/routes/ajustes/index.jsx";
 import Movimientos from "../../src/routes/movimientos/index.jsx";
 import Borradores from "../../src/routes/registrar/borradores.jsx";
 import RegistrarForm from "../../src/routes/registrar/form.jsx";
+import { setPrivacy, setTheme } from "../../src/shell/preferences.js";
 import { goldenEvents, goldenText } from "../helpers/golden.js";
 import { choose, press, settle, show, showInShell, text, type, until } from "../helpers/render.jsx";
 import { apiAt, sameOrigin, signedIn } from "./api-support.js";
@@ -119,8 +120,8 @@ describe("what stays on the device after a session of the cloud", () => {
     await until(() => text(host).includes("200"), "the ledger on the screen");
 
     // What a session does: preferences, and the ECB copy the cloud gives to anyone.
-    store.setPrivacy(false);
-    store.setTheme("dark");
+    setPrivacy(false);
+    setTheme("dark");
     await saveImportedHistory({
       text: "Date,USD\n2026-10-01,1.1\n",
       source: "api",

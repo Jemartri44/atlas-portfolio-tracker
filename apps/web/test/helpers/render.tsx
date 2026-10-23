@@ -12,8 +12,8 @@ import type { JSX } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, vi } from "vitest";
 import { loadInto } from "../../src/ledger/actions.js";
-import { store } from "../../src/ledger/state.js";
 import { AppShell } from "../../src/shell/AppShell.jsx";
+import { setPrivacy } from "../../src/shell/preferences.js";
 import { goldenText } from "./golden.js";
 import { MemoryBlob } from "./memory-blob.js";
 
@@ -44,7 +44,7 @@ const disposers: (() => void)[] = [];
  */
 export const withGoldenLedger = (): void => {
   beforeEach(async () => {
-    store.setPrivacy(false);
+    setPrivacy(false);
     await openLedger();
   });
   afterEach(() => {
@@ -53,7 +53,7 @@ export const withGoldenLedger = (): void => {
     }
     document.body.innerHTML = "";
     window.history.replaceState({}, "", "/");
-    store.setPrivacy(false);
+    setPrivacy(false);
     instant = DEFAULT_INSTANT;
     vi.useRealTimers();
   });

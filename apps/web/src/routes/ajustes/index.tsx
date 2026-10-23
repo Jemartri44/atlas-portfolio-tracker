@@ -11,6 +11,7 @@ import { type CopyFormat, downloadCopy } from "../../ledger/copy.js";
 import { toAppError } from "../../ledger/errors.js";
 import { store, today } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
+import { privacy, setPrivacy, setTheme, theme } from "../../shell/preferences.js";
 import { EcbCard } from "./EcbCard.jsx";
 import { PricesCard } from "./PricesCard.jsx";
 import { SessionCard } from "./SessionCard.jsx";
@@ -133,21 +134,21 @@ export default function AjustesRoute(): JSX.Element {
             <Switch
               id="privacy-setting"
               label="Ocultar importes y cantidades"
-              checked={store.privacy()}
-              onChange={(checked) => store.setPrivacy(checked)}
+              checked={privacy()}
+              onChange={(checked) => setPrivacy(checked)}
               hint="Activado por defecto. Los porcentajes, los pesos y las fechas siguen visibles."
             />
             <fieldset class="theme-choice">
               <legend>Tema</legend>
               <div class="segmented">
                 <For each={THEMES}>
-                  {(theme) => (
+                  {(option) => (
                     <button
                       type="button"
-                      aria-pressed={store.theme() === theme.value}
-                      onClick={() => store.setTheme(theme.value)}
+                      aria-pressed={theme() === option.value}
+                      onClick={() => setTheme(option.value)}
                     >
-                      <span>{theme.label}</span>
+                      <span>{option.label}</span>
                     </button>
                   )}
                 </For>
