@@ -109,7 +109,7 @@ const text = (money: Money): string => money.amount.toString();
  * `atlas settings set`, where there is no report to lose: there is a setting
  * that cannot be changed.
  */
-const figuresOf = (
+const chainFiguresOf = (
   reading: Reading,
   year: number,
   today: CivilDate,
@@ -140,7 +140,6 @@ const reachesInformative = (
   return earliest !== undefined && earliest <= `${year}-12-31`;
 };
 
-/** The settings a reading is read with: its override, or the last recorded. */
 /**
  * The settings **in force** on one side: the override, else the last
  * `settings_changed` that nothing annulled — the rule the projection applies
@@ -189,7 +188,7 @@ const computed = (
  * comparing. Only called for a `renta`, whose three figures are required by
  * the schema, so there is nothing to default here.
  */
-const declaredFigures = (filing: Filing): string[] => {
+const declaredFigureNames = (filing: Filing): string[] => {
   const declared = filing.declared as FiledRentaFigures;
   return [
     "savings_base",
@@ -240,8 +239,8 @@ export const closedYearImpact = (
     // Only the income tax has figures the chain can compare; the assets of a
     // 720 are valued at market and live in their own module, and
     // that is a **reason**, not an empty result.
-    const was = entry.model === "renta" ? figuresOf(before, entry.year, today) : "by_design";
-    const is = entry.model === "renta" ? figuresOf(after, entry.year, today) : "by_design";
+    const was = entry.model === "renta" ? chainFiguresOf(before, entry.year, today) : "by_design";
+    const is = entry.model === "renta" ? chainFiguresOf(after, entry.year, today) : "by_design";
     const comparison = ((): ClosedYearComparison => {
       if (!computed(was)) {
         return { status: "not_compared", reason: was };
@@ -251,7 +250,7 @@ export const closedYearImpact = (
       }
       const moves: MovedFigure[] = [];
       for (const figure of new Set([
-        ...declaredFigures(filingOf(state, entry)),
+        ...declaredFigureNames(filingOf(state, entry)),
         ...was.keys(),
         ...is.keys(),
       ])) {

@@ -24,6 +24,7 @@ import { EVENT_LABELS } from "../../format/labels.js";
 import { nameIndex } from "../../format/names.js";
 import { formatExact } from "../../format/number.js";
 import { toAppError } from "../../ledger/errors.js";
+import type { AppError } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { FORM_SPECS } from "../../view-models/forms/index.js";
 import { RequireLedger } from "../guard.jsx";
@@ -70,7 +71,7 @@ export default function BorradoresRoute(): JSX.Element {
     (await import("../../ecb/history.js")).loadWebHistory(),
   );
   const [discarding, setDiscarding] = createSignal<DraftRow | undefined>(undefined);
-  const [refused, setRefused] = createSignal<string | undefined>(undefined);
+  const [refused, setRefused] = createSignal<AppError | undefined>(undefined);
 
   /** One that is in the ledger already is closed as confirmed; any other, as discarded. */
   const discard = async (row: DraftRow): Promise<void> => {
@@ -84,7 +85,7 @@ export default function BorradoresRoute(): JSX.Element {
           : { outcome: "confirmed", eventId: row.recorded[0] as Ulid },
       );
     } catch (error) {
-      setRefused(toAppError(error).message);
+      setRefused(toAppError(error));
     }
     await refetch();
   };
@@ -127,7 +128,7 @@ export default function BorradoresRoute(): JSX.Element {
               <Show when={refused()}>
                 {(said) => (
                   <Notice severity="caution" title="No se ha cerrado el borrador">
-                    {said()}
+                    {said().message}
                   </Notice>
                 )}
               </Show>

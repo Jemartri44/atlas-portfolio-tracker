@@ -19,7 +19,7 @@ import { eventReferences, inSentence } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
 import { countOf, formatExact } from "../../format/number.js";
 import { toAppError } from "../../ledger/errors.js";
-import { sentenceOf } from "../../ledger/failure-text.js";
+import { errorOf } from "../../ledger/failure-text.js";
 import type { AppError } from "../../ledger/state.js";
 import { SessionNotice } from "../../shell/SessionNotice.jsx";
 
@@ -57,7 +57,7 @@ export const RateCorrections = (props: {
       // The ledger was read again: the chain is proposed again on it, and confirmed again.
       refetch();
     }
-    setFailure({ code: result.failure.kind, message: sentenceOf(result.failure) });
+    setFailure(errorOf(result.failure));
   };
 
   return (

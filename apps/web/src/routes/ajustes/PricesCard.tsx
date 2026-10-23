@@ -8,6 +8,7 @@ import { Icon, Notice, Section } from "../../components/index.js";
 import { formatDate, formatInstantDate } from "../../format/date.js";
 import { toAppError } from "../../ledger/errors.js";
 import { store } from "../../ledger/state.js";
+import { type Said, saidText } from "./ecb-cloud-said.js";
 
 const prices = () => import("../../prices/quotes.js");
 
@@ -25,7 +26,7 @@ export const PricesCard = (): JSX.Element => {
       (await prices()).loadWebQuotes([...(snapshot?.state.assets.keys() ?? [])]),
   );
   const [busy, setBusy] = createSignal(false);
-  const [said, setSaid] = createSignal<{ tone: "info" | "danger" | "caution"; text: string }>();
+  const [said, setSaid] = createSignal<Said>();
 
   const latest = (): string | undefined => {
     let last: string | undefined;
@@ -68,7 +69,7 @@ export const PricesCard = (): JSX.Element => {
             },
       );
     } catch (failure) {
-      setSaid({ tone: "danger", text: toAppError(failure).message });
+      setSaid({ tone: "danger", error: toAppError(failure) });
     } finally {
       setBusy(false);
       input.value = "";
@@ -86,7 +87,7 @@ export const PricesCard = (): JSX.Element => {
         text: "Precios importados borrados de este navegador. Las valoraciones que registras a mano siguen ahí.",
       });
     } catch (failure) {
-      setSaid({ tone: "danger", text: toAppError(failure).message });
+      setSaid({ tone: "danger", error: toAppError(failure) });
     } finally {
       setBusy(false);
       refetch();
@@ -124,7 +125,7 @@ export const PricesCard = (): JSX.Element => {
         )}
       </Show>
       <Show when={said()}>
-        {(message) => <Notice severity={message().tone}>{message().text}</Notice>}
+        {(message) => <Notice severity={message().tone}>{saidText(message())}</Notice>}
       </Show>
       <div class="button-row">
         <label class="file-button">

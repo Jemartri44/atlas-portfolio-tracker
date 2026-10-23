@@ -27,7 +27,7 @@ import { formatDate } from "../../format/date.js";
 import { eventReferences, inSentence } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
 import { toAppError } from "../../ledger/errors.js";
-import { sentenceOf } from "../../ledger/failure-text.js";
+import { errorOf } from "../../ledger/failure-text.js";
 import type { AppError } from "../../ledger/state.js";
 import { store, today } from "../../ledger/state.js";
 import { changeSettings, closedYearsOfSettings } from "../../ledger/write.js";
@@ -152,18 +152,13 @@ export default function ConfiguracionRoute(): JSX.Element {
             setInvalidating(result.failure.affected);
             return;
           }
-          // The whole `AppError`, not just its text: it carries the action that fixes the problem.
           setSignedOut(result.failure.kind === "signed_out");
           if (result.failure.kind === "conflict") {
             // Read again: the next «Guardar» shows the reach of the change on the new ledger.
             setMoved(undefined);
             setClosedYears([]);
           }
-          setError(
-            result.failure.kind === "error"
-              ? result.failure.error
-              : { code: result.failure.kind, message: sentenceOf(result.failure) },
-          );
+          setError(errorOf(result.failure));
         };
 
         const touched = (): boolean => settingsTouched(patch(), weights());
