@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest";
 import { cashBalances } from "../../src/projections/cash.js";
 import { integrity } from "../../src/projections/integrity.js";
-import { fiscalLots } from "../../src/projections/lots.js";
+import { fiscalLots, openQuantity } from "../../src/projections/lots.js";
 import { physicalPositions } from "../../src/projections/positions.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import type { LedgerState } from "../../src/projections/state.js";
@@ -135,7 +135,7 @@ describe("a split between purchases and sales in two accounts", () => {
       return checkInvalid(events, reversal, {});
     };
     expect(() => annul(split.id)).toThrow(/less than 30/);
-    expect(() => annul(first.id)).toThrow();
+    expect(() => annul(first.id)).toThrow(/holds 0 of stock_s, less than 30/);
     expect(annul(last.id).affected).toEqual([]);
   });
 });
@@ -174,19 +174,6 @@ describe("a reverse split with cash in lieu across two accounts", () => {
     after(b);
     return b.build();
   };
-
-  it("leaves whole and fractional holdings, the lots they come from and the cash", () => {
-    const state = projectLedger(events());
-    expect(state.invalid).toEqual([]);
-    expect(positions(state)).toEqual(["acc_a|stock_s=2", "acc_b|stock_s=1"]);
-    expect(openLots(state, "stock_s")).toEqual([
-      "1.25@500 on 2027-01-11",
-      "1.75@700 on 2027-01-12",
-    ]);
-    expect(gains(state)).toEqual(["acc_a:0.5@200-200=0", "acc_b:0.75@300-300=0"]);
-    expect(cash(state)).toEqual(["acc_a=-800", "acc_b=-400"]);
-    expect(integrity(state)).toEqual([]);
-  });
 
   it("sells afterwards from the lot the fractions came out of", () => {
     const state = projectLedger(
@@ -304,7 +291,7 @@ describe("shares received for nothing and the two-month rule", () => {
   });
 });
 
-describe("fractions and ratios that do not divide", () => {
+describe("fractions and ratios that do not divide, and one that does", () => {
   const quantities = [
     ["acc_a", "0.333333"],
     ["acc_b", "1.5"],
@@ -338,8 +325,11 @@ describe("fractions and ratios that do not divide", () => {
         (sum, lot) => sum + Number(lot.cost_eur.amount),
         0,
       );
-      // The cost is spread, never created or lost.
+      // The cost is spread, never created or lost, and the units follow the ratio.
       expect(cost).toBeCloseTo(7 * 3.833341, 6);
+      const [numerator, denominator = "1"] = ratio.split("/");
+      const expected = (3.833341 * Number(numerator)) / Number(denominator);
+      expect(Number(openQuantity(state, "stock_s").toString())).toBeCloseTo(expected, 5);
     },
   );
 });

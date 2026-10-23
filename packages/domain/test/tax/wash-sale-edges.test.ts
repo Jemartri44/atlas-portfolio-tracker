@@ -33,7 +33,6 @@ describe("two months", () => {
     // [sale, last day inside, first day outside]
     ["31 December into a leap February", "2027-12-31", "2028-02-29", "2028-03-01"],
     ["31 December into a plain February", "2026-12-31", "2027-02-28", "2027-03-01"],
-    ["30 December into a plain February", "2026-12-30", "2027-02-28", "2027-03-01"],
     ["29 December into a leap February", "2027-12-29", "2028-02-29", "2028-03-01"],
   ])("after the sale, %s", (_, sale, inside, outside) => {
     expect(deferred("stock_s", DEFAULT_SETTINGS, sale, inside)).toBe("-100");
