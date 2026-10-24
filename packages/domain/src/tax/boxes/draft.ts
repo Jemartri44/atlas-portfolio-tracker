@@ -19,7 +19,7 @@ import type { IncomeCategory } from "../../settings/settings.js";
 import { type ChainCore, categoryOf } from "../chain.js";
 import { type CriterionId, sortCriteria } from "../criteria.js";
 import type { IncomeLine, TaxYearReport, TransmissionLine } from "../report.js";
-import { lineKey } from "../shared.js";
+import { lineKey, linesByKey } from "../shared.js";
 import type { WashSaleOutcome } from "../wash-sale.js";
 import {
   type ConceptId,
@@ -109,10 +109,10 @@ const disposalRows = (
 ): { drafts: Draft[]; totals: Map<SectionId, RowTotals> } => {
   const drafts: Draft[] = [];
   const totals = new Map<SectionId, RowTotals>();
-  for (const line of report.capital_gains.lines) {
+  for (const [key, line] of linesByKey(report.capital_gains.lines)) {
     const section = sectionOf(line);
     const own = line.own_eur;
-    const deferred = stillDeferred.get(index.get(lineKey(line)) as number) ?? zero();
+    const deferred = stillDeferred.get(index.get(key) as number) ?? zero();
     const gain = !own.isNegative();
     const value: Partial<Record<RowFieldId, Money>> = {
       transmission: line.proceeds.eur,

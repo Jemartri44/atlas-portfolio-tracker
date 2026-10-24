@@ -25,6 +25,7 @@ import { zero } from "../../money/eur.js";
 import type { Money } from "../../money/money.js";
 import type { RealizedGain } from "../../projections/state.js";
 import { type ChainCore, deferredAt } from "../chain.js";
+import { keyedByOrder, saleKey } from "../shared.js";
 import type { PendingDeferral, WashSaleOutcome } from "../wash-sale.js";
 
 /** A share of a deferral, in magnitude: which original loss it belongs to, and how much. */
@@ -134,11 +135,20 @@ export const deferredByOrigin = (chain: ChainCore, year: number): Map<number, Mo
 export const gainOf = (chain: ChainCore, index: number): RealizedGain =>
   chain.state.gains[index] as RealizedGain;
 
-/** The index in `state.gains` of a disposal, by the event and account its line names. */
+/**
+ * The index in `state.gains` of a disposal, by the key `linesByKey` gives the
+ * line that reports it: its event, account, asset and order among the sales
+ * the event makes of that asset in that account.
+ */
 export const gainIndexOf = (chain: ChainCore): Map<string, number> => {
-  const index = new Map<string, number>();
-  chain.state.gains.forEach((gain, position) => {
-    index.set(`${gain.event_id}|${gain.account_id}`, position);
-  });
-  return index;
+  const keyed = keyedByOrder(
+    chain.state.gains.map((gain, position) => ({
+      event_id: gain.event_id,
+      account_id: gain.account_id,
+      asset_id: gain.asset_id,
+      position,
+    })),
+    saleKey,
+  );
+  return new Map([...keyed].map(([key, gain]) => [key, gain.position]));
 };
