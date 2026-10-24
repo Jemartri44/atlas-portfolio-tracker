@@ -3,11 +3,11 @@
 import {
   type BenchmarkGap,
   type BucketThesisView,
-  bucketTheses,
   DomainError,
   settingsAt,
   type ThesisLeg,
 } from "@atlas/domain";
+import { bucketTheses } from "@atlas/domain/portfolio";
 import {
   assertKnownFlags,
   booleanFlag,

@@ -29,39 +29,38 @@ export type { Clock } from "./ports/clock.js";
 export type { LedgerStore, LoadedLedger } from "./ports/ledger-store.js";
 export type { RandomSource } from "./ports/random.js";
 export {
-  type BenchmarkGap,
   type BucketPosition,
   type BucketPositions,
-  type BucketThesisView,
   bucketPositions,
-  bucketTheses,
 } from "./projections/bucket.js";
-export {
-  type BucketControls,
-  type BucketReport,
-  type BucketStats,
-  bucketStats,
-  type ControlGap,
-  type DrawdownPoint,
-  type ExcludedThesis,
-  NEAR_LIMIT_PCT,
+export type {
+  BucketControls,
+  BucketReport,
+  BucketStats,
+  ControlGap,
+  DrawdownPoint,
+  ExcludedThesis,
 } from "./projections/bucket-stats.js";
+// Types only: they cost nothing at boot. The functions are behind `@atlas/domain/portfolio`.
+export type {
+  BenchmarkGap,
+  BucketThesesView,
+  BucketThesisView,
+} from "./projections/bucket-theses.js";
 export * from "./projections/cash.js";
 export { accounts, assets } from "./projections/catalogue.js";
-export {
-  type ContributionInput,
-  type ContributionPlan,
-  type ContributionRow,
-  contributionPlan,
+export type {
+  ContributionInput,
+  ContributionPlan,
+  ContributionRow,
 } from "./projections/contribution.js";
-export {
-  type BucketCostRow,
-  type CoreCostRow,
-  type CoreCostTotals,
-  type CostSummary,
-  costSummary,
-  type StandaloneFeeRow,
-  type StandaloneFees,
+export type {
+  BucketCostRow,
+  CoreCostRow,
+  CoreCostTotals,
+  CostSummary,
+  StandaloneFeeRow,
+  StandaloneFees,
 } from "./projections/costs.js";
 export type { FingerprintWaiver } from "./projections/filings.js";
 export { hasForeignAccountsAt } from "./projections/foreign-accounts.js";
@@ -117,9 +116,6 @@ export {
   projectLedger,
 } from "./projections/project-ledger.js";
 export {
-  type BucketIndexPoint,
-  type BucketIndexSeries,
-  bucketIndexSeries,
   type NetWorthPoint,
   type NetWorthSeries,
   netWorthSeries,

@@ -13,7 +13,8 @@
 // side by side from 1024px, the costs across; the date in force to the right
 // of the title.
 
-import { assets, contributionPlan, coreWeights, costSummary, settingsAt } from "@atlas/domain";
+import { assets, coreWeights, settingsAt } from "@atlas/domain";
+import { contributionPlan, costSummary } from "@atlas/domain/portfolio";
 import { createMemo, createSignal, type JSX } from "solid-js";
 import { AsOfPicker, useAsOf } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
