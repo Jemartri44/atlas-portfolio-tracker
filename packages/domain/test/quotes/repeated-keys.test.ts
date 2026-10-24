@@ -35,7 +35,7 @@ const refusal = (run: () => unknown) => {
   throw new Error("no refusal");
 };
 
-describe("a key twice in a JSON of prices/ (review of PR #106, R2-B1)", () => {
+describe("a key twice in a JSON of prices/", () => {
   it("names the repeated key, at any level, and nothing when there is none", () => {
     expect(repeatedKey('{"a":1,"b":{"c":1,"c":2}}')).toBe("c");
     expect(repeatedKey('{"a":1,"\\u0061":2}')).toBe("a");

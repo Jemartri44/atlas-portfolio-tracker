@@ -412,7 +412,7 @@ describe("contributionPlan", () => {
   });
 });
 
-describe("contributionPlan with an approximation (feature 013, P3)", () => {
+describe("contributionPlan with an approximation", () => {
   it("says itself when a weight it uses rests on an approximation; the interfaces only translate it", () => {
     const external: ExternalPrices = {
       at: (assetId, date) =>

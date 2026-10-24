@@ -13,16 +13,9 @@
 // open positions beside the budget, the theses, the costs and the warnings.
 // A bucket with nothing in it is one empty state, not six empty cards.
 
-import {
-  bucketPositions,
-  bucketStats,
-  bucketTheses,
-  costSummary,
-  netWorth,
-  settingsAt,
-  type Warning,
-} from "@atlas/domain";
+import { bucketPositions, netWorth, settingsAt, type Warning } from "@atlas/domain";
 import { bucketGauges, bucketIndexPctSeries } from "@atlas/domain/charts";
+import { bucketStats, bucketTheses, costSummary } from "@atlas/domain/portfolio";
 import { A } from "@solidjs/router";
 import { createMemo, For, type JSX, Show } from "solid-js";
 import {

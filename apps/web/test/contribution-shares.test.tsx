@@ -5,13 +5,8 @@
 // of it. The shares are computed in decimal and rounded once, when they are shown; a share of
 // nothing is no share.
 
-import {
-  type ContributionPlan,
-  contributionPlan,
-  Money,
-  projectLedger,
-  settingsAt,
-} from "@atlas/domain";
+import { type ContributionPlan, Money, projectLedger, settingsAt } from "@atlas/domain";
+import { contributionPlan } from "@atlas/domain/portfolio";
 import { describe, expect, it } from "vitest";
 import { formatPercent } from "../src/format/number.js";
 import Cartera from "../src/routes/cartera/index.jsx";

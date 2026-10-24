@@ -25,7 +25,7 @@ const line = (
 const ORDER = ["eodhd", "alpha_vantage"] as const;
 const TODAY = "2026-10-01";
 
-describe("the closes the console takes from the cloud (016, E3, block 1)", () => {
+describe("the closes the console takes from the cloud", () => {
   it("adds a date it does not have, keeping the source and the time of the cloud", () => {
     expect(
       cloudLinesToAppend([line("2026-09-29", "10")], [line("2026-09-30", "11")], ORDER, {
@@ -34,7 +34,7 @@ describe("the closes the console takes from the cloud (016, E3, block 1)", () =>
     ).toEqual([line("2026-09-30", "11")]);
   });
 
-  it("follows the rules of the 013: a correction of the same source, a source before, never after (mutant 23)", () => {
+  it("follows the rules of the daily download: a correction of the same source, a source before, never after", () => {
     const local = [
       line("2026-09-28", "10", "eodhd"),
       line("2026-09-29", "10", "alpha_vantage"),
@@ -64,7 +64,7 @@ describe("the closes the console takes from the cloud (016, E3, block 1)", () =>
   });
 });
 
-describe("what the console never takes from the cloud (review of PR #108, B1 and N5)", () => {
+describe("what the console never takes from the cloud", () => {
   it("never a close of today or of a day to come, and says how many it left (B1)", () => {
     expect(
       cloudLinesToAppend(

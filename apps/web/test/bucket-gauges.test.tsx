@@ -4,7 +4,7 @@
 // the domain's or `Settings`'s; the screen places them. They are drawn from percentages, so they
 // say the same with the privacy mode on.
 
-import { NEAR_LIMIT_PCT } from "@atlas/domain";
+import { NEAR_LIMIT_PCT } from "@atlas/domain/portfolio";
 import { describe, expect, it } from "vitest";
 import Cubo from "../src/routes/cubo/index.jsx";
 import { setPrivacy } from "../src/shell/preferences.js";

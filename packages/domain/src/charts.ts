@@ -10,6 +10,11 @@
 
 export { type BookCashPoint, type BookCashSeries, bookCashSeries } from "./charts/book-cash.js";
 export {
+  type BucketIndexPoint,
+  type BucketIndexSeries,
+  bucketIndexSeries,
+} from "./charts/bucket-index.js";
+export {
   type BucketIndexPctPoint,
   type BucketIndexPctSeries,
   bucketIndexPctSeries,

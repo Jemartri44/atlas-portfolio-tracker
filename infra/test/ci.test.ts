@@ -51,7 +51,24 @@ describe("the infra job of the CI", () => {
       .scripts as Record<string, string>;
     expect(scripts["test:others"]).not.toContain("infra");
     expect(scripts["test:others"]).not.toContain("domain");
+    expect(scripts.test).toBe("vitest run --project='!infra'");
     expect(job("verify")).not.toContain("terraform");
+  });
+
+  it("lists in test:others every project of vitest.config.ts but domain and infra", () => {
+    const config = readFileSync(join(repoRoot, "vitest.config.ts"), "utf8");
+    const projects = [...config.matchAll(/^\s+name: "(\w+)",?$|test: \{ name: "(\w+)"/gm)].map(
+      (match) => match[1] ?? match[2] ?? "",
+    );
+    const scripts = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8"))
+      .scripts as Record<string, string>;
+    const listed = [...(scripts["test:others"] ?? "").matchAll(/--project (\w+)/g)].map(
+      (match) => match[1],
+    );
+    expect(projects.length).toBeGreaterThan(5);
+    expect(listed.sort()).toEqual(
+      projects.filter((name) => !["domain", "infra"].includes(name)).sort(),
+    );
   });
 
   it("holds no credential: no secret, no AWS variable, no role", () => {

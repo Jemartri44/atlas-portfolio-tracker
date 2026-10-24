@@ -212,6 +212,7 @@ export default defineConfig(({ command }) => ({
       "@atlas/domain/fiscal": repo("../../packages/domain/src/fiscal.ts"),
       "@atlas/domain/tools": repo("../../packages/domain/src/tools.ts"),
       "@atlas/domain/charts": repo("../../packages/domain/src/charts.ts"),
+      "@atlas/domain/portfolio": repo("../../packages/domain/src/portfolio.ts"),
       "@atlas/domain/quotes": repo("../../packages/domain/src/quotes.ts"),
       "@atlas/domain/sync": repo("../../packages/domain/src/sync.ts"),
       "@atlas/domain/remote-answers": repo("../../packages/domain/src/remote-answers.ts"),
@@ -269,7 +270,7 @@ export default defineConfig(({ command }) => ({
          * everything of the ECB (`ecb/`, the `ecb.ts` door and the local configuration in
          * `config/`), the automatic daily closes (`quotes/` and the `quotes.ts` door), the sync of
          * the ledger (`sync/`, the `sync.ts` door and its two ports) and the indicators of the Cubo
-         * (`charts/` and the `charts.ts` door), none of which may be on the boot path. **The store
+         * (`charts/` and the `charts.ts` door) and the analysis of the Cartera and the Cubo (the `portfolio.ts` door and the modules behind it), none of which may be on the boot path. **The store
          * of the browser rides in the same chunk** (`blob.ts` and `idb.ts`): it is boot too —
          * opening the ledger is the boot. Without the group the bundler splits the store into a
          * boot chunk of its own (0,5 KB gzip, measured). `scripts/check-bundle.mjs` fails the build
@@ -279,7 +280,7 @@ export default defineConfig(({ command }) => ({
           groups: [
             {
               name: "domain",
-              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|quotes[\\/]|quotes\.ts|charts[\\/]|charts\.ts|sync[\\/]|sync\.ts|remote[\\/]|remote-answers\.ts|tools\.ts|projections[\\/](?:corporate-action-draft|deep-check|simulate-transfer)\.ts|ports[\\/]remote-ledger\.ts|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/]idb\.ts))/,
+              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|quotes[\\/]|quotes\.ts|charts[\\/]|charts\.ts|sync[\\/]|sync\.ts|remote[\\/]|remote-answers\.ts|tools\.ts|projections[\\/](?:corporate-action-draft|deep-check|simulate-transfer|bucket-theses|bucket-stats|costs|contribution)\.ts|portfolio\.ts|ports[\\/]remote-ledger\.ts|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/]idb\.ts))/,
             },
           ],
         },
