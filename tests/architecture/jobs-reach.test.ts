@@ -23,7 +23,7 @@ import {
   repoRoot,
   resolveAcross,
   webReach,
-} from "./support/source-graph.js";
+} from "../support/source-graph.js";
 
 const jobsSrc = join(jobsRoot, "src");
 const sep = String.raw`[/\\]`;
@@ -57,7 +57,7 @@ const violationsOf = (reached: Map<string, string[]>, rule: RegExp): string[] =>
     .filter(([file]) => file.startsWith("<") || rule.test(file))
     .map(([, chain]) => chainText(chain));
 
-describe("architecture (016): the jobs are reached by nothing that faces a user", () => {
+describe("jobs: reached by nothing that faces a user", () => {
   it("has the files it guards, so no rule below passes by looking at nothing", () => {
     for (const file of [
       join(jobsSrc, "lambda.ts"),
@@ -82,7 +82,7 @@ describe("architecture (016): the jobs are reached by nothing that faces a user"
     expect(violationsOf(reach(roots), TASK_CODE)).toEqual([]);
   });
 
-  it("keeps the mail and the keys of the sources out of the API and the web (B2)", () => {
+  it("keeps the mail and the keys of the sources out of the API and the web", () => {
     const api = reach([join(apiRoot, "src", "lambda.ts"), ...listSources(join(apiRoot, "src"))]);
     expect(violationsOf(api, MAIL)).toEqual([]);
     expect(violationsOf(api, PRICE_KEYS)).toEqual([]);
@@ -97,7 +97,7 @@ describe("architecture (016): the jobs are reached by nothing that faces a user"
     expect(sesv2.map((file) => relative(repoRoot, file))).toEqual([]);
   });
 
-  it("keeps the daily writers and the simulated source out of the API, the web and the console (E2)", () => {
+  it("keeps the daily writers and the simulated source out of the API, the web and the console", () => {
     const roots = [
       join(apiRoot, "src", "lambda.ts"),
       ...listSources(join(apiRoot, "src")),
@@ -107,19 +107,19 @@ describe("architecture (016): the jobs are reached by nothing that faces a user"
     expect(violationsOf(webReach(), DAILY_WRITERS)).toEqual([]);
   });
 
-  it("keeps the daily writers out of the mail task (E2)", () => {
+  it("keeps the daily writers out of the mail task", () => {
     const mail = reach([join(jobsSrc, "tasks", "mail.ts")]);
     expect(violationsOf(mail, DAILY_WRITERS)).toEqual([]);
   });
 
-  it("keeps the keys of the sources out of the mail task (B2)", () => {
+  it("keeps the keys of the sources out of the mail task", () => {
     const mail = reach([join(jobsSrc, "tasks", "mail.ts")]);
     expect(mail.size).toBeGreaterThan(1);
     expect(violationsOf(mail, PRICE_KEYS)).toEqual([]);
   });
 });
 
-describe("architecture (016): the warnings of January reach no price (E4, mutant 31)", () => {
+describe("jobs: the warnings of January reach no price", () => {
   /**
    * No price reaches the fiscal path, not even a warning (ADR-0031, second amendment). The income
    * tax and the thresholds of the 720 and 721 are decided in the domain by functions that take the
@@ -218,7 +218,7 @@ describe("architecture (016): the warnings of January reach no price (E4, mutant
   });
 });
 
-describe("architecture (016): one writer per object in prices/ (P18, M5)", () => {
+describe("jobs: one writer per object in prices/", () => {
   /**
    * The code of the cloud — the application of the jobs and the adapters of
    * AWS it reaches — never writes `prices/symbols.json`, whose one writer is
@@ -258,7 +258,7 @@ describe("architecture (016): one writer per object in prices/ (P18, M5)", () =>
   });
 });
 
-describe("architecture (016): no alias of `imports` escapes the graph (review of PR #106, N1)", () => {
+describe("jobs: no alias of `imports` escapes the graph", () => {
   /**
    * A specifier that starts with `#` is an alias of the `imports` field of a
    * `package.json`: the graph cannot follow it, and a guard that resolved it
@@ -288,7 +288,7 @@ describe("architecture (016): no alias of `imports` escapes the graph (review of
   });
 });
 
-describe("architecture (016): one module per export (round 2 of the review of PR #106, R2-N3)", () => {
+describe("jobs: one module per export", () => {
   /**
    * `exports` can name one module for `types` — what the graph read — and
    * another for `import` — what the bundler takes. The graph now resolves
@@ -354,7 +354,7 @@ describe("architecture (016): one module per export (round 2 of the review of PR
   });
 });
 
-describe("architecture (016): one reader of the switch of amounts (M2)", () => {
+describe("jobs: one reader of the switch of amounts", () => {
   /**
    * The switch lives in SSM (`/atlas/<env>/mail/amounts`, ADR-0028, row 18).
    * Only the composition of the mail task reads it, with the rule of the
@@ -370,7 +370,7 @@ describe("architecture (016): one reader of the switch of amounts (M2)", () => {
   });
 });
 
-describe("architecture (016): the clock is injected", () => {
+describe("jobs: the clock is injected", () => {
   /**
    * Nothing of this feature reads the real time outside the adapter of the clock: a job that did
    * would take its period from the machine, and a test that did would fail one day a year. **Whole

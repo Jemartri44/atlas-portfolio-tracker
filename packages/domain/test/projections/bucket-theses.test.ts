@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Decimal } from "../../src/money/decimal.js";
-import { bucketTheses } from "../../src/projections/bucket.js";
+import { bucketTheses } from "../../src/projections/bucket-theses.js";
 import type { ExternalPrices } from "../../src/projections/prices.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { DEFAULT_SETTINGS, mergeSettings, type Settings } from "../../src/settings/settings.js";
@@ -300,7 +300,7 @@ const noRate013 = (asset: string): ExternalPrices => ({
       : undefined,
 });
 
-describe("bucketTheses with a quote of the index that has no rate (feature 013)", () => {
+describe("bucketTheses with a quote of the index that has no rate", () => {
   it("leaves the comparison out: a price without euros is no price for it", () => {
     const view = bucketTheses(
       projectLedger(scenario({ sell: true }).build()),

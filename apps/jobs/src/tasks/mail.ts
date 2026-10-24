@@ -16,13 +16,7 @@
 
 import { readWebSignIn, TokenRegistry } from "@atlas/adapters/aws";
 import type { JobsStore } from "@atlas/adapters/aws-jobs";
-import {
-  bucketStats,
-  type CivilDate,
-  contributionPlan,
-  coreWeights,
-  DomainError,
-} from "@atlas/domain";
+import { type CivilDate, coreWeights, DomainError } from "@atlas/domain";
 import {
   type AmountsSwitch,
   amountsSwitch,
@@ -48,6 +42,7 @@ import {
   weeklyReviewMail,
   weeklyReviewUnavailableMail,
 } from "@atlas/domain/jobs";
+import { bucketStats, contributionPlan } from "@atlas/domain/portfolio";
 import { type ReferenceRead, readReference } from "../reference.js";
 import type { TaskContext, TaskResult, TaskRunner } from "../run.js";
 import { notifierOf, originOf, sendOnce } from "./send.js";

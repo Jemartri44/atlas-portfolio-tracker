@@ -59,7 +59,7 @@ describe("the currency declared per source", () => {
     expect(JSON.parse(serializeSymbols(file)).symbols_format).toBe(2);
   });
 
-  it("reads a file of feature 013, one currency per asset, as the currency of all its sources", () => {
+  it("reads a file of format 1, one currency per asset, as the currency of all its sources", () => {
     const old = JSON.stringify({
       symbols_format: 1,
       assets: {
@@ -284,7 +284,7 @@ const legacyConfirmed = (currency: string, over: Record<string, string>) =>
     },
   });
 
-describe("a file of 013 that confirmed a currency over another (review of PR #80, blocking)", () => {
+describe("a file of format 1 that confirmed a currency over another source's", () => {
   it("does not inherit the confirmation: that source is left uncontrasted, in both directions", () => {
     // Declared GBP and confirmed over the GBX of Alpha Vantage.
     const pounds = parseSymbols(legacyConfirmed("GBP", { alpha_vantage: "GBX" })).assets.ast_spec;
@@ -346,7 +346,7 @@ describe("a file of 013 that confirmed a currency over another (review of PR #80
   });
 });
 
-describe("closes that 013 stored in the wrong currency (review of PR #80)", () => {
+describe("closes stored in a currency their source does not declare", () => {
   const line = (date: string, close: string, currency: string, source: "eodhd" | "alpha_vantage") =>
     `${JSON.stringify({ schema_version: 1, date, close, currency, source, fetched_at: "2027-01-06T06:00:00.000Z" })}\n`;
   const symbols = parseSymbols(newFile(LONDON));
@@ -451,7 +451,7 @@ describe("the approximation with a reference ETF of London", () => {
   });
 });
 
-describe("the two guards the review found without a test (review of PR #80)", () => {
+describe("the declared currency while a source is contrasted and downloaded", () => {
   const ledger = () => {
     const b = new LedgerBuilder();
     catalogue(b);
@@ -474,7 +474,7 @@ describe("the two guards the review found without a test (review of PR #80)", ()
       sources,
     });
 
-  it("M4: a currency the user changes while its source is being contrasted is left as the user wrote it", async () => {
+  it("a currency the user changes while its source is being contrasted is left as the user wrote it", async () => {
     const store = new MemoryPriceStore();
     store.files.set(
       "symbols.json",
@@ -499,7 +499,7 @@ describe("the two guards the review found without a test (review of PR #80)", ()
     expect(entry?.currency_check).toBeUndefined();
   });
 
-  it("M2: a close whose own currency is not the one declared for its source is never stored", async () => {
+  it("a close whose own currency is not the one declared for its source is never stored", async () => {
     // A source of tomorrow that says the currency of each close.
     const store = new MemoryPriceStore();
     store.files.set(
@@ -537,7 +537,7 @@ describe("the two guards the review found without a test (review of PR #80)", ()
   });
 });
 
-describe("second pass of PR #80: the closes 013 stored wrong under a file of format 1", () => {
+describe("closes stored wrong under a file of format 1 are left out and purged like any other", () => {
   const line = (date: string, close: string, currency: string, source: "eodhd" | "alpha_vantage") =>
     `${JSON.stringify({ schema_version: 1, date, close, currency, source, fetched_at: "2027-01-06T06:00:00.000Z" })}\n`;
 
@@ -619,7 +619,7 @@ describe("second pass of PR #80: the closes 013 stored wrong under a file of for
   });
 });
 
-describe("second pass of PR #80: a purge asks for its days again", () => {
+describe("a purge asks for its days again", () => {
   const line = (date: string, close: string, currency: string, source: "eodhd" | "alpha_vantage") =>
     `${JSON.stringify({ schema_version: 1, date, close, currency, source, fetched_at: "2027-01-06T06:00:00.000Z" })}\n`;
 
@@ -673,7 +673,7 @@ describe("second pass of PR #80: a purge asks for its days again", () => {
   });
 });
 
-describe("second pass of PR #80: the edges of what is carried, purged and asked again", () => {
+describe("what a declaration, a purge and a removal carry, keep and clear of the days owed", () => {
   const line = (date: string, close: string, currency: string, source: "eodhd" | "alpha_vantage") =>
     `${JSON.stringify({ schema_version: 1, date, close, currency, source, fetched_at: "2027-01-06T06:00:00.000Z" })}\n`;
 
@@ -798,7 +798,7 @@ describe("second pass of PR #80: the edges of what is carried, purged and asked 
   });
 });
 
-describe("third pass of PR #80: misstored leaves only through a purge", () => {
+describe("a mark of closes stored wrong leaves only through a purge", () => {
   const pending = () =>
     newFile({
       ...LONDON,
@@ -851,7 +851,7 @@ describe("third pass of PR #80: misstored leaves only through a purge", () => {
   });
 });
 
-describe("third pass of PR #80: the days asked once that the source does not serve", () => {
+describe("days asked once that the source does not serve stay a hole that is said", () => {
   const line = (date: string, close: string, currency: string, source: "eodhd" | "alpha_vantage") =>
     `${JSON.stringify({ schema_version: 1, date, close, currency, source, fetched_at: "2027-01-06T06:00:00.000Z" })}\n`;
 

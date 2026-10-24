@@ -9,8 +9,6 @@ import {
   type BucketStats,
   type BucketThesisView,
   bucketPositions,
-  bucketStats,
-  bucketTheses,
   type CashLine,
   Money,
   type NetWorth,
@@ -18,6 +16,7 @@ import {
   settingsAt,
   type Warning,
 } from "@atlas/domain";
+import { bucketStats, bucketTheses } from "@atlas/domain/portfolio";
 import { assertKnownFlags, type Flags } from "../args.js";
 import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
 import { DASH, eur, pct } from "../output/format.js";

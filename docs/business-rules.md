@@ -42,7 +42,7 @@ Es la línea con la que se lee la evolución del núcleo: cuánto dinero ha pues
 3. **Qué no cuenta:** dividendos, intereses, comisiones sueltas, compras, ventas, cambios de divisa, eventos corporativos y traspasos (también el de custodia, ADR-0012): no son dinero que el usuario pone o saca.
 4. **El cubo nunca entra** (constitución III). El dinero que pasa del núcleo al cubo se registra como retirada en uno e ingreso en el otro, y resta de lo aportado al núcleo, que es lo que pasó.
 5. **Anulados y corregidos:** manda la proyección. Un evento anulado no cuenta y su corrección sí.
-6. **Compras sin ingreso previo.** Si el núcleo tiene una compra anterior a su primer ingreso (o ninguno), lo aportado **no se inventa a partir de las compras**: la serie lleva `uncovered_buys` y la pantalla lo dice en una frase.
+6. **Compras sin ingreso previo.** Si el núcleo tiene una compra anterior a su primer ingreso (o ninguno), lo aportado **no se inventa a partir de las compras**: la serie lleva `uncovered_buys` y la pantalla lo dice en una frase. Es un hecho del libro, no del rango pedido: se calcula sobre todas las compras del núcleo y sale igual con un `from` posterior a la compra.
 7. **Una fecha de consulta** (ADR-0016): el punto de la fecha `d` cuenta los eventos de fecha de negocio `<= d`, en las mismas fechas que la serie del patrimonio. No depende de ningún precio: no tiene huecos.
 8. **El libro de la cuenta** es el actual, como en las aportaciones del cubo.
 

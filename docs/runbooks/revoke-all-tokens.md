@@ -83,7 +83,7 @@ Las órdenes de abajo son de `sh` **POSIX**: valen en `bash`, en `zsh` y en `das
    ```
    Tiene que dar `0`. Si no, uno está vivo o no se puede leer: míralo a mano con `aws ssm get-parameter --with-decryption --name <nombre>`.
 
-*Probado sin AWS*, con `dash` y una `aws` simulada (`tests/runbook-revoke-all.test.ts`, que ejecuta los dos bloques de arriba tal como están aquí):
+*Probado sin AWS*, con `dash` y una `aws` simulada (`tests/runbooks/revoke-all-tokens.test.ts`, que ejecuta los dos bloques de arriba tal como están aquí):
 - el paso 2 escribe **los mismos bytes** que `revokedRecord` y `serializeTokenRecord` de la API, con un `device_name` que lleva acentos, comillas, una barra invertida y un salto de línea;
 - deja como están los ya revocados y los que no se pueden leer;
 - el paso 3 cuenta el que no se puede leer.

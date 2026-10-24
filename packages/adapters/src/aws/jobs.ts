@@ -2,7 +2,7 @@
 // build on the narrow interfaces of S3 and SSM — their records and streaks,
 // and the `Notifier` of SES over its narrow `MailSender`. Apart from
 // `@atlas/adapters/aws` so the API, which imports that door, never reaches
-// what sends mail (`tests/jobs-access.test.ts`). Node only.
+// what sends mail (`tests/architecture/jobs-reach.test.ts`). Node only.
 
 export { JobsStore, JobsWriteConflict, type Read } from "./jobs-store.js";
 export {

@@ -192,7 +192,7 @@ describe("architecture: @atlas/domain imports nothing", () => {
    * from being seen; this sees the whole chain and prints it.
    *
    * Note which way round it is: a view reading `theses.ts` is fine, and that is
-   * exactly why the index comparison lives in `bucket.ts` and **wraps**
+   * exactly why the index comparison lives in `bucket-theses.ts` and **wraps**
    * `theses()` instead of extending it. What is forbidden is the fiscal path
    * learning what a price is.
    */

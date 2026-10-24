@@ -9,7 +9,7 @@
 
 import { Decimal } from "../money/decimal.js";
 import type { Money } from "../money/money.js";
-import type { BucketThesisView } from "../projections/bucket.js";
+import type { BucketThesisView } from "../projections/bucket-theses.js";
 
 const HUNDRED = Decimal.parse("100");
 

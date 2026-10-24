@@ -1,6 +1,5 @@
-// The guardians of the API and the access. Kept apart from `architecture.test.ts`, which is already
-// two thousand lines long; the graph walk is the same idea: static imports, across packages through
-// `exports`.
+// The guardians of the API and the access: the graph walk is the same idea as the other architecture
+// tests: static imports, across packages through `exports`.
 
 import { readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
@@ -22,9 +21,9 @@ import {
   specifiersOf,
   webReach,
   webSrc,
-} from "./support/source-graph.js";
+} from "../support/source-graph.js";
 
-describe("architecture (015): the API is a workspace of its own", () => {
+describe("api: the API is a workspace of its own", () => {
   it("has the files it guards, so no rule below passes by looking at nothing", () => {
     const manifest = JSON.parse(readFileSync(join(apiRoot, "package.json"), "utf8")) as {
       name: string;
@@ -40,7 +39,7 @@ describe("architecture (015): the API is a workspace of its own", () => {
     ).toBe(true);
   });
 
-  it("depends at runtime only on workspaces, and builds with esbuild pinned (§2 bis, B4; §7 P3)", () => {
+  it("depends at runtime only on workspaces, and builds with esbuild pinned", () => {
     const manifest = JSON.parse(readFileSync(join(apiRoot, "package.json"), "utf8")) as {
       dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
@@ -123,7 +122,7 @@ describe("architecture (015): the API is a workspace of its own", () => {
   });
 });
 
-describe("architecture (015): every import can be read", () => {
+describe("api: every import can be read", () => {
   /**
    * The graph every guard above and below walks is read off the imports of each source, so an
    * import it cannot read is an import it cannot see. A dynamic `import(…)` whose argument is not a
@@ -193,7 +192,7 @@ describe("architecture (015): every import can be read", () => {
   });
 });
 
-describe("architecture (015): credentials travel where ADR-0027 says", () => {
+describe("api: credentials travel where ADR-0027 says", () => {
   /**
    * CloudFront overwrites `Authorization` with OAC (ADR-0027, fact 1): every
    * credential goes in the cookie or in `x-atlas-device-token`. Named as a
@@ -209,7 +208,7 @@ describe("architecture (015): credentials travel where ADR-0027 says", () => {
   });
 });
 
-describe("architecture (015): AWS and Google only where they belong", () => {
+describe("api: AWS and Google only where they belong", () => {
   const googleHosts =
     /["'`][^"'`\n]*(?:accounts\.google\.com|googleapis\.com|oauth2\.google|openid-configuration)/;
 
@@ -269,7 +268,7 @@ describe("architecture (015): AWS and Google only where they belong", () => {
   });
 });
 
-describe("architecture (015): the records of the tokens are never deleted nor labelled (T26)", () => {
+describe("api: the records of the tokens are never deleted nor labelled", () => {
   /**
    * ADR-0033, point 9: a record is written to create it and to revoke it, and never deleted; a
    * label or a delete is a way to bring a revoked token back. The narrow interface of SSM offers
@@ -290,7 +289,7 @@ describe("architecture (015): the records of the tokens are never deleted nor la
   });
 });
 
-describe("architecture (015): the thin adapters of the SDK send only what they are for (E3)", () => {
+describe("api: the thin adapters of the SDK send only what they are for", () => {
   /**
    * The API only appends to the bucket and never deletes (ADR-0026, Part A; ADR-0028, row 7), and
    * the records of the tokens are never deleted nor labelled. What the adapters take from the SDK
@@ -337,7 +336,7 @@ describe("architecture (015): the thin adapters of the SDK send only what they a
   });
 });
 
-describe("architecture (015): the API only appends, and the domain judges every line (E3)", () => {
+describe("api: the API only appends, and the domain judges every line", () => {
   const apiSources = () => listSources(join(apiRoot, "src"));
 
   /**
@@ -374,7 +373,7 @@ describe("architecture (015): the API only appends, and the domain judges every 
   });
 });
 
-describe("architecture (015): the administration is out of reach of the API (E5)", () => {
+describe("api: the administration is out of reach of the API", () => {
   const cliSources = (): string[] => listSources(cliSrc);
   const isAdministration = (file: string): boolean =>
     /[/\\]adapters[/\\]src[/\\]aws[/\\]sdk-admin\.ts$/.test(file) ||
@@ -436,7 +435,7 @@ describe("architecture (015): the administration is out of reach of the API (E5)
   });
 });
 
-describe("architecture (015): the authoritative guard reads the graph of the bundle", () => {
+describe("api: the authoritative guard reads the graph of the bundle", () => {
   /**
    * The guards of this file read the sources; the one that decides reads the modules Rolldown put
    * in the bundle. It runs inside `npm run build`, so this only holds that it is there: the plugin
@@ -478,7 +477,7 @@ describe("architecture (015): the authoritative guard reads the graph of the bun
   });
 });
 
-describe("architecture (015): nothing of the access on the boot path", () => {
+describe("api: nothing of the access on the boot path", () => {
   it("lists every web module of the feature in LAZY_ONLY from its first commit", () => {
     const script = readFileSync(
       join(repoRoot, "apps", "web", "scripts", "check-bundle.mjs"),
@@ -495,7 +494,7 @@ describe("architecture (015): nothing of the access on the boot path", () => {
   });
 });
 
-describe("architecture (015): the service worker leaves the API alone", () => {
+describe("api: the service worker leaves the API alone", () => {
   /**
    * Found by looking at the screen: the PWA answered **every** navigation with `index.html`
    * (`navigateFallback`), so `GET /api/auth/login` and the return from Google never reached the

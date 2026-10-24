@@ -1,5 +1,5 @@
-// The reader of the source graph the guardians share (`tests/api-access.test.ts` and
-// `tests/jobs-access.test.ts` walk the same graph, so there is no second, weaker copy). Static
+// The reader of the source graph the guardians share (`tests/architecture/api.test.ts` and
+// `tests/architecture/jobs-reach.test.ts` walk the same graph, so there is no second, weaker copy). Static
 // imports, re-exports and literal dynamic imports, parsed with the parser Vite ships, across
 // packages through their `exports`. Nothing here is a test: it only reads.
 

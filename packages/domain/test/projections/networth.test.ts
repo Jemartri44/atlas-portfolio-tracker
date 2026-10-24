@@ -251,7 +251,7 @@ describe("netWorth, foreign cash with the ECB history", () => {
     expect(without.cash.rows.find((row) => row.currency === "USD")?.fx_source).toBeUndefined();
   });
 
-  it("uses the ledger's rate when it is more recent than the history's (round 1 of PR #102)", () => {
+  it("uses the ledger's rate when it is more recent than the history's", () => {
     // The history not updated since 1 June; the ledger priced the dollar on 30 June.
     const view = netWorth(project(portfolio()), "2027-07-10", settings, ecb("2", "2027-06-01"));
     const usd = view.cash.rows.find((row) => row.currency === "USD");

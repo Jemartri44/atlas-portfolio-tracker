@@ -7,13 +7,12 @@ import {
   type ContributionPlan,
   type CoreWeights,
   type CostSummary,
-  contributionPlan,
   coreWeights,
-  costSummary,
   Decimal,
   settingsAt,
   type Warning,
 } from "@atlas/domain";
+import { contributionPlan, costSummary } from "@atlas/domain/portfolio";
 import { assertKnownFlags, type Flags, stringFlag } from "../args.js";
 import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
 import { eur, pct, pp } from "../output/format.js";

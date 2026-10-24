@@ -19,7 +19,9 @@
 //
 // A ledger that bought without recording the cash it came from has nothing to
 // add up before its first deposit, and nothing is made up from the purchases:
-// the series says it with `uncovered_buys`.
+// the series says it with `uncovered_buys`. It is a fact of the book, not of the
+// range asked: the money that paid for those purchases is missing from every
+// point after them, so a range that starts later still carries it.
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { Money } from "../money/money.js";

@@ -8,7 +8,7 @@ Propuesta hasta el visto bueno (nombres: §7.2 (e) del encargo). Los tipos compl
 |---|---|---|
 | `hasForeignAccountsAt` | E2 | `(events: readonly LedgerEvent[], date: CivilDate, settings: Settings) => boolean` |
 | `inRentaSeason` (Q5, propuesta) | E2 | `(settings: Settings, date: CivilDate) => boolean`, ambos extremos incluidos |
-| `NEAR_LIMIT_PCT` | E3 | `Decimal` (hoy `80`) |
+| `NEAR_LIMIT_PCT` | E3 | `Decimal` (hoy `80`); ahora en `@atlas/domain/portfolio`, ya no en el barril |
 
 `fiscalAttention` **no cambia de firma**: cambia `prominent` (solo la campaña). Sigue en `@atlas/domain/fiscal`.
 

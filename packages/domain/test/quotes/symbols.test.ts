@@ -31,7 +31,7 @@ describe("prices/symbols.json", () => {
     expect(parseSymbols(serializeSymbols(file))).toEqual(file);
   });
 
-  it("refuses a top-level key it does not know, by its name only (review of PR #106, B1)", () => {
+  it("refuses a top-level key it does not know, by its name only", () => {
     for (const format of [1, 2]) {
       try {
         parseSymbols(
@@ -58,7 +58,7 @@ describe("prices/symbols.json", () => {
     );
   });
 
-  it("keeps an asset named like a property of every object as its own (review of PR #106, N4)", () => {
+  it("keeps an asset named like a property of every object as its own", () => {
     const entry = { eodhd: "P.XETRA", currencies: { eodhd: "EUR" }, confirmed_at: AT };
     const parsed = parseSymbols(
       `{"symbols_format":2,"assets":{"__proto__":${JSON.stringify(entry)},"constructor":${JSON.stringify(entry)}}}`,
