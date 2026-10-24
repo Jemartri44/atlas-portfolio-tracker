@@ -7,7 +7,7 @@ import { DEFAULT_SETTINGS } from "../settings/settings.js";
 import { isInvalid, isUnsupported, type TaxOptions } from "./chain.js";
 import { type Core, tryComputeCore } from "./core.js";
 import type { SettingsDiff } from "./report.js";
-import { lineKey } from "./shared.js";
+import { linesByKey } from "./shared.js";
 
 // --- The previous settings ----------------------------------------------
 
@@ -46,8 +46,8 @@ export const settingsDiff = (
       changes: [],
     };
   }
-  const before = new Map(other.transmissions.map((line) => [lineKey(line), line]));
-  const after = new Map(core.transmissions.map((line) => [lineKey(line), line]));
+  const before = linesByKey(other.transmissions);
+  const after = linesByKey(core.transmissions);
   const changes: SettingsDiff["changes"] = [];
   for (const [key, line] of after) {
     const was = before.get(key);
