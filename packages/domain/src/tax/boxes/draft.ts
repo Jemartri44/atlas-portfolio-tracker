@@ -372,7 +372,9 @@ const annexC3 = (report: TaxYearReport, year: number): Draft[] => {
  * The category of each withholding of a disposal. The withholding line does
  * not name its asset, and one event can sell assets of different categories in
  * one account, so the line is matched by position: the withholdings come in the
- * order of the disposals, and so do the gains the chain walked.
+ * order of the disposals, and so do the gains the chain walked. It holds while
+ * this walk keeps the order of `core.transmissions` and the same predicate
+ * (`withholding !== undefined`) as `withholdingLines` in `lines.ts`.
  */
 const withholdingCategories = (
   report: TaxYearReport,
