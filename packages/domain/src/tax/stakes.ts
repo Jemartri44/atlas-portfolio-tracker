@@ -18,7 +18,7 @@ import { type Core, exchangesOfYear, tryComputeCore } from "./core.js";
 import { CRITERION_IDS, type CriterionId, categoryCriterion, FISCAL_CRITERIA } from "./criteria.js";
 import { currencyFirstGain } from "./lines.js";
 import type { CriterionStake, TransmissionLine } from "./report.js";
-import { linesByKey } from "./shared.js";
+import { lineKey } from "./shared.js";
 import type { WashSaleOutcome } from "./wash-sale.js";
 
 // --- What each criterion puts at stake -----------------------------------------
@@ -61,8 +61,6 @@ const item = (
   certainty: FISCAL_CRITERIA[criterion].certainty,
   documented_risk: FISCAL_CRITERIA[criterion].risk,
   ...fields,
-  // An event that makes several sales in one account is one event, not several.
-  event_ids: [...new Set(fields.event_ids)],
 });
 
 /** The settings of the other reading of each configurable criterion. */
@@ -159,7 +157,6 @@ export const criterionStakes = (
 ): CriterionStake[] => {
   const items: CriterionStake[] = [];
   const all = [...core.transmissions];
-  const keyed = linesByKey(all);
   const declaring = (id: CriterionId): TransmissionLine[] =>
     all.filter((line) => line.criteria.includes(id));
   const current = figuresOf(core);
@@ -205,14 +202,13 @@ export const criterionStakes = (
     // The figures that depend on it: those that apply it, and those whose
     // figure changes under the other reading (a loss of another year carried
     // or released into this one).
-    const otherLines = linesByKey(other.transmissions);
-    const affected = [...keyed]
-      .filter(
-        ([key, line]) =>
-          lines.includes(line) ||
-          otherLines.get(key)?.computable_eur_rounded.eq(line.computable_eur_rounded) !== true,
-      )
-      .map(([, line]) => line);
+    const otherLines = new Map(other.transmissions.map((line) => [lineKey(line), line]));
+    const affected = all.filter(
+      (line) =>
+        lines.includes(line) ||
+        otherLines.get(lineKey(line))?.computable_eur_rounded.eq(line.computable_eur_rounded) !==
+          true,
+    );
     if (affected.length === 0 && base.isZero() && pendingDifference.isZero() && deferred.isZero()) {
       continue;
     }

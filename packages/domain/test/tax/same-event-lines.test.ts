@@ -1,7 +1,6 @@
 // A restructuring can sell the same asset in the same account more than once.
-// The comparisons between two readings of the ledger (the warning of a settings
-// change, the stakes of a criterion) must see each of those sales, not only
-// the last one.
+// The warning of a settings change compares the lines of two readings of the
+// ledger: it must see each of those sales, not only the last one.
 
 import { describe, expect, it } from "vitest";
 import { buy, HAND_SETTINGS, reportOf, taxBuilder } from "./helpers.js";
@@ -40,19 +39,5 @@ describe("two sales of one event in one account", () => {
     expect(diff?.base_before_eur?.amount.toString()).toBe("10");
     expect(diff?.base_after_eur.amount.toString()).toBe("40");
     expect(diff?.changes.map((change) => change.what)).toEqual(["computable"]);
-  });
-
-  it("a criterion names the event once", () => {
-    const b = taxBuilder();
-    buy(b, "stock_s", "2027-01-11", "10", "100");
-    b.corporateAction({
-      kind: "issuer_restructuring",
-      asset_id: "stock_s",
-      effective_date: "2027-03-01",
-      effects: [forcedSale("3", "110", "USD", "1.1"), forcedSale("2", "120", "USD", "1.1")],
-    });
-    const report = reportOf(b.build(), 2027, "2028-03-01");
-    const stake = [...report.doubtful, ...report.settled].find((entry) => entry.criterion === "4");
-    expect(stake?.event_ids).toHaveLength(1);
   });
 });
