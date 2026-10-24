@@ -304,7 +304,7 @@ Cada uno con test propio y con su nombre:
 - **SC-001**: los tres cálculos a mano y la Renta de 2025 por casillas coinciden con el binario **al céntimo**, y están en la historia de git **antes** que el código.
 - **SC-002**: borrar precios y presentaciones `720`/`721` deja **idénticos byte a byte** el informe y la salida por casillas de todos los ejercicios del libro sintético, del de la 009 y de los de esta feature; el mismo borrado **cambia** el 720.
 - **SC-003**: el test de arquitectura ve `tax/` y los datos de casillas en el camino fiscal y a los modelos informativos fuera de su alcance.
-- **SC-004**: el informe fiscal del libro sintético se mueve **solo** lo que predice `income-category-expectation.md` (FR-005), y después no se mueve un byte; la instantánea del libro solo gana `filings: []`, predicho antes.
+- **SC-004**: el informe fiscal del libro sintético se mueve **solo** lo que predice `income-category-expectation.md` (FR-005; borrado al cerrar la feature, en el historial de git), y después no se mueve un byte; la instantánea del libro solo gana `filings: []`, predicho antes.
 - **SC-005**: cada caso límite con test de nombre propio, y cada mutante de la lista del prompt (§5) muerto por un test que se nombra.
 - **SC-006**: `packages/domain` al 100 % de líneas y ramas; `lint`, `typecheck`, `test:coverage` y `build` en verde.
 - **SC-007**: capturas medidas en los tamaños y estados de la Historia 7, con los desbordamientos medidos con la privacidad **quitada**.

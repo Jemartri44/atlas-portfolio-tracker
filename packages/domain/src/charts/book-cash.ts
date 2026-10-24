@@ -19,9 +19,7 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import type { Money } from "../money/money.js";
 import { netWorth } from "../projections/networth.js";
-import { projectLedger } from "../projections/project-ledger.js";
-import { netWorthDates, type SeriesOptions } from "../projections/series.js";
-import { settingsAt } from "../projections/settings-at.js";
+import { readSeries, type SeriesOptions } from "../projections/series.js";
 import type { LedgerEvent } from "../schema/events.js";
 
 export interface BookCashPoint {
@@ -42,10 +40,8 @@ export const bookCashSeries = (
   events: readonly LedgerEvent[],
   options: SeriesOptions,
 ): BookCashSeries => {
-  const { dates, from, to } = netWorthDates(events, options);
-  const points = dates.map((date): BookCashPoint => {
-    const state = projectLedger(events, { collectErrors: true, asOf: date });
-    const worth = netWorth(state, date, settingsAt(state, date).settings);
+  const { from, to, points } = readSeries(events, options, (state, date, settings) => {
+    const worth = netWorth(state, date, settings);
     const withCash = (book: "core" | "bucket"): Money | undefined => {
       const assets = book === "core" ? worth.core : worth.bucket;
       let total = assets.total_eur;
@@ -65,9 +61,12 @@ export const bookCashSeries = (
     const core = withCash("core");
     const bucket = withCash("bucket");
     return {
-      date,
-      ...(core === undefined ? {} : { core_eur: core }),
-      ...(bucket === undefined ? {} : { bucket_eur: bucket }),
+      incomplete: worth.partial,
+      point: {
+        date,
+        ...(core === undefined ? {} : { core_eur: core }),
+        ...(bucket === undefined ? {} : { bucket_eur: bucket }),
+      },
     };
   });
   return { from, to, points };
