@@ -49,7 +49,8 @@ const ORDERS: Readonly<Record<string, AdminOrder>> = {
     label: "forget-device",
     flags: ["env", "device"],
     refusesYes: true,
-    run: (ctx, clients, environment, { id }) => forgetOrder(ctx, clients, environment, id as string),
+    run: (ctx, clients, environment, { id }) =>
+      forgetOrder(ctx, clients, environment, id as string),
   },
   compact: {
     label: "compact",
