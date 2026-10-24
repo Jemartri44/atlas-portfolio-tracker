@@ -153,7 +153,7 @@ describe("architecture: no object literal is asserted into a type", () => {
       "apps/web/src/view-models/settings.ts",
       "packages/domain/src/projections/corporate-action-draft.ts",
       "packages/domain/src/settings/settings.ts",
-      "packages/domain/src/synth/scenario.ts",
+      "packages/domain/src/synth/scenario/streams.ts",
       "packages/domain/src/usecases/record-event.ts",
       "packages/domain/src/usecases/rectify.ts",
     ]);
