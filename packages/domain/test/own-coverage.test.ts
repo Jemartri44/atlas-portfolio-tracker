@@ -1,6 +1,6 @@
-// What only tests of **other** projects used to cover in the domain — ten branches, two functions
-// and the lines in them —: the domain's 100 % is now measured in a pass of its own, so each one is
-// covered here, by the domain's own tests.
+// What only tests of **other** projects used to cover in the domain — branches and functions of the
+// ECB, the filings and the informative returns —: the domain's 100 % is now measured in a pass of
+// its own, so each one is covered here, by the domain's own tests.
 
 import { describe, expect, it } from "vitest";
 import { DraftChangedError } from "../src/ecb/drafts.js";
@@ -10,14 +10,10 @@ import { closedYearImpact } from "../src/filings/closed-years.js";
 import { filingProposal } from "../src/filings/proposal.js";
 import { model720 } from "../src/informative/m720.js";
 import { projectLedger } from "../src/projections/project-ledger.js";
-import type { Draft, SellEvent } from "../src/schema/events.js";
 import { DEFAULT_SETTINGS, mergeSettings, type Settings } from "../src/settings/settings.js";
-import { previewCorrection, previewReversal } from "../src/usecases/preview-event.js";
 import { ecbFixture } from "./fixtures-path.js";
 import { catalogue, LedgerBuilder } from "./ledger-builder.js";
-import { TestStore } from "./memory-store.js";
 import { buy, HAND_SETTINGS, sell, taxBuilder } from "./tax/helpers.js";
-import { testDeps } from "./usecases/helpers.js";
 
 describe("DraftChangedError (ecb/drafts.ts)", () => {
   it("says a draft that is gone apart from one stamped elsewhere", () => {
@@ -153,73 +149,5 @@ describe("filingProposal of a renta (filings/proposal.ts)", () => {
     // The whole loss of the sale (10 × (60 − 100)), deferred by the repurchase
     // of the 10, with its sign: a sum turned into a difference gives +400.
     expect(deferred?.amount_eur.amount.toString()).toBe("-400");
-  });
-});
-
-describe("the previews of a reversal and of a correction (usecases/preview-event.ts)", () => {
-  const ledger = () => {
-    const b = new LedgerBuilder();
-    catalogue(b);
-    b.buy({
-      account_id: "acc_fund",
-      asset_id: "ast_world",
-      quantity: "10",
-      unit_price: "10",
-      trade_date: "2027-01-08",
-      value_date: "2027-01-12",
-    });
-    const sale = b.sell({
-      account_id: "acc_fund",
-      asset_id: "ast_world",
-      quantity: "5",
-      unit_price: "6",
-      trade_date: "2027-03-08",
-      value_date: "2027-03-10",
-    });
-    const repurchase = b.buy({
-      account_id: "acc_fund",
-      asset_id: "ast_world",
-      quantity: "1",
-      unit_price: "6",
-      trade_date: "2027-04-08",
-      value_date: "2027-04-10",
-    });
-    return { store: new TestStore(b.build()), sale, repurchase };
-  };
-
-  it("previews a reversal as the write would append it, and writes nothing", async () => {
-    const { store, repurchase } = ledger();
-    const preview = await previewReversal(testDeps(store), repurchase.id, "no era mía");
-    expect(preview.candidate.type).toBe("reversal");
-    expect((preview.candidate as unknown as { reverses_id: string }).reverses_id).toBe(
-      repurchase.id,
-    );
-    expect(preview.before.positions.map((row) => row.quantity.toString())).toEqual(["6"]);
-    expect(preview.after.positions.map((row) => row.quantity.toString())).toEqual(["5"]);
-    expect((await store.load()).etag).toBe("0");
-  });
-
-  it("previews a correction with only the warnings of the corrected event", async () => {
-    const { store, sale, repurchase } = ledger();
-    const {
-      schema_version: _v,
-      id: _id,
-      recorded_at: _at,
-      fingerprint: _fp,
-      ...rest
-    } = sale as SellEvent & { fingerprint?: string };
-    const draft = { ...rest, unit_price: "7" } as unknown as Draft<SellEvent>;
-    const preview = await previewCorrection(testDeps(store), sale.id, draft, "precio mal");
-    // Its own warning, and only it: the repurchase keeps its warning in the
-    // ledger, and that one is somebody else's.
-    expect(preview.warnings.map((warning) => [warning.code, warning.event_id])).toEqual([
-      ["wash_sale_window_prior_buy", preview.candidate.id],
-    ]);
-    expect(
-      preview.state.warnings.some(
-        (warning) =>
-          warning.code === "wash_sale_window_repurchase" && warning.event_id === repurchase.id,
-      ),
-    ).toBe(true);
   });
 });

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { DependentEventsError, NotFoundError } from "../../src/errors.js";
-import type { Draft, LedgerEvent, SupportedEvent } from "../../src/schema/events.js";
-import { previewCorrection, previewEvent } from "../../src/usecases/preview-event.js";
+import type { Draft, LedgerEvent, SellEvent, SupportedEvent } from "../../src/schema/events.js";
+import {
+  previewCorrection,
+  previewEvent,
+  previewReversal,
+} from "../../src/usecases/preview-event.js";
 import { correctEvent } from "../../src/usecases/rectify.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 import { TestStore } from "../memory-store.js";
@@ -158,5 +162,73 @@ describe("previewCorrection", () => {
     expect(assets(asked.after.positions)).toEqual([]);
     expect(assets(asked.before.positions)).toEqual(["ast_world"]);
     expect(asked.events as LedgerEvent[]).toHaveLength(b.build().length);
+  });
+});
+
+describe("the previews of a reversal and of a correction over a wash-sale ledger", () => {
+  const ledger = () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "10",
+      unit_price: "10",
+      trade_date: "2027-01-08",
+      value_date: "2027-01-12",
+    });
+    const sale = b.sell({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "5",
+      unit_price: "6",
+      trade_date: "2027-03-08",
+      value_date: "2027-03-10",
+    });
+    const repurchase = b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "1",
+      unit_price: "6",
+      trade_date: "2027-04-08",
+      value_date: "2027-04-10",
+    });
+    return { store: new TestStore(b.build()), sale, repurchase };
+  };
+
+  it("previews a reversal as the write would append it, and writes nothing", async () => {
+    const { store, repurchase } = ledger();
+    const preview = await previewReversal(testDeps(store), repurchase.id, "no era mía");
+    expect(preview.candidate.type).toBe("reversal");
+    expect((preview.candidate as unknown as { reverses_id: string }).reverses_id).toBe(
+      repurchase.id,
+    );
+    expect(preview.before.positions.map((row) => row.quantity.toString())).toEqual(["6"]);
+    expect(preview.after.positions.map((row) => row.quantity.toString())).toEqual(["5"]);
+    expect((await store.load()).etag).toBe("0");
+  });
+
+  it("previews a correction with only the warnings of the corrected event", async () => {
+    const { store, sale, repurchase } = ledger();
+    const {
+      schema_version: _v,
+      id: _id,
+      recorded_at: _at,
+      fingerprint: _fp,
+      ...rest
+    } = sale as SellEvent & { fingerprint?: string };
+    const draft = { ...rest, unit_price: "7" } as unknown as Draft<SellEvent>;
+    const preview = await previewCorrection(testDeps(store), sale.id, draft, "precio mal");
+    // Its own warning, and only it: the repurchase keeps its warning in the
+    // ledger, and that one is somebody else's.
+    expect(preview.warnings.map((warning) => [warning.code, warning.event_id])).toEqual([
+      ["wash_sale_window_prior_buy", preview.candidate.id],
+    ]);
+    expect(
+      preview.state.warnings.some(
+        (warning) =>
+          warning.code === "wash_sale_window_repurchase" && warning.event_id === repurchase.id,
+      ),
+    ).toBe(true);
   });
 });
