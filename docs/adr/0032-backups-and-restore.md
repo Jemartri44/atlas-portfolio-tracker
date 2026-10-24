@@ -1,6 +1,6 @@
 # ADR-0032 — Copias de seguridad y restauración del libro
 
-**Estado:** Aceptada (2026-09-24). **Enmendada el mismo día** tras la revisión de la PR #72 (ver al final). **Nota del cierre de la feature 013** (2026-09-25): los precios del volcado no necesitan ninguna exclusión (ver al final). Ronda 8. Las capas de copia las fija la dirección (versionado de S3, volcado periódico y la exportación local que ya existe); este documento diseña **cómo se restaura** y cómo se comprueba que se puede, porque una copia que nunca se ha restaurado no es una copia. Responde a la pregunta de la Ronda 8 original sobre la copia fuera de AWS.
+**Estado:** Aceptada (2026-09-24). **La capa 1 (réplicas de dispositivos) y el paso 6 (que cada dispositivo detecte la reescritura) quedan reemplazados por [ADR-0035](0035-cloud-ledger-single-source.md)**: los dispositivos no guardan réplica, y tras una restauración el siguiente `412` recarga el libro; ver la sección final. **Enmendada el mismo día** tras la revisión de la PR #72 (ver al final). **Nota del cierre de la feature 013** (2026-09-25): los precios del volcado no necesitan ninguna exclusión (ver al final). Ronda 8. Las capas de copia las fija la dirección (versionado de S3, volcado periódico y la exportación local que ya existe); este documento diseña **cómo se restaura** y cómo se comprueba que se puede, porque una copia que nunca se ha restaurado no es una copia. Responde a la pregunta de la Ronda 8 original sobre la copia fuera de AWS.
 
 ## Contexto
 

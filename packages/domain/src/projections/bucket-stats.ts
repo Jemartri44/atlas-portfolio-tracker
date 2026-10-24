@@ -251,6 +251,25 @@ export const cashFlowsOf = (
   return flows;
 };
 
+/**
+ * The deposits of the accounts with the date of each, in euros at its own rate:
+ * what `cashFlowsOf` adds up for one date, for the series that asks it for
+ * hundreds.
+ */
+export const depositsOf = (
+  state: LedgerState,
+  events: readonly LedgerEvent[],
+  accounts: ReadonlySet<string>,
+): { date: CivilDate; eur: Money }[] => {
+  const deposits: { date: CivilDate; eur: Money }[] = [];
+  for (const event of liveOperations(state, events)) {
+    if (event.type === "cash_deposit" && accounts.has(event.account_id)) {
+      deposits.push({ date: businessDateOf(state, event), eur: cashEurOf(event) });
+    }
+  }
+  return deposits;
+};
+
 /** Whole months between two dates, counting the month of the first one. */
 const monthsBetween = (from: CivilDate, to: CivilDate): number => {
   const months =

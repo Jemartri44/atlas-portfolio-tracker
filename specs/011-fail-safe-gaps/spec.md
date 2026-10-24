@@ -341,7 +341,7 @@ Todos verificados contra el código de `develop` (`c141cb0`); los que no se pudi
 Tal como lo fija §4 del encargo, y sin excepciones:
 
 - Migrar a notas del informe lo que ADR-0024 dejó mezclado (`compensation.pending`/`expired`, `BoxEntry.partial`, `CRITERION_LABELS` y `CRITERION_NAMES`).
-- Los seguimientos que la 010 dejó anotados en `implementation-notes.md` §6: retirar `priorYear`/`isPriorYear`, el `today()` de la web y medir el informe con la CPU frenada ×4.
+- Los seguimientos que la 010 dejó anotados en `specs/010-tax-output/pendientes-fiscales.md`: retirar `priorYear`/`isPriorYear`, el `today()` de la web y medir el informe con la CPU frenada ×4.
 - Resolver cualquier criterio fiscal en disputa. Cambiar lo que el catálogo declara de un criterio al rellenar la tabla del bloque 7 **es** cambiar el criterio: se pregunta.
 - Aceptar una ADR (se puede proponer), reabrir una aceptada, cambiar el esquema por iniciativa propia, y cualquier cosa de AWS.
 - Funcionalidad nueva, pantallas nuevas, dependencias nuevas y retoques visuales que no sean el estado vacío del bloque 2 y lo que el bloque 6 tenga que pintar.
