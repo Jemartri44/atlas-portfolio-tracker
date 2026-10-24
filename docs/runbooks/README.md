@@ -14,3 +14,6 @@ Qué hacer, paso a paso y con las órdenes exactas, en las situaciones que no so
 | [El histórico del BCE en la nube](ecb-history-in-the-cloud.md) | El histórico del BCE de la nube dice algo que no es verdad: restaurar una generación buena o retirar la que miente (ADR-0029; feature 016) |
 | [La correspondencia de símbolos y los presupuestos de la nube](cloud-symbols-and-budgets.md) | Cambias la correspondencia de símbolos en la consola, llega el aviso de correspondencias sin contrastar, o quieres cambiar las llamadas diarias de la nube (ADR-0031; feature 016) |
 | [El destinatario de los correos y los importes](mail-recipient-and-amounts.md) | Quieres que los correos lleven los euros, o dejen de llevarlos, o que lleguen a otra dirección (ADR-0028, ADR-0034; feature 016) |
+| [Crear y rotar los secretos de un entorno](atlas-admin-secrets.md) | Crear o rotar los secretos de un entorno con `atlas admin secrets` (ADR-0034, fila 21; feature 017) |
+| [Aplicar el *bootstrap* y activar la CI de `infra/`](bootstrap-and-ci.md) | Primera vez, o cada vez que cambia `infra/bootstrap/` (ADR-0034, filas 5 y 20; feature 017) |
+| [El plan de tarifa plana de CloudFront](flat-rate-plan.md) | Suscribir el plan de un entorno con el guion, hasta que el proveedor de Terraform lo traiga (ADR-0028, ADR-0034; feature 017) |

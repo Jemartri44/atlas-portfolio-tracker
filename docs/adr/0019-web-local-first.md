@@ -1,6 +1,6 @@
 # ADR-0019 — La aplicación web funciona sola: local-first, sin servidor
 
-**Estado:** Aceptada (2026-09-18). Completa ADR-0017 (*stack*) con el modo de funcionamiento. Adelanta la web por delante de la Fase 4.
+**Estado:** Aceptada (2026-09-18). **Reemplazada en lo esencial por [ADR-0035](0035-cloud-ledger-single-source.md)** (2026-10-06): la web es cloud-only, sin libro en el dispositivo, sin registro sin conexión y con acceso con Google. Se conserva como historia y por lo que sigue vigente (el *stack* de ADR-0017). Completa ADR-0017 (*stack*) con el modo de funcionamiento. Adelanta la web por delante de la Fase 4.
 
 ## Contexto
 
