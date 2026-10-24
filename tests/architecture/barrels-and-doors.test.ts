@@ -173,9 +173,14 @@ describe("architecture: the analysis of the Cartera and the Cubo is behind its d
   it("keeps their functions out of index.ts, and behind their door", () => {
     const barrel = readFileSync(join(domainSrc, "index.ts"), "utf8");
     const door = readFileSync(join(domainSrc, "portfolio.ts"), "utf8");
-    for (const name of FUNCTIONS) {
-      expect(barrel).not.toMatch(new RegExp(`^\\s+${name},?$`, "m"));
-      expect(door).toMatch(new RegExp(`^\\s+${name},?$`, "m"));
+    // Whatever the layout of the line, an `export { … } from` of one of these modules is a value:
+    // the barrel may only say `export type { … } from` about them.
+    const fromThem = new RegExp(
+      `export\\s*\\{[^}]*\\}\\s*from\\s*"\\./projections/(?:${MODULES.join("|")})\\.js"`,
+    );
+    expect(barrel).not.toMatch(fromThem);
+    for (const name of [...FUNCTIONS, "NEAR_LIMIT_PCT"]) {
+      expect(door).toMatch(new RegExp(`\\b${name}\\b`));
     }
   });
 

@@ -2,9 +2,9 @@
 // open, how it is doing, and how it compares with the boring alternative.
 //
 // Only the `bucket` book (constitution III). Everything here is informative: it
-// reads lots, gains and theses, and writes nothing into them. It is also the
-// reason the index comparison lives here and not inside `theses.ts`: pass B of
-// the projection uses that module, and the path that creates lots and gains
+// reads lots, gains and theses, and writes nothing into them. The comparison
+// with the index lives in `bucket-theses.ts` and not inside `theses.ts`: pass B
+// of the projection uses that module, and the path that creates lots and gains
 // must never learn what a price is (constitution II).
 
 import { type CivilDate, daysBetween } from "../dates/civil-date.js";
