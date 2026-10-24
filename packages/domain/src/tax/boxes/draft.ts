@@ -18,8 +18,8 @@ import type { AssetId } from "../../schema/events.js";
 import type { IncomeCategory } from "../../settings/settings.js";
 import { type ChainCore, categoryOf } from "../chain.js";
 import { type CriterionId, sortCriteria } from "../criteria.js";
-import type { IncomeLine, TaxYearReport, TransmissionLine } from "../report.js";
-import { lineKey, linesByKey } from "../shared.js";
+import type { IncomeLine, TaxYearReport, TransmissionLine, WithholdingLine } from "../report.js";
+import { keyedByOrder, linesByKey, saleKey } from "../shared.js";
 import type { WashSaleOutcome } from "../wash-sale.js";
 import {
   type ConceptId,
@@ -368,8 +368,38 @@ const annexC3 = (report: TaxYearReport, year: number): Draft[] => {
   return drafts;
 };
 
+/**
+ * The category of each withholding of a disposal. The withholding line does
+ * not name its asset, and one event can sell assets of different categories in
+ * one account, so the line is matched by position: the withholdings come in the
+ * order of the disposals, and so do the gains the chain walked.
+ */
+const withholdingCategories = (
+  report: TaxYearReport,
+  chain: ChainCore,
+): Map<WithholdingLine, IncomeCategory> => {
+  const lines = linesByKey([
+    ...report.capital_gains.lines,
+    ...report.movable_capital.transmissions,
+  ]);
+  const gains = chain.walk.outcomes
+    .map((outcome) => gainOf(chain, outcome.gain_index))
+    .filter((gain) => gain.year === report.year);
+  const categories = [...keyedByOrder(gains, saleKey).keys()]
+    .map((key) => lines.get(key) as TransmissionLine)
+    .filter((line) => line.withholding !== undefined)
+    .map((line) => line.category);
+  const disposals = report.withholdings.lines.filter(
+    (line) => line.source === "sell" || line.source === "forced_sale",
+  );
+  return new Map(disposals.map((line, position) => [line, categories[position] as IncomeCategory]));
+};
+
 /** The double taxation deduction (#16) and the payments on account. */
-const deductions = (report: TaxYearReport, categories: Map<string, IncomeCategory>): Draft[] => {
+const deductions = (
+  report: TaxYearReport,
+  categories: Map<WithholdingLine, IncomeCategory>,
+): Draft[] => {
   const drafts: Draft[] = [];
   // Which operation each deduction is about. Only a **dividend** produces one
   // (`doubleTaxation` in `notes.ts`), and a dividend always names its asset, so
@@ -415,7 +445,7 @@ const deductions = (report: TaxYearReport, categories: Map<string, IncomeCategor
             ? predicate("movable_capital")
             : // Every withholding of a disposal comes from a line of the year,
               // so its category is always in the map.
-              predicate(categories.get(lineKey(line)) as IncomeCategory),
+              predicate(categories.get(line) as IncomeCategory),
         )
         .map((line) => line.amount_eur_rounded),
     );
@@ -489,12 +519,6 @@ export const draftEntries = (report: TaxYearReport, chain: ChainCore): Draft[] =
     { concept: "base.savings_taxable", partial: "reductions_unknown", criteria: [] },
   );
   drafts.push(...annexC3(report, year));
-  const categories = new Map<string, IncomeCategory>(
-    [...report.capital_gains.lines, ...report.movable_capital.transmissions].map((line) => [
-      lineKey(line),
-      line.category,
-    ]),
-  );
-  drafts.push(...deductions(report, categories));
+  drafts.push(...deductions(report, withholdingCategories(report, chain)));
   return drafts;
 };

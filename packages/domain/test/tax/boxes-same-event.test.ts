@@ -50,3 +50,36 @@ describe("the rows of two sales of one event in one account", () => {
     });
   });
 });
+
+describe("the withholding of two assets sold by one event in one account", () => {
+  it("goes to the box of the category of its own asset", () => {
+    const b = taxBuilder(null);
+    b.settings({
+      ...HAND_SETTINGS,
+      income_category: { ...HAND_SETTINGS.income_category, etc: "movable_capital" },
+    });
+    buy(b, "stock_s", "2027-01-11", "10", "100");
+    buy(b, "etc_e", "2027-01-11", "10", "100");
+    b.corporateAction({
+      kind: "issuer_restructuring",
+      asset_id: "stock_s",
+      effective_date: "2027-03-01",
+      effects: [
+        {
+          ...forcedSale("3", "110"),
+          per_account: [{ account_id: "acc_a", quantity: "3", fee: "0", withholding: "5" }],
+        },
+        {
+          ...forcedSale("2", "120"),
+          asset_id: "etc_e",
+          per_account: [{ account_id: "acc_a", quantity: "2", fee: "0", withholding: "7" }],
+        },
+      ],
+    });
+    const boxes = taxBoxes(b.build(), 2027, { today: "2028-03-01" });
+    const withheld = (concept: string) =>
+      boxes.entries.find((entry) => entry.concept === concept)?.exact_eur?.amount.toString();
+    expect(withheld("withholding.capital_gain")).toBe("5");
+    expect(withheld("withholding.rcm")).toBe("7");
+  });
+});
