@@ -1,5 +1,5 @@
 // Resolves shared fixtures under tests/fixtures/ledger/ for the domain tests.
-// Only tests use node: the domain sources stay isomorphic (see tests/architecture.test.ts).
+// Only tests use node: the domain sources stay isomorphic (see tests/architecture/).
 
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";

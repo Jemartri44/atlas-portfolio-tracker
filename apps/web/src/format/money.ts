@@ -1,5 +1,5 @@
 // **The privacy gate.** Every amount and every quantity of the application is
-// formatted here, and the architecture test (`tests/architecture.test.ts`)
+// formatted here, and the architecture test (`tests/architecture/`)
 // fails if any file other than `components/Amount.tsx` imports this module. It
 // is the same mechanism that guards the price gate of the domain, and the
 // reason the rule will still be alive in two years: it does not depend on
