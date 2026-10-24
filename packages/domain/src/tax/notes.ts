@@ -158,6 +158,16 @@ export const rateNotes = (
     ...core.income.map((line) => ({ event_id: line.event_id, depends: [line.event_id] })),
     ...core.expenses.map((line) => ({ event_id: line.event_id, depends: [line.event_id] })),
   ];
+  // One note per event: an event that makes several sales in one account has
+  // several lines, and each would say the same thing.
+  const dependsOf = new Map<string, Set<string>>();
+  for (const line of lines) {
+    const known = dependsOf.get(line.event_id) ?? new Set<string>();
+    for (const id of line.depends) {
+      known.add(id);
+    }
+    dependsOf.set(line.event_id, known);
+  }
   const notes: Warning[] = [];
   /** The events a line depends on whose findings include one of `codes`, with those codes. */
   const matching = (depends: readonly string[], wanted: (code: string) => boolean) => {
@@ -169,8 +179,8 @@ export const rateNotes = (
     ].sort();
     return { events, codes };
   };
-  for (const line of lines) {
-    const depends = [...new Set(line.depends)];
+  for (const [eventId, known] of dependsOf) {
+    const depends = [...known];
     // Each finding says **what it is**: a rate the history
     // contradicts is not the same as one it could not contrast, and saying «not
     // the official one» of the second would state what nobody checked.
@@ -179,7 +189,7 @@ export const rateNotes = (
       notes.push(
         eventNote(
           "tax_fx_rate_finding",
-          line.event_id,
+          eventId,
           "this line depends on an ECB rate that is not the official one of its date; the figure is computed with the rate of the ledger",
           { criterion: "25", events: wrong.events, codes: wrong.codes },
         ),
@@ -190,7 +200,7 @@ export const rateNotes = (
       notes.push(
         eventNote(
           "tax_fx_rate_unverified",
-          line.event_id,
+          eventId,
           "this line depends on an ECB rate the history could not contrast; nothing is said of whether it is right, and the figure is computed with the rate of the ledger",
           { criterion: "25", events: unverified.events, codes: unverified.codes },
         ),
@@ -201,7 +211,7 @@ export const rateNotes = (
       notes.push(
         eventNote(
           "tax_fx_rate_date_after_fiscal_date",
-          line.event_id,
+          eventId,
           "this line depends on an ECB rate dated after its fiscal date; the figure is computed with the rate of the ledger",
           { criterion: "25", events: late },
         ),
