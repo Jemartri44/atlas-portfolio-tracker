@@ -24,7 +24,7 @@ import type {
 } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import { type ExternalPrices, manualPrices, positionValueOf } from "./prices.js";
-import { businessDateOf, isOperationEvent } from "./project-ledger.js";
+import { businessDateOf, liveOperations } from "./project-ledger.js";
 import type { LedgerState } from "./state.js";
 import { coreAccountIds, coreQuantityOf } from "./weights.js";
 
@@ -233,18 +233,13 @@ const accumulate = (
     bucket: new Map(),
     standalone: new Map(),
   };
-  // An event the projection rejected produced no position and no lot: its
-  // commission is not a cost of the portfolio either (ADR-0015).
-  const invalid = new Set(state.invalid.map((entry) => entry.event.id));
-  for (const event of events) {
-    // A reversed event never happened, so neither did its commission.
-    if (state.reversed.has(event.id) || invalid.has(event.id)) {
-      continue;
-    }
+  // A reversed event never happened, and one the projection rejected produced no
+  // position and no lot: neither is a cost of the portfolio (ADR-0015).
+  for (const event of liveOperations(state, events)) {
     // The same cut as pass B of the projection, from the same business date
     // (data-schema.md §7): a commission paid after the date asked is not a cost
     // of the portfolio as it stood that day.
-    if (asOf !== undefined && isOperationEvent(event) && businessDateOf(state, event) > asOf) {
+    if (asOf !== undefined && businessDateOf(state, event) > asOf) {
       continue;
     }
     if (event.type === "buy" || event.type === "sell") {
