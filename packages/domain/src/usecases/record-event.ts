@@ -34,8 +34,9 @@ interface RecordBase {
   id?: string;
   /**
    * In a correction, the ids of its reversal and of the corrected event, in
-   * that order, chosen beforehand: the redo of a held pair seals both before
-   * recording them. Otherwise fresh ones.
+   * that order, chosen beforehand: a retry after a write of unknown outcome
+   * uses the same ids, so it knows whether those lines are in the ledger
+   * already. Otherwise fresh ones.
    */
   ids?: UlidGenerator;
   /** Write even if another event carries the same fingerprint. */
