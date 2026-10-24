@@ -13,8 +13,8 @@ import type { InvalidEvent } from "../../src/projections/state.js";
 import type { BuyEvent } from "../../src/schema/events.js";
 import { encodeLine } from "../../src/schema/line.js";
 import { DEFAULT_SETTINGS, mergeSettings } from "../../src/settings/settings.js";
+import { loadAndProject } from "../../src/usecases/load-and-project.js";
 import { previewEvent } from "../../src/usecases/preview-event.js";
-import { loadAndProject } from "../../src/usecases/project-ledger.js";
 import { duplicatesOf, recordEvent } from "../../src/usecases/record-event.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 import { TestStore } from "../memory-store.js";
@@ -322,7 +322,7 @@ describe("recordEvent: a settings change that reinterprets the past (ADR-0015)",
   });
 });
 
-describe("recordEvent: acceptInvalid with the sync configured (feature 014, V7)", () => {
+describe("recordEvent: acceptInvalid with the sync configured", () => {
   const refusal = async (run: () => Promise<unknown>) => {
     const error = await run().catch((e: unknown) => e);
     expect(error).toBeInstanceOf(DependentEventsError);
