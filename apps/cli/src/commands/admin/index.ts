@@ -100,12 +100,11 @@ export const adminCommand = async (
     }
   }
   // A device id may begin with a dash: after `--`, or as `--device <id>`.
+  // `--device` is only taken by `forget-device` (the loop above refuses it elsewhere).
   const flagged = stringFlag(flags, "device");
-  if (flagged !== undefined && (name !== "forget-device" || positionals[2] !== undefined)) {
+  if (flagged !== undefined && positionals[2] !== undefined) {
     throw new UsageError(
-      name === "forget-device"
-        ? "el dispositivo se da una sola vez: «forget-device -- <id>» o «forget-device --device <id>»"
-        : `--device no vale en «atlas admin ${order.label}»`,
+      "el dispositivo se da una sola vez: «forget-device -- <id>» o «forget-device --device <id>»",
     );
   }
   const id = flagged ?? positionals[2];

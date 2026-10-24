@@ -16,3 +16,4 @@ Recomendación: **(b)** hasta que haya un motivo, y valorar (c) si E5 retira la 
 
 - **`syncConfigured`** (`record-event.ts`, dominio): la opción se llama así y significa «libro compartido de nube». Renombrarla toca el dominio y sus tests.
 - **`DraftsOnlyIfAbsent`** (política del bucket de datos, feature 027): sentencia nueva que repite `BackupsOnlyIfAbsent` sobre `drafts/*`. Si no se quiere, se quita sin tocar nada más (el código solo usa `If-None-Match`).
+- **Crecimiento de `drafts/`** (feature 027): los borradores cerrados no se borran nunca y siguen en el listado de primer nivel, que la API pagina entero desde S3 sin paginar hacia el cliente. Con decenas al año es irrelevante; decidir si hace falta paginar o archivar si el uso crece.
