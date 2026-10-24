@@ -3,6 +3,8 @@
 // total is never drawn.
 
 import { describe, expect, it } from "vitest";
+import { Money } from "../../src/money/money.js";
+import { bucketTheses } from "../../src/projections/bucket.js";
 import { netWorth } from "../../src/projections/networth.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { bucketIndexSeries, netWorthSeries, sampleEvenly } from "../../src/projections/series.js";
@@ -444,5 +446,88 @@ describe("bucketIndexSeries", () => {
     const holes = (series: typeof whole): string[] =>
       series.points.filter((point) => point.vs_index_eur === undefined).map((p) => p.date);
     expect(holes(capped)).toEqual(holes(whole));
+  });
+});
+
+/**
+ * The series read the ledger once, handing each date the state the pass had when
+ * it reached it. A date must see exactly what a projection cut at that date
+ * sees — the ones before the first operation, the ones between two groups of
+ * operations, and the ones before an operation that comes later — and a reading
+ * must not change when the pass moves on and the thesis grows more legs.
+ */
+describe("reading the ledger in one pass", () => {
+  const events = (() => {
+    const b = bucketLedger();
+    b.sell({
+      account_id: "acc_bucket",
+      asset_id: "ast_spec",
+      thesis_id: "t1",
+      trade_date: "2027-08-15",
+      value_date: "2027-08-15",
+      quantity: "4",
+      unit_price: "160",
+      currency: "USD",
+      fx_rate: "1",
+      fx_rate_date: "2027-08-15",
+    });
+    // Dated after the end of the range: it must not reach any point.
+    b.deposit({ account_id: "acc_fund", value_date: "2027-12-01", amount: "999" });
+    return b.build();
+  })();
+  const dates = [
+    "2026-12-31",
+    "2027-01-01",
+    "2027-01-15",
+    "2027-02-01",
+    "2027-03-10",
+    "2027-06-30",
+    "2027-08-14",
+    "2027-08-15",
+    "2027-09-01",
+  ];
+
+  const cut = (date: string) => {
+    const state = projectLedger(events, { collectErrors: true, asOf: date });
+    return { state, settings: settingsAt(state, date).settings };
+  };
+
+  it("gives the net worth of each date what a cut projection gives", () => {
+    const series = netWorthSeries(events, { to: "2027-09-01", dates });
+
+    expect(series.points.map((point) => point.date)).toEqual(dates);
+    for (const point of series.points) {
+      const { state, settings } = cut(point.date);
+      const worth = netWorth(state, point.date, settings);
+      const total = (block: { partial: boolean; total_eur: Money }) =>
+        block.partial ? undefined : block.total_eur.amount.toString();
+      expect(point.core_eur?.amount.toString()).toBe(total(worth.core));
+      expect(point.bucket_eur?.amount.toString()).toBe(total(worth.bucket));
+      expect(point.cash_eur?.amount.toString()).toBe(total(worth.cash));
+    }
+  });
+
+  it("gives the thesis against the index of each date what a cut projection gives", () => {
+    const series = bucketIndexSeries(events, { to: "2027-09-01", dates });
+
+    for (const point of series.points) {
+      const { state, settings } = cut(point.date);
+      const all = bucketTheses(state, point.date, settings).rows;
+      const moved = all.filter((thesis) => thesis.buys.length > 0 || thesis.sells.length > 0);
+      expect(point.idle).toBe(all.length - moved.length);
+      if (
+        moved.some(
+          (t) => t.unrealized_eur === undefined || t.benchmark_equivalent_eur === undefined,
+        )
+      ) {
+        expect(point.vs_index_eur).toBeUndefined();
+        continue;
+      }
+      const result = moved.reduce(
+        (sum, thesis) => sum.add(thesis.result_eur).add(thesis.unrealized_eur as Money),
+        Money.zero("EUR"),
+      );
+      expect(point.result_eur?.amount.toString()).toBe(result.amount.toString());
+    }
   });
 });

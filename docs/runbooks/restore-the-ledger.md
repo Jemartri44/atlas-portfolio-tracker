@@ -1,7 +1,5 @@
 # Restaurar el libro de la nube
 
-> **Enmendado por ADR-0035 (2026-10-06).** Los dispositivos **ya no guardan una réplica ni una cola**, así que, cuando se entregue E4/E5: (a) la restauración **no se niega por pendientes** ni por el marcador; (b) desaparece la copia «réplica de un dispositivo»: **las copias fuera de AWS son «Descargar copia» de la web y `atlas backup`**, y el volcado mensual en `backups/`; (c) el «después, en cada dispositivo» se reduce a que el siguiente `412` recarga el libro, sin «volver a descargar» ni retenidos. **Lo que se retira del código se retira en las entregas E1 a E5 de ADR-0035; hasta entonces el código sigue como está y los pasos de abajo describen su comportamiento actual.** Si la nube desaparece, se trabaja en local con la consola sobre la última copia y después se restaura con `atlas admin restore`.
-
 **Cuándo**: el libro de la nube (`ledger/ledger.jsonl` del bucket de datos) está mal, por ejemplo por una reescritura equivocada o un intruso que añadió operaciones, y quieres volver a una copia buena.
 
 **Qué es** (ADR-0032): una operación de **administración**, desde la consola y con las credenciales de vida corta del rol `atlas-<entorno>-admin`. **Nunca pasa por la API**, que solo sabe añadir.
@@ -10,9 +8,7 @@
 
 **Lo que necesitas**: el rol y `admin.json`, como en [Revocar todos los tokens](revoke-all-tokens.md), apartado «Lo que necesitas».
 
-**Ya no se niega por pendientes** (ADR-0035, E4): no hay cola de dispositivos que esperar. Quien tenga Atlas abierto verá «El libro ha cambiado» en su siguiente escritura y recargará.
-
-**Los olvidados no cuentan.**
+Los dispositivos no guardan ninguna copia del libro (ADR-0035), así que no hay nada que esperar de ellos: la restauración no se niega por nada de lo que ellos tengan.
 
 ---
 
@@ -22,8 +18,7 @@
 |---|---|
 | Una versión anterior del objeto en S3 | `--from s3-version:<id>`. Los identificadores, con `aws s3api list-object-versions --bucket <bucket> --prefix ledger/ledger.jsonl` |
 | El volcado mensual | `--from backups/2026-10` |
-| La réplica de un dispositivo sincronizado | `--from /ruta/a/su/ledger.jsonl`. Es idéntica, byte a byte, a lo que tenía la nube en su última sincronización |
-| La copia de tu disco (`atlas backup`) | `--from /disco/ledger-2026-10-01.jsonl` |
+| La copia de tu disco (`atlas backup` o «Descargar copia» de la web) | `--from /disco/ledger-2026-10-01.jsonl` |
 
 ## 2 a 6. La orden, paso a paso
 
@@ -37,25 +32,21 @@ La orden recorre los seis pasos de ADR-0032 **en orden y sin saltarse ninguno**,
 2. **La comprueba antes de tocar nada.** Tiene que ser UTF-8 válido, byte a byte (si no, `restore_candidate_invalid` con `not_utf8`), cargar con el esquema actual, proyectarse sin eventos inválidos y pasar las comprobaciones de `check --deep` sin errores. Si no, se niega (`restore_candidate_invalid`) con la lista.
    - No contrasta los tipos del BCE, porque dependen del histórico de la carpeta. Si quieres ese contraste, pasa antes `atlas --ledger <copia> check --deep` en una carpeta con el histórico.
 3. **La compara con la nube por identificador**:
-   - si la copia es un prefijo de la nube, dice «se pierde esta cola» y nombra cada evento;
+   - si la copia es un prefijo de la nube, dice «se pierde esta cola» (los eventos que solo tiene la nube) y nombra cada uno;
    - si no, evento a evento, en los dos sentidos.
 4. **Te pide confirmación** con esa lista delante: **escribe el nombre del entorno** (`prod`). Cualquier otra respuesta no toca nada. La orden **no admite `--yes`**, que se escribiría antes de ver la lista (ADR-0032, nota del 2026-09-27).
 5. **Archiva lo que había** en `archive/pre-restore-<fecha>T<hora>-<etag>.jsonl` y escribe la copia línea a línea, **con la condición de la nube que comparó en el paso 3**. Si alguien escribió entre medias, se niega sin escribir nada; vuelve a empezar.
 6. **Te dice lo que tiene que hacer cada dispositivo** (abajo).
 
-## Después, en cada dispositivo
+## Después
 
-- Al sincronizar, cada dispositivo ve que la nube se ha reescrito, porque el hash de su prefijo ya no coincide (`remote_rewritten`), y **se detiene**.
-- Su usuario **vuelve a descargar**:
-  - en la consola, `atlas sync redownload`;
-  - en la web, «Volver a descargar».
-- **Todo lo que el dispositivo tenía y la copia no queda retenido para revisarlo**, esté pendiente o ya sincronizado, y **nunca se vuelve a subir solo**, porque podría deshacer la restauración. Decides línea a línea qué vuelves a registrar.
+No hay nada que hacer en los dispositivos: quien tenga Atlas abierto lo notará en su siguiente escritura: la web recarga el libro restaurado y pide confirmar otra vez, y la consola pide repetir la orden. Lo que se registró en la nube después de la copia y que la restauración quita **no vuelve solo**: está en `archive/pre-restore-…`, y decides línea a línea qué vuelves a registrar.
 
 ## La prueba anual (constitución VI)
 
 Una vez al año, **en tu ordenador y nunca en `dev`**:
 1. descarga el último volcado;
-2. ábrelo con la consola y con la web **desde una carpeta vacía**;
+2. ábrelo con la consola **desde una carpeta local vacía** (`atlas --ledger <carpeta>/ledger.jsonl …`);
 3. ejecuta `atlas check --deep`;
 4. contrasta las cifras principales con las de la aplicación en uso.
 
@@ -65,10 +56,10 @@ Anota la fecha.
 
 La cuenta de `prod` es la que compartes con otros proyectos (ADR-0034; ADR-0032, nota del 2026-09-25). Si se pierde:
 1. Terraform levanta la pila en **otra cuenta, que habría que crear entonces**;
-2. el libro vuelve desde **una réplica de un dispositivo o desde tu disco**;
+2. el libro vuelve desde **tu disco** (`atlas backup`, «Descargar copia»);
 3. `documents/` e `imports/` vuelven desde tu disco (`atlas backup --from-bucket` los dejó allí).
 
-Las réplicas y el disco son las capas que no dependen de la cuenta: mantenlas al día.
+Las copias de tu disco son la capa que no depende de la cuenta: mantenlas al día (el correo mensual lo recuerda).
 
 *Probado* contra los dobles de S3 (`apps/cli/test/admin/rewrite.test.ts`):
 - que un objeto de dispositivo ilegible no frena `compact` ni `restore`;

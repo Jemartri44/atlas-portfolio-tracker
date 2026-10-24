@@ -19,6 +19,7 @@ import type { CivilDate } from "../dates/civil-date.js";
 import type { Currency } from "../money/money.js";
 import { EUR, Money } from "../money/money.js";
 import type { AssetId, LedgerEvent } from "../schema/events.js";
+import type { Settings } from "../settings/settings.js";
 import { type BenchmarkGap, bucketTheses } from "./bucket.js";
 import { netWorth } from "./networth.js";
 import { priceDates } from "./prices.js";
@@ -113,9 +114,75 @@ export const sampleEvenly = <T>(values: readonly T[], limit: number): T[] => {
 };
 
 /**
- * The dates of the series, sorted, deduplicated and clipped to the range. `to`
- * is always one of them: the user asked about that day, and the answer to "how
- * much do I have today" cannot depend on when the last valuation was recorded.
+ * What the ledger showed on each of `dates`, read in **one pass** over its
+ * events instead of one projection per date: the `onDate` hook hands over the
+ * state after the last operation of each business date, which is the state
+ * `asOf` of any date up to the next one would build (pass B applies the
+ * operations in the very order the cut keeps them).
+ *
+ * `read` runs inside the hook, while the state is still being built: it must
+ * return values that hold no reference into it (a thesis view shares its legs
+ * with the state, which keeps growing). A date before the first operation sees
+ * the empty pass B, which one cut projection gives.
+ */
+const readAt = <T>(
+  events: readonly LedgerEvent[],
+  dates: readonly CivilDate[],
+  read: (state: LedgerState, date: CivilDate, settings: Settings) => T,
+): Map<CivilDate, T> => {
+  const wanted = [...new Set(dates)].sort();
+  const readings = new Map<CivilDate, T>();
+  if (wanted.length === 0) {
+    return readings;
+  }
+  const readOn = (state: LedgerState, date: CivilDate): void => {
+    readings.set(date, read(state, date, settingsAt(state, date).settings));
+  };
+  const early: CivilDate[] = [];
+  let index = 0;
+  projectLedger(events, {
+    collectErrors: true,
+    onDate: (date, state, next) => {
+      for (; index < wanted.length && (wanted[index] as CivilDate) < date; index += 1) {
+        early.push(wanted[index] as CivilDate);
+      }
+      for (
+        ;
+        index < wanted.length && (next === undefined || (wanted[index] as CivilDate) < next);
+        index += 1
+      ) {
+        readOn(state, wanted[index] as CivilDate);
+      }
+    },
+  });
+  early.push(...wanted.slice(index));
+  if (early.length > 0) {
+    const before = projectLedger(events, { collectErrors: true, asOf: early[0] as CivilDate });
+    for (const date of early) {
+      readOn(before, date);
+    }
+  }
+  return readings;
+};
+
+/** One date of a series: its point, and whether a price or a rate is lacking at it. */
+interface Reading<P> {
+  point: P;
+  incomplete: boolean;
+}
+
+export interface Series<P> {
+  dates: CivilDate[];
+  from: CivilDate;
+  to: CivilDate;
+  points: P[];
+}
+
+/**
+ * The dates of the series, sorted, deduplicated and clipped to the range, each
+ * with its reading. `to` is always one of them: the user asked about that day,
+ * and the answer to "how much do I have today" cannot depend on when the last
+ * valuation was recorded.
  *
  * **The cap never samples a hole away.** Sampling drops intermediate dates, and
  * a dropped date that happened to be the incomplete one turns a gap into a
@@ -126,102 +193,86 @@ export const sampleEvenly = <T>(values: readonly T[], limit: number): T[] => {
  *
  * So `max_points` is a target, not a hard ceiling, and it is the right way round:
  * a chart with more gaps than the cap allows is a chart about a ledger that is
- * barely valued, and that is information, not noise.
+ * barely valued, and that is information, not noise. Telling the incomplete
+ * dates takes reading every candidate, so `read` is told when the cap bites
+ * (`scan`) and only then needs to work out the flag of a reading it will not draw.
  *
- * It does not bite today (the cap is 120 and the ledger offers 8 dates); it
- * bites around year ten with monthly valuations, which is inside this project's
- * horizon.
+ * Every series shares this axis: the same options give the same dates in all of
+ * them.
  */
-const resolveDates = (
-  state: LedgerState,
+export const readSeries = <P>(
+  events: readonly LedgerEvent[],
   options: SeriesOptions,
-  incomplete: (date: CivilDate) => boolean,
-): CivilDate[] => {
+  read: (state: LedgerState, date: CivilDate, settings: Settings, scan: boolean) => Reading<P>,
+): Series<P> => {
   const from = options.from;
-  const candidates = options.dates ?? [...priceDates(state), options.to];
-  const inRange = candidates.filter(
-    (date) => date <= options.to && (from === undefined || date >= from),
+  const candidates = options.dates ?? [
+    ...priceDates(projectLedger(events, { collectErrors: true })),
+    options.to,
+  ];
+  const sorted = [
+    ...new Set(
+      candidates.filter((date) => date <= options.to && (from === undefined || date >= from)),
+    ),
+  ].sort();
+  const scan = options.max_points !== undefined && sorted.length > options.max_points;
+  const readings = readAt(events, sorted, (state, date, settings) =>
+    read(state, date, settings, scan),
   );
-  const sorted = [...new Set(inRange)].sort();
-  if (options.max_points === undefined || sorted.length <= options.max_points) {
-    return sorted;
+  const kept = new Set<CivilDate>(sorted);
+  if (scan) {
+    kept.clear();
+    for (const date of [
+      ...sampleEvenly(sorted, options.max_points as number),
+      // Never dropped, whatever the cap says.
+      sorted[sorted.length - 1] as CivilDate,
+      ...sorted.filter((date) => (readings.get(date) as Reading<P>).incomplete),
+    ]) {
+      kept.add(date);
+    }
   }
-  const kept = new Set([
-    ...sampleEvenly(sorted, options.max_points),
-    // Never dropped, whatever the cap says.
-    sorted[sorted.length - 1] as CivilDate,
-    ...sorted.filter((date) => incomplete(date)),
-  ]);
-  return sorted.filter((date) => kept.has(date));
-};
-
-export interface Resolved {
-  dates: CivilDate[];
-  from: CivilDate;
-  to: CivilDate;
-}
-
-const rangeOf = (
-  state: LedgerState,
-  options: SeriesOptions,
-  incomplete: (date: CivilDate) => boolean,
-): Resolved => {
-  const dates = resolveDates(state, options, incomplete);
+  const dates = sorted.filter((date) => kept.has(date));
   return {
     dates,
-    from: options.from ?? dates[0] ?? options.to,
+    from: from ?? dates[0] ?? options.to,
     to: options.to,
+    points: dates.map((date) => (readings.get(date) as Reading<P>).point),
   };
 };
-
-/** The projection of the ledger cut at a date, with its settings in force. */
-const at = (events: readonly LedgerEvent[], date: CivilDate) => {
-  const state = projectLedger(events, { collectErrors: true, asOf: date });
-  return { state, settings: settingsAt(state, date).settings };
-};
-
-/**
- * The dates of a net worth series, as `netWorthSeries` draws them. Exported
- * from the module, never from the barrel, so that a series drawn beside it (the
- * contributions) shares its axis point by point.
- */
-export const netWorthDates = (events: readonly LedgerEvent[], options: SeriesOptions): Resolved =>
-  rangeOf(projectLedger(events, { collectErrors: true }), options, (date) => {
-    const { state, settings } = at(events, date);
-    return netWorth(state, date, settings).partial;
-  });
 
 /** Evolution of the net worth, one point per date, broken down by book. */
 export const netWorthSeries = (
   events: readonly LedgerEvent[],
   options: SeriesOptions,
 ): NetWorthSeries => {
-  const { dates, from, to } = netWorthDates(events, options);
-  let complete = 0;
-  const points = dates.map((date): NetWorthPoint => {
-    const { state, settings } = at(events, date);
+  const { from, to, points } = readSeries(events, options, (state, date, settings) => {
     const worth = netWorth(state, date, settings);
     const core = worth.core.partial ? undefined : worth.core.total_eur;
     const bucket = worth.bucket.partial ? undefined : worth.bucket.total_eur;
     const cash = worth.cash.partial ? undefined : worth.cash.total_eur;
     const whole = core !== undefined && bucket !== undefined && cash !== undefined;
-    if (whole) {
-      complete += 1;
-    }
     return {
-      date,
-      ...(core === undefined ? {} : { core_eur: core }),
-      ...(bucket === undefined ? {} : { bucket_eur: bucket }),
-      ...(cash === undefined ? {} : { cash_eur: cash }),
-      ...(whole ? { total_eur: (core as Money).add(bucket as Money).add(cash as Money) } : {}),
-      missing: {
-        core: [...worth.core.missing_prices],
-        bucket: [...worth.bucket.missing_prices],
-        cash: [...worth.cash.missing_rates],
+      incomplete: !whole,
+      point: {
+        date,
+        ...(core === undefined ? {} : { core_eur: core }),
+        ...(bucket === undefined ? {} : { bucket_eur: bucket }),
+        ...(cash === undefined ? {} : { cash_eur: cash }),
+        ...(whole ? { total_eur: (core as Money).add(bucket as Money).add(cash as Money) } : {}),
+        missing: {
+          core: [...worth.core.missing_prices],
+          bucket: [...worth.bucket.missing_prices],
+          cash: [...worth.cash.missing_rates],
+        },
       },
     };
   });
-  return { from, to, points, complete };
+  return {
+    from,
+    to,
+    points,
+    complete: points.filter((point) => point.total_eur !== undefined).length,
+  };
 };
 
 /**
@@ -243,46 +294,42 @@ export const bucketIndexSeries = (
   events: readonly LedgerEvent[],
   options: SeriesOptions,
 ): BucketIndexSeries => {
-  const base = projectLedger(events, { collectErrors: true });
-  const { dates, from, to } = rangeOf(base, options, (date) => {
-    const { state, settings } = at(events, date);
-    return bucketTheses(state, date, settings).rows.some(
-      (thesis) =>
-        (thesis.buys.length > 0 || thesis.sells.length > 0) &&
-        (thesis.unrealized_eur === undefined || thesis.benchmark_equivalent_eur === undefined),
-    );
-  });
-  let complete = 0;
-  const points = dates.map((date): BucketIndexPoint => {
-    const { state, settings } = at(events, date);
+  const { from, to, points } = readSeries(events, options, (state, date, settings) => {
     const gaps: BenchmarkGap[] = [];
     let result = Money.zero(EUR);
     let benchmark = Money.zero(EUR);
     let idle = 0;
+    let incomplete = false;
     for (const thesis of bucketTheses(state, date, settings).rows) {
       if (thesis.buys.length === 0 && thesis.sells.length === 0) {
         idle += 1;
         continue;
       }
       if (thesis.unrealized_eur === undefined || thesis.benchmark_equivalent_eur === undefined) {
+        incomplete = true;
         gaps.push(...thesis.missing_benchmark);
         continue;
       }
       result = result.add(thesis.result_eur).add(thesis.unrealized_eur);
       benchmark = benchmark.add(thesis.benchmark_equivalent_eur.sub(thesis.invested_eur));
     }
-    if (gaps.length > 0) {
-      return { date, missing: gaps, idle };
-    }
-    complete += 1;
-    return {
-      date,
-      result_eur: result,
-      benchmark_eur: benchmark,
-      vs_index_eur: result.sub(benchmark),
-      missing: [],
-      idle,
-    };
+    const point: BucketIndexPoint =
+      gaps.length > 0
+        ? { date, missing: gaps, idle }
+        : {
+            date,
+            result_eur: result,
+            benchmark_eur: benchmark,
+            vs_index_eur: result.sub(benchmark),
+            missing: [],
+            idle,
+          };
+    return { point, incomplete };
   });
-  return { from, to, points, complete };
+  return {
+    from,
+    to,
+    points,
+    complete: points.filter((point) => point.missing.length === 0).length,
+  };
 };

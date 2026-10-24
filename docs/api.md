@@ -1,18 +1,8 @@
 # Contrato de la API
 
-El contrato HTTP de la Lambda de la API (`apps/api`), que se alcanza **solo a través de CloudFront**, bajo `/api/*` (ADR-0028, fila 6). Lo encargan **ADR-0026** («Consecuencias»: rutas, cuerpos, códigos, la confirmación y el rechazo por línea, la pareja de anulación y corrección como una sola línea, y el rechazo de una anulación cuya corrección no viene en la misma petición) y **ADR-0033** («Reparto entre features»: la cabecera, las rutas de inicio, canje, revocación y lista, sus códigos de error, los límites del nombre del dispositivo y cómo se liga a su sesión el identificador de dispositivo de la web). Se escribe **antes de implementar**, con el prompt de la feature 014.
+El contrato HTTP de la Lambda de la API (`apps/api`), que se alcanza **solo a través de CloudFront**, bajo `/api/*` (ADR-0028, fila 6). Lo encargan **ADR-0026** («Consecuencias»: rutas, cuerpos, códigos, la confirmación y el rechazo por línea, la pareja de anulación y corrección como una sola línea, y el rechazo de una anulación cuya corrección no viene en la misma petición) y **ADR-0033** («Reparto entre features»: la cabecera, las rutas de inicio, canje, revocación y lista, sus códigos de error, los límites del nombre del dispositivo y cómo se liga a su sesión el identificador de dispositivo de la web). 
 
-**Estado:** escrito el 2026-09-25 con `docs/prompts/014-ledger-sync-core.md`. **Implementado desde la feature 015** (PR #90 a #98, la última fusionada el 2026-09-27), probado con dobles de S3, SSM y Google y **sin desplegar todavía** (017 y 018). La **feature 014** construyó la sincronización contra un **remoto simulado** que cumple la semántica de las rutas de sincronización (§5) sin HTTP; la **feature 015**, la API de verdad, el acceso (§3 y §4) y los clientes HTTP. Ya no queda nada marcado **[PENDIENTE]**; si algo vuelve a quedar sin decidir, se marca así y lo decide la dirección, y una propuesta marcada como tal no es una decisión.
-
-**Puesto al día el 2026-09-25, al cerrar la feature 014** (PR #83). Sigue sin haber HTTP, pero la semántica de §5 ya está escrita y probada como código puro del dominio, el que llamará la Lambda de la 015: `parseAppendBody`, `acceptAppend`, `parsePublishBody`, `parseInitBody`, `acceptInit` e `initDuplicateIds` (`packages/domain/src/sync/remote.ts`), sobre el puerto `RemoteLedger` (`packages/domain/src/ports/remote-ledger.ts`). Los dos remotos simulados de los tests, en memoria y en un directorio, la cumplen. Lo que el código concretó respecto de la primera redacción está marcado «*(014)*» en §5 y §7, y la parte del cliente está en §5.7.
-
-**Puesto al día el 2026-09-25 con las decisiones del alto del plan de la feature 015** (`specs/015-api-access/questions.md (en el historial de git)` §8; propuestas en `specs/015-api-access/contracts/api-routes.md` y `data-model.md`): los valores que estaban [PENDIENTE] en §2, §3, §4 y §5, `GET /api/session`, la página de acceso denegado, el objeto del dispositivo con su tipo y su estado, la ligadura de la web (§5.4), la reemisión, las rutas de referencia (§6), los códigos nuevos (§7) y los parámetros de SSM (§9). Lo que queda [PENDIENTE] lo dice así.
-
-**Puesto al día el 2026-09-26 con E3 de la feature 015** (`specs/015-api-access/questions.md (en el historial de git)` §23 y §24; decisiones de la dirección en §25): §5 está implementado sobre S3 con lo verificado en el bloque 0 (§5.5), y las precisiones de la implementación van marcadas «*(015)*» en §5.1, §5.2, §5.3, §5.5 y §6.
-
-**Enmendado el 2026-10-06 por ADR-0035 (entrega E0, solo documentos).** Atlas pasa a ser siempre en la nube: el libro de S3 es la única fuente de verdad y no hay cola local. **E4 entregada (feature 025):** la API ya no ofrece `PUT /api/sync/devices/self` ni exige ni lee `x-atlas-expected-device`, y `compact` y la restauración no se niegan por pendientes (§2.3, §5.3, §5.4, §7, §8); la sesión de la web pasa a 24 h (§3); `GET /api/ledger` sigue sin comprimir (§5.1); y §5.8 describe el cliente de escritura directa. **El código del cliente que sobraba (§5.7) se borró en E5 (feature 026).**
-
-**Puesto al día el 2026-10-06 con E6 de ADR-0035 (feature 027):** §6.1 (borradores en la nube: cuatro rutas, objetos inmutables de `drafts/`), dos códigos nuevos en §7 (`draft_exists`, `draft_changed`) y una fila en §2.3.
+**Estado:** implementado (features 015, 016 y 021-027) y probado con dobles de S3, SSM y Google; **sin desplegar todavía** (017 y 018). Desde **ADR-0035** (2026-10-06) el libro de S3 es la única fuente de verdad: no hay cola local ni sincronización entre dispositivos, y la web y la consola escriben directamente con `If-Match` (§5.8). Lo que el código concretó respecto del diseño previo va marcado «*(014)*», «*(015)*» o «*(016)*» según la feature. Lo que quede sin decidir se marca **[PENDIENTE]**.
 
 **Si este documento discrepa de una ADR, manda la ADR**, y la discrepancia se anota en el `questions.md` de la feature que la encuentre.
 
@@ -73,14 +63,14 @@ Solo pueden cachearse los negativos que no pueden volver a valer (revocado, cadu
 
 | Ruta | Sesión (web) | Token (consola) |
 |---|---|---|
-| §5 Sincronización: leer el libro, añadir líneas, inicializar un remoto vacío (§5.5; con ADR-0035, solo la subida inicial a una nube vacía y la restauración), sin publicar ninguna cola (retirado en E4) | Sí | Sí |
+| §5 El libro: leer, añadir líneas y la subida inicial a una nube vacía (§5.5) | Sí | Sí |
 | §6 Datos de referencia | Sí | Sí |
 | §6.1 Borradores (E6 de ADR-0035) | Sí | Sí |
 | §4.4 Revocar **el propio** token | — | Sí |
 | §4.5 Listar tokens y revocar uno cualquiera; leer el estado de todos los dispositivos | Sí | **No**: `403 forbidden_for_credential` |
 | §4.1 Emitir un token | Solo al final de un inicio de sesión que abre la consola (§4) | **No** |
 
-**El identificador del dispositivo sale siempre de la credencial, nunca del cuerpo** (ADR-0033, punto 6; ADR-0026, paso 7). Un campo `device_id` en el cuerpo de una petición de sincronización es `400 body_invalid`.
+**El identificador del dispositivo sale siempre de la credencial, nunca del cuerpo** (ADR-0033, punto 6; ADR-0026, paso 7). Un campo `device_id` en el cuerpo de una petición es `400 body_invalid`.
 
 ## 3. Acceso de la web (ADR-0027)
 
@@ -93,7 +83,7 @@ La **vía c**: la Lambda es el cliente OAuth y el token de Google nunca toca la 
 | `POST /api/auth/logout` | Cuerpo `{}` obligatorio (`415 body_not_json`). Borra la cookie de sesión (`Max-Age=0`) **sin validarla** —cerrar una sesión caducada o firmada con una clave rotada también la borra— y responde `204`. Con cookie, la comprobación de `Origin` de §2. Con el token, `403 forbidden_for_credential`. |
 | `GET /api/session` | Solo cookie. `200 { "signed_in": true, "expires_at": "<Z>", "device_id": "<22>" }`, con `Cache-Control: no-store`: así sabe la SPA si tiene sesión (la cookie es `HttpOnly`) y qué `device_id` le asignó la API. Si no, la misma respuesta que cualquier ruta con cookie (`401 unauthenticated`, `401 session_invalid`, `403 not_allowed`, `403 device_forgotten`, `503 remote_unavailable`). Con el token, `403 forbidden_for_credential`. |
 
-**Duraciones**: la sesión, **24 h absolutas**, sin renovación (ADR-0035, pregunta 6, 2026-10-06; eran **8 h** desde el 2026-09-25, ADR-0027); la cookie transitoria, **10 min** (2026-09-25). Las dos son configuración de la Lambda (§9). **Antes de abrir un formulario, la web avisa si a la sesión le quedan menos de 15 minutos** (`expires_at` de `GET /api/session`), porque un formulario a medias se pierde si la sesión caduca (ADR-0035, §2 y «Riesgos aceptados»). *Estado:* el valor de 24 h y el aviso se implementan en las entregas E1 a E2b de ADR-0035; hasta entonces el código sigue con 8 h y sin aviso.
+**Duraciones**: la sesión, **24 h absolutas**, sin renovación (ADR-0035, pregunta 6, 2026-10-06; antes eran 8 h, ADR-0027); la cookie transitoria, **10 min** (2026-09-25). Las dos son configuración de la Lambda (§9). **Antes de abrir un formulario, la web avisa si a la sesión le quedan menos de 15 minutos** (`expires_at` de `GET /api/session`), porque un formulario a medias se pierde si la sesión caduca (ADR-0035, §2 y «Riesgos aceptados»).
 
 **La cookie de sesión** es `__Host-atlas_session`, con `Path=/`, `Secure`, `HttpOnly`, `SameSite=Strict` y sin `Domain`, firmada con HMAC-SHA256 y la subclave HKDF de `info` `atlas session v1`, con `typ: "atlas.session"`. Lleva **solo** `sub`, un identificador de sesión, el `device_id` de la web, la emisión y la caducidad: **ninguna cookie lleva el correo**. La transitoria, `__Host-atlas_login`, con su propia subclave (`atlas login v1`, `typ: "atlas.login"`). Formato exacto: `specs/015-api-access/data-model.md` §1.
 
@@ -171,9 +161,9 @@ Respuesta `200`, **una sola vez**:
 - `POST /api/devices/tokens/<token_id>/revoke`, cuerpo `{}` → `200 { "token_id": "…", "revoked_at": "…" }`. `<token_id>` pasa la regla de §2.1 **antes** de construir el nombre del parámetro (`400 body_invalid` si no). Revocar uno ya revocado devuelve el mismo `revoked_at`, sin volver a escribir. Un `<token_id>` sin registro, o con un registro ilegible, es `404 not_found` con `details.reason` `token_missing` o `token_unreadable`, **sin escribir nada** (decidido el 2026-09-26).
 - **Revocar todos sin Google** no es una ruta: es una operación de administración con credenciales de AWS (ADR-0028, fila 12), con procedimiento escrito en la 015 (`atlas admin revoke-all-tokens`).
 
-## 5. Sincronización del libro (ADR-0026)
+## 5. El libro (ADR-0026, ADR-0035)
 
-> **Enmendado por ADR-0035 (2026-10-06).** Sigue vigente: la API como único escritor que solo añade y valida cada línea (§5.2), `GET /api/ledger`, `POST /api/ledger/lines` y `PUT /api/ledger` (este, solo para la subida inicial a una nube vacía y la restauración, §5.5). **Se retira la cola por dispositivo**: publicar su estado (§5.3), la cabecera `x-atlas-expected-device` (§5.4) y la parte del cliente de §5.7 que habla de cola, marcador y lo retenido. La API lo retiró en **E4** y el código del cliente se borró en **E5** (feature 026). Las escrituras de la web y de la consola pasan a ser directas con `If-Match` (§5.8).
+> **ADR-0035.** No hay cola por dispositivo ni sincronización: la API es el único escritor y solo añade y valida cada línea (§5.2); `GET /api/ledger`, `POST /api/ledger/lines` y `PUT /api/ledger` (este, solo la subida inicial a una nube vacía, §5.5; la restauración es `atlas admin restore`, que nunca pasa por la API). Las escrituras de la web y de la consola son directas con `If-Match` (§5.8).
 
 El remoto es `ledger/ledger.jsonl` del bucket de datos. **La API solo añade**: nunca reescribe ni borra una línea (ADR-0026, Parte A). Las líneas se escriben **tal como las serializó el cliente**, byte a byte: ni la API ni nadie reserializa lo ya escrito (trampa 10 de `CLAUDE.md`).
 
@@ -186,9 +176,8 @@ El remoto es `ledger/ledger.jsonl` del bucket de datos. **La API solo añade**: 
 - **Sin comprimir** (ADR-0035, pregunta 7, 2026-10-06): no se comprime `GET /api/ledger` hasta que el tamaño del libro lo pida (aviso de ADR-0028). Es lo que ya hace CloudFront con `application/x-ndjson`, como dice la viñeta siguiente. Con ADR-0035 la web descarga el libro entero al arrancar y tras cada escritura (§5.8), y toda respuesta de `/api/*` lleva `Cache-Control: no-store`.
 - `200`, cuerpo = **los bytes exactos** del libro, `Content-Type: application/x-ndjson; charset=utf-8`, cabecera `ETag: "<sha256>"`. Sin compresión que cambie los bytes que el cliente hashea (si CloudFront comprime, el cliente hashea lo descomprimido: lo que cuenta son los bytes del fichero).
 - *(015)* **Los bytes viajan como texto si son UTF-8 válido**, porque así se reescriben idénticos, y **en base64 (`isBase64Encoded`) si no lo son**. Exactos en los dos casos. El cliente comprueba que la cabecera `ETag`, fuerte o débil (`W/`, que pone CloudFront al comprimir), dice el SHA-256 de los bytes que recibió, ya descomprimidos. Si no lo dice, o si los bytes no son UTF-8, es `transport_rejected` (bloque 0 de E3, §23.3). **CloudFront no comprime `application/x-ndjson`**, que no está en su lista de tipos.
-- El cliente comprueba con este cuerpo el **hash del prefijo** que sincronizó (ADR-0026, Parte A): si los bytes de sus primeras `synced_lines` líneas no dan el hash de su marcador, el remoto se ha reescrito y no sube nada.
-- **La API no interpreta la versión de esquema al servir**: un cliente antiguo que no entiende el remoto lo rechaza al cargar (`docs/data-schema.md` §5), y sus pendientes esperan.
-- *(014)* **El puerto del cliente entrega texto, no bytes** (`RemoteSnapshot`: `text` y `etag`). El dominio no tiene decodificador UTF-8, así que el cliente HTTP decodifica los bytes del cuerpo y entrega el texto; el etag sigue siendo el SHA-256 de los bytes. Decodificar no pierde nada, porque toda línea del remoto se escribió desde una cadena, y el bloque 0 de la 014 lo comprobó byte a byte (`specs/014-ledger-sync-core/questions.md (en el historial de git)` §1.4).
+- **La API no interpreta la versión de esquema al servir**: un cliente antiguo que no entiende el remoto lo rechaza al cargar (`docs/data-schema.md` §5).
+- *(014)* **El puerto del cliente entrega texto, no bytes** (`RemoteSnapshot`: `text` y `etag`). El dominio no tiene decodificador UTF-8, así que el cliente HTTP decodifica los bytes del cuerpo y entrega el texto; el etag sigue siendo el SHA-256 de los bytes. Decodificar no pierde nada, porque toda línea del remoto se escribió desde una cadena, y el bloque 0 de la 014 lo comprobó byte a byte (la feature 014).
 
 ### 5.2 Añadir líneas
 
@@ -249,7 +238,7 @@ Cuerpo:
 
 - `rejected.index` es siempre el de **la primera línea de la unidad** que falla, y `rejected.id`, el de su primer evento si se pudo leer. En una pareja o una cadena, `details.member_index` dice qué miembro falló: en los rechazos de las filas 1 a 5, en `pair_incomplete` y `pair_not_contiguous`, en `duplicate_unconfirmed`, en `seal_mismatch` y en `pair_rejected`, de una pareja o de una cadena, salvo con `member: "other"`, que no es un miembro.
 - `duplicate_unconfirmed` lleva en `details.existing` los `id` cuya huella repite. Al añadir, la huella se compara con la de los eventos **no anulados**, la regla de siempre (decisión D-Q16 de la 014; en la inicialización vale la de §5.5).
-- **Un remoto que ya tiene eventos inválidos** (una regla endurecida después) no acepta nada más hasta que se repare. Responde `accepted: 0` y el rechazo en el índice 0, con `code: "domain_rejected"` y en `details` `domain_code: "ledger_has_invalid_events"` e `invalid_count`. El cliente no llega a pedirlo: al leer el remoto, para antes con `remote_ledger_invalid` (§5.7).
+- **Un remoto que ya tiene eventos inválidos** (una regla endurecida después) no acepta nada más hasta que se repare. Responde `accepted: 0` y el rechazo en el índice 0, con `code: "domain_rejected"` y en `details` `domain_code: "ledger_has_invalid_events"` e `invalid_count`.
 
 Respuesta `200` siempre que `If-Match` cuadró:
 
@@ -297,7 +286,7 @@ La API toma el dispositivo de la credencial y **nunca del cuerpo, de la URL ni d
 - Un cliente puede presentar un `device_id` **solo al iniciar sesión** (`GET /api/auth/login?device_id=…`). La API lo lleva en la cookie transitoria y, tras verificar a Google, lo acepta **solo si ella misma lo emitió para un dispositivo web y no está olvidado**. Si no —y desde que la web no guarda ninguno, siempre—, **asigna uno nuevo** (22 caracteres aleatorios) y crea su objeto con `If-None-Match: *`. *Abierta:* que cada inicio de sesión cree un dispositivo (`specs/025-api-cloud-first/questions.md`, 1).
 - El `device_id` va **firmado dentro de la cookie de sesión**, y cada petición con cookie comprueba su objeto (§2): olvidado o ausente es `403 device_forgotten`.
 - La web lo puede leer de `GET /api/session`; no es credencial y no se guarda en el dispositivo (ADR-0035).
-- **`device_forgotten`** en cualquier respuesta es un fallo remoto más (§5.7, `remote_failed`); la web dice que hay que volver a iniciar sesión, y la sesión nueva recibe otro dispositivo.
+- **`device_forgotten`** en cualquier respuesta es un fallo remoto más (§7); la web dice que hay que volver a iniciar sesión, y la sesión nueva recibe otro dispositivo.
 
 ### 5.5 Inicializar un remoto vacío
 
@@ -309,62 +298,13 @@ La API toma el dispositivo de la credencial y **nunca del cuerpo, de la URL ni d
 
 Es como **el primer dispositivo** sube su libro (decisión de la dirección, 2026-09-25): **los bytes enteros**, escritos con la operación de líneas crudas, **no línea a línea** por §5.2. Así una presentación o una renuncia de una carpeta ya compactada viaja **con su prefijo intacto**, y su sello sigue cuadrando. La API comprueba antes de escribir que el contenido **carga** con su esquema (ninguna versión más nueva, ninguna línea ilegible), que su proyección es **válida**, y **las dos reglas de ADR-0026 que valen para toda línea que entra en el remoto** (decisión de la dirección, 2026-09-25; nota fechada en ADR-0026): ningún `recorded_at` más allá de la tolerancia del reloj, y **toda huella repetida confirmada** por su `id` en `confirm_duplicate_ids`. **El cliente la deduce del libro, sin volver a preguntar** (decisión de la dirección, 2026-09-25): toda línea que está en el libro local fue aceptada en local —pasó por `confirmDuplicate`, o la escribió una cadena de correcciones de tipos (`writeRateCorrections`) que el usuario confirmó entera—, así que envía los `id` de todo evento cuya huella repite la de uno anterior en el fichero. Cualquier fallo es `init_rejected`, con el código (`line_unreadable`, `schema_version_unsupported`, `domain_rejected`, `recorded_at_in_future`, `duplicate_unconfirmed`…) y la línea en `details`, y no se escribe nada. *(014)* `details.code` es el código; `details.line` es el número de línea, contando desde 1, en los rechazos de una línea, y `details.id` es el evento en `domain_rejected` y `duplicate_unconfirmed`. Una línea con `"\r"` es `init_rejected` con `code: "raw_line_break"`. Las declaraciones de pareja y de cadena no se aplican: no hay cola que partir, porque sube el libro entero. **El cliente se niega a inicializar antes de llamar si su libro no es válido** (por ejemplo, con un `settings_changed` registrado con `acceptInvalid`), y lo explica: hay que repararlo primero. Un `init_rejected` nunca es el camino normal, y nunca deja al dispositivo parado sin explicación. Respuesta `200 { "etag": "…", "lines": n }`.
 
-### 5.6 Qué es «el mismo evento» tras una reescritura del remoto
+### 5.6 y 5.7 (retiradas)
 
-> **Histórica, enmendada por ADR-0035 (E5).** Esta regla la usaba el cliente de la cola, que se borró del código junto con su test (`rewrite-join.test.ts`). Se conserva como registro de por qué `compact` reescribe `ledger_fingerprint`; ya no hay clasificación en el cliente ni test que mantener.
-
-No es una ruta: es la regla con la que un cliente clasifica lo que retiene al volver a descargar un remoto reescrito (ADR-0026, Parte A y nota fechada del 2026-09-25; ADR-0032, paso 3). **Detectar** la reescritura es por el hash de los bytes del prefijo (§5.1). **Clasificar** es por `event_id` y forma canónica: los dos eventos, **migrados a la versión de esquema actual**, se comparan en su serialización canónica (`encodeLine`) **ignorando exactamente estos campos, y ninguno más**:
-
-| Tipo | Campo ignorado | Por qué |
-|---|---|---|
-| `tax_return_filed` | `ledger_fingerprint` | `compact` lo vuelve a sellar por definición sobre el prefijo reescrito (`resealFilings`, `packages/domain/src/filings/fingerprint.ts`; ADR-0025) |
-
-`filing_fingerprint_waived` no tiene ningún campo en la lista: `compact` escribe renuncias **nuevas** y no reescribe las que ya había. La lista es cerrada: un campo nuevo que `compact` reescriba por definición entra aquí, en la nota de ADR-0026 y en el test a la vez. Mismo `event_id` y misma forma canónica: no se retiene. Mismo `event_id` y cualquier otra diferencia: conflicto real, se retiene. `event_id` ausente del remoto nuevo: se retiene. **Nunca se ofrece rehacer una presentación que el remoto ya tiene.**
-
-### 5.7 La parte del cliente *(014)*
-
-> **Histórica, enmendada por ADR-0035.** Todo lo de esta sección (cola, marcador, lo retenido, volver a descargar, unirse, `syncDevice` y sus códigos) describe el motor de sincronización que **ADR-0035 retiró**. El motor se borró del código en **E5** (feature 026; `packages/adapters/src/sync/` salvo `http-remote` y `api-ledger-store`; se conserva lo que importa la API, como `acceptAppend`, y `unitsOf` y `entriesOf`, de los que depende `ApiLedgerStore`); sus clientes dejan de usarse desde E2b y E3.  Lo que lo sustituye es §5.8.
-
-No es una ruta: es lo que el cliente hace con §5.1 a §5.5, fijado por el código de la 014 (`syncDevice`, `initialiseRemote`, `replaceFromRemote` y `joinWithOwnLines` en `packages/adapters/src/sync/client.ts`; `inspect`, `planUpload` y `settle` en `packages/domain/src/sync/client-plan.ts`). Los dos clientes, la consola sobre su carpeta y la web sobre su IndexedDB, comparten esta orquestación. Cada interfaz traduce cada código con su propia frase (`tests/messages.test.ts`).
-
-**Negativas antes de llamar**, sin tocar nada:
-
-| Código | Cuándo |
-|---|---|
-| `sync_not_configured` | Sincronizar en un dispositivo sin `sync/` (o sin claves `sync:*`). Empezar es siempre una elección explícita: inicializar un remoto vacío (§5.5), unirse desde el remoto o unirse subiendo las líneas propias como pendientes |
-| `sync_deactivated` | Sincronizar con el marcador en `disabled`. Para volver hay que unirse otra vez, de forma explícita |
-| `init_refused_invalid_ledger` | Inicializar con un libro que tiene eventos inválidos; `details.invalid` los lista con su código (§5.5) |
-
-**Paradas**: la sincronización para, **no retiene nada** y deja todo pendiente donde estaba.
-
-| Código | Cuándo |
-|---|---|
-| `remote_empty` | El remoto está vacío, el libro tiene líneas y no hay nada sincronizado: no se sube línea a línea, se inicializa (§5.5) |
-| `local_prefix_changed` | El prefijo local ya no da el hash del marcador (`details.synced_lines`) |
-| `remote_rewritten` | En el paso 1, el prefijo del remoto no da el hash del marcador (§5.1) (`details.synced_lines`, `details.remote_lines`). En el paso 5, el remoto releído ya no empieza por **todo** lo leído en el paso 1, línea a línea, aunque el prefijo del marcador siga cuadrando; esta parada va sin `details` (`syncDevice`, `packages/adapters/src/sync/client.ts`). Solo se vuelve a descargar cuando el usuario lo pide |
-| `remote_schema_too_new` | El remoto tiene una línea de una versión de esquema que este cliente no conoce |
-| `remote_unreadable` | Una línea del remoto no se puede leer (`details.line`) |
-| `remote_ledger_invalid` | El remoto ya tiene eventos inválidos (`details.invalid_count`); no es culpa de ninguna línea de la cola (D-Q11) |
-| `join_required` | No hay marcador legible, y la cola tiene líneas que el remoto no tiene y que no están retenidas (`details.own_lines`). Reconstruir el prefijo común no autoriza a mezclar: unirse es siempre explícito (segunda revisión de la PR #83). Sin líneas propias, el marcador se reconstruye y la sincronización sigue |
-| `remote_failed` | Cualquier respuesta sin rechazo por línea, salvo el `412` al añadir, que vuelve a empezar: `details.remote_code` lleva el código tal cual, de la lista cerrada de §7, y `details.status`, el HTTP |
-| `remote_contention` | Tres `412` seguidos (`MAX_REMOTE_RACES`, D-Q9; `details.attempts`) |
-| `local_changed` | El libro local, lo retenido o el marcador cambiaron entre el paso 1 y el paso 6 tres veces seguidas (`MAX_LOCAL_CHANGES`, D-Q9) |
-
-Y un **aviso**, no una parada: `publish_failed` (`details.remote_code`, `details.status`), cuando todo está escrito y solo falló publicar el estado de la cola (§5.3). Lo publica la sincronización siguiente.
-
-**Lo que se retiene** al sincronizar, por un rechazo de una línea o unidad: en el paso 3, por el propio cliente, y en el paso 4, por un `rejected.code` de §5.2, que se retiene tal cual. En el paso 3, los motivos son estos:
-
-- `pair_not_contiguous`: una corrección que no va justo detrás de la anulación de su objetivo;
-- `seals_prefix`: una línea que sella el prefijo y ya no caería sobre el mismo;
-- `concurrent_settings`, `concurrent_account` y `concurrent_asset`: fotos concurrentes (D-Q8);
-- `pair_rejected`, `settings_leave_invalid` y `domain_rejected`: rechazos del dominio;
-- `new_duplicate` y `new_closed_year`: avisos nuevos (D-Q3).
-
-Al volver a descargar un remoto reescrito o al unirse desde el remoto se retiene con `absent_after_rewrite`, `differs_after_rewrite`, `absent_at_join` y `differs_at_join`, en las mismas unidades que la cola. Y al descartar solo la anulación de una pareja, su corrección se retiene otra vez, sola, con `partner_discarded` (`discardHeld`, `packages/domain/src/sync/resolve.ts`): a esa solo se le ofrece descartar, y rehacerla se niega con `redo_partner_discarded`. Mientras quede algo retenido sin resolver, no se sube nada.
+Describían el motor de sincronización del cliente (cola, marcador, lo retenido, volver a descargar, unirse), que ADR-0035 retiró y la feature 026 borró del código. Se conservan los números para no romper las citas.
 
 ### 5.8 El cliente de escritura directa (ADR-0035)
 
-Decidido por ADR-0035 (aceptada el 2026-10-06). **El adaptador está implementado (E1, `specs/021-api-ledger-store`)**: `ApiLedgerStore` sobre `httpRemote`, con los errores `remote_rejected` (`RemoteRejectedError`) y `write_outcome_unknown` (`WriteOutcomeUnknownError`) y `findOutcome(ids)` para resolver el resultado desconocido. La web lo usa desde E2b (feature 023) y la consola desde E3 (feature 024).
+Decidido por ADR-0035. **El adaptador está implementado (E1, `specs/021-api-ledger-store`)**: `ApiLedgerStore` sobre `httpRemote`, con los errores `remote_rejected` (`RemoteRejectedError`) y `write_outcome_unknown` (`WriteOutcomeUnknownError`) y `findOutcome(ids)` para resolver el resultado desconocido. La web lo usa desde E2b (feature 023) y la consola desde E3 (feature 024).
 
 - **Un solo almacén, `ApiLedgerStore`**, implementa `LedgerStore` sobre HTTP: `load()` es `GET /api/ledger` (se comprueba que el `ETag` es el SHA-256 de los bytes); `append(events, etag)` serializa cada evento con `encodeLine` y lo envía en `POST /api/ledger/lines` con `If-Match: "<etag>"`. `replace`, `appendLines` y `replaceLines` se niegan. Sin cola local y sin libro guardado en el dispositivo.
 - **Las declaraciones de §5.2 las deduce el adaptador:** `has_correction` y `chain_continues`, de la forma del lote; `confirm_duplicate`, por unidad, con las huellas del libro cargado más la unidad entera (miembros posteriores incluidos), que es la regla de la fila 7 de la tabla de §5.2.
@@ -468,25 +408,24 @@ Todo error de la Lambda tiene esta forma, sin mensaje en lenguaje natural (lo po
 | `append_too_many_units` | 413 | `POST /api/ledger/lines` con más de `MAX_APPEND_UNITS` (100) unidades, `details.max` (§5.2); nada escrito |
 | `body_too_large` | 413 | Un cuerpo por encima del tope propio de la Lambda, antes de leerlo (la Function URL admite 6 MB) |
 
-*(014)* **La lista cerrada de los fallos que no son de una línea** es `REMOTE_FAILURE_CODES` (`packages/domain/src/ports/remote-ledger.ts`). Contiene los códigos de esta tabla que pueden responder las rutas de §5, menos los de las rutas de acceso de §4, más `device_forgotten` y `remote_unavailable` (feature 015), y dos que nombra el cliente para lo que no llegó a la API: `transport_rejected` (abajo) y `network_failed`, un fallo de red. El cliente los lleva tal cual en `remote_failed` (§5.7), nunca retiene por ellos, y cada interfaz tiene una frase para cada uno.
+*(014)* **La lista cerrada de los fallos que no son de una línea** es `REMOTE_FAILURE_CODES` (`packages/domain/src/ports/remote-ledger.ts`). Contiene los códigos de esta tabla que pueden responder las rutas de §5, menos los de las rutas de acceso de §4, más `device_forgotten` y `remote_unavailable` (feature 015), y dos que nombra el cliente para lo que no llegó a la API: `transport_rejected` (abajo) y `network_failed`, un fallo de red. El cliente los lleva tal cual en `remote_failed`, y cada interfaz tiene una frase para cada uno.
 
 Y los **motivos de rechazo de una línea** (dentro de un `200`, en `rejected.code`, §5.2): `line_unreadable`, `schema_version_unsupported`, `line_invalid`, `recorded_at_in_future`, `domain_rejected`, `duplicate_unconfirmed`, `pair_declaration_invalid`, `pair_incomplete`, `pair_not_contiguous`, `pair_rejected`, `seal_mismatch` y `waiver_not_appendable`.
 
-**Qué hace el cliente con cada respuesta** (decisión de la dirección, 2026-09-25): **solo un `rejected.code` retiene** la línea (o la unidad) con su motivo. Un `412` vuelve a empezar la sincronización. Cualquier otra cosa —un 5xx, `transport_rejected`, un fallo de red, `session_invalid`, `device_token_expired` o `device_token_revoked`— **para la sincronización y deja todo pendiente**, para reintentarla después; nunca retiene.
+**Qué hace el cliente con cada respuesta:** §5.8.
 
-Fuera de la Lambda: `transport_rejected` es el nombre que da **el cliente** a una respuesta sin este formato (el hash del cuerpo rechazado por AWS, el WAF, un error de CloudFront). Nunca se trata como un rechazo de líneas: la sincronización para y lo dice.
+Fuera de la Lambda: `transport_rejected` es el nombre que da **el cliente** a una respuesta sin este formato (el hash del cuerpo rechazado por AWS, el WAF, un error de CloudFront). Nunca se trata como un rechazo de líneas: se dice y el resultado de la escritura se trata como desconocido (§5.8).
 
 ## 8. Quién implementa qué
 
-> **Enmendado por ADR-0035 (2026-10-06).** La tabla es histórica en lo que toca a la cola. Las entregas de ADR-0035 reparten lo nuevo: **E1** `ApiLedgerStore`; **E2a/E2b** la web; **E3** la consola; **E4** la API (entregada: retira `PUT /api/sync/devices/self`, `x-atlas-expected-device` y la negativa por pendientes de `compact` y la restauración); **E5** (entregada, feature 026) el código muerto; **E6** los borradores en la nube. La fila de **017** ya no necesita `x-atlas-expected-device`. 
-
 | Pieza | Feature |
 |---|---|
-| El caso de uso puro que reaplica y acepta líneas (el mismo para el cliente y para la Lambda), las operaciones de líneas crudas del puerto, el marcador, lo retenido y lo descartado, y un **remoto simulado** que cumple §5 sin HTTP | **014**, fusionada (PR #83, 2026-09-25) |
+| El caso de uso puro que acepta líneas (el mismo para el cliente y para la Lambda), las operaciones de líneas crudas del puerto y un **remoto simulado** que cumple §5 sin HTTP | **014**, fusionada (PR #83, 2026-09-25) |
+| `ApiLedgerStore`, la web y la consola contra la nube, la API sin cola y el código muerto, retirados | **021 a 026** (E1 a E5 de ADR-0035) |
 | Las órdenes de administración de la consola contra el almacén remoto: `compact` del remoto, restaurar y olvidar un dispositivo, **fuera de la API** (ADR-0026, Parte A) | **015** |
 | La Lambda: §1 a §7 sobre HTTP, `LedgerStore` sobre S3 con `If-Match`, el registro en SSM, los clientes HTTP de la web y de la consola, `atlas remote login` y `logout`, la pantalla de dispositivos de la web | **015** |
 | El correo mensual con los inicios de sesión de la web y de la consola y los tokens vivos y emitidos; `access/last-web-sign-in.json` (§3); la regla de nombres de `prices/` y los clientes de §6 | **016**, fusionada (PR #104, #106, #108 y #109, 2026-09-28) |
-| El prefijo de SSM y sus permisos, la política de origen que reenvía a `/api/*` `x-atlas-device-token`, (`x-atlas-expected-device` se retiró en E4, §5.4), **`Sec-Fetch-Site` y `Origin`** (sin las dos últimas, la Lambda nunca sabe que un inicio de sesión viene del propio sitio: ignora siempre el `device_id` de §3 y cada inicio de sesión de la web crea un dispositivo nuevo, sin avisar; y sin `Origin`, toda escritura con cookie se rechaza con `origin_rejected`, §2; revisión de la PR #90, ronda 2), la CSP que respeta la `sandbox` de §4.2 | **017** |
+| El prefijo de SSM y sus permisos, la política de origen que reenvía a `/api/*` `x-atlas-device-token`, **`Sec-Fetch-Site` y `Origin`** (sin las dos últimas, la Lambda nunca sabe que un inicio de sesión viene del propio sitio: ignora siempre el `device_id` de §3 y cada inicio de sesión de la web crea un dispositivo nuevo, sin avisar; y sin `Origin`, toda escritura con cookie se rechaza con `origin_rejected`, §2; revisión de la PR #90, ronda 2), la CSP que respeta la `sandbox` de §4.2 | **017** |
 | Los borradores en la nube: §6.1, el prefijo `drafts/` del rol de la API sin permiso de borrado, el puerto sobre la API y los clientes de la web y de la consola | **027** (E6 de ADR-0035) |
 
 ## 9. Parámetros de SSM y configuración de la Lambda
@@ -501,7 +440,7 @@ Decidido el 2026-09-25 (feature 015). **Los valores los crea y los rota el guion
 | `/atlas/<entorno>/auth/session-key` | `SecureString` | 32 bytes aleatorios en base64url (43 caracteres); de ella salen las subclaves HKDF | 300 s: rotarla cierra todas las sesiones como mucho en 5 minutos |
 | `/atlas/<entorno>/device-tokens/<token_id>` | `SecureString` | el registro del token (formato en `specs/015-api-access/data-model.md` §2) | **ninguna** (§2.2) |
 
-**Configuración que no es secreta**, en variables de entorno de la Lambda (**ningún secreto en una variable de entorno**): `ATLAS_ENV`, `ATLAS_ORIGIN`, `ATLAS_DATA_BUCKET`, `ATLAS_SESSION_TTL_SECONDS` (28.800), `ATLAS_LOGIN_TTL_SECONDS` (600), `ATLAS_CONSOLE_CODE_TTL_SECONDS` (300), `ATLAS_TOKEN_LIFETIME_DAYS` (90; más de 120 impide arrancar), `ATLAS_RECENT_ISSUE_DAYS` (7), `ATLAS_CLOCK_TOLERANCE_SECONDS` (600), `ATLAS_ALLOW_LIST_CACHE_SECONDS` (120) y `ATLAS_SECRETS_CACHE_SECONDS` (300). Una variable `ATLAS_*` desconocida, o un valor que no se entiende, impide arrancar. **Techos fijos en el código** (revisión de seguridad de la PR #90, S4): la sesión, como mucho 24 h (86.400); la cookie transitoria, 30 min (1.800); el código de la consola, 15 min (900); las dos cachés, 1 h (3.600); la tolerancia del reloj, 1 h (3.600); la ventana de las emisiones «recientes», 90 días; la caducidad del token, 120 días. Por encima, la configuración se rechaza y la Lambda no arranca.
+**Configuración que no es secreta**, en variables de entorno de la Lambda (**ningún secreto en una variable de entorno**): `ATLAS_ENV`, `ATLAS_ORIGIN`, `ATLAS_DATA_BUCKET`, `ATLAS_SESSION_TTL_SECONDS` (86.400), `ATLAS_LOGIN_TTL_SECONDS` (600), `ATLAS_CONSOLE_CODE_TTL_SECONDS` (300), `ATLAS_TOKEN_LIFETIME_DAYS` (90; más de 120 impide arrancar), `ATLAS_RECENT_ISSUE_DAYS` (7), `ATLAS_CLOCK_TOLERANCE_SECONDS` (600), `ATLAS_ALLOW_LIST_CACHE_SECONDS` (120) y `ATLAS_SECRETS_CACHE_SECONDS` (300). Una variable `ATLAS_*` desconocida, o un valor que no se entiende, impide arrancar. **Techos fijos en el código** (revisión de seguridad de la PR #90, S4): la sesión, como mucho 24 h (86.400); la cookie transitoria, 30 min (1.800); el código de la consola, 15 min (900); las dos cachés, 1 h (3.600); la tolerancia del reloj, 1 h (3.600); la ventana de las emisiones «recientes», 90 días; la caducidad del token, 120 días. Por encima, la configuración se rechaza y la Lambda no arranca.
 
 ### 9.1 Las tareas programadas *(016)*
 

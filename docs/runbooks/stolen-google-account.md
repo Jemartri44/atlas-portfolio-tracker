@@ -1,12 +1,10 @@
 # Recuperar una cuenta de Google robada
 
-> **Enmendado por ADR-0035 (2026-10-06).** (a) La sesión de la web pasa de 8 h a **24 h** (el texto de abajo dice 8 h hasta que el código la cambie); con un teléfono robado sin sesión viva, ya no hay libro en el dispositivo. (b) Con la nube como única fuente de verdad y **sin réplica local**, el token de la consola es lo único que da acceso desde ella, así que la revocación (paso 3) pesa más; ninguna regla cambia. (c) Los pasos que hablan de pendientes, de la réplica propia, de `atlas sync` y de «volver a descargar» (5.1, 5.2, 5.3 y 6) **dejan de aplicar** al entregarse E3 a E5: no habrá cola que publique pendientes, la revisión se hace con el rol de administración y el siguiente `412` recarga el libro. **Lo que se retira del código se retira en las entregas E1 a E5; hasta entonces el código sigue como está y los pasos de abajo valen tal cual.** (d) «El libro no depende de la cuenta de Google» sigue siendo cierto, pero ya no vive en réplicas de dispositivos: vive en el bucket y en las copias de tu disco (`atlas backup`, «Descargar copia»).
+**Cuándo**: alguien ha entrado en la cuenta de Google con la que entras en Atlas, o lo sospechas. **Cerrar la sesión en Google no cierra Atlas.** Atlas tiene su propia sesión web, de hasta 24 horas, y quien entró pudo sacar un token de consola que vale hasta 90 días.
 
-**Cuándo**: alguien ha entrado en la cuenta de Google con la que entras en Atlas, o lo sospechas. **Cerrar la sesión en Google no cierra Atlas.** Atlas tiene su propia sesión web, de hasta 8 horas, y quien entró pudo sacar un token de consola que vale hasta 90 días.
+**Señal**: en la web de Atlas, Ajustes › Sesión › «Dispositivos de la consola». Las emisiones recientes van marcadas: **un token que no reconoces es la alarma**.
 
-**Señal**: en la web de Atlas, Ajustes › Sincronización › «Dispositivos de la consola». Las emisiones recientes van marcadas: **un token que no reconoces es la alarma**.
-
-**El orden importa** (ADR-0033, punto 8; `docs/prompts/015-api-access.md` §7.1 bis, B3). **Sigue estos seis pasos en este orden y sin saltarte ninguno.** Si repones la cuenta antes de terminar el paso 5, los tokens y las sesiones del intruso vuelven a valer.
+**El orden importa** (ADR-0033, punto 8). **Sigue estos seis pasos en este orden y sin saltarte ninguno.** Si repones la cuenta antes de terminar el paso 5, los tokens y las sesiones del intruso vuelven a valer.
 
 Lo que necesitas es el rol de administración y `admin.json`, como en [Revocar todos los tokens](revoke-all-tokens.md), apartado «Lo que necesitas». **Desde el paso 1, tu propia consola tampoco entra en la nube** (`not_allowed`), y desde el paso 3 su token está revocado: todo lo que se hace hasta el paso 6 va con el rol de administración.
 
@@ -61,7 +59,7 @@ Es el procedimiento [Revocar todos los tokens](revoke-all-tokens.md), que tiene 
 
 ## 5. Olvidar sus dispositivos, revisar la nube y rectificar
 
-**En este orden.** Desde E4 de ADR-0035 la restauración no se niega por pendientes de ningún dispositivo.
+**En este orden.** Los dispositivos no guardan copia del libro (ADR-0035): la nube es lo único que hay que revisar.
 
 **5.1. Olvida primero los dispositivos que no reconozcas.**
 ```sh
@@ -69,10 +67,10 @@ AWS_PROFILE=atlas-prod-admin atlas admin devices --env prod
 AWS_PROFILE=atlas-prod-admin atlas admin forget-device --env prod -- <dispositivo>
 ```
 - El identificador va **detrás de `--`**, que termina las opciones: son 22 caracteres base64url y pueden empezar por `-` o por `--`, y sin él la consola lo leería como una opción y saldría con 64. Vale también `--device <dispositivo>`.
-- La confirmación enseña su tipo, su nombre y su última sincronización, y pide que escribas `prod`.
+- La confirmación enseña su tipo y su nombre, y pide que escribas `prod`.
 - Revoca sus tokens, **después** lo marca olvidado y vuelve a barrer los tokens que se hubieran emitido entre medias. Nunca se borra.
 
-**5.2. Revisa la nube con el rol de administración**, no con `atlas sync`, que desde el paso 1 no entra. Hay dos formas:
+**5.2. Revisa la nube con el rol de administración**, porque desde el paso 1 tu consola no entra. Hay dos formas:
 - **Descargar el libro de la nube** a tu carpeta privada y leerlo ahí:
   ```sh
   mkdir -p ~/personal/atlas/privado/revision
@@ -81,17 +79,12 @@ AWS_PROFILE=atlas-prod-admin atlas admin forget-device --env prod -- <dispositiv
   jq -c 'select(.recorded_at >= "<inicio de la ventana>")' ~/personal/atlas/privado/revision/ledger.jsonl
   ```
   El bucket es el `data_bucket` de `admin.json`. Nunca en el repositorio.
-- **Compararla con tu réplica** sin tocar nada: `atlas admin restore` enseña en su paso 3 la cola que solo tiene la nube. Contesta cualquier cosa que no sea `prod` en el paso 4, y no toca nada:
+- **Compararla con tu última copia** sin tocar nada: `atlas admin restore` enseña en su paso 3 lo que solo tiene la nube. Contesta cualquier cosa que no sea `prod` en el paso 4, y no toca nada:
   ```sh
-  AWS_PROFILE=atlas-prod-admin atlas admin restore --env prod --from <tu carpeta>/ledger.jsonl
+  AWS_PROFILE=atlas-prod-admin atlas admin restore --env prod --from <tu copia>/ledger-AAAA-MM-DD.jsonl
   ```
-  Ejecútala **desde una carpeta vacía** (`--ledger <carpeta vacía>/ledger.jsonl`), no desde la de tu réplica: con pendientes en ella, se negaría.
 
-**5.3. Rectifica.** Una de dos:
-- **Restaura ahí mismo**, con la misma orden del 5.2, escribiendo `prod` en el paso 4 ([Restaurar el libro](restore-the-ledger.md), ADR-0032). Lo que había queda en `archive/pre-restore-…`.
-- O **anula** las líneas del intruso con `atlas delete <id>`, pero cada una **cuando esté en tu carpeta**:
-  - las que ya están en tu réplica, ahora mismo. Las anulaciones se quedan pendientes y **suben después del paso 6**, cuando tu consola vuelva a entrar;
-  - **las que solo están en la nube**, que son justo la cola que enseña el 5.2, **después del paso 6**, una vez sincronizado. Antes, tu carpeta no las tiene y `atlas delete` dice que el evento no existe.
+**5.3. Rectifica.** Restaura ahí mismo, con la misma orden del 5.2, escribiendo `prod` en el paso 4 ([Restaurar el libro](restore-the-ledger.md), ADR-0032). Lo que había queda en `archive/pre-restore-…`. Lo que el intruso añadió y tú no quieres perder, lo vuelves a registrar a mano desde ese archivo.
 
 ## 6. Solo entonces, reponer tu cuenta en la lista
 
@@ -105,7 +98,7 @@ AWS_PROFILE=atlas-prod-admin atlas admin forget-device --env prod -- <dispositiv
 - Inicia sesión en la web y en cada consola. Los tokens anteriores ya no valen, y **cada consola saca uno nuevo en dos vueltas**:
   1. el primer `atlas remote login` choca con el token revocado (`device_token_revoked`) y lo quita de `credentials.json`;
   2. el segundo `atlas remote login` vuelve a dar un token **al mismo dispositivo** de la carpeta, y la página te pide confirmarlo.
-- Sincroniza. Si restauraste en el 5.3, cada dispositivo verá la reescritura y se detendrá: vuelve a descargar (`atlas sync redownload`, o «Volver a descargar» en la web).
+- Si restauraste en el 5.3, no hay nada más que hacer en los dispositivos: el siguiente `412` recarga el libro.
 
 *Ensayado entero con los dobles* (`apps/cli/test/admin/stolen-account.test.ts`): los seis pasos en este orden, con tu consola y la del intruso sobre la misma nube. Tu consola no entra desde el paso 1; el intruso tampoco, ni con su token ni con su cookie; la revisión del 5.2 enseña su línea sin tocar nada; la restauración la quita; y en el paso 6 tu consola vuelve a entrar con un token nuevo para su mismo dispositivo, en las dos vueltas de `atlas remote login`, mientras el intruso sigue fuera con su token y con su cookie. *Sin probar*: contra AWS real (018), el editor y `aws s3 cp`.
 
@@ -118,4 +111,4 @@ Si no la recuperas, porque Google la cierra o no puedes demostrar que es tuya (A
 2. haz los pasos 3 a 5 de arriba igualmente;
 3. inicia sesión con la cuenta nueva en la web y en cada consola.
 
-El libro no depende de la cuenta de Google: vive en el bucket y en las réplicas de tus dispositivos.
+El libro no depende de la cuenta de Google: vive en el bucket y en las copias de tu disco (`atlas backup`, «Descargar copia»).
