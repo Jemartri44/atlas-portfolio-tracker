@@ -16,6 +16,8 @@ const refused: [string[], string][] = [
   [["forget-device", "--from", "x"], "--from no vale en «atlas admin forget-device»"],
   [["devices", "--accept-invalid"], "--accept-invalid no vale en «atlas admin devices»"],
   [["devices", "--confirm-duplicate"], "--confirm-duplicate no vale"],
+  [["constructor"], "uso: atlas admin"],
+  [["prices"], "uso: atlas admin"],
 ];
 
 describe("atlas admin options", () => {

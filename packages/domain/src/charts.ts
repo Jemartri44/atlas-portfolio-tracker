@@ -5,7 +5,7 @@
 // is the module the browser downloads at boot, and these are for the Cubo, a
 // screen opened now and then. Imported from here, `@atlas/domain/charts`, by
 // whoever draws them; the barrel never exports them
-// (`tests/architecture.test.ts`) and no other module of the domain imports
+// (`tests/architecture/`) and no other module of the domain imports
 // them.
 
 export { type BookCashPoint, type BookCashSeries, bookCashSeries } from "./charts/book-cash.js";

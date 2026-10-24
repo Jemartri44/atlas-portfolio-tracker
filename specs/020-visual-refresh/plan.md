@@ -16,7 +16,7 @@ Trece mejoras de la propuesta (M1-M13) y el ancla de `#sincronizacion`, en cuatr
 **Almacenamiento**: ninguno nuevo; la web lee el libro de IndexedDB (ADR-0019).
 **Pruebas**: Vitest 4 con `happy-dom`, `fast-check` (ya es dependencia de desarrollo), `@vitest/coverage-v8`; siempre `--pool=forks --maxWorkers=1`, y las dos pasadas (`test:coverage:domain`, `test:others`) por separado con las opciones.
 **Plataforma**: el navegador del móvil (400×890, DPR 3) y del monitor (2045×1141); PWA estática con CSP `style-src 'self'`.
-**Tipo de proyecto**: monorepo; se tocan `apps/web` y `packages/domain`, y `tests/architecture.test.ts`.
+**Tipo de proyecto**: monorepo; se tocan `apps/web` y `packages/domain`, y `tests/architecture/`.
 **Objetivos**: arranque ≤ 76.069 bytes gzip, total ≤ 500.000 (§6; la dirección la subió de 309.500 a 310.500 el 2026-09-27, `questions.md` §4.1, a 312.000 el 2026-09-28 y a 500.000 por «decisión de la persona, 04/10», `questions.md` §14).
 **Restricciones**: sin dependencias, sin estilos en línea, ningún valor fuera de `tokens.css`, ningún porcentaje con `number`, ninguna regla de dominio en la web, memoria disponible ≥ 1.500 MB antes de cada paso pesado.
 **Escala**: 13 mejoras, 4 entregas, 5 cambios de dominio.
@@ -55,7 +55,7 @@ Trece mejoras de la propuesta (M1-M13) y el ancla de `#sincronizacion`, en cuatr
 | Regla del hueco del cubo | `view-models/series.ts` |
 | Tira de desviación, medidores, mancuernas, calendario | `components/chart/` (SVG a mano con coordenadas en %) |
 | El guardián de privacidad por atributos | `apps/web/test/privacy-attributes.test.tsx` (nuevo) |
-| El guardián de fechas fiscales en la web | `tests/architecture.test.ts` |
+| El guardián de fechas fiscales en la web | `tests/architecture/` |
 
 ## 2. La partición, tal como la sigo
 
@@ -278,9 +278,9 @@ Una fila por regla visible, con el test que la ata y el mutante que la rompe (nu
 | 32 | «Este año» desde el 01/01 de la fecha consultada en Madrid | `chart.test.tsx` (`ranges`) | 23 |
 | 33 | Regla del hueco `>` la mitad; sin tramo, *pendiente* | `view-models.test.ts` | 24 |
 | 34 | Cubo en % sobre lo aportado; ausente con comparación parcial; = `bucketStats` al final | `packages/domain/test/bucket-index-pct.test.ts` | 25 |
-| 35 | Ninguna fecha fiscal en la web; campaña de `Settings`; ventana de `washSaleWindowEnd`; sin importes en el calendario | `tests/architecture.test.ts`, `packages/domain/test/fiscal-calendar.test.ts`, `privacy-attributes.test.tsx` | 26 |
+| 35 | Ninguna fecha fiscal en la web; campaña de `Settings`; ventana de `washSaleWindowEnd`; sin importes en el calendario | `tests/architecture/`, `packages/domain/test/fiscal-calendar.test.ts`, `privacy-attributes.test.tsx` | 26 |
 | 36 | Paneles con escalas propias y `cursor.sync` | `chart-wiring.test.tsx` | 27 |
-| 37 | Nada nuevo en el barril; puertas en `LAZY_ONLY` | `tests/architecture.test.ts`, `check-bundle.mjs` | 28 |
+| 37 | Nada nuevo en el barril; puertas en `LAZY_ONLY` | `tests/architecture/`, `check-bundle.mjs` | 28 |
 | 38 | Renta variable y cripto nunca juntas sin etiqueta | `chart-wiring.test.tsx` | n.6: sin etiqueta directa |
 | 39 | Cada SVG nuevo: `role="img"` con etiqueta sin importes, o `aria-hidden` con texto al lado | `privacy-attributes.test.tsx` | n.7: una etiqueta con un importe con la privacidad quitada |
 | 40 | La salida fiscal no se mueve | predicción + ejecución | 29 |

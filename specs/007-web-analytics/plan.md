@@ -236,7 +236,7 @@ La carrera que la 006 arregló (S3 de sus notas) sigue arreglada con dos pantall
 | Total | 113,3 KB gzip | **163,1 KB gzip** | 164 KB |
 | uPlot + capa de gráficas, en su fragmento perezoso | — | **24,2 KB gzip** (56,3 KB sin comprimir) | — |
 
-**El total se pasa de los 150 KB que fijó la dirección.** Está medido y desglosado en la cabecera de `scripts/check-bundle.mjs`: ~34 KB del dominio, ~22 de uPlot, ~16 del CSS (Pico incluido), ~12 del router, ~8 de Solid y el arranque, y unos 2 KB por pantalla. La dirección aprobó 175 KB pidiendo que el techo se fijara en lo medido: son **163,1 KB**, y el techo queda en **164**, no en un objetivo al que crecer. **Lo que se nota en un teléfono es el arranque, y ese ha subido 4 KB** con dos pantallas, seis formularios y una librería de gráficas: uPlot no entra en él porque solo lo cargan Núcleo y Cubo.
+**El total se pasa de los 150 KB que fijó la dirección.** Está medido y desglosado en la cabecera de `apps/web/scripts/check-bundle.mjs`: ~34 KB del dominio, ~22 de uPlot, ~16 del CSS (Pico incluido), ~12 del router, ~8 de Solid y el arranque, y unos 2 KB por pantalla. La dirección aprobó 175 KB pidiendo que el techo se fijara en lo medido: son **163,1 KB**, y el techo queda en **164**, no en un objetivo al que crecer. **Lo que se nota en un teléfono es el arranque, y ese ha subido 4 KB** con dos pantallas, seis formularios y una librería de gráficas: uPlot no entra en él porque solo lo cargan Núcleo y Cubo.
 
 ### Código
 

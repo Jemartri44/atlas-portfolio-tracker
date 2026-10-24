@@ -10,7 +10,7 @@
 //
 // It lives beside the door of the cloud (`aws-daily`), not in `prices/`: no
 // subpath the web could import may reach that folder, where the addresses of
-// the sources live (`tests/architecture.test.ts`).
+// the sources live (`tests/architecture/`).
 
 import type { CivilDate } from "@atlas/domain";
 import type { DailyClose, PriceSource, SourceResult } from "@atlas/domain/quotes";

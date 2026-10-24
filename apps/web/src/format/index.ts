@@ -1,6 +1,6 @@
 // Presentation formatting. `money.ts` is **not** re-exported here on purpose:
 // it is the privacy gate and only `components/Amount.tsx` may import it
-// (tests/architecture.test.ts enforces it).
+// (tests/architecture/ enforces it).
 
 export { daysSince, formatAge, formatDate, formatInstantDate, formatLongDate } from "./date.js";
 export {

@@ -378,9 +378,9 @@ Medido al final: **1204 tests** en 113 ficheros; `packages/domain` al **100 %** 
 | **Valores por defecto** | `test/tax/defaults.test.ts` |
 | Instantánea del informe fiscal del libro sintético | `test/tax/synthetic.test.ts` + `tests/fixtures/ledger/synthetic-v1.tax.json` |
 | Catálogo contra `docs/fiscal-questions.md` | `tests/fiscal-criteria.test.ts` |
-| El motor dentro del camino fiscal; ni `valuations` ni `fxRates` | `tests/architecture.test.ts` |
+| El motor dentro del camino fiscal; ni `valuations` ni `fxRates` | `tests/architecture/` |
 | `atlas tax`: texto, `--lots`, `--json`, errores | `apps/cli/test/commands/tax.test.ts`, `e2e.test.ts` |
-| Mensajes nuevos en las dos interfaces y enmascarados | `tests/messages.test.ts`, `tests/architecture.test.ts` (existentes) |
+| Mensajes nuevos en las dos interfaces y enmascarados | `tests/messages.test.ts`, `tests/architecture/` (existentes) |
 
 ---
 

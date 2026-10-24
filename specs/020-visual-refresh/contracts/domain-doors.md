@@ -21,7 +21,7 @@ Propuesta hasta el visto bueno (nombres: §7.2 (e) del encargo). Los tipos compl
 | `contributedSeries` | E4 | `(events: readonly LedgerEvent[], options: SeriesOptions) => ContributedSeries` |
 | `bucketIndexPctSeries` | E4 | `(events: readonly LedgerEvent[], options: SeriesOptions) => BucketIndexPctSeries` |
 
-Reglas de arquitectura (`tests/architecture.test.ts`): el barril no la reexporta; ningún módulo del dominio la importa; ningún módulo del arranque de la web la importa estáticamente.
+Reglas de arquitectura (`tests/architecture/`): el barril no la reexporta; ningún módulo del dominio la importa; ningún módulo del arranque de la web la importa estáticamente.
 
 ## `@atlas/domain/fiscal` (existente, perezosa)
 

@@ -124,7 +124,7 @@ describe("jobs: the warnings of January reach no price", () => {
    * No price reaches the fiscal path, not even a warning (ADR-0031, second amendment). The income
    * tax and the thresholds of the 720 and 721 are decided in the domain by functions that take the
    * ledger and the day, and reach nothing price-aware — the same rule that closes the 720
-   * (`tests/architecture.test.ts`). The task composes them in a module of its own that reads no
+   * (`tests/architecture/`). The task composes them in a module of its own that reads no
    * close: not `reference.ts`, not the door of the quotes, not a projection that takes the external
    * prices.
    */

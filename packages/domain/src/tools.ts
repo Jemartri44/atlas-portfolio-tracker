@@ -6,7 +6,7 @@
 // is one module the browser downloads at boot, and these three were riding in
 // it for screens a user opens now and then — about 12.6 KB of source on the
 // boot path. Imported from here, `@atlas/domain/tools`, by whoever needs them;
-// the barrel never exports them again (`tests/architecture.test.ts`).
+// the barrel never exports them again (`tests/architecture/`).
 
 export {
   type CashSettlement,

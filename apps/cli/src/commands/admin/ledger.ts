@@ -73,7 +73,7 @@ export const compactOrder = async (
     ctx,
     result,
     result.status === "compacted"
-      ? `Compactada la nube: ${result.linesBefore} → ${result.linesAfter} líneas. El original está en archive/${result.archiveName}. Quien tenga Atlas abierto verá «El libro ha cambiado» en su siguiente escritura y recargará.`
+      ? `Compactada la nube: ${result.linesBefore} → ${result.linesAfter} líneas. El original está en archive/${result.archiveName}. Quien tenga Atlas abierto lo notará en su siguiente escritura: la web recarga el libro y pide confirmar otra vez, y la consola pide repetir la orden.`
       : "Nada que compactar en la nube.",
   );
   return EXIT.ok;
@@ -190,7 +190,7 @@ export const restoreOrder = async (
   render(
     ctx,
     { status: "restored", comparison, archive },
-    "6. Quien tenga Atlas abierto verá «El libro ha cambiado» en su siguiente escritura y recargará el libro restaurado.",
+    "6. Quien tenga Atlas abierto lo notará en su siguiente escritura: la web recarga el libro restaurado y pide confirmar otra vez, y la consola pide repetir la orden.",
   );
   return EXIT.ok;
 };
