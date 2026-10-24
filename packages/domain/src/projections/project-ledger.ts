@@ -78,8 +78,10 @@ export interface ProjectOptions {
    * what is needed, do not keep it. What pass B builds (cash, lots, positions)
    * is what `asOf` of that date would return, read in one pass instead of one
    * projection per date; the warnings of the final pass are not there yet.
+   * `next` is the date of the next group of operations, absent after the last:
+   * the state holds for every date from `date` up to, not including, `next`.
    */
-  onDate?: (date: CivilDate, state: LedgerState) => void;
+  onDate?: (date: CivilDate, state: LedgerState, next?: CivilDate) => void;
 }
 
 export type CatalogueEvent =
@@ -564,8 +566,9 @@ export const projectLedger = (
       // date a currency either.
       noteFxRates(state, entry.event, entry.date);
     });
-    if (ordered[index + 1]?.date !== entry.date) {
-      options.onDate?.(entry.date, state);
+    const next = ordered[index + 1]?.date;
+    if (next !== entry.date) {
+      options.onDate?.(entry.date, state, next);
     }
   });
   thesisWarnings(state, options.asOf);

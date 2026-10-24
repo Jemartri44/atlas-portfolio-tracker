@@ -19,8 +19,9 @@
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
+import { Money } from "../money/money.js";
 import { type BenchmarkGap, bucketAccountIds } from "../projections/bucket.js";
-import { cashFlowsOf } from "../projections/bucket-stats.js";
+import { depositsOf } from "../projections/bucket-stats.js";
 import { businessDateOf, liveOperations, projectLedger } from "../projections/project-ledger.js";
 import { bucketIndexSeries, type SeriesOptions } from "../projections/series.js";
 import type { LedgerEvent } from "../schema/events.js";
@@ -56,6 +57,7 @@ export const bucketIndexPctSeries = (
   const series = bucketIndexSeries(events, options);
   const state = projectLedger(events, { collectErrors: true });
   const accounts = bucketAccountIds(state);
+  const deposits = depositsOf(state, events, accounts);
   let firstTrade: CivilDate | undefined;
   for (const event of liveOperations(state, events)) {
     const account = (event as { account_id?: string }).account_id;
@@ -66,7 +68,9 @@ export const bucketIndexPctSeries = (
   }
   let complete = 0;
   const points = series.points.map((point): BucketIndexPctPoint => {
-    const gross = cashFlowsOf(state, events, accounts, point.date).deposits.amount;
+    const gross = deposits
+      .filter((deposit) => deposit.date <= point.date)
+      .reduce((sum, deposit) => sum.add(deposit.eur), Money.zero("EUR")).amount;
     const { result_eur: result, benchmark_eur: benchmark, vs_index_eur: vs } = point;
     if (result === undefined || benchmark === undefined || vs === undefined) {
       return { date: point.date, missing: point.missing, idle: point.idle };

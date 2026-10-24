@@ -26,8 +26,9 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import { Money } from "../money/money.js";
 import { cashEurOf } from "../projections/bucket-stats.js";
+import { netWorth } from "../projections/networth.js";
 import { businessDateOf, liveOperations, projectLedger } from "../projections/project-ledger.js";
-import { netWorthDates, type SeriesOptions } from "../projections/series.js";
+import { readSeries, type SeriesOptions } from "../projections/series.js";
 import type { LedgerEvent } from "../schema/events.js";
 
 export interface ContributedPoint {
@@ -72,7 +73,11 @@ export const contributedSeries = (
       firstBuy = date;
     }
   }
-  const { dates, from, to } = netWorthDates(events, options);
+  // The axis of the net worth, which tells the dates it cannot draw by their prices.
+  const { dates, from, to } = readSeries(events, options, (at, date, settings, scan) => ({
+    point: date,
+    incomplete: scan && netWorth(at, date, settings).partial,
+  }));
   return {
     from,
     to,
