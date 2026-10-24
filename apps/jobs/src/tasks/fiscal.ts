@@ -1,7 +1,7 @@
 // The two warnings of January that touch the fiscal path (`docs/specification.md` §9.5), in a
 // module of their own: **nothing here reaches a price**. Each runs over a view of the bucket that
 // reaches only `ledger/` and `reference/ecb/` (`scopedObjects`), and the module takes from the
-// packages only what the guardian of `tests/jobs-access.test.ts` lists. At most once each, and
+// packages only what the guardian of `tests/architecture/jobs-reach.test.ts` lists. At most once each, and
 // **never for a January gone** (the handler closes it `expired`).
 //
 // - `tax_return_ready`: the report of the year before the period's, from the

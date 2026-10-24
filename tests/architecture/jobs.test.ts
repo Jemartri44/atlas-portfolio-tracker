@@ -20,7 +20,7 @@ import { repoRoot } from "./support.js";
  * (static, re-exports and literal `import()`), and a dynamic import whose argument is not a literal
  * is refused outright in `apps/jobs/src`, since no graph can follow it.
  */
-describe("architecture: apps/jobs (016)", () => {
+describe("architecture: apps/jobs", () => {
   const jobsRoot = join(repoRoot, "apps", "jobs");
   const jobsSrc = join(jobsRoot, "src");
   const insideJobs = (from: string, specifier: string): boolean =>

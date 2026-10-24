@@ -2,7 +2,7 @@
 // §9.5). Decided **with the function the models use** (`fiscalAttention`, which
 // reads the informative returns of `informative/`), and so **from manual
 // valuations only**: no automatic close reaches it, by structure (the 013's
-// guardians, and this file's in `tests/jobs-access.test.ts`). It takes the
+// guardians, and this file's in `tests/architecture/jobs-reach.test.ts`). It takes the
 // ledger and the day, and nothing else — there is no argument through which a
 // price could come in.
 //

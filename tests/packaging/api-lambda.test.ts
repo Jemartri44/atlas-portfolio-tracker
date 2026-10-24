@@ -9,7 +9,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { inflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const script = join(repoRoot, "apps", "api", "scripts", "build-lambda.mjs");
 
 interface Script {
@@ -20,7 +20,7 @@ interface Script {
 
 const load = async (): Promise<Script> => (await import(pathToFileURL(script).href)) as Script;
 
-describe("the package of the Lambda (E3)", () => {
+describe("the package of the API Lambda", () => {
   it("bundles the product and the SDK, and nothing of the tests", async () => {
     const { buildLambda } = await load();
     const { inputs } = await buildLambda(join(tmpdir(), "atlas-lambda"));

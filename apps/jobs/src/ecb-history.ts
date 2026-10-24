@@ -2,7 +2,7 @@
 // **only** through the `ReferenceReader`, and the file used **only if its bytes are the ones its
 // manifest records** — never as if they were (`EcbHistoryDamaged`). Nothing of `prices/`: the
 // income tax of January reads this (the notes of the ECB check, as `atlas tax` does) and must not
-// reach a price (`tests/jobs-access.test.ts`).
+// reach a price (`tests/architecture/jobs-reach.test.ts`).
 
 import {
   decodeUtf8Strict,
