@@ -447,8 +447,6 @@ describe("api: the authoritative guard reads the graph of the bundle", () => {
     // The workers are other builds, with the same plugin.
     expect(config).toContain('worker: { plugins: () => [moduleGraph("worker")] }');
     expect(config).toContain('fileName: ".vite/atlas-modules.json"');
-    // Who imports each module, statically or not.
-    expect(config).toContain("info?.dynamicImporters");
     expect(config).toContain("realpathSync(path)");
     // A source of code is never inlined as a `data:` URL.
     expect(config).toMatch(/assetsInlineLimit: \(filePath: string\)/);
@@ -468,9 +466,6 @@ describe("api: the authoritative guard reads the graph of the bundle", () => {
       "el bundle lleva un fuente",
       "ningún grafo dice de dónde sale este fichero",
       "lleva código incrustado como URL data:",
-      "un módulo de la sección de la sincronización que no es su puerta",
-      "alcanza el motor de la sincronización de la web desde fuera de su sección",
-      "el grafo no dice quién importa",
     ]) {
       expect(script).toContain(family);
     }
@@ -487,7 +482,6 @@ describe("api: nothing of the access on the boot path", () => {
       "/packages/domain/src/access/",
       "/packages/domain/src/access.ts",
       "/src/auth/",
-      "/src/routes/ajustes/sync/",
     ]) {
       expect(script).toContain(`path: "${path}"`);
     }

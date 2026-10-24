@@ -99,6 +99,7 @@ export const netWorthPlot = (
     }
     subjects.push(...point.missing.cash);
   }
+  const missing = reasonOf(drawn, series.points.length, subjects);
   return {
     x: series.points.map((point) => secondsOf(point.date)),
     values: [
@@ -116,9 +117,7 @@ export const netWorthPlot = (
     })),
     drawn,
     total: series.points.length,
-    ...(reasonOf(drawn, series.points.length, subjects) === undefined
-      ? {}
-      : { missing: reasonOf(drawn, series.points.length, subjects) as MissingNote }),
+    ...(missing === undefined ? {} : { missing }),
   };
 };
 
