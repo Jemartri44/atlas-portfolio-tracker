@@ -52,7 +52,7 @@ describe("the rows of two sales of one event in one account", () => {
 });
 
 describe("the withholding of two assets sold by one event in one account", () => {
-  it("goes to the box of the category of its own asset", () => {
+  const ledger = (leadingWithholding: string) => {
     const b = taxBuilder(null);
     b.settings({
       ...HAND_SETTINGS,
@@ -66,6 +66,12 @@ describe("the withholding of two assets sold by one event in one account", () =>
       effective_date: "2027-03-01",
       effects: [
         {
+          ...forcedSale("1", "100"),
+          per_account: [
+            { account_id: "acc_a", quantity: "1", fee: "0", withholding: leadingWithholding },
+          ],
+        },
+        {
           ...forcedSale("3", "110"),
           per_account: [{ account_id: "acc_a", quantity: "3", fee: "0", withholding: "5" }],
         },
@@ -76,10 +82,17 @@ describe("the withholding of two assets sold by one event in one account", () =>
         },
       ],
     });
-    const boxes = taxBoxes(b.build(), 2027, { today: "2028-03-01" });
-    const withheld = (concept: string) =>
-      boxes.entries.find((entry) => entry.concept === concept)?.exact_eur?.amount.toString();
-    expect(withheld("withholding.capital_gain")).toBe("5");
-    expect(withheld("withholding.rcm")).toBe("7");
-  });
+    return b.build();
+  };
+
+  it.each(["0", "2"])(
+    "goes to the box of the category of its own asset (first sale withholds %s)",
+    (leading) => {
+      const boxes = taxBoxes(ledger(leading), 2027, { today: "2028-03-01" });
+      const withheld = (concept: string) =>
+        boxes.entries.find((entry) => entry.concept === concept)?.exact_eur?.amount.toString();
+      expect(withheld("withholding.capital_gain")).toBe(String(Number(leading) + 5));
+      expect(withheld("withholding.rcm")).toBe("7");
+    },
+  );
 });
