@@ -21,15 +21,8 @@ import type {
   LedgerEvent,
 } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
-import {
-  type BucketThesisView,
-  bucketAccountIds,
-  bucketPositions,
-  bucketTheses,
-  lotIndexOf,
-  rootEventOf,
-  warn,
-} from "./bucket.js";
+import { bucketAccountIds, bucketPositions, lotIndexOf, rootEventOf, warn } from "./bucket.js";
+import { type BucketThesisView, bucketTheses } from "./bucket-theses.js";
 import { costSummary } from "./costs.js";
 import { netWorth } from "./networth.js";
 import type { ExternalPrices } from "./prices.js";

@@ -1,13 +1,7 @@
 // atlas add buy|sell|transfer|dividend|interest|fx|cash-in|cash-out|fee|valuation
 
-import {
-  bucketStats,
-  DomainError,
-  type Draft,
-  previewEvent,
-  settingsAt,
-  todayInMadrid,
-} from "@atlas/domain";
+import { DomainError, type Draft, previewEvent, settingsAt, todayInMadrid } from "@atlas/domain";
+import { bucketStats } from "@atlas/domain/portfolio";
 import type { Flags } from "../args.js";
 import { booleanFlag, UsageError } from "../args.js";
 import { CommandFailure, type Context, describeWarnings, EXIT } from "../context.js";

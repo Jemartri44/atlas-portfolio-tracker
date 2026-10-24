@@ -7,11 +7,11 @@
 import {
   type ContributionPlan,
   type CoreWeightRow,
-  contributionPlan,
   Money,
   projectLedger,
   settingsAt,
 } from "@atlas/domain";
+import { contributionPlan } from "@atlas/domain/portfolio";
 import { describe, expect, it } from "vitest";
 import { ContributionCard } from "../src/routes/cartera/ContributionCard.jsx";
 import Cartera from "../src/routes/cartera/index.jsx";

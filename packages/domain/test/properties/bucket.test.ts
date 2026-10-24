@@ -6,7 +6,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { Decimal } from "../../src/money/decimal.js";
 import type { Money } from "../../src/money/money.js";
-import { type BucketThesisView, bucketTheses } from "../../src/projections/bucket.js";
+import { type BucketThesisView, bucketTheses } from "../../src/projections/bucket-theses.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { DEFAULT_SETTINGS, mergeSettings } from "../../src/settings/settings.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";

@@ -2,10 +2,10 @@
 // contributed to the bucket by each date.
 
 import { describe, expect, it } from "vitest";
+import { bucketIndexSeries } from "../../src/charts/bucket-index.js";
 import { bucketIndexPctSeries } from "../../src/charts.js";
 import { bucketStats } from "../../src/projections/bucket-stats.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
-import { bucketIndexSeries } from "../../src/projections/series.js";
 import { DEFAULT_SETTINGS, mergeSettings, type Settings } from "../../src/settings/settings.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 
