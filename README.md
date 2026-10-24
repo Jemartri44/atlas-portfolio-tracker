@@ -156,8 +156,8 @@ mkdir -p ~/.config/atlas && printf '{"eodhd":"…","alpha_vantage":"…"}\n' > ~
 
 atlas prices symbols set ast_world --currency EUR --eodhd XX0000000001.EUFUND   # el símbolo y la divisa de la cotización, contrastada con la fuente
 atlas prices symbols set ast_tsco --eodhd TSCO.LSE --eodhd-currency GBP --alpha-vantage TSCO.LON --alpha-vantage-currency GBX   # la divisa es de cada fuente: Londres cotiza en libras en una y en peniques en la otra
-atlas prices update      # los cierres de días anteriores a hoy, por prioridad (cubo, referencias, núcleo) y dentro del cupo; en una carpeta sincronizada, los baja de la nube (feature 016)
-atlas prices update --from-sources   # en una carpeta sincronizada, llama a las fuentes en vez de bajar de la nube: gasta el cupo que comparte con la nube (2 y 2 al día por defecto, ADR-0031)
+atlas prices update      # los cierres de días anteriores a hoy, por prioridad (cubo, referencias, núcleo) y dentro del cupo; en una carpeta de nube, los baja de la nube (feature 016)
+atlas prices update --from-sources   # en una carpeta de nube, llama a las fuentes en vez de bajar de la nube: gasta el cupo que comparte con la nube (2 y 2 al día por defecto, ADR-0031)
 atlas prices status      # cada fuente con su cupo de hoy y sus fallos, y la antigüedad del último cierre de cada activo
 atlas prices purge ast_tsco --source alpha_vantage   # borra los cierres de esa fuente guardados en una divisa que no es la que ahora declara; la próxima descarga vuelve a pedir esos días una vez, y los que ninguna fuente sirva quedan como hueco (lo dice «prices status»)
 ```

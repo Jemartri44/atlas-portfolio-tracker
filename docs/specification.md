@@ -339,11 +339,11 @@ Trabajo programado que compara las posiciones del libro mayor contra el extracto
 
 ### 9.2 Componentes
 
-> **La consola, desde ADR-0035 E3 (feature 024).** Una carpeta es **de nube** (`sync/remote.json`, sin `ledger.jsonl`: el libro es el de la nube, por la API y con el token de dispositivo) o **local** (`ledger.jsonl`, sin identidad remota); con las dos cosas se niega (`folder_mode_ambiguous`). Sin conexión la consola sale con el código 8, con la sesión caducada con el 10 (`atlas remote login`). `atlas backup` y `atlas export` valen en los dos modos; `compact` solo en local; la subida inicial es `atlas remote upload`. Ningún camino sincroniza lo local con la nube. Detalle: `docs/api.md` §5.8.
+> **Atlas es siempre en la nube (ADR-0035).** El libro de S3 (`ledger/ledger.jsonl`) es la **única fuente de verdad**: la web y la consola escriben directamente contra la API con `If-Match`, sin cola local y sin libro en el dispositivo; la API es el único escritor y solo añade. Detalle del contrato: `docs/api.md` §5.8.
+>
+> **La consola.** Una carpeta es **de nube** (`sync/remote.json`, sin `ledger.jsonl`: el libro es el de la nube, por la API y con el token de dispositivo) o **local** (`ledger.jsonl`, sin identidad remota); con las dos cosas se niega (`folder_mode_ambiguous`). Sin conexión la consola sale con el código 8, con la sesión caducada con el 10 (`atlas remote login`). `atlas backup` y `atlas export` valen en los dos modos; `compact` solo en local; la subida inicial es `atlas remote upload`. Ningún camino sincroniza lo local con la nube.
 
 > **Diagrama y decisiones vigentes desde ADR-0026, ADR-0027 y ADR-0028 (2026-09-24, Ronda 8).** Cognito desaparece: el acceso es solo con Google, verificado por la propia Lambda (ADR-0027). **Desde el 2026-09-25 no hay cuentas miembro dedicadas** (decisión del usuario; ADR-0034): `dev` y `prod` son dos pilas en una cuenta de AWS que el usuario comparte con otros proyectos, separadas por nombre, etiqueta, estado, prefijo de SSM, roles y un límite de permisos por entorno (detalle en §11.3).
-
-> **Enmendado por ADR-0035 (2026-10-06): Atlas siempre en la nube.** El libro de S3 (`ledger/ledger.jsonl`) es la **única fuente de verdad**: la web y la consola escriben directamente contra la API con `If-Match`, sin cola local y sin libro en el dispositivo. La API sigue siendo el único escritor y solo añade. Sin conexión no se registra nada ni se muestra el libro. **Lo que esto retira del código se retiró en las entregas E1 a E5 de ADR-0035 (E5, feature 026, entregada)** (la web actual, local-first, y la cola de ADR-0026). Detalle del contrato en `docs/api.md` §5.8.
 
 ```
 Navegador (PC / móvil)      Consola (`atlas`; token de dispositivo
@@ -440,45 +440,17 @@ EventBridge Scheduler despierta **una vez al día** a cada una de las cinco func
 
 ### 9.6 Frontend
 
-> **Enmendado por ADR-0035 (2026-10-06).** El párrafo siguiente («la web no necesita servidor», libro en IndexedDB, exportar e importar entre dispositivos) y la viñeta «Sincronizar desde la web» describen la web **local-first** de ADR-0019 y la cola de ADR-0026, que ADR-0035 **sustituye**: la web entra con Google, descarga el libro de la nube al arrancar y escribe directamente con `If-Match`; no guarda libro, borradores ni cierres en el dispositivo (solo el *shell*, las preferencias de la interfaz y la copia pública del histórico del BCE). Sin conexión muestra solo «Sin conexión» con «Reintentar». Si dos sitios registran a la vez, el segundo ve «El libro ha cambiado; revisa y confirma otra vez». Se retiran importar un libro, vincular la carpeta, el aviso «sin exportar» y la tarjeta «Sincronización»; aparece el botón «Descargar copia» (JSONL y CSV). **Esto se construyó en las entregas E1 a E5 de ADR-0035 (la web, en E2a y E2b; E5, feature 026, la última); el texto de abajo describe la web local-first anterior y es histórico.**
+SPA estática (Vite + Solid, ADR-0017; base de estilos propia, ADR-0023) servida desde S3 por CloudFront, sin servidor de renderizado. **Cloud-only (ADR-0035):**
 
-> **Vigente desde ADR-0017 y ADR-0019 (2026-09-18).** El *stack* está decidido con investigación verificada (Solid con versión fijada, uPlot vendorizada, sin librería de componentes, tablas HTML nativas; la base de estilos es propia desde ADR-0023, que retiró Pico), así que la comparativa de abajo es **histórica** y la decisión abierta «¿Svelte o Solid?» de §14 queda resuelta: **Solid**. Y la web **no necesita servidor para funcionar**: funciona en el dispositivo, con el libro en el almacenamiento del navegador (IndexedDB) **también en el escritorio**. Desde el 2026-09-24 (feature 012, ADR-0019 enmendada) la web de escritorio **ya no trabaja sobre el mismo fichero que la CLI**: nunca escribe en la carpeta del libro, porque el navegador no puede tomar el cerrojo de la consola (la File System Access API no crea ficheros en exclusiva); de la carpeta solo **lee** el histórico del BCE y, con confirmación, un libro que importar. Hasta la sincronización, la web y la CLI del mismo ordenador no comparten un libro vivo: se pasa de una a otra exportando e importando. Lo que esta sección y la §9.2 describen detrás de una Lambda es la **sincronización de la Fase 4** (ADR-0026), no un requisito para que la web exista. **Desde ADR-0027 (2026-09-24, Ronda 8) esa Lambda ya no valida contra Cognito**: verifica el acceso con Google.
-
-**Requisito:** compila a archivos estáticos servibles desde S3, sin servidor de renderizado.
-
-| Opción | Ventaja | Inconveniente |
-|---|---|---|
-| Vite + TypeScript sin framework | Dependencias mínimas, máxima auditabilidad | Todo a mano |
-| **Vite + Svelte** | Árbol de dependencias pequeño, compila a JS mínimo | Ecosistema menor |
-| **Vite + Solid** | Ligero, API tipo React | Menos material de apoyo |
-| Vite + React | Ecosistema enorme | Árbol de dependencias grande |
-| Astro | Pensado para estático | Puede quedarse corto con estado |
-
-**Recomendación (histórica): Svelte o Solid con Vite.** Suficientes para una app con estado y con un árbol de dependencias auditable de verdad. **Decidido: Solid** (ADR-0017, 2026-09-18).
+- Entra con Google, descarga el libro de la nube al arrancar y escribe directamente con `If-Match`. No guarda libro, borradores ni cierres en el dispositivo: solo el *shell*, las preferencias de la interfaz y la copia pública del histórico del BCE.
+- Sin conexión muestra solo «Sin conexión» con «Reintentar»; si se corta con la aplicación abierta, oculta los datos al momento y recarga el libro al volver.
+- Si dos sitios registran a la vez, el segundo ve que sus datos han cambiado, se recarga el libro y se le pide confirmar otra vez; nada se mezcla sin que lo vea.
+- «Descargar copia» baja el libro (JSONL y CSV).
 
 **Requisitos transversales:**
 - Responsive real: la misma interfaz en PC y móvil, sin funcionalidad recortada en móvil.
 - **Modo privacidad**: un interruptor, **activado por defecto** (mientras el usuario no lo apague en ese dispositivo), que oculta todos los importes y cantidades (saldos, posiciones, P&L, ejes de gráficas) sustituyéndolos por una máscara, como en las apps bancarias. Los porcentajes y las formas de las gráficas siguen visibles. La máscara mide siempre lo mismo y conserva la unidad («•••• €», «•••• part.»), que dice qué se oculta sin decir cuánto. Lo que el usuario escribe no se oculta; lo que la aplicación precarga en un campo (corregir un movimiento, la configuración) sí, hasta que el campo recibe el foco. Se implementa en un único componente de importe para que ninguna pantalla pueda saltárselo; el estado se recuerda por dispositivo.
 - Modo de solo lectura por defecto; registrar operaciones requiere acción explícita.
-- **Sincronizar desde la web** (ADR-0026, Parte B; feature 015, E4). *Retirada por ADR-0035 (E2b y E5, entregadas): ya no existe en el código.* Se hace en la tarjeta «Sincronización» de Ajustes, en una sección que se carga en diferido y **solo con sesión**; nada de esto va en el arranque. **Nada sincroniza solo**: ni al arrancar, ni con un temporizador, ni al recuperar la conexión. Cada escritura es un botón.
-  - **Estado**: pendientes de subir, retenidas, y el día y la hora de la última sincronización, con el botón «Sincronizar».
-  - **Empezar**, siempre como elección explícita y con una pregunta antes de escribir:
-    - «Subir mis datos a la nube», solo sobre una nube vacía;
-    - «Unirme desde la nube»: los datos de este navegador se archivan, y lo que la nube no tiene queda retenido;
-    - «Unirme con mis operaciones»: las propias quedan pendientes de subir.
-  - **Lo retenido**: el motivo, dicho con la palabra de su botón, y de cada operación el tipo, el activo, la fecha, la cantidad, el precio por unidad y el importe. Las cifras van por el componente de importes, que el modo privacidad tapa; nunca la línea en bruto. Con las resoluciones que ofrece el dominio (confirmar, rehacer, descartar):
-    - rehacer enseña el plan antes de registrar;
-    - descartar pregunta antes;
-    - confirmar no pregunta.
-  - **Al unirse desde la nube o volver a descargar**, el resultado dice cuántas operaciones de las que había aquí han quedado retenidas.
-  - **Con algo retenido sin resolver**, el aviso de datos inválidos dice que la causa es lo retenido y enlaza con Ajustes › Sincronización › Retenidas (D-Q1).
-  - **«Desactivar»**, que se niega con operaciones pendientes y conserva lo retenido.
-  - **«Volver a descargar»**, que solo aparece tras una reescritura de la nube y pregunta antes.
-  - **El aviso** de que lo que se ve antes de sincronizar puede cambiar después.
-  - **Un navegador sincroniza como el dispositivo con el que se unió** (`docs/api.md` §5.4). La sesión se relee en cada orden y la API también lo comprueba. Con la sesión de otro, la tarjeta lo dice y ofrece unirse otra vez.
-  - **Mientras se sincroniza**, importar un fichero se niega. La exportación dice cuántas operaciones retenidas no van en el libro, y las entrega aparte, en `ledger.held.jsonl`, con su propio botón (`docs/data-schema.md` §1). Hasta que se descargan, el aviso de la barra dice «falta descargar lo retenido» en lugar de la fecha.
-  - **La sección de la sincronización de Ajustes tiene una sola puerta hacia fuera**: su tarjeta, que solo importa la página de Ajustes. Nadie más alcanza el motor, por ningún camino. Lo comprueban una regla sobre los fuentes y otra sobre el grafo real del paquete.
-- ~~Funciona sin conexión para consulta (los datos cacheados siguen visibles con su antigüedad marcada).~~ **Retirado por ADR-0035:** sin conexión la web no enseña cifras ni deja registrar, solo «Sin conexión» con «Reintentar»; si la conexión se corta con la aplicación abierta, oculta los datos al momento y recarga el libro al volver. Se implementa en E2a; hasta entonces la web actual sigue funcionando sin conexión.
 - **Consistencia visual**: un sistema de componentes y tokens (colores, tipografía, espaciado) definido una vez y reutilizado; ninguna pantalla con estilos propios. El sistema está en `docs/design/system.md` y la base de estilos es propia (ADR-0023).
 
 ---
@@ -492,7 +464,7 @@ Son datos financieros personales completos. Nivel de exigencia alto.
 - **Nunca almacenar credenciales de brókers.** Ni usuario, ni contraseña, ni claves de exchange. Los secretos van en SSM Parameter Store como `SecureString`, jamás en el frontend ni en el repositorio: el token Flex de IBKR (**solo lectura**) y el secreto del cliente OAuth de Google y la clave de firma de la sesión (ADR-0027). **Las claves de las fuentes de precios** EODHD y Alpha Vantage (ADR-0031) van **en local, en un fichero fuera del repositorio y de la carpeta del libro, y en la nube, en SSM** (§11.8).
 - **S3 privado**, servido solo vía CloudFront con Origin Access Control. Sin buckets públicos.
 - **Acceso solo con Google, verificado en la propia Lambda de la API; sin Cognito ni Lambda@Edge** (ADR-0027). Código de autorización con PKCE y `state`: la Lambda es el cliente OAuth y canjea el código directamente con Google, así que el token nunca toca la SPA ni la URL. Verificación completa del ID token (firma, `aud` del entorno, `iss`, `exp`, `nonce`, `email_verified`) y lista permitida de `{sub, email}` en SSM, consultada en cada petición con una caché de pocos minutos. Sesión propia en una cookie `__Host-` firmada (`HttpOnly`, `Secure`, `SameSite=Strict`), sin *refresh token*: al caducar, se repite el flujo con Google. **La verificación en dos pasos de la cuenta de Google es un requisito operativo del usuario**, no algo que la aplicación pueda comprobar (`docs/prompts/000-director-handoff.md`).
-- **La consola, con un token de dispositivo propio** (ADR-0033, aceptada el 2026-09-25). Se emite **solo** al final de un inicio de sesión con Google que abre la propia consola (`atlas remote login`: *loopback* a `127.0.0.1` con PKCE, y una variante manual para WSL en modo NAT o SSH), **nunca desde la web**. Caduca a los 90 días, sin renovarse con el uso, bajo un techo fijo de 120 en el código; se revoca uno a uno desde la web o con `atlas remote logout`. Viaja en la cabecera `x-atlas-device-token`, solo al origen que lo emitió, por HTTPS y sin seguir redirecciones; una petición con cookie **y** token se rechaza. La API guarda solo su hash (SSM), lo comprueba en cada petición sin caché y vuelve a consultar la lista permitida; su alcance es sincronizar y leer, nunca emitir ni revocar otros tokens. Contrato en `docs/api.md`.
+- **La consola, con un token de dispositivo propio** (ADR-0033, aceptada el 2026-09-25). Se emite **solo** al final de un inicio de sesión con Google que abre la propia consola (`atlas remote login`: *loopback* a `127.0.0.1` con PKCE, y una variante manual para WSL en modo NAT o SSH), **nunca desde la web**. Caduca a los 90 días, sin renovarse con el uso, bajo un techo fijo de 120 en el código; se revoca uno a uno desde la web o con `atlas remote logout`. Viaja en la cabecera `x-atlas-device-token`, solo al origen que lo emitió, por HTTPS y sin seguir redirecciones; una petición con cookie **y** token se rechaza. La API guarda solo su hash (SSM), lo comprueba en cada petición sin caché y vuelve a consultar la lista permitida; su alcance es leer y escribir el libro, nunca emitir ni revocar otros tokens. Contrato en `docs/api.md`.
 - **IAM de mínimo privilegio**: cada Lambda con su rol y solo los permisos que necesita.
 - **Cifrado en reposo** en S3, y en tránsito por TLS.
 - **Sin analítica de terceros, sin CDN externos, sin fuentes remotas.** Todo se sirve desde tu propio origen. Un script de terceros en una app financiera es una vía de exfiltración.
@@ -634,7 +606,7 @@ Requisitos que no son técnicos pero deciden si el sistema sigue vivo en 2046:
 
 ## 13. Fases
 
-**Estado a 2026-09-23:** entregadas las fases 1, 2, 3 y 5, más la aplicación web entera. Sin empezar: la Fase 4 (automatización) y toda la infraestructura en la nube; los datos viven en un fichero local o en el navegador.
+**Estado a 2026-10-24:** entregadas las fases 1, 2, 3 y 5, la aplicación web y la consola, ambas contra la nube (ADR-0035). La Fase 4 y la infraestructura están en código y probadas con dobles, **sin desplegar** (018 y 019).
 
 **Fase 0 — Validación (antes de escribir nada)**
 1. **Pasar la cuenta AWS al Paid Plan** y configurar alerta de presupuesto en 1$.
