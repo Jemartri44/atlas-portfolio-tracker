@@ -23,15 +23,13 @@ import { repeatedKeyError } from "./repeated-key.js";
 import { isQuoteSource, QUOTE_SOURCES } from "./sources.js";
 
 /**
- * Format 2: the currency is declared **per source**: a
- * London share quotes in pounds at EODHD and in pence at Alpha Vantage, and
- * one currency for the asset made one of the two ask for a confirmation
- * forever, or stored the closes of the other a hundred times too high.
- * Format 1, with one `currency` per asset, is still
- * read, as the currency of all its sources; it is written as format 2.
+ * The currency is declared **per source**: a London share quotes in pounds at
+ * EODHD and in pence at Alpha Vantage, and one currency for the asset made one
+ * of the two ask for a confirmation forever, or stored the closes of the other
+ * a hundred times too high. Format 1 (one `currency` per asset) is no longer
+ * read.
  */
 export const SYMBOLS_FORMAT = 2;
-const LEGACY_FORMAT = 1;
 
 export interface CurrencyCheck {
   /** What the source's metadata said; absent when they do not say. */
@@ -55,12 +53,9 @@ export interface SymbolEntry {
   readonly currency_confirmed_over?: Partial<Record<QuoteSource, string>>;
   /**
    * The currency in which the closes of a source **that said another one** were
-   * stored: a file of format 1 confirmed the currency of the asset over what
-   * the source said (`currency_confirmed_over`), and every close of that source
-   * was stored with the currency of the asset — pence as pounds. Those lines
-   * are left out of every figure in euros until they are purged; never written
-   * by anything but the reading of format 1, and kept when the file is written
-   * again.
+   * stored — pence as pounds. Those lines are left out of every figure in euros
+   * until they are purged. Nothing writes it any more: it is kept only when the
+   * file brings it, and kept when the file is written again.
    */
   readonly misstored?: Partial<Record<QuoteSource, string>>;
   /**
@@ -97,8 +92,6 @@ const ENTRY_KEYS = [
   "refetch_days",
   "unserved_days",
 ];
-
-const FORMAT_2_ONLY = ["misstored", "refetch_days", "unserved_days"];
 
 const isDays = (item: unknown): item is CivilDate[] =>
   Array.isArray(item) && item.length > 0 && item.every(isCivilDate);
@@ -140,26 +133,11 @@ const isCurrency = (item: unknown): item is string =>
 const isSaid = (item: unknown): item is string =>
   typeof item === "string" && item.length > 0 && item.length <= 16;
 
-/**
- * The currencies of an entry: its own per source (format 2), or the one of
- * the asset for every source that has a symbol (format 1).
- */
+/** The currencies of an entry: its own, per source with a symbol. */
 const currenciesOf = (
   assetId: string,
   value: Record<string, unknown>,
-  legacy: boolean,
 ): Partial<Record<QuoteSource, string>> => {
-  if (legacy) {
-    if (!isCurrency(value.currency)) {
-      throw wrong(`${assetId}.currency`);
-    }
-    return Object.fromEntries(
-      QUOTE_SOURCES.filter((source) => value[source] !== undefined).map((source) => [
-        source,
-        value.currency as string,
-      ]),
-    );
-  }
   if (!isRecord(value.currencies)) {
     throw wrong(`${assetId}.currencies`);
   }
@@ -176,52 +154,12 @@ const currenciesOf = (
   return value.currencies as Partial<Record<QuoteSource, string>>;
 };
 
-/**
- * A confirmation of format 1 is **not inherited**: it was
- * taken with one currency for every source — the model that was wrong — so
- * a user who declared GBP and confirmed it over the GBX of Alpha Vantage would
- * keep storing pence as pounds. Every source confirmed over another currency
- * is left **uncontrasted** instead, and is contrasted with the rule of format
- * 2 before its next download.
- */
-const withoutLegacyConfirmations = (entry: SymbolEntry): SymbolEntry => {
-  const over = entry.currency_confirmed_over;
-  if (over === undefined) {
-    return entry;
-  }
-  const check = { ...entry.currency_check };
-  // What the source said is in `currency_confirmed_over`; the closes of that
-  // source were stored with the currency of the asset, which is another one:
-  // exactly the defect.
-  const misstored: Partial<Record<QuoteSource, string>> = {};
-  for (const source of Object.keys(over) as QuoteSource[]) {
-    delete check[source];
-    const stored = entry.currencies[source];
-    if (stored !== undefined && stored !== over[source]) {
-      misstored[source] = stored;
-    }
-  }
-  const { currency_confirmed_over: _dropped, currency_check: _check, ...rest } = entry;
-  return {
-    ...rest,
-    ...(Object.keys(check).length === 0 ? {} : { currency_check: check }),
-    ...(Object.keys(misstored).length === 0 ? {} : { misstored }),
-  };
-};
-
-const entryOf = (assetId: string, value: unknown, legacy: boolean): SymbolEntry => {
+const entryOf = (assetId: string, value: unknown): SymbolEntry => {
   if (!isRecord(value)) {
     throw wrong(assetId);
   }
-  // Format 1 has `currency` where format 2 has `currencies`, never both; and
-  // what format 2 added after it (`misstored`, the days of a purge) it never had.
-  const allowed = legacy
-    ? ENTRY_KEYS.filter((key) => !FORMAT_2_ONLY.includes(key)).map((key) =>
-        key === "currencies" ? "currency" : key,
-      )
-    : ENTRY_KEYS;
   for (const key of Object.keys(value)) {
-    if (!allowed.includes(key)) {
+    if (!ENTRY_KEYS.includes(key)) {
       throw wrong(`${assetId}.${key}`);
     }
   }
@@ -248,11 +186,8 @@ const entryOf = (assetId: string, value: unknown, legacy: boolean): SymbolEntry 
       bySource(value[key], `${assetId}.${key}`, isDays);
     }
   }
-  // Every field was checked above; format 1's `currency` becomes `currencies`.
-  const { currency: _legacy, ...rest } = value;
-  const checked = rest as unknown as Omit<SymbolEntry, "currencies">;
-  const entry = { ...checked, currencies: currenciesOf(assetId, value, legacy) };
-  return legacy ? withoutLegacyConfirmations(entry) : entry;
+  // Every field was checked above.
+  return { ...(value as unknown as SymbolEntry), currencies: currenciesOf(assetId, value) };
 };
 
 const TOP_LEVEL_KEYS: readonly string[] = ["symbols_format", "assets"];
@@ -328,19 +263,14 @@ export const parseSymbols = (text: string | undefined): SymbolsFile => {
       { key: unknown },
     );
   }
-  if (
-    !isRecord(raw) ||
-    (raw.symbols_format !== SYMBOLS_FORMAT && raw.symbols_format !== LEGACY_FORMAT) ||
-    !isRecord(raw.assets)
-  ) {
+  if (!isRecord(raw) || raw.symbols_format !== SYMBOLS_FORMAT || !isRecord(raw.assets)) {
     throw wrong("symbols_format");
   }
-  const legacy = raw.symbols_format === LEGACY_FORMAT;
   // Without a prototype: an asset called `__proto__`
   // or `constructor` is an asset like any other, never a property of objects.
   const assets: Record<AssetId, SymbolEntry> = Object.create(null);
   for (const [assetId, value] of Object.entries(raw.assets)) {
-    assets[assetId] = entryOf(assetId, value, legacy);
+    assets[assetId] = entryOf(assetId, value);
   }
   return { symbols_format: SYMBOLS_FORMAT, assets };
 };
