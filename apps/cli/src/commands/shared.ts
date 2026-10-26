@@ -274,6 +274,23 @@ export const draftOf = (event: LedgerEvent): Record<string, unknown> => {
   return rest;
 };
 
+/** An empty table for a mistyped id would read as «nothing there»: say the id does not exist. */
+export const assertExists = (
+  state: LedgerState,
+  kind: "account" | "asset",
+  id: string | undefined,
+) => {
+  if (id === undefined) {
+    return;
+  }
+  if (kind === "account" && !state.accounts.has(id)) {
+    throw new DomainError("unknown_account", `account ${id} does not exist`, { account_id: id });
+  }
+  if (kind === "asset" && !state.assets.has(id)) {
+    throw new DomainError("unknown_asset", `asset ${id} does not exist`, { asset_id: id });
+  }
+};
+
 /** A year given as an argument: up to four digits without a leading zero, or `undefined` for anything else (`0`, `1e3`, a missing word). */
 export const yearArgument = (raw: string | undefined): number | undefined =>
   raw !== undefined && /^[1-9]\d{0,3}$/.test(raw) ? Number(raw) : undefined;

@@ -33,6 +33,7 @@ import { table } from "../output/table.js";
 import { confirmRuleChangeRates } from "./rule-change.js";
 import {
   aside,
+  assertExists,
   cancelled,
   confirm,
   confirmAndRecord,
@@ -495,7 +496,12 @@ export const settingsCommand = async (
     const weights = stringFlag(flags, "target-weights");
     if (weights !== undefined) {
       // Replaced whole, never merged: the weights must add up to 100 as a set.
-      patch.target_weights = parseAssignments(weights, "target-weights");
+      const assigned = parseAssignments(weights, "target-weights");
+      // A weight for an asset that is not in the catalogue would sit in the settings for good.
+      for (const assetId of Object.keys(assigned)) {
+        assertExists(state, "asset", assetId);
+      }
+      patch.target_weights = assigned;
     }
     for (const flag of SETTINGS_DECIMALS) {
       const value = stringFlag(flags, flag);

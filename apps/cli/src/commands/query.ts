@@ -2,7 +2,6 @@
 
 import {
   cashBalances,
-  DomainError,
   type FingerprintWaiver,
   fiscalLots,
   type IntegrityFinding,
@@ -26,6 +25,7 @@ import { table } from "../output/table.js";
 import { describeWarning } from "../output/warnings.js";
 import { ratesOf } from "./rates.js";
 import {
+  assertExists,
   dateFlag,
   loadForQuery,
   originOf,
@@ -41,19 +41,6 @@ const yearOf = (positionals: string[], usage: string): number => {
     throw new UsageError(usage);
   }
   return year;
-};
-
-/** An empty table for a mistyped id would read as «nothing there»: say the id does not exist. */
-const assertExists = (state: LedgerState, kind: "account" | "asset", id: string | undefined) => {
-  if (id === undefined) {
-    return;
-  }
-  if (kind === "account" && !state.accounts.has(id)) {
-    throw new DomainError("unknown_account", `account ${id} does not exist`, { account_id: id });
-  }
-  if (kind === "asset" && !state.assets.has(id)) {
-    throw new DomainError("unknown_asset", `asset ${id} does not exist`, { asset_id: id });
-  }
 };
 
 export const positionsCommand = async (
