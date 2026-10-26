@@ -1,4 +1,3 @@
-// A ceiling of `check-bundle.mjs` never passes what the direction authorised
 // A ceiling of `check-bundle.mjs` never passes what the direction authorised. The script refuses to
 // build green with one over it; this reads the same constants, so the rule shows up in the suite
 // too, before anyone waits for a build to find it.
@@ -24,6 +23,16 @@ const constant = (name: string): number => {
     .reduce((sum, term) => sum + term, 0);
 };
 
+/** The ceilings of the lazy areas, by name, read from the `LAZY_AREAS` table of the script. */
+const areaBudgets = (): Map<string, number> => {
+  const table = /const LAZY_AREAS = \[([\s\S]*?)\n\];/.exec(script)?.[1] ?? "";
+  const found = new Map<string, number>();
+  for (const match of table.matchAll(/name: "(\w+)"[\s\S]*?budget: ([\d_]+)/g)) {
+    found.set(match[1] as string, Number((match[2] as string).replaceAll("_", "")));
+  }
+  return found;
+};
+
 describe("the ceilings of the bundle and what the direction authorised", () => {
   it("names the two authorisations of the direction, and nothing else moves them", () => {
     expect(constant("BOOT_AUTHORISED_GZIP_BYTES")).toBe(76_069);
@@ -31,11 +40,14 @@ describe("the ceilings of the bundle and what the direction authorised", () => {
     expect(constant("TOTAL_AUTHORISED_GZIP_BYTES")).toBe(500_000);
   });
 
-  it("keeps each ceiling at or under its authorisation", () => {
+  it("keeps the boot ceiling under its authorisation, and the sum of all the ceilings under the total one", () => {
     expect(constant("BOOT_BUDGET_GZIP_BYTES")).toBeLessThanOrEqual(
       constant("BOOT_AUTHORISED_GZIP_BYTES"),
     );
-    expect(constant("TOTAL_BUDGET_GZIP_BYTES")).toBeLessThanOrEqual(
+    const areas = areaBudgets();
+    expect([...areas.keys()]).toEqual(["fiscal", "formularios", "resto"]);
+    const sum = [...areas.values()].reduce((total, budget) => total + budget, 0);
+    expect(constant("BOOT_BUDGET_GZIP_BYTES") + sum).toBeLessThanOrEqual(
       constant("TOTAL_AUTHORISED_GZIP_BYTES"),
     );
   });
@@ -44,8 +56,10 @@ describe("the ceilings of the bundle and what the direction authorised", () => {
     expect(script).toMatch(
       /if \(BOOT_BUDGET_GZIP_BYTES > BOOT_AUTHORISED_GZIP_BYTES\) \{\s*problems\.push\(/,
     );
+    expect(script).toMatch(/if \(ceilings > TOTAL_AUTHORISED_GZIP_BYTES\) \{\s*problems\.push\(/);
+    // The sum starts from the boot ceiling and adds every area: a seed of 0 would loosen the wall.
     expect(script).toMatch(
-      /if \(TOTAL_BUDGET_GZIP_BYTES > TOTAL_AUTHORISED_GZIP_BYTES\) \{\s*problems\.push\(/,
+      /const ceilings = LAZY_AREAS\.reduce\(\(sum, area\) => sum \+ area\.budget, BOOT_BUDGET_GZIP_BYTES\);/,
     );
   });
 });
