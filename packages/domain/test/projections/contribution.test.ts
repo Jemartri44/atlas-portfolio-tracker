@@ -6,6 +6,7 @@ import {
   assertSplit,
   type ContributionRow,
   contributionPlan,
+  fillByLevel,
 } from "../../src/projections/contribution.js";
 import type { ExternalPrices } from "../../src/projections/prices.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
@@ -83,7 +84,7 @@ describe("contributionPlan", () => {
     expect(result.rows.map((row) => row.asset_id)).toEqual(["ast_world", "ast_bonds", "ast_gold"]);
   });
 
-  it("splits in proportion to the shortfall while the contribution does not cover it", () => {
+  it("covers every shortfall when the contribution reaches them all", () => {
     // Core 600/300/100 against 40/40/20 of 1000 + 1000: shortfalls 200, 500, 300.
     const result = plan(core(), "1000", {
       target_weights: { ast_world: "40", ast_bonds: "40", ast_gold: "20" },
@@ -98,6 +99,48 @@ describe("contributionPlan", () => {
     for (const row of result.rows) {
       expect(row.value_after_eur.cmp(row.target_eur)).toBeLessThanOrEqual(0);
     }
+  });
+
+  it("fills the asset furthest from its weight first, down to the level of the next", () => {
+    // Core 5800 / 3500 / 700 against 55 / 30 / 15 of 10900: shortfalls 195, 0
+    // (above target) and 935. The gold takes 740 to get level with the equity
+    // fund, and the other 160 are split evenly. Proportionally it would have
+    // been 155.31 and 744.69.
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({ account_id: "acc_fund", asset_id: "ast_world", quantity: "58", unit_price: "100" });
+    b.buy({ account_id: "acc_fund", asset_id: "ast_bonds", quantity: "35", unit_price: "100" });
+    b.buy({
+      account_id: "acc_etf",
+      asset_id: "ast_gold",
+      quantity: "7",
+      unit_price: "100",
+      currency: "USD",
+      fx_rate: "1",
+    });
+    b.valuation({ account_id: "acc_fund", asset_id: "ast_world", date: DATE, unit_value: "100" });
+    b.valuation({ account_id: "acc_fund", asset_id: "ast_bonds", date: DATE, unit_value: "100" });
+    b.valuation({
+      account_id: "acc_etf",
+      asset_id: "ast_gold",
+      date: DATE,
+      unit_value: "100",
+      currency: "USD",
+      fx_rate: "1",
+    });
+    const result = plan(b, "1000", {
+      bucket_pct_of_contribution: "10",
+      target_weights: { ast_world: "55", ast_bonds: "30", ast_gold: "15" },
+    });
+    expect(result.surplus_distributed).toBe(false);
+    expect(allocations(result)).toEqual({ ast_world: "80", ast_bonds: "0", ast_gold: "820" });
+    // Both funded assets end with the same shortfall; the one above target is untouched.
+    const left = (id: string) =>
+      (result.rows.find((row) => row.asset_id === id) as ContributionRow).target_eur
+        .sub((result.rows.find((row) => row.asset_id === id) as ContributionRow).value_after_eur)
+        .amount.toString();
+    expect(left("ast_world")).toBe("115");
+    expect(left("ast_gold")).toBe("115");
   });
 
   it("follows the target weights exactly when the portfolio is already balanced", () => {
@@ -409,6 +452,35 @@ describe("contributionPlan", () => {
         Money.parse("90", "EUR"),
       ),
     ).toThrow(ValidationError);
+  });
+});
+
+describe("fillByLevel", () => {
+  const eur = (...amounts: string[]) => amounts.map((amount) => Money.parse(amount, "EUR"));
+  const text = (amounts: Money[]) => amounts.map((amount) => amount.amount.toString());
+
+  it("fills the largest first and then levels", () => {
+    expect(text(fillByLevel(eur("195", "0", "935"), Money.parse("900", "EUR")))).toEqual([
+      "80",
+      "0",
+      "820",
+    ]);
+  });
+
+  it("gives the whole amount to the largest while it stays the largest", () => {
+    expect(text(fillByLevel(eur("100", "40"), Money.parse("50", "EUR")))).toEqual(["50", "0"]);
+  });
+
+  it("splits evenly between equal shortfalls", () => {
+    expect(text(fillByLevel(eur("100", "100"), Money.parse("60", "EUR")))).toEqual(["30", "30"]);
+  });
+
+  it("covers every shortfall exactly when the money is their sum", () => {
+    expect(text(fillByLevel(eur("100", "40"), Money.parse("140", "EUR")))).toEqual(["100", "40"]);
+  });
+
+  it("gives nothing when there is no money", () => {
+    expect(text(fillByLevel(eur("100", "40"), Money.zero("EUR")))).toEqual(["0", "0"]);
   });
 });
 

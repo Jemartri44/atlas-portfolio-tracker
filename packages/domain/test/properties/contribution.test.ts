@@ -146,6 +146,30 @@ describe("contributionPlan properties", () => {
     );
   });
 
+  it("leaves every asset that received money with the same shortfall, within the cents", () => {
+    fc.assert(
+      fc.property(assetsArb, amountArb, (assets, amount) => {
+        const plan = planOf(assets, amount, "0");
+        if (plan.surplus_distributed) {
+          return;
+        }
+        const left = plan.rows
+          .filter((row) => !row.allocation_eur.isZero())
+          .map((row) => row.target_eur.sub(row.value_after_eur).amount);
+        for (const one of left) {
+          // Rounding to cents per row and the residue: two cents at most.
+          expect(
+            one
+              .sub(left[0] as Decimal)
+              .abs()
+              .lt(Decimal.parse("0.03")),
+          ).toBe(true);
+        }
+      }),
+      { numRuns: 200 },
+    );
+  });
+
   it("never leaves the portfolio further from the plan than it was", () => {
     fc.assert(
       fc.property(assetsArb, amountArb, (assets, amount) => {

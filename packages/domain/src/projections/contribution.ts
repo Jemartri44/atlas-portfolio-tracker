@@ -1,9 +1,10 @@
 // Monthly contribution split (business rule 2, data-schema.md §7).
 //
 // The bucket budget is separated first and never allocated: it is a budget, not
-// an allocation (constitution III). The rest goes to the core assets in
-// proportion to their shortfall against the target computed on the value after
-// the contribution; if the contribution covers every shortfall, the surplus
+// an allocation (constitution III). The rest goes to the core assets by water
+// level: first to the asset furthest below its target (computed on the value
+// after the contribution) until its shortfall equals the next one's, then to
+// both, and so on. If the contribution covers every shortfall, the surplus
 // goes by target weight. It proposes and never sells (rule 2; selling is an
 // annual decision, rule 3) and never writes: the orders are placed by hand.
 
@@ -93,6 +94,29 @@ interface Slice {
   gap_eur: Money;
   allocation_eur: Money;
 }
+
+/**
+ * Spreads `money` over the shortfalls by water level: the largest shortfall is
+ * filled first, down to the level of the next one, and so on until the money
+ * runs out. Every asset that receives something ends with the same shortfall
+ * left (the level); the ones below the level receive nothing. Exact, not yet
+ * rounded. Requires `money` to be at most the sum of the shortfalls.
+ */
+export const fillByLevel = (gaps: readonly Money[], money: Money): Money[] => {
+  const order = gaps.map((gap, index) => ({ gap, index })).sort((a, b) => b.gap.cmp(a.gap));
+  let cumulative = Money.zero(EUR);
+  let level = Money.zero(EUR);
+  for (let k = 1; k <= order.length; k += 1) {
+    cumulative = cumulative.add((order[k - 1] as (typeof order)[number]).gap);
+    const next = order[k]?.gap ?? Money.zero(EUR);
+    // What it takes to bring the first k shortfalls down to the next one.
+    if (cumulative.sub(next.mul(Decimal.parse(String(k)))).cmp(money) >= 0) {
+      level = cumulative.sub(money).div(Decimal.parse(String(k)));
+      break;
+    }
+  }
+  return gaps.map((gap) => (gap.cmp(level) > 0 ? gap.sub(level) : Money.zero(EUR)));
+};
 
 /**
  * Spreads the rounding residue so the allocations add up to the core amount
@@ -219,7 +243,7 @@ export const contributionPlan = (
   /*
    * Because the targets are computed on the value after the contribution, the
    * shortfalls add up to the core amount plus whatever is above target, so the
-   * proportional branch is the normal case. The surplus branch is reached when
+   * water-level branch is the normal case. The surplus branch is reached when
    * part of the plan points at assets that are not in the table (an unknown
    * target weight, a warning of `coreWeights`): then the weights of the rows do
    * not add up to 100 and the leftover is spread among them in proportion to
@@ -227,14 +251,18 @@ export const contributionPlan = (
    */
   const surplus = totalGap.cmp(core) < 0;
   const leftover = core.sub(totalGap);
-  for (const slice of slices) {
+  const levelled = surplus
+    ? []
+    : fillByLevel(
+        slices.map((slice) => slice.gap_eur),
+        core,
+      );
+  slices.forEach((slice, index) => {
     const raw = surplus
       ? slice.gap_eur.add(leftover.mul(slice.target_pct).div(rowWeight))
-      : totalGap.isZero()
-        ? Money.zero(EUR)
-        : core.mul(slice.gap_eur.amount).div(totalGap.amount);
+      : (levelled[index] as Money);
     slice.allocation_eur = raw.roundToCents();
-  }
+  });
   const assigned = slices.reduce((sum, slice) => sum.add(slice.allocation_eur), Money.zero(EUR));
   settleResidue(residueOrder(slices), core.sub(assigned));
 
