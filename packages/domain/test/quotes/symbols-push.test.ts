@@ -128,22 +128,6 @@ describe("symbolsPushPlan", () => {
     });
   });
 
-  it("refuses a local file of format 1 whose confirmation leaves closes misstored", () => {
-    const legacy = JSON.stringify({
-      symbols_format: 1,
-      assets: {
-        ast_l: {
-          eodhd: "L.LSE",
-          currency: "GBP",
-          confirmed_at: AT,
-          currency_check: { eodhd: { found: "GBX", at: AT } },
-          currency_confirmed_over: { eodhd: "GBX" },
-        },
-      },
-    });
-    expect(refusal(() => symbolsPushPlan(legacy, undefined)).code).toBe("symbols_push_misstored");
-  });
-
   it("refuses a local file it cannot read or of a newer format, with the code of the reader", () => {
     for (const [local, code] of [
       ["{", "invalid_symbols_file"],

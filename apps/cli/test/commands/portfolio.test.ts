@@ -283,6 +283,17 @@ describe("atlas costs", () => {
     expect(data.core.rows).toHaveLength(2);
     expect(data.bucket.rows).toEqual([]);
   });
+
+  it("says how much of the valued core the average TER leaves out", async () => {
+    const h = await portfolio();
+    expect(await h.exec(["costs", "--date", DATE, "--json"])).toBe(0);
+    const { core } = h.json() as {
+      core: { totals: { ter_partial: boolean; ter_missing_eur: string } };
+    };
+    expect(core.totals.ter_partial).toBe(true);
+    expect(await h.exec(["costs", "--date", DATE])).toBe(0);
+    expect(h.text()).toContain(`El TER medio no cuenta ${core.totals.ter_missing_eur}`);
+  });
 });
 
 describe("atlas transfer simulate", () => {

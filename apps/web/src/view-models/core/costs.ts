@@ -50,6 +50,9 @@ export interface CostsView {
     value: Money;
     weightedTer?: string;
     annualCost?: Money;
+    /** Value of the priced part whose asset declares no TER: outside the average. */
+    terMissing: Money;
+    terPartial: boolean;
     partial: boolean;
   };
   bucket: {
@@ -108,6 +111,8 @@ export const costsView = (
     ...(summary.core.totals.annual_cost_eur === undefined
       ? {}
       : { annualCost: summary.core.totals.annual_cost_eur }),
+    terMissing: summary.core.totals.ter_missing_eur,
+    terPartial: summary.core.totals.ter_partial,
     partial: summary.core.totals.partial,
   },
   bucket: {

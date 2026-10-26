@@ -259,4 +259,14 @@ describe("atlas settings", () => {
     ).toBe(1);
     expect(await h.exec(["settings", "wipe"])).toBe(64);
   });
+
+  it("refuses target weights for an asset that is not in the catalogue, and writes nothing", async () => {
+    const h = harness({ events: seed() });
+    const before = (await h.store.load()).etag;
+    expect(
+      await h.exec(["settings", "set", "--target-weights", "ast_world=60,ast_nope=40", "--yes"]),
+    ).toBe(1);
+    expect(h.text()).toContain("ast_nope");
+    expect((await h.store.load()).etag).toBe(before);
+  });
 });

@@ -232,12 +232,12 @@ describe("two consoles downloading at once, on the disk", () => {
     await writeFile(
       join(ledger, "prices", "symbols.json"),
       JSON.stringify({
-        symbols_format: 1,
+        symbols_format: 2,
         assets: Object.fromEntries(
           ids.map((id) => [
             id,
             {
-              currency: "EUR",
+              currencies: { eodhd: "EUR" },
               eodhd: `${id}.XETRA`,
               confirmed_at: "x",
               currency_check: { eodhd: { at: "x" } },
