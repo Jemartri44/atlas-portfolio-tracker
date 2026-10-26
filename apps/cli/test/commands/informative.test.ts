@@ -87,9 +87,7 @@ describe("a year that has not begun", () => {
     async (model) => {
       const h = harness({ events: abroad().build(), instant: "2028-03-01T10:00:00.000Z" });
       expect(await h.exec([model, "2029"])).toBe(64);
-      expect(h.text()).toContain(
-        `el año 2029 aún no ha empezado: el modelo ${model[1]}${model.slice(2)}`,
-      );
+      expect(h.text()).toContain(`el año 2029 aún no ha empezado: el modelo ${model.slice(1)}`);
       h.reset();
       expect(await h.exec([model, "2028"])).toBe(0);
     },
