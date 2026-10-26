@@ -167,8 +167,16 @@ describe("architecture: the analysis of the Cartera and the Cubo is behind its d
    * functions (a function re-exported there is reachable from boot, whatever the chunk rules
    * say), and `check-bundle.mjs` keeps the door and its modules off the boot path.
    */
-  const FUNCTIONS = ["bucketStats", "bucketTheses", "contributionPlan", "costSummary"];
-  const MODULES = ["bucket-theses", "bucket-stats", "costs", "contribution"];
+  const FUNCTIONS = [
+    "bucketStats",
+    "bucketTheses",
+    "contributionPlan",
+    "costSummary",
+    "platformPlan",
+  ];
+  const MODULES = ["bucket-theses", "bucket-stats", "costs", "contribution", "platform-plan"];
+  // The rebalance (feature 028) sits on top of them behind a door of its own.
+  const REBALANCE = ["rebalance.ts", "projections/rebalance.ts", "projections/sale-tax.ts"];
 
   it("keeps their functions out of index.ts, and behind their door", () => {
     const barrel = readFileSync(join(domainSrc, "index.ts"), "utf8");
@@ -188,6 +196,7 @@ describe("architecture: the analysis of the Cartera and the Cubo is behind its d
     const own = new Set(
       [
         "portfolio.ts",
+        ...REBALANCE,
         ...MODULES.map((name) => `projections/${name}.ts`),
         ...listTsFiles(join(domainSrc, "charts")).map((file) => relative(domainSrc, file)),
         "charts.ts",
@@ -305,6 +314,39 @@ describe("architecture: the ECB and the prices are downloaded by the console onl
     ]
       .filter((file) =>
         /secrets\.json|readSecrets|prices\/secrets/.test(readFileSync(file, "utf8")),
+      )
+      .map((file) => relative(repoRoot, file));
+    expect(offenders).toEqual([]);
+  });
+});
+
+describe("architecture: the rebalance is behind its own door", () => {
+  /**
+   * The rebalance estimates the tax of a sale with the tax engine, so it cannot share the door of
+   * the Cartera and the Cubo (that would carry the engine into both): `@atlas/domain/rebalance`
+   * is loaded when the button is pressed.
+   */
+  it("keeps it out of index.ts and out of the portfolio door", () => {
+    const barrel = readFileSync(join(domainSrc, "index.ts"), "utf8");
+    const portfolio = readFileSync(join(domainSrc, "portfolio.ts"), "utf8");
+    for (const source of [barrel, portfolio]) {
+      expect(source).not.toMatch(/projections\/(?:rebalance|sale-tax)\.js/);
+    }
+    expect(readFileSync(join(domainSrc, "rebalance.ts"), "utf8")).toMatch(/\brebalancePlan\b/);
+  });
+
+  it("is imported by nothing but its door", () => {
+    const offenders = listTsFiles(domainSrc)
+      .filter(
+        (file) =>
+          !["rebalance.ts", "projections/rebalance.ts", "projections/sale-tax.ts"].some(
+            (own) => file === join(domainSrc, own),
+          ),
+      )
+      .filter((file) =>
+        specifiersOf(readFileSync(file, "utf8")).some((specifier) =>
+          /\/(?:rebalance|sale-tax)\.js$/.test(specifier),
+        ),
       )
       .map((file) => relative(repoRoot, file));
     expect(offenders).toEqual([]);

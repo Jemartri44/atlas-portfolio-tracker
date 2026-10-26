@@ -79,11 +79,11 @@ export const taxOfBase = (base: Money, brackets: readonly TaxBracket[]): Money =
 };
 
 const sellOf = (date: CivilDate, sale: HypotheticalSale, sequence: number): SellEvent => {
-  const draft = {
+  const draft: Omit<SellEvent, "fingerprint"> = {
     schema_version: CURRENT_SCHEMA_VERSION,
     id: systemUlid(new Date(`${date}T12:00:00.000Z`), sequence),
     recorded_at: `${date}T12:00:00.000Z`,
-    type: "sell" as const,
+    type: "sell",
     account_id: sale.account_id,
     asset_id: sale.asset_id,
     trade_date: date,
@@ -97,8 +97,7 @@ const sellOf = (date: CivilDate, sale: HypotheticalSale, sequence: number): Sell
     source: "manual",
   };
   // A sell is always fingerprinted.
-  const fingerprint = fingerprintOf(draft as unknown as SellEvent) as string;
-  return { ...draft, fingerprint } as unknown as SellEvent;
+  return { ...draft, fingerprint: fingerprintOf(draft) as string };
 };
 
 const lineOf = (events: readonly LedgerEvent[], year: number, date: CivilDate, id: string) => {
@@ -128,8 +127,8 @@ export const estimateSale = (
   const without = taxYear(base, year, { today: date });
   // The engine refuses a ledger it cannot project (a sale larger than the
   // lots, say), so a report that reaches here always holds the line of the sale.
-  const { report, line } = lineOf([...base, event], year, date, event.id);
-  const own = line as TransmissionLine;
+  const { report, line: found } = lineOf([...base, event], year, date, event.id);
+  const own = found as TransmissionLine;
   const added = report.base_eur.sub(without.base_eur);
   return {
     gain_eur: own.own_eur,
