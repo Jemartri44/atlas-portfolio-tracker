@@ -221,10 +221,15 @@ const informativeCommand =
     if (year === undefined) {
       throw new UsageError(USAGE);
     }
+    const today = todayInMadrid(ctx.deps.clock);
+    // A year that has not begun is not «the current year» with nothing in it: it is a typo.
+    if (year > Number(today.slice(0, 4))) {
+      throw new UsageError(
+        `el año ${year} aún no ha empezado: el modelo ${model} se calcula para el año en curso o uno ya cerrado`,
+      );
+    }
     const { events, state } = await loadForQuery(ctx);
-    const report = informativeReturn(events, model, year, {
-      today: todayInMadrid(ctx.deps.clock),
-    });
+    const report = informativeReturn(events, model, year, { today });
     renderQuery(ctx, state, report, renderInformative(report));
     return 0;
   };

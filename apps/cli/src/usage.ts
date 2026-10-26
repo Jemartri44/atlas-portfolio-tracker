@@ -36,3 +36,6 @@ comandos:
   admin devices|revoke-all-tokens|forget-device [--] <id>|--device <id>|compact|restore --from <copia>|prices push|secrets --env <entorno>
                                  la administración de la nube, con el rol de administración y nunca por la API
   --                             termina las opciones: lo que va detrás es posicional (un id que empiece por guion)`;
+
+/** What a failed order points to instead of printing the whole usage again. */
+export const USAGE_HINT = "Escribe «atlas --help» para ver el uso.";
