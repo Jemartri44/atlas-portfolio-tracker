@@ -297,9 +297,87 @@ describe("costSummary", () => {
     const priced = summary(b.build());
     expect(priced.core.totals.partial).toBe(false);
     expect(priced.core.totals.value_eur.amount.toString()).toBe("1060");
-    // ast_world has no declared TER in the test catalogue, so only ast_low weighs in.
-    expect(priced.core.totals.weighted_ter?.round(6).toString()).toBe("0.004717");
+    // ast_world has no declared TER in the test catalogue, so only ast_low
+    // weighs in: the average is the TER of what has one, and the aggregate says
+    // how much of the priced core has no figure instead of counting it as 0%.
+    expect(priced.core.totals.weighted_ter?.toString()).toBe("0.05");
     expect(priced.core.totals.annual_cost_eur?.amount.toString()).toBe("0.05");
+    expect(priced.core.totals.ter_missing_eur.amount.toString()).toBe("960");
+    expect(priced.core.totals.ter_partial).toBe(true);
+  });
+
+  it("has no weighted TER when no priced asset declares one, and is not partial when all do", () => {
+    const none = summary(traded().build());
+    expect(none.core.totals.weighted_ter).toBeUndefined();
+    expect(none.core.totals.annual_cost_eur).toBeUndefined();
+    expect(none.core.totals.ter_missing_eur.amount.toString()).toBe("960");
+    expect(none.core.totals.ter_partial).toBe(true);
+
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.asset("ast_low", { asset_class: "fixed_income", ter: "0.05" });
+    b.buy({ account_id: "acc_fund", asset_id: "ast_low", quantity: "10", unit_price: "10" });
+    b.valuation({ account_id: "acc_fund", asset_id: "ast_low", date: DATE, unit_value: "10" });
+    const all = summary(b.build());
+    expect(all.core.totals.ter_missing_eur.isZero()).toBe(true);
+    expect(all.core.totals.ter_partial).toBe(false);
+  });
+
+  it("counts a declared TER of 0 as declared: it weighs the average down and is not missing", () => {
+    const b = traded();
+    b.asset("ast_low", { asset_class: "fixed_income", ter: "0.05" });
+    b.asset("ast_free", { asset_class: "fixed_income", ter: "0" });
+    for (const asset_id of ["ast_low", "ast_free"]) {
+      b.buy({ account_id: "acc_fund", asset_id, quantity: "10", unit_price: "10" });
+      b.valuation({ account_id: "acc_fund", asset_id, date: DATE, unit_value: "10" });
+    }
+    const totals = summary(b.build()).core.totals;
+    // 100 at 0.05% and 100 at 0%: the average of the declared ones is 0.025%.
+    expect(totals.weighted_ter?.toString()).toBe("0.025");
+    expect(totals.ter_missing_eur.amount.toString()).toBe("960");
+  });
+
+  it("charges the commission of a swap to the asset received, in the core, and to the account, in the bucket", () => {
+    const b = traded();
+    b.swap({
+      account_id: "acc_fund",
+      from_asset_id: "ast_world",
+      to_asset_id: "ast_bonds",
+      trade_date: "2027-07-01",
+      quantity_out: "1",
+      fee: "4",
+    });
+    const result = summary(b.build());
+    expect(rowOf(result, "ast_bonds")?.fees_eur.amount.toString()).toBe("4");
+    // Nothing is invested by a swap: its cost is a fiscal valuation, not a price paid.
+    expect(rowOf(result, "ast_bonds")?.invested_eur.amount.toString()).toBe("0");
+    expect(rowOf(result, "ast_world")?.fees_eur.amount.toString()).toBe("8");
+    expect(result.core.totals.fees_eur.amount.toString()).toBe("12");
+
+    const bucket = traded();
+    bucket.asset("ast_other", { asset_type: "stock", book: "bucket", transferable: false });
+    bucket.thesisOpened({ thesis_id: "th", account_id: "acc_bucket", asset_id: "ast_spec" });
+    bucket.buy({
+      account_id: "acc_bucket",
+      asset_id: "ast_spec",
+      quantity: "10",
+      unit_price: "50",
+      fee: "7",
+      thesis_id: "th",
+    });
+    bucket.thesisOpened({ thesis_id: "th2", account_id: "acc_bucket", asset_id: "ast_other" });
+    bucket.swap({
+      account_id: "acc_bucket",
+      from_asset_id: "ast_spec",
+      to_asset_id: "ast_other",
+      trade_date: "2027-07-01",
+      quantity_out: "1",
+      fee: "3",
+      thesis_id: "th2",
+    });
+    const inBucket = summary(bucket.build());
+    expect(inBucket.bucket.rows[0]?.fees_eur.amount.toString()).toBe("10");
+    expect(inBucket.core.totals.fees_eur.amount.toString()).toBe("8");
   });
 
   it("keeps the bucket in its own table, per account and never mixed with the core", () => {

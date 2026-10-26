@@ -181,6 +181,26 @@ describe("Núcleo: costs", () => {
     expect(view.core.fees.amount.toString()).not.toBe(view.standalone.core.total.amount.toString());
   });
 
+  it("carries to the card how much value the average TER leaves out", () => {
+    const { state, settings, names } = at("2027-12-31");
+    const summary = costSummary(state, EVENTS, "2027-12-31", settings, "2027-12-31");
+    expect(costsView(summary, names).core.terPartial).toBe(false);
+    const partial = {
+      ...summary,
+      core: {
+        ...summary.core,
+        totals: {
+          ...summary.core.totals,
+          ter_partial: true,
+          ter_missing_eur: summary.core.totals.value_eur,
+        },
+      },
+    };
+    const view = costsView(partial, names).core;
+    expect(view.terPartial).toBe(true);
+    expect(view.terMissing).toBe(summary.core.totals.value_eur);
+  });
+
   /**
    * The Núcleo screen used to receive the rows of **both** books and print them
    * under a line that read "Total del núcleo" and added up only one of them:

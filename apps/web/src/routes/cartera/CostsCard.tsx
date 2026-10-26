@@ -101,6 +101,12 @@ export const CostsCard = (props: { view: CostsView }): JSX.Element => (
           <StatLine label="TER medio de la cartera, ponderado por valor">
             <Figure value={props.view.core.weightedTer} unit="percent" />
           </StatLine>
+          <Show when={props.view.core.terPartial}>
+            <p class="card-note">
+              El TER medio no cuenta <Amount value={props.view.core.terMissing} /> de la cartera
+              valorada cuyos activos no tienen TER declarado.
+            </p>
+          </Show>
           <Show when={props.view.core.partial}>
             <p class="card-note">
               El agregado solo cubre la parte de la cartera con precio: faltan valoraciones.
