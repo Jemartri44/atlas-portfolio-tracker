@@ -302,6 +302,49 @@ describe("costSummary", () => {
     expect(priced.core.totals.annual_cost_eur?.amount.toString()).toBe("0.05");
   });
 
+  it("charges the commission of a swap to the asset received, in the core, and to the account, in the bucket", () => {
+    const b = traded();
+    b.swap({
+      account_id: "acc_fund",
+      from_asset_id: "ast_world",
+      to_asset_id: "ast_bonds",
+      trade_date: "2027-07-01",
+      quantity_out: "1",
+      fee: "4",
+    });
+    const result = summary(b.build());
+    expect(rowOf(result, "ast_bonds")?.fees_eur.amount.toString()).toBe("4");
+    // Nothing is invested by a swap: its cost is a fiscal valuation, not a price paid.
+    expect(rowOf(result, "ast_bonds")?.invested_eur.amount.toString()).toBe("0");
+    expect(rowOf(result, "ast_world")?.fees_eur.amount.toString()).toBe("8");
+    expect(result.core.totals.fees_eur.amount.toString()).toBe("12");
+
+    const bucket = traded();
+    bucket.asset("ast_other", { asset_type: "stock", book: "bucket", transferable: false });
+    bucket.thesisOpened({ thesis_id: "th", account_id: "acc_bucket", asset_id: "ast_spec" });
+    bucket.buy({
+      account_id: "acc_bucket",
+      asset_id: "ast_spec",
+      quantity: "10",
+      unit_price: "50",
+      fee: "7",
+      thesis_id: "th",
+    });
+    bucket.thesisOpened({ thesis_id: "th2", account_id: "acc_bucket", asset_id: "ast_other" });
+    bucket.swap({
+      account_id: "acc_bucket",
+      from_asset_id: "ast_spec",
+      to_asset_id: "ast_other",
+      trade_date: "2027-07-01",
+      quantity_out: "1",
+      fee: "3",
+      thesis_id: "th2",
+    });
+    const inBucket = summary(bucket.build());
+    expect(inBucket.bucket.rows[0]?.fees_eur.amount.toString()).toBe("10");
+    expect(inBucket.core.totals.fees_eur.amount.toString()).toBe("8");
+  });
+
   it("keeps the bucket in its own table, per account and never mixed with the core", () => {
     const b = traded();
     b.thesisOpened({ thesis_id: "th", account_id: "acc_bucket", asset_id: "ast_spec" });

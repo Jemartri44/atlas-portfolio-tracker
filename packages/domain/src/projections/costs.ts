@@ -21,6 +21,7 @@ import type {
   LedgerEvent,
   SellEvent,
   StandaloneFeeEvent,
+  SwapEvent,
 } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import { type ExternalPrices, manualPrices, positionValueOf } from "./prices.js";
@@ -206,19 +207,27 @@ const addToBucket = (
  * must not fall into the core table just for not being in the bucket one
  * (constitution III: the books never mix).
  */
-const bookTrade = (state: LedgerState, totals: Accumulator, event: BuyEvent | SellEvent): void => {
+const bookTrade = (
+  state: LedgerState,
+  totals: Accumulator,
+  event: BuyEvent | SellEvent | SwapEvent,
+): void => {
   const book = state.accounts.get(event.account_id)?.book;
   if (book === undefined) {
     return;
   }
+  // A swap pays its commission for the asset it acquires, like a purchase; what
+  // it invests is a fiscal valuation (art. 37.1.h) and not a price, so only the
+  // commission is booked.
   const fee = feeEurOf(event);
+  const assetId = event.type === "swap" ? event.to_asset_id : event.asset_id;
   if (book === "bucket") {
     addToBucket(totals, event.account_id, fee, event.type === "buy" ? costEurOf(event) : undefined);
     return;
   }
-  addTo(totals.fees, event.asset_id, fee);
+  addTo(totals.fees, assetId, fee);
   if (event.type === "buy") {
-    addTo(totals.invested, event.asset_id, costEurOf(event));
+    addTo(totals.invested, assetId, costEurOf(event));
   }
 };
 
@@ -242,7 +251,7 @@ const accumulate = (
     if (asOf !== undefined && businessDateOf(state, event) > asOf) {
       continue;
     }
-    if (event.type === "buy" || event.type === "sell") {
+    if (event.type === "buy" || event.type === "sell" || event.type === "swap") {
       bookTrade(state, totals, event);
       continue;
     }
