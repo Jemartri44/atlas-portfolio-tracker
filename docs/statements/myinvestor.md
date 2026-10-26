@@ -9,7 +9,7 @@ Una hoja, `Movimientos MyInvestor`. Nueve filas de cabecera con metadatos (titul
 | Columna (índice) | Encabezado | Tipo observado | Notas |
 |---|---|---|---|
 | 1 | `Fecha Operación` | texto `DD/MM/YYYY` | Fecha de orden |
-| 2 | `Fecha Valor` | texto `DD/MM/YYYY` | Fecha valor |
+| 2 | `Fecha Valor` | texto `DD/MM/YYYY` | Fecha valor **de la cuenta de efectivo**: el día en que el importe cuenta en el saldo, es decir, el del abono. **No es la fecha del valor liquidativo** de un reembolso, que es la fecha fiscal del fondo (`value_date` del `sell`, business-rules.md §5.10) |
 | 3 | `Movimiento` | texto | Concepto libre; vacío en la apertura |
 | 4 | *(sin encabezado)* | vacío | Columna de relleno |
 | 5 | `Importe` | número (float en Excel) | Signo según cargo/abono; **leer como cadena decimal**, nunca como float (ADR-0005) |
@@ -36,7 +36,7 @@ Los importes usan coma decimal y símbolo `€` (`0,0000 €`); el parser debe n
 
 ## 3. Pendiente de observar
 
-- Exportación de **operaciones de fondos** (suscripciones, reembolsos, traspasos internos y externos): qué columnas trae (ISIN, participaciones, valor liquidativo, importe, fechas de orden y valor) y si un traspaso aparece como un movimiento o como dos. Es la entrada principal de `buy`/`sell`/`transfer` del libro `core`.
+- Exportación de **operaciones de fondos** (suscripciones, reembolsos, traspasos internos y externos): qué columnas trae (ISIN, participaciones, valor liquidativo, importe, fechas de orden y valor) y si un traspaso aparece como un movimiento o como dos. **Antes de escribir el importador, identificar qué columna es la fecha del valor liquidativo aplicado**: esa, y no la del abono, va a `value_date`. Es la entrada principal de `buy`/`sell`/`transfer` del libro `core`.
 - Si el PDF de posición admite descarga a una fecha dada (para `valuation` a 31/12).
 
 Cuando se disponga de estos ficheros, actualizar esta página y crear las fixtures sintéticas en `tests/fixtures/myinvestor/`.
