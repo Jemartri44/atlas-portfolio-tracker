@@ -59,27 +59,6 @@ describe("the currency declared per source", () => {
     expect(JSON.parse(serializeSymbols(file)).symbols_format).toBe(2);
   });
 
-  it("reads a file of format 1, one currency per asset, as the currency of all its sources", () => {
-    const old = JSON.stringify({
-      symbols_format: 1,
-      assets: {
-        ast_spec: {
-          currency: "GBX",
-          eodhd: "TSCO.LSE",
-          alpha_vantage: "TSCO.LON",
-          confirmed_at: AT,
-          currency_check: { eodhd: { found: "GBP", at: AT } },
-        },
-      },
-    });
-    const entry = parseSymbols(old).assets.ast_spec;
-    expect(entry?.currencies).toEqual({ eodhd: "GBX", alpha_vantage: "GBX" });
-    // A source already contrasted that contradicts it still asks, as always.
-    expect(currencyAgrees(entry as never, "eodhd")).toBe(false);
-    // Written again, it is the new format, with the same meaning.
-    expect(parseSymbols(serializeSymbols(parseSymbols(old)))).toEqual(parseSymbols(old));
-  });
-
   it("refuses a source without its currency, or a currency that is not a code", () => {
     for (const [text, field] of [
       [newFile({ eodhd: "X", currencies: {} }), "ast_spec.currencies.eodhd"],
@@ -101,13 +80,6 @@ describe("the currency declared per source", () => {
           refetch_days: { eodhd: ["2027-02-30"] },
         }),
         "ast_spec.refetch_days.eodhd",
-      ],
-      [
-        JSON.stringify({
-          symbols_format: 1,
-          assets: { ast_spec: { currency: "GBP", confirmed_at: AT, misstored: {} } },
-        }),
-        "ast_spec.misstored",
       ],
     ] as const) {
       expect(() => parseSymbols(text), text).toThrow(
@@ -264,87 +236,20 @@ describe("London with its two sources, end to end", () => {
   });
 });
 
-const legacyConfirmed = (currency: string, over: Record<string, string>) =>
-  JSON.stringify({
-    symbols_format: 1,
-    assets: {
-      ast_spec: {
-        currency,
-        eodhd: "TSCO.LSE",
-        alpha_vantage: "TSCO.LON",
-        confirmed_at: AT,
-        currency_check: Object.fromEntries(
-          Object.entries({ eodhd: "GBP", alpha_vantage: "GBX" }).map(([s, found]) => [
-            s,
-            { found, at: AT },
-          ]),
-        ),
-        currency_confirmed_over: over,
-      },
+/**
+ * A file whose closes of `source` were stored with the currency of the other
+ * source's metadata: both sources declare `currency`, `source` is `misstored`.
+ */
+const misstoredFile = (currency: string, source: "eodhd" | "alpha_vantage") =>
+  newFile({
+    eodhd: "TSCO.LSE",
+    alpha_vantage: "TSCO.LON",
+    currencies: { eodhd: currency, alpha_vantage: currency },
+    currency_check: {
+      [source === "eodhd" ? "alpha_vantage" : "eodhd"]: { found: currency, at: AT },
     },
+    misstored: { [source]: currency },
   });
-
-describe("a file of format 1 that confirmed a currency over another source's", () => {
-  it("does not inherit the confirmation: that source is left uncontrasted, in both directions", () => {
-    // Declared GBP and confirmed over the GBX of Alpha Vantage.
-    const pounds = parseSymbols(legacyConfirmed("GBP", { alpha_vantage: "GBX" })).assets.ast_spec;
-    expect(pounds?.currency_confirmed_over?.alpha_vantage).toBeUndefined();
-    expect(pounds?.currency_check?.alpha_vantage).toBeUndefined();
-    expect(pounds?.currency_check?.eodhd).toEqual({ found: "GBP", at: AT });
-    // Declared GBX and confirmed over the GBP of EODHD.
-    const pence = parseSymbols(legacyConfirmed("GBX", { eodhd: "GBP" })).assets.ast_spec;
-    expect(pence?.currency_confirmed_over?.eodhd).toBeUndefined();
-    expect(pence?.currency_check?.eodhd).toBeUndefined();
-    expect(pence?.currency_check?.alpha_vantage).toEqual({ found: "GBX", at: AT });
-  });
-
-  it("leaves no check at all when the only one checked was the one confirmed over", () => {
-    const raw = JSON.parse(legacyConfirmed("GBP", { alpha_vantage: "GBX" }));
-    delete raw.assets.ast_spec.currency_check.eodhd;
-    const entry = parseSymbols(JSON.stringify(raw)).assets.ast_spec;
-    expect(entry?.currency_check).toBeUndefined();
-    expect(entry?.currency_confirmed_over).toBeUndefined();
-  });
-
-  it("contrasts it again before the next download, and never stores pence as pounds", async () => {
-    const store = new MemoryPriceStore();
-    store.files.set("symbols.json", legacyConfirmed("GBP", { alpha_vantage: "GBX" }));
-    const eodhd = new FakeSource("eodhd", () => ({ ok: false, kind: "unavailable" }), store);
-    const alpha = new FakeSource(
-      "alpha_vantage",
-      () => closes(["2027-01-05", "1000"]),
-      store,
-      () => ({
-        ok: true,
-        value: "GBX",
-      }),
-    );
-    const b = new LedgerBuilder();
-    catalogue(b);
-    b.thesisOpened({ thesis_id: "th1" });
-    b.buy({
-      account_id: "acc_bucket",
-      asset_id: "ast_spec",
-      trade_date: "2027-01-04",
-      thesis_id: "th1",
-    });
-    const report = await updatePrices({
-      state: projectLedger(b.build(), { asOf: TODAY }),
-      settings: DEFAULT_SETTINGS,
-      today: TODAY,
-      now: () => new Date("2027-01-06T08:00:00.000Z"),
-      store,
-      sources: { eodhd, alpha_vantage: alpha },
-    });
-    expect(alpha.currencyCalls).toEqual(["TSCO.LON"]);
-    expect(alpha.calls).toEqual([]);
-    expect(store.files.get("ast_spec.jsonl") ?? "").toBe("");
-    expect(report.assets[0]?.failures).toEqual([
-      { source: "eodhd", kind: "unavailable" },
-      { source: "alpha_vantage", kind: "currency_mismatch" },
-    ]);
-  });
-});
 
 describe("closes stored in a currency their source does not declare", () => {
   const line = (date: string, close: string, currency: string, source: "eodhd" | "alpha_vantage") =>
@@ -537,12 +442,12 @@ describe("the declared currency while a source is contrasted and downloaded", ()
   });
 });
 
-describe("closes stored wrong under a file of format 1 are left out and purged like any other", () => {
+describe("closes stored wrong (misstored) are left out and purged like any other", () => {
   const line = (date: string, close: string, currency: string, source: "eodhd" | "alpha_vantage") =>
     `${JSON.stringify({ schema_version: 1, date, close, currency, source, fetched_at: "2027-01-06T06:00:00.000Z" })}\n`;
 
-  it("GBP confirmed over the GBX of Alpha Vantage: its pounds are pence, a hundred times too high, left out", () => {
-    const symbols = parseSymbols(legacyConfirmed("GBP", { alpha_vantage: "GBX" }));
+  it("Alpha Vantage closes stored as GBP: its pounds are pence, a hundred times too high, left out", () => {
+    const symbols = parseSymbols(misstoredFile("GBP", "alpha_vantage"));
     const { closes: read, mismatched } = readCloses(
       new Map([
         [
@@ -566,8 +471,8 @@ describe("closes stored wrong under a file of format 1 are left out and purged l
     ]);
   });
 
-  it("GBX confirmed over the GBP of EODHD: its pence are pounds, a hundred times too low, left out", () => {
-    const symbols = parseSymbols(legacyConfirmed("GBX", { eodhd: "GBP" }));
+  it("EODHD closes stored as GBX: its pence are pounds, a hundred times too low, left out", () => {
+    const symbols = parseSymbols(misstoredFile("GBX", "eodhd"));
     const { closes: read, mismatched } = readCloses(
       new Map([
         [
@@ -584,10 +489,10 @@ describe("closes stored wrong under a file of format 1 are left out and purged l
     ]);
   });
 
-  it("stays known when the file is written again in format 2, and when the source is declared again", async () => {
+  it("stays known when the file is written again, and when the source is declared again", async () => {
     const lines = new Map([["ast_spec", line("2027-01-05", "1000", "GBP", "alpha_vantage")]]);
     const again = parseSymbols(
-      serializeSymbols(parseSymbols(legacyConfirmed("GBP", { alpha_vantage: "GBX" }))),
+      serializeSymbols(parseSymbols(misstoredFile("GBP", "alpha_vantage"))),
     );
     expect(readCloses(lines, again).closes.get("ast_spec")).toEqual([]);
     const store = new MemoryPriceStore();
@@ -607,7 +512,7 @@ describe("closes stored wrong under a file of format 1 are left out and purged l
 
   it("is purged like any other, and then nothing of that source is left out any more", async () => {
     const store = new MemoryPriceStore();
-    store.files.set("symbols.json", legacyConfirmed("GBP", { alpha_vantage: "GBX" }));
+    store.files.set("symbols.json", misstoredFile("GBP", "alpha_vantage"));
     store.files.set(
       "ast_spec.jsonl",
       line("2027-01-04", "9", "GBP", "eodhd") + line("2027-01-05", "1000", "GBP", "alpha_vantage"),
@@ -676,21 +581,6 @@ describe("a purge asks for its days again", () => {
 describe("what a declaration, a purge and a removal carry, keep and clear of the days owed", () => {
   const line = (date: string, close: string, currency: string, source: "eodhd" | "alpha_vantage") =>
     `${JSON.stringify({ schema_version: 1, date, close, currency, source, fetched_at: "2027-01-06T06:00:00.000Z" })}\n`;
-
-  it("marks nothing stored wrong where format 1 confirmed over a source without symbol, or over its own currency", () => {
-    const raw = JSON.stringify({
-      symbols_format: 1,
-      assets: {
-        ast_spec: {
-          currency: "GBP",
-          eodhd: "TSCO.LSE",
-          confirmed_at: AT,
-          currency_confirmed_over: { alpha_vantage: "GBX", eodhd: "GBP" },
-        },
-      },
-    });
-    expect(parseSymbols(raw).assets.ast_spec?.misstored).toBeUndefined();
-  });
 
   it("a new declaration keeps every day owed, and the marks of the sources it declares", async () => {
     const store = new MemoryPriceStore();

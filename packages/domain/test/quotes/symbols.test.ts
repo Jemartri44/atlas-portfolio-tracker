@@ -32,20 +32,16 @@ describe("prices/symbols.json", () => {
   });
 
   it("refuses a top-level key it does not know, by its name only", () => {
-    for (const format of [1, 2]) {
-      try {
-        parseSymbols(
-          JSON.stringify({ symbols_format: format, assets: {}, token: "sentinel-value" }),
-        );
-        expect.unreachable();
-      } catch (error) {
-        expect(error).toMatchObject({
-          code: "symbols_file_unknown_key",
-          details: { key: "token" },
-        });
-        expect(JSON.stringify(error)).not.toContain("sentinel-value");
-        expect((error as Error).message).not.toContain("sentinel-value");
-      }
+    try {
+      parseSymbols(JSON.stringify({ symbols_format: 2, assets: {}, token: "sentinel-value" }));
+      expect.unreachable();
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: "symbols_file_unknown_key",
+        details: { key: "token" },
+      });
+      expect(JSON.stringify(error)).not.toContain("sentinel-value");
+      expect((error as Error).message).not.toContain("sentinel-value");
     }
     expect(unknownSymbolsKey([])).toBeUndefined();
     expect(unknownSymbolsKey("assets")).toBeUndefined();
@@ -73,17 +69,19 @@ describe("prices/symbols.json", () => {
   it("refuses what it does not understand, naming it", () => {
     const entry = (extra: object) =>
       JSON.stringify({
-        symbols_format: 1,
-        assets: { a: { currency: "EUR", confirmed_at: AT, ...extra } },
-        // Format 1: still read, and refused the same way.
+        symbols_format: 2,
+        assets: { a: { currencies: { eodhd: "EUR" }, eodhd: "X", confirmed_at: AT, ...extra } },
       });
     const cases: [string, string][] = [
       ["no", "json"],
       ['{"symbols_format":"2","assets":{}}', "symbols_format"],
-      ['{"symbols_format":1,"assets":[]}', "symbols_format"],
-      ['{"symbols_format":1,"assets":{"a":1}}', "a"],
+      ['{"symbols_format":2,"assets":[]}', "symbols_format"],
+      // Format 1, with one `currency` per asset, is no longer read.
+      ['{"symbols_format":1,"assets":{}}', "symbols_format"],
+      ['{"symbols_format":2,"assets":{"a":1}}', "a"],
       [entry({ coingecko: "bitcoin" }), "a.coingecko"],
-      [entry({ currency: "eur" }), "a.currency"],
+      [entry({ currencies: { eodhd: "eur" } }), "a.currencies.eodhd"],
+      [entry({ currency: "EUR" }), "a.currency"],
       [entry({ confirmed_at: 1 }), "a.confirmed_at"],
       [entry({ eodhd: " " }), "a.eodhd"],
       [entry({ alpha_vantage: 3 }), "a.alpha_vantage"],

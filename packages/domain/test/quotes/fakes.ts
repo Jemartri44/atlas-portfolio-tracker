@@ -107,23 +107,29 @@ export const closes = (...pairs: [CivilDate, string][]): SourceResult<DailyClose
   value: pairs.map(([date, close]) => ({ date, close })),
 });
 
+/**
+ * A `prices/symbols.json`. An entry may say `currency` as a shorthand for the
+ * same currency on every source it names, or `currencies` per source.
+ */
 export const symbolsFile = (assets: Record<string, Record<string, unknown>>): string =>
   JSON.stringify({
-    symbols_format: 1,
+    symbols_format: 2,
     assets: Object.fromEntries(
-      Object.entries(assets).map(([id, entry]) => [
-        id,
-        {
-          confirmed_at: "2027-01-01T00:00:00.000Z",
-          // Contrasted with every source it names, unless the test says otherwise.
-          currency_check: Object.fromEntries(
-            ["eodhd", "alpha_vantage"]
-              .filter((source) => entry[source] !== undefined)
-              .map((source) => [source, { at: "2027-01-01T00:00:00.000Z" }]),
-          ),
-          ...entry,
-        },
-      ]),
+      Object.entries(assets).map(([id, { currency, ...entry }]) => {
+        const named = ["eodhd", "alpha_vantage"].filter((source) => entry[source] !== undefined);
+        return [
+          id,
+          {
+            confirmed_at: "2027-01-01T00:00:00.000Z",
+            currencies: Object.fromEntries(named.map((source) => [source, currency])),
+            // Contrasted with every source it names, unless the test says otherwise.
+            currency_check: Object.fromEntries(
+              named.map((source) => [source, { at: "2027-01-01T00:00:00.000Z" }]),
+            ),
+            ...entry,
+          },
+        ];
+      }),
     ),
   });
 
