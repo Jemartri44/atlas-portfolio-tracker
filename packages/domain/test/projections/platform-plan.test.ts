@@ -57,6 +57,18 @@ describe("platformPlan", () => {
     expect(fund?.costliest_asset_id).toBeUndefined();
   });
 
+  it("does not ask to refill a cash the ledger shows below zero, only what is bought", () => {
+    const b = new LedgerBuilder();
+    b.account("acc_fund");
+    b.asset("ast_world");
+    // Bought with no deposit recorded: the ledger says -1000, which is a missing deposit.
+    b.buy({ account_id: "acc_fund", asset_id: "ast_world", quantity: "10", unit_price: "100" });
+    const row = run(b, [order("ast_world", "300")]).rows[0];
+    expect(row?.cash_eur?.amount.toString()).toBe("-1000");
+    expect(row?.cash_negative).toBe(true);
+    expect(row?.deposit_eur.amount.toString()).toBe("300");
+  });
+
   it("never asks to deposit a negative amount when the cash covers the purchases", () => {
     const result = run(held(), [order("ast_world", "10")]);
     expect(result.rows[0]?.deposit_eur.amount.toString()).toBe("0");

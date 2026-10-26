@@ -55,7 +55,13 @@ export interface PlatformRow {
   cash_eur?: Money;
   /** The account is kept in another currency: the exchange is not calculated. */
   foreign_currency: boolean;
-  /** `max(0, purchases + known fees − cash)`. */
+  /**
+   * The ledger shows less than nothing in the account: deposits were not
+   * recorded (ADR-0004). It is not asked to be refilled; only what is bought
+   * is asked for.
+   */
+  cash_negative: boolean;
+  /** `max(0, purchases + known fees − max(0, cash))`. */
   deposit_eur: Money;
   /** The line with the highest fee over its amount, when any fee is above zero. */
   costliest_asset_id?: AssetId;
@@ -171,7 +177,9 @@ const rowOf = (state: LedgerState, accountId: AccountId, lines: PlatformLine[]):
     Money.zero(EUR),
   );
   const cash = foreign ? undefined : (state.cash.get(cashKey(accountId, EUR)) ?? Money.zero(EUR));
-  const need = buy.add(fees).sub(cash ?? Money.zero(EUR));
+  const negative = cash?.isNegative() === true;
+  const usable = cash === undefined || negative ? Money.zero(EUR) : cash;
+  const need = buy.add(fees).sub(usable);
   const costliest = lines
     .filter((line) => line.fee_pct?.isPositive())
     .sort((a, b) => (b.fee_pct as Decimal).cmp(a.fee_pct as Decimal))[0];
@@ -184,6 +192,7 @@ const rowOf = (state: LedgerState, accountId: AccountId, lines: PlatformLine[]):
     unknown_fee_assets: lines.filter((line) => line.fee === undefined).map((line) => line.asset_id),
     ...(cash === undefined ? {} : { cash_eur: cash }),
     foreign_currency: foreign,
+    cash_negative: negative,
     deposit_eur: need.isNegative() ? Money.zero(EUR) : need,
     ...(costliest === undefined ? {} : { costliest_asset_id: costliest.asset_id }),
   };
