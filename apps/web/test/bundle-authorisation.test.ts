@@ -57,5 +57,9 @@ describe("the ceilings of the bundle and what the direction authorised", () => {
       /if \(BOOT_BUDGET_GZIP_BYTES > BOOT_AUTHORISED_GZIP_BYTES\) \{\s*problems\.push\(/,
     );
     expect(script).toMatch(/if \(ceilings > TOTAL_AUTHORISED_GZIP_BYTES\) \{\s*problems\.push\(/);
+    // The sum starts from the boot ceiling and adds every area: a seed of 0 would loosen the wall.
+    expect(script).toMatch(
+      /const ceilings = LAZY_AREAS\.reduce\(\(sum, area\) => sum \+ area\.budget, BOOT_BUDGET_GZIP_BYTES\);/,
+    );
   });
 });
