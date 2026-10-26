@@ -192,8 +192,8 @@ Funcionalidad común a las cuatro clases de activo:
 - **Calculadora de aportación mensual**: dado el importe del mes (menos el presupuesto del cubo), reparte hacia los activos más rezagados.
 - **Aviso de desviación** si algún activo supera el umbral (regla 3).
 - Histórico de aportaciones y evolución del valor, total y por clase.
-- TER medio ponderado del núcleo y coste anual estimado en euros.
-- Coste acumulado en comisiones por activo, en euros y como porcentaje de lo invertido.
+- TER medio ponderado del núcleo y coste anual estimado en euros. El promedio cuenta solo los activos con TER declarado y dice cuánto valor de la cartera valorada queda fuera, en vez de contarlo como TER 0.
+- Coste acumulado en comisiones por activo, en euros y como porcentaje de lo invertido; la comisión de una permuta (`swap`) se imputa al activo recibido.
 
 #### 6.1.1 Renta variable y renta fija (fondos)
 

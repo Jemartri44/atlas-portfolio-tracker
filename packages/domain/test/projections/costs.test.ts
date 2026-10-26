@@ -297,9 +297,30 @@ describe("costSummary", () => {
     const priced = summary(b.build());
     expect(priced.core.totals.partial).toBe(false);
     expect(priced.core.totals.value_eur.amount.toString()).toBe("1060");
-    // ast_world has no declared TER in the test catalogue, so only ast_low weighs in.
-    expect(priced.core.totals.weighted_ter?.round(6).toString()).toBe("0.004717");
+    // ast_world has no declared TER in the test catalogue, so only ast_low
+    // weighs in: the average is the TER of what has one, and the aggregate says
+    // how much of the priced core has no figure instead of counting it as 0%.
+    expect(priced.core.totals.weighted_ter?.toString()).toBe("0.05");
     expect(priced.core.totals.annual_cost_eur?.amount.toString()).toBe("0.05");
+    expect(priced.core.totals.ter_missing_eur.amount.toString()).toBe("960");
+    expect(priced.core.totals.ter_partial).toBe(true);
+  });
+
+  it("has no weighted TER when no priced asset declares one, and is not partial when all do", () => {
+    const none = summary(traded().build());
+    expect(none.core.totals.weighted_ter).toBeUndefined();
+    expect(none.core.totals.annual_cost_eur).toBeUndefined();
+    expect(none.core.totals.ter_missing_eur.amount.toString()).toBe("960");
+    expect(none.core.totals.ter_partial).toBe(true);
+
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.asset("ast_low", { asset_class: "fixed_income", ter: "0.05" });
+    b.buy({ account_id: "acc_fund", asset_id: "ast_low", quantity: "10", unit_price: "10" });
+    b.valuation({ account_id: "acc_fund", asset_id: "ast_low", date: DATE, unit_value: "10" });
+    const all = summary(b.build());
+    expect(all.core.totals.ter_missing_eur.isZero()).toBe(true);
+    expect(all.core.totals.ter_partial).toBe(false);
   });
 
   it("charges the commission of a swap to the asset received, in the core, and to the account, in the bucket", () => {
