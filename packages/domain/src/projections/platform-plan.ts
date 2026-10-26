@@ -10,10 +10,11 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
+import type { Quantity } from "../money/quantity.js";
 import type { AccountId, AssetId, BuyEvent, LedgerEvent, SellEvent } from "../schema/events.js";
 import { feeEurOf } from "./costs.js";
 import { businessDateOf, liveOperations } from "./project-ledger.js";
-import { cashKey, type LedgerState } from "./state.js";
+import { type Account, cashKey, type LedgerState } from "./state.js";
 
 const HUNDRED = Decimal.parse("100");
 
@@ -80,28 +81,30 @@ const openAccounts = (state: LedgerState): AccountId[] =>
     .map((account) => account.account_id)
     .sort();
 
+/** The active core accounts that hold the asset, largest position first and, on a tie, by id. */
+export const holdersOf = (
+  state: LedgerState,
+  assetId: AssetId,
+): { account_id: AccountId; quantity: Quantity }[] => {
+  const open = new Set(openAccounts(state));
+  const holders: { account_id: AccountId; quantity: Quantity }[] = [];
+  for (const [key, quantity] of state.positions) {
+    const [account, asset] = key.split("|") as [AccountId, AssetId];
+    if (asset === assetId && open.has(account) && quantity.isPositive()) {
+      holders.push({ account_id: account, quantity });
+    }
+  }
+  return holders.sort(
+    (a, b) => b.quantity.cmp(a.quantity) || a.account_id.localeCompare(b.account_id),
+  );
+};
+
 /**
  * The account that holds the asset: the one with the largest position among the
  * active accounts of the core. Undefined when none holds it.
  */
-export const accountHolding = (state: LedgerState, assetId: AssetId): AccountId | undefined => {
-  const open = new Set(openAccounts(state));
-  let best: { account: AccountId; quantity: Decimal } | undefined;
-  for (const [key, quantity] of state.positions) {
-    const [account, asset] = key.split("|") as [AccountId, AssetId];
-    if (asset !== assetId || !open.has(account) || !quantity.isPositive()) {
-      continue;
-    }
-    const better =
-      best === undefined ||
-      quantity.value.gt(best.quantity) ||
-      (quantity.value.eq(best.quantity) && account < best.account);
-    if (better) {
-      best = { account, quantity: quantity.value };
-    }
-  }
-  return best?.account;
-};
+export const accountHolding = (state: LedgerState, assetId: AssetId): AccountId | undefined =>
+  holdersOf(state, assetId)[0]?.account_id;
 
 /**
  * What the last equivalent trade cost: same side, same account and same asset;
@@ -148,10 +151,9 @@ const lineOf = (
     account_id: accountId,
     asset_id: order.asset_id,
   });
+  // The caller skips orders of zero euros, so the amount here is positive.
   const pct =
-    fee !== undefined && order.amount_eur.amount.isPositive()
-      ? fee.fee_eur.amount.div(order.amount_eur.amount).mul(HUNDRED)
-      : undefined;
+    fee === undefined ? undefined : fee.fee_eur.amount.div(order.amount_eur.amount).mul(HUNDRED);
   return {
     ...order,
     ...(fee === undefined ? {} : { fee }),
@@ -160,8 +162,9 @@ const lineOf = (
 };
 
 const rowOf = (state: LedgerState, accountId: AccountId, lines: PlatformLine[]): PlatformRow => {
-  const account = state.accounts.get(accountId);
-  const foreign = account?.base_currency !== EUR;
+  // An account reaches here because it holds a position or was picked among the catalogue's.
+  const account = state.accounts.get(accountId) as Account;
+  const foreign = account.base_currency !== EUR;
   const buy = lines.reduce((sum, line) => sum.add(line.amount_eur), Money.zero(EUR));
   const fees = lines.reduce(
     (sum, line) => sum.add(line.fee?.fee_eur ?? Money.zero(EUR)),
@@ -169,18 +172,12 @@ const rowOf = (state: LedgerState, accountId: AccountId, lines: PlatformLine[]):
   );
   const cash = foreign ? undefined : (state.cash.get(cashKey(accountId, EUR)) ?? Money.zero(EUR));
   const need = buy.add(fees).sub(cash ?? Money.zero(EUR));
-  let costliest: PlatformLine | undefined;
-  for (const line of lines) {
-    if (
-      line.fee_pct?.isPositive() &&
-      (costliest?.fee_pct === undefined || line.fee_pct.gt(costliest.fee_pct))
-    ) {
-      costliest = line;
-    }
-  }
+  const costliest = lines
+    .filter((line) => line.fee_pct?.isPositive())
+    .sort((a, b) => (b.fee_pct as Decimal).cmp(a.fee_pct as Decimal))[0];
   return {
     account_id: accountId,
-    platform: account?.platform ?? "",
+    platform: account.platform,
     lines,
     buy_eur: buy,
     fees_eur: fees,
@@ -225,7 +222,7 @@ export const platformPlan = (
   }
   return {
     rows: [...byAccount.entries()]
-      .sort(([a], [b]) => (a < b ? -1 : 1))
+      .sort(([a], [b]) => a.localeCompare(b))
       .map(([account, lines]) => rowOf(state, account, lines)),
     unassigned,
   };

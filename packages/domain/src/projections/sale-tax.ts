@@ -96,8 +96,9 @@ const sellOf = (date: CivilDate, sale: HypotheticalSale, sequence: number): Sell
     fee: sale.fee,
     source: "manual",
   };
-  const fingerprint = fingerprintOf(draft as unknown as SellEvent);
-  return (fingerprint === undefined ? draft : { ...draft, fingerprint }) as unknown as SellEvent;
+  // A sell is always fingerprinted.
+  const fingerprint = fingerprintOf(draft as unknown as SellEvent) as string;
+  return { ...draft, fingerprint } as unknown as SellEvent;
 };
 
 const lineOf = (events: readonly LedgerEvent[], year: number, date: CivilDate, id: string) => {

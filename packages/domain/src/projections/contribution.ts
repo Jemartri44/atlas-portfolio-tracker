@@ -103,7 +103,10 @@ export interface Slice {
 }
 
 /** New money that would bring every asset with a target to it by purchases alone. */
-const purchasesOnlyOf = (slices: readonly Slice[], total: Money): Money => {
+export const purchasesOnlyOf = (
+  slices: readonly { target_pct: Decimal; value_eur: Money }[],
+  total: Money,
+): Money => {
   let needed = total;
   for (const slice of slices) {
     if (slice.target_pct.isPositive()) {

@@ -93,6 +93,18 @@ describe("platformPlan", () => {
     }
   });
 
+  it("leaves a commission unknown when the account never traded that type of asset", () => {
+    const b = held();
+    b.asset("ast_mm", { asset_class: "fixed_income" });
+    // IBKR only bought a gold ETC, so there is no fund purchase to read a fee from.
+    const result = run(b, [order("ast_mm", "50")], new Map([["ast_mm", "acc_etf"]]));
+    const row = result.rows[0];
+    expect(row?.lines[0]?.fee).toBeUndefined();
+    expect(row?.lines[0]?.fee_pct).toBeUndefined();
+    expect(row?.unknown_fee_assets).toEqual(["ast_mm"]);
+    expect(row?.fees_eur.amount.toString()).toBe("0");
+  });
+
   it("does not convert the cash of an account kept in another currency", () => {
     const b = new LedgerBuilder();
     b.account("acc_usd", { base_currency: "USD", platform: "ibkr" });
