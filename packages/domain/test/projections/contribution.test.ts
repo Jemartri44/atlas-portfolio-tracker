@@ -139,8 +139,19 @@ describe("contributionPlan", () => {
       (result.rows.find((row) => row.asset_id === id) as ContributionRow).target_eur
         .sub((result.rows.find((row) => row.asset_id === id) as ContributionRow).value_after_eur)
         .amount.toString();
+    // Purchases alone would take 3500 / 0.30 − 10000 of new money, 900 of it this month.
+    expect(result.purchases_only_eur.roundToCents().amount.toString()).toBe("1666.67");
     expect(left("ast_world")).toBe("115");
     expect(left("ast_gold")).toBe("115");
+  });
+
+  it("asks for no new money when the portfolio is balanced, and ignores an asset with a zero target", () => {
+    expect(plan(core(), "100").purchases_only_eur.amount.toString()).toBe("0");
+    const zero = plan(core(), "100", {
+      target_weights: { ast_world: "70", ast_bonds: "30", ast_gold: "0" },
+    });
+    // The gold above a zero target cannot be fixed by buying: it does not count.
+    expect(zero.purchases_only_eur.amount.toString()).toBe("0");
   });
 
   it("follows the target weights exactly when the portfolio is already balanced", () => {

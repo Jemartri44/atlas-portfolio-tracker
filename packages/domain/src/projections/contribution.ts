@@ -47,6 +47,13 @@ export interface ContributionPlan {
   rows: ContributionRow[];
   /** True when the contribution covered every shortfall and the surplus went by target weight. */
   surplus_distributed: boolean;
+  /**
+   * New money the core would need for purchases alone to bring every asset to
+   * its target, today's prices unchanged: `max(value / target) − V`, over the
+   * assets with a target. Zero when nothing is above its target. Arithmetic of
+   * today, not a forecast.
+   */
+  purchases_only_eur: Money;
   warnings: Warning[];
 }
 
@@ -94,6 +101,18 @@ interface Slice {
   gap_eur: Money;
   allocation_eur: Money;
 }
+
+/** New money that would bring every asset with a target to it by purchases alone. */
+const purchasesOnlyOf = (slices: readonly Slice[], total: Money): Money => {
+  let needed = total;
+  for (const slice of slices) {
+    if (slice.target_pct.isPositive()) {
+      const whole = slice.value_eur.mul(HUNDRED).div(slice.target_pct);
+      needed = whole.cmp(needed) > 0 ? whole : needed;
+    }
+  }
+  return needed.sub(total);
+};
 
 /**
  * Spreads `money` over the shortfalls by water level: the largest shortfall is
@@ -287,6 +306,7 @@ export const contributionPlan = (
     core_value_eur: total,
     rows,
     surplus_distributed: surplus,
+    purchases_only_eur: purchasesOnlyOf(slices, total),
     // The calculator says when a weight it uses rests on an approximation
     // through the reference ETF: the domain says it, the interfaces only
     // translate it (ADR-0024).

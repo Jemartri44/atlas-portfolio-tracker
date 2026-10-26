@@ -106,7 +106,7 @@ export interface CostSummary {
   standalone: StandaloneFees;
 }
 
-const feeEurOf = (event: {
+export const feeEurOf = (event: {
   fee: string;
   currency: string;
   fx_rate: string;
