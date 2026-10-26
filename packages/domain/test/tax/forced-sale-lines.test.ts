@@ -38,6 +38,11 @@ describe("two forced sales of the same asset in the same account", () => {
     ]);
   });
 
+  it("each withholding names the asset it was withheld on", () => {
+    const report = lines();
+    expect(report.withholdings.lines.map((line) => line.asset_id)).toEqual(["stock_s", "stock_s"]);
+  });
+
   it("the figure that counts comes from the gains and is the same either way", () => {
     const report = lines();
     const [first, second] = report.capital_gains.lines;

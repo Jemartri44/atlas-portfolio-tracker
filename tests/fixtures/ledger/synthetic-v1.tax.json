@@ -210,6 +210,7 @@
             "fx_rate_date": "2026-11-11"
           },
           "amount_eur_rounded": "0.33",
+          "asset_id": "ast_alpha",
           "criteria": [
             "6"
           ],
@@ -1361,6 +1362,7 @@
             "fx_rate_date": "2027-04-15"
           },
           "amount_eur_rounded": "0.35",
+          "asset_id": "ast_alpha",
           "criteria": [
             "6"
           ],
@@ -1805,6 +1807,7 @@
             "fx_rate_date": "2028-05-08"
           },
           "amount_eur_rounded": "1.5",
+          "asset_id": "ast_mm",
           "criteria": [
             "6",
             "12"
