@@ -81,6 +81,21 @@ describe("atlas m720", () => {
   });
 });
 
+describe("a year that has not begun", () => {
+  it.each(["m720", "m721"])(
+    "%s refuses it with a sentence, and takes the current one",
+    async (model) => {
+      const h = harness({ events: abroad().build(), instant: "2028-03-01T10:00:00.000Z" });
+      expect(await h.exec([model, "2029"])).toBe(64);
+      expect(h.text()).toContain(
+        `el año 2029 aún no ha empezado: el modelo ${model[1]}${model.slice(2)}`,
+      );
+      h.reset();
+      expect(await h.exec([model, "2028"])).toBe(0);
+    },
+  );
+});
+
 describe("atlas m721", () => {
   it("counts nothing when the crypto is held through an ETP", async () => {
     const h = await run(["m721", "2027"]);
