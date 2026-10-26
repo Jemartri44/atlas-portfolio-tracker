@@ -61,6 +61,8 @@ const item = (
   certainty: FISCAL_CRITERIA[criterion].certainty,
   documented_risk: FISCAL_CRITERIA[criterion].risk,
   ...fields,
+  // An event that made several lines (a restructuring with two sales) is one event.
+  event_ids: [...new Set(fields.event_ids)],
 });
 
 /** The settings of the other reading of each configurable criterion. */
