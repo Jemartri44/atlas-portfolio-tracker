@@ -147,6 +147,8 @@ Sufijos de bolsa documentados en Alpha Vantage: `.LON`, `.DEX` (Xetra), `.TRT`, 
 - **Un `symbols.json` ilegible, o de un formato más nuevo** (`symbols_file_newer_version`), deja las vistas sin precios automáticos, con el motivo dicho, en la consola y en la web; y `update`, `status`, `symbols` y `purge` **se niegan** (§14.2).
 - **En la web**, los precios leídos de la carpeta se filtran con su `symbols.json`. Una importación a mano puede traerlo; sin él, la web avisa de que no puede comprobar la divisa y usa los cierres tal como están (§14.3).
 
+> Nota del 2026-10-26: el formato 1 se retiró: ninguna carpeta lo usaba. Solo se lee el formato 2; cualquier otro `symbols_format` ≤ 2 es `invalid_symbols_file`. Lo dicho arriba sobre su lectura (confirmaciones no heredadas, `misstored` fabricado al leer) es historia; `misstored` sigue siendo un campo del formato 2.
+
 ### 5. Cupo, fallos y parada (D-Q1, D-Q3, D-Q4)
 
 - **El cupo se cuenta por día GMT en EODHD y en una ventana móvil de 24 horas en Alpha Vantage**, que nunca se pasa sea cual sea su hora de reinicio (`BUDGET_WINDOW`, `packages/domain/src/quotes/status.ts`). Cada llamada se reserva **una a una bajo el cerrojo** en `prices/_status.json` (`calls_at`), antes de llamar y fuera del cerrojo la llamada. Alpha Vantage deja además **un segundo** entre llamadas.
