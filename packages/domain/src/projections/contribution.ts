@@ -92,7 +92,7 @@ const amountOf = (input: ContributionInput): { amount: Money; origin: "flag" | "
  * handful of arrays aligned by index: this is the calculation of priority 4 of
  * the constitution, and two arrays that drift apart would still typecheck.
  */
-interface Slice {
+export interface Slice {
   asset_id: AssetId;
   asset_class: AssetClass;
   target_pct: Decimal;
@@ -193,6 +193,67 @@ export const assertSplit = (
   }
 };
 
+export interface SplitInput {
+  asset_id: AssetId;
+  asset_class: AssetClass;
+  target_pct: Decimal;
+  value_eur: Money;
+}
+
+/**
+ * Spreads `core` euros of new money over the assets by water level, with the
+ * targets computed on the value after it (`total + core`). Rounded to cents, the
+ * residue settled so the allocations add up to `core` exactly. Shared by the
+ * monthly contribution and by the first step of a rebalance, so the two can
+ * never disagree about who is furthest from its weight.
+ */
+export const splitCore = (
+  items: readonly SplitInput[],
+  total: Money,
+  core: Money,
+): { slices: Slice[]; surplus: boolean } => {
+  const after = total.add(core);
+  const rowWeight = items.reduce((sum, item) => sum.add(item.target_pct), Decimal.ZERO);
+  const slices: Slice[] = items.map((item) => {
+    const target = after.mul(item.target_pct).div(HUNDRED);
+    const gap = target.sub(item.value_eur);
+    return {
+      ...item,
+      target_eur: target,
+      gap_eur: gap.isNegative() ? Money.zero(EUR) : gap,
+      allocation_eur: Money.zero(EUR),
+    };
+  });
+  const totalGap = slices.reduce((sum, slice) => sum.add(slice.gap_eur), Money.zero(EUR));
+
+  /*
+   * Because the targets are computed on the value after the contribution, the
+   * shortfalls add up to the core amount plus whatever is above target, so the
+   * water-level branch is the normal case. The surplus branch is reached when
+   * part of the plan points at assets that are not in the table (an unknown
+   * target weight, a warning of `coreWeights`): then the weights of the rows do
+   * not add up to 100 and the leftover is spread among them in proportion to
+   * the weight they do have, which the callers check is never zero.
+   */
+  const surplus = totalGap.cmp(core) < 0;
+  const leftover = core.sub(totalGap);
+  const levelled = surplus
+    ? []
+    : fillByLevel(
+        slices.map((slice) => slice.gap_eur),
+        core,
+      );
+  slices.forEach((slice, index) => {
+    const raw = surplus
+      ? slice.gap_eur.add(leftover.mul(slice.target_pct).div(rowWeight))
+      : (levelled[index] as Money);
+    slice.allocation_eur = raw.roundToCents();
+  });
+  const assigned = slices.reduce((sum, slice) => sum.add(slice.allocation_eur), Money.zero(EUR));
+  settleResidue(residueOrder(slices), core.sub(assigned));
+  return { slices, surplus };
+};
+
 export const contributionPlan = (
   state: LedgerState,
   input: ContributionInput,
@@ -241,49 +302,17 @@ export const contributionPlan = (
   const core = amount.sub(bucket);
   const total = weights.total_eur;
   const after = total.add(core);
-
   // Every row has a value: the ones held without a price were rejected above.
-  const slices: Slice[] = weights.rows.map((row) => {
-    const value = row.value_eur as Money;
-    const target = after.mul(row.target_pct).div(HUNDRED);
-    const gap = target.sub(value);
-    return {
+  const { slices, surplus } = splitCore(
+    weights.rows.map((row) => ({
       asset_id: row.asset_id,
       asset_class: row.asset_class,
       target_pct: row.target_pct,
-      value_eur: value,
-      target_eur: target,
-      gap_eur: gap.isNegative() ? Money.zero(EUR) : gap,
-      allocation_eur: Money.zero(EUR),
-    };
-  });
-  const totalGap = slices.reduce((sum, slice) => sum.add(slice.gap_eur), Money.zero(EUR));
-
-  /*
-   * Because the targets are computed on the value after the contribution, the
-   * shortfalls add up to the core amount plus whatever is above target, so the
-   * water-level branch is the normal case. The surplus branch is reached when
-   * part of the plan points at assets that are not in the table (an unknown
-   * target weight, a warning of `coreWeights`): then the weights of the rows do
-   * not add up to 100 and the leftover is spread among them in proportion to
-   * the weight they do have, which is never zero (checked above).
-   */
-  const surplus = totalGap.cmp(core) < 0;
-  const leftover = core.sub(totalGap);
-  const levelled = surplus
-    ? []
-    : fillByLevel(
-        slices.map((slice) => slice.gap_eur),
-        core,
-      );
-  slices.forEach((slice, index) => {
-    const raw = surplus
-      ? slice.gap_eur.add(leftover.mul(slice.target_pct).div(rowWeight))
-      : (levelled[index] as Money);
-    slice.allocation_eur = raw.roundToCents();
-  });
-  const assigned = slices.reduce((sum, slice) => sum.add(slice.allocation_eur), Money.zero(EUR));
-  settleResidue(residueOrder(slices), core.sub(assigned));
+      value_eur: row.value_eur as Money,
+    })),
+    total,
+    core,
+  );
 
   const rows = slices.map((slice) => {
     const valueAfter = slice.value_eur.add(slice.allocation_eur);
