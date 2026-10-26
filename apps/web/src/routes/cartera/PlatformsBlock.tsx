@@ -7,7 +7,11 @@
 
 import { For, type JSX, Show } from "solid-js";
 import { Amount, Figure, Notice } from "../../components/index.js";
-import type { PlatformRowView, PlatformsView } from "../../view-models/core/index.js";
+import type {
+  ContributionView,
+  PlatformRowView,
+  PlatformsView,
+} from "../../view-models/core/index.js";
 
 const Row = (props: { row: PlatformRowView }): JSX.Element => (
   <div class="platform" data-testid="platform">
@@ -105,5 +109,30 @@ export const PlatformsBlock = (props: { view: PlatformsView }): JSX.Element => (
         </Notice>
       )}
     </For>
+  </>
+);
+
+/** What the monthly contribution adds: how much purchases alone would take, and the plan per platform. */
+export const PlatformSection = (props: { view: ContributionView }): JSX.Element => (
+  <>
+    <Show when={props.view.purchasesOnly}>
+      {(only) => (
+        <p class="card-note" data-testid="purchases-only">
+          Con este importe quedan activos por debajo de su peso. Solo con aportaciones, llevar todos
+          a su objetivo exigiría <Amount value={only().total} /> en total (
+          <Amount value={only().missing} /> más que este mes), sin que cambien los precios. Es la
+          aritmética de hoy, no una previsión.
+        </p>
+      )}
+    </Show>
+    <Show when={props.view.platforms}>
+      {(platforms) => (
+        <>
+          <h3 class="block-title">Por plataforma</h3>
+          <p class="card-note">Las comisiones van aparte del importe del mes.</p>
+          <PlatformsBlock view={platforms()} />
+        </>
+      )}
+    </Show>
   </>
 );

@@ -33,7 +33,7 @@ import type { AppError } from "../../ledger/state.js";
 import { privacy } from "../../shell/preferences.js";
 import type { ContributionRowView, ContributionView } from "../../view-models/core/index.js";
 import { COLUMNS } from "./contribution-columns.jsx";
-import { PlatformsBlock } from "./PlatformsBlock.jsx";
+import { PlatformSection } from "./PlatformsBlock.jsx";
 
 /**
  * What fixes each refusal, and where. The button used to be written by hand as
@@ -155,25 +155,7 @@ const Split = (props: { view: ContributionView }): JSX.Element => {
       <Show when={idle().length > 0}>
         <p class="card-note">{idle().join(", ")}: nada este mes.</p>
       </Show>
-      <Show when={props.view.purchasesOnly}>
-        {(only) => (
-          <p class="card-note" data-testid="purchases-only">
-            Con este importe quedan activos por debajo de su peso. Solo con aportaciones, llevar
-            todos a su objetivo exigiría <Amount value={only().total} /> en total (
-            <Amount value={only().missing} /> más que este mes), sin que cambien los precios. Es la
-            aritmética de hoy, no una previsión.
-          </p>
-        )}
-      </Show>
-      <Show when={props.view.platforms}>
-        {(platforms) => (
-          <>
-            <h3 class="block-title">Por plataforma</h3>
-            <p class="card-note">Las comisiones van aparte del importe del mes.</p>
-            <PlatformsBlock view={platforms()} />
-          </>
-        )}
-      </Show>
+      <PlatformSection view={props.view} />
       <Show when={props.view.surplusDistributed}>
         <p class="card-note">
           La aportación cubre el déficit de todos los activos: el sobrante se reparte por pesos
