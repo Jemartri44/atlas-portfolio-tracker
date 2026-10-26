@@ -12,12 +12,21 @@ import type { AssetType } from "../schema/events.js";
 import {
   DEFAULT_WASH_SALE_TRANSFER_COUNTS,
   DEFAULT_WASH_SALE_WINDOW,
+  incomeCategoryOf,
   type Settings,
   type WashSaleWindow,
 } from "./settings.js";
 
-/** The window in force for an asset type: the settings, the legacy form, or the default (ADR-0018). */
+/**
+ * The window in force for an asset type: the settings, the legacy form, or the
+ * default (ADR-0018). Movable capital income has its own rule, article 25.2.b)
+ * LIRPF: two months before or after, for any financial asset, whatever the
+ * market and with no one-year variant, so a configured window does not apply.
+ */
 export const washSaleWindowOf = (settings: Settings, assetType: AssetType): WashSaleWindow => {
+  if (incomeCategoryOf(settings, assetType) === "movable_capital") {
+    return "2m";
+  }
   const configured = settings.wash_sale_window[assetType];
   if (configured !== undefined) {
     return configured;

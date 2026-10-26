@@ -215,5 +215,7 @@ describe("windowCriterion", () => {
     expect(windowCriterion("fund", "1y")).toBe("2:fund_1y");
     expect(windowCriterion("money_market", "1y")).toBe("2:fund_1y");
     expect(windowCriterion("fund", "45d")).toBe("2:other");
+    // Article 25.2.b): whatever the type and the window, it is its own rule.
+    expect(windowCriterion("etc", "2m", "movable_capital")).toBe("2:movable_capital");
   });
 });

@@ -54,6 +54,9 @@ export interface FiscalCriterion {
  *   Spain.
  * - `2:fund_1y`: one year for a fund, the other side of the same dispute and
  *   the conservative one.
+ * - `2:movable_capital`: two months for an asset that yields movable capital
+ *   income (an ETC or an ETP by default), article 25.2.b) LIRPF: its own rule,
+ *   with no market and no one-year variant — **high**; aggressive if wrong.
  * - `2:other`: any other window —a number of days— that no reading of the
  *   document supports. Two months for a fund is **not** one of these any more:
  *   since 2026-09-22 it is `2:fund_2m`, the reading the document holds.
@@ -108,6 +111,7 @@ export const FISCAL_CRITERIA = {
   "2:fund_2m": { doc: "2", certainty: "medium", risk: "aggressive" },
   "2:fund_1y": { doc: "2", certainty: "medium", risk: "conservative" },
   "2:other": { doc: "2", certainty: "low", risk: "both" },
+  "2:movable_capital": { doc: "2", certainty: "high", risk: "aggressive" },
   "2b": { doc: "2b", certainty: "medium", risk: "conservative" },
   "3": { doc: "3", certainty: "high", risk: "conservative" },
   "4": { doc: "4", certainty: "disputed", risk: "both" },
@@ -127,7 +131,7 @@ export const FISCAL_CRITERIA = {
   "18": { doc: "18", certainty: "high", risk: "aggressive" },
   "19": { doc: "19", certainty: "high", risk: "aggressive" },
   "20": { doc: "20", certainty: "medium", risk: "aggressive" },
-  "21": { doc: "21", certainty: "low", risk: "conservative" },
+  "21": { doc: "21", certainty: "medium", risk: "both" },
   "22": { doc: "22", certainty: "medium", risk: "neutral" },
   "23": { doc: "23", certainty: "high", risk: "aggressive" },
   "24:etc": { doc: "24", certainty: "medium", risk: "both" },
@@ -153,6 +157,7 @@ export const CRITERION_IDS: readonly CriterionId[] = [
   "2:fund_2m",
   "2:fund_1y",
   "2:other",
+  "2:movable_capital",
   "2b",
   "3",
   "4",
