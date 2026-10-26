@@ -20,14 +20,24 @@ const BRACKETS = [
 ];
 const TARGETS = { ast_world: "55", ast_bonds: "30", ast_gold: "15" };
 
-const settings = (extra: Partial<Settings> = {}): Settings =>
-  mergeSettings(DEFAULT_SETTINGS, {
-    bucket_pct_of_contribution: "0",
-    target_weights: TARGETS,
-    deviation_threshold_pp: "5",
-    savings_tax_brackets: BRACKETS,
+/** The settings of the cases; a key given as `undefined` is taken out, as if it had never been set. */
+const settings = (extra: { [K in keyof Settings]?: Settings[K] | undefined } = {}): Settings => {
+  const merged: Record<string, unknown> = {
+    ...mergeSettings(DEFAULT_SETTINGS, {
+      bucket_pct_of_contribution: "0",
+      target_weights: TARGETS,
+      deviation_threshold_pp: "5",
+      savings_tax_brackets: BRACKETS,
+    }),
     ...extra,
-  });
+  };
+  for (const [key, value] of Object.entries(extra)) {
+    if (value === undefined) {
+      delete merged[key];
+    }
+  }
+  return merged as unknown as Settings;
+};
 
 /**
  * A core of 10,000 euros: the equity fund A (45 units in three lots, 150 each,
@@ -108,7 +118,11 @@ const core = (a = "6600", b = "2900", g = "500", pastSale = true): LedgerBuilder
   return x;
 };
 
-const run = (b: LedgerBuilder, extra: Partial<Settings> = {}, amount?: string): RebalancePlan => {
+const run = (
+  b: LedgerBuilder,
+  extra: { [K in keyof Settings]?: Settings[K] | undefined } = {},
+  amount?: string,
+): RebalancePlan => {
   const events = b.build();
   return rebalancePlan(projectLedger(events), events, {
     date: DATE,
@@ -361,7 +375,9 @@ describe("rebalancePlan cases", () => {
     ]);
     ledger.asset("f3");
     const plan = run(ledger, { target_weights: { ...targets, f3: "20" } });
-    const transfer = plan.steps.find((step) => step.to_asset_id === "f3") as TransferStep;
+    const transfer = plan.steps.find(
+      (step) => step.kind === "transfer" && step.to_asset_id === "f3",
+    ) as TransferStep;
     expect(transfer.from_account_id).toBe("acc_fund");
     expect(transfer.to_account_id).toBeUndefined();
   });

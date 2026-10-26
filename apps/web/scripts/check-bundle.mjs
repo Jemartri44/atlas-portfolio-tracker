@@ -295,6 +295,15 @@ const LAZY_ONLY = [
   { path: "/packages/domain/src/projections/bucket-stats.ts", what: "las estadísticas del cubo" },
   { path: "/packages/domain/src/projections/costs.ts", what: "los costes de la cartera" },
   { path: "/packages/domain/src/projections/contribution.ts", what: "el reparto de la aportación" },
+  { path: "/packages/domain/src/projections/platform-plan.ts", what: "el reparto por plataforma" },
+  // Feature 028: the rebalance reads the tax engine, so it has a door of its own and is
+  // loaded when the button is pressed.
+  { path: "/packages/domain/src/rebalance.ts", what: "la puerta del rebalanceo" },
+  { path: "/packages/domain/src/projections/rebalance.ts", what: "la propuesta de rebalanceo" },
+  {
+    path: "/packages/domain/src/projections/sale-tax.ts",
+    what: "el impuesto aproximado de una venta",
+  },
   // Feature 015: **nothing of the access on the boot path**, from its first
   // commit. The rules of the access are the API's and never the web's (the
   // architecture test keeps the web from reaching them at all); the session

@@ -213,6 +213,7 @@ export default defineConfig(({ command }) => ({
       "@atlas/domain/tools": repo("../../packages/domain/src/tools.ts"),
       "@atlas/domain/charts": repo("../../packages/domain/src/charts.ts"),
       "@atlas/domain/portfolio": repo("../../packages/domain/src/portfolio.ts"),
+      "@atlas/domain/rebalance": repo("../../packages/domain/src/rebalance.ts"),
       "@atlas/domain/quotes": repo("../../packages/domain/src/quotes.ts"),
       "@atlas/domain/sync": repo("../../packages/domain/src/sync.ts"),
       "@atlas/domain/remote-answers": repo("../../packages/domain/src/remote-answers.ts"),
