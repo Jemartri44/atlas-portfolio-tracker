@@ -21,6 +21,7 @@ export const CRITERION_LABELS: Record<CriterionId, string> = {
   "2:fund_2m": "ventana de dos meses (fondos)",
   "2:fund_1y": "ventana de un año (fondos, la lectura prudente)",
   "2:other": "ventana configurada que ninguna lectura del documento sostiene",
+  "2:movable_capital": "dos meses fijos del capital mobiliario (art. 25.2.b)",
   "2b": "un traspaso entrante es una adquisición",
   "3": "comisiones en la base (art. 35)",
   "4": "ganancia en divisa y diferencias de cambio",

@@ -386,6 +386,23 @@ describe("mandatory edge cases", () => {
     expect(text(report.doubtful.find((e) => e.criterion === "20")?.exposure_eur)).toBe("275");
   });
 
+  it("an ETC as movable capital income keeps two months even when a year is configured (art. 25.2.b)", () => {
+    const b = taxBuilder({
+      ...DEFAULT_SETTINGS,
+      wash_sale_window: { ...DEFAULT_SETTINGS.wash_sale_window, etc: "1y" },
+    });
+    b.asset("etc_g", { asset_type: "etc", transferable: false });
+    buy(b, "etc_g", "2027-01-11", "10", "100");
+    const loss = sell(b, "etc_g", "2027-06-01", "10", "90");
+    buy(b, "etc_g", "2027-09-01", "10", "90");
+    const report = reportOf(b.build(), 2027);
+    const line = lineOf(report, loss.id);
+    // Three months later: outside two months, inside the year that does not apply.
+    expect(text(line.deferred_eur)).toBe("0");
+    expect(line.criteria).toContain("2:movable_capital");
+    expect(report.doubtful.map((entry) => entry.criterion)).not.toContain("2:listed_1y");
+  });
+
   describe("#21: only a definitive transmission releases a deferred loss, whatever its result", () => {
     it("a gain bought back inside its window keeps the loss deferred, and the gain is computable whole", () => {
       const b = taxBuilder();

@@ -31,6 +31,8 @@ export const CRITERION_NAMES: Record<CriterionId, string> = {
   "2:fund_2m": "Ventana de dos meses para fondos de inversión",
   "2:fund_1y": "Ventana de un año para fondos de inversión, la lectura prudente",
   "2:other": "Ventana a medida, que ninguna lectura conocida de la norma sostiene",
+  "2:movable_capital":
+    "Dos meses fijos del capital mobiliario (art. 25.2.b LIRPF), sin variante de un año",
   "2b": "Un traspaso que entra cuenta como compra a efectos de la recompra",
   "3": "Las comisiones suman al coste y restan de lo transmitido",
   "4": "Cómo se calcula la ganancia de lo comprado en otra divisa",
