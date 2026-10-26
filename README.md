@@ -287,7 +287,7 @@ atlas thesis list --closed     # invertido, resultado, comisiones, posición viv
 atlas valuations --date 2027-12-31   # última foto de valoración por cuenta y activo (Modelo 720)
 ```
 
-Códigos de salida: `0` OK · `1` error de validación o de proyección · `2` conflicto de escritura (repite) · `3` huella repetida sin `--confirm-duplicate` · `4` falta confirmación sin terminal (añade `--yes`) · `5` libro escrito por una versión más nueva · `64` uso incorrecto.
+Códigos de salida: `0` OK · `1` error de validación o de proyección · `2` conflicto de escritura (repite) · `3` huella repetida sin `--confirm-duplicate` · `4` falta confirmación sin terminal (añade `--yes`) · `5` libro escrito por una versión más nueva · `64` uso incorrecto (una línea de error y la pista de `atlas --help`, no el uso entero).
 
 ### Datos sintéticos, compactación y copia de seguridad
 
