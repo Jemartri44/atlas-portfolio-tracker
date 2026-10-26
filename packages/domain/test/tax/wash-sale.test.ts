@@ -356,6 +356,21 @@ describe("mandatory edge cases", () => {
     expect(report.doubtful.map((entry) => entry.criterion)).not.toContain("19");
   });
 
+  it("#19: units that deferred a loss stay used after a fund transfer carries them to another lot", () => {
+    const b = taxBuilder();
+    buy(b, "fund_f", "2027-01-11", "10", "100");
+    sell(b, "fund_f", "2027-02-01", "10", "90");
+    buy(b, "fund_f", "2027-02-15", "10", "90");
+    transfer(b, "fund_f", "fund_g", "2027-04-01", "10", "10");
+    const loss = sell(b, "fund_g", "2027-05-03", "5", "80");
+    const line = lineOf(reportOf(b.build(), 2027), loss.id);
+    // Own −50 and −50 released. The 5 left are the repurchase of February,
+    // already used by the first loss: nothing defers this one.
+    expect(text(line.own_eur.add(line.released_eur))).toBe("-100");
+    expect(text(line.deferred_eur)).toBe("0");
+    expect(line.criteria).toContain("19");
+  });
+
   it("#19: a repurchase bought before two losses defers only the first, whichever buy carries it", () => {
     // Two prior purchases, and the second loss consumes what is left of the
     // first one: the purchase of February can only carry one of the two.
