@@ -50,7 +50,7 @@ export const CRITERION_NAMES: Record<CriterionId, string> = {
   "18": "Solo aplaza la pérdida la recompra que sigue en cartera",
   "19": "Cada participación recomprada aplaza una pérdida una sola vez",
   "20": "La regla de la recompra mira la venta entera, no cada lote",
-  "21": "Lo que se libera vuelve a pasar por la regla de la recompra",
+  "21": "Solo una venta definitiva, sin recompra en su ventana, libera la pérdida diferida",
   "22": "En qué orden se compensan las pérdidas de distintos años",
   "23": "Los gastos de administración y depósito restan de los rendimientos",
   "24:etc": "Un ETC tributa como rendimiento del capital mobiliario",

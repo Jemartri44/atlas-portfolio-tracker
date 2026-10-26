@@ -76,7 +76,7 @@ describe("hand-computed exercise, 2028: transmissions", () => {
       ["E12", "-150", "0", "-75", "-75"],
       ["E13", "5", "0", "0", "5"],
       ["E17", "190", "0", "0", "190"],
-      ["E19", "50", "-75", "-10", "-15"],
+      ["E19", "50", "-75", "-30", "5"],
       ["E20", "165", "-30", "0", "135"],
       ["E21", "172.5", "0", "0", "172.5"],
     ]);
@@ -128,7 +128,15 @@ describe("hand-computed exercise, 2028: transmissions", () => {
     expect(line.criteria).toEqual(["1", "3", "6", "17"]);
   });
 
-  it("E19: releases the −75.00 of E12, the total is a loss and 2/5 of it is deferred to E22 (#21)", () => {
+  /**
+   * E22 buys back 2 of its 5 units inside its window: those 2 are not a
+   * definitive transmission (#21, DGT V3282-18), so 2/5 of the −75.00 it
+   * releases, −30.00, stays deferred on E22, and its own +50.00 is computable
+   * whole: 50.00 − 45.00 = +5.00. (The hand calculation of feature 009 netted
+   * the release with the gain first, −25.00 × 2/5 = −10.00, the reading
+   * V3282-18 rules out.)
+   */
+  it("E19: releases the −75.00 of E12, not definitive for 2 of 5 units: −30.00 deferred to E22 (#21)", () => {
     const line = lineOf(report2028, "E19");
     expect(line.released.map((r) => [r.origin_event_id, text(r.amount_eur), r.travelled])).toEqual([
       [id.E12, "-75", false],
@@ -140,7 +148,7 @@ describe("hand-computed exercise, 2028: transmissions", () => {
         a.units.toString(),
         text(a.amount_eur),
       ]),
-    ).toEqual([[id.E22, "posterior", "2", "-10"]]);
+    ).toEqual([[id.E22, "posterior", "2", "-30"]]);
     expect(line.deferral?.window_end).toBe("2029-01-02");
     expect(line.criteria).toEqual(["1", "2:listed", "3", "6", "14", "21", "24:etc_gain"]);
   });
@@ -151,7 +159,10 @@ describe("hand-computed exercise, 2028: transmissions", () => {
     expect(line.released.map((r) => [r.origin_event_id, text(r.amount_eur), r.travelled])).toEqual([
       [id.E11, "-30", true],
     ]);
-    expect(line.criteria).toEqual(["1", "2:fund_1y", "3", "6", "14", "15"]);
+    // It releases, so it is tested for definitiveness: the 10 units left are
+    // the ones E15 bought back for E11 (#18 for the 150 it sold, #19 for those),
+    // so nothing defers it again.
+    expect(line.criteria).toEqual(["1", "2:fund_1y", "3", "6", "14", "15", "18", "19", "21"]);
     // The lots keep the date of the original purchases through the transfer.
     expect(line.lots.map((lot) => [lot.quantity.toString(), lot.acquisition_date])).toEqual([
       ["120", "2027-02-01"],
@@ -168,10 +179,10 @@ describe("hand-computed exercise, 2028: transmissions", () => {
     expect(line.criteria).toEqual(["1", "3", "4", "6"]);
   });
 
-  it("adds up to gains 502.50, losses −130.00, balance +372.50", () => {
-    expect(text(report2028.capital_gains.gains_eur)).toBe("502.5");
-    expect(text(report2028.capital_gains.losses_eur)).toBe("-130");
-    expect(text(report2028.capital_gains.balance_eur)).toBe("372.5");
+  it("adds up to gains 507.50, losses −115.00, balance +392.50", () => {
+    expect(text(report2028.capital_gains.gains_eur)).toBe("507.5");
+    expect(text(report2028.capital_gains.losses_eur)).toBe("-115");
+    expect(text(report2028.capital_gains.balance_eur)).toBe("392.5");
     expect(report2028.movable_capital.transmissions).toEqual([]);
   });
 });
@@ -188,7 +199,7 @@ describe("hand-computed exercise, 2028: the rest of the base", () => {
     expect(text(m.balance_eur)).toBe("64");
   });
 
-  it("offsets the −260.80 of 2027 against the gains in phase 2: base 175.70, nothing pending", () => {
+  it("offsets the −260.80 of 2027 against the gains in phase 2: base 195.70, nothing pending", () => {
     const c = report2028.compensation;
     expect(
       c.steps.map((s) => [
@@ -200,18 +211,19 @@ describe("hand-computed exercise, 2028: the rest of the base", () => {
         s.limited,
       ]),
     ).toEqual([[2, "capital_gain", 2027, "capital_gain", "260.8", false]]);
-    expect(text(c.capital_gain_final_eur)).toBe("111.7");
-    expect(text(report2028.base_eur)).toBe("175.7");
+    // 392.50 − 260.80 = 131.70; plus 64.00 of movable capital income.
+    expect(text(c.capital_gain_final_eur)).toBe("131.7");
+    expect(text(report2028.base_eur)).toBe("195.7");
     expect(c.pending).toEqual([]);
     expect(c.expired).toEqual([]);
   });
 
-  it("defers −125.00, releases −105.00 and keeps −20.00 pending at 31/12, −10.00 of it having travelled", () => {
+  it("defers −145.00, releases −105.00 and keeps −40.00 pending at 31/12, −10.00 of it having travelled", () => {
     const w = report2028.wash_sale;
     expect(w.deferred.map((d) => [d.event_id, text(d.amount_eur_rounded)])).toEqual([
       [id.E11, "-40"],
       [id.E12, "-75"],
-      [id.E19, "-10"],
+      [id.E19, "-30"],
     ]);
     expect(w.released.map((r) => [r.event_id, r.origin_event_id, text(r.amount_eur)])).toEqual([
       [id.E19, id.E12, "-75"],
@@ -223,7 +235,7 @@ describe("hand-computed exercise, 2028: the rest of the base", () => {
         .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
     ).toEqual([
       [id.E11, "-10", true],
-      [id.E19, "-10", false],
+      [id.E19, "-30", false],
     ]);
   });
 
@@ -251,7 +263,13 @@ describe("hand-computed exercise, 2028: the rest of the base", () => {
     expect(codes).toContain("tax_double_taxation_partial");
     const fx = report2028.notes.find((n) => n.code === "tax_fx_differences_not_computed");
     expect(fx?.details).toEqual({ currencies: ["USD"], fx_exchanges: [id.E8] });
-    expect(codes).not.toContain("tax_window_open");
+    // E20 releases −30.00 and its window for funds (a year here) runs to
+    // 2029-11-15: a purchase of fund_b before then would defer it again.
+    expect(
+      report2028.notes
+        .filter((n) => n.code === "tax_window_open")
+        .map((n) => [n.event_id, n.details]),
+    ).toEqual([[id.E20, { asset_id: "fund_b", loss_eur: "-30", window_end: "2029-11-15" }]]);
     expect(codes).not.toContain("tax_settings_default_used");
   });
 
@@ -299,9 +317,10 @@ describe("hand-computed exercise, 2028: the doubtful criteria", () => {
     expect(entry?.direction).toBe("aggressive");
   });
 
-  it("#21: −10.00 of base with the other reading, conservative", () => {
+  it("#21: −30.00 of base with the other reading, conservative", () => {
+    // Releasing whatever the transmission: E19 computes −25.00 instead of +5.00.
     const entry = doubtful("21");
-    expect(text(entry?.base_difference_eur)).toBe("-10");
+    expect(text(entry?.base_difference_eur)).toBe("-30");
     expect(entry?.direction).toBe("conservative");
   });
 
@@ -317,8 +336,8 @@ describe("hand-computed exercise, 2028: the doubtful criteria", () => {
    * with two months, E11 defers nothing —its only repurchase, E15 of 1 June 2028, falls outside
    * [01/01/2028, 01/05/2028]— so its computable goes from −40,00 to −80,00 and
    * E20 stops releasing the −30,00 that travelled to it, going from +135,00 to
-   * +165,00. Gains 372,50 − 40,00 + 30,00 = 362,50; base 362,50 − 260,80 +
-   * 64,00 = 165,70 against 175,70.
+   * +165,00. Balance 392,50 − 40,00 + 30,00 = 382,50; base 382,50 − 260,80 +
+   * 64,00 = 185,70 against 195,70.
    */
   it("#2 of funds: two months would give 10.00 less base and leave 10.00 less deferred", () => {
     const entry = doubtful("2:fund_1y");

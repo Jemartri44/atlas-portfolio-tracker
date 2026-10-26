@@ -40,7 +40,7 @@ export const CRITERION_LABELS: Record<CriterionId, string> = {
   "18": "solo cuenta la recompra que sigue en el patrimonio",
   "19": "cada unidad recomprada difiere una sola vez",
   "20": "la regla mira la operación, no el lote",
-  "21": "lo liberado vuelve a pasar por la regla",
+  "21": "solo una venta definitiva libera la pérdida diferida",
   "22": "orden de la compensación entre ejercicios",
   "23": "gastos de administración y depósito (art. 26.1.a)",
   "24:etc": "ETC como rendimiento del capital mobiliario (la consulta V0267-25)",

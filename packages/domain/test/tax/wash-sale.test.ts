@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import { Decimal } from "../../src/money/decimal.js";
+import { zero } from "../../src/money/eur.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { DEFAULT_SETTINGS } from "../../src/settings/settings.js";
 import { walkWashSales } from "../../src/tax/wash-sale.js";
@@ -385,18 +386,91 @@ describe("mandatory edge cases", () => {
     expect(text(report.doubtful.find((e) => e.criterion === "20")?.exposure_eur)).toBe("275");
   });
 
-  it("#21: a release that turns a gain into a loss is deferred again when there is a repurchase", () => {
-    const b = taxBuilder();
-    buy(b, "stock_s", "2027-01-11", "10", "100");
-    sell(b, "stock_s", "2027-02-01", "10", "90");
-    buy(b, "stock_s", "2027-02-10", "10", "90");
-    const gain = sell(b, "stock_s", "2027-06-01", "10", "95");
-    buy(b, "stock_s", "2027-06-15", "10", "95");
-    const line = lineOf(reportOf(b.build(), 2027), gain.id);
-    // Own +50, released −100, total −50, repurchased all: deferred −50.
-    expect(text(line.own_eur.add(line.released_eur).roundToCents())).toBe("-50");
-    expect(text(line.deferred_eur)).toBe("-50");
-    expect(line.criteria).toContain("21");
+  describe("#21: only a definitive transmission releases a deferred loss, whatever its result", () => {
+    it("a gain bought back inside its window keeps the loss deferred, and the gain is computable whole", () => {
+      const b = taxBuilder();
+      buy(b, "stock_s", "2027-02-01", "10", "100");
+      sell(b, "stock_s", "2027-05-03", "10", "70");
+      buy(b, "stock_s", "2027-06-15", "10", "75");
+      const gain = sell(b, "stock_s", "2028-03-01", "10", "120");
+      buy(b, "stock_s", "2028-03-15", "10", "120");
+      const report = reportOf(b.build(), 2028);
+      const line = lineOf(report, gain.id);
+      // Own +450, released −300: not definitive, so −300 stays deferred.
+      expect(text(line.own_eur.roundToCents())).toBe("450");
+      expect(text(line.deferred_eur)).toBe("-300");
+      expect(text(line.computable_eur)).toBe("450");
+      expect(line.criteria).toContain("21");
+      expect(text(report.wash_sale.pending.reduce((s, p) => s.add(p.amount_eur), zero()))).toBe(
+        "-300",
+      );
+    });
+
+    it("a gain that a release turns into a loss defers only the release, never the gain", () => {
+      const b = taxBuilder();
+      buy(b, "stock_s", "2027-01-11", "10", "100");
+      sell(b, "stock_s", "2027-02-01", "10", "90");
+      buy(b, "stock_s", "2027-02-10", "10", "90");
+      const gain = sell(b, "stock_s", "2027-06-01", "10", "95");
+      buy(b, "stock_s", "2027-06-15", "10", "95");
+      const line = lineOf(reportOf(b.build(), 2027), gain.id);
+      // Own +50, released −100, repurchased all: −100 deferred, +50 computable.
+      expect(text(line.deferred_eur)).toBe("-100");
+      expect(text(line.computable_eur)).toBe("50");
+    });
+
+    it("without a repurchase the same gain is definitive and releases the loss", () => {
+      const b = taxBuilder();
+      buy(b, "stock_s", "2027-02-01", "10", "100");
+      sell(b, "stock_s", "2027-05-03", "10", "70");
+      buy(b, "stock_s", "2027-06-15", "10", "75");
+      const gain = sell(b, "stock_s", "2028-03-01", "10", "120");
+      buy(b, "stock_s", "2028-05-02", "10", "120");
+      const line = lineOf(reportOf(b.build(), 2028), gain.id);
+      expect(text(line.deferred_eur)).toBe("0");
+      expect(text(line.computable_eur)).toBe("150");
+    });
+
+    /**
+     * DGT V3282-18 (28/12/2018), the facts of the ruling as given: two losses,
+     * then two gains each with a repurchase inside its window that no earlier
+     * transmission used. "No se produce ninguna transmisión definitiva de
+     * acciones a lo largo del ejercicio 2017": both losses stay deferred.
+     * Moved to 2027, a year the engine computes (the 25 % regime of 2018).
+     */
+    it("V3282-18: no transmission of the year is definitive, so −500 and −600 stay deferred", () => {
+      const b = taxBuilder();
+      buy(b, "stock_s", "2027-02-05", "4000", "10");
+      sell(b, "stock_s", "2027-02-08", "4000", "10.1");
+      buy(b, "stock_s", "2027-02-15", "4000", "10");
+      sell(b, "stock_s", "2027-02-20", "2000", "9.75");
+      buy(b, "stock_s", "2027-03-15", "2000", "10");
+      buy(b, "stock_s", "2027-03-20", "2000", "10");
+      buy(b, "stock_s", "2027-03-24", "2000", "10");
+      sell(b, "stock_s", "2027-03-26", "2000", "9.7");
+      buy(b, "stock_s", "2027-03-28", "2000", "10");
+      sell(b, "stock_s", "2027-03-31", "2000", "10.2");
+      buy(b, "stock_s", "2027-04-01", "2000", "10");
+      sell(b, "stock_s", "2027-04-05", "2000", "10.05");
+      const report = reportOf(b.build(), 2027);
+      const lines = report.capital_gains.lines;
+      expect(lines.map((line) => text(line.own_eur.roundToCents()))).toEqual([
+        "400",
+        "-500",
+        "-600",
+        "400",
+        "100",
+      ]);
+      expect(lines.map((line) => text(line.computable_eur.roundToCents()))).toEqual([
+        "400",
+        "0",
+        "0",
+        "400",
+        "100",
+      ]);
+      const pending = report.wash_sale.pending.reduce((s, p) => s.add(p.amount_eur), zero());
+      expect(text(pending.roundToCents())).toBe("-1100");
+    });
   });
 
   describe("a split between the loss and the repurchase: the same security, in other units", () => {
