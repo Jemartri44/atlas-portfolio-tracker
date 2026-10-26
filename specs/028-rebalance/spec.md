@@ -107,3 +107,11 @@ El reparto del mes es la prioridad 4 de la constitución, así que el dominio ma
 - Casos límite: dos activos con el mismo déficit, un solo activo con déficit, aportación mínima de un céntimo, objetivo cero, activo sin posición, activo en dos cuentas.
 - Rebalanceo: el disparador, el orden traspasos → ventas, el límite por lo que las compras absorben, conservación del dinero entre venta y compra, el cubo ausente, la venta con pérdida con y sin recompra en ventana, comisión desconocida, el impuesto marginal contra los tramos (también con ganancias ya realizadas ese año), y que la copia en memoria no modifica el libro.
 - Contrato: la web y la consola enseñan las mismas cifras que el dominio y no recalculan nada.
+
+## Lo que cambió al construir
+
+- **Efectivo negativo.** Si el libro muestra menos de cero en una cuenta (ingresos sin registrar, ADR-0004), «ingresar» no pide rellenar ese hueco: pide solo lo que se compra, y la pantalla lo dice.
+- **Puerta propia.** El rebalanceo vive tras `@atlas/domain/rebalance` y se carga al pulsar el botón, porque lleva el motor fiscal. El reparto por plataforma va en la puerta `@atlas/domain/portfolio`. Los techos del paquete web suben lo medido (arranque +70 B por un ayudante compartido; las áreas diferidas, por las tarjetas nuevas).
+- **Impuesto sin tramos.** Si `savings_tax_brackets` no está configurado, el impuesto sale «no calculable» (nunca cero) y el resto de la venta se enseña igual.
+- **Sin umbral, sin propuesta.** Sin `deviation_threshold_pp` el rebalanceo se niega (`missing_deviation_threshold`), con su remedio en la web y en la consola.
+- **Lo que no se hizo.** La retirada de dinero como función, elegir en la web la cuenta de un activo sin posición (hoy se dice cuáles son las candidatas), y unidades enteras en las órdenes de venta.

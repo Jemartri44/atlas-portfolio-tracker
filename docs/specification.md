@@ -189,7 +189,8 @@ Proyectos de código abierto que ya han resuelto partes de esto:
 Funcionalidad común a las cuatro clases de activo:
 
 - Posición actual por activo y por clase: valor, peso real, peso objetivo, desviación en puntos porcentuales.
-- **Calculadora de aportación mensual**: dado el importe del mes (menos el presupuesto del cubo), reparte hacia los activos más rezagados.
+- **Calculadora de aportación mensual**: dado el importe del mes (menos el presupuesto del cubo), reparte por nivel: primero al activo más lejos de su peso, hasta igualarlo con el siguiente (regla 2). Dice también cuánto ingresar en cada plataforma, qué comprar en ella y la comisión estimada, que sale del libro y va aparte del importe del mes. Consola: `atlas contribute`.
+- **Rebalanceo** («Rebalancear» en la web, `atlas rebalance`): propone, por este orden, dinero nuevo, traspasos entre fondos y ventas, con el impuesto aproximado y las comisiones delante y lo que queda si se para en cada paso. Solo si algún activo supera el umbral (reglas 3 y 4). Nunca toca el cubo y nunca escribe. Se carga bajo demanda (`@atlas/domain/rebalance`) porque lleva el motor fiscal.
 - **Aviso de desviación** si algún activo supera el umbral (regla 3).
 - Histórico de aportaciones y evolución del valor, total y por clase.
 - TER medio ponderado del núcleo y coste anual estimado en euros.
