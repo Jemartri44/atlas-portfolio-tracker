@@ -323,6 +323,20 @@ describe("costSummary", () => {
     expect(all.core.totals.ter_partial).toBe(false);
   });
 
+  it("counts a declared TER of 0 as declared: it weighs the average down and is not missing", () => {
+    const b = traded();
+    b.asset("ast_low", { asset_class: "fixed_income", ter: "0.05" });
+    b.asset("ast_free", { asset_class: "fixed_income", ter: "0" });
+    for (const asset_id of ["ast_low", "ast_free"]) {
+      b.buy({ account_id: "acc_fund", asset_id, quantity: "10", unit_price: "10" });
+      b.valuation({ account_id: "acc_fund", asset_id, date: DATE, unit_value: "10" });
+    }
+    const totals = summary(b.build()).core.totals;
+    // 100 at 0.05% and 100 at 0%: the average of the declared ones is 0.025%.
+    expect(totals.weighted_ter?.toString()).toBe("0.025");
+    expect(totals.ter_missing_eur.amount.toString()).toBe("960");
+  });
+
   it("charges the commission of a swap to the asset received, in the core, and to the account, in the bucket", () => {
     const b = traded();
     b.swap({
