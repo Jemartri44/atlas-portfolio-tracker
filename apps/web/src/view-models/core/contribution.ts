@@ -10,6 +10,7 @@ import { type ContributionPlan, Decimal, Money, type Warning } from "@atlas/doma
 import { parseDecimalInput } from "../../format/input.js";
 import { valueLabel } from "../../format/labels.js";
 import { displayName, type NameIndex, NO_NAMES, unitsOf } from "../../format/names.js";
+import type { PlatformsView } from "./platforms.js";
 import { totalLeftover, type WholeUnits, wholeUnitsFor } from "./whole-units.js";
 
 export interface ContributionRowView {
@@ -55,6 +56,13 @@ export interface ContributionView {
   wholeLeftover?: Money;
   /** The note of the domain when a weight it used rests on an approximation. */
   approximation?: Warning;
+  /** What to buy and how much to deposit on each platform; absent when nothing is to be bought. */
+  platforms?: PlatformsView;
+  /**
+   * Said only when this month's money does not take every asset to its target:
+   * the new money that purchases alone would need, and how much of it is still missing.
+   */
+  purchasesOnly?: { total: Money; missing: Money };
 }
 
 const HUNDRED = Decimal.parse("100");
@@ -101,6 +109,7 @@ export const contributionView = (
   plan: ContributionPlan,
   names: NameIndex = NO_NAMES,
   unitPrices: UnitPrices = new Map(),
+  platforms?: PlatformsView,
 ): ContributionView => {
   const rows: ContributionRowView[] = plan.rows.map((row) => ({
     assetId: row.asset_id,
@@ -129,6 +138,17 @@ export const contributionView = (
     ...shares(plan),
     surplusDistributed: plan.surplus_distributed,
     ...approximationOf(plan),
+    ...(platforms === undefined || platforms.rows.length + platforms.unassigned.length === 0
+      ? {}
+      : { platforms }),
+    ...(plan.purchases_only_eur.cmp(plan.core_amount_eur) > 0
+      ? {
+          purchasesOnly: {
+            total: plan.purchases_only_eur,
+            missing: plan.purchases_only_eur.sub(plan.core_amount_eur),
+          },
+        }
+      : {}),
     rows,
     ...(leftover === undefined ? {} : { wholeLeftover: leftover }),
   };
