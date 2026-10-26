@@ -39,15 +39,15 @@ import { describeDependants, describeDuplicate, describeError } from "./output/m
 import { describeSecretsError } from "./output/prices.js";
 import { describeCredentialsError } from "./output/remote.js";
 import { CredentialsError } from "./remote/credentials-file.js";
-import { USAGE } from "./usage.js";
+import { USAGE_HINT } from "./usage.js";
 
 /** An order that did not do what was asked: the exit code, a stable code and the lines for stderr. */
 interface Failure {
   readonly exit: number;
   readonly code: string;
   readonly lines: readonly string[];
-  /** The usage text follows on stderr; it is not part of the sentence in JSON. */
-  readonly usage?: true;
+  /** The pointer to `--help` follows on stderr; it is not part of the sentence in JSON. */
+  readonly hint?: string;
   /** The stack of an error nobody expected: for stderr, never in the object a script reads. */
   readonly trace?: string;
 }
@@ -180,7 +180,9 @@ const failureOf = async (
     return fromCloud;
   }
   if (error instanceof UsageError) {
-    return { ...failure(EXIT.usage, "usage", `Error de uso: ${error.message}`), usage: true };
+    // A message that is itself a usage line («uso: atlas …») would read «Error de uso: uso: …».
+    const what = error.message.replace(/^uso: /, "se esperaba ");
+    return { ...failure(EXIT.usage, "usage", `Error de uso: ${what}`), hint: USAGE_HINT };
   }
   if (error instanceof ConfirmationRequired) {
     return failure(EXIT.noTty, "confirmation_required", `Error: ${error.message}`);
@@ -282,8 +284,8 @@ export const reportError = async (
   for (const line of reported.lines) {
     io.err(line);
   }
-  if (reported.usage === true) {
-    io.err(USAGE);
+  if (reported.hint !== undefined) {
+    io.err(reported.hint);
   }
   if (reported.trace !== undefined) {
     io.err(reported.trace);

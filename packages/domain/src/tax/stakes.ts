@@ -61,6 +61,8 @@ const item = (
   certainty: FISCAL_CRITERIA[criterion].certainty,
   documented_risk: FISCAL_CRITERIA[criterion].risk,
   ...fields,
+  // An event that made several lines (a restructuring with two sales) is one event.
+  event_ids: [...new Set(fields.event_ids)],
 });
 
 /** The settings of the other reading of each configurable criterion. */
@@ -98,7 +100,10 @@ const alternatives = (settings: Settings): { criterion: CriterionId; settings: S
           },
         ];
   };
-  const listed = ["stock", "etf", "etc", "etp"] as const;
+  // Movable capital income has a fixed window (art. 25.2.b): no other reading to compute.
+  const listed = (["stock", "etf", "etc", "etp"] as const).filter(
+    (type) => incomeCategoryOf(settings, type) === "capital_gain",
+  );
   // #24, one reading per type: which of the four variants each one applies
   // depends on its own `income_category`, so they are not flipped together.
   const category = (type: "etc" | "etp"): { criterion: CriterionId; settings: Settings } => {

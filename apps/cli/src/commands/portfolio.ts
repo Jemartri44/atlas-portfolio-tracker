@@ -345,6 +345,12 @@ export const costsCommand = async (
     ...(totals.partial
       ? ["", "El agregado solo cubre la parte del núcleo con precio: faltan valoraciones."]
       : []),
+    ...(totals.ter_partial
+      ? [
+          "",
+          `El TER medio no cuenta ${eur(totals.ter_missing_eur)} EUR valorados sin TER declarado.`,
+        ]
+      : []),
     "",
     "Cubo (comisiones acumuladas por cuenta; la métrica de la regla 14 llega en la Fase 3):",
     table(
@@ -375,6 +381,8 @@ export const costsCommand = async (
           value_eur: totals.value_eur.amount.toString(),
           weighted_ter: totals.weighted_ter?.toString(),
           annual_cost_eur: totals.annual_cost_eur?.amount.toString(),
+          ter_missing_eur: totals.ter_missing_eur.amount.toString(),
+          ter_partial: totals.ter_partial,
           partial: totals.partial,
         },
       },

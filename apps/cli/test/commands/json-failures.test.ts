@@ -38,7 +38,7 @@ const oneObject = (out: string[]): Record<string, unknown> => {
 
 describe("a failed order with --json", () => {
   it.each([
-    { argv: ["gains", "abc"], code: 64, why: "usage", message: "uso: atlas gains" },
+    { argv: ["gains", "abc"], code: 64, why: "usage", message: "se esperaba atlas gains" },
     { argv: ["nonsense"], code: 64, why: "usage", message: "comando desconocido: nonsense" },
     { argv: ["thesis", "show", "nope"], code: 1, why: "unknown_thesis", message: "nope" },
     { argv: ["add", "buy", "--yes"], code: 1, why: "missing_field", message: "account_id" },
@@ -132,6 +132,18 @@ describe("a failed order with --json", () => {
     const object = oneObject(result.out);
     expect(object).toMatchObject({ status: "error", code: "ledger_locked", exit_code: 6 });
     expect(String(object.message)).toContain("atlas lock break");
+  });
+});
+
+describe("a usage error", () => {
+  it("is one sentence and a pointer to --help, not the whole usage again", async () => {
+    const result = await capture(["gains", "abc"]);
+    expect(result.code).toBe(64);
+    expect(result.err).toEqual([
+      expect.stringMatching(/^Error de uso: se esperaba atlas gains/),
+      "Escribe «atlas --help» para ver el uso.",
+    ]);
+    expect(result.err.join("\n")).not.toContain("comandos:");
   });
 });
 

@@ -21,6 +21,7 @@ import type {
   LedgerEvent,
   SellEvent,
   StandaloneFeeEvent,
+  SwapEvent,
 } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import { type ExternalPrices, manualPrices, positionValueOf } from "./prices.js";
@@ -49,9 +50,14 @@ export interface CoreCostTotals {
   invested_eur: Money;
   /** Value of the part that does have a price. */
   value_eur: Money;
-  /** Weighted by value over the priced part. */
+  /** Weighted by value over the part that has a price **and** a TER; absent when none does. */
   weighted_ter?: Decimal;
+  /** Yearly cost of the part that has a TER; absent when none does. */
   annual_cost_eur?: Money;
+  /** Value of the priced part whose asset declares no TER: left out of the average, not counted as 0%. */
+  ter_missing_eur: Money;
+  /** Some priced value has no TER: the average and the yearly cost cover only part of it. */
+  ter_partial: boolean;
   /** Some core asset held has no price: the aggregate covers only part of the core. */
   partial: boolean;
 }
@@ -206,19 +212,27 @@ const addToBucket = (
  * must not fall into the core table just for not being in the bucket one
  * (constitution III: the books never mix).
  */
-const bookTrade = (state: LedgerState, totals: Accumulator, event: BuyEvent | SellEvent): void => {
+const bookTrade = (
+  state: LedgerState,
+  totals: Accumulator,
+  event: BuyEvent | SellEvent | SwapEvent,
+): void => {
   const book = state.accounts.get(event.account_id)?.book;
   if (book === undefined) {
     return;
   }
+  // A swap pays its commission for the asset it acquires, like a purchase; what
+  // it invests is a fiscal valuation (art. 37.1.h) and not a price, so only the
+  // commission is booked.
   const fee = feeEurOf(event);
+  const assetId = event.type === "swap" ? event.to_asset_id : event.asset_id;
   if (book === "bucket") {
     addToBucket(totals, event.account_id, fee, event.type === "buy" ? costEurOf(event) : undefined);
     return;
   }
-  addTo(totals.fees, event.asset_id, fee);
+  addTo(totals.fees, assetId, fee);
   if (event.type === "buy") {
-    addTo(totals.invested, event.asset_id, costEurOf(event));
+    addTo(totals.invested, assetId, costEurOf(event));
   }
 };
 
@@ -242,7 +256,7 @@ const accumulate = (
     if (asOf !== undefined && businessDateOf(state, event) > asOf) {
       continue;
     }
-    if (event.type === "buy" || event.type === "sell") {
+    if (event.type === "buy" || event.type === "sell" || event.type === "swap") {
       bookTrade(state, totals, event);
       continue;
     }
@@ -335,6 +349,7 @@ export const costSummary = (
   const rows: CoreCostRow[] = [];
   let partial = false;
   let valued = Money.zero(EUR);
+  let withTer = Money.zero(EUR);
   let annual = Money.zero(EUR);
   let weightedTer = Decimal.ZERO;
 
@@ -365,6 +380,7 @@ export const costSummary = (
     if (value !== undefined) {
       valued = valued.add(value);
       if (ter !== undefined) {
+        withTer = withTer.add(value);
         weightedTer = weightedTer.add(ter.mul(value.amount));
         annual = annual.add(annualCost as Money);
       }
@@ -389,8 +405,10 @@ export const costSummary = (
         fees_eur: rows.reduce((sum, row) => sum.add(row.fees_eur), Money.zero(EUR)),
         invested_eur: rows.reduce((sum, row) => sum.add(row.invested_eur), Money.zero(EUR)),
         value_eur: valued,
-        ...(valued.isZero() ? {} : { weighted_ter: weightedTer.div(valued.amount) }),
-        ...(valued.isZero() ? {} : { annual_cost_eur: annual }),
+        ...(withTer.isZero() ? {} : { weighted_ter: weightedTer.div(withTer.amount) }),
+        ...(withTer.isZero() ? {} : { annual_cost_eur: annual }),
+        ter_missing_eur: valued.sub(withTer),
+        ter_partial: !valued.sub(withTer).isZero(),
         partial,
       },
     },

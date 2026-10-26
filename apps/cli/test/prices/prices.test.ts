@@ -35,21 +35,24 @@ const symbols = async (dir: string, assets: Record<string, Record<string, unknow
   await writeFile(
     join(dir, "prices", "symbols.json"),
     JSON.stringify({
-      symbols_format: 1,
+      symbols_format: 2,
+      // `currency` is a shorthand for the same currency on every source named.
       assets: Object.fromEntries(
-        Object.entries(assets).map(([id, entry]) => [
-          id,
-          {
-            confirmed_at: "2027-01-01T00:00:00.000Z",
-            // Contrasted with its sources unless the test says otherwise.
-            currency_check: Object.fromEntries(
-              ["eodhd", "alpha_vantage"]
-                .filter((source) => entry[source] !== undefined)
-                .map((source) => [source, { at: "2027-01-01T00:00:00.000Z" }]),
-            ),
-            ...entry,
-          },
-        ]),
+        Object.entries(assets).map(([id, { currency, ...entry }]) => {
+          const named = ["eodhd", "alpha_vantage"].filter((source) => entry[source] !== undefined);
+          return [
+            id,
+            {
+              confirmed_at: "2027-01-01T00:00:00.000Z",
+              currencies: Object.fromEntries(named.map((source) => [source, currency])),
+              // Contrasted with its sources unless the test says otherwise.
+              currency_check: Object.fromEntries(
+                named.map((source) => [source, { at: "2027-01-01T00:00:00.000Z" }]),
+              ),
+              ...entry,
+            },
+          ];
+        }),
       ),
     }),
   );
@@ -311,34 +314,6 @@ describe("atlas prices symbols with a currency per source", () => {
     expect(missing.code).toBe(64);
     expect(missing.text).toContain("EODHD");
   });
-
-  it("keeps reading a symbols.json of the older format, with one currency per asset", async () => {
-    const f = await folder(ledger());
-    await mkdir(join(f.dir, "prices"), { recursive: true });
-    await writeFile(
-      join(f.dir, "prices", "symbols.json"),
-      JSON.stringify({
-        symbols_format: 1,
-        assets: {
-          fund_a: {
-            currency: "EUR",
-            eodhd: "A.EUFUND",
-            confirmed_at: "x",
-            currency_check: { eodhd: { at: "x" } },
-          },
-        },
-      }),
-    );
-    f.eodhd = new ScriptedSource("eodhd", () => ({
-      ok: true,
-      value: [{ date: "2027-06-08", close: "112" }],
-    }));
-    expect((await f.atlas("prices", "update")).code).toBe(0);
-    expect(await readFile(join(f.dir, "prices", "fund_a.jsonl"), "utf8")).toContain(
-      '"currency":"EUR"',
-    );
-    expect((await f.atlas("prices", "symbols")).text).toMatch(/fund_a\s+A\.EUFUND \(EUR\)/);
-  });
 });
 
 describe("atlas prices symbols: currencies are declared with their symbol, and closes in another one are purged", () => {
@@ -440,29 +415,29 @@ describe("atlas prices symbols: currencies are declared with their symbol, and c
 describe("atlas prices symbols: closes stored in the wrong currency, and a symbols.json that cannot be read", () => {
   const line = (close: string, currency: string, source: string) =>
     `${JSON.stringify({ schema_version: 1, date: "2027-06-08", close, currency, source, fetched_at: "2027-06-09T06:00:00.000Z" })}\n`;
-  const legacy = (currency: string, over: Record<string, string>) =>
+  const misstored = (currency: string, source: string) =>
     JSON.stringify({
-      symbols_format: 1,
+      symbols_format: 2,
       assets: {
         etf_b: {
-          currency,
+          currencies: { eodhd: currency, alpha_vantage: currency },
           eodhd: "TSCO.LSE",
           alpha_vantage: "TSCO.LON",
           confirmed_at: "x",
           currency_check: { eodhd: { at: "x" }, alpha_vantage: { at: "x" } },
-          currency_confirmed_over: over,
+          misstored: { [source]: currency },
         },
       },
     });
 
-  for (const [currency, over, source, close, name] of [
-    ["GBP", { alpha_vantage: "GBX" }, "alpha_vantage", "1000", "Alpha Vantage"],
-    ["GBX", { eodhd: "GBP" }, "eodhd", "10", "EODHD"],
+  for (const [currency, source, close, name] of [
+    ["GBP", "alpha_vantage", "1000", "Alpha Vantage"],
+    ["GBX", "eodhd", "10", "EODHD"],
   ] as const) {
-    it(`leaves out the closes stored as ${currency} over the ${over[source as keyof typeof over]} of ${name}, before and after an update`, async () => {
+    it(`leaves out the closes of ${name} stored as ${currency} though it said another one, before and after an update`, async () => {
       const f = await folder(ledger());
       await symbols(f.dir, {});
-      await writeFile(join(f.dir, "prices", "symbols.json"), legacy(currency, over));
+      await writeFile(join(f.dir, "prices", "symbols.json"), misstored(currency, source));
       await writeFile(join(f.dir, "prices", "etf_b.jsonl"), line(close, currency, source));
       const said = `etf_b: 1 cierre de ${name} se guardó en ${currency}, pero esa fuente dijo otra divisa`;
       const weights = await f.atlas("weights", "--date", "2027-06-09");

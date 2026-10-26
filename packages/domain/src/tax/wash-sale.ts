@@ -20,8 +20,10 @@
 // - #19: each acquired unit defers at most one transmitted unit, and losses are
 //   served in chronological order.
 // - #20: the rule looks at the net result of the transmission, not lot by lot.
-// - #21: a released deferral adds to the result of the transmission that
-//   releases it, and the rule applies again to the total.
+// - #21: a deferred loss comes back only with a definitive transmission, one
+//   with no repurchase inside its own window (DGT V3282-18), whatever its own
+//   result. The rule looks at what can be deferred: the transmission's own
+//   loss, if any, plus what it releases. A gain is never deferred.
 
 import { type CivilDate, daysBetween, yearOf } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
@@ -109,9 +111,11 @@ export interface WashSaleOutcome {
    * Only possible when a conversion joins two asset types of different category.
    */
   foreign_released: Release[];
-  /** `own + released`: what the rule looks at (#21). */
+  /** `own + released`. */
   total_eur: Money;
-  /** Present when the total was a loss and the window was looked at. */
+  /** The own loss (never a gain) plus what is released: what the rule looks at (#21). */
+  deferrable_eur: Money;
+  /** Present when something could be deferred and the window was looked at. */
   window?: WindowSpan;
   /** Negative or zero, exact. */
   deferred_eur: Money;
@@ -213,6 +217,8 @@ class Walker {
   private readonly consumed = new Map<string, Quantity>();
   private readonly lotsOfKey = new Map<string, string[]>();
   private readonly transit = new Map<string, Share[]>();
+  /** The used fraction (#19) of a lot whose units are on their way to another one. */
+  private readonly transitUsed = new Map<string, Decimal>();
   private readonly pendingOf = new Map<string, Pending[]>();
   private readonly toOpen = new Map<string, Quantity>();
   private releasing: Release[] = [];
@@ -330,12 +336,19 @@ class Walker {
       this.sharesOf(lotId).push(...inherited);
       this.transit.delete(source as string);
     }
+    // Units that already deferred a loss stay used after a transfer or a
+    // conversion: they are the same repurchase, in another lot (#19).
+    const inheritedUsed = source === undefined ? undefined : this.transitUsed.get(source);
+    if (inheritedUsed !== undefined) {
+      this.used.set(lotId, inheritedUsed);
+      this.transitUsed.delete(source as string);
+    }
     const pending = this.pendingOf.get(key);
     const remaining = this.toOpen.get(key);
     if (pending === undefined || remaining === undefined) {
       return;
     }
-    let usedUnits = Quantity.ZERO;
+    let usedUnits = Quantity.of(quantity.value.mul(inheritedUsed ?? Decimal.ZERO));
     for (const entry of pending) {
       const amount = share(entry.amount, quantity, remaining);
       const units = unitShare(entry.units, quantity, remaining);
@@ -375,6 +388,10 @@ class Walker {
       );
       return;
     }
+    const usedFraction = this.used.get(lotId);
+    if (usedFraction !== undefined) {
+      this.transitUsed.set(lotId, usedFraction);
+    }
     if (moving.length > 0) {
       this.transit.set(
         lotId,
@@ -404,6 +421,7 @@ class Walker {
     this.releasing = [];
     const releasedEur = released.reduce((sum, part) => sum.add(part.amount_eur), zero());
     const total = gain.gain_eur.add(releasedEur);
+    const deferrable = minZero(gain.gain_eur).add(releasedEur);
     const signs = new Set(
       gain.by_lot.filter((lot) => !lot.gain_eur.isZero()).map((lot) => lot.gain_eur.isNegative()),
     );
@@ -414,6 +432,7 @@ class Walker {
       released_eur: releasedEur,
       foreign_released: foreign,
       total_eur: total,
+      deferrable_eur: deferrable,
       deferred_eur: zero(),
       computable_eur: total,
       not_held: false,
@@ -424,7 +443,7 @@ class Walker {
       alternatives: { "18": zero(), "19": zero(), "21": zero() },
     };
     this.outcomes.push(outcome);
-    if (total.isNegative()) {
+    if (deferrable.isNegative()) {
       this.evaluate(gain, outcome, journalIndex);
     }
   }
@@ -453,11 +472,11 @@ class Walker {
     const candidates = this.candidates(gain, start, end, journalIndex, outcome);
     const available = candidates.reduce((sum, c) => sum.add(c.available), Quantity.ZERO);
     const units = available.gt(sold) ? sold : available;
-    const deferred = units.isZero() ? zero() : share(outcome.total_eur, units, sold);
+    const deferred = units.isZero() ? zero() : share(outcome.deferrable_eur, units, sold);
     const least = (a: Quantity, b: Quantity): Quantity => (a.gt(b) ? b : a);
     const alternative = (extra: Quantity): Money => {
       const altUnits = least(available.add(extra), sold);
-      return share(outcome.total_eur, altUnits, sold).sub(deferred);
+      return share(outcome.deferrable_eur, altUnits, sold).sub(deferred);
     };
     // #18 read the other way counts the units the sale consumed too, but a
     // deferral needs a lot to wait on: by article 33.5 in fine it comes back as
@@ -476,8 +495,9 @@ class Walker {
     outcome.alternatives["19"] = alternative(
       candidates.reduce((sum, c) => sum.add(c.usedBefore), Quantity.ZERO),
     );
-    // #21: the alternative looks only at the transmission's own result. A
-    // release is never zero, so it always changes what the rule looks at.
+    // #21: the alternative releases whatever the transmission, and defers only
+    // its own loss. A release is never zero, so it always changes what the rule
+    // looks at.
     if (!outcome.released_eur.isZero()) {
       outcome.reapplied = true;
       const own = minZero(outcome.own_eur);

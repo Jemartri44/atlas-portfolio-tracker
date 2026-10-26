@@ -193,8 +193,8 @@ Funcionalidad común a las cuatro clases de activo:
 - **Rebalanceo** («Rebalancear» en la web, `atlas rebalance`): propone, por este orden, dinero nuevo, traspasos entre fondos y ventas, con el impuesto aproximado y las comisiones delante y lo que queda si se para en cada paso. Solo si algún activo supera el umbral (reglas 3 y 4). Nunca toca el cubo y nunca escribe. Se carga bajo demanda (`@atlas/domain/rebalance`) porque lleva el motor fiscal.
 - **Aviso de desviación** si algún activo supera el umbral (regla 3).
 - Histórico de aportaciones y evolución del valor, total y por clase.
-- TER medio ponderado del núcleo y coste anual estimado en euros.
-- Coste acumulado en comisiones por activo, en euros y como porcentaje de lo invertido.
+- TER medio ponderado del núcleo y coste anual estimado en euros. El promedio cuenta solo los activos con TER declarado y dice cuánto valor de la cartera valorada queda fuera, en vez de contarlo como TER 0.
+- Coste acumulado en comisiones por activo, en euros y como porcentaje de lo invertido; la comisión de una permuta (`swap`) se imputa al activo recibido.
 
 #### 6.1.1 Renta variable y renta fija (fondos)
 

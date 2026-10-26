@@ -154,6 +154,8 @@ export interface WithholdingLine {
   event_id: Ulid;
   source: "sell" | "forced_sale" | "dividend" | "interest";
   account_id: AccountId;
+  /** The asset the withholding comes from; absent only for interest the account paid on its own cash. */
+  asset_id?: AssetId;
   fiscal_date: CivilDate;
   amount: Converted;
   amount_eur_rounded: Money;
