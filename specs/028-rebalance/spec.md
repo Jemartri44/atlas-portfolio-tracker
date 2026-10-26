@@ -1,10 +1,10 @@
 # Especificación — 028 Reparto por plataforma y rebalanceo
 
-Estado: **diseño, pendiente de visto bueno** (no hay código). Parte de lo que pidió la dueña el 2026-10-26 y aprobó el mismo día: reparto del mes por plataforma, prioridad cuando el dinero no llega y un botón «Rebalancear». Las dudas abiertas están en `questions.md`.
+Estado: **diseño aprobado el 2026-10-26 (incluido el cambio de la regla 2); en construcción**. Parte de lo que pidió el dueño el 2026-10-26 y aprobó el mismo día: reparto del mes por plataforma, prioridad cuando el dinero no llega y un botón «Rebalancear». Respuestas a las dudas en `questions.md`.
 
 ## Qué y por qué
 
-Hoy Atlas dice **a qué activo** va la aportación del mes (`contributionPlan`, regla 2), reparte **proporcionalmente al déficit** y no dice nada de plataformas ni de cómo corregir una desviación grande cuando las aportaciones no bastan. Mover dinero entre activos que no son fondos tributa y paga comisiones, así que la pregunta de la dueña es de fondo: **qué hacer en cada plataforma y cuánto cuesta**. Esta feature añade tres cosas, sin escribir nada en el libro (las órdenes se dan a mano y se registran como siempre):
+Hoy Atlas dice **a qué activo** va la aportación del mes (`contributionPlan`, regla 2), reparte **proporcionalmente al déficit** y no dice nada de plataformas ni de cómo corregir una desviación grande cuando las aportaciones no bastan. Mover dinero entre activos que no son fondos tributa y paga comisiones, así que la pregunta de el dueño es de fondo: **qué hacer en cada plataforma y cuánto cuesta**. Esta feature añade tres cosas, sin escribir nada en el libro (las órdenes se dan a mano y se registran como siempre):
 
 1. **Reparto del mes por plataforma**: cuánto ingresar en cada cuenta y qué comprar en ella.
 2. **Prioridad cuando el dinero no llega**: primero al activo más lejos de su peso, hasta igualarlo con el siguiente, y así sucesivamente.
@@ -48,7 +48,7 @@ El oro, el más lejos de su peso, recibe primero 740 € (hasta quedar con el mi
 
 Parte del núcleo (nunca el cubo; la regla 21 impide que un activo esté en los dos libros). Sin libro de órdenes ni escritura.
 
-**Disparador (regla 3).** Solo propone algo si, tras aplicar el dinero nuevo del paso 1, algún activo está a más de `deviation_threshold_pp` de su objetivo. Si ninguno lo está, dice «ningún activo supera el umbral» y propone nada. El umbral lo configura la dueña; no se inventa otro. La «revisión anual» de la regla 3 sigue siendo una recomendación: el botón se puede pulsar cuando se quiera (la regla 7 anulada prohíbe restricciones de diseño por frecuencia) y el texto lo recuerda.
+**Disparador (regla 3).** Solo propone algo si, tras aplicar el dinero nuevo del paso 1, algún activo está a más de `deviation_threshold_pp` de su objetivo. Si ninguno lo está, dice «ningún activo supera el umbral» y propone nada. El umbral lo configura el dueño; no se inventa otro. La «revisión anual» de la regla 3 sigue siendo una recomendación: el botón se puede pulsar cuando se quiera (la regla 7 anulada prohíbe restricciones de diseño por frecuencia) y el texto lo recuerda.
 
 **Orden de los pasos.** Lo barato y sin impuestos primero:
 
@@ -65,7 +65,7 @@ Cada venta se acompaña de su compra (con el efectivo que deja) y los dos extrem
 | 1 | Traspaso A → B (sin impuestos) | 100 € | 0 | 0 | A 65 %, B 30 %, G 5 %; desviación máxima 10 pts |
 | 2 | Vender A (MyInvestor) y comprar G (IBKR) | 1.000 € | ≈ 63 € | 0 € + 3,00 € | A 55 %, B 30 %, G 15 %; desviación máxima 0 |
 
-La venta de 1.000 € de A consume FIFO el lote más antiguo (compra 02/2022, coste 2.000 €, vale 3.000 €): parte vendida con coste 666,67 y ganancia 333,33 €, a un 19 % ≈ 63 €. Si la dueña se queda en el paso 1, no paga impuestos y sigue 10 puntos desviada; la tarjeta muestra las dos situaciones y dice cuánto aportar para corregir sin vender («1.818 €, unos dos meses a 900 € al mes sin cambios de precio»). **Decide ella dónde parar.** Efectivo entre plataformas: MyInvestor envía 1.000 € a IBKR.
+La venta de 1.000 € de A consume FIFO el lote más antiguo (compra 02/2022, coste 2.000 €, vale 3.000 €): parte vendida con coste 666,67 y ganancia 333,33 €, a un 19 % ≈ 63 €. Si el dueño se queda en el paso 1, no paga impuestos y sigue 10 puntos desviada; la tarjeta muestra las dos situaciones y dice cuánto aportar para corregir sin vender («1.818 €, unos dos meses a 900 € al mes sin cambios de precio»). **Decide el dueño dónde parar.** Efectivo entre plataformas: MyInvestor envía 1.000 € a IBKR.
 
 ## Impuesto aproximado de una venta
 
@@ -80,9 +80,9 @@ Es lo que se enseña antes de decidir, y se calcula con el **motor fiscal tal co
 
 - **Dinero insuficiente.** Funciona el nivel de agua: se corrige lo más lejano primero, hasta donde llegue, y la tarjeta dice cuánto falta (ver arriba). Nunca se vende para completar una aportación: la aportación propone y no vende (regla 2).
 - **Activo sin precio.** Igual que hoy: el cálculo se rechaza nombrando los activos (`missing_manual_prices`), con el remedio «Registrar una valoración». Nunca se estima en silencio. Un activo con objetivo, sin posición y sin precio entra con valor cero y se le asigna importe en euros, pero no unidades. Un precio viejo (`stale_price_days`) se muestra con su edad.
-- **Plataforma sin cuenta.** La plataforma de un activo es la cuenta (activa, del núcleo) donde tiene posición; con varias, la de mayor posición. Un activo con objetivo y sin posición no tiene cuenta: sale en «Sin plataforma» y la dueña elige una de las cuentas activas del núcleo en la pantalla (no se guarda). Una cuenta inactiva no recibe órdenes. Una venta mayor que la posición de una cuenta se parte en las cuentas que la tengan, de mayor a menor posición, aunque el FIFO fiscal sea entre cuentas (ADR-0009).
+- **Plataforma sin cuenta.** La plataforma de un activo es la cuenta (activa, del núcleo) donde tiene posición; con varias, la de mayor posición. Un activo con objetivo y sin posición no tiene cuenta: sale en «Sin plataforma» y el dueño elige una de las cuentas activas del núcleo en la pantalla (no se guarda). Una cuenta inactiva no recibe órdenes. Una venta mayor que la posición de una cuenta se parte en las cuentas que la tengan, de mayor a menor posición, aunque el FIFO fiscal sea entre cuentas (ADR-0009).
 - **Cuenta en otra divisa.** Los importes salen en euros; el cambio de divisa de la cuenta no se calcula y la pantalla lo dice.
-- **Comisión que no compensa.** La comisión estimada es la **real de la dueña**: la de la última operación equivalente del libro (mismo activo y cuenta; si no la hay, el mismo tipo de activo en la cuenta; si tampoco, **desconocida**, nunca cero, y la operación lo avisa). No se inventa ningún mínimo: cada paso enseña la comisión y su porcentaje sobre el importe, y el resumen señala la operación en que ese porcentaje es mayor. Si se quiere un aviso con umbral propio, ver `questions.md`, 3.
+- **Comisión que no compensa.** La comisión estimada es la **real de el dueño**: la de la última operación equivalente del libro (mismo activo y cuenta; si no la hay, el mismo tipo de activo en la cuenta; si tampoco, **desconocida**, nunca cero, y la operación lo avisa). No se inventa ningún mínimo: cada paso enseña la comisión y su porcentaje sobre el importe, y el resumen señala la operación en que ese porcentaje es mayor. Si se quiere un aviso con umbral propio, ver `questions.md`, 3.
 - **Venta con pérdida y regla de recompra.** El impuesto estimado sale 0 y la tarjeta dice la pérdida y qué ocurre con ella: si hay compras del mismo valor homogéneo en la ventana anterior (`wash_sale_window`: dos meses en fondos y cotizados) el motor ya difiere la pérdida y se enseña el importe diferido; y se avisa de **hasta cuándo no recomprar** (fin de la ventana posterior), sobre todo si ese fondo recibe aportación mensual. Las compras de la propia propuesta no recompran lo vendido.
 - **Venta de un activo con lotes de traspaso.** Se usan los lotes tal cual (fecha y coste heredados); no se inventa nada.
 - **Nada que hacer.** Sin umbral superado, sin déficit o con un solo activo, la respuesta es una frase, no una tabla vacía.
@@ -90,7 +90,7 @@ Es lo que se enseña antes de decidir, y se calcula con el **motor fiscal tal co
 
 ## Reglas de negocio que cambian
 
-- **Regla 2** (`docs/business-rules.md`): el reparto deja de ser proporcional al déficit y pasa a ser por nivel de agua («primero al activo más lejos de su peso, hasta igualarlo con el siguiente»), con la frase de la dueña del 2026-10-26 y la salida por plataforma. Es el único cambio de una regla escrita y por eso espera el visto bueno de la dirección.
+- **Regla 2** (`docs/business-rules.md`): el reparto deja de ser proporcional al déficit y pasa a ser por nivel de agua («primero al activo más lejos de su peso, hasta igualarlo con el siguiente»), con la frase de el dueño del 2026-10-26 y la salida por plataforma. Es el único cambio de una regla escrita y por eso espera el visto bueno de la dirección.
 - **Regla 3**: se añade que el botón es lo que propone ventas y que las ventas solo aparecen si se supera el umbral; la revisión anual sigue siendo recomendación.
 - **Regla 4**: se añade que el orden de las ventas del rebalanceo es el suyo (lo que esté por encima, de lo más lejano a lo menos). La **retirada de dinero** como función propia queda fuera de esta feature y reutilizará ese mismo orden.
 - `docs/specification.md` §6.1 y §6.1.1: se añaden la salida por plataforma y el rebalanceo. Los tests que fijan el reparto proporcional se rehacen; el resto no cambia.
