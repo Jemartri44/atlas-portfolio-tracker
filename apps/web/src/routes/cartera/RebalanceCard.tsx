@@ -355,11 +355,7 @@ export const RebalanceCard = (props: RebalanceCardProps): JSX.Element => {
   };
 
   return (
-    <Section
-      title="Rebalancear"
-      class="span-12 is-natural"
-      aside={<Tag tone="accent">Propuesta</Tag>}
-    >
+    <Section title="Rebalancear" class="span-12" aside={<Tag tone="accent">Propuesta</Tag>}>
       <p class="card-note">
         Propone cómo acercarte a los pesos objetivo: primero con dinero nuevo, después con traspasos
         entre fondos (sin impuestos) y, solo si hace falta, con ventas, enseñándote antes el
