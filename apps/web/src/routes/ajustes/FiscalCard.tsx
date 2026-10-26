@@ -78,7 +78,7 @@ const FiscalRow = (props: { draft: SettingsDraft; type: AssetType }): JSX.Elemen
       placeholder={`Por defecto (${valueLabel(DEFAULT_FISCAL_DATE_RULE[props.type]).toLowerCase()})`}
       options={[
         { value: "trade_date", label: "Fecha de contratación" },
-        { value: "value_date", label: "Fecha valor" },
+        { value: "value_date", label: "Fecha valor (en fondos, la del valor liquidativo)" },
       ]}
       onInput={(raw) => props.draft.onPerAssetType("fiscal_date_rule", props.type, raw)}
     />
