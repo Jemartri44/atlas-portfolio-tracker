@@ -895,7 +895,6 @@
         "event_ids": [
           "01MN8FTA80DDTPKAG5TNV3Q20X",
           "01MQTWHB78RC2FADH9B774BHS5",
-          "01MQTWHB78RC2FADH9B774BHS5",
           "01N4F4Y58036KX1852YTTM0XD3"
         ],
         "markets": [
@@ -925,7 +924,6 @@
         "documented_risk": "both",
         "event_ids": [
           "01MQTWHB78RC2FADH9B774BHS5",
-          "01MQTWHB78RC2FADH9B774BHS5",
           "01N1T5TF78RGXZG073WH23MGPM",
           "01N428YK78ARMXKW9TRZB7XV2D",
           "01N8FWT380SW7KKH9M43NPQ2DA"
@@ -938,7 +936,6 @@
         "direction": "conservative",
         "documented_risk": "conservative",
         "event_ids": [
-          "01MQTWHB78RC2FADH9B774BHS5",
           "01MQTWHB78RC2FADH9B774BHS5"
         ],
         "exposure_eur": "717.35",
@@ -999,7 +996,6 @@
         "direction": "none",
         "documented_risk": "both",
         "event_ids": [
-          "01MQTWHB78RC2FADH9B774BHS5",
           "01MQTWHB78RC2FADH9B774BHS5"
         ],
         "measure": "difference",
