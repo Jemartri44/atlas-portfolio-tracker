@@ -105,8 +105,8 @@ describe("atlas tax prints the figures worked out by hand", () => {
       "0.00",
       "2:listed* 3 6 14 19",
     ]);
-    // (1,200 − 2) / 1.10 against (1,000 + 2) / 1.20.
-    expect(row(gains, "2021-12-01", ID.U3)).toEqual([
+    // First in dollars (spec 029): (1,198 − 1,002) USD at 1.10, both values at that rate.
+    expect(row(gains, "2021-12-01", "1089.09")).toEqual([
       "2021-12-01",
       ID.U3,
       "sell",
@@ -117,14 +117,37 @@ describe("atlas tax prints the figures worked out by hand", () => {
       "1198 USD",
       "1.10 (2021-12-01)",
       "1089.09",
-      "835.00",
-      "254.09",
+      "910.91",
+      "178.18",
       "0.00",
       "0.00",
-      "254.09",
+      "178.18",
       "1* 3 4* 6",
     ]);
-    expect(gains).toContain("Ganancias 254.09 · Pérdidas -20.00 · Saldo 234.09");
+    // The dollars of the dividend and of U3 cover the 1,002 the purchase spent without having them.
+    expect(row(gains, "2021-11-15", ID.U2)).toEqual([
+      "2021-11-15",
+      ID.U2,
+      "cubre divisa gastada sin tenerla",
+      "acc_bk",
+      "21 USD",
+      "17.50",
+      "17.50",
+      "0.00",
+      "4* 4:currency_fifo* 6",
+    ]);
+    expect(row(gains, "2021-12-01", "cubre divisa")).toEqual([
+      "2021-12-01",
+      ID.U3,
+      "cubre divisa gastada sin tenerla",
+      "acc_bk",
+      "981 USD",
+      "817.50",
+      "829.66",
+      "-12.16",
+      "4* 4:currency_fifo* 4:currency_wash_sale* 6",
+    ]);
+    expect(gains).toContain("Ganancias 178.18 · Pérdidas -32.16 · Saldo 146.02");
 
     const income = section(text, 2);
     expect(row(income, "2021-11-15", ID.U2)).toEqual([
@@ -164,14 +187,14 @@ describe("atlas tax prints the figures worked out by hand", () => {
 
     const offset = section(text, 4);
     expect(offset).toContain(
-      "Límite conjunto del 25 %: contra ganancias 58.52, contra rendimientos 16.25.",
+      "Límite conjunto del 25 %: contra ganancias 36.51, contra rendimientos 16.25.",
     );
-    expect(row(offset, "2 ", "234.09")).toEqual([
+    expect(row(offset, "2 ", "146.02")).toEqual([
       "2",
       "ganancias y pérdidas patrimoniales",
       "2020",
       "ganancias y pérdidas patrimoniales",
-      "234.09",
+      "146.02",
       "no",
     ]);
     expect(row(offset, "2 ", "16.25")).toEqual([
@@ -185,10 +208,10 @@ describe("atlas tax prints the figures worked out by hand", () => {
     expect(row(section(text, 5), "2020")).toEqual([
       "2020",
       "ganancias y pérdidas patrimoniales",
-      "-549.66",
+      "-637.73",
       "2024",
     ]);
-    // 65 − 16.25, never the 234.09 of gains.
+    // 65 − 16.25, never the 146.02 of gains.
     expect(text).toContain("BASE IMPONIBLE DEL AHORRO 2021: 48.75 EUR (base, no cuota)");
 
     const withheld = section(text, 7);
@@ -206,16 +229,16 @@ describe("atlas tax prints the figures worked out by hand", () => {
     expect(row(foreign, ID.U2)).toEqual([ID.U2, "US", "25.00", "7.50", "15", "3.75", "3.75"]);
     expect(foreign).toContain("Deducible 3.75 · No deducible 3.75");
 
-    // #4: documented "both", and here it is the conservative side: the columns
-    // must not be confused.
+    // #4: documented "both", and here it is the aggressive side —leg by leg would carry
+    // 13.75 less of 2020—: the columns must not be confused.
     const doubtful = section(text, 9);
     expect(row(doubtful, "4 ")).toEqual([
-      "4 ganancia en divisa y diferencias de cambio",
-      "en disputa",
+      "4 ganancia en divisa: primero en la divisa, al tipo de la transmisión",
+      "media",
       "ambas",
-      "diferencia: base -75.91",
-      "conservador",
-      ID.U3,
+      "diferencia: base 0.00, pendiente 13.75",
+      "agresivo",
+      `${ID.U3} ${ID.U2}`,
     ]);
     expect(row(doubtful, "22 ")).toEqual([
       "22 orden de la compensación entre ejercicios",
@@ -297,7 +320,7 @@ describe("atlas tax prints the figures worked out by hand", () => {
     expect(row(carried, "2020")).toEqual([
       "2020",
       "ganancias y pérdidas patrimoniales",
-      "-549.66",
+      "-637.73",
       "2024",
     ]);
     expect(row(carried, "2022")).toEqual([
@@ -342,7 +365,7 @@ describe("atlas tax prints the figures worked out by hand", () => {
     const offset = section(text, 4);
     expect(row(offset, "2 ", "370.00")[4]).toBe("370.00");
     expect(row(offset, "2 ", "rendimientos")[4]).toBe("5.00");
-    expect(row(section(text, 5), "2020")[2]).toBe("-174.66");
+    expect(row(section(text, 5), "2020")[2]).toBe("-262.73");
     expect(text).toContain("BASE IMPONIBLE DEL AHORRO 2023: 15.00 EUR (base, no cuota)");
     const doubtful = section(text, 9);
     expect(row(doubtful, "17 ").slice(1, 5)).toEqual([
@@ -367,16 +390,25 @@ describe("atlas tax prints the figures worked out by hand", () => {
       "6 23",
     ]);
     expect(income).toContain("Saldo 90.00");
+    // The 12.50 USD of the fee cost 10.57 of what U3 left, and are worth 10.00 that day.
+    expect(row(section(text, 1), "2024-06-28", ID.FE).slice(2, 8)).toEqual([
+      "pago con divisa",
+      "acc_bk",
+      "12.5 USD",
+      "10.00",
+      "10.57",
+      "-0.57",
+    ]);
     const offset = section(text, 4);
-    expect(row(offset, "1 ")[4]).toBe("15.00");
-    expect(row(offset, "2 ")[4]).toBe("7.50");
+    expect(row(offset, "1 ")[4]).toBe("15.57");
+    expect(row(offset, "2 ")[4]).toBe("6.93");
     const carried = section(text, 5);
     expect(row(carried, "2022")[2]).toBe("-94.75");
     expect(carried).toContain(
-      "CADUCA al cierre de 2024: -167.16 de 2020 (ganancias y pérdidas patrimoniales).",
+      "CADUCA al cierre de 2024: -255.80 de 2020 (ganancias y pérdidas patrimoniales).",
     );
     expect(text).toContain("BASE IMPONIBLE DEL AHORRO 2024: 67.50 EUR (base, no cuota)");
     expect(section(text, 7)).toContain("Total 19.00");
-    expect(row(section(text, 9), "22 ")[3]).toBe("exposición 7.50");
+    expect(row(section(text, 9), "22 ")[3]).toBe("exposición 6.93");
   });
 });

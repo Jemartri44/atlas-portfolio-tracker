@@ -2,10 +2,12 @@
 // reading criterion #24 documents (binding ruling V0267-25) and the **default**.
 //
 // Every literal here comes from the hand calculation of the same year under
-// that reading: gains 462,50; movable capital income 64,00 − 75,00 + 5,00 =
-// −6,00 (E19 is +5,00 since only a definitive transmission releases, #21);
-// phase 1 offsets the 6,00 against 25 % of 462,50 = 115,63; phase 2 takes the
-// −260,80 carried from 2027; base **195,70**, the same as the other reading.
+// that reading: gains 541,41 (462,50 before spec 029, plus 75,83 on E21 and
+// 3,08 of exchange differences, `exercise.test.ts`); movable capital income
+// 64,00 − 75,00 + 5,00 = −6,00 (E19 is +5,00 since only a definitive
+// transmission releases, #21); phase 1 offsets the 6,00 against 25 % of 541,41
+// = 135,35; phase 2 takes the −173,64 carried from 2027 (−260,80 before);
+// base **361,77** (195,70 before), the same as the other reading.
 // Nothing here was copied from the engine.
 
 import { describe, expect, it } from "vitest";
@@ -38,19 +40,19 @@ describe("the hand-computed year of feature 009 with the ETC as movable capital 
     ]);
   });
 
-  it("offsets 6.00 in phase 1 within the 115.63 of the limit, and still lands on base 195.70", () => {
+  it("offsets 6.00 in phase 1 within the 135.35 of the limit, and still lands on base 361.77", () => {
     const c = report.compensation;
-    expect(text(c.capital_gain_eur)).toBe("462.5");
+    expect(text(c.capital_gain_eur)).toBe("541.41");
     expect(text(c.movable_capital_eur)).toBe("-6");
-    expect(text(c.limit_eur.capital_gain)).toBe("115.63");
+    expect(text(c.limit_eur.capital_gain)).toBe("135.35");
     expect(
       c.steps.map((s) => [s.phase, s.from, s.origin_year, s.against, text(s.amount_eur)]),
     ).toEqual([
       [1, "movable_capital", 2028, "capital_gain", "6"],
-      [2, "capital_gain", 2027, "capital_gain", "260.8"],
+      [2, "capital_gain", 2027, "capital_gain", "173.64"],
     ]);
     expect(text(c.movable_capital_final_eur)).toBe("0");
-    expect(text(report.base_eur)).toBe("195.7");
+    expect(text(report.base_eur)).toBe("361.77");
     expect(c.pending).toEqual([]);
   });
 
@@ -80,7 +82,7 @@ describe("the hand-computed year of feature 009 with the ETC as movable capital 
     expect(JSON.stringify(taxReportJson(fromCode).movable_capital)).toBe(
       JSON.stringify(taxReportJson(report).movable_capital),
     );
-    expect(text(fromCode.base_eur)).toBe("195.7");
+    expect(text(fromCode.base_eur)).toBe("361.77");
     expect(fromCode.notes.map((n) => n.code)).toContain("tax_settings_default_used");
   });
 });

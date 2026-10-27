@@ -83,6 +83,8 @@ export const exerciseLedger = (reading: CategoryReading = "capital_gain"): Exerc
           },
         }),
     wash_sale_transfer_counts: true,
+    // Pinned too: the literals encode the method of #4 they were recomputed with (spec 029).
+    fx_gain_method: "currency_first",
     savings_offset_limit_pct: "25",
     loss_carryforward_years: 4,
     treaty_withholding_pct: { US: "15" },
