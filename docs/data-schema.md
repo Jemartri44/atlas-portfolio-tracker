@@ -543,7 +543,7 @@ La divisa extranjera que se tiene es un elemento patrimonial con su coste en eur
 | `fx_exchange` desde otra divisa | el coste de los lotes entregados: no imputa nada (V2466-08) |
 | `cash_deposit` | `amount / fx_rate` |
 | `dividend`, `interest` | el neto, al tipo del evento |
-| `sell`, venta forzosa | `funding_eur` de los lotes vendidos + la ganancia en euros − la retención en euros; en una IIC o un lote comprado en otra divisa, más la línea `invested`: es decir, el valor de la transmisión al tipo de la venta − la retención |
+| `sell`, venta forzosa | `funding_eur` de los lotes vendidos + la ganancia en euros − la retención en euros; en una IIC o un lote calculado cada pata a su tipo, más la línea `invested`: para esos lotes, su parte de la transmisión al tipo de la venta − la retención |
 
 | Sale divisa | Qué se imputa (`currency_gains`) |
 |---|---|
@@ -558,4 +558,4 @@ La divisa extranjera que se tiene es un elemento patrimonial con su coste en eur
 
 **Conversión del bróker** (`broker_settled_eur` presente, ADR-0030 y ADR-0036): no toca los lotes. Una compra se financia con esos euros. Una venta, un dividendo o un interés imputan ese día los euros liquidados menos el coste de la divisa, y una comisión, su valor al tipo del BCE menos los euros cobrados (`auto_conversion`). El cuadre de lotes y saldos descuenta esas operaciones. Abierto hasta ver un extracto de IBKR.
 
-Cada imputación es una ganancia o pérdida patrimonial de la base del ahorro del año de su fecha, redondeada una vez (ADR-0005). La pérdida de una `conversion` o un `payment` sigue la regla de recompra de un año (`4:currency_wash_sale`, `tax/currency-wash-sale.ts`): la proyección anota en orden cada lote positivo que abre y lo que toma cada salida (`currencyJournal`, nunca en la instantánea), y el motor lee ese diario sin decidir otra vez qué lotes se consumieron.
+Cada imputación es una ganancia o pérdida patrimonial de la base del ahorro del año de su fecha, redondeada una vez (ADR-0005). La pérdida de una `conversion` o un `payment` sigue la regla de recompra de un año (`4:currency_wash_sale`, `tax/currency-wash-sale.ts`): la proyección anota en orden cada lote positivo que abre, lo que cubre cada entrada y lo que toma cada salida (`currencyJournal`, nunca en la instantánea), y el motor lee ese diario sin decidir otra vez qué lotes se consumieron.
