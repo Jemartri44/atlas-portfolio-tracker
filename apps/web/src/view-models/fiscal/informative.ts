@@ -98,7 +98,7 @@ const reasonText = (reason: VerdictReason, names: NameIndex): string => {
     case "first_time_category":
       return `Esto no se declaró en la presentación de ${reason.against_year}, así que cuenta como primera vez.`;
     case "partial_extinction":
-      return `Has transmitido ${displayName(names, reason.asset_id ?? reason.account_id ?? "")} (venta, permuta o traspaso) de lo ya declarado en ${reason.against_year}: hay que volver a presentar.`;
+      return `Transmitiste ${displayName(names, reason.asset_id ?? reason.account_id ?? "")} (venta, permuta o traspaso) de lo declarado en ${reason.against_year}: hay que volver a presentar.`;
     case "extinction":
       return `Ya no tienes ${displayName(names, reason.asset_id ?? reason.account_id ?? "")}, que sí estaba en lo presentado en ${reason.against_year}.`;
     default:
