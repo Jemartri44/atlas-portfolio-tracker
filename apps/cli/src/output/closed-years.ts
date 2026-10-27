@@ -72,7 +72,7 @@ const NOT_COMPARED: Record<ClosedYearNotCompared, string> = {
 const supplementaryLine = (impact: ClosedYearImpact): string => {
   const { supplementary } = impact;
   if (supplementary.kind !== "repurchase") {
-    return "Puede que toque una complementaria.";
+    return "Puede que toque una autoliquidación rectificativa.";
   }
   const parts: string[] = [];
   if (supplementary.within_period) {

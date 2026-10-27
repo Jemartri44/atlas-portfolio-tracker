@@ -128,7 +128,7 @@ describe("a write that reaches a filed return", () => {
     expect(text).toContain("afecta a la Renta de 2027, presentada el 2028-06-10");
     // 2.000,00 of the sale already declared plus 3.000,00 of this one.
     expect(text).toContain("la base del ahorro pasa de 2000 a 5000");
-    expect(text).toContain("Puede que toque una complementaria");
+    expect(text).toContain("Puede que toque una autoliquidación rectificativa");
     // Before the question, not after writing.
     expect(text.indexOf("afecta a la Renta")).toBeLessThan(text.indexOf("Registrado"));
   });
@@ -158,7 +158,7 @@ describe("a write that reaches a filed return", () => {
     );
     expect(text).toContain("afecta a la Renta de 2027, presentada el 2028-06-10");
     expect(text).toContain("la base del ahorro pasa de 2000 a 4000");
-    expect(text).toContain("Puede que toque una complementaria");
+    expect(text).toContain("Puede que toque una autoliquidación rectificativa");
     // Before the question, which is the only moment it is still useful.
     expect(text.indexOf("afecta a la Renta")).toBeLessThan(text.indexOf("Registrados"));
   });
