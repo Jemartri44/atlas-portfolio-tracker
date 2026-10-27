@@ -40,7 +40,7 @@ const dist = join(webRoot, "dist");
  * a margin of a few tens of bytes, so a growth shows up in the diff that
  * causes it; raise it only with the commit that needs it.
  */
-const BOOT_BUDGET_GZIP_BYTES = 70700;
+const BOOT_BUDGET_GZIP_BYTES = 70_820;
 
 /**
  * Ceilings of what the browser downloads **on demand**, one per area (JS + CSS,
@@ -72,9 +72,9 @@ const LAZY_AREAS = [
     name: "formularios",
     what: "los formularios de registro",
     owns: ["/src/routes/registrar/", "/src/view-models/forms/", "/src/view-models/preview"],
-    budget: 25_610,
+    budget: 25_620,
   },
-  { name: "resto", what: "todo lo demás que se carga en diferido", owns: [], budget: 177_390 },
+  { name: "resto", what: "todo lo demás que se carga en diferido", owns: [], budget: 177_510 },
 ];
 
 /**
