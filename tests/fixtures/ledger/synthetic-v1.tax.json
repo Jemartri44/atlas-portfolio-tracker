@@ -109,7 +109,9 @@
         "code": "tax_treaty_rate_missing",
         "details": {
           "country": "US",
-          "foreign_tax_eur": "0.26"
+          "foreign_tax_eur": "0.26",
+          "suggested_pct": "15",
+          "suggested_source": "BOE-A-1990-30940, art. 10.2.b)"
         },
         "event_id": "01M75W8H80JDGKJK8CCDBRNEMS",
         "message": "no treaty rate is configured for US: no deduction is calculated"
@@ -1171,7 +1173,9 @@
         "code": "tax_treaty_rate_missing",
         "details": {
           "country": "US",
-          "foreign_tax_eur": "0.27"
+          "foreign_tax_eur": "0.27",
+          "suggested_pct": "15",
+          "suggested_source": "BOE-A-1990-30940, art. 10.2.b)"
         },
         "event_id": "01N94FZW78EQA3J41K0795WXF9",
         "message": "no treaty rate is configured for US: no deduction is calculated"
