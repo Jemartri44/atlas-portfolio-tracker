@@ -1,6 +1,6 @@
 # Especificación — 029 Ganancias en divisa: primero en la divisa, y lotes de divisa
 
-Estado: **diseño, a la espera del «sí» de Coordinación** antes de escribir código. Punto 2 del encargo del 26/10 (`docs/prompts/` no tiene prompt propio: el encargo es de la coordinadora, sobre la investigación fiscal del 26/10). Tiene que estar en `develop` **antes de la primera operación real en USD**.
+Estado: **diseño aprobado por Coordinación el 2026-10-27**, con las respuestas a las cuatro preguntas al final. El cómo, en `plan.md`. Punto 2 del encargo del 26/10 (`docs/prompts/` no tiene prompt propio: el encargo es de la coordinadora, sobre la investigación fiscal del 26/10). Tiene que estar en `develop` **antes de la primera operación real en USD**.
 
 ## Por qué
 
@@ -75,9 +75,11 @@ Los cálculos a mano con operaciones en dólares (ejercicio de la feature 009, E
 
 Permutas de cripto por cripto (otro elemento, otro caso). Rellenar las casillas que nadie ha comprobado. Que un cambio de divisa active la regla de recompra (pregunta 4).
 
-## Preguntas para Coordinación
+## Respuestas de Coordinación (2026-10-27)
 
-1. **Orden de los lotes de divisa.** La DGT no lo dice. Propuesta: FIFO por divisa a través de todas las cuentas, como los valores; certeza media, error en los dos sentidos.
-2. **Compra con conversión automática del bróker.** ¿El coste en euros es `broker_settled_eur` (lo que salió de verdad de la cuenta) o el importe al tipo del BCE? Propuesta: `broker_settled_eur` cuando está, y el BCE cuando no, dicho en la línea. Se puede aplazar hasta ver un extracto real de IBKR (Ronda 6).
-3. **Comisión pagada en divisa** (custodia, conectividad). Gastar divisa es un «pago» (art. 14.2.e). Propuesta: imputar la diferencia de cambio de lo gastado al tipo del día de la comisión. Son céntimos; la alternativa es no imputar y perder ese coste.
-4. **Regla de recompra en la divisa.** Leída a la letra, una divisa vendida con pérdida y recomprada en un año caería en el art. 33.5.e). No hay doctrina, y aplicarla a cada cambio de divisa sería absurdo. Propuesta: no aplicarla, y escribirlo como criterio con certeza baja.
+1. **FIFO por divisa a través de todas las cuentas**, escrito como criterio con su certeza (`4:currency_fifo`, media, en las dos direcciones).
+2. **`broker_settled_eur` si lo hay y, si no, el BCE.** La conversión automática del bróker se cierra cuando haya un extracto real de IBKR; queda anotada en el ADR y en ADR-0030.
+3. **La diferencia de cambio de una comisión pagada en divisa se imputa**, al tipo del día de la comisión.
+4. **La regla de recompra no se aplica a la divisa**, pero como criterio de certeza **baja** y riesgo **agresivo** (`4:currency_wash_sale`), citando que el art. 33.5.e) podría alcanzarla como «otros elementos patrimoniales» (un año posterior). Va a la lista de la auditoría fiscal independiente.
+
+ADR nuevo en `Propuesta`; la PR espera el visto bueno de Coordinación con la tabla del antes y el después de cada cifra recalculada a mano.
