@@ -214,7 +214,10 @@ export const taxYearWithChain = (
     );
   const rounded = (lines: readonly TransmissionLine[]) =>
     lines.map((line) => line.computable_eur_rounded);
-  const capitalFigures = [...rounded(gains), ...core.currency.map((line) => line.gain_eur_rounded)];
+  const capitalFigures = [
+    ...rounded(gains),
+    ...core.currency.map((line) => line.computable_eur_rounded),
+  ];
   const dividends = core.income.filter((line) => line.kind === "dividend");
   const interest = core.income.filter((line) => line.kind === "interest");
   const withholdings = withholdingLines(core.transmissions, core.income);

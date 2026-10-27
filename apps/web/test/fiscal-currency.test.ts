@@ -23,6 +23,11 @@ const line = (event_id: string, kind: CurrencyLine["kind"], gain: string): Curre
   gain_eur: eur(gain),
   gain_eur_rounded: eur(gain),
   lots: [],
+  released_eur: zero,
+  deferred_eur: zero,
+  computable_eur: eur(gain),
+  computable_eur_rounded: eur(gain),
+  reacquired: [],
   criteria: ["4", "4:currency_fifo", "6"],
 });
 
@@ -69,6 +74,22 @@ describe("the exchange differences of the year", () => {
       ["e21:cover", "Divisa USD", "Entrada que cubre divisa gastada sin tenerla", "1.55"],
       ["e30:conversion", "Divisa USD", "Cambio a euros", "-4"],
     ]);
+  });
+
+  it("show what is computable, not the difference a repurchase of the currency deferred", () => {
+    const deferred = { ...line("e30", "conversion", "-4"), deferred_eur: eur("-4") };
+    const view = yearView(
+      {
+        ...report,
+        capital_gains: {
+          ...report.capital_gains,
+          currency_lines: [{ ...deferred, computable_eur: zero, computable_eur_rounded: zero }],
+        },
+      },
+      NO_NAMES,
+    );
+    const row = view.groups[0]?.rows.find((entry) => entry.key === "e30:conversion");
+    expect(row?.amount_eur.amount.toString()).toBe("0");
   });
 
   it("are named by their currency in the layout by box", () => {

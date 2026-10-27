@@ -134,6 +134,8 @@ describe("atlas tax prints the figures worked out by hand", () => {
       "17.50",
       "17.50",
       "0.00",
+      "0.00",
+      "0.00",
       "4* 4:currency_fifo* 6",
     ]);
     expect(row(gains, "2021-12-01", "cubre divisa")).toEqual([
@@ -144,6 +146,8 @@ describe("atlas tax prints the figures worked out by hand", () => {
       "981 USD",
       "817.50",
       "829.66",
+      "-12.16",
+      "0.00",
       "-12.16",
       "4* 4:currency_fifo* 4:currency_wash_sale* 6",
     ]);

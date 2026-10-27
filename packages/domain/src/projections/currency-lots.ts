@@ -43,9 +43,10 @@ export interface CurrencyLots {
 /**
  * What an exchange difference was imputed on: a conversion to euros, a payment
  * (a fee) made with the currency, an inflow that covers currency spent without
- * having it, and a conversion the broker made itself.
+ * having it, a conversion the broker made itself, and the currency invested in
+ * a lot computed leg by leg, imputed on its sale (`gains.ts`).
  */
-export type CurrencyGainKind = "conversion" | "payment" | "cover" | "auto_conversion";
+export type CurrencyGainKind = "conversion" | "payment" | "cover" | "auto_conversion" | "invested";
 
 export interface CurrencySlice {
   lot_id: string;
@@ -82,6 +83,31 @@ export interface CurrencyFlow {
 /** What currency leaving does: only a conversion and a payment impute a difference. */
 export type CurrencyUse = "invest" | "conversion" | "payment" | "exchange" | "withdrawal";
 
+/**
+ * The currency lots, as the wash-sale rule reads them (`tax/currency-wash-sale.ts`):
+ * a lot of currency held was opened, or an outflow took from the lots held.
+ * Negative lots (currency spent without having it) are not in it.
+ */
+export type CurrencyJournalEntry =
+  | {
+      kind: "open";
+      lot_id: string;
+      currency: string;
+      event_id: Ulid;
+      date: CivilDate;
+      amount: Money;
+    }
+  | {
+      kind: "take";
+      currency: string;
+      event_id: Ulid;
+      date: CivilDate;
+      use: CurrencyUse;
+      slices: CurrencySlice[];
+      /** Index in `state.currencyGains` of the difference it imputed, if any. */
+      gain_index?: number;
+    };
+
 const lotsOf = (state: LedgerState, currency: string): CurrencyLots => {
   let entry = state.currencyLots.get(currency);
   if (entry === undefined) {
@@ -94,8 +120,19 @@ const lotsOf = (state: LedgerState, currency: string): CurrencyLots => {
 const open = (state: LedgerState, flow: CurrencyFlow, amount: Money, cost: Money): void => {
   const sequence = state.currencyLotCounts.get(flow.event_id) ?? 0;
   state.currencyLotCounts.set(flow.event_id, sequence + 1);
+  const id = `${flow.event_id}$${sequence}`;
+  if (!amount.isNegative()) {
+    state.currencyJournal.push({
+      kind: "open",
+      lot_id: id,
+      currency: amount.currency,
+      event_id: flow.event_id,
+      date: flow.date,
+      amount,
+    });
+  }
   lotsOf(state, amount.currency).open.push({
-    id: `${flow.event_id}$${sequence}`,
+    id,
     currency: amount.currency,
     account_id: flow.account_id,
     acquisition_date: flow.date,
@@ -216,9 +253,21 @@ export const currencyOut = (
   }
   const cost = total(slices).add(uncovered);
   const spent = flow.amount.sub(left);
-  if ((use === "conversion" || use === "payment") && !spent.isZero()) {
+  const imputes = (use === "conversion" || use === "payment") && !spent.isZero();
+  if (imputes) {
     const value = valueEur.sub(uncovered);
     record(state, flow, use, spent, value, total(slices), slices);
+  }
+  if (slices.length > 0) {
+    state.currencyJournal.push({
+      kind: "take",
+      currency: flow.amount.currency,
+      event_id: flow.event_id,
+      date: flow.date,
+      use,
+      slices,
+      ...(imputes ? { gain_index: state.currencyGains.length - 1 } : {}),
+    });
   }
   return cost;
 };

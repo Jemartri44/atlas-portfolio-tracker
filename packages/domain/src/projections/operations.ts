@@ -20,7 +20,7 @@ import {
   currencyOut,
   settledEurOf,
 } from "./currency-lots.js";
-import { fundingOf, recordGain } from "./gains.js";
+import { recordGain } from "./gains.js";
 import { consume, openLot, openQuantity } from "./lots.js";
 import { fillOrder, lookupOpenOrder } from "./pending.js";
 import { accountsHolding, adjustPosition, positionOf } from "./positions.js";
@@ -327,7 +327,7 @@ export const applySell = (state: LedgerState, event: SellEvent, position: number
   adjustCash(state, event.account_id, proceeds.sub(withholding));
   adjustPosition(state, event.account_id, event.asset_id, negative(quantity), event.id);
   const slices = consume(state, event.asset_id, quantity, event.id, "transmission");
-  const gain = recordGain(state, {
+  const { gain, carried_eur: carried } = recordGain(state, {
     event_id: event.id,
     asset_id: event.asset_id,
     account_id: event.account_id,
@@ -345,7 +345,7 @@ export const applySell = (state: LedgerState, event: SellEvent, position: number
       amount: proceeds.sub(withholding),
       date: fiscalDate,
     },
-    fundingOf(slices).add(gain.gain_eur).sub(fxOf(event).toEur(withholding)),
+    carried.sub(fxOf(event).toEur(withholding)),
     settledEurOf(event),
   );
   if (thesis !== undefined) {
@@ -430,7 +430,7 @@ export const applySwap = (state: LedgerState, event: SwapEvent, position: number
   adjustPosition(state, event.account_id, event.from_asset_id, negative(quantityOut), event.id);
   adjustPosition(state, event.account_id, event.to_asset_id, quantityIn, event.id);
   const slices = consume(state, event.from_asset_id, quantityOut, event.id, "transmission");
-  const gain = recordGain(state, {
+  const { gain, carried_eur: carried } = recordGain(state, {
     event_id: event.id,
     asset_id: event.from_asset_id,
     account_id: event.account_id,
@@ -448,7 +448,7 @@ export const applySwap = (state: LedgerState, event: SwapEvent, position: number
     quantity: quantityIn,
     cost_eur: costEur,
     cost: value,
-    funding_eur: fundingOf(slices).add(gain.gain_eur).add(feeFunding),
+    funding_eur: carried.add(feeFunding),
     source_event_id: event.id,
     position,
   });

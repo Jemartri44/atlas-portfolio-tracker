@@ -302,7 +302,7 @@ export const notesOf = (
       eventNote(
         "tax_currency_mixed_lots",
         "",
-        "a lot acquired in another currency than the disposal is computed leg by leg, and the exchange difference of the currency spent on it is not imputed",
+        "a lot acquired in another currency than the disposal is computed leg by leg, and the exchange difference of the currency spent on it is imputed on the sale",
         { events: mixed.map((line) => line.event_id) },
       ),
     );

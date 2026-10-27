@@ -132,6 +132,7 @@ const CURRENCY_KIND: Record<CurrencyLine["kind"], string> = {
   payment: "pago con divisa",
   cover: "cubre divisa gastada sin tenerla",
   auto_conversion: "conversión del bróker",
+  invested: "divisa invertida, al vender (IIC o lote en otra divisa)",
 };
 
 /** The exchange differences of the year: currency disposed of against what it cost (spec 029). */
@@ -146,6 +147,8 @@ const currencyTable = (lines: readonly CurrencyLine[]): string =>
       "valor EUR",
       "coste EUR",
       "resultado",
+      "diferido",
+      "computable",
       "criterios",
     ],
     lines.map((line) => [
@@ -157,6 +160,8 @@ const currencyTable = (lines: readonly CurrencyLine[]): string =>
       eur(line.proceeds_eur),
       eur(line.cost_eur),
       eur(line.gain_eur_rounded),
+      eur(line.deferred_eur.roundToCents()),
+      `${eur(line.computable_eur_rounded)}${line.provisional_until === undefined ? "" : ` (provisional hasta ${line.provisional_until})`}`,
       criteriaText(line.criteria),
     ]),
   );

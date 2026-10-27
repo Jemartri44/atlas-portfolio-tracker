@@ -35,6 +35,7 @@ import {
 } from "../schema/events.js";
 import { type IncomeCategory, incomeCategoryOf, type Settings } from "../settings/settings.js";
 import { type CriterionId, categoryCriterion, sortCriteria } from "./criteria.js";
+import type { CurrencyWashOutcome, CurrencyWashResult } from "./currency-wash-sale.js";
 import type {
   Converted,
   CurrencyLine,
@@ -58,6 +59,7 @@ export interface LineContext {
   /** Lots a carve-out took cost from or gave cost to (#7). */
   carved: Set<string>;
   walk: WashSaleResult;
+  currencyWalk: CurrencyWashResult;
 }
 
 const LISTED: ReadonlySet<AssetType> = new Set(["stock", "etf", "etc", "etp"]);
@@ -366,6 +368,9 @@ export const transmissionLine = (ctx: LineContext, outcome: WashSaleOutcome): Tr
   if (gain.fx_method === "mixed") {
     criteria.add("4:mixed_currency");
   }
+  if (gain.fx_method === "iic") {
+    criteria.add("4:iic");
+  }
   // #5 is about which day's rate converts an amount: in euros nothing is converted.
   if (facts.currency !== EUR && facts.fx_rate_date < gain.fiscal_date) {
     criteria.add("5");
@@ -458,19 +463,30 @@ export const transmissionLine = (ctx: LineContext, outcome: WashSaleOutcome): Tr
   };
 };
 
-/** The criteria of an exchange difference: the method, the order of the lots, and what is not applied. */
-const currencyCriteria = (gain: CurrencyGain): CriterionId[] =>
+/**
+ * The criteria of an exchange difference: the method, the order of the lots,
+ * the undertaking's method, and the wash-sale rule wherever it looked or could
+ * have looked at a loss.
+ */
+const currencyCriteria = (gain: CurrencyGain, outcome: CurrencyWashOutcome): CriterionId[] =>
   sortCriteria([
     "4",
     "6",
     ...(gain.kind === "auto_conversion"
       ? (["4:auto_conversion"] as const)
-      : (["4:currency_fifo"] as const)),
-    ...(gain.gain_eur.isNegative() ? (["4:currency_wash_sale"] as const) : []),
+      : gain.kind === "invested"
+        ? (["4:iic"] as const)
+        : (["4:currency_fifo"] as const)),
+    ...(gain.gain_eur.isNegative() || !outcome.released_eur.isZero()
+      ? (["4:currency_wash_sale"] as const)
+      : []),
   ]);
 
 export const currencyLine = (ctx: LineContext, gain: CurrencyGain): CurrencyLine => {
   const lots = new Map(currencyLots(ctx.state).map((lot) => [lot.id, lot]));
+  const outcome = ctx.currencyWalk.outcomes[
+    ctx.state.currencyGains.indexOf(gain)
+  ] as CurrencyWashOutcome;
   return {
     event_id: gain.event_id,
     kind: gain.kind,
@@ -488,7 +504,19 @@ export const currencyLine = (ctx: LineContext, gain: CurrencyGain): CurrencyLine
       amount: slice.amount,
       cost_eur: slice.cost_eur,
     })),
-    criteria: currencyCriteria(gain),
+    released_eur: outcome.released_eur,
+    deferred_eur: outcome.deferred_eur,
+    computable_eur: outcome.computable_eur,
+    computable_eur_rounded: outcome.computable_eur.roundToCents(),
+    reacquired: outcome.reacquired.map((entry) => ({
+      event_id: entry.event_id,
+      fiscal_date: entry.fiscal_date,
+      amount: entry.amount,
+    })),
+    ...(outcome.provisional_until === undefined
+      ? {}
+      : { provisional_until: outcome.provisional_until }),
+    criteria: currencyCriteria(gain, outcome),
   };
 };
 

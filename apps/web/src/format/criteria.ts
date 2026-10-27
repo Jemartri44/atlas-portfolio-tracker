@@ -37,9 +37,12 @@ export const CRITERION_NAMES: Record<CriterionId, string> = {
   "3": "Las comisiones suman al coste y restan de lo transmitido",
   "4": "La ganancia de lo comprado en otra divisa se calcula primero en esa divisa",
   "4:mixed_currency":
-    "Lo comprado en una divisa y vendido en otra se calcula con el tipo de cada día",
+    "Lo comprado en una divisa y vendido en otra se calcula con el tipo de cada día, y la divisa invertida se imputa al vender",
+  "4:iic":
+    "Un fondo, ETF o monetario en divisa se calcula con el tipo de cada día, y la divisa invertida se imputa al vender",
   "4:currency_fifo": "La divisa se gasta en el orden en que entró, sumando todas las cuentas",
-  "4:currency_wash_sale": "La regla de recompra no se aplica a la divisa",
+  "4:currency_wash_sale":
+    "La pérdida de divisa se difiere si se vuelve a adquirir esa divisa en el año siguiente",
   "4:auto_conversion": "Lo que convirtió el bróker se valora con los euros que liquidó",
   "5": "Se usa el tipo del Banco Central Europeo del último día publicado",
   "6": "Cada operación se redondea al céntimo una sola vez, hacia arriba en el empate",

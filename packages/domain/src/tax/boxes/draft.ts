@@ -13,12 +13,19 @@
 
 import { positive, sum, zero } from "../../money/eur.js";
 import type { Money } from "../../money/money.js";
+import type { CurrencyGain } from "../../projections/currency-lots.js";
 import type { LedgerState } from "../../projections/state.js";
 import type { AssetId } from "../../schema/events.js";
 import type { IncomeCategory } from "../../settings/settings.js";
 import { type ChainCore, categoryOf } from "../chain.js";
 import { type CriterionId, sortCriteria } from "../criteria.js";
-import type { IncomeLine, TaxYearReport, TransmissionLine, WithholdingLine } from "../report.js";
+import type {
+  CurrencyLine,
+  IncomeLine,
+  TaxYearReport,
+  TransmissionLine,
+  WithholdingLine,
+} from "../report.js";
 import { linesByKey } from "../shared.js";
 import type { WashSaleOutcome } from "../wash-sale.js";
 import {
@@ -92,6 +99,27 @@ interface RowTotals {
   losses: Money;
 }
 
+/** The row of an exchange difference: the currency stands for the asset. */
+const currencyRow = (line: {
+  event_id: string;
+  account_id: string;
+  currency: string;
+  fiscal_date: string;
+}): BoxRow => ({
+  event_id: line.event_id,
+  account_id: line.account_id,
+  asset_id: line.currency,
+  fiscal_date: line.fiscal_date,
+  currency: line.currency,
+});
+
+/** Where a line of the report is in `state.currencyGains`: one per event, kind and currency. */
+const currencyIndexOf = (chain: ChainCore, line: CurrencyLine): number =>
+  chain.state.currencyGains.findIndex(
+    (gain) =>
+      gain.event_id === line.event_id && gain.kind === line.kind && gain.currency === line.currency,
+  );
+
 /**
  * The rows of the disposals of the year, by section, and what each section
  * adds up to.
@@ -103,6 +131,7 @@ interface RowTotals {
  */
 const disposalRows = (
   report: TaxYearReport,
+  chain: ChainCore,
   stillDeferred: Map<number, Money>,
   index: Map<string, number>,
   state: LedgerState,
@@ -160,20 +189,18 @@ const disposalRows = (
     );
   }
   // An exchange difference is the transmission of "otros elementos
-  // patrimoniales": its box is not checked yet, so it is shown by concept.
+  // patrimoniales": its box is not checked yet, so it is shown by concept. A
+  // loss shows what is still deferred of it at 31/12, like a security.
+  const stillDeferredFx = chain.currencyWalk.pendingAt(report.year);
   for (const line of report.capital_gains.currency_lines) {
     const gain = !line.gain_eur.isNegative();
+    const deferred = stillDeferredFx.get(currencyIndexOf(chain, line)) ?? zero();
     const value: Partial<Record<RowFieldId, Money>> = {
       transmission: line.proceeds_eur,
       acquisition: line.cost_eur,
-      ...(gain ? { gain: line.gain_eur } : { loss: line.gain_eur, loss_imputable: line.gain_eur }),
-    };
-    const row: BoxRow = {
-      event_id: line.event_id,
-      account_id: line.account_id,
-      asset_id: line.currency,
-      fiscal_date: line.fiscal_date,
-      currency: line.currency,
+      ...(gain
+        ? { gain: line.gain_eur }
+        : { loss: line.gain_eur, loss_imputable: line.gain_eur.sub(deferred) }),
     };
     for (const field of SECTION_FIELDS.other) {
       const amount = value[field];
@@ -183,7 +210,7 @@ const disposalRows = (
       drafts.push({
         concept: rowConcept("other", field),
         section: "other",
-        row,
+        row: currencyRow(line),
         criteria: line.criteria,
         ...(field === "name" ? { text: `Divisa ${line.currency}` } : { exact: amount as Money }),
       });
@@ -193,7 +220,7 @@ const disposalRows = (
       "other",
       gain
         ? { ...current, gains: current.gains.add(line.gain_eur_rounded) }
-        : { ...current, losses: current.losses.add(line.gain_eur_rounded) },
+        : { ...current, losses: current.losses.add(line.gain_eur.sub(deferred).roundToCents()) },
     );
   }
   return { drafts, totals };
@@ -234,6 +261,26 @@ const priorYearRows = (
       origin_year: gain.year,
       exact: delta,
       criteria: sortCriteria(["14"]),
+    });
+    losses = losses.add(delta.roundToCents());
+  }
+  // The same for a loss of currency (V1613-25): it is always a capital gain,
+  // and what was deferred at the close of the year before is of an earlier year.
+  const fxBefore = chain.currencyWalk.pendingAt(year - 1);
+  const fxNow = chain.currencyWalk.pendingAt(year);
+  // In the order the losses were deferred, which is that of their origin.
+  for (const origin of fxBefore.keys()) {
+    const gain = chain.state.currencyGains[origin] as CurrencyGain;
+    const delta = (fxBefore.get(origin) as Money).sub(fxNow.get(origin) ?? zero());
+    if (delta.isZero()) {
+      continue;
+    }
+    drafts.push({
+      concept: "gp.prior_years.loss",
+      row: currencyRow(gain),
+      origin_year: gain.year,
+      exact: delta,
+      criteria: sortCriteria(["4:currency_wash_sale"]),
     });
     losses = losses.add(delta.roundToCents());
   }
@@ -507,7 +554,7 @@ export const draftEntries = (report: TaxYearReport, chain: ChainCore): Draft[] =
   const index = gainIndexOf(chain);
   const now = deferredByOrigin(chain, year);
   const before = deferredByOrigin(chain, year - 1);
-  const disposals = disposalRows(report, now, index, chain.state);
+  const disposals = disposalRows(report, chain, now, index, chain.state);
   const prior = priorYearRows(chain, year, before, now);
   const drafts: Draft[] = [...disposals.drafts];
   let gains = zero();

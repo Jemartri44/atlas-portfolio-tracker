@@ -202,7 +202,10 @@ export const rowsAddUpToTheEngine = (
     .reduce((total, line) => total.add(line.computable_eur), zero)
     .add(foreign)
     .add(
-      report.capital_gains.currency_lines.reduce((total, line) => total.add(line.gain_eur), zero),
+      report.capital_gains.currency_lines.reduce(
+        (total, line) => total.add(line.computable_eur),
+        zero,
+      ),
     );
   return { rows: rows.amount.toString(), engine: engine.amount.toString() };
 };
