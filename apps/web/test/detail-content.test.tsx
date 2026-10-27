@@ -71,14 +71,14 @@ describe("the detail of a movement", () => {
     const host = await show(`/movimientos/${REVERSE_SPLIT}`, Detail, "/movimientos/:id");
     const shown = text(host);
     expect(shown).toContain("Resultado de las ventas");
-    // Both lines and the total, never the first sale presented as the whole.
-    expect(shown).toContain("2,11");
-    expect(shown).toContain("5,40");
-    expect(shown).toMatch(/Pérdida total\s*[−-]7,51/);
-    // No amounts or costs added up across operations: rounded one by one they
-    // would subtract to −7,52 against the −7,51 declared.
+    // Both lines and the total, never the first sale presented as the whole. First in
+    // dollars since spec 029: (191,14 − 191,765) $ and (574,42 − 575,295) $ at 1,0672.
+    expect(shown).toContain("0,59");
+    expect(shown).toContain("0,82");
+    expect(shown).toMatch(/Pérdida total\s*[−-]1,41/);
+    // No amounts or costs added up across operations.
     expect(shown).not.toContain("717,35");
-    expect(shown).not.toContain("724,87");
+    expect(shown).not.toContain("718,76");
     expect(shown).toContain("Se redondea al céntimo una vez por operación, como se declara.");
   });
 

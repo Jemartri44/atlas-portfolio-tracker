@@ -4,6 +4,7 @@
     "base_eur": "10.43",
     "capital_gains": {
       "balance_eur": "0",
+      "currency_lines": [],
       "foreign_releases_eur": "0",
       "gains_eur": "0",
       "lines": [],
@@ -114,20 +115,6 @@
         "message": "no treaty rate is configured for US: no deduction is calculated"
       },
       {
-        "code": "tax_fx_differences_not_computed",
-        "details": {
-          "currencies": [
-            "USD"
-          ],
-          "fx_exchanges": [
-            "01M1HME780HB1ZYBHV3TG6V003",
-            "01M1HME878SE9PKE007PWDX100"
-          ]
-        },
-        "event_id": "",
-        "message": "gains and losses of foreign cash (criterion #4) are not computed"
-      },
-      {
         "code": "tax_settings_default_used",
         "details": {
           "fields": [
@@ -141,6 +128,7 @@
             "income_category.crypto",
             "income_category.money_market",
             "wash_sale_transfer_counts",
+            "fx_gain_method",
             "savings_offset_limit_pct",
             "loss_carryforward_years"
           ]
@@ -162,6 +150,7 @@
         "income_category.crypto",
         "income_category.money_market",
         "wash_sale_transfer_counts",
+        "fx_gain_method",
         "savings_offset_limit_pct",
         "loss_carryforward_years"
       ],
@@ -225,11 +214,12 @@
   },
   "2027": {
     "anchors": [],
-    "base_eur": "174.35",
+    "base_eur": "184.89",
     "capital_gains": {
-      "balance_eur": "180.04",
+      "balance_eur": "184.48",
+      "currency_lines": [],
       "foreign_releases_eur": "0",
-      "gains_eur": "267.64",
+      "gains_eur": "272.63",
       "lines": [
         {
           "account_id": "acc_mi",
@@ -527,10 +517,10 @@
           "asset_type": "stock",
           "book": "bucket",
           "category": "capital_gain",
-          "computable_eur": "3.4256226634",
-          "computable_eur_rounded": "3.43",
+          "computable_eur": "3.6040280857",
+          "computable_eur_rounded": "3.6",
           "corporate_action_kind": "spin_off",
-          "cost_eur": "7.9795879796",
+          "cost_eur": "7.8011825573",
           "criteria": [
             "3",
             "4",
@@ -545,8 +535,8 @@
           "lots": [
             {
               "acquisition_date": "2026-09-04",
-              "cost_eur": "7.9795879796",
-              "gain_eur": "3.4256226634",
+              "cost_eur": "7.8011825573",
+              "gain_eur": "3.6040280857",
               "lineage": [
                 {
                   "acquisition_date": "2026-09-04",
@@ -582,7 +572,7 @@
               }
             }
           ],
-          "own_eur": "3.4256226634",
+          "own_eur": "3.6040280857",
           "proceeds": {
             "amount": "12.345",
             "currency": "USD",
@@ -600,15 +590,17 @@
           "asset_type": "stock",
           "book": "bucket",
           "category": "capital_gain",
-          "computable_eur": "1.4070317346",
-          "computable_eur_rounded": "1.41",
+          "computable_eur": "-0.5477811214",
+          "computable_eur_rounded": "-0.55",
           "corporate_action_kind": "merger",
-          "cost_eur": "24.6563940128",
+          "cost_eur": "26.6112068688",
           "criteria": [
+            "2:listed",
             "3",
             "4",
             "6",
-            "13"
+            "13",
+            "14"
           ],
           "deferred_eur": "0",
           "event_id": "01N428YK78ARMXKW9TRZB7XV2D",
@@ -618,8 +610,8 @@
           "lots": [
             {
               "acquisition_date": "2026-10-07",
-              "cost_eur": "24.6563940128",
-              "gain_eur": "1.4070317346",
+              "cost_eur": "26.6112068688",
+              "gain_eur": "-0.5477811214",
               "lineage": [
                 {
                   "acquisition_date": "2026-10-07",
@@ -655,7 +647,7 @@
               }
             }
           ],
-          "own_eur": "1.4070317346",
+          "own_eur": "-0.5477811214",
           "proceeds": {
             "amount": "27.449999997205",
             "currency": "USD",
@@ -762,9 +754,9 @@
           "asset_type": "stock",
           "book": "bucket",
           "category": "capital_gain",
-          "computable_eur": "87.50231959454",
-          "computable_eur_rounded": "87.5",
-          "cost_eur": "159.59175959176",
+          "computable_eur": "93.7341082456",
+          "computable_eur_rounded": "93.73",
+          "cost_eur": "153.3599709407",
           "criteria": [
             "1",
             "3",
@@ -780,8 +772,8 @@
           "lots": [
             {
               "acquisition_date": "2026-09-04",
-              "cost_eur": "159.59175959176",
-              "gain_eur": "87.50231959454",
+              "cost_eur": "153.3599709407",
+              "gain_eur": "93.7341082456",
               "lineage": [
                 {
                   "acquisition_date": "2026-09-04",
@@ -810,7 +802,7 @@
               }
             }
           ],
-          "own_eur": "87.50231959454",
+          "own_eur": "93.7341082456",
           "proceeds": {
             "amount": "272.1",
             "currency": "USD",
@@ -823,35 +815,22 @@
           "released_eur": "0"
         }
       ],
-      "losses_eur": "-87.6"
+      "losses_eur": "-88.15"
     },
     "compensation": {
-      "base_eur": "174.35",
-      "capital_gain_eur": "180.04",
-      "capital_gain_final_eur": "174.35",
+      "base_eur": "184.89",
+      "capital_gain_eur": "184.48",
+      "capital_gain_final_eur": "184.48",
       "expired": [],
       "limit_eur": {
-        "capital_gain": "45.01",
-        "movable_capital": "0"
+        "capital_gain": "46.12",
+        "movable_capital": "0.1"
       },
       "limit_pct": "25",
-      "movable_capital_eur": "-5.69",
-      "movable_capital_final_eur": "0",
+      "movable_capital_eur": "0.41",
+      "movable_capital_final_eur": "0.41",
       "pending": [],
-      "steps": [
-        {
-          "against": "capital_gain",
-          "amount_eur": "5.69",
-          "criteria": [
-            "10",
-            "22"
-          ],
-          "from": "movable_capital",
-          "limited": true,
-          "origin_year": 2027,
-          "phase": 1
-        }
-      ]
+      "steps": []
     },
     "double_taxation": {
       "deductible_eur": "0",
@@ -870,7 +849,7 @@
     },
     "doubtful": [
       {
-        "base_difference_eur": "-87.5",
+        "base_difference_eur": "-93.73",
         "certainty": "medium",
         "criterion": "1",
         "deferred_difference_eur": "0",
@@ -895,6 +874,7 @@
         "documented_risk": "aggressive",
         "event_ids": [
           "01MN8FTA80DDTPKAG5TNV3Q20X",
+          "01N428YK78ARMXKW9TRZB7XV2D",
           "01N4F4Y58036KX1852YTTM0XD3"
         ],
         "markets": [
@@ -917,10 +897,11 @@
         "pending_difference_eur": "0"
       },
       {
-        "base_difference_eur": "10.54",
-        "certainty": "disputed",
+        "base_difference_eur": "-10.54",
+        "certainty": "medium",
         "criterion": "4",
-        "direction": "aggressive",
+        "deferred_difference_eur": "0",
+        "direction": "conservative",
         "documented_risk": "both",
         "event_ids": [
           "01MQTWHB78RC2FADH9B774BHS5",
@@ -928,7 +909,8 @@
           "01N428YK78ARMXKW9TRZB7XV2D",
           "01N8FWT380SW7KKH9M43NPQ2DA"
         ],
-        "measure": "difference"
+        "measure": "difference",
+        "pending_difference_eur": "0"
       },
       {
         "certainty": "medium",
@@ -950,7 +932,7 @@
           "01N1T5TF78RGXZG073WH23MGPM",
           "01N8FWT380SW7KKH9M43NPQ2DA"
         ],
-        "exposure_eur": "167.57",
+        "exposure_eur": "161.16",
         "measure": "exposure"
       },
       {
@@ -973,7 +955,7 @@
         "event_ids": [
           "01N428YK78ARMXKW9TRZB7XV2D"
         ],
-        "exposure_eur": "1.41",
+        "exposure_eur": "0.55",
         "measure": "exposure"
       },
       {
@@ -1004,7 +986,7 @@
     ],
     "in_kind": [],
     "movable_capital": {
-      "balance_eur": "-5.69",
+      "balance_eur": "0.41",
       "dividends": [
         {
           "account_id": "acc_bucket",
@@ -1038,10 +1020,10 @@
           "asset_type": "etc",
           "book": "core",
           "category": "movable_capital",
-          "computable_eur": "-2.1139083171",
-          "computable_eur_rounded": "-2.11",
+          "computable_eur": "-0.5856446777",
+          "computable_eur_rounded": "-0.59",
           "corporate_action_kind": "reverse_split",
-          "cost_eur": "181.2181062181",
+          "cost_eur": "179.6898425787",
           "criteria": [
             "2:movable_capital",
             "3",
@@ -1059,8 +1041,8 @@
           "lots": [
             {
               "acquisition_date": "2026-09-03",
-              "cost_eur": "181.2181062181",
-              "gain_eur": "-2.1139083171",
+              "cost_eur": "179.6898425787",
+              "gain_eur": "-0.5856446777",
               "lineage": [
                 {
                   "acquisition_date": "2026-09-03",
@@ -1089,7 +1071,7 @@
               }
             }
           ],
-          "own_eur": "-2.1139083171",
+          "own_eur": "-0.5856446777",
           "proceeds": {
             "amount": "191.14",
             "currency": "USD",
@@ -1107,10 +1089,10 @@
           "asset_type": "etc",
           "book": "core",
           "category": "movable_capital",
-          "computable_eur": "-5.4046934669",
-          "computable_eur_rounded": "-5.4",
+          "computable_eur": "-0.8199025487",
+          "computable_eur_rounded": "-0.82",
           "corporate_action_kind": "reverse_split",
-          "cost_eur": "543.6543186543",
+          "cost_eur": "539.0695277361",
           "criteria": [
             "2:movable_capital",
             "3",
@@ -1128,8 +1110,8 @@
           "lots": [
             {
               "acquisition_date": "2026-09-03",
-              "cost_eur": "543.6543186543",
-              "gain_eur": "-5.4046934669",
+              "cost_eur": "539.0695277361",
+              "gain_eur": "-0.8199025487",
               "lineage": [
                 {
                   "acquisition_date": "2026-09-03",
@@ -1158,7 +1140,7 @@
               }
             }
           ],
-          "own_eur": "-5.4046934669",
+          "own_eur": "-0.8199025487",
           "proceeds": {
             "amount": "574.42",
             "currency": "USD",
@@ -1195,17 +1177,6 @@
         "message": "no treaty rate is configured for US: no deduction is calculated"
       },
       {
-        "code": "tax_fx_differences_not_computed",
-        "details": {
-          "currencies": [
-            "USD"
-          ],
-          "fx_exchanges": []
-        },
-        "event_id": "",
-        "message": "gains and losses of foreign cash (criterion #4) are not computed"
-      },
-      {
         "code": "tax_settings_default_used",
         "details": {
           "fields": [
@@ -1219,6 +1190,7 @@
             "income_category.crypto",
             "income_category.money_market",
             "wash_sale_transfer_counts",
+            "fx_gain_method",
             "savings_offset_limit_pct",
             "loss_carryforward_years"
           ]
@@ -1240,14 +1212,15 @@
         "income_category.crypto",
         "income_category.money_market",
         "wash_sale_transfer_counts",
+        "fx_gain_method",
         "savings_offset_limit_pct",
         "loss_carryforward_years"
       ],
       "origin": "01NDYZTZ804AP696WA0PA725XK"
     },
     "settings_diff": {
-      "base_after_eur": "174.35",
-      "base_before_eur": "174.35",
+      "base_after_eur": "184.89",
+      "base_before_eur": "184.89",
       "changes": [],
       "current_origin": "01NDYZTZ804AP696WA0PA725XK",
       "previous_origin": "01MZ56PR7833HV4ZQJTT064MFJ"
@@ -1376,9 +1349,10 @@
   },
   "2028": {
     "anchors": [],
-    "base_eur": "111.13",
+    "base_eur": "99.27",
     "capital_gains": {
-      "balance_eur": "94.86",
+      "balance_eur": "83",
+      "currency_lines": [],
       "foreign_releases_eur": "0",
       "gains_eur": "176.81",
       "lines": [
@@ -1388,9 +1362,9 @@
           "asset_type": "stock",
           "book": "bucket",
           "category": "capital_gain",
-          "computable_eur": "-81.9504769249",
-          "computable_eur_rounded": "-81.95",
-          "cost_eur": "295.876728183",
+          "computable_eur": "-93.808287058",
+          "computable_eur_rounded": "-93.81",
+          "cost_eur": "307.7345383161",
           "criteria": [
             "1",
             "2:listed",
@@ -1408,8 +1382,8 @@
           "lots": [
             {
               "acquisition_date": "2026-10-07",
-              "cost_eur": "295.876728183",
-              "gain_eur": "-81.9504769249",
+              "cost_eur": "307.7345383161",
+              "gain_eur": "-93.808287058",
               "lineage": [
                 {
                   "acquisition_date": "2026-10-07",
@@ -1445,7 +1419,7 @@
               }
             }
           ],
-          "own_eur": "-81.9504769249",
+          "own_eur": "-93.808287058",
           "proceeds": {
             "amount": "233.8",
             "currency": "USD",
@@ -1593,15 +1567,15 @@
           "released_eur": "0"
         }
       ],
-      "losses_eur": "-81.95"
+      "losses_eur": "-93.81"
     },
     "compensation": {
-      "base_eur": "111.13",
-      "capital_gain_eur": "94.86",
-      "capital_gain_final_eur": "94.86",
+      "base_eur": "99.27",
+      "capital_gain_eur": "83",
+      "capital_gain_final_eur": "83",
       "expired": [],
       "limit_eur": {
-        "capital_gain": "23.72",
+        "capital_gain": "20.75",
         "movable_capital": "4.07"
       },
       "limit_pct": "25",
@@ -1617,7 +1591,7 @@
     },
     "doubtful": [
       {
-        "base_difference_eur": "87.5",
+        "base_difference_eur": "93.73",
         "certainty": "medium",
         "criterion": "1",
         "deferred_difference_eur": "0",
@@ -1649,15 +1623,17 @@
         "pending_difference_eur": "0"
       },
       {
-        "base_difference_eur": "-11.86",
-        "certainty": "disputed",
+        "base_difference_eur": "11.86",
+        "certainty": "medium",
         "criterion": "4",
-        "direction": "conservative",
+        "deferred_difference_eur": "0",
+        "direction": "aggressive",
         "documented_risk": "both",
         "event_ids": [
           "01N99MS980M9HHX4EMDCANXBYD"
         ],
-        "measure": "difference"
+        "measure": "difference",
+        "pending_difference_eur": "0"
       },
       {
         "certainty": "medium",
@@ -1708,17 +1684,6 @@
         "message": "this is the savings base, not the tax: the rest of the return is not in the ledger"
       },
       {
-        "code": "tax_fx_differences_not_computed",
-        "details": {
-          "currencies": [
-            "USD"
-          ],
-          "fx_exchanges": []
-        },
-        "event_id": "",
-        "message": "gains and losses of foreign cash (criterion #4) are not computed"
-      },
-      {
         "code": "tax_settings_default_used",
         "details": {
           "fields": [
@@ -1732,6 +1697,7 @@
             "income_category.crypto",
             "income_category.money_market",
             "wash_sale_transfer_counts",
+            "fx_gain_method",
             "savings_offset_limit_pct",
             "loss_carryforward_years"
           ]
@@ -1753,14 +1719,15 @@
         "income_category.crypto",
         "income_category.money_market",
         "wash_sale_transfer_counts",
+        "fx_gain_method",
         "savings_offset_limit_pct",
         "loss_carryforward_years"
       ],
       "origin": "01NDYZTZ804AP696WA0PA725XK"
     },
     "settings_diff": {
-      "base_after_eur": "111.13",
-      "base_before_eur": "111.13",
+      "base_after_eur": "99.27",
+      "base_before_eur": "99.27",
       "changes": [],
       "current_origin": "01NDYZTZ804AP696WA0PA725XK",
       "previous_origin": "01MZ56PR7833HV4ZQJTT064MFJ"
@@ -1842,6 +1809,7 @@
     "base_eur": "0",
     "capital_gains": {
       "balance_eur": "0",
+      "currency_lines": [],
       "foreign_releases_eur": "0",
       "gains_eur": "0",
       "lines": [],
@@ -1898,6 +1866,7 @@
             "income_category.crypto",
             "income_category.money_market",
             "wash_sale_transfer_counts",
+            "fx_gain_method",
             "savings_offset_limit_pct",
             "loss_carryforward_years"
           ]
@@ -1919,6 +1888,7 @@
         "income_category.crypto",
         "income_category.money_market",
         "wash_sale_transfer_counts",
+        "fx_gain_method",
         "savings_offset_limit_pct",
         "loss_carryforward_years"
       ],

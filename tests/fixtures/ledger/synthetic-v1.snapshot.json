@@ -271,6 +271,135 @@
       "currency": "USD"
     }
   ],
+  "currency_gains": [],
+  "currency_lots": {
+    "USD": {
+      "closed": [
+        {
+          "account_id": "acc_ibkr",
+          "acquisition_date": "2026-09-02",
+          "amount": "0",
+          "closed": true,
+          "cost_eur": "0",
+          "currency": "USD",
+          "id": "01M1HME780HB1ZYBHV3TG6V003$0",
+          "original_amount": "2431.86",
+          "original_cost_eur": "2300",
+          "source_event_id": "01M1HME780HB1ZYBHV3TG6V003"
+        }
+      ],
+      "open": [
+        {
+          "account_id": "acc_bucket",
+          "acquisition_date": "2026-09-02",
+          "amount": "579.99",
+          "closed": false,
+          "cost_eur": "548.6368479224",
+          "currency": "USD",
+          "id": "01M1HME878SE9PKE007PWDX100$0",
+          "original_amount": "2008.58",
+          "original_cost_eur": "1900",
+          "source_event_id": "01M1HME878SE9PKE007PWDX100"
+        },
+        {
+          "account_id": "acc_bucket",
+          "acquisition_date": "2026-11-11",
+          "amount": "1.32",
+          "closed": false,
+          "cost_eur": "1.1566771819",
+          "currency": "USD",
+          "id": "01M75W8H80JDGKJK8CCDBRNEMS$0",
+          "original_amount": "1.32",
+          "original_cost_eur": "1.1566771819",
+          "source_event_id": "01M75W8H80JDGKJK8CCDBRNEMS"
+        },
+        {
+          "account_id": "acc_bucket",
+          "acquisition_date": "2027-04-15",
+          "amount": "1.32",
+          "closed": false,
+          "cost_eur": "1.2013105206",
+          "currency": "USD",
+          "id": "01N94FZW78EQA3J41K0795WXF9$0",
+          "original_amount": "1.32",
+          "original_cost_eur": "1.2013105206",
+          "source_event_id": "01N94FZW78EQA3J41K0795WXF9"
+        },
+        {
+          "account_id": "acc_ibkr",
+          "acquisition_date": "2027-06-06",
+          "amount": "191.14",
+          "closed": false,
+          "cost_eur": "180.7814981677",
+          "currency": "USD",
+          "id": "01MQTWHB78RC2FADH9B774BHS5$0",
+          "original_amount": "191.14",
+          "original_cost_eur": "180.7814981677",
+          "source_event_id": "01MQTWHB78RC2FADH9B774BHS5"
+        },
+        {
+          "account_id": "acc_ibkr2",
+          "acquisition_date": "2027-06-06",
+          "amount": "574.42",
+          "closed": false,
+          "cost_eur": "543.2815259875",
+          "currency": "USD",
+          "id": "01MQTWHB78RC2FADH9B774BHS5$1",
+          "original_amount": "574.42",
+          "original_cost_eur": "543.2815259875",
+          "source_event_id": "01MQTWHB78RC2FADH9B774BHS5"
+        },
+        {
+          "account_id": "acc_bucket",
+          "acquisition_date": "2027-10-08",
+          "amount": "12.345",
+          "closed": false,
+          "cost_eur": "11.5907054535",
+          "currency": "USD",
+          "id": "01N1T5TF78RGXZG073WH23MGPM$0",
+          "original_amount": "12.345",
+          "original_cost_eur": "11.5907054535",
+          "source_event_id": "01N1T5TF78RGXZG073WH23MGPM"
+        },
+        {
+          "account_id": "acc_bucket",
+          "acquisition_date": "2027-11-05",
+          "amount": "27.449999997205",
+          "closed": false,
+          "cost_eur": "25.9640600008",
+          "currency": "USD",
+          "id": "01N428YK78ARMXKW9TRZB7XV2D$0",
+          "original_amount": "27.449999997205",
+          "original_cost_eur": "25.9640600008",
+          "source_event_id": "01N428YK78ARMXKW9TRZB7XV2D"
+        },
+        {
+          "account_id": "acc_bucket",
+          "acquisition_date": "2027-12-30",
+          "amount": "272.1",
+          "closed": false,
+          "cost_eur": "253.4676556007",
+          "currency": "USD",
+          "id": "01N8FWT380SW7KKH9M43NPQ2DA$0",
+          "original_amount": "272.1",
+          "original_cost_eur": "253.4676556007",
+          "source_event_id": "01N8FWT380SW7KKH9M43NPQ2DA"
+        },
+        {
+          "account_id": "acc_bucket",
+          "acquisition_date": "2028-01-09",
+          "amount": "233.8",
+          "closed": false,
+          "cost_eur": "224.3338064403",
+          "currency": "USD",
+          "id": "01N99MS980M9HHX4EMDCANXBYD$0",
+          "original_amount": "233.8",
+          "original_cost_eur": "224.3338064403",
+          "source_event_id": "01N99MS980M9HHX4EMDCANXBYD"
+        }
+      ]
+    }
+  },
   "filings": [],
   "fiscal_settings": {
     "bucket_benchmark_asset_id": "ast_world",
@@ -393,18 +522,19 @@
       "asset_id": "ast_gold",
       "by_lot": [
         {
-          "cost_eur": "181.2181062181",
-          "gain_eur": "-2.1139083171",
+          "cost_eur": "179.6898425787",
+          "gain_eur": "-0.5856446777",
           "lot_id": "01M1M6TY80A45SV7BY1V6AFX8V#0",
           "proceeds_eur": "179.104197901",
           "quantity": "0.25"
         }
       ],
-      "cost_eur": "181.2181062181",
+      "cost_eur": "179.6898425787",
       "event_id": "01MQTWHB78RC2FADH9B774BHS5",
       "fiscal_date": "2027-06-06",
-      "gain_eur": "-2.1139083171",
-      "gain_eur_rounded": "-2.11",
+      "fx_method": "currency_first",
+      "gain_eur": "-0.5856446777",
+      "gain_eur_rounded": "-0.59",
       "proceeds_eur": "179.104197901",
       "quantity": "0.25",
       "year": 2027
@@ -414,18 +544,19 @@
       "asset_id": "ast_gold",
       "by_lot": [
         {
-          "cost_eur": "543.6543186543",
-          "gain_eur": "-5.4046934669",
+          "cost_eur": "539.0695277361",
+          "gain_eur": "-0.8199025487",
           "lot_id": "01M1M6TY80A45SV7BY1V6AFX8V#0",
           "proceeds_eur": "538.2496251874",
           "quantity": "0.75"
         }
       ],
-      "cost_eur": "543.6543186543",
+      "cost_eur": "539.0695277361",
       "event_id": "01MQTWHB78RC2FADH9B774BHS5",
       "fiscal_date": "2027-06-06",
-      "gain_eur": "-5.4046934669",
-      "gain_eur_rounded": "-5.4",
+      "fx_method": "currency_first",
+      "gain_eur": "-0.8199025487",
+      "gain_eur_rounded": "-0.82",
       "proceeds_eur": "538.2496251874",
       "quantity": "0.75",
       "year": 2027
@@ -463,18 +594,19 @@
       "asset_id": "ast_alpha_spin",
       "by_lot": [
         {
-          "cost_eur": "7.9795879796",
-          "gain_eur": "3.4256226634",
+          "cost_eur": "7.8011825573",
+          "gain_eur": "3.6040280857",
           "lot_id": "01N1T5TF78RGXZG073WH23MGPM#0",
           "proceeds_eur": "11.405210643",
           "quantity": "0.5"
         }
       ],
-      "cost_eur": "7.9795879796",
+      "cost_eur": "7.8011825573",
       "event_id": "01N1T5TF78RGXZG073WH23MGPM",
       "fiscal_date": "2027-10-08",
-      "gain_eur": "3.4256226634",
-      "gain_eur_rounded": "3.43",
+      "fx_method": "currency_first",
+      "gain_eur": "3.6040280857",
+      "gain_eur_rounded": "3.6",
       "proceeds_eur": "11.405210643",
       "quantity": "0.5",
       "year": 2027
@@ -484,18 +616,19 @@
       "asset_id": "ast_beta_new",
       "by_lot": [
         {
-          "cost_eur": "24.6563940128",
-          "gain_eur": "1.4070317346",
+          "cost_eur": "26.6112068688",
+          "gain_eur": "-0.5477811214",
           "lot_id": "01N428YK78ARMXKW9TRZB7XV2D#0",
           "proceeds_eur": "26.0634257474",
           "quantity": "0.3333333333"
         }
       ],
-      "cost_eur": "24.6563940128",
+      "cost_eur": "26.6112068688",
       "event_id": "01N428YK78ARMXKW9TRZB7XV2D",
       "fiscal_date": "2027-11-05",
-      "gain_eur": "1.4070317346",
-      "gain_eur_rounded": "1.41",
+      "fx_method": "currency_first",
+      "gain_eur": "-0.5477811214",
+      "gain_eur_rounded": "-0.55",
       "proceeds_eur": "26.0634257474",
       "quantity": "0.3333333333",
       "year": 2027
@@ -526,18 +659,19 @@
       "asset_id": "ast_alpha",
       "by_lot": [
         {
-          "cost_eur": "159.59175959176",
-          "gain_eur": "87.50231959454",
+          "cost_eur": "153.3599709407",
+          "gain_eur": "93.7341082456",
           "lot_id": "01M1PS7P7828CF37AWMZ0G1BED#0",
           "proceeds_eur": "247.0940791863",
           "quantity": "10"
         }
       ],
-      "cost_eur": "159.59175959176",
+      "cost_eur": "153.3599709407",
       "event_id": "01N8FWT380SW7KKH9M43NPQ2DA",
       "fiscal_date": "2027-12-30",
-      "gain_eur": "87.50231959454",
-      "gain_eur_rounded": "87.5",
+      "fx_method": "currency_first",
+      "gain_eur": "93.7341082456",
+      "gain_eur_rounded": "93.73",
       "proceeds_eur": "247.0940791863",
       "quantity": "10",
       "year": 2027
@@ -547,18 +681,19 @@
       "asset_id": "ast_beta_new",
       "by_lot": [
         {
-          "cost_eur": "295.876728183",
-          "gain_eur": "-81.9504769249",
+          "cost_eur": "307.7345383161",
+          "gain_eur": "-93.808287058",
           "lot_id": "01N428YK78ARMXKW9TRZB7XV2D#0",
           "proceeds_eur": "213.9262512581",
           "quantity": "4"
         }
       ],
-      "cost_eur": "295.876728183",
+      "cost_eur": "307.7345383161",
       "event_id": "01N99MS980M9HHX4EMDCANXBYD",
       "fiscal_date": "2028-01-09",
-      "gain_eur": "-81.9504769249",
-      "gain_eur_rounded": "-81.95",
+      "fx_method": "currency_first",
+      "gain_eur": "-93.808287058",
+      "gain_eur_rounded": "-93.81",
       "proceeds_eur": "213.9262512581",
       "quantity": "4",
       "year": 2028
@@ -685,12 +820,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "168.88",
               "cost_eur": "159.59175959176",
               "event_id": "01N8FWT380SW7KKH9M43NPQ2DA",
+              "funding_eur": "159.73354735512",
               "quantity": "10"
             }
           ],
+          "cost": "0",
+          "cost_currency": "USD",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01M1PS7P7828CF37AWMZ0G1BED#0",
           "original_cost_eur": "199.4896994897",
           "original_quantity": "10",
@@ -709,12 +849,17 @@
           "closed": false,
           "consumptions": [
             {
+              "cost": "8.444",
               "cost_eur": "7.9795879796",
               "event_id": "01N1T5TF78RGXZG073WH23MGPM",
+              "funding_eur": "7.9866773678",
               "quantity": "0.5"
             }
           ],
+          "cost": "33.776",
+          "cost_currency": "USD",
           "cost_eur": "31.91835191834",
+          "funding_eur": "31.94670947098",
           "id": "01N1T5TF78RGXZG073WH23MGPM#0",
           "original_cost_eur": "39.89793989794",
           "original_quantity": "2.5",
@@ -732,12 +877,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "364.35",
               "cost_eur": "320.5331221958",
               "event_id": "01N428YK78ARMXKW9TRZB7XV2D",
+              "funding_eur": "344.6539346205",
               "quantity": "13"
             }
           ],
+          "cost": "0",
+          "cost_currency": "USD",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01M4BRBD78HXF9SGE8990VQ67M#0",
           "original_cost_eur": "320.5331221958",
           "original_quantity": "13",
@@ -755,17 +905,24 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "28.0269230743",
               "cost_eur": "24.6563940128",
               "event_id": "01N428YK78ARMXKW9TRZB7XV2D",
+              "funding_eur": "26.5118411222",
               "quantity": "0.3333333333"
             },
             {
+              "cost": "336.3230769257",
               "cost_eur": "295.876728183",
               "event_id": "01N99MS980M9HHX4EMDCANXBYD",
+              "funding_eur": "318.1420934983",
               "quantity": "4"
             }
           ],
+          "cost": "0",
+          "cost_currency": "USD",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01N428YK78ARMXKW9TRZB7XV2D#0",
           "original_cost_eur": "320.5331221958",
           "original_quantity": "4.3333333333",
@@ -784,12 +941,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "5.204168372",
               "cost_eur": "5.204168372",
               "event_id": "01NDWDEA6G0YN8D767S1W8P48Q",
+              "funding_eur": "5.204168372",
               "quantity": "0.0360522072"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01MWZNZC6GGPMWWX9SQ9ZMY6BZ#0",
           "original_cost_eur": "5.204168372",
           "original_quantity": "0.0360522072",
@@ -803,12 +965,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "250",
               "cost_eur": "250",
               "event_id": "01NDWDEA6G0YN8D767S1W8P48Q",
+              "funding_eur": "250",
               "quantity": "2.5487"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01M1SBMC80DQR811FBE84B8YRM#0",
           "original_cost_eur": "250",
           "original_quantity": "2.5487",
@@ -821,12 +988,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "600",
               "cost_eur": "600",
               "event_id": "01NDWDEA6G0YN8D767S1W8P48Q",
+              "funding_eur": "600",
               "quantity": "4.0351645602"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01MWZNZC6GGPMWWX9SQ9ZMY6BZ#1",
           "original_cost_eur": "600",
           "original_quantity": "4.0351645602",
@@ -840,12 +1012,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "44.8812513863",
               "cost_eur": "44.8812513863",
               "event_id": "01NDWDEA6G0YN8D767S1W8P48Q",
+              "funding_eur": "44.8812513863",
               "quantity": "0.3078832326"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01MWZNZC6GGPMWWX9SQ9ZMY6BZ#2",
           "original_cost_eur": "44.8812513863",
           "original_quantity": "0.3078832326",
@@ -859,12 +1036,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "250",
               "cost_eur": "250",
               "event_id": "01NDWDEA6G0YN8D767S1W8P48Q",
+              "funding_eur": "250",
               "quantity": "2.3724"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01M93NSS801CEY95BKH1VNBXK0#0",
           "original_cost_eur": "250",
           "original_quantity": "2.3724",
@@ -877,12 +1059,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "250",
               "cost_eur": "250",
               "event_id": "01NDWDEA6G0YN8D767S1W8P48Q",
+              "funding_eur": "250",
               "quantity": "2.3509"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01MGK4RM80R8M5RTZVJK69WT0K#0",
           "original_cost_eur": "250",
           "original_quantity": "2.3509",
@@ -895,12 +1082,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "250",
               "cost_eur": "250",
               "event_id": "01NDWDEA6G0YN8D767S1W8P48Q",
+              "funding_eur": "250",
               "quantity": "2.5396"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01MQTWHA80VFCCM0XTK4R1GT48#0",
           "original_cost_eur": "250",
           "original_quantity": "2.5396",
@@ -913,12 +1105,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "250",
               "cost_eur": "250",
               "event_id": "01NDWDEA6G0YN8D767S1W8P48Q",
+              "funding_eur": "250",
               "quantity": "2.3116"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01MZ56PQ8069FAGYWFBQ20HT7B#0",
           "original_cost_eur": "250",
           "original_quantity": "2.3116",
@@ -931,12 +1128,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "250",
               "cost_eur": "250",
               "event_id": "01NDWDEA6G0YN8D767S1W8P48Q",
+              "funding_eur": "250",
               "quantity": "2.5678"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01N6MNNJ804JBAD1KBD213ZBKX#0",
           "original_cost_eur": "250",
           "original_quantity": "2.5678",
@@ -949,12 +1151,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "250",
               "cost_eur": "250",
               "event_id": "01NDWDEA6G0YN8D767S1W8P48Q",
+              "funding_eur": "250",
               "quantity": "2.4479"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01NDWDE880SSB9ZC917RPZ7WA8#0",
           "original_cost_eur": "250",
           "original_quantity": "2.4479",
@@ -972,7 +1179,10 @@
           "asset_id": "ast_bonds_i",
           "closed": false,
           "consumptions": [],
+          "cost": "5.204168372",
+          "cost_currency": "EUR",
           "cost_eur": "5.204168372",
+          "funding_eur": "5.204168372",
           "id": "01NDWDEA6G0YN8D767S1W8P48Q#0",
           "original_cost_eur": "5.204168372",
           "original_quantity": "0.0360522072",
@@ -985,7 +1195,10 @@
           "asset_id": "ast_bonds_i",
           "closed": false,
           "consumptions": [],
+          "cost": "250",
+          "cost_currency": "EUR",
           "cost_eur": "250",
+          "funding_eur": "250",
           "id": "01NDWDEA6G0YN8D767S1W8P48Q#1",
           "original_cost_eur": "250",
           "original_quantity": "2.5487",
@@ -998,7 +1211,10 @@
           "asset_id": "ast_bonds_i",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01NDWDEA6G0YN8D767S1W8P48Q#2",
           "original_cost_eur": "600",
           "original_quantity": "4.0351645602",
@@ -1011,7 +1227,10 @@
           "asset_id": "ast_bonds_i",
           "closed": false,
           "consumptions": [],
+          "cost": "44.8812513863",
+          "cost_currency": "EUR",
           "cost_eur": "44.8812513863",
+          "funding_eur": "44.8812513863",
           "id": "01NDWDEA6G0YN8D767S1W8P48Q#3",
           "original_cost_eur": "44.8812513863",
           "original_quantity": "0.3078832326",
@@ -1024,7 +1243,10 @@
           "asset_id": "ast_bonds_i",
           "closed": false,
           "consumptions": [],
+          "cost": "250",
+          "cost_currency": "EUR",
           "cost_eur": "250",
+          "funding_eur": "250",
           "id": "01NDWDEA6G0YN8D767S1W8P48Q#4",
           "original_cost_eur": "250",
           "original_quantity": "2.3724",
@@ -1037,7 +1259,10 @@
           "asset_id": "ast_bonds_i",
           "closed": false,
           "consumptions": [],
+          "cost": "250",
+          "cost_currency": "EUR",
           "cost_eur": "250",
+          "funding_eur": "250",
           "id": "01NDWDEA6G0YN8D767S1W8P48Q#5",
           "original_cost_eur": "250",
           "original_quantity": "2.3509",
@@ -1050,7 +1275,10 @@
           "asset_id": "ast_bonds_i",
           "closed": false,
           "consumptions": [],
+          "cost": "250",
+          "cost_currency": "EUR",
           "cost_eur": "250",
+          "funding_eur": "250",
           "id": "01NDWDEA6G0YN8D767S1W8P48Q#6",
           "original_cost_eur": "250",
           "original_quantity": "2.5396",
@@ -1063,7 +1291,10 @@
           "asset_id": "ast_bonds_i",
           "closed": false,
           "consumptions": [],
+          "cost": "250",
+          "cost_currency": "EUR",
           "cost_eur": "250",
+          "funding_eur": "250",
           "id": "01NDWDEA6G0YN8D767S1W8P48Q#7",
           "original_cost_eur": "250",
           "original_quantity": "2.3116",
@@ -1076,7 +1307,10 @@
           "asset_id": "ast_bonds_i",
           "closed": false,
           "consumptions": [],
+          "cost": "250",
+          "cost_currency": "EUR",
           "cost_eur": "250",
+          "funding_eur": "250",
           "id": "01NDWDEA6G0YN8D767S1W8P48Q#8",
           "original_cost_eur": "250",
           "original_quantity": "2.5678",
@@ -1089,7 +1323,10 @@
           "asset_id": "ast_bonds_i",
           "closed": false,
           "consumptions": [],
+          "cost": "250",
+          "cost_currency": "EUR",
           "cost_eur": "250",
+          "funding_eur": "250",
           "id": "01NDWDEA6G0YN8D767S1W8P48Q#9",
           "original_cost_eur": "250",
           "original_quantity": "2.4479",
@@ -1102,7 +1339,10 @@
           "asset_id": "ast_bonds_i",
           "closed": false,
           "consumptions": [],
+          "cost": "250",
+          "cost_currency": "EUR",
           "cost_eur": "250",
+          "funding_eur": "250",
           "id": "01NN6QKN80JAHCPQ48V3S7HVXR#0",
           "original_cost_eur": "250",
           "original_quantity": "2.492",
@@ -1114,7 +1354,10 @@
           "asset_id": "ast_bonds_i",
           "closed": false,
           "consumptions": [],
+          "cost": "250",
+          "cost_currency": "EUR",
           "cost_eur": "250",
+          "funding_eur": "250",
           "id": "01NWVBBY80JP6HR8M66SNAC8BS#0",
           "original_cost_eur": "250",
           "original_quantity": "2.318",
@@ -1126,7 +1369,10 @@
           "asset_id": "ast_bonds_i",
           "closed": false,
           "consumptions": [],
+          "cost": "250",
+          "cost_currency": "EUR",
           "cost_eur": "250",
+          "funding_eur": "250",
           "id": "01P3VBYF803AH5MTZWSABV9PFW#0",
           "original_cost_eur": "250",
           "original_quantity": "2.431",
@@ -1143,7 +1389,10 @@
           "asset_id": "ast_btc",
           "closed": false,
           "consumptions": [],
+          "cost": "193.6",
+          "cost_currency": "EUR",
           "cost_eur": "193.6",
+          "funding_eur": "193.6",
           "id": "01M1M6TZ78T3J54NXB4CZXH4XC#0",
           "original_cost_eur": "193.6",
           "original_quantity": "6",
@@ -1160,12 +1409,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "376.2",
               "cost_eur": "376.2",
               "event_id": "01MX28C1803YR20A0EAGQ8XSQM",
+              "funding_eur": "376.2",
               "quantity": "20"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01MEG6DY80B931VTBH1A0BGNRE#0",
           "original_cost_eur": "376.2",
           "original_quantity": "20",
@@ -1178,12 +1432,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "207.4",
               "cost_eur": "207.4",
               "event_id": "01MX28C1803YR20A0EAGQ8XSQM",
+              "funding_eur": "207.4",
               "quantity": "10"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01MKD8NS806CJ9SGD5ERZMGPD5#0",
           "original_cost_eur": "207.4",
           "original_quantity": "10",
@@ -1196,12 +1455,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "743.5",
               "cost_eur": "743.5",
               "event_id": "01N4F4Y58036KX1852YTTM0XD3",
+              "funding_eur": "743.5",
               "quantity": "25"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01MZJ2PA80XHBXS2XS5FZYQ1N2#0",
           "original_cost_eur": "743.5",
           "original_quantity": "25",
@@ -1215,7 +1479,10 @@
           "asset_id": "ast_delta",
           "closed": false,
           "consumptions": [],
+          "cost": "535.5",
+          "cost_currency": "EUR",
           "cost_eur": "535.5",
+          "funding_eur": "535.5",
           "id": "01N7P4TX80S2D9FXZN82KE9Z3A#0",
           "original_cost_eur": "535.5",
           "original_quantity": "25",
@@ -1232,12 +1499,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "571",
               "cost_eur": "571",
               "event_id": "01MN8FTA80DDTPKAG5TNV3Q20X",
+              "funding_eur": "571",
               "quantity": "40"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01MGBDJF80AQMY7TCNE7BB4R42#0",
           "original_cost_eur": "571",
           "original_quantity": "40",
@@ -1250,12 +1522,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "450.05",
               "cost_eur": "450.05",
               "event_id": "01NP0FJV80F4D8ENCZZRFTSFRS",
+              "funding_eur": "450.05",
               "quantity": "35"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01N9S35K80Q2QR8FAZEQQ1JAZ5#0",
           "original_cost_eur": "450.05",
           "original_quantity": "35",
@@ -1273,7 +1550,10 @@
           "asset_id": "ast_gamma",
           "closed": false,
           "consumptions": [],
+          "cost": "410.08",
+          "cost_currency": "USD",
           "cost_eur": "361.8778679845",
+          "funding_eur": "387.9118581286",
           "id": "01MTAPVM784KF96PN3121T84B1#0",
           "original_cost_eur": "361.8778679845",
           "original_quantity": "6",
@@ -1285,7 +1565,10 @@
           "asset_id": "ast_gamma",
           "closed": false,
           "consumptions": [],
+          "cost": "573.74",
+          "cost_currency": "USD",
           "cost_eur": "510.8084045584",
+          "funding_eur": "542.7247109899",
           "id": "01NWVBC06G2CXHD3MJX82063T1#0",
           "original_cost_eur": "510.8084045584",
           "original_quantity": "7",
@@ -1303,17 +1586,24 @@
           "closed": false,
           "consumptions": [
             {
+              "cost": "191.765",
               "cost_eur": "181.2181062181",
               "event_id": "01MQTWHB78RC2FADH9B774BHS5",
+              "funding_eur": "181.3671428454",
               "quantity": "0.25"
             },
             {
+              "cost": "575.295",
               "cost_eur": "543.6543186543",
               "event_id": "01MQTWHB78RC2FADH9B774BHS5",
+              "funding_eur": "544.1014285362",
               "quantity": "0.75"
             }
           ],
+          "cost": "1534.12",
+          "cost_currency": "USD",
           "cost_eur": "1449.7448497449",
+          "funding_eur": "1450.9371427631",
           "id": "01M1M6TY80A45SV7BY1V6AFX8V#0",
           "original_cost_eur": "2174.6172746173",
           "original_quantity": "12",
@@ -1331,12 +1621,17 @@
           "closed": false,
           "consumptions": [
             {
+              "cost": "1239.9980150027",
               "cost_eur": "1239.9980150027",
               "event_id": "01NJYMFH80AWMAY0T3631A31HN",
+              "funding_eur": "1239.9980150027",
               "quantity": "12.4937"
             }
           ],
+          "cost": "1860.0019849973",
+          "cost_currency": "EUR",
           "cost_eur": "1860.0019849973",
+          "funding_eur": "1860.0019849973",
           "id": "01M1PS7N80HK088D7010QSGMEQ#0",
           "original_cost_eur": "3100",
           "original_quantity": "31.2343",
@@ -1353,12 +1648,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "5.204168372",
               "cost_eur": "5.204168372",
               "event_id": "01MWZNZC6GGPMWWX9SQ9ZMY6BZ",
+              "funding_eur": "5.204168372",
               "quantity": "0.0332604684"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01MGR9J378GET3A3ZFX29ZRHTK#0",
           "original_cost_eur": "5.204168372",
           "original_quantity": "0.0332604684",
@@ -1372,12 +1672,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "600",
               "cost_eur": "600",
               "event_id": "01MWZNZC6GGPMWWX9SQ9ZMY6BZ",
+              "funding_eur": "600",
               "quantity": "3.7226975459"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01MGR9J378GET3A3ZFX29ZRHTK#1",
           "original_cost_eur": "600",
           "original_quantity": "3.7226975459",
@@ -1391,17 +1696,24 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "44.8812513863",
               "cost_eur": "44.8812513863",
               "event_id": "01MWZNZC6GGPMWWX9SQ9ZMY6BZ",
+              "funding_eur": "44.8812513863",
               "quantity": "0.2840419857"
             },
             {
+              "cost": "555.1187486137",
               "cost_eur": "555.1187486137",
               "event_id": "01NBMAA57800TAN9DDY4TX509F",
+              "funding_eur": "555.1187486137",
               "quantity": "3.5132048859"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01MGR9J378GET3A3ZFX29ZRHTK#2",
           "original_cost_eur": "600",
           "original_quantity": "3.7972468716",
@@ -1415,12 +1727,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "93.6490619355",
               "cost_eur": "93.6490619355",
               "event_id": "01NBMAA57800TAN9DDY4TX509F",
+              "funding_eur": "93.6490619355",
               "quantity": "0.5267951141"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01MGR9J378GET3A3ZFX29ZRHTK#3",
           "original_cost_eur": "93.6490619355",
           "original_quantity": "0.5267951141",
@@ -1439,7 +1756,10 @@
           "asset_id": "ast_smallcap_b",
           "closed": false,
           "consumptions": [],
+          "cost": "555.1187486137",
+          "cost_currency": "EUR",
           "cost_eur": "555.1187486137",
+          "funding_eur": "555.1187486137",
           "id": "01NBMAA57800TAN9DDY4TX509F#0",
           "original_cost_eur": "555.1187486137",
           "original_quantity": "5.97244830603",
@@ -1452,7 +1772,10 @@
           "asset_id": "ast_smallcap_b",
           "closed": false,
           "consumptions": [],
+          "cost": "93.6490619355",
+          "cost_currency": "EUR",
           "cost_eur": "93.6490619355",
+          "funding_eur": "93.6490619355",
           "id": "01NBMAA57800TAN9DDY4TX509F#1",
           "original_cost_eur": "93.6490619355",
           "original_quantity": "0.89555169397",
@@ -1470,12 +1793,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "243.9",
               "cost_eur": "243.9",
               "event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+              "funding_eur": "243.9",
               "quantity": "2.5"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01MBP2GT78JNMNGSE96ZZMH1R7#0",
           "original_cost_eur": "243.9",
           "original_quantity": "2.5",
@@ -1488,17 +1816,24 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "594.795831628",
               "cost_eur": "594.795831628",
               "event_id": "01MBP2GS80T8F1MS8PT0M7FK2R",
+              "funding_eur": "594.795831628",
               "quantity": "6.2975"
             },
             {
+              "cost": "5.204168372",
               "cost_eur": "5.204168372",
               "event_id": "01MGR9J378GET3A3ZFX29ZRHTK",
+              "funding_eur": "5.204168372",
               "quantity": "0.0551"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01M1PS7R5RJ4XWKK5GX24DQ2FE#0",
           "original_cost_eur": "600",
           "original_quantity": "6.3526",
@@ -1511,12 +1846,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "600",
               "cost_eur": "600",
               "event_id": "01MGR9J378GET3A3ZFX29ZRHTK",
+              "funding_eur": "600",
               "quantity": "6.1671"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01M495YN80BYC4Q2KCPDGJRBPT#0",
           "original_cost_eur": "600",
           "original_quantity": "6.1671",
@@ -1529,12 +1869,17 @@
           "closed": true,
           "consumptions": [
             {
+              "cost": "600",
               "cost_eur": "600",
               "event_id": "01MGR9J378GET3A3ZFX29ZRHTK",
+              "funding_eur": "600",
               "quantity": "6.2906"
             }
           ],
+          "cost": "0",
+          "cost_currency": "EUR",
           "cost_eur": "0",
+          "funding_eur": "0",
           "id": "01M6H92S80PZPKZ809HYAG101D#0",
           "original_cost_eur": "600",
           "original_quantity": "6.2906",
@@ -1549,12 +1894,17 @@
           "closed": false,
           "consumptions": [
             {
+              "cost": "93.6490619355",
               "cost_eur": "93.6490619355",
               "event_id": "01MGR9J378GET3A3ZFX29ZRHTK",
+              "funding_eur": "93.6490619355",
               "quantity": "0.8727"
             }
           ],
+          "cost": "506.3509380645",
+          "cost_currency": "EUR",
           "cost_eur": "506.3509380645",
+          "funding_eur": "506.3509380645",
           "id": "01M913D280DABTDXE2PY8XFSY8#0",
           "original_cost_eur": "600",
           "original_quantity": "5.5913",
@@ -1566,7 +1916,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01MBEBAM80K3CE5XK9JN91KKCC#0",
           "original_cost_eur": "600",
           "original_quantity": "4.9233",
@@ -1578,7 +1931,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01ME3AEB80NNJANWN0AFEQT9NM#0",
           "original_cost_eur": "600",
           "original_quantity": "5.0701",
@@ -1590,7 +1946,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01MGGJBX80QH7D6T8TEGCQ2T7R#0",
           "original_cost_eur": "600",
           "original_quantity": "5.3662",
@@ -1602,7 +1961,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01MK0CP680GRT4VMCSCNE2J9M3#0",
           "original_cost_eur": "600",
           "original_quantity": "6.0356",
@@ -1614,7 +1976,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01MN3B0W80VF30629G9Z57MH12#0",
           "original_cost_eur": "600",
           "original_quantity": "5.7609",
@@ -1626,7 +1991,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01MQRA4K80BKW03GPJQ15WRAAA#0",
           "original_cost_eur": "600",
           "original_quantity": "4.9088",
@@ -1638,7 +2006,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01MWQYS580AQC67E90RTJSJWXG#0",
           "original_cost_eur": "600",
           "original_quantity": "5.5996",
@@ -1650,7 +2021,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01MZ2MA08035GFM8GTVXQKJPA0#0",
           "original_cost_eur": "600",
           "original_quantity": "6.5646",
@@ -1662,7 +2036,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01N1QKDQ80FXGXFWNKBY8GHRT8#0",
           "original_cost_eur": "600",
           "original_quantity": "6.4488",
@@ -1674,7 +2051,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01N3X45480EBH73T8KZ6NY4EVD#0",
           "original_cost_eur": "600",
           "original_quantity": "4.8701",
@@ -1686,7 +2066,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01N6J38V806J987G65VGRJGGDD#0",
           "original_cost_eur": "600",
           "original_quantity": "4.6838",
@@ -1698,7 +2081,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01N91XK48084QAF9Q2RRNGFG1F#0",
           "original_cost_eur": "600",
           "original_quantity": "5.629",
@@ -1710,7 +2096,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01NBHQXD800KRYT2ENAHYXGA6F#0",
           "original_cost_eur": "600",
           "original_quantity": "6.0723",
@@ -1722,7 +2111,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01NDSV1H80CKBHV0SA0CQDR7R3#0",
           "original_cost_eur": "600",
           "original_quantity": "4.8104",
@@ -1734,7 +2126,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01NGET5880PZCEQPEK9PWNG679#0",
           "original_cost_eur": "600",
           "original_quantity": "5.2808",
@@ -1746,7 +2141,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01NJSFP380SZQ5SYR0BQAFXXES#0",
           "original_cost_eur": "600",
           "original_quantity": "6.0187",
@@ -1758,7 +2156,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01NN456Y80A3SYTRTJH9SQ21PP#0",
           "original_cost_eur": "600",
           "original_quantity": "5.1564",
@@ -1770,7 +2171,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01NQPHXY80AVSFQAZKTCPHC7P7#0",
           "original_cost_eur": "600",
           "original_quantity": "6.1811",
@@ -1782,7 +2186,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01NT8YMY80C4AWK1XPFBB8HCB3#0",
           "original_cost_eur": "600",
           "original_quantity": "4.6375",
@@ -1794,7 +2201,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01NWRRZ780K84A9DT5551JC46H#0",
           "original_cost_eur": "600",
           "original_quantity": "6.0901",
@@ -1806,7 +2216,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01NZ60WS80JP63RTY36DBVGWHW#0",
           "original_cost_eur": "600",
           "original_quantity": "6.2604",
@@ -1818,7 +2231,10 @@
           "asset_id": "ast_world",
           "closed": false,
           "consumptions": [],
+          "cost": "600",
+          "cost_currency": "EUR",
           "cost_eur": "600",
+          "funding_eur": "600",
           "id": "01P1GPDM80WFCQAT10VJ7M3RTP#0",
           "original_cost_eur": "600",
           "original_quantity": "6.3325",
@@ -2573,8 +2989,8 @@
       "planned_size_eur": "259",
       "quantity_bought": "10",
       "quantity_sold": "10",
-      "result_eur": "87.50231959454",
-      "result_eur_rounded": "87.5",
+      "result_eur": "93.7341082456",
+      "result_eur_rounded": "93.73",
       "sells": [
         "01N8FWT380SW7KKH9M43NPQ2DA"
       ],
@@ -2646,8 +3062,8 @@
       "planned_size_eur": "447",
       "quantity_bought": "0",
       "quantity_sold": "4",
-      "result_eur": "-81.9504769249",
-      "result_eur_rounded": "-81.95",
+      "result_eur": "-93.808287058",
+      "result_eur_rounded": "-93.81",
       "sells": [
         "01N99MS980M9HHX4EMDCANXBYD"
       ],
