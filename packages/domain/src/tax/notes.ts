@@ -337,6 +337,26 @@ export const notesOf = (
       );
     }
   }
+  // The same for a loss of currency: one year after (V1613-25).
+  for (const line of core.currency) {
+    if (line.provisional_until !== undefined) {
+      notes.push(
+        eventNote(
+          "tax_window_open",
+          line.event_id,
+          `the wash-sale window of this exchange difference is open until ${line.provisional_until}`,
+          {
+            asset_id: line.currency,
+            loss_eur: (line.gain_eur.isNegative() ? line.gain_eur : zero())
+              .add(line.released_eur)
+              .roundToCents()
+              .amount.toString(),
+            window_end: line.provisional_until,
+          },
+        ),
+      );
+    }
+  }
   for (const outcome of core.ctx.walk.outcomes) {
     const gain = core.state.gains[outcome.gain_index] as RealizedGain;
     if (gain.year !== year) {

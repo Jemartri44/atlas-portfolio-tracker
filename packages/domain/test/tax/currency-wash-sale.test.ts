@@ -3,6 +3,7 @@
 // por las diferencias de cambio en la conversión de las divisas a euros".
 
 import { describe, expect, it } from "vitest";
+import { filingProposal } from "../../src/filings/proposal.js";
 import { DEFAULT_SETTINGS } from "../../src/settings/settings.js";
 import { LedgerBuilder } from "../ledger-builder.js";
 import { reportOf, rowsAddUpToTheEngine, text } from "./helpers.js";
@@ -104,8 +105,9 @@ describe("the wash-sale rule on currency (V1613-25)", () => {
     });
   });
 
-  it("does not defer on a purchase of shares with the dollars: investing imputes nothing", () => {
+  it("rides on through dollars invested in shares, and comes back with a later conversion", () => {
     const b = c3();
+    // The dollars bought again buy shares: nothing is realized, nothing comes back.
     b.buy({
       account_id: "acc_us",
       asset_id: "stk_us",
@@ -115,9 +117,81 @@ describe("the wash-sale rule on currency (V1613-25)", () => {
       currency: "USD",
       fx_rate: "1.25",
     });
-    // The deferral rides on to the next dollars, and stays deferred.
-    expect(year(b, 2027).balance).toBe("0");
-    expect(year(b, 2028).balance).toBe("0");
+    b.sell({
+      account_id: "acc_us",
+      asset_id: "stk_us",
+      value_date: "2028-06-01",
+      quantity: "10",
+      unit_price: "100",
+      currency: "USD",
+      fx_rate: "1.25",
+    });
+    expect([year(b, 2027).balance, year(b, 2028).balance]).toEqual(["0", "0"]);
+    // The dollars of the sale took it; their conversion with nothing bought after brings it back.
+    exchange(b, "2029-06-01", "sell", "1000", "800", "1.25");
+    expect(year(b, 2029).balance).toBe("-200");
+    const { rows, engine } = rowsAddUpToTheEngine(b.build(), 2029);
+    expect(rows).toBe(engine);
+  });
+
+  it("passes to the next dollars held when those that carry it are withdrawn", () => {
+    const b = ledger();
+    exchange(b, "2027-01-11", "buy", "1000", "1000", "1");
+    exchange(b, "2027-03-01", "sell", "1000", "800", "1.25");
+    exchange(b, "2027-04-01", "buy", "1000", "800", "1.25");
+    exchange(b, "2028-05-02", "buy", "500", "400", "1.25");
+    b.withdrawal({
+      account_id: "acc_us",
+      value_date: "2028-06-01",
+      amount: "1000",
+      currency: "USD",
+    });
+    // The 500 bought in May now carry the −200; half of them, half of it.
+    exchange(b, "2029-07-02", "sell", "250", "200", "1.25");
+    expect(year(b, 2029).balance).toBe("-100");
+  });
+
+  it("counts as acquired again the dollars that cover dollars spent without having them", () => {
+    const b = ledger();
+    exchange(b, "2027-01-11", "buy", "1000", "1000", "1");
+    exchange(b, "2027-03-01", "sell", "1000", "800", "1.25");
+    b.buy({
+      account_id: "acc_us",
+      asset_id: "stk_us",
+      value_date: "2027-04-01",
+      quantity: "10",
+      unit_price: "100",
+      currency: "USD",
+      fx_rate: "1.25",
+    });
+    exchange(b, "2027-04-02", "buy", "1000", "800", "1.25");
+    expect(year(b, 2027).lines).toEqual([
+      ["conversion", "-200", "-200", "0"],
+      ["cover", "0", "0", "0"],
+    ]);
+  });
+
+  it("says the loss is provisional while its year is open", () => {
+    const b = ledger();
+    exchange(b, "2027-01-11", "buy", "1000", "1000", "1");
+    exchange(b, "2027-09-01", "sell", "1000", "800", "1.25");
+    const notes = reportOf(b.build(), 2027, "2028-05-01").notes.filter(
+      (note) => note.code === "tax_window_open",
+    );
+    expect(
+      notes.map((note) => [note.details.asset_id, note.details.loss_eur, note.details.window_end]),
+    ).toEqual([["USD", "-200", "2028-09-01"]]);
+  });
+
+  it("puts what is still deferred into the figure a filed return records", () => {
+    const report = reportOf(c3().build(), 2027);
+    expect(
+      report.wash_sale.currency_pending.map((entry) => [entry.currency, text(entry.amount_eur)]),
+    ).toEqual([["USD", "-200"]]);
+    const deferred = filingProposal(c3().build(), "renta", 2027, {
+      today: "2035-01-01",
+    }).figures.find((figure) => figure.key === "deferred");
+    expect(text(deferred?.amount_eur)).toBe("-200");
   });
 
   it("keeps deferring what a conversion releases when the currency is bought again (#21)", () => {
@@ -168,6 +242,11 @@ describe("the wash-sale rule on currency (V1613-25)", () => {
     });
     exchange(b, "2027-02-02", "buy", "1000", "909.09", "1.1");
     exchange(b, "2027-03-01", "buy", "1000", "909.09", "1.1");
-    expect(year(b, 2027).lines).toEqual([["cover", "-109.09", "0", "-109.09"]]);
+    const [cover] = reportOf(b.build(), 2027).capital_gains.currency_lines;
+    expect([cover?.kind, text(cover?.computable_eur_rounded), cover?.criteria]).toEqual([
+      "cover",
+      "-109.09",
+      ["4", "4:currency_fifo", "6"],
+    ]);
   });
 });

@@ -20,6 +20,7 @@
 import { DomainError } from "../errors.js";
 import { filingComparison } from "../filings/comparison.js";
 import type { Money } from "../money/money.js";
+import type { CurrencyGain } from "../projections/currency-lots.js";
 import type { RealizedGain } from "../projections/state.js";
 import type { CorporateActionEvent, LedgerEvent } from "../schema/events.js";
 import type { IncomeCategory, Settings } from "../settings/settings.js";
@@ -295,6 +296,10 @@ export const taxYearWithChain = (
         amount_eur: entry.amount_eur,
         travelled: entry.travelled,
       })),
+      currency_pending: [...core.currencyWalk.pendingAt(year)].map(([origin, amount]) => {
+        const gain = state.currencyGains[origin] as CurrencyGain;
+        return { origin_event_id: gain.event_id, currency: gain.currency, amount_eur: amount };
+      }),
     },
     compensation: core.compensation,
     anchors: core.anchors,

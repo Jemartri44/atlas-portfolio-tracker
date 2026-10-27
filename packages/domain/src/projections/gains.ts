@@ -110,14 +110,15 @@ const methodOf = (
  * Leg by leg, the currency spent on a lot is valued at the rate of the day of
  * the purchase (its `cost_eur`), and what it had cost (`funding_eur`) differs:
  * that exchange difference is imputed now, one line per currency (V0777-21).
- * Only for an undertaking and a lot sold in another currency; first in the
- * currency, and with `each_leg` on a share, the difference stays in what the
- * transmission brings in and comes back when that is converted.
+ * Only for an undertaking and the lots of a sale in another currency; first in
+ * the currency, and with `each_leg` on a share, the difference stays in what
+ * the transmission brings in and comes back when that is converted.
  */
 const recordInvested = (
   state: LedgerState,
   input: GainInput,
   fxMethod: RealizedGain["fx_method"],
+  method: FxGainMethod,
 ): Money => {
   let total = Money.zero(EUR);
   if (fxMethod !== "iic" && fxMethod !== "mixed") {
@@ -125,7 +126,9 @@ const recordInvested = (
   }
   const byCurrency = new Map<string, LotSlice[]>();
   for (const slice of input.slices) {
-    if (slice.cost.currency !== EUR) {
+    // A lot of a mixed sale in the currency of the sale was computed first in
+    // it: its difference stays in what the sale brings in.
+    if (slice.cost.currency !== EUR && !inCurrency(method, input.proceeds, slice)) {
       byCurrency.set(slice.cost.currency, [...(byCurrency.get(slice.cost.currency) ?? []), slice]);
     }
   }
@@ -207,7 +210,7 @@ export const recordGain = (state: LedgerState, input: GainInput): RecordedGain =
   };
   state.gains.push(gain);
   state.lotJournal.push({ kind: "gain", gain_index: state.gains.length - 1 });
-  const invested = recordInvested(state, input, fxMethod);
+  const invested = recordInvested(state, input, fxMethod, methodFor(setting, assetType));
   return { gain, carried_eur: fundingOf(input.slices).add(gainEur).add(invested) };
 };
 

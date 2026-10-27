@@ -91,7 +91,7 @@ describe("an exchange difference in the report", () => {
     expect([line?.kind, text(line?.gain_eur_rounded), line?.criteria]).toEqual([
       "auto_conversion",
       "-1",
-      ["4", "4:currency_wash_sale", "4:auto_conversion", "6"],
+      ["4", "4:auto_conversion", "6"],
     ]);
   });
 

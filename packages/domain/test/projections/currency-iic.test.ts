@@ -182,4 +182,73 @@ describe("a lot bought in one currency and sold in another", () => {
       ["invested", "100"],
     ]);
   });
+
+  it("leaves the lots in the currency of the sale first in it, and imputes the others", () => {
+    // 10 shares with 1.000 $ (1,00; the dollars cost 800 €) and 10 with 800 £
+    // (0,80; the pounds cost 1.000 €); the 20 sold for 2.200 $ (1,10), and
+    // the dollars back to 2.000 € in 2028. 1.800 € in, 2.000 € out: +200.
+    const b = new LedgerBuilder();
+    b.settings(DEFAULT_SETTINGS);
+    b.account("acc_us", { platform: "broker", country: "IE" });
+    b.asset("stk_us", { asset_type: "stock", currency: "USD", transferable: false });
+    b.deposit({ account_id: "acc_us", value_date: "2027-01-04", amount: "1800" });
+    const fx = (date: string, eur: string, amount: string, currency: string, rate: string) =>
+      b.fx({
+        account_id: "acc_us",
+        value_date: date,
+        sold_amount: eur,
+        sold_currency: "EUR",
+        bought_amount: amount,
+        bought_currency: currency,
+        fee: "0",
+        fee_currency: "EUR",
+        fx_rate_bought: rate,
+        fx_rate_date: date,
+      });
+    fx("2027-01-05", "800", "1000", "USD", "1.25");
+    fx("2027-01-05", "1000", "800", "GBP", "0.8");
+    const buy = (currency: string, price: string, rate: string) =>
+      b.buy({
+        account_id: "acc_us",
+        asset_id: "stk_us",
+        value_date: "2027-01-11",
+        quantity: "10",
+        unit_price: price,
+        currency,
+        fx_rate: rate,
+      });
+    buy("USD", "100", "1");
+    buy("GBP", "80", "0.8");
+    b.sell({
+      account_id: "acc_us",
+      asset_id: "stk_us",
+      value_date: "2027-06-01",
+      quantity: "20",
+      unit_price: "110",
+      currency: "USD",
+      fx_rate: "1.1",
+    });
+    b.fx({
+      account_id: "acc_us",
+      value_date: "2028-02-01",
+      sold_amount: "2200",
+      sold_currency: "USD",
+      bought_amount: "2000",
+      bought_currency: "EUR",
+      fee: "0",
+      fee_currency: "EUR",
+      fx_rate_sold: "1.1",
+      fx_rate_bought: "1",
+      fx_rate_date: "2028-02-01",
+    });
+    const state = projectLedger(b.build());
+    // (1.100 − 1.000)/1,1 on the dollar lot; 1.000 − 1.000 on the pound lot.
+    expect(state.gains.map((gain) => [rounded(gain.gain_eur), gain.fx_method])).toEqual([
+      ["90.91", "mixed"],
+    ]);
+    // Nothing invested to impute on the pounds; the dollars' difference comes with them.
+    expect(
+      state.currencyGains.map((gain) => [gain.year, gain.kind, rounded(gain.gain_eur)]),
+    ).toEqual([[2028, "conversion", "109.09"]]);
+  });
 });

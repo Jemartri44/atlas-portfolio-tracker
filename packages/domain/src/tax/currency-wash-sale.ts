@@ -12,8 +12,10 @@
 //   currency. Not the cover of currency spent without having it, what the
 //   broker converted itself, nor the currency invested in an undertaking: those
 //   stay computed (`4:auto_conversion` and the cover are open on their own).
-// - What is an acquisition: every lot of the currency that opens after the
-//   loss, whatever brought it in (a purchase with euros, a sale, a dividend).
+// - What is an acquisition: every inflow of the currency after the loss,
+//   whatever brought it in (a purchase with euros, a sale, a dividend, a
+//   deposit, the cover of currency spent without having it). What covers opens
+//   no lot: the deferral it absorbs waits for the next lot of the currency.
 // - When it comes back: when the lots that carry it are converted or paid
 //   with. Investing, exchanging or withdrawing them imputes no difference
 //   (art. 14.2.e, V2422-20), so the deferral passes to the next lots of the
@@ -34,10 +36,14 @@ import type { LedgerState } from "../projections/state.js";
 
 const SUBJECT: ReadonlySet<CurrencyGainKind> = new Set(["conversion", "payment"]);
 
+/** Whether the rule looks at a difference of this kind at all. */
+export const subjectToWashSale = (kind: CurrencyGainKind): boolean => SUBJECT.has(kind);
+
 /** An acquisition of the currency that absorbed part of a loss. */
 export interface CurrencyReacquisition {
   event_id: Ulid;
-  lot_id: string;
+  /** The lot it opened; absent for what covered currency spent without having it. */
+  lot_id?: string;
   fiscal_date: CivilDate;
   /** Units of the lot used to defer the loss, in the currency. */
   amount: Money;
@@ -106,6 +112,9 @@ export const walkCurrencyWashSales = (state: LedgerState, today: CivilDate): Cur
   };
 
   journal.forEach((entry, index) => {
+    if (entry.kind === "cover") {
+      return;
+    }
     if (entry.kind === "open") {
       held.set(entry.lot_id, entry.amount);
       queue.set(entry.currency, [...(queue.get(entry.currency) ?? []), entry.lot_id]);
@@ -167,39 +176,43 @@ export const walkCurrencyWashSales = (state: LedgerState, today: CivilDate): Cur
         outcome.provisional_until = end;
       }
       let left = gain.amount;
-      for (const later of journal.slice(index + 1)) {
-        if (left.isZero()) {
-          break;
-        }
+      journal.slice(index + 1).forEach((later, offset) => {
         if (
-          later.kind !== "open" ||
+          left.isZero() ||
+          later.kind === "take" ||
           later.currency !== entry.currency ||
           compareCivilDates(later.date, end) > 0
         ) {
-          continue;
+          return;
         }
-        const before = used.get(later.lot_id) ?? Money.zero(later.currency);
+        const key = later.kind === "open" ? later.lot_id : `#${index + 1 + offset}`;
+        const before = used.get(key) ?? Money.zero(later.currency);
         const free = later.amount.sub(before);
         if (free.isZero()) {
-          continue;
+          return;
         }
         const units = free.cmp(left) <= 0 ? free : left;
-        used.set(later.lot_id, before.add(units));
+        used.set(key, before.add(units));
         outcome.reacquired.push({
           event_id: later.event_id,
-          lot_id: later.lot_id,
+          ...(later.kind === "open" ? { lot_id: later.lot_id } : {}),
           fiscal_date: later.date,
           amount: units,
         });
         left = left.sub(units);
-      }
+      });
       reacquired = gain.amount.sub(left);
     }
     // Each share is deferred in proportion to the units acquired again, and
     // the rest of it is computed now: the own loss stays, a release comes back.
     const deferred = scale(deferrable, reacquired, gain.amount);
     for (const line of outcome.reacquired) {
-      carry(line.lot_id, scale(deferred, line.amount, reacquired));
+      const part = scale(deferred, line.amount, reacquired);
+      if (line.lot_id === undefined) {
+        waiting.set(entry.currency, [...(waiting.get(entry.currency) ?? []), ...part]);
+      } else {
+        carry(line.lot_id, part);
+      }
     }
     deferrable.forEach((share, i) => {
       const kept = (deferred[i] as Share).amount;

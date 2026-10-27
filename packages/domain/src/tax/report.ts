@@ -393,6 +393,8 @@ export interface TaxYearReport {
       amount_eur: Money;
       travelled: boolean;
     }[];
+    /** Losses of currency still deferred at 31/12 of the year (V1613-25), by origin. */
+    currency_pending: { origin_event_id: Ulid; currency: string; amount_eur: Money }[];
   };
   compensation: Compensation;
   /**

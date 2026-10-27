@@ -35,7 +35,11 @@ import {
 } from "../schema/events.js";
 import { type IncomeCategory, incomeCategoryOf, type Settings } from "../settings/settings.js";
 import { type CriterionId, categoryCriterion, sortCriteria } from "./criteria.js";
-import type { CurrencyWashOutcome, CurrencyWashResult } from "./currency-wash-sale.js";
+import {
+  type CurrencyWashOutcome,
+  type CurrencyWashResult,
+  subjectToWashSale,
+} from "./currency-wash-sale.js";
 import type {
   Converted,
   CurrencyLine,
@@ -465,8 +469,8 @@ export const transmissionLine = (ctx: LineContext, outcome: WashSaleOutcome): Tr
 
 /**
  * The criteria of an exchange difference: the method, the order of the lots,
- * the undertaking's method, and the wash-sale rule wherever it looked or could
- * have looked at a loss.
+ * the undertaking's method, and the wash-sale rule wherever it looked at a loss
+ * (a conversion or a payment; not a cover, the broker's or the invested one).
  */
 const currencyCriteria = (gain: CurrencyGain, outcome: CurrencyWashOutcome): CriterionId[] =>
   sortCriteria([
@@ -477,7 +481,8 @@ const currencyCriteria = (gain: CurrencyGain, outcome: CurrencyWashOutcome): Cri
       : gain.kind === "invested"
         ? (["4:iic"] as const)
         : (["4:currency_fifo"] as const)),
-    ...(gain.gain_eur.isNegative() || !outcome.released_eur.isZero()
+    ...(subjectToWashSale(gain.kind) &&
+    (gain.gain_eur.isNegative() || !outcome.released_eur.isZero())
       ? (["4:currency_wash_sale"] as const)
       : []),
   ]);

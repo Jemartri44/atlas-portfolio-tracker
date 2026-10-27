@@ -149,7 +149,7 @@ describe("atlas tax prints the figures worked out by hand", () => {
       "-12.16",
       "0.00",
       "-12.16",
-      "4* 4:currency_fifo* 4:currency_wash_sale* 6",
+      "4* 4:currency_fifo* 6",
     ]);
     expect(gains).toContain("Ganancias 178.18 · Pérdidas -32.16 · Saldo 146.02");
 

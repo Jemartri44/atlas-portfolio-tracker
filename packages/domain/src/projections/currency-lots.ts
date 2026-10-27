@@ -85,8 +85,9 @@ export type CurrencyUse = "invest" | "conversion" | "payment" | "exchange" | "wi
 
 /**
  * The currency lots, as the wash-sale rule reads them (`tax/currency-wash-sale.ts`):
- * a lot of currency held was opened, or an outflow took from the lots held.
- * Negative lots (currency spent without having it) are not in it.
+ * a lot of currency held was opened, an inflow covered currency spent without
+ * having it (an acquisition that opens no lot), or an outflow took from the
+ * lots held. Negative lots are not in it.
  */
 export type CurrencyJournalEntry =
   | {
@@ -98,11 +99,17 @@ export type CurrencyJournalEntry =
       amount: Money;
     }
   | {
+      kind: "cover";
+      currency: string;
+      event_id: Ulid;
+      date: CivilDate;
+      amount: Money;
+    }
+  | {
       kind: "take";
       currency: string;
       event_id: Ulid;
       date: CivilDate;
-      use: CurrencyUse;
       slices: CurrencySlice[];
       /** Index in `state.currencyGains` of the difference it imputed, if any. */
       gain_index?: number;
@@ -224,6 +231,13 @@ export const currencyIn = (state: LedgerState, flow: CurrencyFlow, costEur: Mone
   if (!covered.isZero()) {
     const coveredCost = costEur.mul(covered.amount).div(flow.amount.amount);
     record(state, flow, "cover", covered, total(slices), coveredCost, slices);
+    state.currencyJournal.push({
+      kind: "cover",
+      currency: covered.currency,
+      event_id: flow.event_id,
+      date: flow.date,
+      amount: covered,
+    });
   }
   if (!left.isZero()) {
     open(state, flow, left, costEur.mul(left.amount).div(flow.amount.amount));
@@ -264,7 +278,6 @@ export const currencyOut = (
       currency: flow.amount.currency,
       event_id: flow.event_id,
       date: flow.date,
-      use,
       slices,
       ...(imputes ? { gain_index: state.currencyGains.length - 1 } : {}),
     });
