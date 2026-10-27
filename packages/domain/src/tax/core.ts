@@ -15,8 +15,8 @@ import {
   tryReading,
   type Unsupported,
 } from "./chain.js";
-import { incomeLine, transmissionLine } from "./lines.js";
-import type { IncomeLine, TransmissionLine } from "./report.js";
+import { currencyLine, incomeLine, transmissionLine } from "./lines.js";
+import type { CurrencyLine, IncomeLine, TransmissionLine } from "./report.js";
 import type { WashSaleOutcome } from "./wash-sale.js";
 
 /** The chain of years plus the lines of the one asked. */
@@ -25,6 +25,8 @@ export interface Core extends ChainCore {
   /** The outcome of the rule behind each transmission line, in the same order. */
   outcomes: WashSaleOutcome[];
   income: IncomeLine[];
+  /** Exchange differences imputed in the year (spec 029). */
+  currency: CurrencyLine[];
 }
 
 /**
@@ -52,11 +54,15 @@ export const computeCore = (
   const income = state.income
     .filter((entry) => entry.year === year)
     .map((entry) => incomeLine(ctx, entry));
+  const currency = state.currencyGains
+    .filter((gain) => gain.year === year)
+    .map((gain) => currencyLine(ctx, gain));
   return {
     ...chain,
     transmissions,
     outcomes,
     income,
+    currency,
     expenses: expenses.filter((expense) => yearOf(expense.fiscal_date) === year),
   };
 };

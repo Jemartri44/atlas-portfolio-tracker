@@ -66,6 +66,7 @@ export const HAND_SETTINGS: Settings = {
     money_market: "capital_gain",
   },
   wash_sale_transfer_counts: true,
+  fx_gain_method: "currency_first",
   savings_offset_limit_pct: "25",
   loss_carryforward_years: 4,
   treaty_withholding_pct: { US: "15" },
@@ -186,8 +187,8 @@ export const rowsAddUpToTheEngine = (
       /^gp\.(iic|etf|listed_shares|crypto|other)\.(gain|loss_imputable)$/.test(entry.concept),
   ).add(sumOf((entry) => entry.concept === "gp.prior_years.loss"));
   // What the engine puts into the balance of capital gains: what each disposal
-  // of the category computes, plus every release of a loss of this category
-  // that happened on a disposal of the other one.
+  // of the category computes, every release of a loss of this category that
+  // happened on a disposal of the other one, and the exchange differences.
   const foreign = chain.walk.outcomes
     .filter((outcome) => (chain.state.gains[outcome.gain_index] as RealizedGain).year === year)
     .flatMap((outcome) => outcome.foreign_released)
@@ -199,6 +200,9 @@ export const rowsAddUpToTheEngine = (
     .reduce((total, release) => total.add(release.amount_eur), zero);
   const engine = report.capital_gains.lines
     .reduce((total, line) => total.add(line.computable_eur), zero)
-    .add(foreign);
+    .add(foreign)
+    .add(
+      report.capital_gains.currency_lines.reduce((total, line) => total.add(line.gain_eur), zero),
+    );
   return { rows: rows.amount.toString(), engine: engine.amount.toString() };
 };

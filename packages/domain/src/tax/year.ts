@@ -214,6 +214,7 @@ export const taxYearWithChain = (
     );
   const rounded = (lines: readonly TransmissionLine[]) =>
     lines.map((line) => line.computable_eur_rounded);
+  const capitalFigures = [...rounded(gains), ...core.currency.map((line) => line.gain_eur_rounded)];
   const dividends = core.income.filter((line) => line.kind === "dividend");
   const interest = core.income.filter((line) => line.kind === "interest");
   const withholdings = withholdingLines(core.transmissions, core.income);
@@ -256,8 +257,9 @@ export const taxYearWithChain = (
     settings,
     capital_gains: {
       lines: gains,
-      gains_eur: sum(rounded(gains).filter((m) => !m.isNegative())),
-      losses_eur: sum(rounded(gains).filter((m) => m.isNegative())),
+      currency_lines: core.currency,
+      gains_eur: sum(capitalFigures.filter((m) => !m.isNegative())),
+      losses_eur: sum(capitalFigures.filter((m) => m.isNegative())),
       balance_eur: core.compensation.capital_gain_eur,
       foreign_releases_eur: foreignReleases("capital_gain"),
     },

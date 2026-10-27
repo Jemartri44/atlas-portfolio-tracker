@@ -6,9 +6,10 @@ import { Decimal } from "../money/decimal.js";
 import { sum, zero } from "../money/eur.js";
 import { FxRate } from "../money/fx-rate.js";
 import { EUR } from "../money/money.js";
+import { currencyLots } from "../projections/currency-lots.js";
 import { sharedIsins } from "../projections/isin.js";
 import type { LedgerState, RealizedGain, Warning } from "../projections/state.js";
-import { ASSET_TYPES, type FxExchangeEvent } from "../schema/events.js";
+import { ASSET_TYPES, type CashWithdrawalEvent } from "../schema/events.js";
 import { treatyWithholdingPctOf } from "../settings/settings.js";
 import { type Core, exchangesOfYear } from "./core.js";
 import { sortCriteria } from "./criteria.js";
@@ -37,6 +38,7 @@ export const settingsFromCode = (state: LedgerState): { origin: string; from_cod
   }
   for (const field of [
     "wash_sale_transfer_counts",
+    "fx_gain_method",
     "savings_offset_limit_pct",
     "loss_carryforward_years",
   ] as const) {
@@ -247,26 +249,47 @@ export const notesOf = (
     );
   }
   notes.push(...ddiNotes);
-  const foreign = [...core.ctx.events.values()].filter(
-    (event) =>
-      event.type === "fx_exchange" && yearOf((event as FxExchangeEvent).value_date) === year,
+  // What the currency lots do not see or value in a way of their own (spec 029).
+  const withdrawn = [...core.ctx.events.values()].filter(
+    (event): event is CashWithdrawalEvent =>
+      event.type === "cash_withdrawal" &&
+      event.currency !== EUR &&
+      yearOf(event.value_date) === year,
   );
-  const currencies = new Set<string>([
-    ...core.transmissions.map((line) => line.proceeds.amount.currency),
-    ...core.income.map((line) => line.gross.amount.currency),
-    ...foreign.flatMap((event) => [
-      (event as FxExchangeEvent).sold_currency,
-      (event as FxExchangeEvent).bought_currency,
-    ]),
-  ]);
-  currencies.delete(EUR);
-  if (currencies.size > 0) {
+  if (withdrawn.length > 0) {
     notes.push(
       eventNote(
-        "tax_fx_differences_not_computed",
+        "tax_currency_withdrawn",
         "",
-        "gains and losses of foreign cash (criterion #4) are not computed",
-        { currencies: [...currencies].sort(), fx_exchanges: foreign.map((event) => event.id) },
+        "foreign currency taken out of an account leaves at its cost and imputes nothing: what is done with it outside is not in the ledger",
+        { events: withdrawn.map((event) => event.id) },
+      ),
+    );
+  }
+  const spentWithout = currencyLots(core.state).filter(
+    (lot) => lot.original_amount.isNegative() && yearOf(lot.acquisition_date) === year,
+  );
+  if (spentWithout.length > 0) {
+    notes.push(
+      eventNote(
+        "tax_currency_spent_without_lots",
+        "",
+        "currency was spent without having it (a negative balance): it is valued at the ECB rate of that day until a later inflow covers it",
+        {
+          currencies: [...new Set(spentWithout.map((lot) => lot.currency))].sort(),
+          events: [...new Set(spentWithout.map((lot) => lot.source_event_id))],
+        },
+      ),
+    );
+  }
+  const mixed = core.transmissions.filter((line) => line.criteria.includes("4:mixed_currency"));
+  if (mixed.length > 0) {
+    notes.push(
+      eventNote(
+        "tax_currency_mixed_lots",
+        "",
+        "a lot acquired in another currency than the disposal is computed leg by leg, and the exchange difference of the currency spent on it is not imputed",
+        { events: mixed.map((line) => line.event_id) },
       ),
     );
   }

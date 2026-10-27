@@ -79,7 +79,6 @@ describe("the names of the criteria", () => {
     for (const reason of [
       "invalid_under_alternative",
       "unsupported_under_alternative",
-      "lot_in_other_currency",
       "regime_not_recorded",
       "no_carrier_left",
     ] as const) {

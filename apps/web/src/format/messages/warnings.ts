@@ -201,8 +201,12 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     `No hay tipo de convenio configurado para ${num(d.country)}: no se calcula deducción por los ${f.money(d.foreign_tax_eur)} retenidos.`,
   tax_dividend_without_country: (d, _n, f) =>
     `El dividendo no dice qué país lo pagó: no se calcula deducción por los ${f.money(d.foreign_tax_eur)} retenidos en origen.`,
-  tax_fx_differences_not_computed: (d) =>
-    `Las diferencias de cambio del efectivo en divisa (${(Array.isArray(d.currencies) ? d.currencies : [d.currencies]).map((code) => num(code)).join(", ")}) no se calculan: es un criterio en disputa y faltan los lotes de divisa.`,
+  tax_currency_withdrawn: () =>
+    "Has sacado divisa de una cuenta: sale a lo que te costó y no imputa nada. Lo que hagas con ella fuera no está en tus datos.",
+  tax_currency_spent_without_lots: (d) =>
+    `Has gastado ${(Array.isArray(d.currencies) ? d.currencies : [d.currencies]).map((code) => num(code)).join(", ")} sin tenerlos en la cuenta: se valoran al tipo del BCE de ese día hasta que entren, y entonces se imputa la diferencia.`,
+  tax_currency_mixed_lots: () =>
+    "Hay lotes comprados en una divisa y vendidos en otra: se calculan con el tipo de cada día, y la diferencia de cambio de lo que se gastó en ellos no se imputa.",
   tax_in_kind_income_not_integrated: (d, _n, f) =>
     `Renta en especie registrada (${f.money(d.income_eur)}) y no integrada: el criterio vigente no declara nada al recibirla.`,
   tax_fx_rate_finding: () =>

@@ -138,6 +138,30 @@ export interface IncomeLine {
   criteria: CriterionId[];
 }
 
+/**
+ * An exchange difference imputed in the year (spec 029, criterion #4): the
+ * currency disposed of against what its lots cost in euros. It is a capital gain
+ * or loss of the savings base (V1877-10), with no wash-sale rule
+ * (`4:currency_wash_sale`).
+ */
+export interface CurrencyLine {
+  event_id: Ulid;
+  /** `conversion` to euros, `payment` made with it, `cover` of currency spent without having it, `auto_conversion` by the broker. */
+  kind: "conversion" | "payment" | "cover" | "auto_conversion";
+  account_id: AccountId;
+  currency: string;
+  fiscal_date: CivilDate;
+  /** Currency disposed of or covered, in that currency. */
+  amount: Money;
+  proceeds_eur: Money;
+  cost_eur: Money;
+  gain_eur: Money;
+  gain_eur_rounded: Money;
+  /** The currency lots it consumed, oldest first; none for what the broker converted. */
+  lots: { lot_id: string; acquisition_date: CivilDate; amount: Money; cost_eur: Money }[];
+  criteria: CriterionId[];
+}
+
 /** A standalone fee deducted from movable capital income (art. 26.1.a, criterion #23). */
 export interface ExpenseLine {
   event_id: Ulid;
@@ -275,9 +299,7 @@ export interface CriterionStake {
    * `invalid_under_alternative` (the other reading leaves `invalid_count`
    * events invalid), `unsupported_under_alternative` (the other reading makes
    * the chain start before the first year the engine can compute, which no
-   * repair of the ledger fixes), `lot_in_other_currency` (#4 cannot be
-   * recomputed in the
-   * currency of the sale), `regime_not_recorded` (an exchange without a word on
+   * repair of the ledger fixes), `regime_not_recorded` (an exchange without a word on
    * the neutrality regime: its taxable value is not in the ledger),
    * `no_carrier_left` (#18 read the other way would defer onto no lot: none of
    * the asset is left in the patrimony).
@@ -285,7 +307,6 @@ export interface CriterionStake {
   reason?:
     | "invalid_under_alternative"
     | "unsupported_under_alternative"
-    | "lot_in_other_currency"
     | "regime_not_recorded"
     | "no_carrier_left";
   invalid_count?: number;
@@ -323,6 +344,8 @@ export interface TaxYearReport {
   settings: { origin: string; from_code: string[] };
   capital_gains: {
     lines: TransmissionLine[];
+    /** Exchange differences of foreign currency, in the same balance (spec 029). */
+    currency_lines: CurrencyLine[];
     gains_eur: Money;
     losses_eur: Money;
     balance_eur: Money;

@@ -433,7 +433,7 @@ describe("income in kind and exchanges without regime", () => {
 });
 
 describe("the other doubtful criteria", () => {
-  it("#4: the currency-first method is an exposure when a lot was bought in another currency", () => {
+  it("#4: a lot bought in another currency is leg by leg under both readings, and #4:mixed_currency is the exposure", () => {
     const b = taxBuilder();
     buy(b, "stock_s", "2027-01-11", "10", "100");
     buy(b, "stock_t", "2027-01-11", "10", "100");
@@ -457,11 +457,15 @@ describe("the other doubtful criteria", () => {
       currency: "USD",
       fx_rate: "1.2",
     });
-    const item = reportOf(b.build(), 2027).doubtful.find((d) => d.criterion === "4");
-    expect(item?.measure).toBe("exposure");
-    expect(item?.reason).toBe("lot_in_other_currency");
-    expect(item?.direction).toBe("both");
-    expect(text(item?.exposure_eur)).toBe("200");
+    const report = reportOf(b.build(), 2027);
+    const method = report.doubtful.find((d) => d.criterion === "4");
+    expect(method?.measure).toBe("difference");
+    expect(text(method?.base_difference_eur)).toBe("0");
+    const mixed = report.doubtful.find((d) => d.criterion === "4:mixed_currency");
+    expect(mixed?.measure).toBe("exposure");
+    expect(mixed?.direction).toBe("both");
+    expect(text(mixed?.exposure_eur)).toBe("200");
+    expect(report.notes.map((note) => note.code)).toContain("tax_currency_mixed_lots");
   });
 
   it("#5: a foreign amount converted at an older rate is an exposure, in euros it is nothing", () => {

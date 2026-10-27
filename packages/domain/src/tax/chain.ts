@@ -306,6 +306,10 @@ export const taxChain = (
   for (const income of state.income) {
     add(income.year, "movable_capital", income.gross_eur.roundToCents());
   }
+  // Exchange differences are capital gains and losses of the savings base (V1877-10).
+  for (const gain of state.currencyGains) {
+    add(gain.year, "capital_gain", gain.gain_eur_rounded);
+  }
   const expenses = expenseLines(ctx);
   for (const expense of expenses) {
     add(yearOf(expense.fiscal_date), "movable_capital", expense.amount_eur_rounded);
