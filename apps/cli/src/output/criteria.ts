@@ -43,6 +43,9 @@ export const CRITERION_LABELS: Record<CriterionId, string> = {
   "16": "deducción por doble imposición",
   "17": "la comisión de una permuta resta de lo transmitido",
   "18": "solo cuenta la recompra que sigue en el patrimonio",
+  "18:single_purchase": "una sola compra en la ventana anterior no es recompra",
+  "18:single_purchase_etc":
+    "una sola compra en la ventana anterior no es recompra (por analogía, ETC/ETP)",
   "19": "cada unidad recomprada difiere una sola vez",
   "20": "la regla mira la operación, no el lote",
   "21": "solo una venta definitiva libera la pérdida diferida",

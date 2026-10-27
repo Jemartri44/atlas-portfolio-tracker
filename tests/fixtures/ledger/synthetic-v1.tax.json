@@ -365,8 +365,7 @@
             "2:listed",
             "3",
             "6",
-            "14",
-            "18"
+            "14"
           ],
           "deferred_eur": "0",
           "event_id": "01MN8FTA80DDTPKAG5TNV3Q20X",
@@ -675,8 +674,7 @@
             "2:listed",
             "3",
             "6",
-            "14",
-            "18"
+            "14"
           ],
           "deferral": {
             "acquisitions": [
@@ -1237,9 +1235,7 @@
         "direction": "none",
         "documented_risk": "aggressive",
         "event_ids": [
-          "01MBP2GS80T8F1MS8PT0M7FK2R",
-          "01MN8FTA80DDTPKAG5TNV3Q20X",
-          "01N4F4Y58036KX1852YTTM0XD3"
+          "01MBP2GS80T8F1MS8PT0M7FK2R"
         ],
         "measure": "difference",
         "reason": "no_carrier_left"
