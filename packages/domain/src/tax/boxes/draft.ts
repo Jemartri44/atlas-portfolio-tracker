@@ -456,13 +456,29 @@ const deductions = (
     };
     drafts.push(
       { concept: "ddi.income", row, exact: line.gross_eur, criteria: line.criteria },
-      { concept: "ddi.foreign_tax", row, exact: line.foreign_tax_eur, criteria: line.criteria },
+      // What Renta WEB asks for is the tax **deductible** under the treaty (DGT
+      // V0080-20): copying the whole withholding would deduct the excess, which
+      // is reclaimed at source. Without a treaty rate there is no such figure,
+      // and it stays empty.
+      {
+        concept: "ddi.foreign_tax",
+        row,
+        ...(line.deductible_eur === undefined ? {} : { exact: line.deductible_eur }),
+        criteria: line.criteria,
+      },
+      { concept: "ddi.withheld", row, exact: line.foreign_tax_eur, criteria: line.criteria },
     );
   }
   if (report.double_taxation.lines.length > 0) {
     const criteria = union(report.double_taxation.lines.map((line) => line.criteria));
+    // A sum over lines some of which have no figure is not the limit: it stays empty.
+    const known = report.double_taxation.lines.every((line) => line.deductible_eur !== undefined);
     drafts.push(
-      { concept: "ddi.first_limit", exact: report.double_taxation.deductible_eur, criteria },
+      {
+        concept: "ddi.first_limit",
+        ...(known ? { exact: report.double_taxation.deductible_eur } : {}),
+        criteria,
+      },
       // The box holds the **lesser** of two limits, and the engine knows only
       // the first one: the second needs the whole return. So the box is named
       // and left without a figure.

@@ -436,8 +436,43 @@ describe("the operation a row names", () => {
     const ddi = boxes.entries.filter((item) => item.concept.startsWith("ddi."));
     expect(ddi.length).toBeGreaterThan(0);
     const named = ddi.filter((item) => item.row !== undefined);
-    expect(named.map((item) => item.row?.asset_id)).toEqual(["stock_s", "stock_s"]);
+    expect(named.map((item) => item.row?.asset_id)).toEqual(["stock_s", "stock_s", "stock_s"]);
     expect(named.every((item) => item.row?.fiscal_date === "2025-03-10")).toBe(true);
+  });
+
+  // 100 USD gross, 30 USD withheld at 1.25: 24 EUR withheld, 12 EUR at 15 %.
+  const taxedAbroad = (treaty: Record<string, string>) => {
+    const b = taxBuilder({ ...HAND_SETTINGS, treaty_withholding_pct: treaty });
+    b.dividend({
+      account_id: "acc_b",
+      asset_id: "stock_s",
+      value_date: "2025-03-10",
+      gross: "100",
+      withholding_origin: "30",
+      currency: "USD",
+      fx_rate: "1.25",
+      fx_rate_date: "2025-03-10",
+      source_country: "US",
+    });
+    return taxBoxes(b.build(), 2025, { today: TODAY }).entries.filter((item) =>
+      item.concept.startsWith("ddi."),
+    );
+  };
+  const figure = (entries: readonly BoxEntry[], concept: string): string | undefined =>
+    entries.find((item) => item.concept === concept)?.amount_eur?.amount.toString();
+
+  it("gives as the tax paid abroad the one limited to the treaty, and the whole withholding as detail", () => {
+    const ddi = taxedAbroad({ US: "15" });
+    expect(figure(ddi, "ddi.foreign_tax")).toBe("12");
+    expect(figure(ddi, "ddi.first_limit")).toBe("12");
+    expect(figure(ddi, "ddi.withheld")).toBe("24");
+  });
+
+  it("leaves the figure to copy empty, never at zero, when there is no treaty rate", () => {
+    const ddi = taxedAbroad({});
+    expect(ddi.find((item) => item.concept === "ddi.foreign_tax")?.exact_eur).toBeUndefined();
+    expect(ddi.find((item) => item.concept === "ddi.first_limit")?.exact_eur).toBeUndefined();
+    expect(figure(ddi, "ddi.withheld")).toBe("24");
   });
 });
 
