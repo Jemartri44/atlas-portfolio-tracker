@@ -25,6 +25,7 @@ import { zero } from "../money/eur.js";
 import { EUR, Money } from "../money/money.js";
 import type { Filing } from "../projections/filings.js";
 import { filingInForce } from "../projections/filings.js";
+import { settingsAt } from "../projections/settings-at.js";
 import type { LedgerState, Warning } from "../projections/state.js";
 import {
   type AccountId,
@@ -36,10 +37,12 @@ import {
   type LedgerEvent,
 } from "../schema/events.js";
 import {
+  DEFAULT_TAX_RESIDENCE,
   type InformativeModel,
   modelAlertThresholdOf,
   modelIncreaseOf,
   modelThresholdOf,
+  taxResidenceOf,
 } from "../settings/settings.js";
 import { sortCriteria } from "../tax/criteria.js";
 import { note } from "../tax/shared.js";
@@ -307,6 +310,12 @@ export const informativeReturn = (
       },
     );
   }
+  // Only Spanish residents have to file (arts. 42 bis.1, 42 ter.1 and 42 quater.1
+  // RGAT), and Spain does not split the year: the residence in force on 31
+  // December, as recorded by then, decides it. What counts as foreign does not
+  // move with it: abroad is always outside Spain.
+  const residence = taxResidenceOf(settingsAt(state, closed ? end : options.today).settings);
+  const resident = residence === DEFAULT_TAX_RESIDENCE;
   const settings = state.fiscalSettings;
   const limits: Limits = {
     threshold: modelThresholdOf(settings, model),
@@ -331,7 +340,9 @@ export const informativeReturn = (
       limits,
       declaredOf(previous, category, heldBefore, heldNow),
     );
-    return closed ? decided : { ...decided, verdict: "not_applicable" as const, reasons: [] };
+    return closed && resident
+      ? decided
+      : { ...decided, verdict: "not_applicable" as const, reasons: [] };
   });
   const filed = closed ? filingInForce(state, model, year, options.today) : undefined;
   const notes: Warning[] = [];
@@ -341,6 +352,14 @@ export const informativeReturn = (
         "informative_model_did_not_exist",
         `the model ${model} did not exist in ${year}: there is nothing to file for that year`,
         { model, year, first_year: FIRST_FILING_YEAR[model] },
+      ),
+    );
+  } else if (!resident) {
+    notes.push(
+      note(
+        "informative_not_resident",
+        `the model ${model} is only for Spanish tax residents, and the residence of ${year} is ${residence}: there is nothing to file`,
+        { model, year, tax_residence: residence },
       ),
     );
   } else if (!closed) {
@@ -391,7 +410,13 @@ export const informativeReturn = (
     year,
     scope: "fiscal_total",
     today: options.today,
-    period: exists ? (closed ? "closed_year" : "current_year") : "before_model",
+    period: !exists
+      ? "before_model"
+      : !resident
+        ? "not_resident"
+        : closed
+          ? "closed_year"
+          : "current_year",
     threshold_eur: Money.of(limits.threshold, EUR),
     increase_eur: Money.of(limits.increase, EUR),
     alert_eur: Money.of(limits.alert, EUR),

@@ -66,7 +66,7 @@ const LAZY_AREAS = [
       "/src/view-models/fiscal/",
       "/src/format/criteria",
     ],
-    budget: 42_890,
+    budget: 43_010,
   },
   {
     name: "formularios",
