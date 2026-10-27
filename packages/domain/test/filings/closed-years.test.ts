@@ -95,9 +95,13 @@ describe("what a change does to a year already filed", () => {
 
   // Crypto sold at a loss in 2025, the Renta of 2025 filed on 2026-06-18, bought back
   // the day given (art. 33.5.e: the following year). Its filing period ends 2026-06-30.
-  const cryptoRepurchase = (bought: string, seasonEnd?: string) => {
+  const cryptoRepurchase = (bought: string, seasonEnd?: string | null) => {
     const b = taxBuilder(
-      seasonEnd === undefined ? undefined : { ...DEFAULT_SETTINGS, renta_season_end: seasonEnd },
+      seasonEnd === undefined
+        ? undefined
+        : seasonEnd === null
+          ? null
+          : { ...DEFAULT_SETTINGS, renta_season_end: seasonEnd },
     );
     b.buy({
       account_id: "acc_a",
@@ -140,6 +144,13 @@ describe("what a change does to a year already filed", () => {
     ["2026-07-01", true],
   ])("tells the last day of the filing period from the next one: %s", (bought, after) => {
     expect(cryptoRepurchase(bought)?.supplementary).toMatchObject({ after_deadline: after });
+  });
+
+  it("takes the default end of the filing period when the ledger writes no settings", () => {
+    expect(cryptoRepurchase("2026-07-01", null)?.supplementary).toMatchObject({
+      filing_deadline: "2026-06-30",
+      after_deadline: true,
+    });
   });
 
   it("reads the end of the filing period from the season of the settings", () => {
