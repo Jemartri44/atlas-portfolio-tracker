@@ -207,7 +207,7 @@ export const DEFAULT_INCOME_CATEGORY: Record<AssetType, IncomeCategory> = {
  * **That last clause is part of the quote and it narrows it**: article 33.5 f)
  * LIRPF is not obviously one of those provisions, so the regulation on its own
  * is arguable and does not carry the decision. What carries it is the doctrine:
- * the two only consultations on the point (DGT 0011-00 and V2067-06) put fund
+ * the two only consultations on the point (DGT V0011-00 and V2067-06) put fund
  * units under f), and the help of Modelo 100 for 2025 lists funds with daily
  * information among the two-month case; its example of the year is a SICAV of
  * the MAB.
