@@ -222,7 +222,7 @@ export const CONCEPT_NAMES: Record<Exclude<ConceptId, RowConceptId>, string> = {
   "ddi.income": "Rendimiento obtenido en el extranjero",
   "ddi.foreign_tax": "Impuesto satisfecho en el extranjero (limitado al convenio)",
   "ddi.withheld":
-    "Retenido en origen, solo detalle: el exceso sobre el convenio se reclama en origen (W-8BEN / formulario V2A)",
+    "Retenido en origen, solo detalle: el exceso sobre el convenio se reclama en el país de origen",
   "ddi.first_limit": "Límite del convenio",
   "ddi.deduction": "Deducción por doble imposición internacional",
   "withholding.rcm": "Retenciones sobre rendimientos del capital mobiliario",
