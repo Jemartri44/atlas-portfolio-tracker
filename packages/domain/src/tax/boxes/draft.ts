@@ -19,7 +19,7 @@ import type { IncomeCategory } from "../../settings/settings.js";
 import { type ChainCore, categoryOf } from "../chain.js";
 import { type CriterionId, sortCriteria } from "../criteria.js";
 import type { IncomeLine, TaxYearReport, TransmissionLine, WithholdingLine } from "../report.js";
-import { keyedByOrder, linesByKey, saleKey } from "../shared.js";
+import { linesByKey } from "../shared.js";
 import type { WashSaleOutcome } from "../wash-sale.js";
 import {
   type ConceptId,
@@ -369,32 +369,25 @@ const annexC3 = (report: TaxYearReport, year: number): Draft[] => {
 };
 
 /**
- * The category of each withholding of a disposal. The withholding line does
- * not name its asset, and one event can sell assets of different categories in
- * one account, so the line is matched by position: the withholdings come in the
- * order of the disposals, and so do the gains the chain walked. It holds while
- * this walk keeps the order of `core.transmissions` and the same predicate
- * (`withholding !== undefined`) as `withholdingLines` in `lines.ts`.
+ * The category of each withholding of a disposal: the one of the asset it was
+ * withheld on. One event can sell assets of different categories in one
+ * account, so the withholding is looked up by the asset it names; two sales of
+ * the same asset in an event are one category, so they cannot disagree.
  */
-const withholdingCategories = (
-  report: TaxYearReport,
-  chain: ChainCore,
-): Map<WithholdingLine, IncomeCategory> => {
-  const lines = linesByKey([
-    ...report.capital_gains.lines,
-    ...report.movable_capital.transmissions,
-  ]);
-  const gains = chain.walk.outcomes
-    .map((outcome) => gainOf(chain, outcome.gain_index))
-    .filter((gain) => gain.year === report.year);
-  const categories = [...keyedByOrder(gains, saleKey).keys()]
-    .map((key) => lines.get(key) as TransmissionLine)
-    .filter((line) => line.withholding !== undefined)
-    .map((line) => line.category);
-  const disposals = report.withholdings.lines.filter(
-    (line) => line.source === "sell" || line.source === "forced_sale",
+const withholdingCategories = (report: TaxYearReport): Map<WithholdingLine, IncomeCategory> => {
+  const key = (line: { event_id: string; account_id: string; asset_id?: string }) =>
+    `${line.event_id}|${line.account_id}|${line.asset_id}`;
+  const categoryOfSale = new Map(
+    [...report.capital_gains.lines, ...report.movable_capital.transmissions].map((line) => [
+      key(line),
+      line.category,
+    ]),
   );
-  return new Map(disposals.map((line, position) => [line, categories[position] as IncomeCategory]));
+  return new Map(
+    report.withholdings.lines
+      .filter((line) => line.source === "sell" || line.source === "forced_sale")
+      .map((line) => [line, categoryOfSale.get(key(line)) as IncomeCategory]),
+  );
 };
 
 /** The double taxation deduction (#16) and the payments on account. */
@@ -521,6 +514,6 @@ export const draftEntries = (report: TaxYearReport, chain: ChainCore): Draft[] =
     { concept: "base.savings_taxable", partial: "reductions_unknown", criteria: [] },
   );
   drafts.push(...annexC3(report, year));
-  drafts.push(...deductions(report, withholdingCategories(report, chain)));
+  drafts.push(...deductions(report, withholdingCategories(report)));
   return drafts;
 };

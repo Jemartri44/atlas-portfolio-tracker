@@ -212,23 +212,26 @@ describe("the hand-checked ledger, year by year", () => {
     // that travelled: +25.
     // C2: swap valued at what it hands over, 1,300 − 15 of fee = 1,285, against
     // 1,000: +285.
-    // FX: 35.25 at 12 = 423 against 5.25 × 12 + 30 × 10 = 363: +60; releases
-    // −5.25 (F2) and −30 (F5): +24.75.
+    // FX: 35.25 at 12 = 423 against 5.25 × 12 + 30 × 10 = 363: +60. It would
+    // release −5.25 (F2) and −30 (F5), but the 40 bought on 2023-02-11 are
+    // still held, inside its one-year window and used by no earlier loss: it is
+    // not definitive (#21, DGT V3282-18), so −35.25 stays deferred on them and
+    // the +60 is computable whole.
     expect(lines(report)).toEqual([
       ["D1", "40", "-15", "0", "25"],
       ["C2", "285", "0", "0", "285"],
-      ["FX", "60", "-35.25", "0", "24.75"],
+      ["FX", "60", "-35.25", "-35.25", "60"],
     ]);
-    expect(eur(report.capital_gains.gains_eur)).toBe("334.75");
+    expect(eur(report.capital_gains.gains_eur)).toBe("370");
     expect(eur(report.movable_capital.balance_eur)).toBe("20");
-    // The oldest first: 2020 absorbs 334.75 of gains and 25 % of 20 = 5 of
-    // income; 549.66 − 339.75 = 209.91 left of 2020, and 2022 gets nothing.
+    // The oldest first: 2020 absorbs 370 of gains and 25 % of 20 = 5 of
+    // income; 549.66 − 375 = 174.66 left of 2020, and 2022 gets nothing.
     expect(steps(report)).toEqual([
-      [2, 2020, "capital_gain", "334.75", false],
+      [2, 2020, "capital_gain", "370", false],
       [2, 2020, "movable_capital", "5", true],
     ]);
     expect(carried(report.compensation.pending)).toEqual([
-      [2020, "capital_gain", "-209.91", 2024],
+      [2020, "capital_gain", "-174.66", 2024],
       [2022, "capital_gain", "-94.75", 2026],
     ]);
     expect(eur(report.base_eur)).toBe("15");
@@ -245,13 +248,17 @@ describe("the hand-checked ledger, year by year", () => {
       ["FX", "F4", "-5.25", false],
       ["FX", "F4", "-30", false],
     ]);
-    // Y2's −20 now sits on Y3's lot.
-    expect(pending(report)).toEqual([["Y2", "fund_y", "-20", false]]);
+    // Y2's −20 now sits on Y3's lot, and what FX deferred again on the 40 of
+    // 2023-02-11.
+    expect(pending(report)).toEqual([
+      ["Y2", "fund_y", "-20", false],
+      ["FX", "fund_x", "-35.25", false],
+    ]);
     // The fee of the swap, 15, is what #17 puts at stake.
     expect(eur(doubtful(report, "17")?.exposure_eur)).toBe("15");
     // 2020 and 2022 both had losses to carry and the year could not take them
-    // all: the order decided which 339.75 were used.
-    expect(eur(doubtful(report, "22")?.exposure_eur)).toBe("339.75");
+    // all: the order decided which 375 were used.
+    expect(eur(doubtful(report, "22")?.exposure_eur)).toBe("375");
   });
 
   it("2024: a custody fee in dollars at its own rate, and what is left of 2020 expires", () => {
@@ -271,13 +278,14 @@ describe("the hand-checked ledger, year by year", () => {
       [1, 2024, "movable_capital", "15", true],
       [2, 2020, "movable_capital", "7.5", true],
     ]);
-    // 209.91 − 7.50 = 202.41 of 2020 expires with the year; 2022 goes on.
-    expect(carried(report.compensation.expired)).toEqual([[2020, "capital_gain", "-202.41", 2024]]);
+    // 174.66 − 7.50 = 167.16 of 2020 expires with the year; 2022 goes on.
+    expect(carried(report.compensation.expired)).toEqual([[2020, "capital_gain", "-167.16", 2024]]);
     expect(carried(report.compensation.pending)).toEqual([[2022, "capital_gain", "-94.75", 2026]]);
     // 90 − 15 − 7.50.
     expect(eur(report.base_eur)).toBe("67.5");
     expect(eur(report.withholdings.total_eur)).toBe("19");
-    expect(pending(report)).toEqual([]);
+    // Nobody sells the 40 fund_x of 2023-02-11: what FX deferred waits on them.
+    expect(pending(report)).toEqual([["FX", "fund_x", "-35.25", false]]);
     // 2020 used 7.50 and 2022 nothing, and 2020 expires: the order is at stake.
     expect(eur(doubtful(report, "22")?.exposure_eur)).toBe("7.5");
   });

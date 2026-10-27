@@ -31,6 +31,8 @@ export const CRITERION_NAMES: Record<CriterionId, string> = {
   "2:fund_2m": "Ventana de dos meses para fondos de inversión",
   "2:fund_1y": "Ventana de un año para fondos de inversión, la lectura prudente",
   "2:other": "Ventana a medida, que ninguna lectura conocida de la norma sostiene",
+  "2:movable_capital":
+    "Dos meses fijos del capital mobiliario (art. 25.2.b LIRPF), sin variante de un año",
   "2b": "Un traspaso que entra cuenta como compra a efectos de la recompra",
   "3": "Las comisiones suman al coste y restan de lo transmitido",
   "4": "Cómo se calcula la ganancia de lo comprado en otra divisa",
@@ -50,7 +52,7 @@ export const CRITERION_NAMES: Record<CriterionId, string> = {
   "18": "Solo aplaza la pérdida la recompra que sigue en cartera",
   "19": "Cada participación recomprada aplaza una pérdida una sola vez",
   "20": "La regla de la recompra mira la venta entera, no cada lote",
-  "21": "Lo que se libera vuelve a pasar por la regla de la recompra",
+  "21": "Solo una venta definitiva, sin recompra en su ventana, libera la pérdida diferida",
   "22": "En qué orden se compensan las pérdidas de distintos años",
   "23": "Los gastos de administración y depósito restan de los rendimientos",
   "24:etc": "Un ETC tributa como rendimiento del capital mobiliario",

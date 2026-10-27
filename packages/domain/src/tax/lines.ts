@@ -32,7 +32,7 @@ import {
   type StandaloneFeeEvent,
   type SwapEvent,
 } from "../schema/events.js";
-import { incomeCategoryOf, type Settings } from "../settings/settings.js";
+import { type IncomeCategory, incomeCategoryOf, type Settings } from "../settings/settings.js";
 import { type CriterionId, categoryCriterion, sortCriteria } from "./criteria.js";
 import type {
   Converted,
@@ -60,8 +60,18 @@ export interface LineContext {
 
 const LISTED: ReadonlySet<AssetType> = new Set(["stock", "etf", "etc", "etp"]);
 
-/** Which variant of criterion #2 applies: by the type of asset **and the window applied**. */
-export const windowCriterion = (type: AssetType, window: string): CriterionId => {
+/**
+ * Which variant of criterion #2 applies: by the type of asset **and the window
+ * applied**, or by article 25.2.b) when the asset yields movable capital income.
+ */
+export const windowCriterion = (
+  type: AssetType,
+  window: string,
+  category: IncomeCategory = "capital_gain",
+): CriterionId => {
+  if (category === "movable_capital") {
+    return "2:movable_capital";
+  }
   if (LISTED.has(type)) {
     return window === "2m" ? "2:listed" : window === "1y" ? "2:listed_1y" : "2:other";
   }
@@ -300,7 +310,11 @@ const deferralCriteria = (ctx: LineContext, outcome: WashSaleOutcome): Criterion
   const gain = ctx.state.gains[outcome.gain_index] as RealizedGain;
   const type = (ctx.state.assets.get(gain.asset_id) as { asset_type: AssetType }).asset_type;
   const ids: CriterionId[] = [
-    windowCriterion(type, (outcome.window as { window: string }).window),
+    windowCriterion(
+      type,
+      (outcome.window as { window: string }).window,
+      incomeCategoryOf(ctx.settings, type),
+    ),
     "14",
   ];
   if (outcome.not_held) {
@@ -536,6 +550,7 @@ export const withholdingLines = (
       event_id: line.event_id,
       source: line.event_type === "sell" ? "sell" : "forced_sale",
       account_id: line.account_id,
+      asset_id: line.asset_id,
       fiscal_date: line.fiscal_date,
       amount,
       amount_eur_rounded: amount.eur.roundToCents(),
@@ -551,6 +566,7 @@ export const withholdingLines = (
       event_id: entry.event_id,
       source: entry.kind,
       account_id: entry.account_id,
+      ...(entry.asset_id === undefined ? {} : { asset_id: entry.asset_id }),
       fiscal_date: entry.fiscal_date,
       amount,
       amount_eur_rounded: amount.eur.roundToCents(),

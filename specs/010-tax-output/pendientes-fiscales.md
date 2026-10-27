@@ -4,7 +4,6 @@ Lo que las predicciones (`*-expectation.md`) y las notas de implementación de l
 
 ## Fiscales
 
-2. **`windowCriterion` con un ETC declarado capital mobiliario** recibe `2:listed` y una alternativa de un año que el art. 25.2 no contempla. Falta el **test de definitividad**: una transmisión solo libera el diferimiento si ella misma es definitiva (DGT V3282-18 y Manual práctico de Renta 2025, capítulo 11, texto de marzo de 2026), con la ventana del propio activo.
 4. **Recompra con #19**: con la pérdida ya cubierta, hay avisos de recompra que no difieren nada (diez de doce en el sintético de entonces). El aviso no puede saberlo sin repetir el reparto del motor; dejar de emitirlos exigiría mover ese reparto a la proyección. Se deja así (coordinadora, 2026-10-26: es diseño, no fiscal; el cálculo del año ya aplica el #19 bien). (De `warnings-expectation.md`.)
 
 ## De código y de interfaz
