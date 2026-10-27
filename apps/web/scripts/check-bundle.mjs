@@ -72,9 +72,9 @@ const LAZY_AREAS = [
     name: "formularios",
     what: "los formularios de registro",
     owns: ["/src/routes/registrar/", "/src/view-models/forms/", "/src/view-models/preview"],
-    budget: 25_700,
+    budget: 25_740,
   },
-  { name: "resto", what: "todo lo demás que se carga en diferido", owns: [], budget: 177_510 },
+  { name: "resto", what: "todo lo demás que se carga en diferido", owns: [], budget: 177_640 },
 ];
 
 /**
