@@ -33,6 +33,7 @@ import type { AppError } from "../../ledger/state.js";
 import { privacy } from "../../shell/preferences.js";
 import type { ContributionRowView, ContributionView } from "../../view-models/core/index.js";
 import { COLUMNS } from "./contribution-columns.jsx";
+import { PlatformSection } from "./PlatformsBlock.jsx";
 
 /**
  * What fixes each refusal, and where. The button used to be written by hand as
@@ -154,6 +155,7 @@ const Split = (props: { view: ContributionView }): JSX.Element => {
       <Show when={idle().length > 0}>
         <p class="card-note">{idle().join(", ")}: nada este mes.</p>
       </Show>
+      <PlatformSection view={props.view} />
       <Show when={props.view.surplusDistributed}>
         <p class="card-note">
           La aportación cubre el déficit de todos los activos: el sobrante se reparte por pesos

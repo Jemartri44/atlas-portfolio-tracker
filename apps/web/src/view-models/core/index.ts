@@ -13,6 +13,21 @@ export {
   type StandaloneGroupView,
   type StandaloneRowView,
 } from "./costs.js";
+export {
+  type PlatformLineView,
+  type PlatformRowView,
+  type PlatformsView,
+  platformsView,
+  type UnassignedView,
+} from "./platforms.js";
+export {
+  type CashMoveView,
+  type DiagnosisRowView,
+  type RebalanceView,
+  rebalanceView,
+  type SaleTaxView,
+  type StepView,
+} from "./rebalance.js";
 export { type TransferRowView, type TransferView, transferView } from "./transfer.js";
 export {
   type WeightClassRow,

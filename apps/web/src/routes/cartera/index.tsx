@@ -14,7 +14,7 @@
 // of the title.
 
 import { assets, coreWeights, settingsAt } from "@atlas/domain";
-import { contributionPlan, costSummary } from "@atlas/domain/portfolio";
+import { contributionPlan, costSummary, platformPlan } from "@atlas/domain/portfolio";
 import { createMemo, createSignal, type JSX } from "solid-js";
 import { AsOfPicker, useAsOf } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
@@ -25,6 +25,7 @@ import { PageHeader } from "../../shell/PageHeader.jsx";
 import {
   contributionView,
   costsView,
+  platformsView,
   typedAmount,
   type UnitPrices,
   weightsView,
@@ -34,6 +35,7 @@ import { absorbedAssets } from "../../view-models/weighted.js";
 import { RequireLedger } from "../guard.jsx";
 import { ContributionCard } from "./ContributionCard.jsx";
 import { CostsCard } from "./CostsCard.jsx";
+import { RebalanceCard } from "./RebalanceCard.jsx";
 import { WeightsCard } from "./WeightsCard.jsx";
 
 export default function CarteraRoute(): JSX.Element {
@@ -66,16 +68,19 @@ export default function CarteraRoute(): JSX.Element {
           attempt(() => {
             const quotes = external();
             const override = typed();
-            return contributionView(
-              contributionPlan(dated(), {
-                date: date(),
-                settings: settings(),
-                ...(override.kind === "amount" ? { amount: override.value } : {}),
-                ...(quotes === undefined ? {} : { external: quotes }),
-              }),
-              names,
-              unitPrices(),
+            const split = contributionPlan(dated(), {
+              date: date(),
+              settings: settings(),
+              ...(override.kind === "amount" ? { amount: override.value } : {}),
+              ...(quotes === undefined ? {} : { external: quotes }),
+            });
+            const platforms = platformPlan(
+              dated(),
+              snapshot.events,
+              date(),
+              split.rows.map((row) => ({ asset_id: row.asset_id, amount_eur: row.allocation_eur })),
             );
+            return contributionView(split, names, unitPrices(), platformsView(platforms, names));
           }),
         );
         /** Funds converted into another and holding nothing: not listed, not offered. */
@@ -132,6 +137,14 @@ export default function CarteraRoute(): JSX.Element {
                   const outcome = typed();
                   return outcome.kind === "invalid" ? outcome.message : undefined;
                 })()}
+              />
+              <RebalanceCard
+                state={dated()}
+                events={snapshot.events}
+                date={date()}
+                settings={settings()}
+                external={external()}
+                names={names}
               />
               <CostsCard view={costs()} />
             </div>

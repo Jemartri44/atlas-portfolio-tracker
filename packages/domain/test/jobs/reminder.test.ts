@@ -42,6 +42,7 @@ const PLAN: ContributionPlan = {
   bucket_budget_eur: eur("61.73"),
   core_amount_eur: eur("1172.83"),
   core_value_eur: eur("987654.32"),
+  purchases_only_eur: eur("0"),
   rows: [
     row("equity", "700.00", "555555.55"),
     row("equity", "33.02", "44444.44"),

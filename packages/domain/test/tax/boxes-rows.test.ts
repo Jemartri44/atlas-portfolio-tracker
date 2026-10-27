@@ -27,8 +27,9 @@ const amountOf = (boxes: TaxBoxes, concept: string, event?: string): string => {
 
 /**
  * The three years of the test: a loss deferred
- * whole, a disposal with a gain of its own that releases it and **defers it
- * again** (#21), and the sale that finally brings it back.
+ * whole, a disposal with a gain of its own that would release it but is bought
+ * back inside its window, so it **defers it again** whole (#21, DGT V3282-18),
+ * and the sale that finally brings it back.
  *
  * Its point is that the row of a releasing disposal is a **gain** on the form,
  * and what it released is declared in the section of earlier years, attributed
@@ -61,27 +62,28 @@ describe("the rows of the form, by origin of the loss", () => {
 
   it("year 2: the disposal that releases it is a gain, and what it frees goes to its origin", () => {
     const boxes = taxBoxes(events, 2027, { today: TODAY });
-    // Its own result is +30,00: the −100,00 it released is not in this row.
+    // Its own result is +30,00, computable whole: the repurchase of April makes
+    // it not definitive, so the −100,00 of 2026 stays deferred and nothing of
+    // earlier years is imputable this year.
     expect(amountOf(boxes, "gp.listed_shares.gain", releases.id)).toBe("30");
     expect(boxes.entries.filter((entry) => entry.concept === "gp.listed_shares.loss")).toEqual([]);
-    // −100,00 of 2026 less the −70,00 that #21 defers again: 30,00 imputable.
-    expect(amountOf(boxes, "gp.prior_years.loss")).toBe("-30");
+    expect(boxes.entries.filter((entry) => entry.concept === "gp.prior_years.loss")).toEqual([]);
+    expect(text(taxYear(events, 2027, { today: TODAY }).capital_gains.balance_eur)).toBe("30");
+    expect(rowsAddUpToTheEngine(events, 2027, TODAY)).toEqual({ rows: "30", engine: "30" });
+  });
+
+  it("year 3: the repurchase is sold and the whole loss of 2026 comes back", () => {
+    const boxes = taxBoxes(events, 2028, { today: TODAY });
+    // +70,00 of its own, definitive, and the −100,00 of 2026: −30,00.
+    expect(amountOf(boxes, "gp.listed_shares.gain", last.id)).toBe("70");
+    expect(amountOf(boxes, "gp.prior_years.loss")).toBe("-100");
     expect(
       (boxes.entries.find((entry) => entry.concept === "gp.prior_years.loss") as BoxEntry)
         .origin_year,
     ).toBe(2026);
-    // 30,00 − 30,00 = 0,00, which is what the engine computes for the year.
-    expect(text(taxYear(events, 2027, { today: TODAY }).capital_gains.balance_eur)).toBe("0");
-    expect(rowsAddUpToTheEngine(events, 2027, TODAY)).toEqual({ rows: "0", engine: "0" });
-  });
-
-  it("year 3: the repurchase is sold and the rest of the loss of 2026 comes back", () => {
-    const boxes = taxBoxes(events, 2028, { today: TODAY });
-    expect(amountOf(boxes, "gp.listed_shares.gain", last.id)).toBe("70");
-    expect(amountOf(boxes, "gp.prior_years.loss")).toBe("-70");
-    expect(amountOf(boxes, "gp.prior_years.losses")).toBe("-70");
-    expect(text(taxYear(events, 2028, { today: TODAY }).capital_gains.balance_eur)).toBe("0");
-    expect(rowsAddUpToTheEngine(events, 2028, TODAY)).toEqual({ rows: "0", engine: "0" });
+    expect(amountOf(boxes, "gp.prior_years.losses")).toBe("-100");
+    expect(text(taxYear(events, 2028, { today: TODAY }).capital_gains.balance_eur)).toBe("-30");
+    expect(rowsAddUpToTheEngine(events, 2028, TODAY)).toEqual({ rows: "-30", engine: "-30" });
   });
 
   it("never attributes a released loss to the disposal that released it", () => {

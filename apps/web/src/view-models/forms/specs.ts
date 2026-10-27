@@ -49,6 +49,12 @@ export interface FieldSpec {
   required?: boolean;
   /** One line saying what it is or where it is copied from. */
   hint?: string;
+  /**
+   * The label and the hint when the chosen asset is a fund: its fiscal date is
+   * the one of the net asset value applied, not the one of the cash
+   * (business-rules.md §5.10).
+   */
+  fund?: { label: string; hint: string };
   initial?: string;
   /** Fixed list of options, or the name of a catalogue list. */
   options?: OptionSource;
@@ -216,7 +222,11 @@ const tradeFields = (): FieldSpec[] => [
     label: "Fecha valor",
     kind: "date",
     required: true,
-    hint: "Cuando liquidó. En fondos es la que manda para la fiscalidad.",
+    hint: "Cuando liquidó.",
+    fund: {
+      label: "Fecha valor liquidativo",
+      hint: "La del valor liquidativo aplicado (en la confirmación de la orden), no la del abono: es la fecha fiscal.",
+    },
     pair: true,
   },
   { name: "quantity", label: "Cantidad", kind: "decimal", required: true, pair: true },
@@ -630,7 +640,12 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         required: true,
       },
       { name: "nav_out", label: "Valor liquidativo de salida", kind: "decimal" },
-      { name: "value_date_out", label: "Fecha valor de salida", kind: "date", required: true },
+      {
+        name: "value_date_out",
+        label: "Fecha del valor liquidativo de salida",
+        kind: "date",
+        required: true,
+      },
       { ...account(), name: "to_account_id", label: "Cuenta de destino" },
       { ...destinationAsset(), label: "Fondo de destino" },
       {
@@ -640,7 +655,12 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         required: true,
       },
       { name: "nav_in", label: "Valor liquidativo de entrada", kind: "decimal" },
-      { name: "value_date_in", label: "Fecha valor de entrada", kind: "date", required: true },
+      {
+        name: "value_date_in",
+        label: "Fecha del valor liquidativo de entrada",
+        kind: "date",
+        required: true,
+      },
       notes(),
     ],
     // Nothing omitted: `fee` is not a field of a transfer at all. The

@@ -55,12 +55,11 @@ describe("the wash-sale rule on random ledgers", () => {
             true,
           );
           for (const outcome of walk.outcomes) {
-            // Negative or zero, and never more than the loss the rule looked at.
+            // Negative or zero, and never more than what the rule looked at: the
+            // own loss plus what it releases, never a gain (#21).
             expect(outcome.deferred_eur.amount.isPositive()).toBe(false);
-            const floor = outcome.total_eur.amount.isNegative()
-              ? outcome.total_eur.amount
-              : Decimal.ZERO;
-            expect(outcome.deferred_eur.amount.lt(floor)).toBe(false);
+            expect(outcome.deferrable_eur.amount.isPositive()).toBe(false);
+            expect(outcome.deferred_eur.amount.lt(outcome.deferrable_eur.amount)).toBe(false);
           }
           if (walk.deferrals.length > 0) {
             deferring += 1;

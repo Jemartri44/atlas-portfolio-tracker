@@ -111,18 +111,33 @@ export const FormFields = (props: FormFieldsProps): JSX.Element => {
     props.onTyped?.(name);
   };
 
+  /** The chosen asset is a fund: some fields are named after its net asset value. */
+  const fundChosen = (): boolean => {
+    const type = props.state.assets.get(props.values.asset_id ?? "")?.asset_type;
+    return type === "fund" || type === "money_market";
+  };
+
   const render = (field: FieldSpec): JSX.Element => {
     const value = (): string => props.values[field.name] ?? "";
+    const forFund = (): boolean => field.fund !== undefined && fundChosen();
     // Getters, not values: this runs once per field, and what it hands down has
     // to follow the form — the value, the error under it and, for a list of
     // assets, which ones the chosen account allows.
     const common = {
       id: `${props.prefix ?? "f"}-${field.name}`,
-      label: field.label,
+      get label(): string {
+        return forFund() ? (field.fund as { label: string }).label : field.label;
+      },
       get value(): string {
         return value();
       },
-      ...(field.hint === undefined ? {} : { hint: field.hint }),
+      ...(field.hint === undefined
+        ? {}
+        : {
+            get hint(): string {
+              return forFund() ? (field.fund as { hint: string }).hint : (field.hint as string);
+            },
+          }),
       ...(field.required === undefined ? {} : { required: field.required }),
       onInput: (next: string) => set(field.name, next),
       get error(): string | undefined {

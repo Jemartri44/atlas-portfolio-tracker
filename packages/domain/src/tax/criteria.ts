@@ -32,11 +32,13 @@ export interface FiscalCriterion {
  * the user set to one year applies the prudent side of the dispute, and saying
  * "two months, aggressive" of it would state the opposite of what was done.
  *
- * - `2:listed`: two months for a listed security — **disputed** outside the EU,
- *   and the system cannot tell where a security trades, so every listed
- *   security carries it; **aggressive** if wrong.
- * - `2:listed_1y`: one year for a listed security — the other side of the same
- *   dispute; **conservative** if wrong.
+ * - `2:listed`: two months for a listed security — right in the EU and in the
+ *   markets of third countries with an equivalence decision (DGT V0778-25 and
+ *   V0951-25: Nasdaq, NYSE), wrong in a market without one, and the system
+ *   does not govern the window by the market: **medium**; **aggressive** if
+ *   wrong.
+ * - `2:listed_1y`: one year for a listed security — the other side, right only
+ *   in a market without an equivalence decision; **conservative** if wrong.
  * - `2:crypto`: one year **after** the sale for crypto, article 33.5.e) LIRPF,
  *   which the Renta manual words as "un año posterior a la transmisión" for
  *   other assets; nothing before the sale — **medium** (no consultation on
@@ -44,16 +46,15 @@ export interface FiscalCriterion {
  * - `2:crypto_2m`: two months after the sale for crypto — a configuration, not a
  *   legal reading; aggressive.
  * - `2:fund_2m`: two months for a fund, which is what the document says since
- *   2026-09-22 — the two consultations on the point put fund units under
- *   letter f). Its certainty is **medium**, not high, for two reasons: the
- *   regulatory ground (art. 4.9 RD 1082/2012) calls them securities "admitted
- *   to trading" only "a los efectos de aquellas disposiciones que regulen
- *   regímenes específicos de inversión", which article 33.5 f) is not
- *   obviously one of; and it is written for Spanish funds managed by a SGIIC,
- *   with nothing resolving a foreign UCITS, which is what is usually bought in
- *   Spain.
+ *   2026-09-22 — the two binding consultations on the point (V0011-00 and
+ *   V2067-06) put fund units under letter f). High for a Spanish fund,
+ *   **medium** for a foreign UCITS, which no source names; the catalogue does
+ *   not know the domicile and keeps the weaker.
  * - `2:fund_1y`: one year for a fund, the other side of the same dispute and
  *   the conservative one.
+ * - `2:movable_capital`: two months for an asset that yields movable capital
+ *   income (an ETC or an ETP by default), article 25.2.b) LIRPF: its own rule,
+ *   with no market and no one-year variant — **high**; aggressive if wrong.
  * - `2:other`: any other window —a number of days— that no reading of the
  *   document supports. Two months for a fund is **not** one of these any more:
  *   since 2026-09-22 it is `2:fund_2m`, the reading the document holds.
@@ -101,13 +102,14 @@ export interface FiscalCriterion {
  */
 export const FISCAL_CRITERIA = {
   "1": { doc: "1", certainty: "medium", risk: "conservative" },
-  "2:listed": { doc: "2", certainty: "disputed", risk: "aggressive" },
-  "2:listed_1y": { doc: "2", certainty: "disputed", risk: "conservative" },
+  "2:listed": { doc: "2", certainty: "medium", risk: "aggressive" },
+  "2:listed_1y": { doc: "2", certainty: "medium", risk: "conservative" },
   "2:crypto": { doc: "2", certainty: "medium", risk: "conservative" },
   "2:crypto_2m": { doc: "2", certainty: "low", risk: "aggressive" },
   "2:fund_2m": { doc: "2", certainty: "medium", risk: "aggressive" },
   "2:fund_1y": { doc: "2", certainty: "medium", risk: "conservative" },
   "2:other": { doc: "2", certainty: "low", risk: "both" },
+  "2:movable_capital": { doc: "2", certainty: "high", risk: "aggressive" },
   "2b": { doc: "2b", certainty: "medium", risk: "conservative" },
   "3": { doc: "3", certainty: "high", risk: "conservative" },
   "4": { doc: "4", certainty: "disputed", risk: "both" },
@@ -127,13 +129,13 @@ export const FISCAL_CRITERIA = {
   "18": { doc: "18", certainty: "high", risk: "aggressive" },
   "19": { doc: "19", certainty: "high", risk: "aggressive" },
   "20": { doc: "20", certainty: "medium", risk: "aggressive" },
-  "21": { doc: "21", certainty: "low", risk: "conservative" },
+  "21": { doc: "21", certainty: "medium", risk: "both" },
   "22": { doc: "22", certainty: "medium", risk: "neutral" },
   "23": { doc: "23", certainty: "high", risk: "aggressive" },
   "24:etc": { doc: "24", certainty: "medium", risk: "both" },
   "24:etc_gain": { doc: "24", certainty: "low", risk: "both" },
-  "24:etp": { doc: "24", certainty: "low", risk: "both" },
-  "24:etp_gain": { doc: "24", certainty: "medium", risk: "both" },
+  "24:etp": { doc: "24", certainty: "medium", risk: "both" },
+  "24:etp_gain": { doc: "24", certainty: "low", risk: "both" },
   "25": { doc: "25", certainty: "medium", risk: "both" },
 } as const satisfies Record<string, FiscalCriterion>;
 
@@ -153,6 +155,7 @@ export const CRITERION_IDS: readonly CriterionId[] = [
   "2:fund_2m",
   "2:fund_1y",
   "2:other",
+  "2:movable_capital",
   "2b",
   "3",
   "4",

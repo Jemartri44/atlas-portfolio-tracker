@@ -11,7 +11,7 @@ import { EXIT } from "../../src/context.js";
 import { COMMANDS } from "../../src/registry.js";
 import { harness, seed } from "../harness.js";
 
-/** Enough configuration for `contribute` to have something to answer. */
+/** Enough configuration for `contribute` and `rebalance` to have something to answer. */
 const configured = () => [
   ...seed(),
   {
@@ -23,6 +23,7 @@ const configured = () => [
       ...DEFAULT_SETTINGS,
       target_weights: { ast_world: "60", ast_bonds: "40" },
       bucket_pct_of_contribution: "10",
+      deviation_threshold_pp: "5",
     },
   },
 ];
@@ -69,6 +70,7 @@ const INVOCATIONS: {
   { command: "positions", argv: ["positions"], readOnly: true },
   { command: "weights", argv: ["weights"], readOnly: true },
   { command: "contribute", argv: ["contribute", "--amount", "100"], readOnly: true },
+  { command: "rebalance", argv: ["rebalance"], readOnly: true },
   { command: "costs", argv: ["costs"], readOnly: true },
   { command: "networth", argv: ["networth"], readOnly: true },
   { command: "bucket", argv: ["bucket"], readOnly: true },
