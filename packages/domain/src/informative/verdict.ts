@@ -37,7 +37,7 @@ export interface Declared {
   q4_average_eur?: Money;
   /** An asset of its list that is no longer held: the second trigger. */
   extinct: { account_id: AccountId; asset_id?: AssetId }[];
-  /** An asset of its list that is still held but in a smaller quantity: a partial sale. */
+  /** An asset of its list transmitted in whole or in part since that return, and still held. */
   reduced: { account_id: AccountId; asset_id: AssetId }[];
 }
 
