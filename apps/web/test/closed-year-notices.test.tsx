@@ -122,7 +122,7 @@ describe("a write that reaches a filed return", () => {
     // rule, which is exactly the figure a rule "by date" would have missed.
     expect(text(dialog)).toContain("Cae en ese ejercicio y mueve lo que declaraste");
     expect(text(dialog)).toContain("lo aplazado por recompra a 31 de diciembre");
-    expect(text(dialog)).toContain("Puede que toque presentar una complementaria");
+    expect(text(dialog)).toContain("Puede que toque presentar una autoliquidación rectificativa");
   });
 
   it("has the warning in the dialog the moment it opens, not a tick later", async () => {
@@ -201,6 +201,6 @@ describe("a write that reaches a filed return", () => {
     await settle(60);
     const dialog = open();
     expect(text(dialog)).toContain("Afecta a la Renta de 2027");
-    expect(text(dialog)).toContain("Puede que toque presentar una complementaria");
+    expect(text(dialog)).toContain("Puede que toque presentar una autoliquidación rectificativa");
   });
 });

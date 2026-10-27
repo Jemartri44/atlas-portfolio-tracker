@@ -46,10 +46,11 @@ export interface FiscalCriterion {
  * - `2:crypto_2m`: two months after the sale for crypto — a configuration, not a
  *   legal reading; aggressive.
  * - `2:fund_2m`: two months for a fund, which is what the document says since
- *   2026-09-22 — the two binding consultations on the point (V0011-00 and
- *   V2067-06) put fund units under letter f). High for a Spanish fund,
- *   **medium** for a foreign UCITS, which no source names; the catalogue does
- *   not know the domicile and keeps the weaker.
+ *   2026-09-22 — the two binding consultations found on the point (V0011-00
+ *   and V2067-06, both older than Ley 35/2006) put fund units under letter
+ *   f). High for a Spanish fund, **medium** for a foreign UCITS, which no
+ *   source names; the catalogue does not know the domicile and keeps the
+ *   weaker.
  * - `2:fund_1y`: one year for a fund, the other side of the same dispute and
  *   the conservative one.
  * - `2:movable_capital`: two months for an asset that yields movable capital
