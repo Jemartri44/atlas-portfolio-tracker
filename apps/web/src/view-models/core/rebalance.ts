@@ -27,8 +27,10 @@ export type SaleTaxView =
   | { kind: "unavailable"; code: string }
   | {
       kind: "estimated";
-      /** Absent when the brackets are not configured. */
+      /** Absent when the brackets are not configured, or when the sale saves tax instead (`saving`). */
       tax?: Money;
+      /** A loss that offsets gains already made this year: how much tax it takes off. */
+      saving?: Money;
       gain: Money;
       isLoss: boolean;
       lots: { acquired: string; quantity: Quantity; cost: Money; gain: Money }[];
@@ -93,7 +95,8 @@ const taxView = (tax: SaleTax): SaleTaxView =>
   tax.available
     ? {
         kind: "estimated",
-        ...(tax.tax_eur === undefined ? {} : { tax: tax.tax_eur }),
+        ...(tax.tax_eur === undefined || tax.tax_eur.isNegative() ? {} : { tax: tax.tax_eur }),
+        ...(tax.tax_eur?.isNegative() === true ? { saving: tax.tax_eur.neg() } : {}),
         gain: tax.gain_eur,
         isLoss: tax.gain_eur.isNegative(),
         lots: tax.lots.map((lot) => ({

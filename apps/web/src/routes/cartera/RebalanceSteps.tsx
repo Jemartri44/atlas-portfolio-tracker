@@ -21,7 +21,19 @@ const Tax = (props: { tax: SaleTaxView }): JSX.Element => (
         <p class="card-note" data-testid="tax">
           <Show
             when={tax().tax}
-            fallback="Impuesto: no calculable, faltan los tramos de la base del ahorro en Ajustes."
+            fallback={
+              <Show
+                when={tax().saving}
+                fallback="Impuesto: no calculable, faltan los tramos de la base del ahorro en Ajustes."
+              >
+                {(saving) => (
+                  <>
+                    Reduce tu impuesto en ≈ <Amount value={saving()} />: la pérdida de{" "}
+                    <Amount value={tax().gain} /> compensa ganancias de este año.
+                  </>
+                )}
+              </Show>
+            }
           >
             {(amount) => (
               <>

@@ -100,6 +100,14 @@ describe("estimateSale", () => {
     expect(eur(second.base_after_eur)).toBe("666.66");
   });
 
+  it("saves tax, with a negative figure, when a loss offsets a gain already made that year", () => {
+    const events = fund().build();
+    const gain = estimateSale(events, [], DATE, sale("6.66666667", "150"), BRACKETS);
+    const loss = estimateSale(events, [gain.event], DATE, sale("5", "80"), BRACKETS);
+    expect(loss.gain_eur.isNegative()).toBe(true);
+    expect(loss.tax_eur?.isNegative()).toBe(true);
+  });
+
   it("refuses to estimate a sale larger than the lots the ledger holds", () => {
     expect(() => estimateSale(fund().build(), [], DATE, sale("100", "150"), BRACKETS)).toThrow(
       DomainError,
