@@ -21,6 +21,7 @@ describe("the keys of the state of the ledger", () => {
         "acquisitions",
         "lots",
         "lotJournal",
+        "eventFacts",
         "lotCounts",
         "gains",
         "currencyLots",

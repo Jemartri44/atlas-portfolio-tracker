@@ -347,12 +347,30 @@ describe("Resumen applies the rule of `transfer_max_days`", () => {
 /**
  * A loss-making sale of a fund bought inside the wash-sale window, so the summary carries a warning
  * whose figures live **inside the sentence**: "Venta con pérdida de World Index Fund del 2026-02-12
- * (−500,00 EUR) cuando siguen en cartera 0,5 títulos de una compra del 2026-01-14…". It sells 10 of
- * the 10.5 bought: a purchase sold whole defers nothing and is not named (criterion #18), and the
+ * (−500,00 EUR) cuando siguen en cartera 1,5 títulos de una compra del 2026-01-14…". It sells 10 of
+ * the 10.5 bought, after a first purchase of 1 (a lone one would be exempt): a purchase sold whole defers nothing and is not named (criterion #18), and the
  * warning says what is left of it, not what was bought. The dates are in the past of any plausible
  * "today", which is what keeps this ledger stable: the summary projects at today's date.
  */
 const WASH_SALE = ledgerOf(
+  // A second purchase in the window: a lone one would be exempt.
+  {
+    schema_version: 1,
+    id: "01AAAAAAAAAAAAAAAAAAAAAAAE",
+    recorded_at: "2026-01-12T09:00:00.000Z",
+    type: "buy",
+    account_id: "acc_mi",
+    asset_id: "ast_world",
+    trade_date: "2025-06-02",
+    value_date: "2025-06-02",
+    quantity: "1",
+    unit_price: "100",
+    currency: "EUR",
+    fx_rate: "1",
+    fx_rate_date: "2025-06-02",
+    fee: "0",
+    source: "manual",
+  },
   {
     schema_version: 1,
     id: "01AAAAAAAAAAAAAAAAAAAAAAAF",
@@ -433,7 +451,7 @@ describe("the privacy mode covers the prose of the warnings", () => {
     // And nothing of what it is worth: neither the loss nor the units.
     expect(shown).toContain(MASK);
     expect(shown).not.toContain("500");
-    expect(shown).not.toContain("0,5 títulos");
+    expect(shown).not.toContain("1,5 títulos");
     expect(DECIMAL.test(withoutPercentages(shown))).toBe(false);
   });
 
@@ -443,6 +461,6 @@ describe("the privacy mode covers the prose of the warnings", () => {
 
     expect(shown).not.toContain(MASK);
     expect(shown).toContain("500,00 €");
-    expect(shown).toContain("0,5 títulos");
+    expect(shown).toContain("1,5 títulos");
   });
 });

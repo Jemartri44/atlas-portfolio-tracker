@@ -330,6 +330,15 @@ export const criterionStakes = (
       .toEur(line.fee)
       .roundToCents(),
   );
+  // What the single-purchase exception kept from deferring: the loss at stake
+  // if it were applied too widely.
+  for (const id of ["18:single_purchase", "18:single_purchase_etc"] as const) {
+    exposure(id, declaring(id), (line) =>
+      abs(
+        (core.outcomes[core.transmissions.indexOf(line)] as WashSaleOutcome).single_purchase_eur,
+      ).roundToCents(),
+    );
+  }
   exposure("20", declaring("20"), (line) =>
     abs(
       sum(line.lots.filter((lot) => lot.gain_eur.isNegative()).map((lot) => lot.gain_eur)),
