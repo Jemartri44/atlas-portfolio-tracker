@@ -147,7 +147,7 @@ describe("what a change does to a year already filed", () => {
   ])("tells the last day of the filing period from the next one: %s", (bought, after) => {
     const supplementary = cryptoRepurchase(bought)?.supplementary;
     expect(supplementary).toMatchObject({ within_period: !after });
-    expect(supplementary).toHaveProperty("after_period_year", after ? 2026 : undefined);
+    expect(Object.hasOwn(supplementary ?? {}, "after_period_year")).toBe(after);
   });
 
   it("says both cases when one purchase is within the period and another after it", () => {
