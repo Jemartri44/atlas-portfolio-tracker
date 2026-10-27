@@ -181,15 +181,18 @@ const supplementaryOf = (
   model: FilingModel,
   comparison: ClosedYearComparison,
   year: number,
-  acquisitions: readonly CivilDate[],
+  /**
+   * Read only once a figure of a Renta is known to move: the currency side
+   * walks the engine, which is neither cheap nor safe on an invalid reading.
+   */
+  laterAcquisitionsOf: () => readonly CivilDate[],
   seasonEnd: string,
 ): ClosedYearSupplementary => {
-  if (
-    model !== "renta" ||
-    comparison.status !== "compared" ||
-    comparison.moves.length === 0 ||
-    acquisitions.length === 0
-  ) {
+  if (model !== "renta" || comparison.status !== "compared" || comparison.moves.length === 0) {
+    return { kind: "possible" };
+  }
+  const acquisitions = laterAcquisitionsOf();
+  if (acquisitions.length === 0) {
     return { kind: "possible" };
   }
   // The filing period of a year ends with the campaign of the next one.
@@ -398,12 +401,13 @@ export const closedYearImpact = (
         entry.model,
         comparison,
         entry.year,
-        byDate
-          ? []
-          : [
-              ...laterAcquisitions(before.events, after.events, entry.year),
-              ...laterCurrencyAcquisitions(before.events, state, entry.year, today),
-            ].sort(),
+        () =>
+          byDate
+            ? []
+            : [
+                ...laterAcquisitions(before.events, after.events, entry.year),
+                ...laterCurrencyAcquisitions(before.events, state, entry.year, today),
+              ].sort(),
         rentaSeasonOf(settingsOf(after) ?? {}).end,
       ),
     });
