@@ -69,7 +69,7 @@ export interface VerdictReason {
     | "first_time_category"
     /** An asset of the last return is no longer held. */
     | "extinction"
-    /** The quantity of an asset of the last return has gone down: a partial sale. */
+    /** An asset of the last return was transmitted, in whole or in part, since then. */
     | "partial_extinction"
     /** Not obliged, but close enough that the user asked to be told. */
     | "alert";
