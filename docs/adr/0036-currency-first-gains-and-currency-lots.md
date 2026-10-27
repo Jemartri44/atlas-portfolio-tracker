@@ -1,6 +1,6 @@
 # ADR-0036 — Ganancias en divisa primero en la divisa, y lotes de divisa
 
-**Estado:** Propuesta (2026-10-27). La acepta la persona; el diseño lo aprobó Coordinación el mismo día (`specs/029-fx-currency-first/`). *Verificar con asesor.*
+**Estado:** Aceptada (2026-10-27), por decisión del dueño transmitida por la coordinadora el 27/10/2026 con sus palabras «Sí a todo lo de atlas» (aceptar ADR-0036 con su corrección); el diseño lo aprobó Coordinación el mismo día (`specs/029-fx-currency-first/`). Acotada por la nota del 2026-10-27 al final. *Verificar con asesor.*
 
 ## Contexto
 
@@ -26,3 +26,13 @@ El motor calculaba la ganancia de un valor en divisa **cada pata a su tipo**: la
 - El informe gana `capital_gains.currency_lines`, la instantánea `currency_lots` y `currency_gains`, y desaparece la nota `tax_fx_differences_not_computed`. Las diferencias de cambio van a «otros elementos patrimoniales», sin número de casilla mientras no se compruebe (`business-rules.md` §5.11).
 - Un lote comprado en una divisa y vendido en otra se calcula cada pata a su tipo (`4:mixed_currency`); la diferencia de cambio de la divisa gastada en él no se imputa, y una nota lo dice.
 - Relacionadas: ADR-0005, ADR-0009, ADR-0013, ADR-0022, ADR-0029 y ADR-0030.
+
+## Nota del 2026-10-27: alcance del método «primero en la divisa» (auditoría fiscal)
+
+Una auditoría fiscal independiente del mismo día acota la decisión:
+
+- **«Primero en la divisa» vale para acciones y ETC/ETP** (V1740-17, V2422-20, V0152-26).
+- **Para fondos, ETF y monetarios manda el método de las IIC** (V0777-21, V0207-24): cada pata a su tipo, más la diferencia de cambio de la divisa invertida, imputada en el año de la venta. Véase el criterio #4 de `docs/fiscal-questions.md`.
+- **Un lote comprado en una divisa y vendido en otra (`mixed`)** imputa `cost_eur − funding_eur` como línea de divisa. Véase el criterio #4 de `docs/fiscal-questions.md`.
+
+ADR-0013 no cambia.

@@ -32,7 +32,7 @@ import {
   type LedgerEvent,
   type SettingsChangedEvent,
 } from "../schema/events.js";
-import { DEFAULT_FISCAL_DATE_RULE, type Settings } from "../settings/settings.js";
+import { DEFAULT_FISCAL_DATE_RULE, rentaSeasonOf, type Settings } from "../settings/settings.js";
 import { chainFigures, isInvalid, isUnsupported, taxChain, tryReading } from "../tax/chain.js";
 import { type ClosedYear, closedYearsTouched, earliestReached } from "./touched.js";
 
@@ -98,25 +98,45 @@ export interface ClosedYearImpact {
 }
 
 /**
- * A supplementary return of the Renta, said as much as the engine knows. An
+ * A rectifying return of the Renta (the RIRPF says «complementaria», the form
+ * says «rectificativa», box 121), said as much as the engine knows. An
  * acquisition of a later year that moves what a filed one declared is a
- * repurchase that defers a loss that return computed: article 73.2 RIRPF
- * makes the supplementary return compulsory, with late-payment interest when
- * the acquisition comes after the filing period, and due by the end of the
- * filing period of the year of the acquisition. Anything else is «possible».
+ * repurchase that defers a loss that return computed. Two cases, told apart
+ * by the date of the purchase against the end of the filing period of the
+ * year of the loss (`filing_deadline`). Several purchases can fall in both,
+ * and the warning then says both:
+ *
+ *   - **after it** (`after_period_year`): article 73.2 RIRPF, which covers the
+ *     letters e) and g) of article 33.5 LIRPF only. A two-month window (letter
+ *     f) cannot reach past the period, so the article is never cited for it:
+ *     a return with late-payment interest, due by the end of the filing
+ *     period of the year of the acquisition;
+ *   - **before it** (`within_period`), with the return already filed: not article 73.2. The
+ *     filed return is wrong and is rectified as soon as possible, before that
+ *     period ends, to avoid the surcharge.
+ *
+ * Anything else is «possible».
  */
 export type ClosedYearSupplementary =
   | { kind: "possible" }
-  | { kind: "repurchase"; acquisition_year: number };
+  | {
+      kind: "repurchase";
+      /** The last day of the filing period of the year of the filed Renta. */
+      filing_deadline: CivilDate;
+      /** Some purchase falls on or before `filing_deadline`: the filed return is wrong. */
+      within_period: boolean;
+      /** The year of the earliest purchase after `filing_deadline`, when there is one (art. 73.2). */
+      after_period_year?: number;
+    };
 
-/** The year of the earliest acquisition the write adds after `year`, if any. */
-const laterAcquisitionYear = (
+/** The dates of the acquisitions the write adds in a year after `year`, earliest first. */
+const laterAcquisitions = (
   before: readonly LedgerEvent[],
   after: readonly LedgerEvent[],
   year: number,
-): number | undefined => {
+): CivilDate[] => {
   const known = new Set(before.map((event) => event.id));
-  const years = after
+  const dates = after
     .filter((event) => !known.has(event.id))
     .flatMap((event) => {
       switch (event.type) {
@@ -129,9 +149,9 @@ const laterAcquisitionYear = (
           return [];
       }
     })
-    .map((date) => Number(date.slice(0, 4)))
-    .filter((acquired) => acquired > year);
-  return years.length === 0 ? undefined : Math.min(...years);
+    .filter((date) => Number(date.slice(0, 4)) > year)
+    .sort();
+  return dates;
 };
 
 // A later acquisition can only move a filed year one way: by deferring a loss
@@ -140,14 +160,28 @@ const laterAcquisitionYear = (
 const supplementaryOf = (
   model: FilingModel,
   comparison: ClosedYearComparison,
-  acquisitionYear: number | undefined,
-): ClosedYearSupplementary =>
-  model === "renta" &&
-  comparison.status === "compared" &&
-  comparison.moves.length > 0 &&
-  acquisitionYear !== undefined
-    ? { kind: "repurchase", acquisition_year: acquisitionYear }
-    : { kind: "possible" };
+  year: number,
+  acquisitions: readonly CivilDate[],
+  seasonEnd: string,
+): ClosedYearSupplementary => {
+  if (
+    model !== "renta" ||
+    comparison.status !== "compared" ||
+    comparison.moves.length === 0 ||
+    acquisitions.length === 0
+  ) {
+    return { kind: "possible" };
+  }
+  // The filing period of a year ends with the campaign of the next one.
+  const deadline = `${year + 1}-${seasonEnd}`;
+  const late = acquisitions.find((date) => date > deadline);
+  return {
+    kind: "repurchase",
+    filing_deadline: deadline,
+    within_period: acquisitions.some((date) => date <= deadline),
+    ...(late === undefined ? {} : { after_period_year: Number(late.slice(0, 4)) }),
+  };
+};
 
 const text = (money: Money): string => money.amount.toString();
 
@@ -343,7 +377,9 @@ export const closedYearImpact = (
       supplementary: supplementaryOf(
         entry.model,
         comparison,
-        byDate ? undefined : laterAcquisitionYear(before.events, after.events, entry.year),
+        entry.year,
+        byDate ? [] : laterAcquisitions(before.events, after.events, entry.year),
+        rentaSeasonOf(settingsOf(after) ?? {}).end,
       ),
     });
     if (byDate) {

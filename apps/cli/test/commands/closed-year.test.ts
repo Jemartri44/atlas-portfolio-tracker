@@ -8,7 +8,9 @@
 // this" is how a warning stops being read.
 
 import type { LedgerEvent } from "@atlas/domain";
+import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { describe, expect, it } from "vitest";
+import { closedYearLines } from "../../src/output/closed-years.js";
 import { CLI_SETTINGS, Events } from "../events.js";
 import { harness } from "../harness.js";
 
@@ -61,7 +63,7 @@ const run = async (argv: string[], events: LedgerEvent[] = filed().build()) => {
 };
 
 describe("a write that reaches a filed return", () => {
-  it("makes the supplementary return compulsory for a repurchase that defers a declared loss", async () => {
+  it("asks to rectify the Renta, before the end of its filing period, for a repurchase that defers a declared loss", async () => {
     // A loss of December 2027 already declared, and a repurchase of January 2028.
     const events = filed("2027-12-15").build();
     const sale = events.find((event) => event.type === "sell") as { unit_price: string };
@@ -94,7 +96,7 @@ describe("a write that reaches a filed return", () => {
     );
     expect(text).toContain("afecta a la Renta de 2027, presentada el 2028-06-10");
     expect(text).toContain(
-      "Hay que presentar una complementaria de la Renta de 2027 antes de que acabe el plazo de la Renta de 2028, con intereses de demora si la compra es posterior al fin del plazo de la de 2027 (art. 73.2 RIRPF).",
+      "Una compra es anterior al fin del plazo de la Renta de 2027 (2028-06-30) y esa Renta ya está presentada. Presenta una autoliquidación rectificativa (casilla [121]) antes de esa fecha y no habrá recargo. Si la presentas después, lleva el recargo por presentarla fuera de plazo (art. 27 LGT).",
     );
     expect(text).not.toContain("Puede que toque");
   });
@@ -291,5 +293,38 @@ describe("a write that reaches a filed return", () => {
     expect(text).toContain("el ejercicio 2027 tiene cifras y no consta");
     expect(text).toContain("atlas filed renta");
     expect(text.indexOf("Registrado")).toBeLessThan(text.indexOf("no consta"));
+  });
+});
+
+describe("the rectification text by purchase date", () => {
+  const impact = (supplementary: ClosedYearImpact["supplementary"]): ClosedYearImpact => ({
+    model: "renta",
+    year: 2027,
+    filing_id: "01ARYZ6S41TSV4RRFFQ6900099",
+    filed_at: "2028-06-10",
+    by_date: false,
+    comparison: {
+      status: "compared",
+      moves: [{ figure: "savings_base", before: "1", after: "2" }],
+    },
+    supplementary,
+  });
+  const line = (parts: { within_period: boolean; after_period_year?: number }) =>
+    closedYearLines([impact({ kind: "repurchase", filing_deadline: "2028-06-30", ...parts })]).join(
+      "\n",
+    );
+  const AFTER =
+    "Hay que presentar una autoliquidación rectificativa de la Renta de 2027 (casilla [121]), con intereses de demora, antes del fin del plazo de la Renta de 2028 (art. 73.2 RIRPF).";
+
+  it("cites art. 73.2 with interest and box 121 for a purchase after the period", () => {
+    const text = line({ within_period: false, after_period_year: 2028 });
+    expect(text).toContain(AFTER);
+    expect(text).not.toContain("Una compra es anterior");
+  });
+
+  it("says both cases when purchases fall on both sides of the period", () => {
+    const text = line({ within_period: true, after_period_year: 2028 });
+    expect(text).toContain("Una compra es anterior al fin del plazo de la Renta de 2027");
+    expect(text).toContain(AFTER);
   });
 });
