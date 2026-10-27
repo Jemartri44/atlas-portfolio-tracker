@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { informativeReturn } from "../../src/informative/m720.js";
 import type { InformativeCategory } from "../../src/informative/report.js";
+import type { AssetType } from "../../src/schema/events.js";
 import type { InformativeModel, Settings } from "../../src/settings/settings.js";
 import { LedgerBuilder } from "../ledger-builder.js";
 import { HAND_SETTINGS } from "../tax/helpers.js";
@@ -18,7 +19,7 @@ const SETTINGS: Settings = {
   model_721_alert_threshold_eur: "45000",
 };
 
-const CASES: { model: InformativeModel; category: "securities" | "crypto"; type: string }[] = [
+const CASES: { model: InformativeModel; category: "securities" | "crypto"; type: AssetType }[] = [
   { model: "720", category: "securities", type: "etf" },
   { model: "721", category: "crypto", type: "crypto" },
 ];
@@ -26,7 +27,7 @@ const CASES: { model: InformativeModel; category: "securities" | "crypto"; type:
 /** Filed for 2027 with 600 units at 100 (60.000); 2028 sells `sold` and values the rest at 100. */
 const ledger = (
   category: "securities" | "crypto",
-  type: string,
+  type: AssetType,
   options: {
     declared: boolean;
     sold: string;
