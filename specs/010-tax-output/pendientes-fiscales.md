@@ -4,9 +4,7 @@ Lo que las predicciones (`*-expectation.md`) y las notas de implementación de l
 
 ## Fiscales
 
-1. **Criterio #17, tercera lectura.** Que la comisión de una permuta **no se deduzca nunca**: el riesgo dejaría de ser un desfase temporal y pasaría a ser permanente. Y la pista del manual del Modelo 100 sobre repartirla entre las dos patas. (De `criteria-labels-expectation.md`.)
-3. **Criterio #21**: la cita del art. 35 en las líneas de capital mobiliario y la atadura de las comisiones a valores negociables.
-4. **Recompra con #19**: con la pérdida ya cubierta, hay avisos de recompra que no difieren nada (diez de doce en el sintético de entonces). El aviso no puede saberlo sin repetir el reparto del motor; dejar de emitirlos exigiría mover ese reparto a la proyección. Decisión de diseño no tomada. (De `warnings-expectation.md`.)
+4. **Recompra con #19**: con la pérdida ya cubierta, hay avisos de recompra que no difieren nada (diez de doce en el sintético de entonces). El aviso no puede saberlo sin repetir el reparto del motor; dejar de emitirlos exigiría mover ese reparto a la proyección. Se deja así (coordinadora, 2026-10-26: es diseño, no fiscal; el cálculo del año ya aplica el #19 bien). (De `warnings-expectation.md`.)
 
 ## De código y de interfaz
 

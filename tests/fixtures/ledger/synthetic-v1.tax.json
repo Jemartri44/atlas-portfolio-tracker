@@ -888,7 +888,7 @@
       },
       {
         "base_difference_eur": "76.65",
-        "certainty": "disputed",
+        "certainty": "medium",
         "criterion": "2:listed",
         "deferred_difference_eur": "-76.65",
         "direction": "aggressive",
@@ -1633,7 +1633,7 @@
       },
       {
         "base_difference_eur": "-76.65",
-        "certainty": "disputed",
+        "certainty": "medium",
         "criterion": "2:listed",
         "deferred_difference_eur": "0",
         "direction": "conservative",

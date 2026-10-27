@@ -50,3 +50,7 @@ Se añaden al esquema las nueve previsiones de abajo. **Ninguna decide una pregu
 - Se vuelve más difícil: hay más campos que rellenar al dar de alta un activo. Se mitiga dejándolos **opcionales** (salvo el 9) y pidiéndolos solo donde aportan.
 - **Riesgo asumido:** se añade estructura para mecánicas que quizá nunca se usen (la permuta cripto-cripto, si el usuario se queda en ETP). Es deliberado y es la excepción justificada al principio de no añadir nada por añadir: el coste de tenerlo y no usarlo es un campo opcional vacío; el de no tenerlo y necesitarlo es una migración del libro.
 - La ventana de ADR-0018 **se cierra** con esta decisión: después de esto, cualquier endurecimiento exige `schema_version = 2`.
+
+## Nota del 2026-10-26: el art. 95 de la fila 3 vale solo para las IIC
+
+El motivo «Art. 95 LIRPF» de la fila 3 queda **acotado a fondos y ETF**. El art. 95 trata a los partícipes de **instituciones de inversión colectiva** en paraísos fiscales, y un ETC o un ETP no es una IIC, sino un título de deuda de su emisor (criterio #24; `docs/fiscal-questions.md`, «Lo que falta», punto 6). Para ellos, `issuer_country` solo sirve para la clasificación en los Modelos 720 y 721. La decisión no cambia: el campo sigue siendo el mismo y sigue siendo opcional. Lo dice también el comentario de `issuer_country` en `packages/domain/src/schema/events.ts`.

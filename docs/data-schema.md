@@ -108,7 +108,7 @@ Son **26 tipos**. La forma exacta de cada evento (campos obligatorios, validacio
 | `account_id` | id | Cuenta donde ocurre |
 | `asset_id` | id | Activo (no en movimientos de efectivo) |
 | `trade_date` | fecha | Fecha de contratación |
-| `value_date` | fecha | Fecha valor / liquidación |
+| `value_date` | fecha | Fecha valor / liquidación. **En un fondo, la del valor liquidativo aplicado** a la suscripción o el reembolso, que es su fecha fiscal (business-rules.md §5.10); no la «fecha valor» del abono en la cuenta de efectivo |
 | *(derivada)* `fiscal_date` | fecha | La que manda para ejercicio, antigüedad, tipo de cambio y ventana de recompra. Se deriva por `asset_type` según `Settings.fiscal_date_rule` (ADR-0013); no se almacena |
 | `quantity` | decimal | Cantidad (participaciones, acciones, unidades) |
 | `unit_price?` | decimal | Precio unitario en `currency`. **Obligatorio si no hay `amount`**; si lo hay, es informativo y puede omitirse (nunca se rellena con `"0"` ni con un valor derivado: el libro no guarda datos inventados) |

@@ -9,7 +9,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
 import Registrar from "../src/routes/registrar/index.jsx";
-import { show, withGoldenLedger } from "./helpers/render.jsx";
+import { choose, settle, show, withGoldenLedger } from "./helpers/render.jsx";
 import { applied, token, withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
@@ -62,5 +62,18 @@ describe("the short fields in pairs", () => {
     for (const field of host.querySelectorAll(".fieldset > .pair")) {
       expect(applied(field, "grid-column")).toBe("1 / -1");
     }
+  });
+
+  it("name the date of a fund after its net asset value, which is its fiscal date", async () => {
+    // business-rules.md §5.10: the «Fecha Valor» of the cash account is the day of the payment.
+    const host = await show("/registrar/buy", RegistrarForm, "/registrar/:tipo");
+    choose(host, "f-account_id", "acc_mi");
+    choose(host, "f-asset_id", "ast_world");
+    await settle();
+    expect(pairs(host)[1]).toBe("Fecha valor liquidativo");
+    choose(host, "f-account_id", "acc_ibkr");
+    choose(host, "f-asset_id", "ast_gold");
+    await settle();
+    expect(pairs(host)[1]).toBe("Fecha valor");
   });
 });
