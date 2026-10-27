@@ -94,5 +94,6 @@ describe("architecture: apps/jobs", () => {
       .filter(([, text]) => text.includes("@atlas/jobs"))
       .map(([dir]) => dir);
     expect(manifests).toEqual([]);
-  });
+    // It parses every source and test of the repo: 3-4.7 s measured under a load of 9, 5 s limit.
+  }, 20_000);
 });

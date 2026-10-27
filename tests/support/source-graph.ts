@@ -105,11 +105,7 @@ export const parse = (file: string): Parsed => {
   if (result.errors.length > 0) {
     throw new Error(`${relative(repoRoot, file)} cannot be parsed: ${result.errors[0]?.message}`);
   }
-  let code = source;
-  for (const comment of result.comments) {
-    const blank = source.slice(comment.start, comment.end).replace(/[^\n]/g, " ");
-    code = code.slice(0, comment.start) + blank + code.slice(comment.end);
-  }
+  const comments = result.comments;
   const module = result.module as unknown as ModuleInfo;
   const bindings: Binding[] = [];
   for (const statement of module.staticImports) {
@@ -152,7 +148,21 @@ export const parse = (file: string): Parsed => {
   }
   const parsed: Parsed = {
     source,
-    code,
+    get code() {
+      // Built on first use, in one pass: most guards read specifiers only, and slicing the whole
+      // file once per comment was quadratic.
+      const pieces: string[] = [];
+      let from = 0;
+      for (const comment of comments) {
+        pieces.push(source.slice(from, comment.start));
+        pieces.push(source.slice(comment.start, comment.end).replace(/[^\n]/g, " "));
+        from = comment.end;
+      }
+      pieces.push(source.slice(from));
+      const blanked = pieces.join("");
+      Object.defineProperty(this, "code", { value: blanked });
+      return blanked;
+    },
     specifiers: [...new Set(bindings.map((binding) => binding.specifier))],
     bindings,
     dynamicImports: module.dynamicImports.length,
