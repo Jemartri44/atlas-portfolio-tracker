@@ -77,7 +77,7 @@ const supplementaryLine = (impact: ClosedYearImpact): string => {
   const parts: string[] = [];
   if (supplementary.within_period) {
     parts.push(
-      `Una compra es anterior al fin del plazo de la Renta de ${impact.year} (${supplementary.filing_deadline}) y ya está presentada: rectifícala con una autoliquidación rectificativa cuanto antes y, si puedes, dentro de ese plazo, que es lo que evita presentarla fuera de plazo (no es el art. 73.2 RIRPF).`,
+      `Una compra es anterior al fin del plazo de la Renta de ${impact.year} (${supplementary.filing_deadline}) y esa Renta ya está presentada. Presenta una autoliquidación rectificativa (casilla [121]) antes de esa fecha y no habrá recargo. Si la presentas después, lleva el recargo por presentarla fuera de plazo (art. 27 LGT).`,
     );
   }
   if (supplementary.after_period_year !== undefined) {

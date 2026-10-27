@@ -43,14 +43,14 @@ describe("the supplementary return of a filed Renta", () => {
     expect(text).not.toContain("anterior al fin del plazo");
   });
 
-  it("is a rectification as soon as possible when the purchase came within the period", () => {
+  it("is a rectification before the deadline, with no surcharge, when the purchase came within the period", () => {
     const text = repurchase({ within_period: true });
     expect(text).toContain("anterior al fin del plazo de la Renta de 2025 (30/06/2026)");
     expect(text).toContain("autoliquidación rectificativa");
-    expect(text).toContain("no es el art. 73.2 RIRPF");
-    expect(text).toContain("que es lo que evita presentarla fuera de plazo");
-    expect(text).not.toContain("evitar el recargo");
-    expect(text).not.toContain("casilla [121]");
+    expect(text).not.toContain("73.2");
+    expect(text).toContain("antes de esa fecha y no habrá recargo");
+    expect(text).toContain("art. 27 LGT");
+    expect(text).toContain("casilla [121]");
   });
 
   it("says both cases when there are purchases within the period and after it", () => {
