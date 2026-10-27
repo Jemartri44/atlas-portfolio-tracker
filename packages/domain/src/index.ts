@@ -62,6 +62,11 @@ export type {
   StandaloneFeeRow,
   StandaloneFees,
 } from "./projections/costs.js";
+export {
+  type CurrencyGain,
+  type CurrencyLot,
+  currencyLots,
+} from "./projections/currency-lots.js";
 export type { FingerprintWaiver } from "./projections/filings.js";
 export { hasForeignAccountsAt } from "./projections/foreign-accounts.js";
 export { realizedGains } from "./projections/gains.js";

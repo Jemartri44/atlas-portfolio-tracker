@@ -14,12 +14,13 @@ import { Ratio, scaleQuantities } from "../money/ratio.js";
 import type { AccountId, AssetId } from "../schema/events.js";
 import { adjustCash } from "./cash.js";
 import { assertSameBook, requireAccount, requireAsset } from "./catalogue.js";
-import { recordGain } from "./gains.js";
+import { fundingOf, recordGain } from "./gains.js";
 import type { ResolvedEffect } from "./kind-rules.js";
 import { consume, openLot, openQuantity } from "./lots.js";
 import {
   fxOf,
   negative,
+  receiveProceeds,
   requireAvailable,
   warnCurrency,
   warnFxDate,
@@ -179,6 +180,8 @@ export const applyConvert = (
       acquisition_date: slice.acquisition_date,
       quantity: scaledLots[index] as Quantity,
       cost_eur: slice.cost_eur,
+      cost: slice.cost,
+      funding_eur: slice.funding_eur,
       source_event_id: ctx.eventId,
       // FIFO tie-break keeps the origin event of the consumed lot (data-schema.md §8.1).
       position: slice.position,
@@ -222,13 +225,19 @@ export const applyCarveOut = (
 
   lots.forEach((lot, index) => {
     const carved = lot.cost_eur.mul(share);
+    const carvedCost = lot.cost.mul(share);
+    const carvedFunding = lot.funding_eur.mul(share);
     // Subtraction, so that origin + carved is exactly the cost before.
     lot.cost_eur = lot.cost_eur.sub(carved);
+    lot.cost = lot.cost.sub(carvedCost);
+    lot.funding_eur = lot.funding_eur.sub(carvedFunding);
     const into = openLot(state, {
       asset_id: to.asset_id,
       acquisition_date: lot.acquisition_date,
       quantity: scaledLots[index] as Quantity,
       cost_eur: carved,
+      cost: carvedCost,
+      funding_eur: carvedFunding,
       source_event_id: ctx.eventId,
       position: lot.position,
       source_lot_id: lot.id,
@@ -322,8 +331,20 @@ export const applyForcedSale = (
       fiscal_date: ctx.effectiveDate,
       quantity: entry.quantity,
       proceeds_eur: fx.toEur(proceeds),
+      proceeds: { amount: proceeds, fx },
       slices,
     });
+    receiveProceeds(
+      state,
+      {
+        event_id: ctx.eventId,
+        account_id: entry.account_id,
+        amount: proceeds.sub(entry.withholding),
+        date: ctx.effectiveDate,
+      },
+      fundingOf(slices).add(gain.gain_eur).sub(fx.toEur(entry.withholding)),
+      undefined,
+    );
     // A forced sale is a transmission like any other: a fund liquidation, the
     // cash in lieu of a reverse split or the cash leg of a merger can realize a
     // loss, and the rule looks at the loss, not at who decided the sale
@@ -392,11 +413,15 @@ export const applyGrant = (
   });
 
   for (const entry of entries) {
+    const cost = unitCost.times(entry.quantity);
+    // No currency is spent on a grant: what is tied up in it is its cost.
     openLot(state, {
       asset_id: asset.asset_id,
       acquisition_date: effect.acquisition_date,
       quantity: entry.quantity,
-      cost_eur: fx.toEur(unitCost.times(entry.quantity)),
+      cost_eur: fx.toEur(cost),
+      cost,
+      funding_eur: fx.toEur(cost),
       source_event_id: ctx.eventId,
       position: ctx.position,
     });

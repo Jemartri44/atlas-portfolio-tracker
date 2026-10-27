@@ -60,6 +60,56 @@ describe("movedFiscalYears", () => {
     expect(movedFiscalYears(straddling(), byValueDate, louder, 2029)).toEqual([]);
   });
 
+  it("counts the exchange differences too, which move with the method of #4", () => {
+    // 1,200 USD bought with 1,000 EUR at 1.2, shares bought at 1.3 and sold at 1.5 in 2027,
+    // and the dollars back to euros at 1.2 in 2028 (DGT V2422-20).
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.fx({
+      account_id: "acc_etf",
+      value_date: "2027-01-05",
+      sold_amount: "1000",
+      sold_currency: "EUR",
+      bought_amount: "1200",
+      bought_currency: "USD",
+      fee: "0",
+      fee_currency: "EUR",
+      fx_rate_bought: "1.2",
+      fx_rate_date: "2027-01-05",
+    });
+    const usd = {
+      account_id: "acc_etf",
+      asset_id: "ast_gold",
+      quantity: "10",
+      unit_price: "120",
+      currency: "USD",
+    };
+    b.buy({ ...usd, value_date: "2027-01-11", fx_rate: "1.3" });
+    b.sell({ ...usd, value_date: "2027-03-01", fx_rate: "1.5" });
+    b.fx({
+      account_id: "acc_etf",
+      value_date: "2028-03-01",
+      sold_amount: "1200",
+      sold_currency: "USD",
+      bought_amount: "1000",
+      bought_currency: "EUR",
+      fee: "0",
+      fee_currency: "EUR",
+      fx_rate_sold: "1.2",
+      fx_rate_bought: "1",
+      fx_rate_date: "2028-03-01",
+    });
+    const legByLeg = mergeSettings(DEFAULT_SETTINGS, { fx_gain_method: "each_leg" });
+    const moved = movedFiscalYears(b.build(), DEFAULT_SETTINGS, legByLeg, 2029);
+    // Leg by leg the shares lose 123.08 in 2027, and the dollars win them back in 2028.
+    expect(
+      moved.map((y) => [y.year, y.before.amount.toString(), y.after.amount.toString()]),
+    ).toEqual([
+      [2027, "0", "-123.08"],
+      [2028, "0", "123.08"],
+    ]);
+  });
+
   it("says nothing on a ledger with no sales", () => {
     const b = new LedgerBuilder();
     catalogue(b);

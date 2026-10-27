@@ -65,6 +65,8 @@ export const applyTransfer = (state: LedgerState, event: TransferEvent): void =>
       acquisition_date: slice.acquisition_date,
       quantity,
       cost_eur: slice.cost_eur,
+      cost: slice.cost,
+      funding_eur: slice.funding_eur,
       source_event_id: event.id,
       // FIFO tie-break on equal dates keeps the position of the origin event of the consumed lot (data-schema.md §8.1).
       position: slice.position,

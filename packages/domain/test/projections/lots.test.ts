@@ -23,6 +23,8 @@ const lot = (
     acquisition_date: date,
     quantity: q(quantity),
     cost_eur: eur(cost),
+    cost: eur(cost),
+    funding_eur: eur(cost),
     source_event_id: event,
     position,
     ...(sourceLotId === undefined ? {} : { source_lot_id: sourceLotId }),
@@ -97,6 +99,8 @@ describe("consume", () => {
       acquisition_date: "2027-01-11",
       quantity: q("2"),
       cost_eur: eur("50"),
+      cost: eur("50"),
+      funding_eur: eur("50"),
       source_event_id: "e2",
       position: 2,
     });

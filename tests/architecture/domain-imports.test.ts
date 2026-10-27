@@ -103,10 +103,11 @@ describe("architecture: @atlas/domain imports nothing", () => {
   });
 
   /**
-   * **`broker_settled_eur` is informative** (ADR-0030): no projection, no tax
-   * figure and no balance reads it. A closed list of modules may: the
-   * validation, and the one function that sets it beside the ECB figure for the
-   * interfaces to show. Checked in the domain **and** in both interfaces, with
+   * **`broker_settled_eur` is read in one place only** (ADR-0030, amended by
+   * ADR-0036): no balance reads it, and the only figures that depend on it are
+   * those of the currency lots. A closed list of modules may: the validation,
+   * the one function that sets it beside the ECB figure for the interfaces to
+   * show, and the currency lots. Checked in the domain **and** in both interfaces, with
    * the ways of reading a field the test of the valuations above learnt — a
    * dot, a destructuring (which once slipped past it), a string index — and a
    * destructured parameter, which slipped past this one.
@@ -115,6 +116,8 @@ describe("architecture: @atlas/domain imports nothing", () => {
     const allowed = new Set([
       join(domainSrc, "schema", "validate.ts"),
       join(domainSrc, "ecb", "broker-settlement.ts"),
+      // What the broker converted funds a purchase and values a conversion (spec 029).
+      join(domainSrc, "projections", "currency-lots.ts"),
     ]);
     const reads = [
       /\.broker_settled_eur\b/,

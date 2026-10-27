@@ -19,6 +19,7 @@ import type {
   ValuationEvent,
 } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
+import type { CurrencyGain, CurrencyLots } from "./currency-lots.js";
 import type { Filing, FingerprintWaiver } from "./filings.js";
 import type { KnownFxRate } from "./fx-rates.js";
 import type { Acquisition } from "./wash-sale.js";
@@ -50,6 +51,8 @@ export interface LotConsumption {
   event_id: Ulid;
   quantity: Quantity;
   cost_eur: Money;
+  cost: Money;
+  funding_eur: Money;
 }
 
 export interface FiscalLot {
@@ -63,6 +66,17 @@ export interface FiscalLot {
   /** Remaining cost, exact. */
   cost_eur: Money;
   original_cost_eur: Money;
+  /**
+   * Remaining cost in the currency of the acquisition, exact: what criterion #4
+   * subtracts first when the disposal is in that currency. Splits like `cost_eur`.
+   */
+  cost: Money;
+  /**
+   * What the currency spent on the lot cost in euros (its currency lots, or the
+   * euros the broker charged): it goes back to the currency lots, plus the gain,
+   * when the lot is sold for currency. Splits like `cost_eur`.
+   */
+  funding_eur: Money;
   source_event_id: Ulid;
   source_lot_id?: string;
   /**
@@ -141,6 +155,12 @@ export interface RealizedGain {
   /** Rounded half-up to cents, once per operation. */
   gain_eur_rounded: Money;
   by_lot: GainByLot[];
+  /**
+   * How criterion #4 computed it, when a foreign currency is involved:
+   * `currency_first`, `each_leg`, or `mixed` when a lot was acquired in a
+   * currency other than that of the transmission (`4:mixed_currency`).
+   */
+  fx_method?: "currency_first" | "each_leg" | "mixed";
 }
 
 export interface InvestmentIncome {
@@ -318,6 +338,12 @@ export interface LedgerState {
   /** Lots created per source event, to number lot ids uniquely across assets. */
   lotCounts: Map<Ulid, number>;
   gains: RealizedGain[];
+  /** Lots of foreign currency per currency, across accounts (spec 029). */
+  currencyLots: Map<string, CurrencyLots>;
+  /** Currency lots created per source event, to number their ids. */
+  currencyLotCounts: Map<Ulid, number>;
+  /** Exchange differences imputed, in order (spec 029). */
+  currencyGains: CurrencyGain[];
   income: InvestmentIncome[];
   /** Income in kind a grant declares; read by nobody yet (ADR-0021). */
   inKindIncome: InKindIncome[];
@@ -368,6 +394,9 @@ export const createEmptyState = (fiscalSettings: Settings): LedgerState => ({
   lotJournal: [],
   lotCounts: new Map(),
   gains: [],
+  currencyLots: new Map(),
+  currencyLotCounts: new Map(),
+  currencyGains: [],
   income: [],
   inKindIncome: [],
   valuations: [],

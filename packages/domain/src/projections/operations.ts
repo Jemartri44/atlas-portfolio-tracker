@@ -13,7 +13,14 @@ import type { AssetId, BuyEvent, SellEvent, SwapEvent, ValuationEvent } from "..
 import { fiscalDateOf } from "../settings/fiscal-date.js";
 import { adjustCash } from "./cash.js";
 import { assertSameBook, requireAccount, requireAsset } from "./catalogue.js";
-import { recordGain } from "./gains.js";
+import {
+  autoConversion,
+  type CurrencyFlow,
+  currencyIn,
+  currencyOut,
+  settledEurOf,
+} from "./currency-lots.js";
+import { fundingOf, recordGain } from "./gains.js";
 import { consume, openLot, openQuantity } from "./lots.js";
 import { fillOrder, lookupOpenOrder } from "./pending.js";
 import { accountsHolding, adjustPosition, positionOf } from "./positions.js";
@@ -56,6 +63,25 @@ const basisOf = (event: {
 };
 
 export const negative = (quantity: Quantity): Quantity => Quantity.of(quantity.value.neg());
+
+/**
+ * The currency a transmission brings in, at what it cost: the currency tied up
+ * in the lots sold plus their gain, less the withholding. With the method of
+ * either side of #4, a round trip then imputes, in euros, exactly what came in
+ * minus what went out. Converted by the broker, the difference is imputed now.
+ */
+export const receiveProceeds = (
+  state: LedgerState,
+  flow: CurrencyFlow,
+  costEur: Money,
+  settledEur: Money | undefined,
+): void => {
+  if (settledEur === undefined) {
+    currencyIn(state, flow, costEur);
+  } else {
+    autoConversion(state, flow, settledEur, costEur);
+  }
+};
 
 export const warnCurrency = (state: LedgerState, event: Priced, asset: Asset): void => {
   if (asset.currency !== event.currency) {
@@ -233,12 +259,23 @@ export const applyBuy = (state: LedgerState, event: BuyEvent, position: number):
     fillOrder(order, event.id, fiscalDate);
   }
   adjustCash(state, event.account_id, total.neg());
+  // Paid with the currency held, or with the euros the broker converted.
+  const funding =
+    settledEurOf(event) ??
+    currencyOut(
+      state,
+      { event_id: event.id, account_id: event.account_id, amount: total, date: fiscalDate },
+      costEur,
+      "invest",
+    );
   adjustPosition(state, event.account_id, event.asset_id, quantity, event.id);
   openLot(state, {
     asset_id: event.asset_id,
     acquisition_date: fiscalDate,
     quantity,
     cost_eur: costEur,
+    cost: total,
+    funding_eur: funding,
     source_event_id: event.id,
     position,
   });
@@ -297,8 +334,20 @@ export const applySell = (state: LedgerState, event: SellEvent, position: number
     fiscal_date: fiscalDate,
     quantity,
     proceeds_eur: proceedsEur,
+    proceeds: { amount: proceeds, fx: fxOf(event) },
     slices,
   });
+  receiveProceeds(
+    state,
+    {
+      event_id: event.id,
+      account_id: event.account_id,
+      amount: proceeds.sub(withholding),
+      date: fiscalDate,
+    },
+    fundingOf(slices).add(gain.gain_eur).sub(fxOf(event).toEur(withholding)),
+    settledEurOf(event),
+  );
   if (thesis !== undefined) {
     linkSell(
       thesis,
@@ -372,6 +421,12 @@ export const applySwap = (state: LedgerState, event: SwapEvent, position: number
   const costEur = fx.toEur(value);
 
   adjustCash(state, event.account_id, fee.neg());
+  const feeFunding = currencyOut(
+    state,
+    { event_id: event.id, account_id: event.account_id, amount: fee, date: dateOut },
+    fx.toEur(fee),
+    "invest",
+  );
   adjustPosition(state, event.account_id, event.from_asset_id, negative(quantityOut), event.id);
   adjustPosition(state, event.account_id, event.to_asset_id, quantityIn, event.id);
   const slices = consume(state, event.from_asset_id, quantityOut, event.id, "transmission");
@@ -382,13 +437,18 @@ export const applySwap = (state: LedgerState, event: SwapEvent, position: number
     fiscal_date: dateOut,
     quantity: quantityOut,
     proceeds_eur: proceedsEur,
+    proceeds: { amount: value.sub(fee), fx },
     slices,
   });
+  // What was handed over is reinvested: the currency tied up in it, its gain and
+  // the fee paid with currency stay tied up in what is received.
   openLot(state, {
     asset_id: event.to_asset_id,
     acquisition_date: dateIn,
     quantity: quantityIn,
     cost_eur: costEur,
+    cost: value,
+    funding_eur: fundingOf(slices).add(gain.gain_eur).add(feeFunding),
     source_event_id: event.id,
     position,
   });

@@ -10,6 +10,8 @@ const lot = (asset_id: string, source_event_id: string) => ({
   acquisition_date: "2027-01-11",
   quantity: Quantity.parse("1"),
   cost_eur: Money.parse("100", "EUR"),
+  cost: Money.parse("100", "EUR"),
+  funding_eur: Money.parse("100", "EUR"),
   source_event_id,
   position: 0,
 });

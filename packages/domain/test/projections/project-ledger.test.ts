@@ -93,9 +93,11 @@ describe("projectLedger: quickstart scenario", () => {
     const [gain] = realizedGains(state, 2026);
     expect(gain?.event_id).toBe(sell.id);
     expect(gain?.proceeds_eur.amount.toString()).toBe("384.4036697248");
-    expect(gain?.cost_eur.amount.toString()).toBe("369.2165898618");
-    expect(gain?.gain_eur.amount.toString()).toBe("15.187079863");
-    expect(gain?.gain_eur_rounded.amount.toString()).toBe("15.19");
+    // First in dollars (criterion #4): 419 − 2/5 of 1.001,5 = 18,4 $, at 1,09 = 16,880733945 €;
+    // the acquisition value is what is left of the proceeds, at the rate of the sale.
+    expect(gain?.cost_eur.amount.toString()).toBe("367.5229357798");
+    expect(gain?.gain_eur.amount.toString()).toBe("16.880733945");
+    expect(gain?.gain_eur_rounded.amount.toString()).toBe("16.88");
     expect(gain?.by_lot).toHaveLength(1);
     expect(state.warnings).toEqual([]);
     expect(integrity(state)).toEqual([]);
