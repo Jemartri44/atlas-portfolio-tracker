@@ -201,6 +201,8 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     `No hay tipo de convenio configurado para ${num(d.country)}: no se calcula deducción por los ${f.money(d.foreign_tax_eur)} retenidos.`,
   tax_dividend_without_country: (d, _n, f) =>
     `El dividendo no dice qué país lo pagó: no se calcula deducción por los ${f.money(d.foreign_tax_eur)} retenidos en origen.`,
+  tax_crypto_custody_not_deductible: () =>
+    "No se resta la custodia de las cuentas con solo cripto en tenencia directa: la cripto no es un valor negociable, y solo se deduce el depósito de valores negociables.",
   tax_fx_differences_not_computed: (d) =>
     `Las diferencias de cambio del efectivo en divisa (${(Array.isArray(d.currencies) ? d.currencies : [d.currencies]).map((code) => num(code)).join(", ")}) no se calculan: es un criterio en disputa y faltan los lotes de divisa.`,
   tax_in_kind_income_not_integrated: (d, _n, f) =>
