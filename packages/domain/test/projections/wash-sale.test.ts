@@ -248,6 +248,18 @@ describe("wash_sale_window_prior_buy: selling at a loss after buying", () => {
       const b = new LedgerBuilder();
       catalogue(b);
       b.thesisOpened({ thesis_id: "t1", planned_size_eur: "100000" });
+      // Held before the window opens: a lone purchase in it would be exempt.
+      b.buy({
+        account_id: "acc_bucket",
+        asset_id: "ast_spec",
+        quantity: "1",
+        unit_price: "10",
+        fee: "0",
+        ...EUR,
+        trade_date: "2026-06-01",
+        value_date: "2026-06-01",
+        thesis_id: "t1",
+      });
       b.buy({
         account_id: "acc_bucket",
         asset_id: "ast_spec",
@@ -280,8 +292,8 @@ describe("wash_sale_window_prior_buy: selling at a loss after buying", () => {
       sale_date: "2027-03-10",
       buy_date: "2027-01-10",
       window_start: "2027-01-10",
-      // Of the 10 bought, the sale took 5: what is still held is what it says.
-      held_quantity: "5",
+      // Of the 10 bought, the sale took 4 (after the 1 held before): 6 stay.
+      held_quantity: "6",
       loss_eur: "-10",
       tax_year: 2027,
       window: "2m",
@@ -744,6 +756,53 @@ describe("wash_sale_transfer_counts: a transfer in as an acquisition", () => {
   });
 });
 
+describe("wash_sale_window_prior_buy: the single-purchase exception", () => {
+  // A loss-making sale of 5 on 2027-03-10; the window opens on 2027-01-10.
+  it.each([
+    ["a lone purchase in the window is not a repurchase", [["2027-02-01", "10"]], 0],
+    [
+      "two purchases in the window: it warns",
+      [
+        ["2027-02-01", "5"],
+        ["2027-02-15", "5"],
+      ],
+      1,
+    ],
+    [
+      "a holding before the window opens: it warns",
+      [
+        ["2026-06-01", "5"],
+        ["2027-02-01", "5"],
+      ],
+      1,
+    ],
+  ] as const)("%s", (_name, buys, expected) => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    for (const [date, quantity] of buys) {
+      b.buy({
+        account_id: "acc_fund",
+        asset_id: "ast_world",
+        quantity,
+        unit_price: "10",
+        ...EUR,
+        trade_date: date,
+        value_date: date,
+      });
+    }
+    b.sell({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "5",
+      unit_price: "6",
+      ...EUR,
+      trade_date: "2027-03-10",
+      value_date: "2027-03-10",
+    });
+    expect(codes(projectLedger(b.build()), "wash_sale_window_prior_buy")).toHaveLength(expected);
+  });
+});
+
 describe("wash_sale_window_prior_buy: a forced sale warns like a sell", () => {
   /**
    * A fund bought at 10 and partly sold by force at 6: a 24 EUR loss nobody
@@ -753,6 +812,16 @@ describe("wash_sale_window_prior_buy: a forced sale warns like a sell", () => {
   const liquidation = (buyDate: string): LedgerState => {
     const b = new LedgerBuilder();
     catalogue(b);
+    // Held before the window opens: a lone purchase in it would be exempt.
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "1",
+      unit_price: "10",
+      ...EUR,
+      trade_date: "2026-06-01",
+      value_date: "2026-06-01",
+    });
     b.buy({
       account_id: "acc_fund",
       asset_id: "ast_world",
@@ -786,8 +855,8 @@ describe("wash_sale_window_prior_buy: a forced sale warns like a sell", () => {
     expect(warnings[0]?.details).toMatchObject({
       asset_id: "ast_world",
       buy_date: "2027-05-01",
-      // 10 bought, 6 taken by the forced sale: 4 are still held.
-      held_quantity: "4",
+      // 10 bought, 5 taken by the forced sale (after the 1 held before): 5 stay.
+      held_quantity: "5",
       loss_eur: "-24",
       window_start: "2027-04-01",
       window: "2m",

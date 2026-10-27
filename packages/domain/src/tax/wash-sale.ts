@@ -37,18 +37,14 @@ import type { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
 import { Ratio } from "../money/ratio.js";
 import type { LedgerState, LotJournalEntry, RealizedGain } from "../projections/state.js";
+import { isSinglePurchaseWindow } from "../projections/wash-sale.js";
 import type { AssetId, AssetType } from "../schema/events.js";
 import {
   type IncomeCategory,
   incomeCategoryOf,
   type WashSaleWindow,
 } from "../settings/settings.js";
-import {
-  washSaleLooksBack,
-  washSaleWindowEnd,
-  washSaleWindowOf,
-  washSaleWindowStart,
-} from "../settings/wash-sale.js";
+import { washSaleWindowEnd, washSaleWindowOf, washSaleWindowStart } from "../settings/wash-sale.js";
 
 /** A part of a deferred loss sitting on a lot, with the transmission it came from. */
 interface Share {
@@ -245,8 +241,6 @@ class Walker {
     private readonly firstOpen: Map<string, number>,
     private readonly scales: Map<AssetId, ScaleMark[]>,
     private readonly yearOf: ((eventId: Ulid) => number) | undefined,
-    private readonly dateOf: ((eventId: Ulid) => CivilDate) | undefined,
-    private readonly eventTypes: Map<Ulid, string>,
   ) {
     for (const list of acquired.values()) {
       for (const entry of list) {
@@ -545,7 +539,13 @@ class Walker {
   ): Candidate[] {
     const assetId = gain.asset_id;
     const found: Candidate[] = [];
-    const singlePurchase = this.isSinglePurchase(gain, start, journalIndex);
+    const singlePurchase = isSinglePurchaseWindow(
+      this.state,
+      assetId,
+      this.assetType(assetId),
+      start,
+      journalIndex,
+    );
     for (const acquisition of this.acquired.get(assetId) ?? []) {
       if (acquisition.fiscal_date < start || acquisition.fiscal_date > end) {
         continue;
@@ -639,52 +639,6 @@ class Walker {
     const distance = (candidate: Candidate): number =>
       Math.abs(daysBetween(gain.fiscal_date, candidate.acquisition.fiscal_date));
     return found.sort((a, b) => distance(a) - distance(b) || a.position - b.position);
-  }
-
-  /**
-   * The exception of DGT V3282-18: inside the window before the sale the asset
-   * was opened by one single event and none of it was held when the window
-   * began. Any lot opened in the window counts as an operation —a purchase, a
-   * transfer in, a conversion—, and only a `buy` qualifies as "the purchase": a
-   * transfer in or a grant keeps counting as a repurchase, the prudent side.
-   * Without event dates it never applies.
-   */
-  private isSinglePurchase(gain: RealizedGain, start: CivilDate, journalIndex: number): boolean {
-    const dateOf = this.dateOf;
-    const assetId = gain.asset_id;
-    if (dateOf === undefined || !washSaleLooksBack(this.assetType(assetId))) {
-      return false;
-    }
-    const quantity = new Map<string, Quantity>();
-    const assetOf = new Map<string, AssetId>();
-    const opened = new Set<Ulid>();
-    let atStart = Quantity.ZERO;
-    for (const entry of this.state.lotJournal.slice(0, journalIndex)) {
-      if (entry.kind === "gain" || entry.kind === "units" || entry.kind === "carve") {
-        continue;
-      }
-      if (entry.kind === "open") {
-        assetOf.set(entry.lot_id, entry.asset_id);
-      }
-      const before = quantity.get(entry.lot_id) ?? Quantity.ZERO;
-      const after =
-        entry.kind === "open"
-          ? entry.quantity
-          : entry.kind === "consume"
-            ? before.sub(entry.quantity)
-            : entry.quantity_after;
-      quantity.set(entry.lot_id, after);
-      if (assetOf.get(entry.lot_id) !== assetId) {
-        continue;
-      }
-      if (dateOf(entry.event_id) < start) {
-        atStart = atStart.add(after.sub(before));
-      } else if (entry.kind === "open") {
-        opened.add(entry.event_id);
-      }
-    }
-    const [only] = opened;
-    return opened.size === 1 && atStart.isZero() && this.eventTypes.get(only as Ulid) === "buy";
   }
 
   private allocate(
@@ -884,8 +838,6 @@ export const walkWashSales = (
   eventTypes: Map<Ulid, string>,
   /** The tax year an event belongs to; without it no year is closed on the way. */
   yearOf?: (eventId: Ulid) => number,
-  /** The business date of an event; without it the single-purchase exception is off. */
-  dateOf?: (eventId: Ulid) => CivilDate,
 ): WashSaleResult => {
   const firstOpen = new Map<string, number>();
   const scales = new Map<AssetId, ScaleMark[]>();
@@ -918,8 +870,6 @@ export const walkWashSales = (
     firstOpen,
     scales,
     yearOf,
-    dateOf,
-    eventTypes,
   );
   walker.walk();
   return {

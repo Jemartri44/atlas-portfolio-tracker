@@ -169,6 +169,15 @@ describe("the previews of a reversal and of a correction over a wash-sale ledger
   const ledger = () => {
     const b = new LedgerBuilder();
     catalogue(b);
+    // Held before the window opens: a lone purchase in it would be exempt.
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "1",
+      unit_price: "10",
+      trade_date: "2026-06-01",
+      value_date: "2026-06-01",
+    });
     b.buy({
       account_id: "acc_fund",
       asset_id: "ast_world",
@@ -203,8 +212,8 @@ describe("the previews of a reversal and of a correction over a wash-sale ledger
     expect((preview.candidate as unknown as { reverses_id: string }).reverses_id).toBe(
       repurchase.id,
     );
-    expect(preview.before.positions.map((row) => row.quantity.toString())).toEqual(["6"]);
-    expect(preview.after.positions.map((row) => row.quantity.toString())).toEqual(["5"]);
+    expect(preview.before.positions.map((row) => row.quantity.toString())).toEqual(["7"]);
+    expect(preview.after.positions.map((row) => row.quantity.toString())).toEqual(["6"]);
     expect((await store.load()).etag).toBe("0");
   });
 

@@ -147,16 +147,16 @@ export const tryReading = <T>(read: () => T): T | Unsupported => {
   }
 };
 
-/** The business date of an event of the lot journal: they are all operations. */
-const dateOfEntry = (state: LedgerState, events: Map<Ulid, LedgerEvent>) => {
-  const cache = new Map<Ulid, CivilDate>();
-  return (eventId: Ulid): CivilDate => {
-    let date = cache.get(eventId);
-    if (date === undefined) {
-      date = businessDateOf(state, events.get(eventId) as OperationEvent);
-      cache.set(eventId, date);
+/** The year of the business date of an event of the lot journal: they are all operations. */
+const yearOfEntry = (state: LedgerState, events: Map<Ulid, LedgerEvent>) => {
+  const cache = new Map<Ulid, number>();
+  return (eventId: Ulid): number => {
+    let year = cache.get(eventId);
+    if (year === undefined) {
+      year = yearOf(businessDateOf(state, events.get(eventId) as OperationEvent));
+      cache.set(eventId, year);
     }
-    return date;
+    return year;
   };
 };
 
@@ -264,8 +264,8 @@ export const taxChain = (
     events.filter((event) => !state.reversed.has(event.id)).map((event) => [event.id, event]),
   );
   const types = new Map<Ulid, string>([...byId].map(([id, event]) => [id, event.type]));
-  const entryDate = dateOfEntry(state, byId);
-  const walk = walkWashSales(state, options.today, types, (id) => yearOf(entryDate(id)), entryDate);
+  const entryYear = yearOfEntry(state, byId);
+  const walk = walkWashSales(state, options.today, types, entryYear);
   const lots = new Map<string, FiscalLot>();
   for (const entry of state.lots.values()) {
     for (const lot of [...entry.open, ...entry.closed]) {
