@@ -20,6 +20,7 @@
 import { DomainError } from "../errors.js";
 import { filingComparison } from "../filings/comparison.js";
 import type { Money } from "../money/money.js";
+import type { CurrencyGain } from "../projections/currency-lots.js";
 import type { RealizedGain } from "../projections/state.js";
 import type { CorporateActionEvent, LedgerEvent } from "../schema/events.js";
 import type { IncomeCategory, Settings } from "../settings/settings.js";
@@ -214,7 +215,10 @@ export const taxYearWithChain = (
     );
   const rounded = (lines: readonly TransmissionLine[]) =>
     lines.map((line) => line.computable_eur_rounded);
-  const capitalFigures = [...rounded(gains), ...core.currency.map((line) => line.gain_eur_rounded)];
+  const capitalFigures = [
+    ...rounded(gains),
+    ...core.currency.map((line) => line.computable_eur_rounded),
+  ];
   const dividends = core.income.filter((line) => line.kind === "dividend");
   const interest = core.income.filter((line) => line.kind === "interest");
   const withholdings = withholdingLines(core.transmissions, core.income);
@@ -292,6 +296,10 @@ export const taxYearWithChain = (
         amount_eur: entry.amount_eur,
         travelled: entry.travelled,
       })),
+      currency_pending: [...core.currencyWalk.pendingAt(year)].map(([origin, amount]) => {
+        const gain = state.currencyGains[origin] as CurrencyGain;
+        return { origin_event_id: gain.event_id, currency: gain.currency, amount_eur: amount };
+      }),
     },
     compensation: core.compensation,
     anchors: core.anchors,

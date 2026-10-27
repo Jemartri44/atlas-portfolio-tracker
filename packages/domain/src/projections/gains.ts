@@ -1,13 +1,21 @@
 // Realized gains per sell, lot by lot (data-schema.md §8.1). Exact per lot,
 // summed per operation and rounded to cents once (ADR-0005). The wash-sale rule
 // is left to the tax engine.
+//
+// Criterion #4 has three methods. A share or an ETC in one foreign currency is
+// computed first in that currency (V1740-17, V2422-20). A collective investment
+// undertaking (fund, ETF, money-market fund) is computed leg by leg, each at the
+// rate of its day, and the exchange difference of the currency invested in it
+// is imputed in the year of the sale (V0777-21, V0207-24); a lot bought in one
+// currency and sold in another is computed the same way. In both, what the
+// transmission brings in then comes in at the rate of the sale.
 
 import { yearOf } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
 import type { FxRate } from "../money/fx-rate.js";
 import { EUR, Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
-import type { AccountId, AssetId } from "../schema/events.js";
+import type { AccountId, AssetId, AssetType } from "../schema/events.js";
 import { type FxGainMethod, fxGainMethodOf } from "../settings/settings.js";
 import type { LotSlice } from "./lots.js";
 import type { GainByLot, LedgerState, RealizedGain } from "./state.js";
@@ -31,6 +39,13 @@ export interface Proceeds {
   amount: Money;
   fx: FxRate;
 }
+
+/** Collective investment undertakings: their method in currency is the doctrine's, not a setting. */
+const UNDERTAKINGS: ReadonlySet<AssetType> = new Set(["fund", "etf", "money_market"]);
+
+/** The method criterion #4 applies to an asset: an undertaking is always leg by leg. */
+const methodFor = (method: FxGainMethod, assetType: AssetType): FxGainMethod =>
+  UNDERTAKINGS.has(assetType) ? "each_leg" : method;
 
 /**
  * Whether a lot's gain is computed first in the currency of the transmission
@@ -76,6 +91,7 @@ export const allocateProceeds = (
 /** How criterion #4 reached the gain of a transmission that involves a foreign currency. */
 const methodOf = (
   method: FxGainMethod,
+  assetType: AssetType,
   proceeds: Proceeds,
   slices: readonly LotSlice[],
 ): RealizedGain["fx_method"] => {
@@ -87,7 +103,59 @@ const methodOf = (
   if (slices.some((slice) => slice.cost.currency !== currency)) {
     return "mixed";
   }
-  return method;
+  return UNDERTAKINGS.has(assetType) ? "iic" : method;
+};
+
+/**
+ * Leg by leg, the currency spent on a lot is valued at the rate of the day of
+ * the purchase (its `cost_eur`), and what it had cost (`funding_eur`) differs:
+ * that exchange difference is imputed now, one line per currency (V0777-21).
+ * Only for an undertaking and the lots of a sale in another currency; first in
+ * the currency, and with `each_leg` on a share, the difference stays in what
+ * the transmission brings in and comes back when that is converted.
+ */
+const recordInvested = (
+  state: LedgerState,
+  input: GainInput,
+  fxMethod: RealizedGain["fx_method"],
+  method: FxGainMethod,
+): Money => {
+  let total = Money.zero(EUR);
+  if (fxMethod !== "iic" && fxMethod !== "mixed") {
+    return total;
+  }
+  const byCurrency = new Map<string, LotSlice[]>();
+  for (const slice of input.slices) {
+    // A lot of a mixed sale in the currency of the sale was computed first in
+    // it: its difference stays in what the sale brings in.
+    if (slice.cost.currency !== EUR && !inCurrency(method, input.proceeds, slice)) {
+      byCurrency.set(slice.cost.currency, [...(byCurrency.get(slice.cost.currency) ?? []), slice]);
+    }
+  }
+  for (const [currency, slices] of byCurrency) {
+    const valued = slices.reduce((sum, slice) => sum.add(slice.cost_eur), Money.zero(EUR));
+    const funding = fundingOf(slices);
+    const gain = valued.sub(funding);
+    if (gain.isZero()) {
+      continue;
+    }
+    state.currencyGains.push({
+      event_id: input.event_id,
+      kind: "invested",
+      account_id: input.account_id,
+      currency,
+      fiscal_date: input.fiscal_date,
+      year: yearOf(input.fiscal_date),
+      amount: slices.reduce((sum, slice) => sum.add(slice.cost), Money.zero(currency)),
+      proceeds_eur: valued,
+      cost_eur: funding,
+      gain_eur: gain,
+      gain_eur_rounded: gain.roundToCents(),
+      by_lot: [],
+    });
+    total = total.add(gain);
+  }
+  return total;
 };
 
 export interface GainInput {
@@ -102,18 +170,30 @@ export interface GainInput {
   slices: readonly LotSlice[];
 }
 
-export const recordGain = (state: LedgerState, input: GainInput): RealizedGain => {
-  const method = fxGainMethodOf(state.fiscalSettings);
+export interface RecordedGain {
+  gain: RealizedGain;
+  /**
+   * What the transmission brings in cost in euros: the currency spent on the
+   * lots, plus the gain, plus the exchange difference imputed now. First in
+   * the currency it carries that difference on; leg by leg it is the value of
+   * the transmission at its rate.
+   */
+  carried_eur: Money;
+}
+
+export const recordGain = (state: LedgerState, input: GainInput): RecordedGain => {
+  const assetType = (state.assets.get(input.asset_id) as { asset_type: AssetType }).asset_type;
+  const setting = fxGainMethodOf(state.fiscalSettings);
   const byLot = allocateProceeds(
     input.slices,
     input.proceeds_eur,
     input.quantity,
     input.proceeds,
-    method,
+    methodFor(setting, assetType),
   );
   const costEur = byLot.reduce((total, lot) => total.add(lot.cost_eur), Money.zero("EUR"));
   const gainEur = input.proceeds_eur.sub(costEur);
-  const fxMethod = methodOf(method, input.proceeds, input.slices);
+  const fxMethod = methodOf(setting, assetType, input.proceeds, input.slices);
   const gain: RealizedGain = {
     event_id: input.event_id,
     asset_id: input.asset_id,
@@ -130,7 +210,8 @@ export const recordGain = (state: LedgerState, input: GainInput): RealizedGain =
   };
   state.gains.push(gain);
   state.lotJournal.push({ kind: "gain", gain_index: state.gains.length - 1 });
-  return gain;
+  const invested = recordInvested(state, input, fxMethod, methodFor(setting, assetType));
+  return { gain, carried_eur: fundingOf(input.slices).add(gainEur).add(invested) };
 };
 
 /** What the currency spent on the consumed slices cost in euros (`FiscalLot.funding_eur`). */

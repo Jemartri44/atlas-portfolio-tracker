@@ -101,6 +101,7 @@ const CURRENCY_KINDS: Record<CurrencyLine["kind"], string> = {
   payment: "Pago hecho con la divisa",
   cover: "Entrada que cubre divisa gastada sin tenerla",
   auto_conversion: "Cambio hecho por el bróker",
+  invested: "Divisa invertida, imputada al vender",
 };
 
 /** An exchange difference: its own key, because a sale and the cover its proceeds make share an event. */
@@ -109,7 +110,7 @@ const currencyRow = (line: CurrencyLine): FiscalRow => ({
   subject: `Divisa ${line.currency}`,
   kind: CURRENCY_KINDS[line.kind],
   date: formatDate(line.fiscal_date),
-  amount_eur: line.gain_eur_rounded,
+  amount_eur: line.computable_eur_rounded,
   criteria: sortCriteria(line.criteria),
 });
 

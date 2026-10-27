@@ -14,7 +14,7 @@ import { Ratio, scaleQuantities } from "../money/ratio.js";
 import type { AccountId, AssetId } from "../schema/events.js";
 import { adjustCash } from "./cash.js";
 import { assertSameBook, requireAccount, requireAsset } from "./catalogue.js";
-import { fundingOf, recordGain } from "./gains.js";
+import { recordGain } from "./gains.js";
 import type { ResolvedEffect } from "./kind-rules.js";
 import { consume, openLot, openQuantity } from "./lots.js";
 import {
@@ -324,7 +324,7 @@ export const applyForcedSale = (
     adjustCash(state, entry.account_id, proceeds.sub(entry.withholding));
     adjustPosition(state, entry.account_id, asset.asset_id, negative(entry.quantity), ctx.eventId);
     const slices = consume(state, asset.asset_id, entry.quantity, ctx.eventId, "transmission");
-    const gain = recordGain(state, {
+    const { gain, carried_eur: carried } = recordGain(state, {
       event_id: ctx.eventId,
       asset_id: asset.asset_id,
       account_id: entry.account_id,
@@ -342,7 +342,7 @@ export const applyForcedSale = (
         amount: proceeds.sub(entry.withholding),
         date: ctx.effectiveDate,
       },
-      fundingOf(slices).add(gain.gain_eur).sub(fx.toEur(entry.withholding)),
+      carried.sub(fx.toEur(entry.withholding)),
       undefined,
     );
     // A forced sale is a transmission like any other: a fund liquidation, the

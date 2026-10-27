@@ -223,7 +223,7 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   tax_currency_spent_without_lots: (d) =>
     `Has gastado ${(Array.isArray(d.currencies) ? d.currencies : [d.currencies]).map((code) => num(code)).join(", ")} sin tenerlos en la cuenta: se valoran al tipo del BCE de ese día hasta que entren, y entonces se imputa la diferencia.`,
   tax_currency_mixed_lots: () =>
-    "Hay lotes comprados en una divisa y vendidos en otra: se calculan con el tipo de cada día, y la diferencia de cambio de lo que se gastó en ellos no se imputa.",
+    "Hay lotes comprados en una divisa y vendidos en otra: se calculan con el tipo de cada día, y la diferencia de cambio de lo que se gastó en ellos se imputa en la venta.",
   tax_in_kind_income_not_integrated: (d, _n, f) =>
     `Renta en especie registrada (${f.money(d.income_eur)}) y no integrada: el criterio vigente no declara nada al recibirla.`,
   tax_fx_rate_finding: () =>

@@ -19,7 +19,7 @@ import type {
   ValuationEvent,
 } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
-import type { CurrencyGain, CurrencyLots } from "./currency-lots.js";
+import type { CurrencyGain, CurrencyJournalEntry, CurrencyLots } from "./currency-lots.js";
 import type { Filing, FingerprintWaiver } from "./filings.js";
 import type { KnownFxRate } from "./fx-rates.js";
 import type { Acquisition } from "./wash-sale.js";
@@ -157,10 +157,11 @@ export interface RealizedGain {
   by_lot: GainByLot[];
   /**
    * How criterion #4 computed it, when a foreign currency is involved:
-   * `currency_first`, `each_leg`, or `mixed` when a lot was acquired in a
-   * currency other than that of the transmission (`4:mixed_currency`).
+   * `currency_first`, `each_leg`, `iic` for a collective investment
+   * undertaking (leg by leg, V0777-21), or `mixed` when a lot was acquired in
+   * a currency other than that of the transmission (`4:mixed_currency`).
    */
-  fx_method?: "currency_first" | "each_leg" | "mixed";
+  fx_method?: "currency_first" | "each_leg" | "iic" | "mixed";
 }
 
 export interface InvestmentIncome {
@@ -346,6 +347,8 @@ export interface LedgerState {
   currencyLotCounts: Map<Ulid, number>;
   /** Exchange differences imputed, in order (spec 029). */
   currencyGains: CurrencyGain[];
+  /** What happened to the currency lots, in order, for the wash-sale rule. Never in the snapshot. */
+  currencyJournal: CurrencyJournalEntry[];
   income: InvestmentIncome[];
   /** Income in kind a grant declares; read by nobody yet (ADR-0021). */
   inKindIncome: InKindIncome[];
@@ -400,6 +403,7 @@ export const createEmptyState = (fiscalSettings: Settings): LedgerState => ({
   currencyLots: new Map(),
   currencyLotCounts: new Map(),
   currencyGains: [],
+  currencyJournal: [],
   income: [],
   inKindIncome: [],
   valuations: [],

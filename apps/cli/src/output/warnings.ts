@@ -145,7 +145,7 @@ export const describeWarning = (warning: Warning): string => {
     case "tax_currency_spent_without_lots":
       return `Se ha gastado divisa sin tenerla (${listOf(d.currencies)}; ${listOf(d.events)}): se valora al tipo del BCE de ese día hasta que una entrada posterior la cubra, y entonces se imputa la diferencia (criterio #4).`;
     case "tax_currency_mixed_lots":
-      return `Hay lotes comprados en otra divisa que la de la venta (${listOf(d.events)}): se calculan con el tipo de cada día, y la diferencia de cambio de la divisa gastada en ellos no se imputa (criterio #4:mixed_currency).`;
+      return `Hay lotes comprados en otra divisa que la de la venta (${listOf(d.events)}): se calculan con el tipo de cada día, y la diferencia de cambio de la divisa gastada en ellos se imputa en la venta (criterio #4:mixed_currency).`;
     case "tax_in_kind_income_not_integrated":
       return `Renta en especie registrada (${text(d.income_eur)} EUR, base ${text(d.base) === "general" ? "general" : "del ahorro"}) y NO integrada: el criterio vigente (#8) no declara nada al recibirla.`;
     case "tax_fx_rate_finding":

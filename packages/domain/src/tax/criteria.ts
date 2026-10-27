@@ -115,12 +115,17 @@ export const FISCAL_CRITERIA = {
   // First in currency since spec 029 (V1740-17, V2422-20, V0152-26): medium, not
   // disputed; the other reading is computed by running the chain with `each_leg`.
   "4": { doc: "4", certainty: "medium", risk: "both" },
-  // A lot acquired in another currency than that of the disposal: leg by leg.
+  // A lot acquired in another currency than that of the disposal: leg by leg,
+  // with the currency invested imputed on the sale.
   "4:mixed_currency": { doc: "4", certainty: "low", risk: "both" },
+  // A collective investment undertaking in currency: leg by leg, and the
+  // currency invested imputed on the sale (V0777-21, V0207-24).
+  "4:iic": { doc: "4", certainty: "medium", risk: "both" },
   // The order of the currency lots: FIFO per currency across accounts.
   "4:currency_fifo": { doc: "4", certainty: "medium", risk: "both" },
-  // The wash-sale rule is not applied to currency; art. 33.5.e) could reach it.
-  "4:currency_wash_sale": { doc: "4", certainty: "low", risk: "aggressive" },
+  // The wash-sale rule on currency, one year after (art. 33.5.e, V1613-25): the
+  // rule is certain, what counts as acquiring and transmitting it is not.
+  "4:currency_wash_sale": { doc: "4", certainty: "medium", risk: "both" },
   // What the broker converted itself, valued at the euros it settled (ADR-0030).
   "4:auto_conversion": { doc: "4", certainty: "low", risk: "both" },
   "5": { doc: "5", certainty: "medium", risk: "conservative" },
@@ -174,6 +179,7 @@ export const CRITERION_IDS: readonly CriterionId[] = [
   "3",
   "4",
   "4:mixed_currency",
+  "4:iic",
   "4:currency_fifo",
   "4:currency_wash_sale",
   "4:auto_conversion",

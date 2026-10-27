@@ -25,9 +25,12 @@ export const CRITERION_LABELS: Record<CriterionId, string> = {
   "2b": "un traspaso entrante es una adquisición",
   "3": "comisiones en la base (art. 35)",
   "4": "ganancia en divisa: primero en la divisa, al tipo de la transmisión",
-  "4:mixed_currency": "lote comprado en otra divisa que la de la venta: pata a pata",
+  "4:mixed_currency":
+    "lote comprado en otra divisa que la de la venta: pata a pata, y la divisa invertida al vender",
+  "4:iic": "fondo, ETF o monetario en divisa: pata a pata, y la divisa invertida al vender",
   "4:currency_fifo": "lotes de divisa por FIFO a través de las cuentas",
-  "4:currency_wash_sale": "la regla de recompra no se aplica a la divisa",
+  "4:currency_wash_sale":
+    "recompra de divisa: la pérdida se difiere si se vuelve a adquirir en el año siguiente",
   "4:auto_conversion": "conversión hecha por el bróker, a los euros que liquidó",
   "5": "tipo del BCE del último día publicado",
   "6": "redondeo half-up una vez por operación",

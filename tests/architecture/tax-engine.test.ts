@@ -181,6 +181,7 @@ describe("architecture: the tax engine", () => {
       "currencyLots",
       "currencyLotCounts",
       "currencyGains",
+      "currencyJournal",
       "income",
       "inKindIncome",
       "valuations",

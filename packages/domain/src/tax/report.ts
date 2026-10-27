@@ -13,6 +13,7 @@ import type { FilingComparison } from "../filings/comparison.js";
 import type { Ulid } from "../ids/ulid.js";
 import type { Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
+import type { CurrencyGainKind } from "../projections/currency-lots.js";
 import type { Warning } from "../projections/state.js";
 import type { AccountId, AssetId, AssetType, Book, IncomeBase } from "../schema/events.js";
 import type { IncomeCategory } from "../settings/settings.js";
@@ -141,13 +142,18 @@ export interface IncomeLine {
 /**
  * An exchange difference imputed in the year (spec 029, criterion #4): the
  * currency disposed of against what its lots cost in euros. It is a capital gain
- * or loss of the savings base (V1877-10), with no wash-sale rule
- * (`4:currency_wash_sale`).
+ * or loss of the savings base (V1877-10), and a loss on a conversion or a
+ * payment is deferred when the currency is acquired again within the year after
+ * (art. 33.5.e, V1613-25, `4:currency_wash_sale`).
  */
 export interface CurrencyLine {
   event_id: Ulid;
-  /** `conversion` to euros, `payment` made with it, `cover` of currency spent without having it, `auto_conversion` by the broker. */
-  kind: "conversion" | "payment" | "cover" | "auto_conversion";
+  /**
+   * `conversion` to euros, `payment` made with it, `cover` of currency spent
+   * without having it, `auto_conversion` by the broker, and the currency
+   * `invested` in a lot computed leg by leg, imputed on its sale.
+   */
+  kind: CurrencyGainKind;
   account_id: AccountId;
   currency: string;
   fiscal_date: CivilDate;
@@ -157,8 +163,20 @@ export interface CurrencyLine {
   cost_eur: Money;
   gain_eur: Money;
   gain_eur_rounded: Money;
-  /** The currency lots it consumed, oldest first; none for what the broker converted. */
+  /** The currency lots it consumed, oldest first; none for what the broker converted or what was invested. */
   lots: { lot_id: string; acquisition_date: CivilDate; amount: Money; cost_eur: Money }[];
+  /**
+   * The wash-sale rule (V1613-25, `4:currency_wash_sale`): what reached it of
+   * earlier deferred losses, what it deferred, and what is computable, exact.
+   */
+  released_eur: Money;
+  deferred_eur: Money;
+  computable_eur: Money;
+  computable_eur_rounded: Money;
+  /** The acquisitions of the currency within the year after that deferred it. */
+  reacquired: { event_id: Ulid; fiscal_date: CivilDate; amount: Money }[];
+  /** The year after the loss has not ended on the date of the query. */
+  provisional_until?: CivilDate;
   criteria: CriterionId[];
 }
 
@@ -375,6 +393,8 @@ export interface TaxYearReport {
       amount_eur: Money;
       travelled: boolean;
     }[];
+    /** Losses of currency still deferred at 31/12 of the year (V1613-25), by origin. */
+    currency_pending: { origin_event_id: Ulid; currency: string; amount_eur: Money }[];
   };
   compensation: Compensation;
   /**

@@ -313,7 +313,7 @@ export const notesOf = (
       eventNote(
         "tax_currency_mixed_lots",
         "",
-        "a lot acquired in another currency than the disposal is computed leg by leg, and the exchange difference of the currency spent on it is not imputed",
+        "a lot acquired in another currency than the disposal is computed leg by leg, and the exchange difference of the currency spent on it is imputed on the sale",
         { events: mixed.map((line) => line.event_id) },
       ),
     );
@@ -339,6 +339,26 @@ export const notesOf = (
             asset_id: line.asset_id,
             // What can still be deferred: its own loss, never a gain, and what it releases (#21).
             loss_eur: (line.own_eur.isNegative() ? line.own_eur : zero())
+              .add(line.released_eur)
+              .roundToCents()
+              .amount.toString(),
+            window_end: line.provisional_until,
+          },
+        ),
+      );
+    }
+  }
+  // The same for a loss of currency: one year after (V1613-25).
+  for (const line of core.currency) {
+    if (line.provisional_until !== undefined) {
+      notes.push(
+        eventNote(
+          "tax_window_open",
+          line.event_id,
+          `the wash-sale window of this exchange difference is open until ${line.provisional_until}`,
+          {
+            asset_id: line.currency,
+            loss_eur: (line.gain_eur.isNegative() ? line.gain_eur : zero())
               .add(line.released_eur)
               .roundToCents()
               .amount.toString(),

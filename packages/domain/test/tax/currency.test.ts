@@ -43,7 +43,7 @@ const backToEuros = (b: ReturnType<typeof taxBuilder>, usd: string, eur: string,
   });
 
 describe("an exchange difference in the report", () => {
-  it("is a capital loss with no repurchase rule, and its box has no number", () => {
+  it("is a capital loss, computable with no currency acquired again in the year after, and its box has no number", () => {
     const b = dollars();
     // 1,200 USD that cost 1,000 EUR, back at 1.3: 923.08 EUR, −76.92.
     backToEuros(b, "1200", "923.0769230769", "1.3");
@@ -57,7 +57,7 @@ describe("an exchange difference in the report", () => {
     expect(text(report.capital_gains.losses_eur)).toBe("-76.92");
     expect(text(report.capital_gains.balance_eur)).toBe("-76.92");
     expect(report.doubtful.find((d) => d.criterion === "4:currency_wash_sale")?.direction).toBe(
-      "aggressive",
+      "both",
     );
     const boxes = boxesOf(report, chain);
     const loss = boxes.entries.find((entry) => entry.concept === "gp.other.loss");
@@ -91,7 +91,7 @@ describe("an exchange difference in the report", () => {
     expect([line?.kind, text(line?.gain_eur_rounded), line?.criteria]).toEqual([
       "auto_conversion",
       "-1",
-      ["4", "4:currency_wash_sale", "4:auto_conversion", "6"],
+      ["4", "4:auto_conversion", "6"],
     ]);
   });
 

@@ -36,6 +36,11 @@ import {
   savingsOffsetLimitPctOf,
 } from "../settings/settings.js";
 import { compensate, type YearBalances } from "./compensation.js";
+import {
+  type CurrencyWashOutcome,
+  type CurrencyWashResult,
+  walkCurrencyWashSales,
+} from "./currency-wash-sale.js";
 import { expenseLines, type LineContext } from "./lines.js";
 import type {
   AnchorDifference,
@@ -68,6 +73,8 @@ export interface ChainCore {
   state: LedgerState;
   ctx: LineContext;
   walk: WashSaleResult;
+  /** The wash-sale rule on foreign currency (V1613-25). */
+  currencyWalk: CurrencyWashResult;
   expenses: ExpenseLine[];
   compensation: Compensation;
   /**
@@ -266,6 +273,7 @@ export const taxChain = (
   const types = new Map<Ulid, string>([...byId].map(([id, event]) => [id, event.type]));
   const entryYear = yearOfEntry(state, byId);
   const walk = walkWashSales(state, options.today, types, entryYear);
+  const currencyWalk = walkCurrencyWashSales(state, options.today);
   const lots = new Map<string, FiscalLot>();
   for (const entry of state.lots.values()) {
     for (const lot of [...entry.open, ...entry.closed]) {
@@ -286,6 +294,7 @@ export const taxChain = (
     lots,
     carved,
     walk,
+    currencyWalk,
   };
 
   // Every year of the ledger, because the carry-forward chains them.
@@ -306,10 +315,12 @@ export const taxChain = (
   for (const income of state.income) {
     add(income.year, "movable_capital", income.gross_eur.roundToCents());
   }
-  // Exchange differences are capital gains and losses of the savings base (V1877-10).
-  for (const gain of state.currencyGains) {
-    add(gain.year, "capital_gain", gain.gain_eur_rounded);
-  }
+  // Exchange differences are capital gains and losses of the savings base
+  // (V1877-10), what the wash-sale rule leaves computable of them (V1613-25).
+  state.currencyGains.forEach((gain, index) => {
+    const outcome = currencyWalk.outcomes[index] as CurrencyWashOutcome;
+    add(gain.year, "capital_gain", outcome.computable_eur.roundToCents());
+  });
   const expenses = expenseLines(ctx);
   for (const expense of expenses) {
     add(yearOf(expense.fiscal_date), "movable_capital", expense.amount_eur_rounded);
@@ -351,8 +362,11 @@ export const taxChain = (
     pendings.set(y, pending);
     deferrals.set(
       y,
-      deferredAt(walk, y)
-        .reduce((total, entry) => total.add(entry.amount_eur), zero())
+      [
+        ...deferredAt(walk, y).map((entry) => entry.amount_eur),
+        ...currencyWalk.pendingAt(y).values(),
+      ]
+        .reduce((total, amount) => total.add(amount), zero())
         .roundToCents(),
     );
     const anchored = filed.find((entry) => entry.year === y);
@@ -379,6 +393,7 @@ export const taxChain = (
     state,
     ctx,
     walk,
+    currencyWalk,
     expenses,
     compensation,
     anchors,

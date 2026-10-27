@@ -105,7 +105,8 @@ const rentaFigures = (report: TaxYearReport): FilingFigureProposal[] => [
   {
     key: "deferred",
     kind: "deferred",
-    amount_eur: report.wash_sale.pending.reduce(
+    // Securities and currency: the figure the chain compares (`chainFigures`).
+    amount_eur: [...report.wash_sale.pending, ...report.wash_sale.currency_pending].reduce(
       (total, entry) => total.add(entry.amount_eur),
       report.base_eur.sub(report.base_eur),
     ),
