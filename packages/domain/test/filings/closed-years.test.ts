@@ -15,7 +15,7 @@ import { projectLedger } from "../../src/projections/project-ledger.js";
 import type { LedgerEvent } from "../../src/schema/events.js";
 import { DEFAULT_SETTINGS } from "../../src/settings/settings.js";
 import type { LedgerBuilder } from "../ledger-builder.js";
-import { buy, sell, taxBuilder } from "../tax/helpers.js";
+import { buy, sell, taxBuilder, transfer } from "../tax/helpers.js";
 
 const TODAY = "2030-06-01";
 
@@ -91,6 +91,76 @@ describe("what a change does to a year already filed", () => {
       ["savings_base", "600", "1000"],
       ["deferred", "0", "-400"],
     ]);
+  });
+
+  it("makes the supplementary return compulsory for that repurchase, due with the Renta of its year", () => {
+    const b = taxBuilder();
+    b.buy({
+      account_id: "acc_a",
+      asset_id: "coin_c",
+      value_date: "2025-01-11",
+      quantity: "1",
+      unit_price: "1000",
+    });
+    b.buy({
+      account_id: "acc_a",
+      asset_id: "stock_t",
+      value_date: "2025-01-11",
+      quantity: "10",
+      unit_price: "100",
+    });
+    b.sell({
+      account_id: "acc_a",
+      asset_id: "stock_t",
+      value_date: "2025-06-01",
+      quantity: "10",
+      unit_price: "200",
+    });
+    // Crypto sold at a loss, the Renta of 2025 filed, bought back within the year (art. 33.5.e).
+    b.sell({
+      account_id: "acc_a",
+      asset_id: "coin_c",
+      value_date: "2025-10-01",
+      quantity: "1",
+      unit_price: "800",
+    });
+    fileReturn(b, 2025, "800");
+    const before = b.build();
+    b.buy({
+      account_id: "acc_a",
+      asset_id: "coin_c",
+      value_date: "2026-08-03",
+      quantity: "1",
+      unit_price: "800",
+    });
+    const [impact] = closedYearImpact({ events: before }, { events: b.build() }, TODAY);
+    expect(impact?.year).toBe(2025);
+    expect(impact?.supplementary).toEqual({ kind: "repurchase", acquisition_year: 2026 });
+  });
+
+  it("counts a fund transfer in as the repurchase, like the wash-sale rule does (#2b)", () => {
+    const b = taxBuilder();
+    buy(b, "fund_f", "2027-01-11", "10", "100");
+    buy(b, "fund_g", "2027-01-11", "10", "100");
+    buy(b, "stock_t", "2027-01-11", "10", "100");
+    sell(b, "stock_t", "2027-06-01", "10", "200");
+    sell(b, "fund_f", "2027-12-01", "10", "80");
+    fileReturn(b, 2027, "800");
+    const before = b.build();
+    transfer(b, "fund_g", "fund_f", "2028-01-15", "10", "10");
+    const [impact] = closedYearImpact({ events: before }, { events: b.build() }, TODAY);
+    expect(impact?.supplementary).toEqual({ kind: "repurchase", acquisition_year: 2028 });
+  });
+
+  it("only says a supplementary return is possible when what moves the year is not a later purchase", () => {
+    const b = taxBuilder();
+    buy(b, "stock_s", "2027-01-11", "10", "100");
+    fileReturn(b, 2027, "0");
+    const before = b.build();
+    sell(b, "stock_s", "2027-06-01", "10", "150");
+    const [impact] = closedYearImpact({ events: before }, { events: b.build() }, TODAY);
+    expect(impact?.by_date).toBe(true);
+    expect(impact?.supplementary).toEqual({ kind: "possible" });
   });
 
   it("warns for a settings change that moves a filed year, with no event at all", () => {

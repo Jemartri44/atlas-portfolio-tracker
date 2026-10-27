@@ -223,6 +223,33 @@ describe("atlas contribute", () => {
     expect((await h.store.load()).etag).toBe(before);
   });
 
+  it("says what to buy and how much to deposit on each platform, apart from the amount of the month", async () => {
+    const h = await portfolio();
+    expect(await h.exec(["contribute", "--amount", "1000", "--date", DATE])).toBe(0);
+    expect(h.text()).toContain("Por plataforma (las comisiones van aparte del importe del mes):");
+    expect(h.text()).toMatch(/acc_fund \(myinvestor\): comprar 900\.00 EUR/);
+    // The ledger has no deposit recorded: only what is bought is asked for.
+    expect(h.text()).toContain("INGRESAR 900.00 EUR");
+    expect(h.text()).toContain("El efectivo del libro es negativo");
+    h.reset();
+    expect(await h.exec(["contribute", "--amount", "1000", "--date", DATE, "--json"])).toBe(0);
+    const data = h.json() as {
+      purchases_only_eur: string;
+      platforms: { rows: { account_id: string; deposit_eur: string }[] };
+    };
+    expect(data.platforms.rows.map((row) => [row.account_id, row.deposit_eur])).toEqual([
+      ["acc_fund", "900"],
+    ]);
+    expect(data.purchases_only_eur).toBe("0");
+  });
+
+  it("says how much more purchases alone would take when this month's money does not reach", async () => {
+    // 600 / 400 against 30 / 70: the equity fund is far above and no amount of buying fixes it soon.
+    const h = await portfolio({ ...CONFIG, target_weights: { ast_world: "30", ast_bonds: "70" } });
+    expect(await h.exec(["contribute", "--amount", "100", "--date", DATE])).toBe(0);
+    expect(h.text()).toContain("Solo con aportaciones, llevar todos a su objetivo exigiría");
+  });
+
   it("takes the amount from the settings when no flag is given", async () => {
     const h = await portfolio();
     expect(await h.exec(["contribute", "--date", DATE])).toBe(0);
@@ -263,6 +290,37 @@ describe("atlas contribute", () => {
       EXIT.domain,
     );
     expect(h.text()).toContain("ast_world");
+  });
+});
+
+describe("atlas rebalance", () => {
+  it("proposes a transfer between funds and writes nothing", async () => {
+    // 600 / 400 against 30 / 70, with a 5-point threshold: the equity fund is 30 points over.
+    const h = await portfolio({ ...CONFIG, target_weights: { ast_world: "30", ast_bonds: "70" } });
+    const before = (await h.store.load()).etag;
+    expect(await h.exec(["rebalance", "--date", DATE])).toBe(0);
+    expect(h.text()).toContain("fuera del umbral");
+    expect(h.text()).toContain("Paso 1 · SIN IMPUESTOS · traspaso de ast_world");
+    expect(h.text()).toContain("no es una venta seguida de una compra");
+    expect(h.text()).toContain("La propuesta no se ha registrado");
+    expect((await h.store.load()).etag).toBe(before);
+    h.reset();
+    expect(await h.exec(["rebalance", "--date", DATE, "--json"])).toBe(0);
+    const data = h.json() as { status: string; steps: { kind: string; amount_eur: string }[] };
+    expect(data.status).toBe("steps");
+    expect(data.steps.map((step) => [step.kind, step.amount_eur])).toEqual([["transfer", "300"]]);
+  });
+
+  it("says no rebalance is needed when every asset is inside the threshold", async () => {
+    const h = await portfolio();
+    expect(await h.exec(["rebalance", "--date", DATE])).toBe(0);
+    expect(h.text()).toContain("no hace falta rebalancear");
+  });
+
+  it("refuses without a threshold", async () => {
+    const h = await portfolio({ ...CONFIG, deviation_threshold_pp: undefined });
+    expect(await h.exec(["rebalance", "--date", DATE])).toBe(EXIT.domain);
+    expect(h.text()).toContain("deviation_threshold_pp");
   });
 });
 

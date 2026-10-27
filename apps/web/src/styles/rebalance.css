@@ -1,0 +1,24 @@
+/* ---- The plan per platform and the steps of a rebalance (feature 028) ---- */
+
+.platform + .platform {
+  margin-top: var(--space-4);
+}
+
+.rebalance-steps {
+  display: grid;
+  gap: var(--space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rebalance-steps > li {
+  border-top: var(--border) solid var(--c-border);
+  padding-top: var(--space-3);
+}
+
+.step-head {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+}

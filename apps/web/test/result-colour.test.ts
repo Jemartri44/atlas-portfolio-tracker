@@ -59,6 +59,10 @@ const RESULTS: Record<string, { count: number; what: string }> = {
     count: 2,
     what: "a declared fiscal figure before and after",
   },
+  "routes/cartera/RebalanceSteps.tsx": {
+    count: 1,
+    what: "the gain or loss each lot of a proposed sale would produce",
+  },
   "routes/cubo/BudgetCard.tsx": {
     count: 2,
     what: "the realised and the latent result of the bucket",

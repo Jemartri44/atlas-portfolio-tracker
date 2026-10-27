@@ -27,6 +27,7 @@ import {
   positionsCommand,
   valuationsCommand,
 } from "./commands/query.js";
+import { rebalanceCommand } from "./commands/rebalance.js";
 import { deleteCommand, editCommand } from "./commands/rectify.js";
 import { remoteCommand } from "./commands/remote.js";
 import { synthCommand } from "./commands/synth.js";
@@ -78,6 +79,7 @@ export const COMMANDS: Readonly<Record<string, CommandSpec>> = {
   bucket: { run: bucketCommand, arity: 1 },
   weights: { run: weightsCommand, arity: 1 },
   contribute: { run: contributeCommand, arity: 1 },
+  rebalance: { run: rebalanceCommand, arity: 1 },
   costs: { run: costsCommand, arity: 1 },
   lots: { run: lotsCommand, arity: 2 },
   cash: { run: cashCommand, arity: 1 },
