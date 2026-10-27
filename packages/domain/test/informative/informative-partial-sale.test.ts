@@ -27,7 +27,13 @@ const CASES: { model: InformativeModel; category: "securities" | "crypto"; type:
 const ledger = (
   category: "securities" | "crypto",
   type: string,
-  options: { declared: boolean; sold: string; rebought?: string },
+  options: {
+    declared: boolean;
+    sold: string;
+    rebought?: string;
+    trade?: string;
+    value?: string;
+  },
 ): LedgerBuilder => {
   const b = new LedgerBuilder();
   b.settings(SETTINGS);
@@ -67,14 +73,15 @@ const ledger = (
     b.sell({
       account_id: "acc_ib",
       asset_id: "asset_a",
-      value_date: "2028-03-10",
+      trade_date: options.trade ?? "2028-03-10",
+      value_date: options.value ?? "2028-03-10",
       quantity: options.sold,
       unit_price: "100",
     });
   }
 
   if (options.rebought !== undefined) {
-    b.deposit({ account_id: "acc_ib", value_date: "2028-06-09", amount: "20000" });
+    b.deposit({ account_id: "acc_ib", value_date: "2028-06-09", amount: "50000" });
     b.buy({
       account_id: "acc_ib",
       asset_id: "asset_a",
@@ -285,4 +292,58 @@ describe("what counts as a transmission of a declared asset", () => {
     });
     expect(kinds(b)).not.toContain("partial_extinction");
   });
+});
+
+describe("the date of the transmission is the fiscal date of the asset", () => {
+  // A fund counts by its value date: the quantity it leaves at 31 December
+  // and the year the sale falls in must agree.
+  const fundSold = (year: number, trade: string, value: string) =>
+    informativeReturn(
+      ledger("securities", "fund", { declared: true, sold: "100", trade, value }).build(),
+      "720",
+      year,
+      { today: "2030-02-01" },
+    ).categories.find((entry) => entry.category === "securities") as InformativeCategory;
+
+  it("traded on 30/12/2027 and settled in 2028: it is a 2028 transmission", () => {
+    expect(fundSold(2028, "2027-12-30", "2028-01-03").reasons.map((r) => r.kind)).toContain(
+      "partial_extinction",
+    );
+  });
+
+  it("traded on 30/12/2028 and settled in 2029: it is not one of 2028, it is one of 2029", () => {
+    expect(fundSold(2028, "2028-12-30", "2029-01-03").verdict).toBe("not_obliged");
+    expect(fundSold(2029, "2028-12-30", "2029-01-03").reasons.map((r) => r.kind)).toContain(
+      "partial_extinction",
+    );
+  });
+});
+
+describe("interaction with the other reasons", () => {
+  it.each(CASES)(
+    "$model: selling it all is one extinction, not also a partial one",
+    ({ model, category, type }) => {
+      const result = verdictOf(
+        model,
+        category,
+        ledger(category, type, { declared: true, sold: "600" }),
+      );
+      expect(result.reasons.map((reason) => reason.kind)).toEqual(["extinction"]);
+    },
+  );
+
+  it.each(CASES)(
+    "$model: a rise over 20.000 and a transmission give both reasons",
+    ({ model, category, type }) => {
+      const result = verdictOf(
+        model,
+        category,
+        ledger(category, type, { declared: true, sold: "100", rebought: "400" }),
+      );
+      expect(result.reasons.map((reason) => reason.kind)).toEqual([
+        "increase",
+        "partial_extinction",
+      ]);
+    },
+  );
 });

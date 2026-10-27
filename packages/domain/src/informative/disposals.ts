@@ -11,47 +11,51 @@
 // grant, a dividend or any event a reversal annulled.
 
 import type { CivilDate } from "../dates/civil-date.js";
+import { businessDateOf, type OperationEvent } from "../projections/project-ledger.js";
+import type { LedgerState } from "../projections/state.js";
 import type { AccountId, AssetId, LedgerEvent } from "../schema/events.js";
 
 export const pairKey = (accountId: AccountId, assetId?: AssetId): string =>
   assetId === undefined ? accountId : `${accountId}|${assetId}`;
 
-/** Pairs with a transmission dated after `after` and up to `until`, `until` included. */
+/**
+ * Pairs with a transmission dated after `after` and up to `until`. The date is
+ * the one the holdings use (`businessDateOf`: the fiscal date of the asset
+ * type), so a sale and the quantity it leaves at 31 December fall in the same year.
+ */
 export const disposedBetween = (
   events: readonly LedgerEvent[],
+  state: LedgerState,
   after: CivilDate,
   until: CivilDate,
 ): Set<string> => {
-  const annulled = new Set<string>();
-  for (const event of events) {
-    if (event.type === "reversal") {
-      annulled.add(event.reverses_id);
-    }
-  }
-  const within = (date: CivilDate): boolean => date > after && date <= until;
+  const within = (event: OperationEvent): boolean => {
+    const date = businessDateOf(state, event);
+    return date > after && date <= until;
+  };
   const lost = new Set<string>();
   for (const event of events) {
-    if (annulled.has(event.id)) {
+    if (state.reversed.has(event.id)) {
       continue;
     }
     switch (event.type) {
       case "sell":
-        if (within(event.trade_date)) {
+        if (within(event)) {
           lost.add(pairKey(event.account_id, event.asset_id));
         }
         break;
       case "swap":
-        if (within(event.trade_date)) {
+        if (within(event)) {
           lost.add(pairKey(event.account_id, event.from_asset_id));
         }
         break;
       case "transfer":
-        if (within(event.value_date_out)) {
+        if (within(event)) {
           lost.add(pairKey(event.from_account_id, event.from_asset_id));
         }
         break;
       case "corporate_action":
-        if (within(event.effective_date)) {
+        if (within(event)) {
           for (const effect of event.effects) {
             if (effect.op === "forced_sale") {
               for (const entry of effect.per_account) {

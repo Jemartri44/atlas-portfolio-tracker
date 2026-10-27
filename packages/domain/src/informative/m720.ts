@@ -343,7 +343,7 @@ export const informativeReturn = (
   const disposed =
     previous === undefined
       ? new Set<string>()
-      : disposedBetween(events, yearEnd(previous.tax_year), end);
+      : disposedBetween(events, state, yearEnd(previous.tax_year), end);
   const averages = quarterAverages(events, year, holdings.accounts);
   const categories = CATEGORIES[model].map((category) => {
     const items =
