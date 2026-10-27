@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BUY_GOLD, BUY_WORLD, harness, seed, withOption } from "../harness.js";
 
 describe("atlas add buy|sell: the wash-sale warning before confirming", () => {
-  /** Buys 10 of the fund, sells 6 at a loss (4 stay: #18), and buys again later. */
+  /** Buys 10 of the fund, sells 6 at a loss (5 stay: #18, the 1 held before goes first), and buys again later. */
   const cycle = async () => {
     const h = harness({ events: seed(), confirm: true });
     const trade = (type: string, date: string, price: string, quantity = "10") => [
@@ -28,14 +28,17 @@ describe("atlas add buy|sell: the wash-sale warning before confirming", () => {
       date,
       "--yes",
     ];
+    // Held before the window opens: a lone purchase in it would be exempt.
+    expect(await h.exec(trade("buy", "2026-06-01", "10", "1"))).toBe(0);
+    h.reset();
     expect(await h.exec(trade("buy", "2027-01-11", "10"))).toBe(0);
     h.reset();
     expect(await h.exec(trade("sell", "2027-02-10", "8", "6"))).toBe(0);
     // The sale itself warns about the purchase inside the previous window that
     // it leaves in the portfolio, names it by its date and by what of it is
-    // still held (10 bought, 6 sold), and the window that actually applies: a
+    // still held (10 bought, 5 of it sold), and the window that actually applies: a
     // fund has **two months** since the correction of criterion #2 (2026-09-22).
-    expect(h.text()).toContain("cuando siguen en cartera 4 títulos de una compra del 2027-01-11");
+    expect(h.text()).toContain("cuando siguen en cartera 5 títulos de una compra del 2027-01-11");
     expect(h.text()).toContain("ventana de dos meses");
     expect(h.text()).toContain("puede no ser computable en 2027");
     h.reset();
@@ -69,7 +72,7 @@ describe("atlas add buy|sell: the wash-sale warning before confirming", () => {
     expect(h.text()).toContain("Registrado");
     // Even inside the window the purchase is recorded: it is a warning, not a rejection.
     const { events } = await h.store.load();
-    expect(events.filter((event) => event.type === "buy")).toHaveLength(2);
+    expect(events.filter((event) => event.type === "buy")).toHaveLength(3);
   });
 });
 

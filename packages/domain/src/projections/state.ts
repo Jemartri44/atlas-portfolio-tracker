@@ -336,6 +336,8 @@ export interface LedgerState {
   lots: Map<AssetId, AssetLots>;
   /** What the FIFO did to every lot, in order. Never in the snapshot. */
   lotJournal: LotJournalEntry[];
+  /** Business date and type of every operation applied, by event id. Never in the snapshot. */
+  eventFacts: Map<Ulid, { date: CivilDate; type: string }>;
   /** Lots created per source event, to number lot ids uniquely across assets. */
   lotCounts: Map<Ulid, number>;
   gains: RealizedGain[];
@@ -395,6 +397,7 @@ export const createEmptyState = (fiscalSettings: Settings): LedgerState => ({
   acquisitions: new Map(),
   lots: new Map(),
   lotJournal: [],
+  eventFacts: new Map(),
   lotCounts: new Map(),
   gains: [],
   currencyLots: new Map(),

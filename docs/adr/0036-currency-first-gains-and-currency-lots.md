@@ -1,6 +1,6 @@
 # ADR-0036 — Ganancias en divisa primero en la divisa, y lotes de divisa
 
-**Estado:** Propuesta (2026-10-27). La acepta la persona; el diseño lo aprobó Coordinación el mismo día (`specs/029-fx-currency-first/`). *Verificar con asesor.*
+**Estado:** Aceptada (2026-10-27), por decisión del dueño transmitida por la coordinadora el 27/10/2026 con sus palabras «Sí a todo lo de atlas» (aceptar ADR-0036 con su corrección); el diseño lo aprobó Coordinación el mismo día (`specs/029-fx-currency-first/`). Acotada por la nota del 2026-10-27 al final. *Verificar con asesor.*
 
 ## Contexto
 
@@ -27,3 +27,13 @@ El motor calculaba la ganancia de un valor en divisa **cada pata a su tipo**: la
 - Un lote comprado en una divisa y vendido en otra se calcula cada pata a su tipo (`4:mixed_currency`), y la diferencia de cambio de la divisa gastada en él (`cost_eur − funding_eur`) se imputa en la venta como línea `invested`.
 - Desde el 2026-10-27 «primero en la divisa» vale para acciones, ETC y ETP. Los fondos, ETF y monetarios (IIC) se calculan cada pata a su tipo, con la divisa invertida imputada en la venta (`4:iic`, V0777-21 y V0207-24). Detalle en `docs/fiscal-questions.md` #4.
 - Relacionadas: ADR-0005, ADR-0009, ADR-0013, ADR-0022, ADR-0029 y ADR-0030.
+
+## Nota del 2026-10-27: alcance del método «primero en la divisa» (auditoría fiscal)
+
+Una auditoría fiscal independiente del mismo día acota la decisión:
+
+- **«Primero en la divisa» vale para acciones y ETC/ETP** (V1740-17, V2422-20, V0152-26).
+- **Para fondos, ETF y monetarios manda el método de las IIC** (V0777-21, V0207-24): cada pata a su tipo, más la diferencia de cambio de la divisa invertida, imputada en el año de la venta. Véase el criterio #4 de `docs/fiscal-questions.md`.
+- **Un lote comprado en una divisa y vendido en otra (`mixed`)** imputa `cost_eur − funding_eur` como línea de divisa. Véase el criterio #4 de `docs/fiscal-questions.md`.
+
+ADR-0013 no cambia.

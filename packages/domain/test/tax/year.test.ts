@@ -270,6 +270,23 @@ describe("double taxation (#16)", () => {
     });
   });
 
+  it.each([
+    ["US", "15", "BOE-A-1990-30940, art. 10.2.b)"],
+    ["IE", "0", "BOE-A-1994-28597, art. 10.1.c)"],
+  ])(
+    "suggests the treaty rate of %s, with its source, and still computes nothing",
+    (country, pct, source) => {
+      const report = dividend(country, {});
+      expect(report.double_taxation.lines[0]?.deductible_eur).toBeUndefined();
+      expect(report.notes.find((n) => n.code === "tax_treaty_rate_missing")?.details).toEqual({
+        country,
+        foreign_tax_eur: "10",
+        suggested_pct: pct,
+        suggested_source: source,
+      });
+    },
+  );
+
   it("computes nothing for a dividend that does not say which country paid it", () => {
     const report = dividend(undefined);
     expect(report.notes.map((n) => n.code)).toContain("tax_dividend_without_country");

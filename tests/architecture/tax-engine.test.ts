@@ -175,6 +175,7 @@ describe("architecture: the tax engine", () => {
       "acquisitions",
       "lots",
       "lotJournal",
+      "eventFacts",
       "lotCounts",
       "gains",
       "currencyLots",

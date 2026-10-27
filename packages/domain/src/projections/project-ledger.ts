@@ -560,6 +560,7 @@ export const projectLedger = (
     if (options.asOf !== undefined && entry.date > options.asOf) {
       return;
     }
+    state.eventFacts.set(entry.event.id, { date: entry.date, type: entry.event.type });
     guarded(entry.event, () => {
       applyOperation(state, entry.event, entry.position);
       // After applying, never before: an event the projection rejected must not

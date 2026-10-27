@@ -10,7 +10,7 @@ import { currencyLots } from "../projections/currency-lots.js";
 import { sharedIsins } from "../projections/isin.js";
 import type { LedgerState, RealizedGain, Warning } from "../projections/state.js";
 import { ASSET_TYPES, type CashWithdrawalEvent } from "../schema/events.js";
-import { treatyWithholdingPctOf } from "../settings/settings.js";
+import { TREATY_RATE_SUGGESTIONS, treatyWithholdingPctOf } from "../settings/settings.js";
 import { type Core, exchangesOfYear } from "./core.js";
 import { sortCriteria } from "./criteria.js";
 import { cryptoCustodyFees } from "./lines.js";
@@ -52,6 +52,13 @@ export const settingsFromCode = (state: LedgerState): { origin: string; from_cod
 
 // --- Double taxation (#16) ----------------------------------------------------
 
+const suggestionOf = (country: string): { suggested_pct?: string; suggested_source?: string } => {
+  const suggestion = TREATY_RATE_SUGGESTIONS.get(country);
+  return suggestion === undefined
+    ? {}
+    : { suggested_pct: suggestion.pct, suggested_source: suggestion.source };
+};
+
 export const doubleTaxation = (core: Core): { lines: DoubleTaxationLine[]; notes: Warning[] } => {
   const lines: DoubleTaxationLine[] = [];
   const notes: Warning[] = [];
@@ -88,7 +95,11 @@ export const doubleTaxation = (core: Core): { lines: DoubleTaxationLine[]; notes
               "tax_treaty_rate_missing",
               income.event_id,
               `no treaty rate is configured for ${income.source_country}: no deduction is calculated`,
-              { country: income.source_country, foreign_tax_eur: foreignTax.amount.toString() },
+              {
+                country: income.source_country,
+                foreign_tax_eur: foreignTax.amount.toString(),
+                ...suggestionOf(income.source_country),
+              },
             ),
       );
       continue;

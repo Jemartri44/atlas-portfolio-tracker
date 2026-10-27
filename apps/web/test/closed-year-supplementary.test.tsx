@@ -31,13 +31,32 @@ const shown = (value: ClosedYearImpact): string => {
 };
 
 describe("the supplementary return of a filed Renta", () => {
-  it("is compulsory after a repurchase, due with the Renta of the year of the purchase", () => {
-    const text = shown(impact({ kind: "repurchase", acquisition_year: 2026 }));
+  const repurchase = (parts: { within_period: boolean; after_period_year?: number }) =>
+    shown(impact({ kind: "repurchase", filing_deadline: "2026-06-30", ...parts }));
+
+  it("is compulsory, with interest, after a repurchase past the filing period (art. 73.2)", () => {
+    const text = repurchase({ within_period: false, after_period_year: 2026 });
     expect(text).toContain(
-      "Hay que presentar una complementaria de la Renta de 2025 antes de que acabe el plazo de la Renta de 2026",
+      "Hay que presentar una autoliquidación rectificativa de la Renta de 2025 (casilla [121]), con intereses de demora, antes del fin del plazo de la Renta de 2026 (art. 73.2 RIRPF).",
     );
-    expect(text).toContain("art. 73.2 RIRPF");
     expect(text).not.toContain("Puede que toque");
+    expect(text).not.toContain("anterior al fin del plazo");
+  });
+
+  it("is a rectification before the deadline, with no surcharge, when the purchase came within the period", () => {
+    const text = repurchase({ within_period: true });
+    expect(text).toContain("anterior al fin del plazo de la Renta de 2025 (30/06/2026)");
+    expect(text).toContain("autoliquidación rectificativa");
+    expect(text).not.toContain("73.2");
+    expect(text).toContain("antes de esa fecha y no habrá recargo");
+    expect(text).toContain("art. 27 LGT");
+    expect(text).toContain("casilla [121]");
+  });
+
+  it("says both cases when there are purchases within the period and after it", () => {
+    const text = repurchase({ within_period: true, after_period_year: 2026 });
+    expect(text).toContain("anterior al fin del plazo");
+    expect(text).toContain("con intereses de demora");
   });
 
   it("is only possible otherwise", () => {

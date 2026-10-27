@@ -207,7 +207,7 @@ export const DEFAULT_INCOME_CATEGORY: Record<AssetType, IncomeCategory> = {
  * **That last clause is part of the quote and it narrows it**: article 33.5 f)
  * LIRPF is not obviously one of those provisions, so the regulation on its own
  * is arguable and does not carry the decision. What carries it is the doctrine:
- * the two only consultations on the point (DGT 0011-00 and V2067-06) put fund
+ * the two only consultations on the point (DGT V0011-00 and V2067-06) put fund
  * units under f), and the help of Modelo 100 for 2025 lists funds with daily
  * information among the two-month case; its example of the year is a SICAV of
  * the MAB.
@@ -349,6 +349,17 @@ export const nextReturnYear = (
   const year = Number(date.slice(0, 4));
   return date.slice(5) > rentaSeasonOf(settings).end ? year : year - 1;
 };
+
+/**
+ * Treaty rates **suggested** to the user for the dividends of an individual,
+ * never applied: `treaty_withholding_pct` has no default on purpose (#16).
+ * Read in the BOE on 2026-10-27; the user checks them before setting them.
+ */
+export const TREATY_RATE_SUGGESTIONS: ReadonlyMap<string, { pct: DecimalString; source: string }> =
+  new Map([
+    ["US", { pct: "15", source: "BOE-A-1990-30940, art. 10.2.b)" }],
+    ["IE", { pct: "0", source: "BOE-A-1994-28597, art. 10.1.c)" }],
+  ]);
 
 /** The treaty rate for a country, or nothing when the settings do not know it (#16). */
 export const treatyWithholdingPctOf = (

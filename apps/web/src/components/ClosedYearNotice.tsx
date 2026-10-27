@@ -81,11 +81,30 @@ const comparedMoves = (impact: ClosedYearImpact): readonly MovedFigure[] =>
 const notComparedReason = (impact: ClosedYearImpact): ClosedYearNotCompared =>
   impact.comparison.status === "compared" ? "by_design" : impact.comparison.reason;
 
-/** Compulsory with its deadline after a repurchase (art. 73.2 RIRPF); otherwise only possible. */
-const supplementaryText = (impact: ClosedYearImpact): string =>
-  impact.supplementary.kind === "repurchase"
-    ? `Hay que presentar una complementaria de la Renta de ${impact.year} antes de que acabe el plazo de la Renta de ${impact.supplementary.acquisition_year}, con intereses de demora si la compra es posterior al fin del plazo de la de ${impact.year} (art. 73.2 RIRPF).`
-    : "Puede que toque presentar una complementaria.";
+/**
+ * A repurchase that defers a filed loss is rectified: after the end of the
+ * filing period of that year it is art. 73.2 RIRPF (interest, own deadline);
+ * before it, the filed return is wrong and is rectified as soon as possible.
+ * Otherwise only possible.
+ */
+const supplementaryText = (impact: ClosedYearImpact): string => {
+  const { supplementary } = impact;
+  if (supplementary.kind !== "repurchase") {
+    return "Puede que toque presentar una complementaria.";
+  }
+  const parts: string[] = [];
+  if (supplementary.within_period) {
+    parts.push(
+      `Una compra es anterior al fin del plazo de la Renta de ${impact.year} (${formatDate(supplementary.filing_deadline)}) y esa Renta ya está presentada. Presenta una autoliquidación rectificativa (casilla [121]) antes de esa fecha y no habrá recargo. Si la presentas después, lleva el recargo por presentarla fuera de plazo (art. 27 LGT).`,
+    );
+  }
+  if (supplementary.after_period_year !== undefined) {
+    parts.push(
+      `Hay que presentar una autoliquidación rectificativa de la Renta de ${impact.year} (casilla [121]), con intereses de demora, antes del fin del plazo de la Renta de ${supplementary.after_period_year} (art. 73.2 RIRPF).`,
+    );
+  }
+  return parts.join(" ");
+};
 
 export const ClosedYearNotice = (props: { impacts: readonly ClosedYearImpact[] }): JSX.Element => (
   <For each={props.impacts}>

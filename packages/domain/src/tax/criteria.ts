@@ -142,6 +142,10 @@ export const FISCAL_CRITERIA = {
   "16": { doc: "16", certainty: "high", risk: "conservative" },
   "17": { doc: "17", certainty: "medium", risk: "aggressive" },
   "18": { doc: "18", certainty: "high", risk: "aggressive" },
+  // A lone purchase in the window before the sale is not a repurchase (V3282-18);
+  // for an asset that yields movable capital it is an analogy.
+  "18:single_purchase": { doc: "18", certainty: "high", risk: "aggressive" },
+  "18:single_purchase_etc": { doc: "18", certainty: "medium", risk: "aggressive" },
   "19": { doc: "19", certainty: "high", risk: "aggressive" },
   "20": { doc: "20", certainty: "medium", risk: "aggressive" },
   "21": { doc: "21", certainty: "medium", risk: "both" },
@@ -193,6 +197,8 @@ export const CRITERION_IDS: readonly CriterionId[] = [
   "16",
   "17",
   "18",
+  "18:single_purchase",
+  "18:single_purchase_etc",
   "19",
   "20",
   "21",

@@ -63,13 +63,30 @@ const NOT_COMPARED: Record<ClosedYearNotCompared, string> = {
 
 /**
  * What the reader has to do about the return. A repurchase that defers a loss
- * the return computed makes the supplementary return compulsory (art. 73.2
- * RIRPF), with its deadline; anything else, the engine cannot tell.
+ * the return computed is rectified (the form's «autoliquidación rectificativa»;
+ * the RIRPF says «complementaria»): after the end of the filing period of the
+ * year it is art. 73.2 RIRPF, with interest and its own deadline; before it,
+ * the return already filed is wrong and is rectified as soon as possible.
+ * Anything else, the engine cannot tell.
  */
-const supplementaryLine = (impact: ClosedYearImpact): string =>
-  impact.supplementary.kind === "repurchase"
-    ? `Hay que presentar una complementaria de la Renta de ${impact.year} antes de que acabe el plazo de la Renta de ${impact.supplementary.acquisition_year}, con intereses de demora si la compra es posterior al fin del plazo de la de ${impact.year} (art. 73.2 RIRPF).`
-    : "Puede que toque una complementaria.";
+const supplementaryLine = (impact: ClosedYearImpact): string => {
+  const { supplementary } = impact;
+  if (supplementary.kind !== "repurchase") {
+    return "Puede que toque una complementaria.";
+  }
+  const parts: string[] = [];
+  if (supplementary.within_period) {
+    parts.push(
+      `Una compra es anterior al fin del plazo de la Renta de ${impact.year} (${supplementary.filing_deadline}) y esa Renta ya está presentada. Presenta una autoliquidación rectificativa (casilla [121]) antes de esa fecha y no habrá recargo. Si la presentas después, lleva el recargo por presentarla fuera de plazo (art. 27 LGT).`,
+    );
+  }
+  if (supplementary.after_period_year !== undefined) {
+    parts.push(
+      `Hay que presentar una autoliquidación rectificativa de la Renta de ${impact.year} (casilla [121]), con intereses de demora, antes del fin del plazo de la Renta de ${supplementary.after_period_year} (art. 73.2 RIRPF).`,
+    );
+  }
+  return parts.join(" ");
+};
 
 /** One line per filed year the write reaches, with what it moves. */
 export const closedYearLines = (impacts: readonly ClosedYearImpact[]): string[] =>

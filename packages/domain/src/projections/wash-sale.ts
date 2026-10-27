@@ -27,7 +27,12 @@ import type { Ulid } from "../ids/ulid.js";
 import type { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
 import type { AssetId, AssetType } from "../schema/events.js";
-import { washSaleWindowEnd, washSaleWindowOf, washSaleWindowStart } from "../settings/wash-sale.js";
+import {
+  washSaleLooksBack,
+  washSaleWindowEnd,
+  washSaleWindowOf,
+  washSaleWindowStart,
+} from "../settings/wash-sale.js";
 import { type AssetLots, addWarning, type LedgerState } from "./state.js";
 
 /** An acquisition that counts for the rule (data-schema.md §8.4). */
@@ -50,6 +55,68 @@ export const noteAcquisition = (state: LedgerState, acquisition: Acquisition): v
   const previous = state.acquisitions.get(acquisition.asset_id) ?? [];
   previous.push(acquisition);
   state.acquisitions.set(acquisition.asset_id, previous);
+};
+
+/**
+ * The single-purchase exception of the rule (DGT V3282-18, Manual de Renta
+ * 2025): inside the window before a sale the asset was opened by one single
+ * event, a `buy`, and none of it was held when the window began. What that
+ * purchase leaves is what was not sold, not a repurchase. Shared by the tax
+ * engine and by the warning below, so the two never disagree.
+ *
+ * Any lot opened in the window counts as an operation —a purchase, a transfer
+ * in, a conversion— and only a `buy` qualifies as "the purchase": a transfer in
+ * or a grant keeps counting as a repurchase, the prudent side. The balance at
+ * the start counts every lot of the asset. `upTo` is the journal position of
+ * the sale: what happens after it is not looked at.
+ */
+export const isSinglePurchaseWindow = (
+  state: LedgerState,
+  assetId: AssetId,
+  assetType: AssetType,
+  start: CivilDate,
+  upTo: number,
+): boolean => {
+  if (!washSaleLooksBack(assetType)) {
+    return false;
+  }
+  const quantity = new Map<string, Quantity>();
+  const assetOf = new Map<string, AssetId>();
+  const opened = new Set<Ulid>();
+  let atStart = Quantity.ZERO;
+  for (const entry of state.lotJournal.slice(0, upTo)) {
+    if (entry.kind === "gain" || entry.kind === "units" || entry.kind === "carve") {
+      continue;
+    }
+    if (entry.kind === "open") {
+      assetOf.set(entry.lot_id, entry.asset_id);
+    }
+    const before = quantity.get(entry.lot_id) ?? Quantity.ZERO;
+    const after =
+      entry.kind === "open"
+        ? entry.quantity
+        : entry.kind === "consume"
+          ? before.sub(entry.quantity)
+          : entry.quantity_after;
+    quantity.set(entry.lot_id, after);
+    if (assetOf.get(entry.lot_id) !== assetId) {
+      continue;
+    }
+    const fact = state.eventFacts.get(entry.event_id);
+    if (fact === undefined) {
+      // A state built by hand, without the dates: nothing to say, nothing exempted.
+      return false;
+    }
+    if (fact.date < start) {
+      atStart = atStart.add(after.sub(before));
+    } else if (entry.kind === "open") {
+      opened.add(entry.event_id);
+    }
+  }
+  const [only] = opened;
+  return (
+    opened.size === 1 && atStart.isZero() && state.eventFacts.get(only as Ulid)?.type === "buy"
+  );
 };
 
 /**
@@ -131,6 +198,9 @@ export const warnPriorBuys = (
 ): void => {
   const window = washSaleWindowOf(state.fiscalSettings, assetType);
   const start = washSaleWindowStart(fiscalDate, window, assetType);
+  if (isSinglePurchaseWindow(state, assetId, assetType, start, state.lotJournal.length)) {
+    return;
+  }
   // The sale has just consumed lots of this asset, so its inventory exists.
   const open = (state.lots.get(assetId) as AssetLots).open;
   const named = new Set<Ulid>();
