@@ -7,6 +7,7 @@ import { zero } from "../../src/money/eur.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { DEFAULT_SETTINGS } from "../../src/settings/settings.js";
 import { walkWashSales } from "../../src/tax/wash-sale.js";
+import type { LedgerBuilder } from "../ledger-builder.js";
 import { buy, lineOf, reportOf, sell, taxBuilder, text, transfer } from "./helpers.js";
 
 describe("the window, counted date to date, at its four edges", () => {
@@ -139,6 +140,70 @@ describe("the single-purchase exception (DGT V3282-18, Manual de Renta 2025)", (
     }
     const line = lineOf(reportOf(b.build(), 2027), loss.id);
     expect(text(line.own_eur)).toBe(own);
+    expect(text(line.deferred_eur)).toBe(deferred);
+    // The line says so when the exception applied, and only then.
+    const tags = line.criteria.filter((id) => id.startsWith("18:single_purchase"));
+    expect(tags).toEqual(
+      deferred === "0" ? [asset === "etc_e" ? "18:single_purchase_etc" : "18:single_purchase"] : [],
+    );
+  });
+});
+
+describe("the single-purchase exception: the edges where a failure costs money", () => {
+  // Sale of 5 at 80 on 2027-03-15; the window opens on 2027-01-15.
+  const edges: [string, (b: LedgerBuilder) => void, string][] = [
+    [
+      "a transfer in as the only operation of the window still defers (#2b)",
+      (b) => {
+        buy(b, "fund_f", "2026-06-01", "10", "100");
+        transfer(b, "fund_f", "fund_g", "2027-03-01", "10", "10");
+      },
+      "-100",
+    ],
+    [
+      "everything sold before the window opens: nothing was held at the start",
+      (b) => {
+        buy(b, "stock_s", "2026-12-01", "5", "100");
+        sell(b, "stock_s", "2026-12-20", "5", "100");
+        buy(b, "stock_s", "2027-03-01", "10", "100");
+      },
+      "0",
+    ],
+    [
+      "the lone purchase on the first day of the window is exempt",
+      (b) => buy(b, "stock_s", "2027-01-15", "10", "100"),
+      "0",
+    ],
+    [
+      "a holding bought the day before the window is the opening balance: no exception",
+      (b) => {
+        buy(b, "stock_s", "2027-01-14", "5", "100");
+        buy(b, "stock_s", "2027-01-15", "5", "100");
+      },
+      "-100",
+    ],
+    [
+      "a holding in another account at the start of the window: no exception",
+      (b) => {
+        b.buy({
+          account_id: "acc_b",
+          asset_id: "stock_s",
+          value_date: "2026-06-01",
+          quantity: "5",
+          unit_price: "100",
+        });
+        buy(b, "stock_s", "2027-03-01", "10", "100");
+      },
+      "-100",
+    ],
+  ];
+
+  it.each(edges)("%s", (_name, setup, deferred) => {
+    const b = taxBuilder();
+    setup(b);
+    const asset = _name.startsWith("a transfer") ? "fund_g" : "stock_s";
+    const loss = sell(b, asset, "2027-03-15", "5", "80");
+    const line = lineOf(reportOf(b.build(), 2027), loss.id);
     expect(text(line.deferred_eur)).toBe(deferred);
   });
 });

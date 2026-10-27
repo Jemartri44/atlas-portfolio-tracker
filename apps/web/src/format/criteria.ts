@@ -55,6 +55,9 @@ export const CRITERION_NAMES: Record<CriterionId, string> = {
   "16": "Deducción por lo pagado a Hacienda de otro país",
   "17": "La comisión de una permuta resta de lo que se entrega",
   "18": "Solo aplaza la pérdida la recompra que sigue en cartera",
+  "18:single_purchase": "Una sola compra en los dos meses anteriores no cuenta como recompra",
+  "18:single_purchase_etc":
+    "Una sola compra en los dos meses anteriores no cuenta como recompra (por analogía, ETC o ETP)",
   "19": "Cada participación recomprada aplaza una pérdida una sola vez",
   "20": "La regla de la recompra mira la venta entera, no cada lote",
   "21": "Solo una venta definitiva, sin recompra en su ventana, libera la pérdida diferida",

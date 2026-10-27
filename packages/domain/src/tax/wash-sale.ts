@@ -144,6 +144,12 @@ export interface WashSaleOutcome {
   reapplied: boolean;
   /** Deferral with the alternative reading minus the current one, per criterion. */
   alternatives: { "18": Money; "19": Money; "21": Money };
+  /**
+   * The single-purchase exception applied and left prior units out: the part of
+   * the loss it kept from deferring, at most (negative, exact). Zero when it
+   * did not apply or changed nothing.
+   */
+  single_purchase_eur: Money;
 }
 
 /**
@@ -233,6 +239,8 @@ class Walker {
   readonly byYear = new Map<number, PendingDeferral[]>();
   /** The highest year seen so far: the journal is walked in the order it was applied. */
   private lastYear: number | undefined;
+  /** Prior units the single-purchase exception left out of the last `candidates` call. */
+  private exemptUnits = Quantity.ZERO;
 
   constructor(
     private readonly state: LedgerState,
@@ -446,6 +454,7 @@ class Walker {
       mixed_lots: signs.size > 1,
       reapplied: false,
       alternatives: { "18": zero(), "19": zero(), "21": zero() },
+      single_purchase_eur: zero(),
     };
     this.outcomes.push(outcome);
     if (deferrable.isNegative()) {
@@ -478,6 +487,16 @@ class Walker {
     const available = candidates.reduce((sum, c) => sum.add(c.available), Quantity.ZERO);
     const units = available.gt(sold) ? sold : available;
     const deferred = units.isZero() ? zero() : share(outcome.deferrable_eur, units, sold);
+    if (this.exemptUnits.isPositive()) {
+      // What the exception kept from deferring, once the posterior purchases
+      // have taken their part: nothing if they cover the loss anyway.
+      const without = available.add(this.exemptUnits);
+      outcome.single_purchase_eur = share(
+        outcome.deferrable_eur,
+        without.gt(sold) ? sold : without,
+        sold,
+      ).sub(deferred);
+    }
     const least = (a: Quantity, b: Quantity): Quantity => (a.gt(b) ? b : a);
     const alternative = (extra: Quantity): Money => {
       const altUnits = least(available.add(extra), sold);
@@ -546,15 +565,13 @@ class Walker {
       start,
       journalIndex,
     );
+    let exempt = Quantity.ZERO;
     for (const acquisition of this.acquired.get(assetId) ?? []) {
       if (acquisition.fiscal_date < start || acquisition.fiscal_date > end) {
         continue;
       }
       const position = this.firstOpen.get(acquisition.key) as number;
       const lots = this.lotsOfKey.get(acquisition.key);
-      if (singlePurchase && lots !== undefined) {
-        continue;
-      }
       if (lots === undefined) {
         // After the loss: its lots do not exist yet. Its units matched to
         // earlier losses (#19) are the ones still pending, in its own units.
@@ -618,6 +635,10 @@ class Walker {
           lotAvailability.push({ lot, available });
         }
       }
+      if (singlePurchase) {
+        exempt = exempt.add(free);
+        continue;
+      }
       found.push({
         acquisition,
         position,
@@ -628,6 +649,7 @@ class Walker {
         lots: lotAvailability,
       });
     }
+    this.exemptUnits = exempt;
     if (found.some((c) => c.notHeld.isPositive())) {
       outcome.not_held = true;
     }
