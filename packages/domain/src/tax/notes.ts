@@ -3,7 +3,7 @@
 
 import { yearOf } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
-import { sum } from "../money/eur.js";
+import { sum, zero } from "../money/eur.js";
 import { FxRate } from "../money/fx-rate.js";
 import { EUR } from "../money/money.js";
 import { sharedIsins } from "../projections/isin.js";
@@ -286,10 +286,14 @@ export const notesOf = (
         eventNote(
           "tax_window_open",
           line.event_id,
-          `the wash-sale window of this loss is open until ${line.provisional_until}`,
+          `the wash-sale window of this transmission is open until ${line.provisional_until}`,
           {
             asset_id: line.asset_id,
-            loss_eur: line.own_eur.add(line.released_eur).roundToCents().amount.toString(),
+            // What can still be deferred: its own loss, never a gain, and what it releases (#21).
+            loss_eur: (line.own_eur.isNegative() ? line.own_eur : zero())
+              .add(line.released_eur)
+              .roundToCents()
+              .amount.toString(),
             window_end: line.provisional_until,
           },
         ),
