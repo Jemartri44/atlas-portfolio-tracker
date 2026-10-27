@@ -165,3 +165,27 @@ describe("describeError: a field the schema refuses is said in Spanish, with wha
     expect(refused("buy: something new", { type: "buy", field: "x" })).toContain("something new");
   });
 });
+
+describe("describeWarning: the missing treaty rate", () => {
+  const missing = (details: Record<string, string>) =>
+    describeWarning({
+      code: "tax_treaty_rate_missing",
+      event_id: "01ARYZ6S41TSV4RRFFQ69G5SET",
+      message: "",
+      details,
+    });
+
+  it("suggests the rate with its source when there is one, and nothing otherwise", () => {
+    expect(
+      missing({
+        country: "US",
+        foreign_tax_eur: "24",
+        suggested_pct: "15",
+        suggested_source: "BOE-A-1990-30940, art. 10.2.b)",
+      }),
+    ).toContain(
+      "Sugerencia para dividendos de una persona física: 15 % (BOE-A-1990-30940, art. 10.2.b))",
+    );
+    expect(missing({ country: "CH", foreign_tax_eur: "24" })).not.toContain("Sugerencia");
+  });
+});

@@ -350,6 +350,17 @@ export const nextReturnYear = (
   return date.slice(5) > rentaSeasonOf(settings).end ? year : year - 1;
 };
 
+/**
+ * Treaty rates **suggested** to the user for the dividends of an individual,
+ * never applied: `treaty_withholding_pct` has no default on purpose (#16).
+ * Read in the BOE on 2026-10-27; the user confirms them with the advisor.
+ */
+export const TREATY_RATE_SUGGESTIONS: ReadonlyMap<string, { pct: DecimalString; source: string }> =
+  new Map([
+    ["US", { pct: "15", source: "BOE-A-1990-30940, art. 10.2.b)" }],
+    ["IE", { pct: "0", source: "BOE-A-1994-28597, art. 10.1.c)" }],
+  ]);
+
 /** The treaty rate for a country, or nothing when the settings do not know it (#16). */
 export const treatyWithholdingPctOf = (
   settings: Settings,

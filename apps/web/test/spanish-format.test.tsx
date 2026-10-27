@@ -28,6 +28,24 @@ const render = (catalogue: typeof ERROR_MESSAGES, code: string, details: Record<
     figuresOf(false),
   );
 
+describe("the missing treaty rate", () => {
+  const missing = (details: Record<string, unknown>) =>
+    render(WARNING_MESSAGES, "tax_treaty_rate_missing", {
+      country: "US",
+      foreign_tax_eur: "24",
+      ...details,
+    });
+
+  it("suggests the rate with its source when there is one, and nothing otherwise", () => {
+    expect(
+      missing({ suggested_pct: "15", suggested_source: "BOE-A-1990-30940, art. 10.2.b)" }),
+    ).toContain(
+      "Sugerencia para dividendos de una persona física: 15\u00a0% (BOE-A-1990-30940, art. 10.2.b))",
+    );
+    expect(missing({})).not.toContain("Sugerencia");
+  });
+});
+
 describe("figures and units", () => {
   it("writes deviations and weights with a comma and one minus sign", () => {
     const text = render(WARNING_MESSAGES, "deviation_above_threshold", {
