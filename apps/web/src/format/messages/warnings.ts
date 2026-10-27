@@ -238,6 +238,8 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   // gives the drift test a date to trip over.
   informative_current_year: () =>
     "El modelo va de lo que hay a 31 de diciembre y ese día no ha llegado: esto es cómo está hoy, sin veredicto.",
+  informative_not_resident: (d) =>
+    `Sin obligación: el Modelo ${num(d.model)} solo obliga a los residentes fiscales en España, y en ${year(d.year)} no lo eras.`,
   informative_model_did_not_exist: (d) =>
     `El modelo ${num(d.model)} no existía en ${year(d.year)}: no hay nada que presentar por ese ejercicio.`,
   informative_domestic_accounts_left_out: (d) =>

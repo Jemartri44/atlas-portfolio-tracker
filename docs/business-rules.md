@@ -229,6 +229,8 @@ Toda operación en divisa distinta del euro requiere conversión al **tipo de ca
 ### 5.8 Obligaciones informativas
 
 **Modelo 720** — declaración informativa (no se paga nada) si los bienes en el extranjero superan **50.000€ por categoría** (cuentas, valores, inmuebles).
+
+**Solo obligan a los residentes fiscales en España**, el 720 y el 721 (arts. 42 bis.1, 42 ter.1 y 42 quater.1 RGAT, releídos en el BOE el 2026-10-26: «las personas físicas y jurídicas residentes en territorio español»). Si la `tax_residence` en vigor a 31/12 del ejercicio (§5.9: España no fracciona el año; vigente según el día en que se registró, como en el traspaso) no es `ES`, los dos modelos responden **«sin obligación: no residente en España»** (periodo `not_resident`, nota `informative_not_resident`), sin veredicto por categoría. «Extranjero» sigue siendo fuera de España, sea cual sea la residencia: no se compara con `tax_residence`. Decidido con Coordinación el 2026-10-27.
 - Aplica a IBKR y a cualquier entidad extranjera. **No aplica a MyInvestor** — pero no por ser entidad española: el criterio legal es dónde están **situados** los bienes, y un fondo luxemburgués está en el extranjero. Lo que salva el caso es que en cuenta ómnibus la titular formal es la comercializadora española, que informa por sus propios modelos. **Comprar un fondo extranjero en una plataforma extranjera cambiaría la respuesta.**
 - Se repite si el valor sube más de 20.000€ sobre la última declaración presentada **o si se deja de ser titular** de un bien previamente declarado (extinción). Sin el segundo disparador, la aplicación diría "no hace falta declarar" en un año en que sí hace falta.
 

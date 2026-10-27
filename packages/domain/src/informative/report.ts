@@ -141,9 +141,10 @@ export interface InformativeReturn {
    * only case that has a verdict; `current_year` shows what there is on the day
    * of the query and says so, because the model is about one date and that date
    * has not arrived; `before_model` is a year in which the model did not exist
-   * yet, which the 721 has plenty of.
+   * yet, which the 721 has plenty of; `not_resident` is a year in which the
+   * taxpayer was not a Spanish tax resident, who files neither.
    */
-  period: "closed_year" | "current_year" | "before_model";
+  period: "closed_year" | "current_year" | "before_model" | "not_resident";
   threshold_eur: Money;
   increase_eur: Money;
   alert_eur: Money;

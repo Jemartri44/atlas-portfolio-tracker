@@ -31,6 +31,9 @@ import type {
   LedgerEvent,
 } from "../schema/events.js";
 
+// Abroad is outside Spain whatever the residence: the 720 and the 721 are
+// Spanish returns, and a taxpayer who is not resident files neither
+// (`m720.ts`, period `not_resident`), so `tax_residence` never moves this.
 const SPAIN = "ES";
 
 /** An account as it stood on the date asked: its country then, not its country today. */
