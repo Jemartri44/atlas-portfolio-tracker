@@ -135,7 +135,7 @@ export const describeWarning = (warning: Warning): string => {
     case "tax_double_taxation_partial":
       return "Doble imposición: solo se calcula el primer límite (impuesto extranjero limitado al tipo del convenio). El segundo (tipo medio efectivo) exige la declaración entera; y lo que no se deduce se pierde, no hay arrastre.";
     case "tax_treaty_rate_missing":
-      return `No hay tipo de convenio configurado para ${text(d.country)}: no se calcula deducción por los ${text(d.foreign_tax_eur)} EUR retenidos. Fíjalo con \`atlas settings set --treaty-withholding-pct ${text(d.country)}=<tipo>\`.${d.suggested_pct === undefined ? "" : ` Sugerencia para dividendos de una persona física: ${text(d.suggested_pct)} % (${text(d.suggested_source)}); confírmalo con tu asesor.`}`;
+      return `No hay tipo de convenio configurado para ${text(d.country)}: no se calcula deducción por los ${text(d.foreign_tax_eur)} EUR retenidos. Fíjalo con \`atlas settings set --treaty-withholding-pct ${text(d.country)}=<tipo>\`.${d.suggested_pct === undefined ? "" : ` Sugerencia para dividendos de una persona física: ${text(d.suggested_pct)} % (${text(d.suggested_source)}); compruébalo antes de fijarlo.`}`;
     case "tax_dividend_without_country":
       return `El dividendo no dice qué país lo pagó (source_country): no se calcula deducción por los ${text(d.foreign_tax_eur)} EUR retenidos en origen.`;
     case "tax_crypto_custody_not_deductible":

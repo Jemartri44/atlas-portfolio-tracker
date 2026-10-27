@@ -353,7 +353,7 @@ export const nextReturnYear = (
 /**
  * Treaty rates **suggested** to the user for the dividends of an individual,
  * never applied: `treaty_withholding_pct` has no default on purpose (#16).
- * Read in the BOE on 2026-10-27; the user confirms them with the advisor.
+ * Read in the BOE on 2026-10-27; the user checks them before setting them.
  */
 export const TREATY_RATE_SUGGESTIONS: ReadonlyMap<string, { pct: DecimalString; source: string }> =
   new Map([

@@ -198,7 +198,7 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     "Doble imposición: solo se calcula el primer límite, el del convenio. El segundo exige la declaración entera, y lo que no se deduce se pierde.",
   // The country is the code the ledger keeps (US, IE): `num` leaves it as it is.
   tax_treaty_rate_missing: (d, _n, f) =>
-    `No hay tipo de convenio configurado para ${num(d.country)}: no se calcula deducción por los ${f.money(d.foreign_tax_eur)} retenidos.${d.suggested_pct === undefined ? "" : ` Sugerencia para dividendos de una persona física: ${pct(d.suggested_pct)} (${text(d.suggested_source)}); confírmalo con tu asesor.`}`,
+    `No hay tipo de convenio configurado para ${num(d.country)}: no se calcula deducción por los ${f.money(d.foreign_tax_eur)} retenidos.${d.suggested_pct === undefined ? "" : ` Sugerencia para dividendos de una persona física: ${pct(d.suggested_pct)} (${text(d.suggested_source)}); compruébalo antes de fijarlo.`}`,
   tax_dividend_without_country: (d, _n, f) =>
     `El dividendo no dice qué país lo pagó: no se calcula deducción por los ${f.money(d.foreign_tax_eur)} retenidos en origen.`,
   tax_crypto_custody_not_deductible: () =>
