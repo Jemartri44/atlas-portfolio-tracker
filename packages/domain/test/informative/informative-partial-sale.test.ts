@@ -27,7 +27,7 @@ const CASES: { model: InformativeModel; category: "securities" | "crypto"; type:
 const ledger = (
   category: "securities" | "crypto",
   type: string,
-  options: { declared: boolean; sold: string },
+  options: { declared: boolean; sold: string; rebought?: string },
 ): LedgerBuilder => {
   const b = new LedgerBuilder();
   b.settings(SETTINGS);
@@ -63,18 +63,31 @@ const ledger = (
         : [],
     },
   });
-  b.sell({
-    account_id: "acc_ib",
-    asset_id: "asset_a",
-    value_date: "2028-05-10",
-    quantity: options.sold,
-    unit_price: "100",
-  });
+  if (options.sold !== "0") {
+    b.sell({
+      account_id: "acc_ib",
+      asset_id: "asset_a",
+      value_date: "2028-03-10",
+      quantity: options.sold,
+      unit_price: "100",
+    });
+  }
+
+  if (options.rebought !== undefined) {
+    b.deposit({ account_id: "acc_ib", value_date: "2028-06-09", amount: "20000" });
+    b.buy({
+      account_id: "acc_ib",
+      asset_id: "asset_a",
+      value_date: "2028-06-10",
+      quantity: options.rebought,
+      unit_price: "100",
+    });
+  }
   b.valuation({
     account_id: "acc_ib",
     asset_id: "asset_a",
     date: "2028-12-31",
-    quantity: String(600 - Number(options.sold)),
+    quantity: String(600 - Number(options.sold) + Number(options.rebought ?? 0)),
     unit_value: "100",
   });
   return b;
@@ -111,6 +124,19 @@ describe("a partial sale of an asset of the last return filed", () => {
     },
   );
 
+  it.each(CASES)(
+    "$model: sold 100 in March, bought 150 back in June: still obliged",
+    ({ model, category, type }) => {
+      const result = verdictOf(
+        model,
+        category,
+        ledger(category, type, { declared: true, sold: "100", rebought: "150" }),
+      );
+      expect(result.value_eur.amount.toString()).toBe("65000");
+      expect(result.reasons.map((reason) => reason.kind)).toContain("partial_extinction");
+    },
+  );
+
   it.each(CASES)("$model: nothing sold, nothing new: not obliged", ({ model, category, type }) => {
     const result = verdictOf(
       model,
@@ -132,4 +158,131 @@ describe("a partial sale of an asset of the last return filed", () => {
       expect(result.reasons.map((reason) => reason.kind)).not.toContain("partial_extinction");
     },
   );
+});
+
+describe("what counts as a transmission of a declared asset", () => {
+  type Other = (b: LedgerBuilder) => void;
+  const base = (other: Other): LedgerBuilder => {
+    const b = ledger("securities", "etf", { declared: true, sold: "0" });
+    b.asset("asset_b", { asset_type: "etf", asset_class: "equity", transferable: false });
+    b.account("acc_ib2", { platform: "ibkr", country: "IE" });
+    other(b);
+    return b;
+  };
+  const kinds = (b: LedgerBuilder): string[] =>
+    verdictOf("720", "securities", b).reasons.map((reason) => reason.kind);
+
+  it("a swap hands over part of it", () => {
+    const b = base((x) =>
+      x.swap({
+        account_id: "acc_ib",
+        from_asset_id: "asset_a",
+        to_asset_id: "asset_b",
+        trade_date: "2028-04-01",
+        quantity_out: "100",
+        market_value_out: "10000",
+        quantity_in: "100",
+        market_value_in: "10000",
+      }),
+    );
+    expect(kinds(b)).toContain("partial_extinction");
+  });
+
+  it("a transfer out of the account moves part of it away", () => {
+    const b = base((x) =>
+      x.transfer({
+        from_account_id: "acc_ib",
+        from_asset_id: "asset_a",
+        quantity_out: "100",
+        value_date_out: "2028-04-01",
+        to_account_id: "acc_ib2",
+        to_asset_id: "asset_a",
+        quantity_in: "100",
+        value_date_in: "2028-04-01",
+      } as never),
+    );
+    expect(kinds(b)).toContain("partial_extinction");
+  });
+
+  it.each([{ named: { asset_id: "asset_a" } }, { named: {} }])(
+    "a forced sale of a corporate action",
+    ({ named }) => {
+      const b = base((x) =>
+        x.corporateAction({
+          kind: "issuer_restructuring",
+          asset_id: "asset_a",
+          effective_date: "2028-04-01",
+          effects: [
+            {
+              op: "forced_sale",
+              ...named,
+              per_account: [{ account_id: "acc_ib", quantity: "100" }],
+              unit_price: "100",
+              currency: "EUR",
+              fx_rate: "1",
+              fx_rate_date: "2028-03-31",
+            },
+          ],
+        }),
+      );
+      expect(kinds(b)).toContain("partial_extinction");
+    },
+  );
+
+  it("a sale that was reversed and a split do not", () => {
+    const b = base((x) => {
+      const wrong = x.sell({
+        account_id: "acc_ib",
+        asset_id: "asset_a",
+        value_date: "2028-04-01",
+        quantity: "100",
+        unit_price: "100",
+      });
+      x.reversal(wrong.id);
+      x.corporateAction({
+        kind: "split",
+        asset_id: "asset_a",
+        effective_date: "2028-04-02",
+        effects: [{ op: "scale", ratio: "2" }],
+      });
+    });
+    expect(kinds(b)).not.toContain("partial_extinction");
+  });
+
+  it("the same operations before the end of the year of the last return do not", () => {
+    const b = base((x) => {
+      x.swap({
+        account_id: "acc_ib",
+        from_asset_id: "asset_a",
+        to_asset_id: "asset_b",
+        trade_date: "2027-06-01",
+      });
+      x.transfer({
+        from_account_id: "acc_ib",
+        from_asset_id: "asset_a",
+        quantity_out: "1",
+        value_date_out: "2027-06-02",
+        to_account_id: "acc_ib2",
+        to_asset_id: "asset_a",
+        quantity_in: "1",
+        value_date_in: "2027-06-02",
+      } as never);
+      x.corporateAction({
+        kind: "issuer_restructuring",
+        asset_id: "asset_a",
+        effective_date: "2027-06-03",
+        effects: [
+          {
+            op: "forced_sale",
+            per_account: [{ account_id: "acc_ib", quantity: "1" }],
+            unit_price: "100",
+            currency: "EUR",
+            fx_rate: "1",
+            fx_rate_date: "2027-06-02",
+          },
+        ],
+      });
+    });
+    expect(kinds(b)).not.toContain("partial_extinction");
+  });
 });
