@@ -95,7 +95,7 @@ describe("what a change does to a year already filed", () => {
 
   // Crypto sold at a loss in 2025, the Renta of 2025 filed on 2026-06-18, bought back
   // the day given (art. 33.5.e: the following year). Its filing period ends 2026-06-30.
-  const cryptoRepurchase = (bought: string, seasonEnd?: string | null) => {
+  const cryptoRepurchase = (bought: string | string[], seasonEnd?: string | null) => {
     const b = taxBuilder(
       seasonEnd === undefined
         ? undefined
@@ -119,13 +119,15 @@ describe("what a change does to a year already filed", () => {
     });
     fileReturn(b, 2025, "800");
     const before = b.build();
-    b.buy({
-      account_id: "acc_a",
-      asset_id: "coin_c",
-      value_date: bought,
-      quantity: "1",
-      unit_price: "800",
-    });
+    for (const date of [bought].flat()) {
+      b.buy({
+        account_id: "acc_a",
+        asset_id: "coin_c",
+        value_date: date,
+        quantity: "1",
+        unit_price: "800",
+      });
+    }
     const [impact] = closedYearImpact({ events: before }, { events: b.build() }, TODAY);
     return impact;
   };
@@ -133,9 +135,9 @@ describe("what a change does to a year already filed", () => {
   it("makes the rectifying return compulsory, with interest, when the purchase is after the filing period (art. 73.2)", () => {
     expect(cryptoRepurchase("2026-08-03")?.supplementary).toEqual({
       kind: "repurchase",
-      acquisition_year: 2026,
       filing_deadline: "2026-06-30",
-      after_deadline: true,
+      within_period: false,
+      after_period_year: 2026,
     });
   });
 
@@ -143,20 +145,31 @@ describe("what a change does to a year already filed", () => {
     ["2026-06-30", false],
     ["2026-07-01", true],
   ])("tells the last day of the filing period from the next one: %s", (bought, after) => {
-    expect(cryptoRepurchase(bought)?.supplementary).toMatchObject({ after_deadline: after });
+    const supplementary = cryptoRepurchase(bought)?.supplementary;
+    expect(supplementary).toMatchObject({ within_period: !after });
+    expect(supplementary).toHaveProperty("after_period_year", after ? 2026 : undefined);
+  });
+
+  it("says both cases when one purchase is within the period and another after it", () => {
+    expect(cryptoRepurchase(["2026-05-10", "2026-09-01"])?.supplementary).toEqual({
+      kind: "repurchase",
+      filing_deadline: "2026-06-30",
+      within_period: true,
+      after_period_year: 2026,
+    });
   });
 
   it("takes the default end of the filing period when the ledger writes no settings", () => {
     expect(cryptoRepurchase("2026-07-01", null)?.supplementary).toMatchObject({
       filing_deadline: "2026-06-30",
-      after_deadline: true,
+      within_period: false,
     });
   });
 
   it("reads the end of the filing period from the season of the settings", () => {
     expect(cryptoRepurchase("2026-07-01", "07-15")?.supplementary).toMatchObject({
       filing_deadline: "2026-07-15",
-      after_deadline: false,
+      within_period: true,
     });
   });
 
@@ -173,9 +186,8 @@ describe("what a change does to a year already filed", () => {
     const [impact] = closedYearImpact({ events: before }, { events: b.build() }, TODAY);
     expect(impact?.supplementary).toEqual({
       kind: "repurchase",
-      acquisition_year: 2028,
       filing_deadline: "2028-06-30",
-      after_deadline: false,
+      within_period: true,
     });
   });
 

@@ -8,7 +8,9 @@
 // this" is how a warning stops being read.
 
 import type { LedgerEvent } from "@atlas/domain";
+import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { describe, expect, it } from "vitest";
+import { closedYearLines } from "../../src/output/closed-years.js";
 import { CLI_SETTINGS, Events } from "../events.js";
 import { harness } from "../harness.js";
 
@@ -94,7 +96,7 @@ describe("a write that reaches a filed return", () => {
     );
     expect(text).toContain("afecta a la Renta de 2027, presentada el 2028-06-10");
     expect(text).toContain(
-      "La compra es anterior al fin del plazo de la Renta de 2027 (2028-06-30) y esa Renta ya está presentada: rectifícala cuanto antes con una autoliquidación rectificativa y, si puedes, antes de esa fecha, para evitar el recargo por presentarla tarde (no es el caso del art. 73.2 RIRPF).",
+      "Una compra es anterior al fin del plazo de la Renta de 2027 (2028-06-30) y esa Renta ya está presentada: rectifícala con una autoliquidación rectificativa cuanto antes y, si puedes, dentro de ese plazo, porque presentarla dentro de él es lo que evita presentarla fuera de plazo (no es el caso del art. 73.2 RIRPF).",
     );
     expect(text).not.toContain("Puede que toque");
   });
@@ -291,5 +293,38 @@ describe("a write that reaches a filed return", () => {
     expect(text).toContain("el ejercicio 2027 tiene cifras y no consta");
     expect(text).toContain("atlas filed renta");
     expect(text.indexOf("Registrado")).toBeLessThan(text.indexOf("no consta"));
+  });
+});
+
+describe("the rectification text by purchase date", () => {
+  const impact = (supplementary: ClosedYearImpact["supplementary"]): ClosedYearImpact => ({
+    model: "renta",
+    year: 2027,
+    filing_id: "01ARYZ6S41TSV4RRFFQ6900099",
+    filed_at: "2028-06-10",
+    by_date: false,
+    comparison: {
+      status: "compared",
+      moves: [{ figure: "savings_base", before: "1", after: "2" }],
+    },
+    supplementary,
+  });
+  const line = (parts: { within_period: boolean; after_period_year?: number }) =>
+    closedYearLines([impact({ kind: "repurchase", filing_deadline: "2028-06-30", ...parts })]).join(
+      "\n",
+    );
+  const AFTER =
+    "Hay que presentar una autoliquidación rectificativa de la Renta de 2027 (marca la casilla [121]), con intereses de demora, antes de que acabe el plazo de la Renta de 2028 (art. 73.2 RIRPF).";
+
+  it("cites art. 73.2 with interest and box 121 for a purchase after the period", () => {
+    const text = line({ within_period: false, after_period_year: 2028 });
+    expect(text).toContain(AFTER);
+    expect(text).not.toContain("Una compra es anterior");
+  });
+
+  it("says both cases when purchases fall on both sides of the period", () => {
+    const text = line({ within_period: true, after_period_year: 2028 });
+    expect(text).toContain("Una compra es anterior al fin del plazo de la Renta de 2027");
+    expect(text).toContain(AFTER);
   });
 });
