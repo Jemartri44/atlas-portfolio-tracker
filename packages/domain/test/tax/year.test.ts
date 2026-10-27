@@ -827,12 +827,12 @@ describe("custody of crypto held directly (art. 26.1.a, DGT V0648-24)", () => {
       description: "custodia",
       fee_kind: "custody",
     });
-    return { events: b.build(), crypto, broker };
+    return { b, crypto, broker };
   };
 
   it("is not deducted when the account only ever held direct crypto, and the report says so", () => {
-    const { events, crypto, broker } = ledger();
-    const report = reportOf(events, 2027);
+    const { b, crypto, broker } = ledger();
+    const report = reportOf(b.build(), 2027);
     // 100 of interest less the 5 of the broker; the 12 of the exchange are not a deposit of securities.
     expect(report.movable_capital.expenses.map((line) => line.event_id)).toEqual([broker.id]);
     expect(text(report.movable_capital.balance_eur)).toBe("95");
@@ -841,5 +841,19 @@ describe("custody of crypto held directly (art. 26.1.a, DGT V0648-24)", () => {
     ).toEqual({
       fees: [crypto.id],
     });
+  });
+
+  it("ignores an annulled purchase of anything else in that account", () => {
+    const { b, crypto } = ledger();
+    const stock = b.buy({
+      account_id: "acc_x",
+      asset_id: "stock_t",
+      value_date: "2027-02-01",
+      quantity: "1",
+      unit_price: "100",
+    });
+    b.reversal(stock.id);
+    const report = reportOf(b.build(), 2027);
+    expect(report.movable_capital.expenses.map((line) => line.event_id)).not.toContain(crypto.id);
   });
 });

@@ -513,6 +513,8 @@ const DEDUCTIBLE_FEES = new Set(["custody", "administration"]);
  * V0648-24). An account that held any other asset keeps its fees deductible:
  * one fee cannot be split, and the classification stays the user's (#23).
  */
+// `ctx.events` has no reversed event (`taxChain`): an annulled purchase does not
+// make an account hold anything.
 const cryptoOnlyAccounts = (ctx: LineContext): Set<string> => {
   const types = new Map<string, Set<AssetType>>();
   const add = (account: string, asset: string): void => {
