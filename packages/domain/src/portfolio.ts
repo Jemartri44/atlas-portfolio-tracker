@@ -41,3 +41,12 @@ export {
   type StandaloneFeeRow,
   type StandaloneFees,
 } from "./projections/costs.js";
+export {
+  type FeeEstimate,
+  type Order,
+  type PlatformLine,
+  type PlatformPlan,
+  type PlatformRow,
+  platformPlan,
+  type UnassignedOrder,
+} from "./projections/platform-plan.js";

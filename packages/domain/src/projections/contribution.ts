@@ -1,9 +1,10 @@
 // Monthly contribution split (business rule 2, data-schema.md §7).
 //
 // The bucket budget is separated first and never allocated: it is a budget, not
-// an allocation (constitution III). The rest goes to the core assets in
-// proportion to their shortfall against the target computed on the value after
-// the contribution; if the contribution covers every shortfall, the surplus
+// an allocation (constitution III). The rest goes to the core assets by water
+// level: first to the asset furthest below its target (computed on the value
+// after the contribution) until its shortfall equals the next one's, then to
+// both, and so on. If the contribution covers every shortfall, the surplus
 // goes by target weight. It proposes and never sells (rule 2; selling is an
 // annual decision, rule 3) and never writes: the orders are placed by hand.
 
@@ -46,6 +47,13 @@ export interface ContributionPlan {
   rows: ContributionRow[];
   /** True when the contribution covered every shortfall and the surplus went by target weight. */
   surplus_distributed: boolean;
+  /**
+   * New money the core would need for purchases alone to bring every asset to
+   * its target, today's prices unchanged: `max(value / target) − V`, over the
+   * assets with a target. Zero when nothing is above its target. Arithmetic of
+   * today, not a forecast.
+   */
+  purchases_only_eur: Money;
   warnings: Warning[];
 }
 
@@ -84,7 +92,7 @@ const amountOf = (input: ContributionInput): { amount: Money; origin: "flag" | "
  * handful of arrays aligned by index: this is the calculation of priority 4 of
  * the constitution, and two arrays that drift apart would still typecheck.
  */
-interface Slice {
+export interface Slice {
   asset_id: AssetId;
   asset_class: AssetClass;
   target_pct: Decimal;
@@ -93,6 +101,44 @@ interface Slice {
   gap_eur: Money;
   allocation_eur: Money;
 }
+
+/** New money that would bring every asset with a target to it by purchases alone. */
+export const purchasesOnlyOf = (
+  slices: readonly { target_pct: Decimal; value_eur: Money }[],
+  total: Money,
+): Money => {
+  let needed = total;
+  for (const slice of slices) {
+    if (slice.target_pct.isPositive()) {
+      const whole = slice.value_eur.mul(HUNDRED).div(slice.target_pct);
+      needed = whole.cmp(needed) > 0 ? whole : needed;
+    }
+  }
+  return needed.sub(total);
+};
+
+/**
+ * Spreads `money` over the shortfalls by water level: the largest shortfall is
+ * filled first, down to the level of the next one, and so on until the money
+ * runs out. Every asset that receives something ends with the same shortfall
+ * left (the level); the ones below the level receive nothing. Exact, not yet
+ * rounded. Requires `money` to be at most the sum of the shortfalls.
+ */
+export const fillByLevel = (gaps: readonly Money[], money: Money): Money[] => {
+  const order = gaps.map((gap, index) => ({ gap, index })).sort((a, b) => b.gap.cmp(a.gap));
+  let cumulative = Money.zero(EUR);
+  let level = Money.zero(EUR);
+  for (let k = 1; k <= order.length; k += 1) {
+    cumulative = cumulative.add((order[k - 1] as (typeof order)[number]).gap);
+    const next = order[k]?.gap ?? Money.zero(EUR);
+    // What it takes to bring the first k shortfalls down to the next one.
+    if (cumulative.sub(next.mul(Decimal.parse(String(k)))).cmp(money) >= 0) {
+      level = cumulative.sub(money).div(Decimal.parse(String(k)));
+      break;
+    }
+  }
+  return gaps.map((gap) => (gap.cmp(level) > 0 ? gap.sub(level) : Money.zero(EUR)));
+};
 
 /**
  * Spreads the rounding residue so the allocations add up to the core amount
@@ -150,6 +196,67 @@ export const assertSplit = (
   }
 };
 
+export interface SplitInput {
+  asset_id: AssetId;
+  asset_class: AssetClass;
+  target_pct: Decimal;
+  value_eur: Money;
+}
+
+/**
+ * Spreads `core` euros of new money over the assets by water level, with the
+ * targets computed on the value after it (`total + core`). Rounded to cents, the
+ * residue settled so the allocations add up to `core` exactly. Shared by the
+ * monthly contribution and by the first step of a rebalance, so the two can
+ * never disagree about who is furthest from its weight.
+ */
+export const splitCore = (
+  items: readonly SplitInput[],
+  total: Money,
+  core: Money,
+): { slices: Slice[]; surplus: boolean } => {
+  const after = total.add(core);
+  const rowWeight = items.reduce((sum, item) => sum.add(item.target_pct), Decimal.ZERO);
+  const slices: Slice[] = items.map((item) => {
+    const target = after.mul(item.target_pct).div(HUNDRED);
+    const gap = target.sub(item.value_eur);
+    return {
+      ...item,
+      target_eur: target,
+      gap_eur: gap.isNegative() ? Money.zero(EUR) : gap,
+      allocation_eur: Money.zero(EUR),
+    };
+  });
+  const totalGap = slices.reduce((sum, slice) => sum.add(slice.gap_eur), Money.zero(EUR));
+
+  /*
+   * Because the targets are computed on the value after the contribution, the
+   * shortfalls add up to the core amount plus whatever is above target, so the
+   * water-level branch is the normal case. The surplus branch is reached when
+   * part of the plan points at assets that are not in the table (an unknown
+   * target weight, a warning of `coreWeights`): then the weights of the rows do
+   * not add up to 100 and the leftover is spread among them in proportion to
+   * the weight they do have, which the callers check is never zero.
+   */
+  const surplus = totalGap.cmp(core) < 0;
+  const leftover = core.sub(totalGap);
+  const levelled = surplus
+    ? []
+    : fillByLevel(
+        slices.map((slice) => slice.gap_eur),
+        core,
+      );
+  slices.forEach((slice, index) => {
+    const raw = surplus
+      ? slice.gap_eur.add(leftover.mul(slice.target_pct).div(rowWeight))
+      : (levelled[index] as Money);
+    slice.allocation_eur = raw.roundToCents();
+  });
+  const assigned = slices.reduce((sum, slice) => sum.add(slice.allocation_eur), Money.zero(EUR));
+  settleResidue(residueOrder(slices), core.sub(assigned));
+  return { slices, surplus };
+};
+
 export const contributionPlan = (
   state: LedgerState,
   input: ContributionInput,
@@ -198,45 +305,17 @@ export const contributionPlan = (
   const core = amount.sub(bucket);
   const total = weights.total_eur;
   const after = total.add(core);
-
   // Every row has a value: the ones held without a price were rejected above.
-  const slices: Slice[] = weights.rows.map((row) => {
-    const value = row.value_eur as Money;
-    const target = after.mul(row.target_pct).div(HUNDRED);
-    const gap = target.sub(value);
-    return {
+  const { slices, surplus } = splitCore(
+    weights.rows.map((row) => ({
       asset_id: row.asset_id,
       asset_class: row.asset_class,
       target_pct: row.target_pct,
-      value_eur: value,
-      target_eur: target,
-      gap_eur: gap.isNegative() ? Money.zero(EUR) : gap,
-      allocation_eur: Money.zero(EUR),
-    };
-  });
-  const totalGap = slices.reduce((sum, slice) => sum.add(slice.gap_eur), Money.zero(EUR));
-
-  /*
-   * Because the targets are computed on the value after the contribution, the
-   * shortfalls add up to the core amount plus whatever is above target, so the
-   * proportional branch is the normal case. The surplus branch is reached when
-   * part of the plan points at assets that are not in the table (an unknown
-   * target weight, a warning of `coreWeights`): then the weights of the rows do
-   * not add up to 100 and the leftover is spread among them in proportion to
-   * the weight they do have, which is never zero (checked above).
-   */
-  const surplus = totalGap.cmp(core) < 0;
-  const leftover = core.sub(totalGap);
-  for (const slice of slices) {
-    const raw = surplus
-      ? slice.gap_eur.add(leftover.mul(slice.target_pct).div(rowWeight))
-      : totalGap.isZero()
-        ? Money.zero(EUR)
-        : core.mul(slice.gap_eur.amount).div(totalGap.amount);
-    slice.allocation_eur = raw.roundToCents();
-  }
-  const assigned = slices.reduce((sum, slice) => sum.add(slice.allocation_eur), Money.zero(EUR));
-  settleResidue(residueOrder(slices), core.sub(assigned));
+      value_eur: row.value_eur as Money,
+    })),
+    total,
+    core,
+  );
 
   const rows = slices.map((slice) => {
     const valueAfter = slice.value_eur.add(slice.allocation_eur);
@@ -259,6 +338,7 @@ export const contributionPlan = (
     core_value_eur: total,
     rows,
     surplus_distributed: surplus,
+    purchases_only_eur: purchasesOnlyOf(slices, total),
     // The calculator says when a weight it uses rests on an approximation
     // through the reference ETF: the domain says it, the interfaces only
     // translate it (ADR-0024).

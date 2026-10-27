@@ -122,7 +122,8 @@ describe("the portfolio", () => {
     const host = await show("/cartera?fecha=2027-01-10", Cartera);
     const contribution = card(host, "Aportación de enero");
     expect(text(contribution?.querySelector(".card-head"))).toContain("Propuesta");
-    expect(contribution?.querySelectorAll(".kpis .kpi")).toHaveLength(3);
+    // The three figures of the month; the per-platform ones come below them.
+    expect(contribution?.querySelector("dl.kpis")?.querySelectorAll(".kpi")).toHaveLength(3);
     expect(text(contribution)).toContain("nada este mes");
     expect(text(contribution?.querySelector(".note-line"))).toContain("Es una propuesta");
   });

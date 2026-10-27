@@ -14,6 +14,7 @@ comandos:
   m720 <año>   m721 <año>        bienes en el extranjero a 31/12 y si hay que presentar
   filed <renta|720|721> <año> [--set <clave>=<importe>]… [--receipt …] [--filed-at …]
   weights [--date]   contribute [--amount <eur>] [--date]   costs [--date]
+  rebalance [--amount <eur>] [--date]   propone traspasos y, si hace falta, ventas con su impuesto aproximado; no escribe
   networth [--date]   bucket [--date]
   transfer simulate --from-asset <id> --to-asset <id> (--quantity <n> | --all) [--date]
   export --format jsonl|csv [--out <ruta>]

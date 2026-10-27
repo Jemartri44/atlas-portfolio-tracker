@@ -18,6 +18,10 @@
       "types": "./dist/portfolio.d.ts",
       "import": "./dist/portfolio.js"
     },
+    "./rebalance": {
+      "types": "./dist/rebalance.d.ts",
+      "import": "./dist/rebalance.js"
+    },
     "./charts": {
       "types": "./dist/charts.d.ts",
       "import": "./dist/charts.js"
