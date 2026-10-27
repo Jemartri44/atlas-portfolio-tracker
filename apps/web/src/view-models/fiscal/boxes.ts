@@ -108,7 +108,12 @@ export interface BoxesView {
 
 const operationOf = (entry: BoxEntry, names: NameIndex): string | undefined => {
   if (entry.row !== undefined) {
-    return `${displayName(names, entry.row.asset_id)} · ${formatDate(entry.row.fiscal_date)}`;
+    // An exchange difference has a currency, not an asset of the catalogue.
+    const subject =
+      entry.row.currency === undefined
+        ? displayName(names, entry.row.asset_id)
+        : `Divisa ${entry.row.currency}`;
+    return `${subject} · ${formatDate(entry.row.fiscal_date)}`;
   }
   return entry.origin_year === undefined ? undefined : `De ${entry.origin_year}`;
 };

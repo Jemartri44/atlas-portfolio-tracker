@@ -35,7 +35,12 @@ export const CRITERION_NAMES: Record<CriterionId, string> = {
     "Dos meses fijos del capital mobiliario (art. 25.2.b LIRPF), sin variante de un año",
   "2b": "Un traspaso que entra cuenta como compra a efectos de la recompra",
   "3": "Las comisiones suman al coste y restan de lo transmitido",
-  "4": "Cómo se calcula la ganancia de lo comprado en otra divisa",
+  "4": "La ganancia de lo comprado en otra divisa se calcula primero en esa divisa",
+  "4:mixed_currency":
+    "Lo comprado en una divisa y vendido en otra se calcula con el tipo de cada día",
+  "4:currency_fifo": "La divisa se gasta en el orden en que entró, sumando todas las cuentas",
+  "4:currency_wash_sale": "La regla de recompra no se aplica a la divisa",
+  "4:auto_conversion": "Lo que convirtió el bróker se valora con los euros que liquidó",
   "5": "Se usa el tipo del Banco Central Europeo del último día publicado",
   "6": "Cada operación se redondea al céntimo una sola vez, hacia arriba en el empate",
   "7": "Reparto del coste en una escisión y régimen de neutralidad",
@@ -109,8 +114,6 @@ export const MEASURE_REASONS: Record<NonNullable<CriterionStake["reason"]>, stri
     "con la otra lectura hay movimientos que dejan de ser válidos, así que no hay una cifra que comparar",
   unsupported_under_alternative:
     "con la otra lectura el cálculo tendría que empezar antes del primer ejercicio que la aplicación sabe calcular",
-  lot_in_other_currency:
-    "el lote se compró en otra divisa y la otra lectura no se puede rehacer con lo registrado",
   regime_not_recorded:
     "el canje no dice si se acogió al régimen de neutralidad, y sin eso no hay valor que comparar",
   no_carrier_left: "no queda nada de ese activo en cartera sobre lo que aplazar la pérdida",

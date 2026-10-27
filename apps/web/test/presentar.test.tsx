@@ -51,7 +51,7 @@ describe("recording what was filed", () => {
     const base = host.querySelector("#f-base") as HTMLInputElement;
     expect(base).not.toBeNull();
     // The savings base of 2027 of the golden ledger, in Spanish.
-    expect(base.value).toBe("174,35");
+    expect(base.value).toBe("184,89");
     expect(text(host)).toContain("Base del ahorro");
     expect(text(host)).toContain("lo que se guarda es lo tuyo");
   });
@@ -63,7 +63,7 @@ describe("recording what was filed", () => {
     expect(base.value).not.toContain("174");
     base.dispatchEvent(new Event("focus", { bubbles: true }));
     await settle();
-    expect(base.value).toBe("174,35");
+    expect(base.value).toBe("184,89");
     type(host, "f-base", "200,00");
     await settle();
     base.dispatchEvent(new Event("blur", { bubbles: true }));
@@ -108,7 +108,7 @@ describe("recording what was filed", () => {
     expect(event.filed_at).toBe("2028-06-12");
     expect((event.declared as { savings_base_eur: string }).savings_base_eur).toBe("200.00");
     // And what it computed that day travels with it, untouched.
-    expect((event.computed as { savings_base_eur: string }).savings_base_eur).toBe("174.35");
+    expect((event.computed as { savings_base_eur: string }).savings_base_eur).toBe("184.89");
   });
 
   it("says it is a supplementary return when one is already recorded", async () => {

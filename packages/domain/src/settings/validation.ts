@@ -8,6 +8,7 @@ import { Decimal, isDecimalString } from "../money/decimal.js";
 import { ASSET_TYPES } from "../schema/events.js";
 import {
   FISCAL_DATE_RULES,
+  FX_GAIN_METHODS,
   INCOME_CATEGORIES,
   INFORMATIVE_MODELS,
   isWashSaleWindow,
@@ -327,6 +328,15 @@ export const validateSettings = (raw: unknown): Settings => {
     if (field in raw && typeof raw[field] !== "boolean") {
       return fail(`${field} must be true or false`, { field, value: raw[field] });
     }
+  }
+  if (
+    "fx_gain_method" in raw &&
+    !(FX_GAIN_METHODS as readonly unknown[]).includes(raw.fx_gain_method)
+  ) {
+    return fail(`fx_gain_method must be ${FX_GAIN_METHODS.join(" or ")}`, {
+      field: "fx_gain_method",
+      value: raw.fx_gain_method,
+    });
   }
   // The transfer rule and the foreign-account test read it as text.
   if ("tax_residence" in raw && typeof raw.tax_residence !== "string") {

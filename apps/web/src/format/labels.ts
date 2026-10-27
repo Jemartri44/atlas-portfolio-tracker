@@ -246,6 +246,7 @@ export const SETTING_LABELS: Record<string, string> = {
   income_category: "Tipo de renta por tipo de activo",
   wash_sale_window_days: "Ventana de recompra en días",
   wash_sale_transfer_counts: "Un traspaso entrante cuenta como recompra",
+  fx_gain_method: "Cómo se calcula la ganancia en divisa",
   target_weights: "Pesos objetivo",
   deviation_threshold_pp: "Umbral de desviación",
   satellite_min_weight_pct: "Mínimo de un satélite",

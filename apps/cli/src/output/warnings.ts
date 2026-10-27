@@ -140,8 +140,12 @@ export const describeWarning = (warning: Warning): string => {
       return `El dividendo no dice qué país lo pagó (source_country): no se calcula deducción por los ${text(d.foreign_tax_eur)} EUR retenidos en origen.`;
     case "tax_crypto_custody_not_deductible":
       return `No se deduce la custodia de cripto en tenencia directa (${((d.fees as string[] | undefined) ?? []).join(", ")}): la cripto no es un valor negociable (art. 26.1.a LIRPF, DGT V0648-24).`;
-    case "tax_fx_differences_not_computed":
-      return `Las diferencias de cambio del efectivo en divisa (${((d.currencies as string[] | undefined) ?? []).join(", ")}) NO se calculan: criterio #4, en disputa, sin lotes de divisa. Cambios de divisa del ejercicio: ${((d.fx_exchanges as string[] | undefined) ?? []).join(", ") || "ninguno"}.`;
+    case "tax_currency_withdrawn":
+      return `Se ha sacado divisa de una cuenta (${listOf(d.events)}): sale a su coste y no imputa nada; lo que se haga con ella fuera no está en el libro.`;
+    case "tax_currency_spent_without_lots":
+      return `Se ha gastado divisa sin tenerla (${listOf(d.currencies)}; ${listOf(d.events)}): se valora al tipo del BCE de ese día hasta que una entrada posterior la cubra, y entonces se imputa la diferencia (criterio #4).`;
+    case "tax_currency_mixed_lots":
+      return `Hay lotes comprados en otra divisa que la de la venta (${listOf(d.events)}): se calculan con el tipo de cada día, y la diferencia de cambio de la divisa gastada en ellos no se imputa (criterio #4:mixed_currency).`;
     case "tax_in_kind_income_not_integrated":
       return `Renta en especie registrada (${text(d.income_eur)} EUR, base ${text(d.base) === "general" ? "general" : "del ahorro"}) y NO integrada: el criterio vigente (#8) no declara nada al recibirla.`;
     case "tax_fx_rate_finding":

@@ -6,6 +6,7 @@
 
 import type { Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
+import type { CurrencyGain, CurrencyLot } from "./currency-lots.js";
 import type { Filing } from "./filings.js";
 import type {
   FiscalLot,
@@ -50,6 +51,9 @@ const lotOf = (lot: FiscalLot) => ({
   quantity: text(lot.quantity),
   cost_eur: text(lot.cost_eur),
   original_cost_eur: text(lot.original_cost_eur),
+  cost: text(lot.cost),
+  cost_currency: lot.cost.currency,
+  funding_eur: text(lot.funding_eur),
   source_event_id: lot.source_event_id,
   source_lot_id: lot.source_lot_id,
   closed: lot.closed,
@@ -57,6 +61,8 @@ const lotOf = (lot: FiscalLot) => ({
     event_id: c.event_id,
     quantity: text(c.quantity),
     cost_eur: text(c.cost_eur),
+    cost: text(c.cost),
+    funding_eur: text(c.funding_eur),
   })),
 });
 
@@ -80,6 +86,39 @@ const gainOf = (gain: RealizedGain) => ({
   gain_eur: text(gain.gain_eur),
   gain_eur_rounded: text(gain.gain_eur_rounded),
   by_lot: gain.by_lot.map(gainByLotOf),
+  fx_method: gain.fx_method,
+});
+
+const currencyLotOf = (lot: CurrencyLot) => ({
+  id: lot.id,
+  currency: lot.currency,
+  account_id: lot.account_id,
+  acquisition_date: lot.acquisition_date,
+  source_event_id: lot.source_event_id,
+  original_amount: text(lot.original_amount),
+  amount: text(lot.amount),
+  original_cost_eur: text(lot.original_cost_eur),
+  cost_eur: text(lot.cost_eur),
+  closed: lot.closed,
+});
+
+const currencyGainOf = (gain: CurrencyGain) => ({
+  event_id: gain.event_id,
+  kind: gain.kind,
+  account_id: gain.account_id,
+  currency: gain.currency,
+  fiscal_date: gain.fiscal_date,
+  year: gain.year,
+  amount: text(gain.amount),
+  proceeds_eur: text(gain.proceeds_eur),
+  cost_eur: text(gain.cost_eur),
+  gain_eur: text(gain.gain_eur),
+  gain_eur_rounded: text(gain.gain_eur_rounded),
+  by_lot: gain.by_lot.map((slice) => ({
+    lot_id: slice.lot_id,
+    amount: text(slice.amount),
+    cost_eur: text(slice.cost_eur),
+  })),
 });
 
 const incomeOf = (income: InvestmentIncome) => ({
@@ -182,6 +221,13 @@ export const snapshotOf = (state: LedgerState): Snapshot => {
   for (const [assetId, entry] of state.lots) {
     lots[assetId] = { open: entry.open.map(lotOf), closed: entry.closed.map(lotOf) };
   }
+  const currencyLots: Record<string, unknown> = {};
+  for (const [currency, entry] of state.currencyLots) {
+    currencyLots[currency] = {
+      open: entry.open.map(currencyLotOf),
+      closed: entry.closed.map(currencyLotOf),
+    };
+  }
   const positions = [...state.positions]
     .filter(([, quantity]) => !quantity.isZero())
     .map(([key, quantity]) => {
@@ -203,6 +249,8 @@ export const snapshotOf = (state: LedgerState): Snapshot => {
     cash,
     lots,
     gains: state.gains.map(gainOf),
+    currency_lots: currencyLots,
+    currency_gains: state.currencyGains.map(currencyGainOf),
     income: state.income.map(incomeOf),
     in_kind_income: state.inKindIncome.map(inKindOf),
     valuations: state.valuations.map((event) => ({

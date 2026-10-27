@@ -2,6 +2,7 @@
 
 import {
   cashBalances,
+  currencyLots,
   type FingerprintWaiver,
   fiscalLots,
   type IntegrityFinding,
@@ -82,22 +83,41 @@ export const lotsCommand = async (
   const asset = positionals[1];
   assertExists(state, "asset", asset);
   const rows = fiscalLots(state, asset).filter((lot) => includeClosed || !lot.closed);
+  // The lots of foreign currency go in the same table, with their currency (spec 029); a
+  // negative one is currency spent without having it.
+  const currency =
+    asset === undefined ? currencyLots(state).filter((lot) => includeClosed || !lot.closed) : [];
   renderQuery(
     ctx,
     state,
-    rows.map((lot) => ({
-      ...lot,
-      origin: originOf(events, state, lot.source_event_id),
-      original_quantity: lot.original_quantity.toString(),
-      quantity: lot.quantity.toString(),
-      cost_eur: lot.cost_eur.amount.toString(),
-      original_cost_eur: lot.original_cost_eur.amount.toString(),
-      consumptions: lot.consumptions.map((c) => ({
-        ...c,
-        quantity: c.quantity.toString(),
-        cost_eur: c.cost_eur.amount.toString(),
+    [
+      ...rows.map((lot) => ({
+        ...lot,
+        origin: originOf(events, state, lot.source_event_id),
+        original_quantity: lot.original_quantity.toString(),
+        quantity: lot.quantity.toString(),
+        cost_eur: lot.cost_eur.amount.toString(),
+        original_cost_eur: lot.original_cost_eur.amount.toString(),
+        cost: lot.cost.amount.toString(),
+        cost_currency: lot.cost.currency,
+        funding_eur: lot.funding_eur.amount.toString(),
+        consumptions: lot.consumptions.map((c) => ({
+          ...c,
+          quantity: c.quantity.toString(),
+          cost_eur: c.cost_eur.amount.toString(),
+          cost: c.cost.amount.toString(),
+          funding_eur: c.funding_eur.amount.toString(),
+        })),
       })),
-    })),
+      ...currency.map((lot) => ({
+        ...lot,
+        origin: originOf(events, state, lot.source_event_id),
+        amount: lot.amount.amount.toString(),
+        original_amount: lot.original_amount.amount.toString(),
+        cost_eur: lot.cost_eur.amount.toString(),
+        original_cost_eur: lot.original_cost_eur.amount.toString(),
+      })),
+    ],
     table(
       [
         "lote",
@@ -111,18 +131,33 @@ export const lotsCommand = async (
         "lote origen",
         "estado",
       ],
-      rows.map((lot) => [
-        lot.id,
-        lot.asset_id,
-        lot.acquisition_date,
-        lot.quantity.toString(),
-        lot.original_quantity.toString(),
-        lot.cost_eur.amount.toString(),
-        lot.original_cost_eur.amount.toString(),
-        originOf(events, state, lot.source_event_id),
-        lot.source_lot_id ?? "",
-        lot.closed ? "cerrado" : "abierto",
-      ]),
+      rows
+        .map((lot) => [
+          lot.id,
+          lot.asset_id,
+          lot.acquisition_date,
+          lot.quantity.toString(),
+          lot.original_quantity.toString(),
+          lot.cost_eur.amount.toString(),
+          lot.original_cost_eur.amount.toString(),
+          originOf(events, state, lot.source_event_id),
+          lot.source_lot_id ?? "",
+          lot.closed ? "cerrado" : "abierto",
+        ])
+        .concat(
+          currency.map((lot) => [
+            lot.id,
+            `${lot.currency} (divisa)`,
+            lot.acquisition_date,
+            lot.amount.amount.toString(),
+            lot.original_amount.amount.toString(),
+            lot.cost_eur.amount.toString(),
+            lot.original_cost_eur.amount.toString(),
+            originOf(events, state, lot.source_event_id),
+            "",
+            lot.closed ? "cerrado" : "abierto",
+          ]),
+        ),
     ),
   );
   return 0;

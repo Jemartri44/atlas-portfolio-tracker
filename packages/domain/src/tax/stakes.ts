@@ -11,12 +11,16 @@ import {
   type CorporateActionEvent,
   type LedgerEvent,
 } from "../schema/events.js";
-import { DEFAULT_SETTINGS, incomeCategoryOf, type Settings } from "../settings/settings.js";
+import {
+  DEFAULT_SETTINGS,
+  fxGainMethodOf,
+  incomeCategoryOf,
+  type Settings,
+} from "../settings/settings.js";
 import { washSaleWindowOf } from "../settings/wash-sale.js";
 import { isInvalid, isUnsupported, type TaxOptions } from "./chain.js";
 import { type Core, exchangesOfYear, tryComputeCore } from "./core.js";
 import { CRITERION_IDS, type CriterionId, categoryCriterion, FISCAL_CRITERIA } from "./criteria.js";
-import { currencyFirstGain } from "./lines.js";
 import type { CriterionStake, TransmissionLine } from "./report.js";
 import { linesByKey } from "./shared.js";
 import type { WashSaleOutcome } from "./wash-sale.js";
@@ -121,6 +125,16 @@ const alternatives = (settings: Settings): { criterion: CriterionId; settings: S
   };
   return [
     { criterion: "1", settings: { ...settings, fiscal_date_rule: flipped } },
+    // #4, the method: first in currency or leg by leg. The other reading runs the
+    // whole chain, so its figure carries the exchange differences it moves too.
+    {
+      criterion: "4",
+      settings: {
+        ...settings,
+        fx_gain_method:
+          fxGainMethodOf(settings) === "currency_first" ? "each_leg" : "currency_first",
+      },
+    },
     ...windows("2:listed", listed, "2m", "1y"),
     ...windows("2:listed_1y", listed, "1y", "2m"),
     ...windows("2:crypto", ["crypto"], "1y", "2m"),
@@ -167,7 +181,14 @@ export const criterionStakes = (
     all.filter((line) => line.criteria.includes(id));
   const current = figuresOf(core);
 
+  // A ledger with nothing in a foreign currency has no other reading of #4 to run.
+  const foreign =
+    core.state.currencyGains.length > 0 ||
+    core.state.gains.some((gain) => gain.fx_method !== undefined);
   for (const alternative of alternatives(core.state.fiscalSettings)) {
+    if (alternative.criterion === "4" && !foreign) {
+      continue;
+    }
     const lines = declaring(alternative.criterion);
     const other = tryComputeCore(events, year, options, alternative.settings);
     // The other reading reaches below the first supported year: it cannot be
@@ -223,47 +244,18 @@ export const criterionStakes = (
       alternative.criterion === "2:listed"
         ? [...new Set(affected.map((line) => line.market ?? "unknown"))].sort()
         : undefined;
+    // The exchange differences of the year move with the method of #4.
+    const currencyIds =
+      alternative.criterion === "4" ? core.currency.map((line) => line.event_id) : [];
     items.push(
       item(alternative.criterion, {
         measure: "difference",
-        event_ids: affected.map((line) => line.event_id),
+        event_ids: [...affected.map((line) => line.event_id), ...currencyIds],
         base_difference_eur: base,
         pending_difference_eur: pendingDifference,
         deferred_difference_eur: deferred,
         direction: directionOf(base, pendingDifference),
         ...(markets === undefined ? {} : { markets }),
-      }),
-    );
-  }
-
-  // #4, method: first in currency, then at the rate of the disposal.
-  const foreign = declaring("4");
-  if (foreign.length > 0) {
-    const differences = foreign.map((line) => {
-      const alternative = currencyFirstGain(line);
-      return alternative === undefined
-        ? undefined
-        : alternative.roundToCents().sub(line.own_eur.roundToCents());
-    });
-    const computable = differences.every((difference) => difference !== undefined);
-    const difference = sum(differences.filter((d): d is Money => d !== undefined));
-    items.push(
-      item("4", {
-        measure: computable ? "difference" : "exposure",
-        event_ids: foreign.map((line) => line.event_id),
-        ...(computable
-          ? { base_difference_eur: difference }
-          : {
-              // An exposure is an amount at stake, whatever the sign of the result.
-              exposure_eur: sum(
-                foreign.map((line) => {
-                  const own = line.own_eur.roundToCents();
-                  return own.isNegative() ? own.neg() : own;
-                }),
-              ),
-            }),
-        direction: computable ? directionOf(difference, zero()) : "both",
-        ...(computable ? {} : { reason: "lot_in_other_currency" as const }),
       }),
     );
   }
@@ -309,6 +301,23 @@ export const criterionStakes = (
       }),
     );
   }
+  // What an exchange difference applies, on its own figure.
+  for (const id of ["4:currency_fifo", "4:currency_wash_sale", "4:auto_conversion"] as const) {
+    const lines = core.currency.filter((line) => line.criteria.includes(id));
+    if (lines.length > 0) {
+      items.push(
+        item(id, {
+          measure: "exposure",
+          event_ids: lines.map((line) => line.event_id),
+          exposure_eur: sum(lines.map((line) => abs(line.gain_eur_rounded))),
+          direction: FISCAL_CRITERIA[id].risk,
+        }),
+      );
+    }
+  }
+  exposure("4:mixed_currency", declaring("4:mixed_currency"), (line) =>
+    abs(line.computable_eur_rounded),
+  );
   // A window no reading of the document supports: what it deferred is at stake.
   exposure("2:other", declaring("2:other"), (line) => abs(line.deferred_eur.roundToCents()));
   exposure("7", declaring("7"), (line) => line.cost_eur.roundToCents());

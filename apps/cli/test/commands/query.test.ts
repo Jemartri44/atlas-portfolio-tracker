@@ -67,7 +67,13 @@ describe("atlas queries", () => {
     expect(h.text()).toContain("923.0414746544");
     h.reset();
     expect(await h.exec(["lots", "--closed", "--json"])).toBe(0);
-    expect(h.json()).toHaveLength(2);
+    // The two lots of the securities, and the dollars the gold purchase spent without
+    // having them: 1,001.5 USD, 419 of them covered by its sale (spec 029).
+    const lots = h.json() as { id: string; amount?: string; currency?: string }[];
+    expect(lots).toHaveLength(3);
+    expect(lots.filter((lot) => lot.currency === "USD").map((lot) => lot.amount)).toEqual([
+      "-582.5",
+    ]);
     h.reset();
     expect(await h.exec(["cash"])).toBe(0);
     expect(h.text()).toContain("acc_fund  EUR     4000");
@@ -80,8 +86,9 @@ describe("atlas queries", () => {
     ]);
     h.reset();
     expect(await h.exec(["gains", "2026", "--lots"])).toBe(0);
-    expect(h.text()).toContain("15.19");
-    expect(h.text()).toContain("Total 2026: 15.19 EUR");
+    // First in dollars (criterion #4): 419 − 2/5 of 1,001.5 = 18.4 USD at 1.09.
+    expect(h.text()).toContain("16.88");
+    expect(h.text()).toContain("Total 2026: 16.88 EUR");
     h.reset();
     expect(await h.exec(["gains", "2027", "--json"])).toBe(0);
     expect(h.json()).toEqual([]);
@@ -109,7 +116,7 @@ describe("atlas queries", () => {
     );
     h.reset();
     expect(await h.exec(["gains", "2027"])).toBe(0);
-    expect(h.text()).toContain("15.19");
+    expect(h.text()).toContain("16.88");
   });
 
   it("lists valuations at a date and shows corporate action origins in lots and gains", async () => {
@@ -170,7 +177,12 @@ describe("atlas queries", () => {
     expect(h.text()).toMatch(/ast_gold\s+2026-12-30\s+6\s+5\s+.*\s+buy\s+/);
     h.reset();
     expect(await h.exec(["lots", "--json"])).toBe(0);
-    expect((h.json() as { origin: string }[]).map((lot) => lot.origin)).toEqual(["buy", "buy"]);
+    // The two lots of gold, and the dollars its purchase spent without having them.
+    expect((h.json() as { origin: string }[]).map((lot) => lot.origin)).toEqual([
+      "buy",
+      "buy",
+      "buy",
+    ]);
   });
 
   it("reports integrity warnings and errors", async () => {

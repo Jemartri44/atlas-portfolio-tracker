@@ -15,6 +15,9 @@ export interface NewLot {
   acquisition_date: CivilDate;
   quantity: Quantity;
   cost_eur: Money;
+  /** Cost in the currency of the acquisition (`FiscalLot.cost`). */
+  cost: Money;
+  funding_eur: Money;
   source_event_id: string;
   position: number;
   source_lot_id?: string;
@@ -27,6 +30,8 @@ export interface LotSlice {
   position: number;
   quantity: Quantity;
   cost_eur: Money;
+  cost: Money;
+  funding_eur: Money;
 }
 
 const lotsOf = (state: LedgerState, assetId: AssetId): AssetLots => {
@@ -55,6 +60,8 @@ export const openLot = (state: LedgerState, lot: NewLot): FiscalLot => {
     quantity: lot.quantity,
     cost_eur: lot.cost_eur,
     original_cost_eur: lot.cost_eur,
+    cost: lot.cost,
+    funding_eur: lot.funding_eur,
     source_event_id: lot.source_event_id,
     ...(lot.source_lot_id === undefined ? {} : { source_lot_id: lot.source_lot_id }),
     position: lot.position,
@@ -104,7 +111,11 @@ export const consume = (
     }
     const whole = !lot.quantity.gt(remaining);
     const taken = whole ? lot.quantity : remaining;
-    const cost = whole ? lot.cost_eur : lot.cost_eur.mul(taken.value).div(lot.quantity.value);
+    const part = (amount: Money): Money =>
+      whole ? amount : amount.mul(taken.value).div(lot.quantity.value);
+    const cost = part(lot.cost_eur);
+    const currencyCost = part(lot.cost);
+    const funding = part(lot.funding_eur);
     state.lotJournal.push({
       kind: "consume",
       lot_id: lot.id,
@@ -115,7 +126,15 @@ export const consume = (
     });
     lot.quantity = lot.quantity.sub(taken);
     lot.cost_eur = lot.cost_eur.sub(cost);
-    lot.consumptions.push({ event_id: eventId, quantity: taken, cost_eur: cost });
+    lot.cost = lot.cost.sub(currencyCost);
+    lot.funding_eur = lot.funding_eur.sub(funding);
+    lot.consumptions.push({
+      event_id: eventId,
+      quantity: taken,
+      cost_eur: cost,
+      cost: currencyCost,
+      funding_eur: funding,
+    });
     if (whole) {
       lot.closed = true;
       entry.open.shift();
@@ -127,6 +146,8 @@ export const consume = (
       position: lot.position,
       quantity: taken,
       cost_eur: cost,
+      cost: currencyCost,
+      funding_eur: funding,
     });
     remaining = remaining.sub(taken);
   }

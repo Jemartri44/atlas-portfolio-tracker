@@ -66,7 +66,7 @@ const rowOf = (entry: BoxEntry): string =>
     ? entry.origin_year === undefined
       ? ""
       : `de ${String(entry.origin_year)}`
-    : `${entry.row.asset_id} ${entry.row.fiscal_date}`;
+    : `${entry.row.currency === undefined ? entry.row.asset_id : `divisa ${entry.row.currency}`} ${entry.row.fiscal_date}`;
 
 /**
  * The columns are "what it is" first and the literal label of the form second,

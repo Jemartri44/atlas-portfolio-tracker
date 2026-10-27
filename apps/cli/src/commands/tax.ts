@@ -7,6 +7,7 @@ import { todayInMadrid } from "@atlas/domain";
 import type {
   CriterionId,
   CriterionStake,
+  CurrencyLine,
   IncomeLine,
   TaxYearReport,
   TransmissionLine,
@@ -126,6 +127,54 @@ const lotTable = (lines: readonly TransmissionLine[]): string =>
     ),
   );
 
+const CURRENCY_KIND: Record<CurrencyLine["kind"], string> = {
+  conversion: "conversión a euros",
+  payment: "pago con divisa",
+  cover: "cubre divisa gastada sin tenerla",
+  auto_conversion: "conversión del bróker",
+};
+
+/** The exchange differences of the year: currency disposed of against what it cost (spec 029). */
+const currencyTable = (lines: readonly CurrencyLine[]): string =>
+  table(
+    [
+      "fecha fiscal",
+      "evento",
+      "qué",
+      "cuenta",
+      "divisa",
+      "valor EUR",
+      "coste EUR",
+      "resultado",
+      "criterios",
+    ],
+    lines.map((line) => [
+      line.fiscal_date,
+      line.event_id,
+      CURRENCY_KIND[line.kind],
+      line.account_id,
+      `${line.amount.amount.toString()} ${line.currency}`,
+      eur(line.proceeds_eur),
+      eur(line.cost_eur),
+      eur(line.gain_eur_rounded),
+      criteriaText(line.criteria),
+    ]),
+  );
+
+const currencyLotTable = (lines: readonly CurrencyLine[]): string =>
+  table(
+    ["evento", "lote de divisa", "entró", "importe", "coste EUR"],
+    lines.flatMap((line) =>
+      line.lots.map((lot) => [
+        line.event_id,
+        lot.lot_id,
+        lot.acquisition_date,
+        `${lot.amount.amount.toString()} ${line.currency}`,
+        eur(lot.cost_eur),
+      ]),
+    ),
+  );
+
 const incomeTable = (lines: readonly IncomeLine[]): string =>
   table(
     [
@@ -162,7 +211,6 @@ const REASONS: Record<NonNullable<CriterionStake["reason"]>, (item: CriterionSta
     `con la otra lectura ${String(item.invalid_count)} eventos serían inválidos`,
   unsupported_under_alternative: () =>
     "con la otra lectura el cálculo tendría que empezar en un ejercicio anterior al primero que este motor sabe calcular",
-  lot_in_other_currency: () => "algún lote se compró en otra divisa",
   regime_not_recorded: () =>
     "sin régimen de neutralidad sería una permuta sujeta, y su valor no está en el libro",
   no_carrier_left: () =>
@@ -259,7 +307,7 @@ const renderTaxReport = (report: TaxYearReport, withLots: boolean): string => {
   out.push(
     section(
       "1. Ganancias y pérdidas patrimoniales (art. 33 LIRPF)",
-      `${transmissionTable(gains.lines)}\nGanancias ${eur(gains.gains_eur)} · Pérdidas ${eur(gains.losses_eur)} · Saldo ${eur(gains.balance_eur)}${gains.foreign_releases_eur.isZero() ? "" : ` (incluye ${eur(gains.foreign_releases_eur)} liberados de pérdidas de esta categoría)`}`,
+      `${transmissionTable(gains.lines)}${gains.currency_lines.length === 0 ? "" : `\nDiferencias de cambio de la divisa (criterio #4):\n${currencyTable(gains.currency_lines)}`}\nGanancias ${eur(gains.gains_eur)} · Pérdidas ${eur(gains.losses_eur)} · Saldo ${eur(gains.balance_eur)}${gains.foreign_releases_eur.isZero() ? "" : ` (incluye ${eur(gains.foreign_releases_eur)} liberados de pérdidas de esta categoría)`}`,
     ),
   );
   if (withLots) {
@@ -269,6 +317,9 @@ const renderTaxReport = (report: TaxYearReport, withLots: boolean): string => {
         lotTable([...gains.lines, ...report.movable_capital.transmissions]),
       ),
     );
+    if (gains.currency_lines.length > 0) {
+      out.push(section("   Lotes de divisa consumidos", currencyLotTable(gains.currency_lines)));
+    }
   }
   const movable = report.movable_capital;
   const movableParts = [
@@ -484,6 +535,7 @@ const renderTaxReport = (report: TaxYearReport, withLots: boolean): string => {
   }
   const used = new Set<CriterionId>([
     ...report.capital_gains.lines.flatMap((line) => line.criteria),
+    ...report.capital_gains.currency_lines.flatMap((line) => line.criteria),
     ...report.movable_capital.transmissions.flatMap((line) => line.criteria),
     ...report.doubtful.map((item) => item.criterion),
     ...report.settled.map((item) => item.criterion),

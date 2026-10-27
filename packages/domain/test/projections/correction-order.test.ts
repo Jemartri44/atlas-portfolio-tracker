@@ -19,12 +19,21 @@ import { testDeps } from "../usecases/helpers.js";
 const history = readEcbZipCsv(ecbFixture("eurofxref-hist.csv"));
 
 /**
+ * Leg by leg (criterion #4, `each_leg`): what these tests watch is that a
+ * correction of the purchase **rate** moves the gain by that rate, which only
+ * the rate of the purchase day can show. First in currency, the purchase rate
+ * does not enter the gain at all.
+ */
+const LEG_BY_LEG: Settings = { ...DEFAULT_SETTINGS, fx_gain_method: "each_leg" };
+
+/**
  * Two purchases of the same day, 2 at 100 USD and 2 at
  * 200 USD, and a sale of 2 — which consumes the first, the cheap one.
  */
 const ledger = (changedRule = false) => {
   const b = new LedgerBuilder();
   catalogue(b);
+  b.settings(LEG_BY_LEG);
   const cheap = b.buy({
     account_id: "acc_etf",
     asset_id: "ast_gold",
@@ -62,7 +71,7 @@ const ledger = (changedRule = false) => {
   });
   if (changedRule) {
     b.settings(
-      mergeSettings(DEFAULT_SETTINGS, {
+      mergeSettings(LEG_BY_LEG, {
         fiscal_date_rule: { ...DEFAULT_SETTINGS.fiscal_date_rule, etc: "value_date" },
       } as Partial<Settings>),
     );

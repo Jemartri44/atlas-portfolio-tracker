@@ -561,7 +561,8 @@ describe("atlas ca", () => {
       gains: { gain_eur: string }[];
       after: { positions: unknown[] };
     };
-    expect(json.gains[0]?.gain_eur).toBe("-923.04");
+    // First in dollars (criterion #4): 0 − 1,001.5 USD, at the rate the liquidation records, 1.
+    expect(json.gains[0]?.gain_eur).toBe("-1001.5");
     expect(json.after.positions).toEqual([]);
   });
 

@@ -11,6 +11,7 @@ import {
   DEFAULT_WASH_SALE_TRANSFER_COUNTS,
   DEFAULT_WASH_SALE_WINDOW,
   type FiscalDateRule,
+  fxGainMethodOf,
   type IncomeCategory,
   lossCarryforwardYearsOf,
   modelAlertThresholdOf,
@@ -59,6 +60,7 @@ export const normalizeSettings = (settings: Settings): Settings => {
     income_category: categories,
     wash_sale_transfer_counts:
       settings.wash_sale_transfer_counts ?? DEFAULT_WASH_SALE_TRANSFER_COUNTS,
+    fx_gain_method: fxGainMethodOf(settings),
     savings_offset_limit_pct: settings.savings_offset_limit_pct ?? DEFAULT_SAVINGS_OFFSET_LIMIT_PCT,
     loss_carryforward_years: lossCarryforwardYearsOf(settings),
     model_720_threshold_eur: modelThresholdOf(settings, "720").toString(),

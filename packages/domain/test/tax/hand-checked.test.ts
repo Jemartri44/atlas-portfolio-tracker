@@ -10,6 +10,11 @@
 // version was computed by hand and the engine matched it to the cent; the
 // custody fee of 2024 was added afterwards, and its effect on 2024 is worked
 // out below.
+//
+// Recomputed by hand for spec 029 (2026-10-27): U3 is computed first in
+// dollars (criterion #4), and the dollars of `acc_bk` are lots. The purchase of
+// 2021-04-01 spends 1,002 USD the account never had: a negative lot worth
+// 1,002 / 1.20 = 835.00, which the dividend and U3 cover.
 
 import { describe, expect, it } from "vitest";
 import type { Money } from "../../src/money/money.js";
@@ -112,16 +117,29 @@ describe("the hand-checked ledger, year by year", () => {
     // RS: the reverse split 1:4 leaves 0.5 in cash at 40: 20 against the 0.5 of
     // S2 left, 0.5/0.75 of its remaining 36 = 24: −4. Window [01-08, 01-12]: S5
     // is used by SX1 (#19), S6 (1.5 after the split) takes 0.5: −4 deferred.
-    // U3: (1,200 − 2) / 1.10 = 1,089.0909… against (1,000 + 2) / 1.20 = 835:
-    // +254.09.
+    // U3, first in dollars: (1,198 − 1,002) USD = 196 / 1.10 = 178.18. Leg by
+    // leg, before spec 029, it was 1,089.09 − 835.00 = 254.09.
     expect(lines(report)).toEqual([
       ["SX1", "-40", "0", "-20", "-20"],
       ["RS", "-4", "0", "-4", "0"],
-      ["U3", "254.09", "0", "0", "254.09"],
+      ["U3", "178.18", "0", "0", "178.18"],
     ]);
-    expect(eur(report.capital_gains.gains_eur)).toBe("254.09");
-    expect(eur(report.capital_gains.losses_eur)).toBe("-20");
-    expect(eur(report.capital_gains.balance_eur)).toBe("234.09");
+    // The dividend's 21 USD net at 1.20 (17.50) cover 21 of the 1,002 owed,
+    // worth 17.50: nothing. U3's 1,198 USD cost 835.00 + 178.18 = 1,013.18;
+    // 981 of them (829.66) cover the rest, worth 835.00 − 17.50 = 817.50: −12.16.
+    expect(
+      report.capital_gains.currency_lines.map((l) => [
+        nameOf(l.event_id),
+        l.kind,
+        eur(l.gain_eur_rounded),
+      ]),
+    ).toEqual([
+      ["U2", "cover", "0"],
+      ["U3", "cover", "-12.16"],
+    ]);
+    expect(eur(report.capital_gains.gains_eur)).toBe("178.18");
+    expect(eur(report.capital_gains.losses_eur)).toBe("-32.16");
+    expect(eur(report.capital_gains.balance_eur)).toBe("146.02");
     // Dividend 30 USD / 1.20 = 25; interest 40: 65 of movable capital.
     expect(
       report.movable_capital.dividends.map((d) => [nameOf(d.event_id), eur(d.gross_eur_rounded)]),
@@ -130,15 +148,16 @@ describe("the hand-checked ledger, year by year", () => {
       report.movable_capital.interest.map((i) => [nameOf(i.event_id), eur(i.gross_eur_rounded)]),
     ).toEqual([["I1", "40"]]);
     expect(eur(report.movable_capital.balance_eur)).toBe("65");
-    // 2020 absorbs the 234.09 of gains whole, then up to 25 % of 65 = 16.25 of
-    // the income: 800 − 234.09 − 16.25 = 549.66 left. Base 65 − 16.25 = 48.75.
-    expect(eur(report.compensation.limit_eur.capital_gain)).toBe("58.52");
+    // 2020 absorbs the 146.02 of gains whole, then up to 25 % of 65 = 16.25 of
+    // the income: 800 − 146.02 − 16.25 = 637.73 left (549.66 before spec 029).
+    // Base 65 − 16.25 = 48.75.
+    expect(eur(report.compensation.limit_eur.capital_gain)).toBe("36.51");
     expect(eur(report.compensation.limit_eur.movable_capital)).toBe("16.25");
     expect(steps(report)).toEqual([
-      [2, 2020, "capital_gain", "234.09", false],
+      [2, 2020, "capital_gain", "146.02", false],
       [2, 2020, "movable_capital", "16.25", true],
     ]);
-    expect(carried(report.compensation.pending)).toEqual([[2020, "capital_gain", "-549.66", 2024]]);
+    expect(carried(report.compensation.pending)).toEqual([[2020, "capital_gain", "-637.73", 2024]]);
     expect(eur(report.base_eur)).toBe("48.75");
     // The Spanish withholding of the interest; the dividend had none in Spain.
     expect(eur(report.withholdings.total_eur)).toBe("7.6");
@@ -157,9 +176,14 @@ describe("the hand-checked ledger, year by year", () => {
       ["SX1", "stk_eu", "-6.67", false],
       ["RS", "stk_eu", "-4", false],
     ]);
-    // #4 the other way: (1,198 − 1,002) USD = 196 USD / 1.10 = 178.18, 75.91 less.
-    expect(eur(doubtful(report, "4")?.base_difference_eur)).toBe("-75.91");
-    expect(doubtful(report, "4")?.direction).toBe("conservative");
+    // #4 the other way, leg by leg: U3 254.09, and its dollars would cost
+    // 835.00 + 254.09, so its cover would give 817.50 − 891.82 = −74.32.
+    // 179.77 against 166.02: 13.75 more gains, which 2020 absorbs, so the base
+    // does not move and 13.75 less of 2020 is carried.
+    expect(eur(doubtful(report, "4")?.base_difference_eur)).toBe("0");
+    expect(eur(doubtful(report, "4")?.pending_difference_eur)).toBe("13.75");
+    // Carrying more loss is the reading that favours the taxpayer.
+    expect(doubtful(report, "4")?.direction).toBe("aggressive");
     // Only 2020 has losses to carry: no other year competes with it.
     expect(eur(doubtful(report, "22")?.exposure_eur)).toBe("0");
   });
@@ -184,7 +208,7 @@ describe("the hand-checked ledger, year by year", () => {
     // for later; 2020 has no room left this year.
     expect(steps(report)).toEqual([[1, 2022, "movable_capital", "12.5", true]]);
     expect(carried(report.compensation.pending)).toEqual([
-      [2020, "capital_gain", "-549.66", 2024],
+      [2020, "capital_gain", "-637.73", 2024],
       [2022, "capital_gain", "-94.75", 2026],
     ]);
     expect(eur(report.base_eur)).toBe("37.5");
@@ -225,13 +249,14 @@ describe("the hand-checked ledger, year by year", () => {
     expect(eur(report.capital_gains.gains_eur)).toBe("370");
     expect(eur(report.movable_capital.balance_eur)).toBe("20");
     // The oldest first: 2020 absorbs 370 of gains and 25 % of 20 = 5 of
-    // income; 549.66 − 375 = 174.66 left of 2020, and 2022 gets nothing.
+    // income; 637.73 − 375 = 262.73 left of 2020 (174.66 before spec 029), and
+    // 2022 gets nothing.
     expect(steps(report)).toEqual([
       [2, 2020, "capital_gain", "370", false],
       [2, 2020, "movable_capital", "5", true],
     ]);
     expect(carried(report.compensation.pending)).toEqual([
-      [2020, "capital_gain", "-174.66", 2024],
+      [2020, "capital_gain", "-262.73", 2024],
       [2022, "capital_gain", "-94.75", 2026],
     ]);
     expect(eur(report.base_eur)).toBe("15");
@@ -265,28 +290,38 @@ describe("the hand-checked ledger, year by year", () => {
     const report = reportOf(2024);
     // Y4: 95 against Y3's 90: +5; releases Y2's −20: −15.
     expect(lines(report)).toEqual([["Y4", "5", "-20", "0", "-15"]]);
-    expect(eur(report.capital_gains.balance_eur)).toBe("-15");
+    // The fee is paid with 12.50 of the 217 USD U3 left, which cost
+    // 1,013.18 − 829.66 = 183.52: 10.57 for what is worth 10.00 that day, −0.57.
+    expect(
+      report.capital_gains.currency_lines.map((l) => [
+        nameOf(l.event_id),
+        l.kind,
+        eur(l.gain_eur_rounded),
+      ]),
+    ).toEqual([["FE", "payment", "-0.57"]]);
+    expect(eur(report.capital_gains.balance_eur)).toBe("-15.57");
     // 12.50 USD / 1.25 = 10.00 at the rate of its own day, not at 1.20 or 1.10
     // of the other operations in dollars. Interest 100 − 10 = 90.
     expect(
       report.movable_capital.expenses.map((e) => [nameOf(e.event_id), eur(e.amount_eur_rounded)]),
     ).toEqual([["FE", "-10"]]);
     expect(eur(report.movable_capital.balance_eur)).toBe("90");
-    // 25 % of 90 = 22.50: the year's own −15 first, then 7.50 of 2020.
+    // 25 % of 90 = 22.50: the year's own −15.57 first, then 6.93 of 2020.
     expect(eur(report.compensation.limit_eur.movable_capital)).toBe("22.5");
     expect(steps(report)).toEqual([
-      [1, 2024, "movable_capital", "15", true],
-      [2, 2020, "movable_capital", "7.5", true],
+      [1, 2024, "movable_capital", "15.57", true],
+      [2, 2020, "movable_capital", "6.93", true],
     ]);
-    // 174.66 − 7.50 = 167.16 of 2020 expires with the year; 2022 goes on.
-    expect(carried(report.compensation.expired)).toEqual([[2020, "capital_gain", "-167.16", 2024]]);
+    // 262.73 − 6.93 = 255.80 of 2020 expires with the year (167.16 before spec
+    // 029); 2022 goes on.
+    expect(carried(report.compensation.expired)).toEqual([[2020, "capital_gain", "-255.8", 2024]]);
     expect(carried(report.compensation.pending)).toEqual([[2022, "capital_gain", "-94.75", 2026]]);
-    // 90 − 15 − 7.50.
+    // 90 − 15.57 − 6.93.
     expect(eur(report.base_eur)).toBe("67.5");
     expect(eur(report.withholdings.total_eur)).toBe("19");
     // Nobody sells the 40 fund_x of 2023-02-11: what FX deferred waits on them.
     expect(pending(report)).toEqual([["FX", "fund_x", "-35.25", false]]);
-    // 2020 used 7.50 and 2022 nothing, and 2020 expires: the order is at stake.
-    expect(eur(doubtful(report, "22")?.exposure_eur)).toBe("7.5");
+    // 2020 used 6.93 and 2022 nothing, and 2020 expires: the order is at stake.
+    expect(eur(doubtful(report, "22")?.exposure_eur)).toBe("6.93");
   });
 });

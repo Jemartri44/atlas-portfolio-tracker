@@ -12,6 +12,7 @@ import type { Ulid } from "../ids/ulid.js";
 import { Decimal } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
 import { EUR, Money } from "../money/money.js";
+import { type CurrencyGain, type CurrencyLot, currencyLots } from "../projections/currency-lots.js";
 import { swapValuation } from "../projections/operations.js";
 import type {
   FiscalLot,
@@ -36,6 +37,7 @@ import { type IncomeCategory, incomeCategoryOf, type Settings } from "../setting
 import { type CriterionId, categoryCriterion, sortCriteria } from "./criteria.js";
 import type {
   Converted,
+  CurrencyLine,
   DeferralLine,
   ExpenseLine,
   IncomeLine,
@@ -358,8 +360,11 @@ export const transmissionLine = (ctx: LineContext, outcome: WashSaleOutcome): Tr
   if (facts.event_type !== "forced_sale") {
     criteria.add("1");
   }
-  if (facts.currency !== EUR) {
+  if (facts.currency !== EUR || gain.fx_method !== undefined) {
     criteria.add("4");
+  }
+  if (gain.fx_method === "mixed") {
+    criteria.add("4:mixed_currency");
   }
   // #5 is about which day's rate converts an amount: in euros nothing is converted.
   if (facts.currency !== EUR && facts.fx_rate_date < gain.fiscal_date) {
@@ -453,28 +458,38 @@ export const transmissionLine = (ctx: LineContext, outcome: WashSaleOutcome): Tr
   };
 };
 
-/**
- * The same gain computed first in the currency of the operation and converted
- * at the rate of the disposal: the alternative method of criterion #4. Only
- * computable when every lot traces back to an acquisition in that currency;
- * otherwise `undefined`. The cost of a lot in currency is its root's, in the
- * proportion its euro cost keeps of the root's (cost only ever splits
- * proportionally: transfers, conversions and carve-outs keep ratios).
- */
-export const currencyFirstGain = (line: TransmissionLine): Money | undefined => {
-  const currency = line.proceeds.amount.currency;
-  let cost = Money.zero(currency);
-  for (const lot of line.lots) {
-    if (lot.root.cost.amount.currency !== currency || lot.root.cost.eur.isZero()) {
-      return undefined;
-    }
-    cost = cost.add(lot.root.cost.amount.mul(lot.cost_eur.amount).div(lot.root.cost.eur.amount));
-  }
-  return FxRate.of(
-    Decimal.parse(line.proceeds.fx_rate),
-    currency,
-    line.proceeds.fx_rate_date,
-  ).toEur(line.proceeds.amount.sub(cost));
+/** The criteria of an exchange difference: the method, the order of the lots, and what is not applied. */
+const currencyCriteria = (gain: CurrencyGain): CriterionId[] =>
+  sortCriteria([
+    "4",
+    "6",
+    ...(gain.kind === "auto_conversion"
+      ? (["4:auto_conversion"] as const)
+      : (["4:currency_fifo"] as const)),
+    ...(gain.gain_eur.isNegative() ? (["4:currency_wash_sale"] as const) : []),
+  ]);
+
+export const currencyLine = (ctx: LineContext, gain: CurrencyGain): CurrencyLine => {
+  const lots = new Map(currencyLots(ctx.state).map((lot) => [lot.id, lot]));
+  return {
+    event_id: gain.event_id,
+    kind: gain.kind,
+    account_id: gain.account_id,
+    currency: gain.currency,
+    fiscal_date: gain.fiscal_date,
+    amount: gain.amount,
+    proceeds_eur: gain.proceeds_eur,
+    cost_eur: gain.cost_eur,
+    gain_eur: gain.gain_eur,
+    gain_eur_rounded: gain.gain_eur_rounded,
+    lots: gain.by_lot.map((slice) => ({
+      lot_id: slice.lot_id,
+      acquisition_date: (lots.get(slice.lot_id) as CurrencyLot).acquisition_date,
+      amount: slice.amount,
+      cost_eur: slice.cost_eur,
+    })),
+    criteria: currencyCriteria(gain),
+  };
 };
 
 const incomeCriteria = (income: InvestmentIncome, rateDate: CivilDate): CriterionId[] =>

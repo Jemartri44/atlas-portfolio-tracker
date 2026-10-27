@@ -57,8 +57,11 @@ export type PartialReason =
 export interface BoxRow {
   event_id: Ulid;
   account_id: AccountId;
+  /** The currency code for an exchange difference, which has no asset. */
   asset_id: AssetId;
   fiscal_date: CivilDate;
+  /** Present on the row of an exchange difference: the currency disposed of (spec 029). */
+  currency?: string;
 }
 
 /** One thing the user reads off here and types into the form. */

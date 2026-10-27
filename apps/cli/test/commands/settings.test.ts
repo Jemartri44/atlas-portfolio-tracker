@@ -513,6 +513,16 @@ describe("atlas settings set: assignments keyed by asset type", () => {
     expect((await h.store.load()).events).toHaveLength(seed().length);
   });
 
+  it("records the method of #4, and refuses one the enumeration does not have", async () => {
+    const h = harness({ events: seed(), confirm: true });
+    expect(await h.exec(["settings", "set", "--fx-gain-method", "each_leg"])).toBe(0);
+    const { events } = await h.store.load();
+    const last = events[events.length - 1] as unknown as { settings: Record<string, unknown> };
+    expect(last.settings.fx_gain_method).toBe("each_leg");
+    expect(await h.exec(["settings", "set", "--fx-gain-method", "average"])).toBe(1);
+    expect((await h.store.load()).events).toHaveLength(events.length);
+  });
+
   it("rejects a category the enumeration does not have", async () => {
     const h = harness({ events: seed(), confirm: true });
     expect(await h.exec(["settings", "set", "--income-category", "etc=rendimiento"])).toBe(1);

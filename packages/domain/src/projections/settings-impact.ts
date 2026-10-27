@@ -63,10 +63,14 @@ export interface FiscalYearImpact {
   after: Money;
 }
 
-/** Realized gains per tax year, rounded to cents once per operation (ADR-0005). */
+/**
+ * Realized gains per tax year, rounded to cents once per operation (ADR-0005):
+ * those of the securities and the exchange differences of the currency (spec 029).
+ */
 const gainsByYear = (events: readonly LedgerEvent[], settings: Settings): Map<number, Money> => {
   const totals = new Map<number, Money>();
-  for (const gain of projectLedger(events, { settings, collectErrors: true }).gains) {
+  const state = projectLedger(events, { settings, collectErrors: true });
+  for (const gain of [...state.gains, ...state.currencyGains]) {
     const year = yearOf(gain.fiscal_date);
     totals.set(year, (totals.get(year) ?? Money.zero(EUR)).add(gain.gain_eur_rounded));
   }

@@ -101,13 +101,14 @@ describe("theses: lifecycle and derived metrics", () => {
     ]);
     expect(view?.sells).toHaveLength(1);
     expect(view?.sells[0]?.event_id).toBe(sell.id);
-    expect(view?.sells[0]?.gain_eur?.amount.toString()).toBe("89.090909091");
+    // First in dollars: 599 − 501 = 98 $, at 1,1 (criterion #4).
+    expect(view?.sells[0]?.gain_eur?.amount.toString()).toBe("89.0909090909");
     expect(view?.sells[0]?.amount_eur.amount.toString()).toBe("544.5454545455");
     expect(view?.planned_size_eur.amount.toString()).toBe("500");
     expect(view?.quantity_bought.toString()).toBe("10");
     expect(view?.quantity_sold.toString()).toBe("10");
     expect(view?.invested_eur.amount.toString()).toBe("455.4545454545");
-    expect(view?.result_eur.amount.toString()).toBe("89.090909091");
+    expect(view?.result_eur.amount.toString()).toBe("89.0909090909");
     expect(view?.result_eur_rounded.amount.toString()).toBe("89.09");
     expect(view?.fees_eur.amount.toString()).toBe("1.8181818182");
     expect(view?.position.toString()).toBe("0");

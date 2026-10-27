@@ -159,6 +159,43 @@ const disposalRows = (
           },
     );
   }
+  // An exchange difference is the transmission of "otros elementos
+  // patrimoniales": its box is not checked yet, so it is shown by concept.
+  for (const line of report.capital_gains.currency_lines) {
+    const gain = !line.gain_eur.isNegative();
+    const value: Partial<Record<RowFieldId, Money>> = {
+      transmission: line.proceeds_eur,
+      acquisition: line.cost_eur,
+      ...(gain ? { gain: line.gain_eur } : { loss: line.gain_eur, loss_imputable: line.gain_eur }),
+    };
+    const row: BoxRow = {
+      event_id: line.event_id,
+      account_id: line.account_id,
+      asset_id: line.currency,
+      fiscal_date: line.fiscal_date,
+      currency: line.currency,
+    };
+    for (const field of SECTION_FIELDS.other) {
+      const amount = value[field];
+      if (amount === undefined && field !== "name") {
+        continue;
+      }
+      drafts.push({
+        concept: rowConcept("other", field),
+        section: "other",
+        row,
+        criteria: line.criteria,
+        ...(field === "name" ? { text: `Divisa ${line.currency}` } : { exact: amount as Money }),
+      });
+    }
+    const current = totals.get("other") ?? { gains: zero(), losses: zero() };
+    totals.set(
+      "other",
+      gain
+        ? { ...current, gains: current.gains.add(line.gain_eur_rounded) }
+        : { ...current, losses: current.losses.add(line.gain_eur_rounded) },
+    );
+  }
   return { drafts, totals };
 };
 
@@ -476,11 +513,14 @@ export const draftEntries = (report: TaxYearReport, chain: ChainCore): Draft[] =
   let gains = zero();
   let losses = prior.losses;
   for (const [section, totals] of disposals.totals) {
-    const criteria = union(
-      report.capital_gains.lines
+    const criteria = union([
+      ...report.capital_gains.lines
         .filter((line) => sectionOf(line) === section)
         .map((line) => line.criteria),
-    );
+      ...(section === "other"
+        ? report.capital_gains.currency_lines.map((line) => line.criteria)
+        : []),
+    ]);
     drafts.push(
       { concept: `gp.${section}.gains`, section, exact: totals.gains, criteria },
       { concept: `gp.${section}.losses`, section, exact: totals.losses, criteria },
@@ -489,7 +529,10 @@ export const draftEntries = (report: TaxYearReport, chain: ChainCore): Draft[] =
     losses = losses.add(totals.losses);
   }
   drafts.push(...prior.drafts);
-  const allCriteria = union(report.capital_gains.lines.map((line) => line.criteria));
+  const allCriteria = union([
+    ...report.capital_gains.lines.map((line) => line.criteria),
+    ...report.capital_gains.currency_lines.map((line) => line.criteria),
+  ]);
   if (prior.drafts.length > 0) {
     drafts.push({ concept: "gp.prior_years.losses", exact: prior.losses, criteria: allCriteria });
   }

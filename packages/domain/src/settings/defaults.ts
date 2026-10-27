@@ -72,6 +72,14 @@ export interface Settings {
    */
   wash_sale_transfer_counts?: boolean;
   /**
+   * How the gain of a disposal in a foreign currency is computed (fiscal
+   * criterion #4): `currency_first` subtracts cost from proceeds in that
+   * currency and converts the difference at the rate of the disposal (DGT
+   * V1740-17, V2422-20, V0152-26); `each_leg` converts each leg at the rate of
+   * its own day. Absent means `currency_first`; read through `fxGainMethodOf`.
+   */
+  fx_gain_method?: FxGainMethod;
+  /**
    * Share, in percent, of the positive balance of one category of the savings
    * base (capital gains, movable capital income) that a negative balance of the
    * other can offset (art. 49 LIRPF; fiscal criteria #10 and #22). It has been
@@ -294,6 +302,15 @@ export const rentaSeasonOf = (
   start: settings.renta_season_start ?? DEFAULT_RENTA_SEASON.start,
   end: settings.renta_season_end ?? DEFAULT_RENTA_SEASON.end,
 });
+
+export const FX_GAIN_METHODS = ["currency_first", "each_leg"] as const;
+export type FxGainMethod = (typeof FX_GAIN_METHODS)[number];
+export const DEFAULT_FX_GAIN_METHOD: FxGainMethod = "currency_first";
+
+/** The method of criterion #4 in force: what the settings say, or its documented default. */
+export const fxGainMethodOf = (settings: {
+  fx_gain_method?: FxGainMethod | undefined;
+}): FxGainMethod => settings.fx_gain_method ?? DEFAULT_FX_GAIN_METHOD;
 
 /** The residence the engine assumes when the settings say none. */
 export const DEFAULT_TAX_RESIDENCE = "ES";
