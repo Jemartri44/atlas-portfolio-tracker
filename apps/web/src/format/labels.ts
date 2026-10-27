@@ -118,8 +118,8 @@ export const FIELD_LABELS: Record<string, string> = {
   quantity_in: "Cantidad que entra",
   nav_out: "Valor liquidativo de salida",
   nav_in: "Valor liquidativo de entrada",
-  value_date_out: "Fecha valor de salida",
-  value_date_in: "Fecha valor de entrada",
+  value_date_out: "Fecha del valor liquidativo de salida",
+  value_date_in: "Fecha del valor liquidativo de entrada",
   // Currency exchange
   sold_amount: "Importe vendido",
   sold_currency: "Divisa vendida",

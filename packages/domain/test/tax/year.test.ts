@@ -185,9 +185,8 @@ describe("categories of income (ADR-0021)", () => {
       return { report: reportOf(b.build(), 2027), etc, etp };
     };
     // Applied as the document says. Neither is certain: V0267-25 reasons from
-    // "it is a debt security", which a physical-gold ETC with a right to
-    // delivery does not obviously satisfy, and there is no ruling at all on a
-    // crypto ETP.
+    // "it is a debt security", which a crypto ETP is too, but no ruling names
+    // either a physical-gold ETC or a crypto ETP.
     const documented = ledger("movable_capital");
     expect(lineOf(documented.report, documented.etc.id).criteria).toContain("24:etc");
     expect(lineOf(documented.report, documented.etp.id).criteria).toContain("24:etp");
@@ -197,7 +196,7 @@ describe("categories of income (ADR-0021)", () => {
         .map((item) => [item.criterion, item.certainty, item.documented_risk]),
     ).toEqual([
       ["24:etc", "medium", "both"],
-      ["24:etp", "low", "both"],
+      ["24:etp", "medium", "both"],
     ]);
     // Applied the other way round: the other two variants, and the risk of the
     // four runs **both** ways, because article 49.1 is symmetric.
