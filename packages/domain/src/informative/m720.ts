@@ -23,6 +23,7 @@ import { DomainError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
 import { zero } from "../money/eur.js";
 import { EUR, Money } from "../money/money.js";
+import type { Quantity } from "../money/quantity.js";
 import type { Filing } from "../projections/filings.js";
 import { filingInForce } from "../projections/filings.js";
 import { settingsAt } from "../projections/settings-at.js";
@@ -164,22 +165,36 @@ const declaredOf = (
   category: FilingCategory,
   heldBefore: Set<string>,
   heldNow: Set<string>,
+  quantityBefore: Map<string, Quantity>,
+  quantityNow: Map<string, Quantity>,
 ): Declared | undefined => {
   if (filing === undefined) {
     return undefined;
   }
   const figures = filing.declared as FiledInformativeFigures;
   const block = figures[category];
-  const extinct = (figures.items as FiledItem[])
-    .filter((item) => item.category === category)
+  const listed = (figures.items as FiledItem[]).filter((item) => item.category === category);
+  const named = (item: FiledItem): { account_id: AccountId; asset_id?: AssetId } => ({
+    account_id: item.account_id,
+    ...(item.asset_id === undefined ? {} : { asset_id: item.asset_id }),
+  });
+  const extinct = listed
     .filter((item) => {
       const key = keyOf(item.account_id, item.asset_id);
       return heldBefore.has(key) && !heldNow.has(key);
     })
-    .map((item) => ({
-      account_id: item.account_id,
-      ...(item.asset_id === undefined ? {} : { asset_id: item.asset_id }),
-    }));
+    .map(named);
+  // A partial sale of something declared is a partial loss of ownership: it
+  // obliges like the full one. Only quantities of assets have it; cash has no
+  // quantity and keeps its own rule.
+  const reduced = listed.flatMap((item) => {
+    const key = keyOf(item.account_id, item.asset_id);
+    const was = quantityBefore.get(key);
+    const now = quantityNow.get(key);
+    return item.asset_id !== undefined && was !== undefined && now?.lt(was)
+      ? [{ account_id: item.account_id, asset_id: item.asset_id }]
+      : [];
+  });
   return {
     year: filing.tax_year,
     ...(block === undefined
@@ -191,8 +206,18 @@ const declaredOf = (
             : {}),
         }),
     extinct,
+    reduced,
   };
 };
+
+/** The quantity held of each security or crypto asset, by account and asset. */
+const quantitiesOf = (holdings: ForeignHoldings): Map<string, Quantity> =>
+  new Map(
+    [...holdings.securities, ...holdings.crypto].map((position) => [
+      keyOf(position.account_id, position.asset_id),
+      position.quantity,
+    ]),
+  );
 
 /** The assets of a year that a later return can find missing: cash counts while the account is open. */
 const heldKeys = (holdings: ForeignHoldings): Set<string> => {
@@ -328,6 +353,8 @@ export const informativeReturn = (
   const before = previous === undefined ? undefined : foreignHoldingsAt(events, yearEnd(year - 1));
   const heldNow = heldKeys(holdings);
   const heldBefore = before === undefined ? new Set<string>() : heldKeys(before);
+  const quantityNow = quantitiesOf(holdings);
+  const quantityBefore = before === undefined ? new Map<string, Quantity>() : quantitiesOf(before);
   const averages = quarterAverages(events, year, holdings.accounts);
   const categories = CATEGORIES[model].map((category) => {
     const items =
@@ -338,7 +365,7 @@ export const informativeReturn = (
       category,
       items,
       limits,
-      declaredOf(previous, category, heldBefore, heldNow),
+      declaredOf(previous, category, heldBefore, heldNow, quantityBefore, quantityNow),
     );
     return closed && resident
       ? decided
