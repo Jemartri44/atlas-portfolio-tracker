@@ -174,7 +174,7 @@ Validación (ADR-0009): un `asset_id` no puede existir en los dos libros. Un cam
 **`settings_changed`**
 `settings`: objeto completo con todos los parámetros de `business-rules.md` §7. La proyección `settingsAt(date)` devuelve el último `settings_changed` con `recorded_at ≤ date`.
 
-**Al leer**, los mapas por tipo de activo son tolerantes: un tipo ausente toma su valor por defecto documentado (ADR-0018). **Al escribir**, se materializan (ADR-0022): la línea que se escribe fija los tres mapas completos (`fiscal_date_rule`, `wash_sale_window`, `income_category`) y los escalares con valor por defecto documentado: `wash_sale_transfer_counts`, `savings_offset_limit_pct`, `loss_carryforward_years`, los seis del 720 y del 721 (`model_720_threshold_eur`, `model_720_increase_eur`, `model_720_alert_threshold_eur` y sus tres equivalentes del 721) y las dos fechas de la campaña de la Renta (`renta_season_start`, `renta_season_end`). Así un ejercicio calculado hoy se reproduce años después aunque el valor por defecto del código cambie. `treaty_withholding_pct` no se materializa: no tiene valor por defecto, y no tenerlo es la decisión.
+**Al leer**, los mapas por tipo de activo son tolerantes: un tipo ausente toma su valor por defecto documentado (ADR-0018). **Al escribir**, se materializan (ADR-0022): la línea que se escribe fija los tres mapas completos (`fiscal_date_rule`, `wash_sale_window`, `income_category`) y los escalares con valor por defecto documentado: `wash_sale_transfer_counts`, `fx_gain_method`, `savings_offset_limit_pct`, `loss_carryforward_years`, los seis del 720 y del 721 (`model_720_threshold_eur`, `model_720_increase_eur`, `model_720_alert_threshold_eur` y sus tres equivalentes del 721) y las dos fechas de la campaña de la Renta (`renta_season_start`, `renta_season_end`). Así un ejercicio calculado hoy se reproduce años después aunque el valor por defecto del código cambie. `treaty_withholding_pct` no se materializa: no tiene valor por defecto, y no tenerlo es la decisión.
 
 Un valor desconocido en cualquiera de los tres mapas tiene **código de error propio** —`invalid_fiscal_date_rule`, `invalid_wash_sale_window`, `invalid_income_category`, todos con el tipo de activo y el valor recibido—, porque cada uno mueve una cosa distinta y el mensaje tiene que poder decirla: el ejercicio de cada operación, la ventana de la regla de recompra o la casilla de la declaración en la que acaba una transmisión. Que el mapa **falte**, o que no sea un objeto, sigue siendo `invalid_settings`, como cualquier otro parámetro mal escrito.
 
@@ -422,7 +422,7 @@ El resultado de cada ejercicio cerrado tiene **tres desenlaces**, en una unión 
 
 Para cada `asset_id`, los lotes abiertos se ordenan por (`acquisition_date`, posición en el fichero del evento origen). Si el evento origen es una corrección, la posición es la de **la raíz de su cadena** (§6.3): el lote corregido no salta detrás de los demás lotes de su fecha, y una venta consume el mismo lote que antes de la corrección. Una transmisión de cantidad `q` consume lotes en ese orden, partiendo el último si hace falta. La cuenta donde ocurre la transmisión no influye en qué lotes se consumen; sí influye en `physicalPositions`. Las transmisiones se aplican en orden cronológico (§7.1), de modo que una compra registrada tarde con fecha anterior sí es consumida por una venta posterior en fecha aunque anterior en registro.
 
-Coste de adquisición de un lote: `((amount ?? quantity × unit_price) + fee) / fx_rate`, en EUR, exacto. Valor de transmisión: `((amount ?? quantity × unit_price) − fee) / fx_rate`. Fechas: `acquisition_date` y la fecha de transmisión son la `fiscal_date` de cada evento (ADR-0013). Ganancia por lote consumido = valor de transmisión proporcional − coste del lote proporcional. Se suma por operación y se redondea a céntimos una vez (ADR-0005).
+Coste de adquisición de un lote: `((amount ?? quantity × unit_price) + fee) / fx_rate`, en EUR, exacto. Valor de transmisión: `((amount ?? quantity × unit_price) − fee) / fx_rate`. Fechas: `acquisition_date` y la fecha de transmisión son la `fiscal_date` de cada evento (ADR-0013). Ganancia por lote consumido = valor de transmisión proporcional − coste del lote proporcional. Se suma por operación y se redondea a céntimos una vez (ADR-0005). **En divisa** (`Settings.fx_gain_method = currency_first`, por defecto desde la 029, criterio #4): si el lote se adquirió en la misma divisa que la transmisión, la ganancia es (transmisión proporcional en divisa − `cost` del lote) al tipo de la transmisión, y el valor de adquisición en euros, el que hace que transmisión menos adquisición dé esa ganancia; los dos, al tipo de la transmisión. Si el lote se adquirió en otra divisa, cada pata a su tipo (`4:mixed_currency`). Con `each_leg`, siempre cada pata a su tipo. Cada lote guarda, además de `cost_eur`, su coste en la divisa de la adquisición (`cost`) y lo que costó en euros la divisa gastada en él (`funding_eur`), y los tres se reparten igual en consumos, traspasos, canjes y escisiones (§8.7).
 
 ### 8.2 Lotes procedentes de traspaso
 
@@ -532,3 +532,29 @@ Las ocho primeras son **compatibles** en el sentido de ADR-0018 (campos opcional
 | `swap` | Transmisión más adquisición, valorada por el art. 37.1.h; la comisión resta de lo transmitido (criterio #17) |
 | `neutrality_regime` | No decide nada; un `convert` sin régimen escrito sale en los dudosos (#7 y #13) y un régimen que contradice lo registrado sale como nota |
 | `fx_rate_date` | Convierte cada operación a su fecha fiscal, sin la cual nada de lo anterior es reproducible |
+
+### 8.7 Lotes de divisa (spec 029, ADR-0036)
+
+La divisa extranjera que se tiene es un elemento patrimonial con su coste en euros. Sus lotes son **una proyección** (`currency_lots` en la instantánea), sin campos nuevos en el libro: salen de importes, divisas, tipos y fechas que ya están en los eventos. Hay **un FIFO por divisa a través de todas las cuentas**, en el orden de la segunda pasada (§7.1) (`4:currency_fifo`).
+
+| Entra divisa | Coste en euros |
+|---|---|
+| `fx_exchange` desde euros | los euros entregados, más la comisión si es en euros |
+| `fx_exchange` desde otra divisa | el coste de los lotes entregados: no imputa nada (V2466-08) |
+| `cash_deposit` | `amount / fx_rate` |
+| `dividend`, `interest` | el neto, al tipo del evento |
+| `sell`, venta forzosa | `funding_eur` de los lotes vendidos + la ganancia en euros − la retención en euros |
+
+| Sale divisa | Qué se imputa (`currency_gains`) |
+|---|---|
+| `fx_exchange` a euros | `conversion`: euros recibidos, menos la comisión en euros, − coste de los lotes |
+| `standalone_fee` | `payment`: `amount / fx_rate` − coste de los lotes |
+| `buy`, comisión de un `swap` | nada: el coste pasa al `funding_eur` del lote del valor |
+| `fx_exchange` a otra divisa | nada: el coste pasa a la divisa recibida |
+| `cash_withdrawal` | nada: sale a su coste (nota `tax_currency_withdrawn`) |
+
+**Divisa gastada sin tenerla** (saldo negativo): lo que los lotes no cubren abre un lote negativo, valorado al tipo del BCE de ese día, y la siguiente entrada lo cubre primero; la diferencia entre lo que valía al gastarse y lo que cuesta la entrada se imputa entonces (`cover`). Así **los lotes de una divisa suman siempre su saldo en todas las cuentas**, y nunca hay a la vez lotes positivos y negativos.
+
+**Conversión del bróker** (`broker_settled_eur` presente, ADR-0030 y ADR-0036): no toca los lotes. Una compra se financia con esos euros. Una venta, un dividendo o un interés imputan ese día los euros liquidados menos el coste de la divisa, y una comisión, su valor al tipo del BCE menos los euros cobrados (`auto_conversion`). El cuadre de lotes y saldos descuenta esas operaciones. Abierto hasta ver un extracto de IBKR.
+
+Cada imputación es una ganancia o pérdida patrimonial de la base del ahorro del año de su fecha, redondeada una vez (ADR-0005), sin regla de recompra (`4:currency_wash_sale`).
