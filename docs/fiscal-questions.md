@@ -149,6 +149,8 @@ Ninguno está resuelto. Se recogen con el argumento en contra para que la decisi
 
 **#16 — Lo que la aplicación no puede calcular.** El límite del tipo medio efectivo exige conocer la base liquidable del ahorro completa, que la aplicación no ve. Y el exceso no deducible **se pierde**: en IRPF no hay arrastre.
 
+**#16 — Presentación (auditoría del 2026-10-27).** La cifra que el borrador da para copiar es el impuesto **ya limitado al convenio** (DGT V0080-20, leída en PETETE); la retención entera queda como detalle, y el exceso se reclama en origen. Sin tipo de convenio, vacío y no 0 €. Si fallara, se pagaría de menos. Sugerencias, nunca aplicadas: EE. UU. 15 % (BOE-A-1990-30940, art. 10.2.b) e Irlanda 0 % (BOE-A-1994-28597, art. 10.1.c), releídos en el BOE el 2026-10-27.
+
 ---
 
 ## Por qué buscar las recompras por `asset_id` es correcto
