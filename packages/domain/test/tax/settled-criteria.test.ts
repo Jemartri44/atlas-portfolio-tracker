@@ -78,8 +78,10 @@ describe("the criteria the report separates", () => {
     // nothing homogeneous is left to carry more: the other reading of #18
     // changes not a cent. That is a result, not an absence, and hiding it is
     // what filtering by amount would do.
+    // Two purchases: a single one in the window is not a repurchase at all.
     const b = taxBuilder(HAND_SETTINGS);
-    buy(b, "stock_s", "2027-03-01", "10", "100");
+    buy(b, "stock_s", "2027-03-01", "5", "100");
+    buy(b, "stock_s", "2027-03-02", "5", "100");
     const loss = sell(b, "stock_s", "2027-04-01", "10", "90");
     const report = reportOf(b.build(), 2027);
     expect(report.capital_gains.lines[0]?.event_id).toBe(loss.id);

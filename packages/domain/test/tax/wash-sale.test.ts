@@ -70,6 +70,79 @@ describe("the window, counted date to date, at its four edges", () => {
   });
 });
 
+describe("the single-purchase exception (DGT V3282-18, Manual de Renta 2025)", () => {
+  // Sale of 5 at 80 on 2027-03-15 against a cost of 100: own result −100.
+  const cases: [string, string, [string, string][], string, string][] = [
+    [
+      "a single purchase in the window is what is left, not a repurchase",
+      "stock_s",
+      [["2027-03-01", "10"]],
+      "-100",
+      "0",
+    ],
+    ["a fund subscription alone in the window", "fund_f", [["2027-03-01", "10"]], "-100", "0"],
+    [
+      "an ETC as movable capital follows the same reading",
+      "etc_e",
+      [["2027-03-01", "10"]],
+      "-100",
+      "0",
+    ],
+    [
+      "two purchases in the window: no exception",
+      "stock_s",
+      [
+        ["2027-03-01", "5"],
+        ["2027-03-05", "5"],
+      ],
+      "-100",
+      "-100",
+    ],
+    [
+      "a holding at the start of the window: no exception",
+      "stock_s",
+      [
+        ["2027-01-05", "5"],
+        ["2027-03-01", "5"],
+      ],
+      "-100",
+      "-100",
+    ],
+    [
+      "a purchase after the sale still defers",
+      "stock_s",
+      [
+        ["2027-03-01", "10"],
+        ["2027-03-20", "5"],
+      ],
+      "-100",
+      "-100",
+    ],
+    [
+      "crypto looks only forward: the same-day purchase keeps deferring",
+      "coin_c",
+      [["2027-03-15", "10"]],
+      "-100",
+      "-100",
+    ],
+  ];
+
+  it.each(cases)("%s", (_name, asset, buys, own, deferred) => {
+    const b = taxBuilder();
+    // Purchases before the sale in the file go first; one dated after goes after it.
+    for (const [date, quantity] of buys.filter(([date]) => date <= "2027-03-15")) {
+      buy(b, asset, date, quantity, "100");
+    }
+    const loss = sell(b, asset, "2027-03-15", "5", "80");
+    for (const [date, quantity] of buys.filter(([date]) => date > "2027-03-15")) {
+      buy(b, asset, date, quantity, "80");
+    }
+    const line = lineOf(reportOf(b.build(), 2027), loss.id);
+    expect(text(line.own_eur)).toBe(own);
+    expect(text(line.deferred_eur)).toBe(deferred);
+  });
+});
+
 describe("mandatory edge cases", () => {
   it("several lots with the same date: FIFO by position, and the deferral too", () => {
     const b = taxBuilder();
