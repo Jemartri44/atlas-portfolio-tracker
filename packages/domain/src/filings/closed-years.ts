@@ -34,6 +34,7 @@ import {
 } from "../schema/events.js";
 import { DEFAULT_FISCAL_DATE_RULE, rentaSeasonOf, type Settings } from "../settings/settings.js";
 import { chainFigures, isInvalid, isUnsupported, taxChain, tryReading } from "../tax/chain.js";
+import { walkCurrencyWashSales } from "../tax/currency-wash-sale.js";
 import { type ClosedYear, closedYearsTouched, earliestReached } from "./touched.js";
 
 /** One reading of the ledger: the events, and the settings to read them with. */
@@ -129,7 +130,7 @@ export type ClosedYearSupplementary =
       after_period_year?: number;
     };
 
-/** The dates of the acquisitions the write adds in a year after `year`, earliest first. */
+/** The dates of the acquisitions of assets the write adds in a year after `year`. */
 const laterAcquisitions = (
   before: readonly LedgerEvent[],
   after: readonly LedgerEvent[],
@@ -149,9 +150,28 @@ const laterAcquisitions = (
           return [];
       }
     })
-    .filter((date) => Number(date.slice(0, 4)) > year)
-    .sort();
+    .filter((date) => Number(date.slice(0, 4)) > year);
   return dates;
+};
+
+/**
+ * The dates of the currency the write adds in a year after `year` that defers
+ * a loss on converting or paying with it — letter e) of art. 33.5 (V1613-25),
+ * so art. 73.2 too. What counts as acquiring the currency again is the
+ * engine's own reading (`walkCurrencyWashSales`), never decided again here.
+ */
+const laterCurrencyAcquisitions = (
+  before: readonly LedgerEvent[],
+  state: LedgerState,
+  year: number,
+  today: CivilDate,
+): CivilDate[] => {
+  const known = new Set(before.map((event) => event.id));
+  return walkCurrencyWashSales(state, today)
+    .outcomes.flatMap((outcome) => outcome.reacquired)
+    .filter((line) => !known.has(line.event_id))
+    .map((line) => line.fiscal_date)
+    .filter((date) => Number(date.slice(0, 4)) > year);
 };
 
 // A later acquisition can only move a filed year one way: by deferring a loss
@@ -378,7 +398,12 @@ export const closedYearImpact = (
         entry.model,
         comparison,
         entry.year,
-        byDate ? [] : laterAcquisitions(before.events, after.events, entry.year),
+        byDate
+          ? []
+          : [
+              ...laterAcquisitions(before.events, after.events, entry.year),
+              ...laterCurrencyAcquisitions(before.events, state, entry.year, today),
+            ].sort(),
         rentaSeasonOf(settingsOf(after) ?? {}).end,
       ),
     });

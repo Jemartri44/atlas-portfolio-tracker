@@ -191,6 +191,50 @@ describe("what a change does to a year already filed", () => {
     });
   });
 
+  // Dollars converted at a loss on 01/10/2027 and the Renta of 2027 filed with
+  // it; the currency acquired again the day given (art. 33.5.e, V1613-25).
+  const currencyRepurchase = (bought: string) => {
+    const b = taxBuilder();
+    const fx = (date: string, sold: [string, string], got: [string, string], rate: string) =>
+      b.fx({
+        account_id: "acc_b",
+        value_date: date,
+        sold_amount: sold[0],
+        sold_currency: sold[1],
+        bought_amount: got[0],
+        bought_currency: got[1],
+        fee: "0",
+        fee_currency: "EUR",
+        ...(got[1] === "USD"
+          ? { fx_rate_bought: rate }
+          : { fx_rate_sold: rate, fx_rate_bought: "1" }),
+        fx_rate_date: date,
+      });
+    fx("2027-01-05", ["1000", "EUR"], ["1000", "USD"], "1");
+    fx("2027-10-01", ["1000", "USD"], ["800", "EUR"], "1.25");
+    fileReturn(b, 2027, "0");
+    const before = b.build();
+    fx(bought, ["800", "EUR"], ["1000", "USD"], "1.25");
+    const [impact] = closedYearImpact({ events: before }, { events: b.build() }, TODAY);
+    return impact;
+  };
+
+  it.each([
+    ["2028-08-03", { within_period: false, after_period_year: 2028 }],
+    ["2028-03-01", { within_period: true }],
+  ])("reads currency acquired again as the repurchase of letter e): %s", (bought, expected) => {
+    const impact = currencyRepurchase(bought);
+    expect(movesOf(impact).map((move) => [move.figure, move.before, move.after])).toEqual([
+      ["deferred", "0", "-200"],
+      ["pending:2027:capital_gain", "-200", "0"],
+    ]);
+    expect(impact?.supplementary).toEqual({
+      kind: "repurchase",
+      filing_deadline: "2028-06-30",
+      ...expected,
+    });
+  });
+
   it("only says a supplementary return is possible when what moves the year is not a later purchase", () => {
     const b = taxBuilder();
     buy(b, "stock_s", "2027-01-11", "10", "100");
