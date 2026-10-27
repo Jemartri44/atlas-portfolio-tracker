@@ -147,6 +147,8 @@ Ninguno está resuelto. Se recogen con el argumento en contra para que la decisi
 
 **#11 — Modelo 721.** El umbral de 50.000 € es del **conjunto** de criptoactivos custodiados por terceros en el extranjero, no por categorías como el 720, y la autocustodia queda fuera. Y el motivo escrito para excluir MyInvestor ("es entidad española") **no es el criterio legal**: lo que cuenta es dónde están situados los bienes, y lo que salva el caso es que en cuenta ómnibus la titular formal es la comercializadora española. Con la regla tal como está escrita, comprar un fondo extranjero en una plataforma extranjera daría la respuesta contraria a la correcta.
 
+**#11 (bis) — Venta parcial en el 720 y el 721.** Volver a presentar también obliga cuando **baja la cantidad** de un bien ya declarado en la última declaración presentada, no solo cuando desaparece entero: la DGT lo trata como pérdida (siquiera parcial) de titularidad en V2643-17 (720) y V0801-18, citada por V1030-25 (721). Lo nunca declarado no obliga. Atlas lo aplica comparando cantidades por cuenta y activo entre el 31/12 anterior y el del ejercicio. **Certeza: alta** (tres consultas vinculantes concordantes). **Si fallara:** no se presentaría una informativa obligatoria; es sanción formal (LGT arts. 198 y 199), no impuesto.
+
 **#16 — Lo que la aplicación no puede calcular.** El límite del tipo medio efectivo exige conocer la base liquidable del ahorro completa, que la aplicación no ve. Y el exceso no deducible **se pierde**: en IRPF no hay arrastre.
 
 ---
