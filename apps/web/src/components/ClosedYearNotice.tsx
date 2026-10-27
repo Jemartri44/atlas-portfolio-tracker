@@ -90,7 +90,7 @@ const notComparedReason = (impact: ClosedYearImpact): ClosedYearNotCompared =>
 const supplementaryText = (impact: ClosedYearImpact): string => {
   const { supplementary } = impact;
   if (supplementary.kind !== "repurchase") {
-    return "Puede que toque presentar una complementaria.";
+    return "Puede que toque presentar una autoliquidación rectificativa.";
   }
   const parts: string[] = [];
   if (supplementary.within_period) {

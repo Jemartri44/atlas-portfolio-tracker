@@ -61,7 +61,7 @@ describe("the supplementary return of a filed Renta", () => {
 
   it("is only possible otherwise", () => {
     expect(shown(impact({ kind: "possible" }))).toContain(
-      "Puede que toque presentar una complementaria.",
+      "Puede que toque presentar una autoliquidación rectificativa.",
     );
   });
 });
