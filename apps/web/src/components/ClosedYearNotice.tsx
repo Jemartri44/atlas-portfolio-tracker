@@ -81,6 +81,12 @@ const comparedMoves = (impact: ClosedYearImpact): readonly MovedFigure[] =>
 const notComparedReason = (impact: ClosedYearImpact): ClosedYearNotCompared =>
   impact.comparison.status === "compared" ? "by_design" : impact.comparison.reason;
 
+/** Compulsory with its deadline after a repurchase (art. 73.2 RIRPF); otherwise only possible. */
+const supplementaryText = (impact: ClosedYearImpact): string =>
+  impact.supplementary.kind === "repurchase"
+    ? `Hay que presentar una complementaria de la Renta de ${impact.year} antes de que acabe el plazo de la Renta de ${impact.supplementary.acquisition_year}, con intereses de demora si la compra es posterior al fin del plazo de la de ${impact.year} (art. 73.2 RIRPF).`
+    : "Puede que toque presentar una complementaria.";
+
 export const ClosedYearNotice = (props: { impacts: readonly ClosedYearImpact[] }): JSX.Element => (
   <For each={props.impacts}>
     {(impact) => (
@@ -121,7 +127,7 @@ export const ClosedYearNotice = (props: { impacts: readonly ClosedYearImpact[] }
               )}
             </For>
           </ul>
-          <p>Puede que toque presentar una complementaria.</p>
+          <p>{supplementaryText(impact)}</p>
         </Show>
       </Notice>
     )}
