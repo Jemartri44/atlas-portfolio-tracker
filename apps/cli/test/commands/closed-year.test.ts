@@ -96,7 +96,7 @@ describe("a write that reaches a filed return", () => {
     );
     expect(text).toContain("afecta a la Renta de 2027, presentada el 2028-06-10");
     expect(text).toContain(
-      "Una compra es anterior al fin del plazo de la Renta de 2027 (2028-06-30) y esa Renta ya está presentada: rectifícala con una autoliquidación rectificativa cuanto antes y, si puedes, dentro de ese plazo, porque presentarla dentro de él es lo que evita presentarla fuera de plazo (no es el caso del art. 73.2 RIRPF).",
+      "Una compra es anterior al fin del plazo de la Renta de 2027 (2028-06-30) y ya está presentada: rectifícala con una autoliquidación rectificativa cuanto antes y, si puedes, dentro de ese plazo, que es lo que evita presentarla fuera de plazo (no es el art. 73.2 RIRPF).",
     );
     expect(text).not.toContain("Puede que toque");
   });
@@ -314,7 +314,7 @@ describe("the rectification text by purchase date", () => {
       "\n",
     );
   const AFTER =
-    "Hay que presentar una autoliquidación rectificativa de la Renta de 2027 (marca la casilla [121]), con intereses de demora, antes de que acabe el plazo de la Renta de 2028 (art. 73.2 RIRPF).";
+    "Hay que presentar una autoliquidación rectificativa de la Renta de 2027 (casilla [121]), con intereses de demora, antes del fin del plazo de la Renta de 2028 (art. 73.2 RIRPF).";
 
   it("cites art. 73.2 with interest and box 121 for a purchase after the period", () => {
     const text = line({ within_period: false, after_period_year: 2028 });

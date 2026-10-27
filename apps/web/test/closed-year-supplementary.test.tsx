@@ -37,7 +37,7 @@ describe("the supplementary return of a filed Renta", () => {
   it("is compulsory, with interest, after a repurchase past the filing period (art. 73.2)", () => {
     const text = repurchase({ within_period: false, after_period_year: 2026 });
     expect(text).toContain(
-      "Hay que presentar una autoliquidación rectificativa de la Renta de 2025 (marca la casilla [121]), con intereses de demora, antes de que acabe el plazo de la Renta de 2026 (art. 73.2 RIRPF).",
+      "Hay que presentar una autoliquidación rectificativa de la Renta de 2025 (casilla [121]), con intereses de demora, antes del fin del plazo de la Renta de 2026 (art. 73.2 RIRPF).",
     );
     expect(text).not.toContain("Puede que toque");
     expect(text).not.toContain("anterior al fin del plazo");
@@ -47,8 +47,8 @@ describe("the supplementary return of a filed Renta", () => {
     const text = repurchase({ within_period: true });
     expect(text).toContain("anterior al fin del plazo de la Renta de 2025 (30/06/2026)");
     expect(text).toContain("autoliquidación rectificativa");
-    expect(text).toContain("no es el caso del art. 73.2 RIRPF");
-    expect(text).toContain("presentarla dentro de él es lo que evita presentarla fuera de plazo");
+    expect(text).toContain("no es el art. 73.2 RIRPF");
+    expect(text).toContain("que es lo que evita presentarla fuera de plazo");
     expect(text).not.toContain("evitar el recargo");
     expect(text).not.toContain("casilla [121]");
   });

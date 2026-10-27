@@ -95,12 +95,12 @@ const supplementaryText = (impact: ClosedYearImpact): string => {
   const parts: string[] = [];
   if (supplementary.within_period) {
     parts.push(
-      `Una compra es anterior al fin del plazo de la Renta de ${impact.year} (${formatDate(supplementary.filing_deadline)}) y esa Renta ya está presentada: rectifícala con una autoliquidación rectificativa cuanto antes y, si puedes, dentro de ese plazo, porque presentarla dentro de él es lo que evita presentarla fuera de plazo (no es el caso del art. 73.2 RIRPF).`,
+      `Una compra es anterior al fin del plazo de la Renta de ${impact.year} (${formatDate(supplementary.filing_deadline)}) y ya está presentada: rectifícala con una autoliquidación rectificativa cuanto antes y, si puedes, dentro de ese plazo, que es lo que evita presentarla fuera de plazo (no es el art. 73.2 RIRPF).`,
     );
   }
   if (supplementary.after_period_year !== undefined) {
     parts.push(
-      `Hay que presentar una autoliquidación rectificativa de la Renta de ${impact.year} (marca la casilla [121]), con intereses de demora, antes de que acabe el plazo de la Renta de ${supplementary.after_period_year} (art. 73.2 RIRPF).`,
+      `Hay que presentar una autoliquidación rectificativa de la Renta de ${impact.year} (casilla [121]), con intereses de demora, antes del fin del plazo de la Renta de ${supplementary.after_period_year} (art. 73.2 RIRPF).`,
     );
   }
   return parts.join(" ");
