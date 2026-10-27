@@ -171,6 +171,8 @@ export const describeError = (error: DomainError): string => {
       return "No hay pesos objetivo configurados: fíjalos con `atlas settings set --target-weights ast_x=60,ast_y=40` (target_weights).";
     case "missing_bucket_pct":
       return "Falta el porcentaje del cubo: `atlas settings set --bucket-pct-of-contribution 10` (bucket_pct_of_contribution).";
+    case "missing_deviation_threshold":
+      return "Falta el umbral de desviación: `atlas settings set --deviation-threshold-pp 5` (deviation_threshold_pp).";
     case "missing_amount":
       return "Falta el importe de la aportación: pásalo con --amount o fíjalo con `atlas settings set --monthly-contribution-eur 600` (monthly_contribution_eur).";
     case "no_target_weight_in_table":

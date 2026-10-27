@@ -95,7 +95,8 @@ describe("the card of the contribution with the privacy mode on", () => {
       expect(text(row)).toMatch(/\d[\d.]*(?:,\d+)?\s%/);
       expect(row.querySelector(".mask")).not.toBeNull();
     }
-    const kpis = [...(card?.querySelectorAll(".kpi") ?? [])].slice(1);
+    // The three figures of the month, not the per-platform ones below them.
+    const kpis = [...(card?.querySelector("dl.kpis")?.querySelectorAll(".kpi") ?? [])].slice(1);
     for (const kpi of kpis) {
       expect(text(kpi.querySelector("dd .share"))).toMatch(/%$/);
     }

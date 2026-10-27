@@ -12,10 +12,16 @@ import {
   settingsAt,
   type Warning,
 } from "@atlas/domain";
-import { contributionPlan, costSummary } from "@atlas/domain/portfolio";
+import {
+  contributionPlan,
+  costSummary,
+  type PlatformPlan,
+  platformPlan,
+} from "@atlas/domain/portfolio";
 import { assertKnownFlags, type Flags, stringFlag } from "../args.js";
 import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
 import { eur, pct, pp } from "../output/format.js";
+import { platformJson, platformLines } from "../output/platforms.js";
 import { PRICE_HEADERS, priceColumns, priceJson, priceNotes } from "../output/prices.js";
 import { table } from "../output/table.js";
 import { loadQuotes, sayNotes } from "../prices/load.js";
@@ -149,7 +155,16 @@ export const weightsCommand = async (
   return 0;
 };
 
-const contributionText = (plan: ContributionPlan): string =>
+/** What purchases alone would take, said only when this month's money does not cover it. */
+const shortfallLines = (plan: ContributionPlan): string[] =>
+  plan.purchases_only_eur.cmp(plan.core_amount_eur) > 0
+    ? [
+        "",
+        `Con este importe quedan activos por debajo de su peso. Solo con aportaciones, llevar todos a su objetivo exigiría ${eur(plan.purchases_only_eur)} EUR en total (${eur(plan.purchases_only_eur.sub(plan.core_amount_eur))} EUR más que este mes), sin que cambien los precios. Es la aritmética de hoy, no una previsión.`,
+      ]
+    : [];
+
+const contributionText = (plan: ContributionPlan, platforms: PlatformPlan): string =>
   [
     `Aportación de ${eur(plan.amount_eur)} EUR a ${plan.date} (importe de ${
       plan.amount_origin === "flag" ? "--amount" : "monthly_contribution_eur"
@@ -183,6 +198,14 @@ const contributionText = (plan: ContributionPlan): string =>
         ["TOTAL", "", "", "", "", eur(plan.core_amount_eur), "", ""],
       ],
     ),
+    ...shortfallLines(plan),
+    ...(platforms.rows.length + platforms.unassigned.length === 0
+      ? []
+      : [
+          "",
+          "Por plataforma (las comisiones van aparte del importe del mes):",
+          ...platformLines(platforms),
+        ]),
     ...warningLines(plan.warnings),
     "",
     "La propuesta no se ha registrado: da las órdenes en la plataforma y regístralas con",
@@ -196,10 +219,12 @@ export const contributeCommand = async (
 ): Promise<number> => {
   assertKnownFlags(flags, ["amount", "date", ...GLOBAL_FLAGS]);
   const date = dateFlag(ctx, flags);
-  const { state } = await loadForQuery(ctx, date);
+  const loaded = await loadForQuery(ctx, date);
+  const { state } = loaded;
   const amount = stringFlag(flags, "amount");
   const quotes = await loadQuotes(ctx, state);
   const settings = settingsAt(state, date).settings;
+  const { events } = loaded;
   const plan = contributionPlan(state, {
     ...(amount === undefined ? {} : { amount }),
     date,
@@ -207,6 +232,12 @@ export const contributeCommand = async (
     ...(quotes.external === undefined ? {} : { external: quotes.external }),
   });
   sayNotes(ctx, quotes.notes);
+  const platforms = platformPlan(
+    state,
+    events,
+    date,
+    plan.rows.map((row) => ({ asset_id: row.asset_id, amount_eur: row.allocation_eur })),
+  );
   renderQuery(
     ctx,
     state,
@@ -218,6 +249,8 @@ export const contributeCommand = async (
       core_amount_eur: plan.core_amount_eur.amount.toString(),
       core_value_eur: plan.core_value_eur.amount.toString(),
       surplus_distributed: plan.surplus_distributed,
+      purchases_only_eur: plan.purchases_only_eur.amount.toString(),
+      platforms: platformJson(platforms),
       rows: plan.rows.map((row) => ({
         asset_id: row.asset_id,
         asset_class: row.asset_class,
@@ -231,7 +264,7 @@ export const contributeCommand = async (
       })),
       warnings: plan.warnings,
     },
-    contributionText(plan),
+    contributionText(plan, platforms),
   );
   return 0;
 };

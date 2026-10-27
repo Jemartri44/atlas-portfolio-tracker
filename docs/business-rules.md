@@ -55,18 +55,19 @@ Los pesos objetivo se calculan sobre el valor total del núcleo, no sobre la apo
 
 **Regla 2 — Rebalanceo con dinero nuevo.**
 Cada mes la aportación se dirige a los activos por debajo de su peso objetivo. Es el mecanismo de rebalanceo por defecto.
-→ Mecánica de la calculadora (feature 004): del importe del mes se separa primero el presupuesto del cubo (`bucket_pct_of_contribution`); el resto se reparte entre los activos del núcleo **proporcionalmente a su déficit** frente al objetivo calculado sobre el valor tras la aportación; si la aportación supera el déficit total, el sobrante se reparte por pesos objetivo. Redondeo a céntimos una vez por activo. La calculadora **propone y nunca vende ni escribe**: las órdenes se dan a mano y se registran como siempre.
+→ Mecánica de la calculadora (features 004 y 028): del importe del mes se separa primero el presupuesto del cubo (`bucket_pct_of_contribution`); el resto se reparte entre los activos del núcleo **por nivel de agua**: primero al activo más lejos de su peso objetivo (calculado sobre el valor tras la aportación), hasta igualarlo con el siguiente; luego a los dos, y así sucesivamente. Un activo por encima de su objetivo no recibe nada. Si la aportación supera el déficit total, el sobrante se reparte por pesos objetivo. Redondeo a céntimos una vez por activo. Sustituye al reparto proporcional al déficit de la feature 004 (el dueño, 2026-10-26: «a qué se le da prioridad si hay varios activos que necesitan»; aprobado el mismo día). La calculadora **propone y nunca vende ni escribe**: las órdenes se dan a mano y se registran como siempre. La propuesta dice también cuánto ingresar en cada plataforma y qué comprar en ella (`specs/028-rebalance/spec.md`).
 
 **Regla 3 — Umbral de rebalanceo por venta.**
 Solo se vende para rebalancear si un activo se desvía más de un umbral (inicialmente 5 puntos porcentuales) de su peso objetivo. Revisión anual, no más frecuente.
 → La app avisa al superarse el umbral. El valor es configurable (`deviation_threshold_pp`).
+→ El botón «Rebalancear» (feature 028) es lo que propone ventas, y solo si algún activo supera el umbral una vez colocado el dinero nuevo; frena también los traspasos de ese botón (el simulador de traspaso suelto no). La «revisión anual» sigue siendo una recomendación: la regla 7 anulada impide restringir el botón por frecuencia. Sin `deviation_threshold_pp` configurado se niega a proponer, en vez de inventar uno.
 
 **Regla 4 — Orden de venta en retiradas.**
 Al retirar dinero se vende lo que esté **por encima** de su peso objetivo, nunca proporcionalmente de todo.
 - Bolsa caída → se vende renta fija u oro (están por encima en peso relativo).
 - Bolsa disparada → se vende renta variable.
 En ambos casos la retirada rebalancea sola.
-→ La app calcula y propone el desglose de la venta.
+→ La app calcula y propone el desglose de la venta. Las ventas del botón «Rebalancear» siguen este orden: lo que esté por encima de su objetivo, del más lejano al más cercano, y nunca proporcionalmente de todo; antes de vender, traspasos entre fondos y, si se escribe, dinero nuevo. Cada venta enseña el impuesto aproximado (la diferencia de aplicar `savings_tax_brackets` a la base del ahorro con y sin ella, sobre una copia del libro en memoria; si es negativa, porque una pérdida compensa ganancias del mismo año, se dice como ahorro: «reduce tu impuesto en ≈ X €») y las comisiones reales del dueño, las de su última operación equivalente; sin ninguna, «desconocida», nunca cero. La retirada de dinero como función propia no está construida y reutilizará este orden.
 
 **Regla 5 — Desriesgado solo con plan concreto.**
 No se reduce el riesgo de forma preventiva. Cuando exista un objetivo con fecha y cifra, desde 2-3 años antes las aportaciones mensuales van a renta fija/monetario hasta cubrir el importe, sin frenar el resto de la cartera.

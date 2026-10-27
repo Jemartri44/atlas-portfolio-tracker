@@ -96,7 +96,8 @@ atlas gains 2027         # ganancias realizadas del ejercicio (redondeadas una v
 atlas income 2027        # dividendos e intereses
 atlas tax 2028           # la base imponible del ahorro del ejercicio, por apartados
 atlas weights --date 2027-12-31   # pesos, objetivos y desviaciones del núcleo
-atlas contribute --amount 1000    # reparto de la aportación del mes (propone; no escribe)
+atlas contribute --amount 1000    # reparto de la aportación del mes, por activo y por plataforma (propone; no escribe)
+atlas rebalance [--amount 500]    # traspasos y, si hace falta, ventas con su impuesto aproximado (propone; no escribe)
 atlas costs                       # comisiones, TER y coste anual, núcleo y cubo por separado
 atlas bucket --date 2028-12-31    # el cubo: posiciones, tesis frente al índice, estadísticas y avisos
 atlas networth --date 2028-12-31  # patrimonio total, siempre desglosado (núcleo + cubo + efectivo)

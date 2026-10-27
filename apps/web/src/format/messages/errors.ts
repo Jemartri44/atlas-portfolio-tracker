@@ -198,6 +198,8 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "No hay pesos objetivo configurados: fíjalos en Ajustes → Configuración.",
   missing_bucket_pct: () =>
     "Falta el porcentaje del cubo sobre la aportación: fíjalo en Ajustes → Configuración.",
+  missing_deviation_threshold: () =>
+    "Falta el umbral de desviación de la regla 3: fíjalo en Ajustes → Configuración.",
   missing_amount: () =>
     "Falta el importe de la aportación: indícalo, o fija la aportación mensual en Ajustes → Configuración.",
   no_target_weight_in_table: (d, n) =>

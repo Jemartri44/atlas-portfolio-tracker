@@ -249,6 +249,7 @@ describe("the calculator of the contribution in the web", () => {
       bucket_budget_eur: Money.of(Decimal.parse("10"), "EUR"),
       core_amount_eur: Money.of(Decimal.parse("90"), "EUR"),
       core_value_eur: Money.of(Decimal.parse("90"), "EUR"),
+      purchases_only_eur: Money.of(Decimal.parse("0"), "EUR"),
       surplus_distributed: false,
       rows: [],
       warnings: [note],
