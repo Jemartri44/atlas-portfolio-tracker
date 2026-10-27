@@ -120,8 +120,10 @@ export const FISCAL_CRITERIA = {
   // with the currency invested imputed on the sale.
   "4:mixed_currency": { doc: "4", certainty: "low", risk: "both" },
   // A collective investment undertaking in currency: leg by leg, and the
-  // currency invested imputed on the sale (V0777-21, V0207-24).
-  "4:iic": { doc: "4", certainty: "medium", risk: "both" },
+  // currency invested imputed on the sale (V0777-21, V0207-24). Low: a US
+  // (non-UCITS) ETF falls outside those consultations, and the catalogue does
+  // not know the domicile, so it keeps the weaker, like `2:fund_2m`.
+  "4:iic": { doc: "4", certainty: "low", risk: "both" },
   // The order of the currency lots: FIFO per currency across accounts.
   "4:currency_fifo": { doc: "4", certainty: "medium", risk: "both" },
   // The wash-sale rule on currency, one year after (art. 33.5.e, V1613-25): the
