@@ -39,10 +39,9 @@ describe("the missing treaty rate", () => {
   it("suggests the rate with its source when there is one, and nothing otherwise", () => {
     expect(
       missing({ suggested_pct: "15", suggested_source: "BOE-A-1990-30940, art. 10.2.b)" }),
-    ).toContain(
-      "Sugerencia para dividendos de una persona física: 15\u00a0% (BOE-A-1990-30940, art. 10.2.b))",
-    );
+    ).toContain("Sugerencia: 15\u00a0% (BOE-A-1990-30940, art. 10.2.b))");
     expect(missing({})).not.toContain("Sugerencia");
+    expect(missing({ country: "12.5", suggested_pct: "12.5" })).not.toContain("BOE");
   });
 });
 
