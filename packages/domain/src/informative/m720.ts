@@ -47,6 +47,7 @@ import {
 import { sortCriteria } from "../tax/criteria.js";
 import { note } from "../tax/shared.js";
 import { type AverageBalance, quarterAverages } from "./balances.js";
+import { disposedBetween, pairKey } from "./disposals.js";
 import { lastFiledBefore } from "./filed.js";
 import { type ForeignHoldings, foreignHoldingsAt } from "./holdings.js";
 import type {
@@ -58,9 +59,6 @@ import type {
 } from "./report.js";
 import { cashValueAt, toEurAt, valueAt, yearEnd } from "./valuation.js";
 import { type Declared, type FlaggedItem, type Limits, verdictOf } from "./verdict.js";
-
-const keyOf = (accountId: AccountId, assetId?: AssetId): string =>
-  assetId === undefined ? accountId : `${accountId}|${assetId}`;
 
 /** A value that is not there at all, as against one that is there and marked. */
 const MISSING: ReadonlySet<ValueFlag> = new Set(["price_missing"]);
@@ -164,22 +162,35 @@ const declaredOf = (
   category: FilingCategory,
   heldBefore: Set<string>,
   heldNow: Set<string>,
+  disposed: ReadonlySet<string>,
 ): Declared | undefined => {
   if (filing === undefined) {
     return undefined;
   }
   const figures = filing.declared as FiledInformativeFigures;
   const block = figures[category];
-  const extinct = (figures.items as FiledItem[])
-    .filter((item) => item.category === category)
+  const listed = (figures.items as FiledItem[]).filter((item) => item.category === category);
+  const named = (item: FiledItem): { account_id: AccountId; asset_id?: AssetId } => ({
+    account_id: item.account_id,
+    ...(item.asset_id === undefined ? {} : { asset_id: item.asset_id }),
+  });
+  const extinct = listed
     .filter((item) => {
-      const key = keyOf(item.account_id, item.asset_id);
+      const key = pairKey(item.account_id, item.asset_id);
       return heldBefore.has(key) && !heldNow.has(key);
     })
-    .map((item) => ({
-      account_id: item.account_id,
-      ...(item.asset_id === undefined ? {} : { asset_id: item.asset_id }),
-    }));
+    .map(named);
+  // A transmission of something declared in the span since that return,
+  // partial or not, obliges too; one already counted as gone is not repeated.
+  // Cash accounts are not transmitted: they keep their own rule.
+  const reduced = listed.flatMap((item) => {
+    const key = pairKey(item.account_id, item.asset_id);
+    return item.asset_id !== undefined &&
+      disposed.has(key) &&
+      !extinct.some((gone) => pairKey(gone.account_id, gone.asset_id) === key)
+      ? [{ account_id: item.account_id, asset_id: item.asset_id }]
+      : [];
+  });
   return {
     year: filing.tax_year,
     ...(block === undefined
@@ -191,6 +202,7 @@ const declaredOf = (
             : {}),
         }),
     extinct,
+    reduced,
   };
 };
 
@@ -201,11 +213,11 @@ const heldKeys = (holdings: ForeignHoldings): Set<string> => {
     // A cash account is extinguished when it is closed, not when it empties: a
     // balance of zero on a live account is still an account.
     if (account.active) {
-      held.add(keyOf(id));
+      held.add(pairKey(id));
     }
   }
   for (const position of [...holdings.securities, ...holdings.crypto]) {
-    held.add(keyOf(position.account_id, position.asset_id));
+    held.add(pairKey(position.account_id, position.asset_id));
   }
   return held;
 };
@@ -328,6 +340,10 @@ export const informativeReturn = (
   const before = previous === undefined ? undefined : foreignHoldingsAt(events, yearEnd(year - 1));
   const heldNow = heldKeys(holdings);
   const heldBefore = before === undefined ? new Set<string>() : heldKeys(before);
+  const disposed =
+    previous === undefined
+      ? new Set<string>()
+      : disposedBetween(events, state, yearEnd(previous.tax_year), end);
   const averages = quarterAverages(events, year, holdings.accounts);
   const categories = CATEGORIES[model].map((category) => {
     const items =
@@ -338,7 +354,7 @@ export const informativeReturn = (
       category,
       items,
       limits,
-      declaredOf(previous, category, heldBefore, heldNow),
+      declaredOf(previous, category, heldBefore, heldNow, disposed),
     );
     return closed && resident
       ? decided
