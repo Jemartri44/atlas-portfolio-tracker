@@ -152,6 +152,7 @@ const PERIOD: Record<InformativeReturn["period"], string> = {
   closed_year: "ejercicio cerrado",
   current_year: "año en curso, estado a la fecha de consulta",
   before_model: "el modelo no existía ese ejercicio",
+  not_resident: "sin obligación: no residente en España ese ejercicio",
 };
 
 const renderInformative = (report: InformativeReturn): string => {

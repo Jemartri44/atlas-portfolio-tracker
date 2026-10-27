@@ -118,3 +118,37 @@ describe("the Modelo 721", () => {
     expect(report.notes.map((note) => note.code)).toContain("informative_model_did_not_exist");
   });
 });
+
+/**
+ * Only Spanish tax residents file the 720 and the 721 (arts. 42 bis.1, 42 ter.1
+ * and 42 quater.1 RGAT). The residence in force on 31 December decides the
+ * year; what counts as foreign does not move with it.
+ */
+describe("a taxpayer who is not a Spanish tax resident", () => {
+  const nonResident = (recordedOn: string) => {
+    const b = ledger("6000");
+    b.recordedAt(recordedOn);
+    b.settings({ ...SETTINGS, tax_residence: "PT" });
+    return b.build();
+  };
+
+  it("has nothing to file for a year that closes with another residence", () => {
+    const events = nonResident("2027-06-01");
+    for (const report of [
+      model720(events, 2027, { today: TODAY }),
+      model721(events, 2027, { today: TODAY }),
+    ]) {
+      expect(report.period).toBe("not_resident");
+      expect(report.categories.every((entry) => entry.verdict === "not_applicable")).toBe(true);
+      expect(
+        report.notes.find((note) => note.code === "informative_not_resident")?.details,
+      ).toEqual({ model: report.model, year: 2027, tax_residence: "PT" });
+    }
+  });
+
+  it("still files the year that closed while resident, though the residence changed later", () => {
+    const report = model721(nonResident("2028-02-01"), 2027, { today: TODAY });
+    expect(report.period).toBe("closed_year");
+    expect(only(report).verdict).toBe("obliged");
+  });
+});
