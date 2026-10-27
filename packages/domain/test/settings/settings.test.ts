@@ -9,6 +9,7 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_WASH_SALE_WINDOW,
   fiscalDateRuleOf,
+  fxGainMethodOf,
   INFORMATIVE_MODELS,
   incomeCategoryOf,
   lossCarryforwardYearsOf,
@@ -83,6 +84,16 @@ describe("validateSettings", () => {
   const withDefaults = (extra: Record<string, unknown>): Record<string, unknown> => ({
     ...DEFAULT_SETTINGS,
     ...extra,
+  });
+
+  it("takes the method of #4 as one of its two values, and first in currency when absent", () => {
+    expect(fxGainMethodOf(DEFAULT_SETTINGS)).toBe("currency_first");
+    expect(
+      validateSettings({ ...DEFAULT_SETTINGS, fx_gain_method: "each_leg" }).fx_gain_method,
+    ).toBe("each_leg");
+    expect(() => validateSettings({ ...DEFAULT_SETTINGS, fx_gain_method: "average" })).toThrow(
+      ValidationError,
+    );
   });
 
   it("rejects non-objects and a per-type map that is missing altogether", () => {

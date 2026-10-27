@@ -453,6 +453,7 @@ export const settingsCommand = async (
       "income-category",
       "treaty-withholding-pct",
       "target-weights",
+      "fx-gain-method",
       ...SETTINGS_DECIMALS,
       ...SETTINGS_INTEGERS,
       ...SETTINGS_STRINGS,
@@ -518,6 +519,11 @@ export const settingsCommand = async (
     const benchmark = stringFlag(flags, "bucket-benchmark-asset");
     if (benchmark !== undefined) {
       patch.bucket_benchmark_asset_id = benchmark;
+    }
+    // Criterion #4: `currency_first` or `each_leg`; the domain refuses any other value.
+    const method = stringFlag(flags, "fx-gain-method");
+    if (method !== undefined) {
+      patch.fx_gain_method = method;
     }
     const counts = booleanFlag(flags, "wash-sale-transfer-counts");
     const doesNot = booleanFlag(flags, "no-wash-sale-transfer-counts");
