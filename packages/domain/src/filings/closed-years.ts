@@ -93,7 +93,61 @@ export interface ClosedYearImpact {
   by_date: boolean;
   /** What the comparison found, or why it was not made. */
   comparison: ClosedYearComparison;
+  /** Whether a supplementary return is due, when the engine can tell. */
+  supplementary: ClosedYearSupplementary;
 }
+
+/**
+ * A supplementary return of the Renta, said as much as the engine knows. An
+ * acquisition of a later year that moves what a filed one declared is a
+ * repurchase that defers a loss that return computed: article 73.2 RIRPF
+ * makes the supplementary return compulsory, with late-payment interest when
+ * the acquisition comes after the filing period, and due by the end of the
+ * filing period of the year of the acquisition. Anything else is «possible».
+ */
+export type ClosedYearSupplementary =
+  | { kind: "possible" }
+  | { kind: "repurchase"; acquisition_year: number };
+
+/** The year of the earliest acquisition the write adds after `year`, if any. */
+const laterAcquisitionYear = (
+  before: readonly LedgerEvent[],
+  after: readonly LedgerEvent[],
+  year: number,
+): number | undefined => {
+  const known = new Set(before.map((event) => event.id));
+  const years = after
+    .filter((event) => !known.has(event.id))
+    .flatMap((event) => {
+      switch (event.type) {
+        case "buy":
+        case "swap":
+          return [event.trade_date];
+        case "transfer":
+          return [event.value_date_in];
+        default:
+          return [];
+      }
+    })
+    .map((date) => Number(date.slice(0, 4)))
+    .filter((acquired) => acquired > year);
+  return years.length === 0 ? undefined : Math.min(...years);
+};
+
+// A later acquisition can only move a filed year one way: by deferring a loss
+// that year computed (the wash-sale rule). Whatever figure it moves —the base,
+// a pending balance, what is deferred— the return computed a loss it should not.
+const supplementaryOf = (
+  model: FilingModel,
+  comparison: ClosedYearComparison,
+  acquisitionYear: number | undefined,
+): ClosedYearSupplementary =>
+  model === "renta" &&
+  comparison.status === "compared" &&
+  comparison.moves.length > 0 &&
+  acquisitionYear !== undefined
+    ? { kind: "repurchase", acquisition_year: acquisitionYear }
+    : { kind: "possible" };
 
 const text = (money: Money): string => money.amount.toString();
 
@@ -286,6 +340,11 @@ export const closedYearImpact = (
       filed_at: entry.filed_at,
       by_date: byDate,
       comparison,
+      supplementary: supplementaryOf(
+        entry.model,
+        comparison,
+        byDate ? undefined : laterAcquisitionYear(before.events, after.events, entry.year),
+      ),
     });
     if (byDate) {
       impacts.push(impact());
