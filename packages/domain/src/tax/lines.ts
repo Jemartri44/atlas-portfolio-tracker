@@ -521,15 +521,56 @@ export const incomeLine = (ctx: LineContext, income: InvestmentIncome): IncomeLi
 /** Fee kinds whose amount is deducted from movable capital income (art. 26.1.a, #23). */
 const DEDUCTIBLE_FEES = new Set(["custody", "administration"]);
 
-/** Every deductible standalone fee of the ledger, in date order. */
-export const expenseLines = (ctx: LineContext): ExpenseLine[] =>
+/**
+ * Accounts where nothing but crypto held directly ever came in. Its custody is
+ * not the deposit of a negotiable security, which is what article 26.1.a)
+ * deducts: crypto "no tiene la consideración de valor negociable" (DGT
+ * V0648-24). An account that held any other asset keeps its fees deductible:
+ * one fee cannot be split, and the classification stays the user's (#23).
+ */
+// `ctx.events` has no reversed event (`taxChain`): an annulled purchase does not
+// make an account hold anything.
+const cryptoOnlyAccounts = (ctx: LineContext): Set<string> => {
+  const types = new Map<string, Set<AssetType>>();
+  const add = (account: string, asset: string): void => {
+    const type = (ctx.state.assets.get(asset) as { asset_type: AssetType }).asset_type;
+    types.set(account, (types.get(account) ?? new Set()).add(type));
+  };
+  for (const event of ctx.events.values()) {
+    if (event.type === "buy") {
+      add(event.account_id, event.asset_id);
+    } else if (event.type === "swap") {
+      add(event.account_id, event.to_asset_id);
+    } else if (event.type === "transfer") {
+      add(event.to_account_id, event.to_asset_id);
+    }
+  }
+  return new Set(
+    [...types].filter(([, held]) => held.size === 1 && held.has("crypto")).map(([id]) => id),
+  );
+};
+
+/** The custody and administration fees of the ledger, in date order. */
+const custodyFees = (ctx: LineContext): StandaloneFeeEvent[] =>
   [...ctx.events.values()]
     .filter(
       (event): event is StandaloneFeeEvent =>
         event.type === "standalone_fee" &&
         DEDUCTIBLE_FEES.has(feeKindOf(event as StandaloneFeeEvent)),
     )
-    .sort((a, b) => compareCivilDates(a.value_date, b.value_date))
+    .sort((a, b) => compareCivilDates(a.value_date, b.value_date));
+
+/** Custody fees of an account of direct crypto only: never deducted (V0648-24). */
+export const cryptoCustodyFees = (ctx: LineContext): StandaloneFeeEvent[] => {
+  const crypto = cryptoOnlyAccounts(ctx);
+  return custodyFees(ctx).filter((event) => crypto.has(event.account_id));
+};
+
+/** Every deductible standalone fee of the ledger, in date order. */
+export const expenseLines = (ctx: LineContext): ExpenseLine[] => {
+  const crypto = cryptoOnlyAccounts(ctx);
+  return custodyFees(ctx)
+    .filter((event) => !crypto.has(event.account_id))
     .map((event) => {
       const amount = convert(
         money(event.amount, event.currency),
@@ -550,6 +591,7 @@ export const expenseLines = (ctx: LineContext): ExpenseLine[] =>
         ),
       };
     });
+};
 
 export const withholdingLines = (
   transmissions: readonly TransmissionLine[],

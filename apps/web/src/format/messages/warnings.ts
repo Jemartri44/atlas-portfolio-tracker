@@ -201,6 +201,8 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     `No hay tipo de convenio configurado para ${num(d.country)}: no se calcula deducción por los ${f.money(d.foreign_tax_eur)} retenidos.`,
   tax_dividend_without_country: (d, _n, f) =>
     `El dividendo no dice qué país lo pagó: no se calcula deducción por los ${f.money(d.foreign_tax_eur)} retenidos en origen.`,
+  tax_crypto_custody_not_deductible: () =>
+    "No se resta la custodia de las cuentas con solo cripto en tenencia directa: la cripto no es un valor negociable, y solo se deduce el depósito de valores negociables.",
   tax_currency_withdrawn: () =>
     "Has sacado divisa de una cuenta: sale a lo que te costó y no imputa nada. Lo que hagas con ella fuera no está en tus datos.",
   tax_currency_spent_without_lots: (d) =>
@@ -242,6 +244,8 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   // gives the drift test a date to trip over.
   informative_current_year: () =>
     "El modelo va de lo que hay a 31 de diciembre y ese día no ha llegado: esto es cómo está hoy, sin veredicto.",
+  informative_not_resident: (d) =>
+    `Sin obligación: el Modelo ${num(d.model)} solo obliga a los residentes fiscales en España, y en ${year(d.year)} no lo eras.`,
   informative_model_did_not_exist: (d) =>
     `El modelo ${num(d.model)} no existía en ${year(d.year)}: no hay nada que presentar por ese ejercicio.`,
   informative_domestic_accounts_left_out: (d) =>

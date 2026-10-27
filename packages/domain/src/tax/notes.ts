@@ -13,6 +13,7 @@ import { ASSET_TYPES, type CashWithdrawalEvent } from "../schema/events.js";
 import { treatyWithholdingPctOf } from "../settings/settings.js";
 import { type Core, exchangesOfYear } from "./core.js";
 import { sortCriteria } from "./criteria.js";
+import { cryptoCustodyFees } from "./lines.js";
 import type { DoubleTaxationLine, InKindLine } from "./report.js";
 import { eventNote } from "./shared.js";
 
@@ -249,6 +250,19 @@ export const notesOf = (
     );
   }
   notes.push(...ddiNotes);
+  const cryptoCustody = cryptoCustodyFees(core.ctx).filter(
+    (event) => yearOf(event.value_date) === year,
+  );
+  if (cryptoCustody.length > 0) {
+    notes.push(
+      eventNote(
+        "tax_crypto_custody_not_deductible",
+        "",
+        "custody of crypto held directly is not deducted: crypto is not a negotiable security (DGT V0648-24)",
+        { fees: cryptoCustody.map((event) => event.id) },
+      ),
+    );
+  }
   // What the currency lots do not see or value in a way of their own (spec 029).
   const withdrawn = [...core.ctx.events.values()].filter(
     (event): event is CashWithdrawalEvent =>

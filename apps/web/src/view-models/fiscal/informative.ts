@@ -83,6 +83,8 @@ const PERIOD_TEXTS: Record<InformativeReturn["period"], string> = {
   current_year:
     "El ejercicio no ha terminado: esto es lo que hay hoy, no lo que se declarará a 31 de diciembre.",
   before_model: "Ese ejercicio el modelo no existía todavía, así que no hay veredicto.",
+  not_resident:
+    "Sin obligación: ese ejercicio no eras residente fiscal en España, y el modelo solo obliga a los residentes.",
 };
 
 const reasonText = (reason: VerdictReason, names: NameIndex): string => {

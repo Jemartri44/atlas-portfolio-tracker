@@ -138,6 +138,8 @@ export const describeWarning = (warning: Warning): string => {
       return `No hay tipo de convenio configurado para ${text(d.country)}: no se calcula deducción por los ${text(d.foreign_tax_eur)} EUR retenidos. Fíjalo con \`atlas settings set --treaty-withholding-pct ${text(d.country)}=<tipo>\`.`;
     case "tax_dividend_without_country":
       return `El dividendo no dice qué país lo pagó (source_country): no se calcula deducción por los ${text(d.foreign_tax_eur)} EUR retenidos en origen.`;
+    case "tax_crypto_custody_not_deductible":
+      return `No se deduce la custodia de cripto en tenencia directa (${((d.fees as string[] | undefined) ?? []).join(", ")}): la cripto no es un valor negociable (art. 26.1.a LIRPF, DGT V0648-24).`;
     case "tax_currency_withdrawn":
       return `Se ha sacado divisa de una cuenta (${listOf(d.events)}): sale a su coste y no imputa nada; lo que se haga con ella fuera no está en el libro.`;
     case "tax_currency_spent_without_lots":
@@ -178,6 +180,8 @@ export const describeWarning = (warning: Warning): string => {
       return "La parte de una pérdida que no es computable por recompra se marca en la ventana de captura de Renta WEB: no tiene casilla con número.";
     case "informative_current_year":
       return `El modelo va de lo que hay a 31/12 y ese día no ha llegado: esto es el estado a ${text(d.as_of)}, sin veredicto.`;
+    case "informative_not_resident":
+      return `Sin obligación: el Modelo ${text(d.model)} solo obliga a los residentes fiscales en España, y la residencia de ${text(d.year)} es ${text(d.tax_residence)} (arts. 42 bis, 42 ter y 42 quater RGAT).`;
     case "informative_model_did_not_exist":
       return `El modelo ${text(d.model)} no existía en ${text(d.year)}: no hay nada que presentar por ese ejercicio (existe desde ${text(d.first_year)}).`;
     case "informative_domestic_accounts_left_out":
