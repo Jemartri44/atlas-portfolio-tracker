@@ -788,3 +788,58 @@ describe("the report as JSON", () => {
     expect(json.scope).toBe("fiscal_total");
   });
 });
+
+describe("custody of crypto held directly (art. 26.1.a, DGT V0648-24)", () => {
+  const ledger = () => {
+    const b = taxBuilder();
+    b.account("acc_x", { platform: "exchange", country: "MT" });
+    b.buy({
+      account_id: "acc_x",
+      asset_id: "coin_c",
+      value_date: "2027-01-11",
+      quantity: "1",
+      unit_price: "1000",
+    });
+    b.buy({
+      account_id: "acc_b",
+      asset_id: "stock_t",
+      value_date: "2027-01-11",
+      quantity: "1",
+      unit_price: "100",
+    });
+    b.interest({
+      account_id: "acc_a",
+      value_date: "2027-06-30",
+      gross: "100",
+      withholding_spain: "19",
+    });
+    const crypto = b.fee({
+      account_id: "acc_x",
+      value_date: "2027-12-15",
+      amount: "12",
+      description: "custodia",
+      fee_kind: "custody",
+    });
+    const broker = b.fee({
+      account_id: "acc_b",
+      value_date: "2027-12-15",
+      amount: "5",
+      description: "custodia",
+      fee_kind: "custody",
+    });
+    return { events: b.build(), crypto, broker };
+  };
+
+  it("is not deducted when the account only ever held direct crypto, and the report says so", () => {
+    const { events, crypto, broker } = ledger();
+    const report = reportOf(events, 2027);
+    // 100 of interest less the 5 of the broker; the 12 of the exchange are not a deposit of securities.
+    expect(report.movable_capital.expenses.map((line) => line.event_id)).toEqual([broker.id]);
+    expect(text(report.movable_capital.balance_eur)).toBe("95");
+    expect(
+      report.notes.find((note) => note.code === "tax_crypto_custody_not_deductible")?.details,
+    ).toEqual({
+      fees: [crypto.id],
+    });
+  });
+});

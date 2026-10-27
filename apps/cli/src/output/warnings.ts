@@ -138,6 +138,8 @@ export const describeWarning = (warning: Warning): string => {
       return `No hay tipo de convenio configurado para ${text(d.country)}: no se calcula deducción por los ${text(d.foreign_tax_eur)} EUR retenidos. Fíjalo con \`atlas settings set --treaty-withholding-pct ${text(d.country)}=<tipo>\`.`;
     case "tax_dividend_without_country":
       return `El dividendo no dice qué país lo pagó (source_country): no se calcula deducción por los ${text(d.foreign_tax_eur)} EUR retenidos en origen.`;
+    case "tax_crypto_custody_not_deductible":
+      return `No se deduce la custodia de cripto en tenencia directa (${((d.fees as string[] | undefined) ?? []).join(", ")}): la cripto no es un valor negociable (art. 26.1.a LIRPF, DGT V0648-24).`;
     case "tax_fx_differences_not_computed":
       return `Las diferencias de cambio del efectivo en divisa (${((d.currencies as string[] | undefined) ?? []).join(", ")}) NO se calculan: criterio #4, en disputa, sin lotes de divisa. Cambios de divisa del ejercicio: ${((d.fx_exchanges as string[] | undefined) ?? []).join(", ") || "ninguno"}.`;
     case "tax_in_kind_income_not_integrated":
