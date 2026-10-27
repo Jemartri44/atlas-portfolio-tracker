@@ -543,7 +543,7 @@ La divisa extranjera que se tiene es un elemento patrimonial con su coste en eur
 | `fx_exchange` desde otra divisa | el coste de los lotes entregados: no imputa nada (V2466-08) |
 | `cash_deposit` | `amount / fx_rate` |
 | `dividend`, `interest` | el neto, al tipo del evento |
-| `sell`, venta forzosa | `funding_eur` de los lotes vendidos + la ganancia en euros − la retención en euros |
+| `sell`, venta forzosa | `funding_eur` de los lotes vendidos + la ganancia en euros − la retención en euros; en una IIC o un lote comprado en otra divisa, más la línea `invested`: es decir, el valor de la transmisión al tipo de la venta − la retención |
 
 | Sale divisa | Qué se imputa (`currency_gains`) |
 |---|---|
@@ -552,9 +552,10 @@ La divisa extranjera que se tiene es un elemento patrimonial con su coste en eur
 | `buy`, comisión de un `swap` | nada: el coste pasa al `funding_eur` del lote del valor |
 | `fx_exchange` a otra divisa | nada: el coste pasa a la divisa recibida |
 | `cash_withdrawal` | nada: sale a su coste (nota `tax_currency_withdrawn`) |
+| venta de una IIC o de un lote comprado en otra divisa | `invested`: `cost_eur − funding_eur` de los lotes vendidos, por divisa, en la fecha de la venta (V0777-21) |
 
 **Divisa gastada sin tenerla** (saldo negativo): lo que los lotes no cubren abre un lote negativo, valorado al tipo del BCE de ese día, y la siguiente entrada lo cubre primero; la diferencia entre lo que valía al gastarse y lo que cuesta la entrada se imputa entonces (`cover`). Así **los lotes de una divisa suman siempre su saldo en todas las cuentas**, y nunca hay a la vez lotes positivos y negativos.
 
 **Conversión del bróker** (`broker_settled_eur` presente, ADR-0030 y ADR-0036): no toca los lotes. Una compra se financia con esos euros. Una venta, un dividendo o un interés imputan ese día los euros liquidados menos el coste de la divisa, y una comisión, su valor al tipo del BCE menos los euros cobrados (`auto_conversion`). El cuadre de lotes y saldos descuenta esas operaciones. Abierto hasta ver un extracto de IBKR.
 
-Cada imputación es una ganancia o pérdida patrimonial de la base del ahorro del año de su fecha, redondeada una vez (ADR-0005), sin regla de recompra (`4:currency_wash_sale`).
+Cada imputación es una ganancia o pérdida patrimonial de la base del ahorro del año de su fecha, redondeada una vez (ADR-0005). La pérdida de una `conversion` o un `payment` sigue la regla de recompra de un año (`4:currency_wash_sale`, `tax/currency-wash-sale.ts`): la proyección anota en orden cada lote positivo que abre y lo que toma cada salida (`currencyJournal`, nunca en la instantánea), y el motor lee ese diario sin decidir otra vez qué lotes se consumieron.
