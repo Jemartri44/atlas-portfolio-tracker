@@ -98,6 +98,7 @@ export type ConceptId =
   // Double taxation (#16): only the first limit is computable.
   | "ddi.income"
   | "ddi.foreign_tax"
+  | "ddi.withheld"
   | "ddi.first_limit"
   | "ddi.deduction"
   // Withholdings already paid on account.
@@ -219,7 +220,9 @@ export const CONCEPT_NAMES: Record<Exclude<ConceptId, RowConceptId>, string> = {
   "base.savings": "Base imponible del ahorro",
   "base.savings_taxable": "Base liquidable del ahorro",
   "ddi.income": "Rendimiento obtenido en el extranjero",
-  "ddi.foreign_tax": "Impuesto satisfecho en el extranjero",
+  "ddi.foreign_tax": "Impuesto satisfecho en el extranjero (limitado al convenio)",
+  "ddi.withheld":
+    "Retenido en origen, solo detalle: el exceso sobre el convenio se reclama en el país de origen",
   "ddi.first_limit": "Límite del convenio",
   "ddi.deduction": "Deducción por doble imposición internacional",
   "withholding.rcm": "Retenciones sobre rendimientos del capital mobiliario",
