@@ -58,7 +58,7 @@ const reasonText = (reason: VerdictReason): string => {
     case "increase_q4_average":
       return `el saldo medio del cuarto trimestre sube más del límite sobre el ${String(reason.against_year)}: ${eur(reason.before_eur)} → ${eur(reason.after_eur)}`;
     case "partial_extinction":
-      return `has transmitido, en parte, ${reason.asset_id ?? reason.account_id}, que se declaró en el ${String(reason.against_year)}`;
+      return `has transmitido (venta, permuta o traspaso) ${reason.asset_id ?? reason.account_id}, que se declaró en el ${String(reason.against_year)}`;
     case "extinction":
       return `se ha dejado de tener ${reason.asset_id ?? reason.account_id}, que se declaró en el ${String(reason.against_year)}`;
     default:
