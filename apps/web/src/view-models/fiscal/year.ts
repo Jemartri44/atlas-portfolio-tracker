@@ -13,6 +13,7 @@
 import type { Money } from "@atlas/domain";
 import type {
   CriterionId,
+  CurrencyLine,
   ExpenseLine,
   IncomeLine,
   TaxYearReport,
@@ -95,6 +96,23 @@ const transmissionRow = (line: TransmissionLine, names: NameIndex): FiscalRow =>
   criteria: sortCriteria(line.criteria),
 });
 
+const CURRENCY_KINDS: Record<CurrencyLine["kind"], string> = {
+  conversion: "Cambio a euros",
+  payment: "Pago hecho con la divisa",
+  cover: "Entrada que cubre divisa gastada sin tenerla",
+  auto_conversion: "Cambio hecho por el bróker",
+};
+
+/** An exchange difference: its own key, because a sale and the cover its proceeds make share an event. */
+const currencyRow = (line: CurrencyLine): FiscalRow => ({
+  key: `${line.event_id}:${line.kind}`,
+  subject: `Divisa ${line.currency}`,
+  kind: CURRENCY_KINDS[line.kind],
+  date: formatDate(line.fiscal_date),
+  amount_eur: line.gain_eur_rounded,
+  criteria: sortCriteria(line.criteria),
+});
+
 const incomeRow = (line: IncomeLine, names: NameIndex): FiscalRow => ({
   key: line.event_id,
   subject: displayName(names, line.asset_id ?? line.account_id),
@@ -118,7 +136,11 @@ const criteriaOf = (rows: readonly FiscalRow[]): readonly CriterionId[] =>
 
 /** The whole year, ready to paint. */
 export const yearView = (report: TaxYearReport, names: NameIndex): YearView => {
-  const gains = report.capital_gains.lines.map((line) => transmissionRow(line, names));
+  const currency = report.capital_gains.currency_lines.map(currencyRow);
+  const gains = [
+    ...report.capital_gains.lines.map((line) => transmissionRow(line, names)),
+    ...currency,
+  ];
   const movable = [
     ...report.movable_capital.transmissions.map((line) => transmissionRow(line, names)),
     ...report.movable_capital.dividends.map((line) => incomeRow(line, names)),
@@ -128,9 +150,15 @@ export const yearView = (report: TaxYearReport, names: NameIndex): YearView => {
   // What every operation of the year is called, by its event: the rows already
   // say "asset · date", which is the same thing a criterion has to say to tell
   // two of its entries apart.
-  const subjectOf = new Map(
-    [...gains, ...movable].map((row) => [row.key, `${row.subject} · ${row.date}`]),
-  );
+  // An exchange difference is also named by its event, after the sale that shares it.
+  const subjectOf = new Map([
+    ...currency.map(
+      (row) => [row.key.split(":")[0] as string, `${row.subject} · ${row.date}`] as const,
+    ),
+    ...[...gains, ...movable]
+      .filter((row) => !currency.includes(row))
+      .map((row) => [row.key, `${row.subject} · ${row.date}`] as const),
+  ]);
   const groups: FiscalGroup[] = [
     {
       key: "capital_gain",

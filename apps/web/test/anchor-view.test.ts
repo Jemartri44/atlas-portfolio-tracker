@@ -31,7 +31,7 @@ const reportWith = (anchors: TaxYearReport["anchors"]): TaxYearReport =>
     today: "2030-01-15",
     base_eur: zero,
     anchors,
-    capital_gains: { lines: [], balance_eur: zero, foreign_releases_eur: zero },
+    capital_gains: { lines: [], currency_lines: [], balance_eur: zero, foreign_releases_eur: zero },
     movable_capital: {
       transmissions: [],
       dividends: [],
