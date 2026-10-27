@@ -1,6 +1,6 @@
 # ADR-0036 — Ganancias en divisa primero en la divisa, y lotes de divisa
 
-**Estado:** Aceptada (2026-10-27), por decisión transmitida por la coordinadora; el diseño lo aprobó Coordinación el mismo día (`specs/029-fx-currency-first/`). Acotada por la nota del 2026-10-27 al final. *Verificar con asesor.*
+**Estado:** Aceptada (2026-10-27), por decisión del dueño transmitida por la coordinadora el 27/10/2026 con sus palabras «Sí a todo lo de atlas» (aceptar ADR-0036 con su corrección); el diseño lo aprobó Coordinación el mismo día (`specs/029-fx-currency-first/`). Acotada por la nota del 2026-10-27 al final. *Verificar con asesor.*
 
 ## Contexto
 
@@ -32,7 +32,7 @@ El motor calculaba la ganancia de un valor en divisa **cada pata a su tipo**: la
 Una auditoría fiscal independiente del mismo día acota la decisión:
 
 - **«Primero en la divisa» vale para acciones y ETC/ETP** (V1740-17, V2422-20, V0152-26).
-- **Para fondos, ETF y monetarios manda el método de las IIC** (V0777-21, V0207-24): cada pata a su tipo, más la diferencia de cambio de la divisa invertida, imputada en el año de la venta. Lo corrige la PR de divisas (criterio #4 de `docs/fiscal-questions.md`).
-- **Un lote comprado en una divisa y vendido en otra (`mixed`)** imputa `cost_eur − funding_eur` como línea de divisa, en lugar de la nota de «no se imputa» de las Consecuencias. También lo corrige la PR de divisas.
+- **Para fondos, ETF y monetarios manda el método de las IIC** (V0777-21, V0207-24): cada pata a su tipo, más la diferencia de cambio de la divisa invertida, imputada en el año de la venta. Véase el criterio #4 de `docs/fiscal-questions.md`.
+- **Un lote comprado en una divisa y vendido en otra (`mixed`)** imputa `cost_eur − funding_eur` como línea de divisa. Véase el criterio #4 de `docs/fiscal-questions.md`.
 
-Hasta que esa PR se funda, el código y las Consecuencias de arriba describen el estado anterior en estos dos puntos. ADR-0013 no cambia.
+ADR-0013 no cambia.

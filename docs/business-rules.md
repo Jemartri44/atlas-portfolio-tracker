@@ -292,6 +292,7 @@ La aplicación deja constancia de cada declaración **realmente presentada** —
   - **Compra posterior a ese plazo**: art. 73.2 RIRPF. Hay que presentar la autoliquidación (la AEAT la llama hoy **rectificativa**, con la casilla [121] marcada; el reglamento dice «complementaria») **con intereses de demora**, entre la fecha de la compra y el fin del plazo de declaración del año de la compra (Manual práctico de Renta 2025, cap. 18, y art. 73.2, releídos el 2026-10-27). Con la cripto directa, cuya ventana es el año siguiente a la venta, es el caso real.
   - **Compra anterior al fin de ese plazo, con la Renta ya presentada**: no es el art. 73.2. La Renta presentada queda mal y se rectifica **cuanto antes y, si se puede, antes del fin de ese plazo**, para evitar el recargo por presentarla tarde (lectura de la auditoría del 2026-10-27; ninguna fuente lo dice expresamente). Certeza media; si fallara, se pagaría un recargo.
   - El art. 73.2 solo cubre las letras e) y g) del art. 33.5 LIRPF. Con la ventana de dos meses (letra f) una compra no puede quedar después del plazo, así que ese artículo no se cita nunca para ella.
+  - Si hay compras a los dos lados del plazo, el aviso dice los dos casos: rectificar la Renta por la primera, y el art. 73.2 con intereses por la posterior.
   En cualquier otro caso el aviso sigue diciendo que puede tocar una complementaria.
 - Un ejercicio pasado **con cifras y sin presentación registrada** no da aviso: da una nota, por si falta registrarla.
 
