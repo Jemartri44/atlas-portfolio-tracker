@@ -17,6 +17,10 @@
 //   after the loss-making transmission (not the ones that same sale consumed,
 //   nor the ones already gone): without a lot to carry it, a deferral has no
 //   place to travel and no moment to come back.
+//   Exception (DGT V3282-18, Manual de Renta 2025): when the window before the
+//   sale holds a single purchase and none of the asset was held when it
+//   opened, what that purchase leaves is what was not sold, not a repurchase:
+//   no prior acquisition counts. Purchases after the sale still do.
 // - #19: each acquired unit defers at most one transmitted unit, and losses are
 //   served in chronological order.
 // - #20: the rule looks at the net result of the transmission, not lot by lot.
@@ -33,6 +37,7 @@ import type { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
 import { Ratio } from "../money/ratio.js";
 import type { LedgerState, LotJournalEntry, RealizedGain } from "../projections/state.js";
+import { isSinglePurchaseWindow } from "../projections/wash-sale.js";
 import type { AssetId, AssetType } from "../schema/events.js";
 import {
   type IncomeCategory,
@@ -139,6 +144,12 @@ export interface WashSaleOutcome {
   reapplied: boolean;
   /** Deferral with the alternative reading minus the current one, per criterion. */
   alternatives: { "18": Money; "19": Money; "21": Money };
+  /**
+   * The single-purchase exception applied and left prior units out: the part of
+   * the loss it kept from deferring, at most (negative, exact). Zero when it
+   * did not apply or changed nothing.
+   */
+  single_purchase_eur: Money;
 }
 
 /**
@@ -228,6 +239,8 @@ class Walker {
   readonly byYear = new Map<number, PendingDeferral[]>();
   /** The highest year seen so far: the journal is walked in the order it was applied. */
   private lastYear: number | undefined;
+  /** Prior units the single-purchase exception left out of the last `candidates` call. */
+  private exemptUnits = Quantity.ZERO;
 
   constructor(
     private readonly state: LedgerState,
@@ -441,6 +454,7 @@ class Walker {
       mixed_lots: signs.size > 1,
       reapplied: false,
       alternatives: { "18": zero(), "19": zero(), "21": zero() },
+      single_purchase_eur: zero(),
     };
     this.outcomes.push(outcome);
     if (deferrable.isNegative()) {
@@ -473,6 +487,16 @@ class Walker {
     const available = candidates.reduce((sum, c) => sum.add(c.available), Quantity.ZERO);
     const units = available.gt(sold) ? sold : available;
     const deferred = units.isZero() ? zero() : share(outcome.deferrable_eur, units, sold);
+    if (this.exemptUnits.isPositive()) {
+      // What the exception kept from deferring, once the posterior purchases
+      // have taken their part: nothing if they cover the loss anyway.
+      const without = available.add(this.exemptUnits);
+      outcome.single_purchase_eur = share(
+        outcome.deferrable_eur,
+        without.gt(sold) ? sold : without,
+        sold,
+      ).sub(deferred);
+    }
     const least = (a: Quantity, b: Quantity): Quantity => (a.gt(b) ? b : a);
     const alternative = (extra: Quantity): Money => {
       const altUnits = least(available.add(extra), sold);
@@ -534,6 +558,14 @@ class Walker {
   ): Candidate[] {
     const assetId = gain.asset_id;
     const found: Candidate[] = [];
+    const singlePurchase = isSinglePurchaseWindow(
+      this.state,
+      assetId,
+      this.assetType(assetId),
+      start,
+      journalIndex,
+    );
+    let exempt = Quantity.ZERO;
     for (const acquisition of this.acquired.get(assetId) ?? []) {
       if (acquisition.fiscal_date < start || acquisition.fiscal_date > end) {
         continue;
@@ -603,6 +635,10 @@ class Walker {
           lotAvailability.push({ lot, available });
         }
       }
+      if (singlePurchase) {
+        exempt = exempt.add(free);
+        continue;
+      }
       found.push({
         acquisition,
         position,
@@ -613,6 +649,7 @@ class Walker {
         lots: lotAvailability,
       });
     }
+    this.exemptUnits = exempt;
     if (found.some((c) => c.notHeld.isPositive())) {
       outcome.not_held = true;
     }

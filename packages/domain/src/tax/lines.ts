@@ -322,6 +322,13 @@ const deferralCriteria = (ctx: LineContext, outcome: WashSaleOutcome): Criterion
   if (outcome.not_held) {
     ids.push("18");
   }
+  if (!outcome.single_purchase_eur.isZero()) {
+    ids.push(
+      incomeCategoryOf(ctx.settings, type) === "movable_capital"
+        ? "18:single_purchase_etc"
+        : "18:single_purchase",
+    );
+  }
   if (outcome.used_before) {
     ids.push("19");
   }

@@ -8,6 +8,7 @@
 // make "is this code translated?" a question with several places to look.
 
 import type { Warning } from "@atlas/domain";
+import { TREATY_RATE_SUGGESTIONS } from "@atlas/domain";
 import { valueLabel } from "../labels.js";
 import { type Naming, NO_NAMES, namingOf } from "../names.js";
 import { countOf } from "../number.js";
@@ -97,6 +98,20 @@ const PARTIAL_BOX: Record<string, string> = {
     "La deducción por doble imposición es la menor de dos límites y solo conocemos el primero: te damos ese, no el importe de la casilla",
   ledger_withholdings_only:
     "Solo contamos las retenciones que constan en tus datos, que no tienen por qué ser todas",
+};
+
+/**
+ * The suggested treaty rate with the article it comes from. The source is read
+ * from the table of the domain by country, not echoed from the note: a
+ * citation is a fixed text, and echoing it would also print whatever the
+ * detail held.
+ */
+const treatySuggestion = (d: Details): string => {
+  if (d.suggested_pct === undefined) {
+    return "";
+  }
+  const source = TREATY_RATE_SUGGESTIONS.get(text(d.country))?.source;
+  return ` Sugerencia: ${pct(d.suggested_pct)}${source === undefined ? "" : ` (${source})`}; compruébalo antes de fijarlo.`;
 };
 
 export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) => string> = {
@@ -198,7 +213,7 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     "Doble imposición: solo se calcula el primer límite, el del convenio. El segundo exige la declaración entera, y lo que no se deduce se pierde.",
   // The country is the code the ledger keeps (US, IE): `num` leaves it as it is.
   tax_treaty_rate_missing: (d, _n, f) =>
-    `No hay tipo de convenio configurado para ${num(d.country)}: no se calcula deducción por los ${f.money(d.foreign_tax_eur)} retenidos.`,
+    `No hay tipo de convenio configurado para ${num(d.country)}: no se calcula deducción por los ${f.money(d.foreign_tax_eur)} retenidos.${treatySuggestion(d)}`,
   tax_dividend_without_country: (d, _n, f) =>
     `El dividendo no dice qué país lo pagó: no se calcula deducción por los ${f.money(d.foreign_tax_eur)} retenidos en origen.`,
   tax_crypto_custody_not_deductible: () =>

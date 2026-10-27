@@ -7,6 +7,7 @@ import { zero } from "../../src/money/eur.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { DEFAULT_SETTINGS } from "../../src/settings/settings.js";
 import { walkWashSales } from "../../src/tax/wash-sale.js";
+import type { LedgerBuilder } from "../ledger-builder.js";
 import { buy, lineOf, reportOf, sell, taxBuilder, text, transfer } from "./helpers.js";
 
 describe("the window, counted date to date, at its four edges", () => {
@@ -67,6 +68,143 @@ describe("the window, counted date to date, at its four edges", () => {
   it("two months for a fund, which is its default: 29 February plus two is 29 April", () => {
     expect(windowCase("fund_f", "2028-02-29", "2028-04-29")).toBe("-100");
     expect(windowCase("fund_f", "2028-02-29", "2028-04-30")).toBe("0");
+  });
+});
+
+describe("the single-purchase exception (DGT V3282-18, Manual de Renta 2025)", () => {
+  // Sale of 5 at 80 on 2027-03-15 against a cost of 100: own result −100.
+  const cases: [string, string, [string, string][], string, string][] = [
+    [
+      "a single purchase in the window is what is left, not a repurchase",
+      "stock_s",
+      [["2027-03-01", "10"]],
+      "-100",
+      "0",
+    ],
+    ["a fund subscription alone in the window", "fund_f", [["2027-03-01", "10"]], "-100", "0"],
+    [
+      "an ETC as movable capital follows the same reading",
+      "etc_e",
+      [["2027-03-01", "10"]],
+      "-100",
+      "0",
+    ],
+    [
+      "two purchases in the window: no exception",
+      "stock_s",
+      [
+        ["2027-03-01", "5"],
+        ["2027-03-05", "5"],
+      ],
+      "-100",
+      "-100",
+    ],
+    [
+      "a holding at the start of the window: no exception",
+      "stock_s",
+      [
+        ["2027-01-05", "5"],
+        ["2027-03-01", "5"],
+      ],
+      "-100",
+      "-100",
+    ],
+    [
+      "a purchase after the sale still defers",
+      "stock_s",
+      [
+        ["2027-03-01", "10"],
+        ["2027-03-20", "5"],
+      ],
+      "-100",
+      "-100",
+    ],
+    [
+      "crypto looks only forward: the same-day purchase keeps deferring",
+      "coin_c",
+      [["2027-03-15", "10"]],
+      "-100",
+      "-100",
+    ],
+  ];
+
+  it.each(cases)("%s", (_name, asset, buys, own, deferred) => {
+    const b = taxBuilder();
+    // Purchases before the sale in the file go first; one dated after goes after it.
+    for (const [date, quantity] of buys.filter(([date]) => date <= "2027-03-15")) {
+      buy(b, asset, date, quantity, "100");
+    }
+    const loss = sell(b, asset, "2027-03-15", "5", "80");
+    for (const [date, quantity] of buys.filter(([date]) => date > "2027-03-15")) {
+      buy(b, asset, date, quantity, "80");
+    }
+    const line = lineOf(reportOf(b.build(), 2027), loss.id);
+    expect(text(line.own_eur)).toBe(own);
+    expect(text(line.deferred_eur)).toBe(deferred);
+    // The line says so when the exception applied, and only then.
+    const tags = line.criteria.filter((id) => id.startsWith("18:single_purchase"));
+    expect(tags).toEqual(
+      deferred === "0" ? [asset === "etc_e" ? "18:single_purchase_etc" : "18:single_purchase"] : [],
+    );
+  });
+});
+
+describe("the single-purchase exception: the edges where a failure costs money", () => {
+  // Sale of 5 at 80 on 2027-03-15; the window opens on 2027-01-15.
+  const edges: [string, (b: LedgerBuilder) => void, string][] = [
+    [
+      "a transfer in as the only operation of the window still defers (#2b)",
+      (b) => {
+        buy(b, "fund_f", "2026-06-01", "10", "100");
+        transfer(b, "fund_f", "fund_g", "2027-03-01", "10", "10");
+      },
+      "-100",
+    ],
+    [
+      "everything sold before the window opens: nothing was held at the start",
+      (b) => {
+        buy(b, "stock_s", "2026-12-01", "5", "100");
+        sell(b, "stock_s", "2026-12-20", "5", "100");
+        buy(b, "stock_s", "2027-03-01", "10", "100");
+      },
+      "0",
+    ],
+    [
+      "the lone purchase on the first day of the window is exempt",
+      (b) => buy(b, "stock_s", "2027-01-15", "10", "100"),
+      "0",
+    ],
+    [
+      "a holding bought the day before the window is the opening balance: no exception",
+      (b) => {
+        buy(b, "stock_s", "2027-01-14", "5", "100");
+        buy(b, "stock_s", "2027-01-15", "5", "100");
+      },
+      "-100",
+    ],
+    [
+      "a holding in another account at the start of the window: no exception",
+      (b) => {
+        b.buy({
+          account_id: "acc_b",
+          asset_id: "stock_s",
+          value_date: "2026-06-01",
+          quantity: "5",
+          unit_price: "100",
+        });
+        buy(b, "stock_s", "2027-03-01", "10", "100");
+      },
+      "-100",
+    ],
+  ];
+
+  it.each(edges)("%s", (_name, setup, deferred) => {
+    const b = taxBuilder();
+    setup(b);
+    const asset = _name.startsWith("a transfer") ? "fund_g" : "stock_s";
+    const loss = sell(b, asset, "2027-03-15", "5", "80");
+    const line = lineOf(reportOf(b.build(), 2027), loss.id);
+    expect(text(line.deferred_eur)).toBe(deferred);
   });
 });
 
