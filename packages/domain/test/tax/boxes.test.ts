@@ -441,19 +441,35 @@ describe("the operation a row names", () => {
   });
 
   // 100 USD gross, 30 USD withheld at 1.25: 24 EUR withheld, 12 EUR at 15 %.
-  const taxedAbroad = (treaty: Record<string, string>) => {
+  const taxedAbroad = (
+    treaty: Record<string, string>,
+    extra: { withheld?: string; second?: boolean } = {},
+  ) => {
     const b = taxBuilder({ ...HAND_SETTINGS, treaty_withholding_pct: treaty });
     b.dividend({
       account_id: "acc_b",
       asset_id: "stock_s",
       value_date: "2025-03-10",
       gross: "100",
-      withholding_origin: "30",
+      withholding_origin: extra.withheld ?? "30",
       currency: "USD",
       fx_rate: "1.25",
       fx_rate_date: "2025-03-10",
       source_country: "US",
     });
+    if (extra.second === true) {
+      b.dividend({
+        account_id: "acc_b",
+        asset_id: "stock_t",
+        value_date: "2025-04-10",
+        gross: "100",
+        withholding_origin: "30",
+        currency: "USD",
+        fx_rate: "1.25",
+        fx_rate_date: "2025-04-10",
+        source_country: "CH",
+      });
+    }
     return taxBoxes(b.build(), 2025, { today: TODAY }).entries.filter((item) =>
       item.concept.startsWith("ddi."),
     );
@@ -466,6 +482,20 @@ describe("the operation a row names", () => {
     expect(figure(ddi, "ddi.foreign_tax")).toBe("12");
     expect(figure(ddi, "ddi.first_limit")).toBe("12");
     expect(figure(ddi, "ddi.withheld")).toBe("24");
+  });
+
+  it("deducts all of a withholding that is under the treaty limit", () => {
+    // 10 USD withheld is 8 EUR, under the 12 EUR of 15 %.
+    const ddi = taxedAbroad({ US: "15" }, { withheld: "10" });
+    expect(figure(ddi, "ddi.foreign_tax")).toBe("8");
+    expect(figure(ddi, "ddi.withheld")).toBe("8");
+  });
+
+  it("leaves the total empty when only one of two dividends has a treaty rate", () => {
+    const ddi = taxedAbroad({ US: "15" }, { second: true });
+    const taxes = ddi.filter((item) => item.concept === "ddi.foreign_tax");
+    expect(taxes.map((item) => item.amount_eur?.amount.toString())).toEqual(["12", undefined]);
+    expect(ddi.find((item) => item.concept === "ddi.first_limit")?.exact_eur).toBeUndefined();
   });
 
   it("leaves the figure to copy empty, never at zero, when there is no treaty rate", () => {
