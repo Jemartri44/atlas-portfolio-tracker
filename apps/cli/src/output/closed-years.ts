@@ -61,6 +61,16 @@ const NOT_COMPARED: Record<ClosedYearNotCompared, string> = {
     "Las cifras de ese modelo son valores a mercado y no se comparan con el motor de la Renta: mira tú si lo que vas a registrar las mueve",
 };
 
+/**
+ * What the reader has to do about the return. A repurchase that defers a loss
+ * the return computed makes the supplementary return compulsory (art. 73.2
+ * RIRPF), with its deadline; anything else, the engine cannot tell.
+ */
+const supplementaryLine = (impact: ClosedYearImpact): string =>
+  impact.supplementary.kind === "repurchase"
+    ? `Hay que presentar una complementaria de la Renta de ${impact.year} antes de que acabe el plazo de la Renta de ${impact.supplementary.acquisition_year}, con intereses de demora si la compra es posterior al fin del plazo de la de ${impact.year} (art. 73.2 RIRPF).`
+    : "Puede que toque una complementaria.";
+
 /** One line per filed year the write reaches, with what it moves. */
 export const closedYearLines = (impacts: readonly ClosedYearImpact[]): string[] =>
   impacts.map((impact) => {
@@ -71,7 +81,7 @@ export const closedYearLines = (impacts: readonly ClosedYearImpact[]): string[] 
     // An empty list used to mean both that and "I could not compare", and the
     // second one read as the first is an affirmation nobody checked.
     if (impact.comparison.status === "not_compared") {
-      return `${head}${where} ${NOT_COMPARED[impact.comparison.reason]}. Puede que toque una complementaria.`;
+      return `${head}${where} ${NOT_COMPARED[impact.comparison.reason]}. ${supplementaryLine(impact)}`;
     }
     // Compared, and nothing moved. It is only reachable by date: with no date
     // and no movement there is nothing to warn about.
@@ -81,7 +91,7 @@ export const closedYearLines = (impacts: readonly ClosedYearImpact[]): string[] 
     const moves = impact.comparison.moves
       .map((move) => `${figureName(move.figure)} pasa de ${move.before} a ${move.after}`)
       .join("; ");
-    return `${head} ${impact.by_date ? "Cae en ese ejercicio y mueve" : "Mueve"} lo declarado: ${moves}. Puede que toque una complementaria.`;
+    return `${head} ${impact.by_date ? "Cae en ese ejercicio y mueve" : "Mueve"} lo declarado: ${moves}. ${supplementaryLine(impact)}`;
   });
 
 /** The note for a past year nobody has recorded a return for. */

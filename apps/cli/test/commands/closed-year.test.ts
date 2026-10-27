@@ -61,6 +61,44 @@ const run = async (argv: string[], events: LedgerEvent[] = filed().build()) => {
 };
 
 describe("a write that reaches a filed return", () => {
+  it("makes the supplementary return compulsory for a repurchase that defers a declared loss", async () => {
+    // A loss of December 2027 already declared, and a repurchase of January 2028.
+    const events = filed("2027-12-15").build();
+    const sale = events.find((event) => event.type === "sell") as { unit_price: string };
+    sale.unit_price = "80";
+    const text = await run(
+      [
+        "add",
+        "buy",
+        "--account",
+        "acc_es",
+        "--asset",
+        "etf_a",
+        "--trade-date",
+        "2028-01-20",
+        "--value-date",
+        "2028-01-20",
+        "--quantity",
+        "100",
+        "--unit-price",
+        "80",
+        "--currency",
+        "EUR",
+        "--fx-rate",
+        "1",
+        "--fx-rate-date",
+        "2028-01-20",
+        "--yes",
+      ],
+      events,
+    );
+    expect(text).toContain("afecta a la Renta de 2027, presentada el 2028-06-10");
+    expect(text).toContain(
+      "Hay que presentar una complementaria de la Renta de 2027 antes de que acabe el plazo de la Renta de 2028, con intereses de demora si la compra es posterior al fin del plazo de la de 2027 (art. 73.2 RIRPF).",
+    );
+    expect(text).not.toContain("Puede que toque");
+  });
+
   it("names the return and how much the base moves, before the question", async () => {
     const text = await run([
       "add",
