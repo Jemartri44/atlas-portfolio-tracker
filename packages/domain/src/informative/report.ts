@@ -69,11 +69,13 @@ export interface VerdictReason {
     | "first_time_category"
     /** An asset of the last return is no longer held. */
     | "extinction"
+    /** An asset of the last return was transmitted, in whole or in part, since then. */
+    | "partial_extinction"
     /** Not obliged, but close enough that the user asked to be told. */
     | "alert";
   before_eur?: Money;
   after_eur?: Money;
-  /** The asset that is gone, for an extinction. */
+  /** The asset that is gone or reduced, for an extinction. */
   account_id?: AccountId;
   asset_id?: AssetId;
   /** The year of the return it is compared against. */
