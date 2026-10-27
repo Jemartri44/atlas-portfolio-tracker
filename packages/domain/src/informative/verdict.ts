@@ -37,6 +37,8 @@ export interface Declared {
   q4_average_eur?: Money;
   /** An asset of its list that is no longer held: the second trigger. */
   extinct: { account_id: AccountId; asset_id?: AssetId }[];
+  /** An asset of its list transmitted in whole or in part since that return, and still held. */
+  reduced: { account_id: AccountId; asset_id: AssetId }[];
 }
 
 export interface VerdictInput {
@@ -110,6 +112,14 @@ const reasonsOf = (input: VerdictInput): VerdictReason[] => {
       kind: "extinction",
       account_id: gone.account_id,
       ...(gone.asset_id === undefined ? {} : { asset_id: gone.asset_id }),
+      against_year: declared.year,
+    });
+  }
+  for (const less of declared.reduced) {
+    reasons.push({
+      kind: "partial_extinction",
+      account_id: less.account_id,
+      asset_id: less.asset_id,
       against_year: declared.year,
     });
   }
