@@ -31,13 +31,34 @@ const shown = (value: ClosedYearImpact): string => {
 };
 
 describe("the supplementary return of a filed Renta", () => {
-  it("is compulsory after a repurchase, due with the Renta of the year of the purchase", () => {
-    const text = shown(impact({ kind: "repurchase", acquisition_year: 2026 }));
-    expect(text).toContain(
-      "Hay que presentar una complementaria de la Renta de 2025 antes de que acabe el plazo de la Renta de 2026",
+  it("is compulsory, with interest, after a repurchase past the filing period (art. 73.2)", () => {
+    const text = shown(
+      impact({
+        kind: "repurchase",
+        acquisition_year: 2026,
+        filing_deadline: "2026-06-30",
+        after_deadline: true,
+      }),
     );
-    expect(text).toContain("art. 73.2 RIRPF");
+    expect(text).toContain(
+      "Hay que presentar una autoliquidación rectificativa de la Renta de 2025 (marca la casilla [121]), con intereses de demora, antes de que acabe el plazo de la Renta de 2026 (art. 73.2 RIRPF).",
+    );
     expect(text).not.toContain("Puede que toque");
+  });
+
+  it("is a rectification as soon as possible when the purchase came before the end of the period", () => {
+    const text = shown(
+      impact({
+        kind: "repurchase",
+        acquisition_year: 2026,
+        filing_deadline: "2026-06-30",
+        after_deadline: false,
+      }),
+    );
+    expect(text).toContain("anterior al fin del plazo de la Renta de 2025 (30/06/2026)");
+    expect(text).toContain("autoliquidación rectificativa");
+    expect(text).toContain("no es el caso del art. 73.2 RIRPF");
+    expect(text).not.toContain("casilla [121]");
   });
 
   it("is only possible otherwise", () => {

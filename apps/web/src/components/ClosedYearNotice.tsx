@@ -81,11 +81,21 @@ const comparedMoves = (impact: ClosedYearImpact): readonly MovedFigure[] =>
 const notComparedReason = (impact: ClosedYearImpact): ClosedYearNotCompared =>
   impact.comparison.status === "compared" ? "by_design" : impact.comparison.reason;
 
-/** Compulsory with its deadline after a repurchase (art. 73.2 RIRPF); otherwise only possible. */
-const supplementaryText = (impact: ClosedYearImpact): string =>
-  impact.supplementary.kind === "repurchase"
-    ? `Hay que presentar una complementaria de la Renta de ${impact.year} antes de que acabe el plazo de la Renta de ${impact.supplementary.acquisition_year}, con intereses de demora si la compra es posterior al fin del plazo de la de ${impact.year} (art. 73.2 RIRPF).`
-    : "Puede que toque presentar una complementaria.";
+/**
+ * A repurchase that defers a filed loss is rectified: after the end of the
+ * filing period of that year it is art. 73.2 RIRPF (interest, own deadline);
+ * before it, the filed return is wrong and is rectified as soon as possible.
+ * Otherwise only possible.
+ */
+const supplementaryText = (impact: ClosedYearImpact): string => {
+  const { supplementary } = impact;
+  if (supplementary.kind !== "repurchase") {
+    return "Puede que toque presentar una complementaria.";
+  }
+  return supplementary.after_deadline
+    ? `Hay que presentar una autoliquidación rectificativa de la Renta de ${impact.year} (marca la casilla [121]), con intereses de demora, antes de que acabe el plazo de la Renta de ${supplementary.acquisition_year} (art. 73.2 RIRPF).`
+    : `La compra es anterior al fin del plazo de la Renta de ${impact.year} (${formatDate(supplementary.filing_deadline)}) y esa Renta ya está presentada: rectifícala cuanto antes con una autoliquidación rectificativa y, si puedes, antes de esa fecha, para evitar el recargo por presentarla tarde (no es el caso del art. 73.2 RIRPF).`;
+};
 
 export const ClosedYearNotice = (props: { impacts: readonly ClosedYearImpact[] }): JSX.Element => (
   <For each={props.impacts}>

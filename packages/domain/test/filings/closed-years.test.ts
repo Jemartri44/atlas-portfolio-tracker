@@ -93,8 +93,12 @@ describe("what a change does to a year already filed", () => {
     ]);
   });
 
-  it("makes the supplementary return compulsory for that repurchase, due with the Renta of its year", () => {
-    const b = taxBuilder();
+  // Crypto sold at a loss in 2025, the Renta of 2025 filed on 2026-06-18, bought back
+  // the day given (art. 33.5.e: the following year). Its filing period ends 2026-06-30.
+  const cryptoRepurchase = (bought: string, seasonEnd?: string) => {
+    const b = taxBuilder(
+      seasonEnd === undefined ? undefined : { ...DEFAULT_SETTINGS, renta_season_end: seasonEnd },
+    );
     b.buy({
       account_id: "acc_a",
       asset_id: "coin_c",
@@ -102,21 +106,6 @@ describe("what a change does to a year already filed", () => {
       quantity: "1",
       unit_price: "1000",
     });
-    b.buy({
-      account_id: "acc_a",
-      asset_id: "stock_t",
-      value_date: "2025-01-11",
-      quantity: "10",
-      unit_price: "100",
-    });
-    b.sell({
-      account_id: "acc_a",
-      asset_id: "stock_t",
-      value_date: "2025-06-01",
-      quantity: "10",
-      unit_price: "200",
-    });
-    // Crypto sold at a loss, the Renta of 2025 filed, bought back within the year (art. 33.5.e).
     b.sell({
       account_id: "acc_a",
       asset_id: "coin_c",
@@ -129,13 +118,35 @@ describe("what a change does to a year already filed", () => {
     b.buy({
       account_id: "acc_a",
       asset_id: "coin_c",
-      value_date: "2026-08-03",
+      value_date: bought,
       quantity: "1",
       unit_price: "800",
     });
     const [impact] = closedYearImpact({ events: before }, { events: b.build() }, TODAY);
-    expect(impact?.year).toBe(2025);
-    expect(impact?.supplementary).toEqual({ kind: "repurchase", acquisition_year: 2026 });
+    return impact;
+  };
+
+  it("makes the rectifying return compulsory, with interest, when the purchase is after the filing period (art. 73.2)", () => {
+    expect(cryptoRepurchase("2026-08-03")?.supplementary).toEqual({
+      kind: "repurchase",
+      acquisition_year: 2026,
+      filing_deadline: "2026-06-30",
+      after_deadline: true,
+    });
+  });
+
+  it.each([
+    ["2026-06-30", false],
+    ["2026-07-01", true],
+  ])("tells the last day of the filing period from the next one: %s", (bought, after) => {
+    expect(cryptoRepurchase(bought)?.supplementary).toMatchObject({ after_deadline: after });
+  });
+
+  it("reads the end of the filing period from the season of the settings", () => {
+    expect(cryptoRepurchase("2026-07-01", "07-15")?.supplementary).toMatchObject({
+      filing_deadline: "2026-07-15",
+      after_deadline: false,
+    });
   });
 
   it("counts a fund transfer in as the repurchase, like the wash-sale rule does (#2b)", () => {
@@ -149,7 +160,12 @@ describe("what a change does to a year already filed", () => {
     const before = b.build();
     transfer(b, "fund_g", "fund_f", "2028-01-15", "10", "10");
     const [impact] = closedYearImpact({ events: before }, { events: b.build() }, TODAY);
-    expect(impact?.supplementary).toEqual({ kind: "repurchase", acquisition_year: 2028 });
+    expect(impact?.supplementary).toEqual({
+      kind: "repurchase",
+      acquisition_year: 2028,
+      filing_deadline: "2028-06-30",
+      after_deadline: false,
+    });
   });
 
   it("only says a supplementary return is possible when what moves the year is not a later purchase", () => {

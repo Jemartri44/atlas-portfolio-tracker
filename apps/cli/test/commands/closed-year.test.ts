@@ -61,7 +61,7 @@ const run = async (argv: string[], events: LedgerEvent[] = filed().build()) => {
 };
 
 describe("a write that reaches a filed return", () => {
-  it("makes the supplementary return compulsory for a repurchase that defers a declared loss", async () => {
+  it("asks to rectify the Renta, before the end of its filing period, for a repurchase that defers a declared loss", async () => {
     // A loss of December 2027 already declared, and a repurchase of January 2028.
     const events = filed("2027-12-15").build();
     const sale = events.find((event) => event.type === "sell") as { unit_price: string };
@@ -94,7 +94,7 @@ describe("a write that reaches a filed return", () => {
     );
     expect(text).toContain("afecta a la Renta de 2027, presentada el 2028-06-10");
     expect(text).toContain(
-      "Hay que presentar una complementaria de la Renta de 2027 antes de que acabe el plazo de la Renta de 2028, con intereses de demora si la compra es posterior al fin del plazo de la de 2027 (art. 73.2 RIRPF).",
+      "La compra es anterior al fin del plazo de la Renta de 2027 (2028-06-30) y esa Renta ya está presentada: rectifícala cuanto antes con una autoliquidación rectificativa y, si puedes, antes de esa fecha, para evitar el recargo por presentarla tarde (no es el caso del art. 73.2 RIRPF).",
     );
     expect(text).not.toContain("Puede que toque");
   });
