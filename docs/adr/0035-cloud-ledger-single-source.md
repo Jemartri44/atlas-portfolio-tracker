@@ -1,6 +1,6 @@
 # ADR-0035 — Atlas siempre en la nube: el libro de S3 como única fuente de verdad, sin cola local
 
-**Estado:** Aceptada (2026-10-06), por la persona (decisión transmitida por la coordinadora de DESBASTE). Desarrolla la decisión de la persona del mismo día. **Enmienda en parte ADR-0019 y ADR-0026** (cada una lleva una nota que remite aquí) y obliga a poner notas en ADR-0015, ADR-0027, ADR-0029, ADR-0032 y ADR-0033 (lista en «Documentos y tareas afectados»). Incluye la enmienda de la constitución (principio VI, versión 2.0.0), **que no se aplica aquí sino en E0**, con `/speckit-constitution`. Ningún criterio fiscal cambia. Las preguntas abiertas están resueltas (sección «Resueltas»).
+**Estado:** Aceptada (2026-10-06); enmienda en parte ADR-0019 y ADR-0026.
 
 ## Resumen en llano
 
@@ -184,7 +184,7 @@ Va **antes de la 018**, para que el protocolo de la cola no llegue nunca a una n
 
 | Entrega (una PR) | Contenido | Riesgo | Esfuerzo y tokens aproximados |
 |---|---|---|---|
-| **E0 — Documentos** | Esta ADR aceptada. Notas en ADR-0015, 0027, 0029, 0032 y 0033 (las de 0019 y 0026 ya están). `docs/specification.md` §9.2 y §9.6. `docs/data-schema.md` §1 y §5. `docs/api.md` §3 (sesión de 24 h), §5.3, §5.4 y §5.7, más el cliente de escritura directa. La enmienda de la constitución, versión 2.0.0, con `/speckit-constitution`. La fila del *stack* de `CLAUDE.md`. `docs/decision-roadmap.md` (018 y 019). La FR-059 y la historia 10 de `specs/006-web-shell/spec.md` | Bajo | S · 0,2-0,4 M |
+| **E0 — Documentos** | Esta ADR aceptada. Notas en ADR-0015, 0027, 0029, 0032 y 0033 (las de 0019 y 0026 ya están). `docs/specification.md` §9.2 y §9.6. `docs/data-schema.md` §1 y §5. `docs/api.md` §3 (sesión de 24 h), §5.3, §5.4 y §5.7, más el cliente de escritura directa. La enmienda de la constitución, versión 2.0.0, con `/speckit-constitution`. La fila del *stack* de `CLAUDE.md`. `docs/decision-roadmap.md` (018 y 019). La FR-059 y la historia 10 de `specs/006-web-shell/spec.md` (retirada; en git) | Bajo | S · 0,2-0,4 M |
 | **E1 — `ApiLedgerStore`** | El adaptador, las declaraciones deducidas, el error `remote_rejected`, el resultado desconocido buscado por `id` y los tests de contrato contra el manejador con dobles | Medio: es el núcleo de la corrección | M · 0,6-1,0 M |
 | **E2a — Web: leer y sin conexión** | El arranque por sesión y libro, la pantalla «Entrar con Google», la pantalla «Sin conexión», `no-store` comprobado y el *proxy* de desarrollo. El test de lo que queda en el dispositivo | Medio: techos del paquete y estados de arranque | M · 0,7-1,2 M |
 | **E2b — Web: escribir** | Los formularios sobre `ApiLedgerStore`, el `412` guiado, el resultado desconocido, «Descargar copia» (JSONL y CSV) y el aviso de sesión (menos de 15 minutos). Fuera del producto: el libro en IndexedDB, importar, la carpeta, el aviso «sin exportar» y la tarjeta de sincronización | Alto: es lo que la persona usa a diario | M · 0,7-1,2 M |
@@ -239,9 +239,9 @@ Va **antes de la 018**, para que el protocolo de la cola no llegue nunca a una n
   - `README.md`, por el aviso de una semana sin exportar;
   - `CLAUDE.md`, en la tabla del *stack*.
 - **Specs:**
-  - `specs/006-web-shell` (FR-013 y FR-059, historia 10);
-  - `specs/014-ledger-sync-core` y `specs/015-api-access` (E4), que quedan como históricas, con una nota que remita aquí;
-  - `specs/012-ecb-reference-rates`, por la lectura del BCE desde la carpeta en la web.
+  - `specs/006-web-shell` (retirada; en git) (FR-013 y FR-059, historia 10);
+  - `specs/014-ledger-sync-core` (retirada; en git) y `specs/015-api-access` (retirada; en git) (E4), que quedan como históricas, con una nota que remita aquí;
+  - `specs/012-ecb-reference-rates` (retirada; en git), por la lectura del BCE desde la carpeta en la web.
 - **`docs/decision-roadmap.md`:** las pruebas de la 018 y la 019 y el orden de las entregas.
 
 ## Preguntas abiertas
@@ -258,3 +258,7 @@ Respuestas de la persona (2026-10-06, transmitidas por la coordinadora de DESBAS
 6. **La sesión de la web** (`docs/api.md` §3). **Resuelta:** **24 h**, y antes de abrir un formulario la web avisa si quedan menos de 15 minutos. Esto cambia las 8 h de ADR-0027 y de `docs/api.md` §3 (E0).
 7. **Comprimir `GET /api/ledger`.** **Resuelta:** sin comprimir hasta que el tamaño del libro lo pida (aviso de ADR-0028).
 8. **Importaciones de extractos futuras** (Ronda 6). **Resuelta:** se aplazan a la ADR de la importación automática, que decidirá si una importación es «todo o nada». Hoy la API escribe el tramo válido hasta el primer rechazo.
+
+## Notas de estado
+
+Aceptada (2026-10-06), por la persona (decisión transmitida por la coordinadora de DESBASTE). Desarrolla la decisión de la persona del mismo día. **Enmienda en parte ADR-0019 y ADR-0026** (cada una lleva una nota que remite aquí) y obliga a poner notas en ADR-0015, ADR-0027, ADR-0029, ADR-0032 y ADR-0033 (lista en «Documentos y tareas afectados»). Incluye la enmienda de la constitución (principio VI, versión 2.0.0), **que no se aplica aquí sino en E0**, con `/speckit-constitution`. Ningún criterio fiscal cambia. Las preguntas abiertas están resueltas (sección «Resueltas»).

@@ -1,6 +1,6 @@
 # ADR-0008 — Lint y formato: Biome
 
-**Estado:** Aceptada (2026-08-30). Revisar en la Ronda 7 si la web usa Svelte.
+**Estado:** Aceptada (2026-08-30); la revisión prevista quedó sin objeto (la web usa Solid, ADR-0017).
 
 ## Contexto
 

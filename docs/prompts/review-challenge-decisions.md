@@ -12,7 +12,7 @@ Eres un revisor externo del proyecto **Atlas Portfolio Tracker** (`~/personal/at
 2. `.specify/memory/constitution.md`.
 3. `docs/adr/README.md` y **todos** los ADRs, incluidas sus secciones *Opciones consideradas* y *Consecuencias*.
 4. `docs/data-schema.md`, `docs/business-rules.md`, `docs/specification.md`.
-5. `docs/decision-roadmap.md` (qué está decidido, qué está aplazado a propósito y por qué).
+5. `docs/decision-roadmap.md` (lo que sigue pendiente; lo decidido está en los ADR).
 6. Si existe código en `packages/` o `apps/`, léelo después de los documentos, no antes.
 
 ## 2. Reglas del juego
@@ -23,7 +23,7 @@ Eres un revisor externo del proyecto **Atlas Portfolio Tracker** (`~/personal/at
 - **Máximo 10 hallazgos**, ordenados por importancia. Mejor 4 buenos que 10 mediocres. Si no encuentras nada importante, dilo: es un resultado válido.
 - **Cada hallazgo tiene que ser concreto y comprobable.** Cita el documento y la sección que lo contradice o que calla; da un ejemplo (una secuencia de operaciones, un escenario, una cifra) donde el problema aparece.
 - **Propón la comprobación o la pregunta más barata**, no la solución completa. El usuario y el asistente de dirección deciden; tú abres el tema.
-- Sobre fiscalidad española: señala lo que creas que está mal o falta, pero marca tu grado de certeza; el usuario lo verificará con un asesor.
+- Sobre fiscalidad española: señala lo que creas que está mal o falta, pero marca tu grado de certeza; se anotará en `docs/fiscal-questions.md`.
 - Trabaja en español, con los identificadores en inglés tal como aparecen en los documentos. No modifiques ningún fichero del repositorio.
 
 ## 3. Ángulos que conviene mirar (sin limitarse a ellos)
