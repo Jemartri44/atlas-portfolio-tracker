@@ -295,6 +295,28 @@ export const assertExists = (
 export const yearArgument = (raw: string | undefined): number | undefined =>
   raw !== undefined && /^[1-9]\d{0,3}$/.test(raw) ? Number(raw) : undefined;
 
+/**
+ * `yearArgument` for a command that reports a year: not one that has not begun, which is a typo
+ * and not «the current year» with nothing in it.
+ */
+export const reportYear = (
+  ctx: Context,
+  raw: string | undefined,
+  usage: string,
+  command: string,
+): number => {
+  const year = yearArgument(raw);
+  if (year === undefined) {
+    throw new UsageError(usage);
+  }
+  if (year > Number(todayInMadrid(ctx.deps.clock).slice(0, 4))) {
+    throw new UsageError(
+      `el año ${year} aún no ha empezado: ${command} se calcula para el año en curso o uno ya cerrado`,
+    );
+  }
+  return year;
+};
+
 export const render = (ctx: Context, data: unknown, text: string): void => {
   ctx.io.out(ctx.json ? jsonText(data) : text);
 };
