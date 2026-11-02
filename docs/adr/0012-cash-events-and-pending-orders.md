@@ -1,6 +1,6 @@
 # ADR-0012 — Eventos de efectivo, base de coste por importe, órdenes pendientes y traspaso de custodia
 
-**Estado:** Aceptada (2026-08-30). Origen: hallazgos 1, 2, 4 y 9 del *challenge* externo del 2026-08-30 (`~/atlas-private/reviews/`).
+**Estado:** Aceptada (2026-08-30). Origen: hallazgos 1, 2, 4 y 9 del *challenge* externo del 2026-08-30 (`~/personal/atlas/privado/reviews/`).
 
 ## Contexto
 
