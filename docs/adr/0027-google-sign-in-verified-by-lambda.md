@@ -1,6 +1,6 @@
 # ADR-0027 — Acceso solo con Google, verificado en nuestra Lambda; sin Cognito
 
-**Estado:** Aceptada (2026-09-24), por decisión de la dirección, que elige la vía c. Ronda 8. La decisión de fondo es de la dirección; la vía c **corrige el texto con el que la dirección abrió la ronda** («la SPA obtiene un ID token de Google»): cargar el *script* de Google en la página rompe la CSP, la constitución y la comprobación del *build*, y eso pesa más que la redacción. **Enmendada el mismo día** tras la revisión de la PR #72: ver la enmienda al final. **Sustituye** a «Cognito con MFA» de la constitución (Restricciones técnicas), de `docs/specification.md` §9.2, §9.3 y §10, de la tabla de *stack* de `CLAUDE.md` y de ADR-0019 («Cognito protegerá la API»), desde su aceptación.
+**Estado:** Aceptada (2026-09-24); enmendada; sustituye a Cognito.
 
 ## Contexto
 
@@ -53,7 +53,7 @@ Se adopta el acceso **solo con Google, verificado en la Lambda**, y el token se 
 
 - **Riesgo: perder la cuenta de Google.** Salida de emergencia: la web local y la consola siguen funcionando sobre la réplica local (ADR-0026, parte A), y los datos de S3 siguen accesibles con el acceso de administración de AWS, que tiene **MFA propia e independiente de Google** (ADR-0028).
 - **Riesgo: Google borra un cliente OAuth tras seis meses sin uso**, según indica la dirección (condiciones exactas, aviso previo y posibilidad de recuperarlo: **SIN VERIFICAR**). Con un uso sobre todo local, medio año sin iniciar sesión es plausible. Mitigación: el correo mensual (siempre llega, `docs/specification.md` §9.5) dice cuántos días lleva sin iniciarse sesión y avisa antes de los seis meses; y recrear el cliente es un procedimiento escrito que acaba en dos parámetros de SSM, sin reconstruir la web (vía c).
-- **Lo que se pierde frente a Cognito, dicho claro:** la aplicación **no puede comprobar** que la cuenta de Google tenga activada la verificación en dos pasos, ni impedir que Google recuerde el navegador. «MFA obligatorio» pasa a depender de cómo mantenga el usuario su cuenta de Google. **Queda como requisito operativo del usuario** (decisión de la dirección): tener activada la verificación en dos pasos en la cuenta de Google que figura en la lista permitida. Se escribe en el procedimiento de puesta en marcha y en el traspaso de dirección (`docs/prompts/000-director-handoff.md`). Si Google permite forzar la reautenticación en cada acceso con los parámetros de OpenID Connect: **SIN VERIFICAR**.
+- **Lo que se pierde frente a Cognito, dicho claro:** la aplicación **no puede comprobar** que la cuenta de Google tenga activada la verificación en dos pasos, ni impedir que Google recuerde el navegador. «MFA obligatorio» pasa a depender de cómo mantenga el usuario su cuenta de Google. **Queda como requisito operativo del usuario** (decisión de la dirección): tener activada la verificación en dos pasos en la cuenta de Google que figura en la lista permitida. Se escribe en el procedimiento de puesta en marcha y en el traspaso de dirección (`docs/prompts/000-director-handoff.md` (retirado; en git)). Si Google permite forzar la reautenticación en cada acceso con los parámetros de OpenID Connect: **SIN VERIFICAR**.
 - **Excepción a «nada creado a mano»:** el cliente OAuth y su pantalla de consentimiento se crean en la consola de Google Cloud, con un procedimiento escrito; si existe una API para gestionarlos con Terraform: **SIN VERIFICAR**. Un cliente y una lista permitida **por entorno**: `dev` nunca acepta la cuenta que da acceso a `prod`.
 - **Secretos nuevos en SSM:** el secreto del cliente de Google y la clave de sesión, los dos `SecureString`. La frase «el único secreto es el token Flex de IBKR» de `CLAUDE.md` y de §10 de la especificación deja de ser cierta, y hay que corregirla (junto con las claves de las fuentes de precios de ADR-0031).
 - Documentos que hay que actualizar: la constitución (Restricciones técnicas: «Cognito con MFA» → acceso con Google verificado en la Lambda), §9.2, §9.3, **§9.6** (nombra Cognito y el modo privacidad «activado por defecto al iniciar sesión») y §10 de la especificación, la tabla de *stack* y la de seguridad de `CLAUDE.md`, una nota fechada en ADR-0019, y el traspaso de dirección, con el requisito operativo de la verificación en dos pasos.
@@ -75,7 +75,7 @@ Decidida por la dirección el mismo día. La verificación compara también `sta
 
 Rutas, cabeceras y códigos: `docs/api.md`.
 
-## Nota del 2026-09-25 (cuenta compartida, ADR-0034 propuesta)
+## Nota del 2026-09-25 (cuenta compartida, ADR-0034 aceptada)
 
 Con Atlas en una cuenta de AWS compartida con otros proyectos (ADR-0028, nota del mismo día), **los valores de los secretos nunca pasan por Terraform** (ADR-0034, fila 21). Lo que cambia aquí: **«Terraform crea el parámetro con un valor de relleno e ignora los cambios de valor» deja de valer** para la lista permitida, el secreto del cliente y la clave de sesión. Los **crea y los rota un guion versionado**, ejecutado con el rol de administración del entorno, y Terraform solo referencia sus ARN en las políticas. El motivo: el `sub` de OIDC de un `pull_request` no lleva la rama de destino, así que el rol de `terraform plan` está al alcance de cualquier rama del repositorio, y ni él ni el estado deben contener un secreto.
 
@@ -88,3 +88,6 @@ Con Atlas en una cuenta de AWS compartida con otros proyectos (ADR-0028, nota de
 
 Lo que ADR-0035 retira del código se retira en sus entregas E1 a E5; hasta entonces, el código sigue como está (sesión de 8 h).
 
+## Notas de estado
+
+Aceptada (2026-09-24), por decisión de la dirección, que elige la vía c. Ronda 8. La decisión de fondo es de la dirección; la vía c **corrige el texto con el que la dirección abrió la ronda** («la SPA obtiene un ID token de Google»): cargar el *script* de Google en la página rompe la CSP, la constitución y la comprobación del *build*, y eso pesa más que la redacción. **Enmendada el mismo día** tras la revisión de la PR #72: ver la enmienda al final. **Sustituye** a «Cognito con MFA» de la constitución (Restricciones técnicas), de `docs/specification.md` §9.2, §9.3 y §10, de la tabla de *stack* de `CLAUDE.md` y de ADR-0019 («Cognito protegerá la API»), desde su aceptación.
