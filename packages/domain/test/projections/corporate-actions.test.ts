@@ -650,6 +650,31 @@ describe("mandatory edge cases (prompt §3.7)", () => {
     expect(collected.warnings).toEqual([]);
   });
 
+  it("rolls back the currency lots a forced sale in a foreign currency opened", () => {
+    const b = new LedgerBuilder();
+    catalogueOf(b);
+    ten(b, "ast_old");
+    b.corporateAction({
+      kind: "issuer_restructuring",
+      asset_id: "ast_old",
+      effects: [
+        {
+          ...sale([{ account_id: "acc_a", quantity: "2" }], "130"),
+          currency: "USD",
+          fx_rate: "1.3",
+        },
+        { op: "convert", to_asset_id: "ast_new", ratio: "1" },
+        { op: "convert", asset_id: "ast_new", to_asset_id: "ast_spec", ratio: "1" },
+      ],
+    });
+    const collected = projectLedger(b.build(), { collectErrors: true });
+    expect(collected.invalid[0]?.error.code).toBe("book_mismatch");
+    expect(collected.currencyLots.size).toBe(0);
+    expect(collected.currencyLotCounts.size).toBe(0);
+    expect(collected.currencyGains).toEqual([]);
+    expect(collected.currencyJournal).toEqual([]);
+  });
+
   it("rolls back the acquisitions and the income in kind a grant noted before a later effect failed", () => {
     // The grant of rights with a cost noted an acquisition for the wash-sale
     // rule and a line of income in kind, and the failed sale that followed
