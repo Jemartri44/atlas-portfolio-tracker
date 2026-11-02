@@ -42,7 +42,6 @@ Trece mejoras de la propuesta (M1-M13) y el ancla de `#sincronizacion`, en cuatr
 | Colores, paso de 1.800 px, alturas de los paneles, alto de la barra actual | `apps/web/src/styles/tokens.css` (tres bloques) |
 | La prueba del color (tres bloques, CVD, contraste, pares, alias) | `apps/web/test/palette.test.ts` (nuevo); `contrast.test.ts` se queda |
 | La regla del uso de ganancia y pérdida en las hojas | `apps/web/test/palette-usage.test.ts` (nuevo) |
-| Techos contra autorizaciones | `apps/web/scripts/check-bundle.mjs` (`BOOT_AUTHORISED_GZIP_BYTES`, `TOTAL_AUTHORISED_GZIP_BYTES`) |
 | El ancla bajo la barra | `styles/base.css` (`scroll-padding-top`) y `shell/anchor.ts` (nuevo: ir al fragmento cuando el destino existe) |
 | `hasForeignAccountsAt` | `packages/domain/src/projections/foreign-accounts.ts`, barril |
 | `fiscalAttention.prominent` | `packages/domain/src/informative/attention.ts` |
