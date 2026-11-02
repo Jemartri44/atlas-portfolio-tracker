@@ -1,10 +1,10 @@
 # ADR-0023 — Base de estilos propia en lugar de Pico CSS
 
-**Estado:** Aceptada (2026-09-19), por decisión de la dirección. Sustituye la parte de **Pico CSS** del [ADR-0017](0017-web-stack.md); el resto de aquel ADR (Solid, uPlot, tablas nativas, sin librería de componentes, sin directivas `use:`) sigue en vigor.
+**Estado:** Aceptada (2026-09-19); sustituye la parte de Pico de ADR-0017.
 
 ## Contexto
 
-El ADR-0017 eligió Pico CSS 2.1.1 vendorizada como base de estilo, con tokens propios encima: un fichero MIT sin dependencias que da buen aspecto al HTML semántico sin clases. Un día después, el usuario vio la aplicación en su monitor y la calificó de la interfaz más fea que había visto; una revisión con más de mil capturas (`docs/design/brief.md`, §13) y el diagnóstico de `docs/design/system.md` (§1) encontraron que buena parte de los defectos visuales nacían de **los valores por defecto de Pico peleando con los nuestros**:
+El ADR-0017 eligió Pico CSS 2.1.1 vendorizada como base de estilo, con tokens propios encima: un fichero MIT sin dependencias que da buen aspecto al HTML semántico sin clases. Un día después, el usuario vio la aplicación en su monitor y la calificó de la interfaz más fea que había visto; una revisión con más de mil capturas (el encargo, `docs/design/brief.md`) y el diagnóstico de `docs/design/system.md` (§1) encontraron que buena parte de los defectos visuales nacían de **los valores por defecto de Pico peleando con los nuestros**:
 
 - `nav` convertido en fila flexible, con márgenes negativos en `nav ul` y `nav li a`: huecos de 37 px, etiquetas cortadas y destinos solapados.
 - `margin-bottom` y `width: 100%` en botones y campos, que obligaban a deshacerlos en cada control puesto en fila.

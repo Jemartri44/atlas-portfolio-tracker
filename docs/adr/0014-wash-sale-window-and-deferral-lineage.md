@@ -1,6 +1,6 @@
 # ADR-0014 — Ventana de recompra de fecha a fecha y diferimiento ligado al linaje de lotes
 
-**Estado:** Aceptada (2026-08-31), con verificación fiscal pendiente (`docs/fiscal-questions.md` #14 y #15). Revisa la decisión 2 de ADR-0013. Origen: hallazgos 1 y 3 del segundo *challenge* externo (2026-08-31).
+**Estado:** Aceptada (2026-08-31); criterio de Atlas (#14, #15); revisa la decisión 2 de ADR-0013.
 
 ## Contexto
 
@@ -21,7 +21,7 @@ ADR-0013 parametrizó la ventana de la regla de recompra como `wash_sale_window_
 
 ## Decisión
 
-`Settings.wash_sale_window[asset_type]` con valores `"2m"`, `"1y"` o `"<n>d"`, contados de fecha a fecha en meses/años naturales (por defecto `"2m"` cotizados **y fondos, monetarios incluidos** —corregido el 2026-09-22, criterio #2—, `"1y"` cripto); `wash_sale_window_days` sigue aceptándose como forma antigua. El diferimiento viaja con el linaje de lotes y se libera al transmitirse los descendientes. *Verificar con asesor* (#14, #15).
+`Settings.wash_sale_window[asset_type]` con valores `"2m"`, `"1y"` o `"<n>d"`, contados de fecha a fecha en meses/años naturales (por defecto `"2m"` cotizados **y fondos, monetarios incluidos** —corregido el 2026-09-22, criterio #2—, `"1y"` cripto); `wash_sale_window_days` sigue aceptándose como forma antigua. El diferimiento viaja con el linaje de lotes y se libera al transmitirse los descendientes. Criterio de Atlas (`docs/fiscal-questions.md` #14, #15).
 
 ## Consecuencias
 

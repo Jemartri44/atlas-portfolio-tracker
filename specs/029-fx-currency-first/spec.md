@@ -1,6 +1,6 @@
 # Especificación — 029 Ganancias en divisa: primero en la divisa, y lotes de divisa
 
-Estado: **diseño aprobado por Coordinación el 2026-10-27**, con las respuestas a las cuatro preguntas al final. El cómo, en `plan.md`. Punto 2 del encargo del 26/10 (`docs/prompts/` no tiene prompt propio: el encargo es de la coordinadora, sobre la investigación fiscal del 26/10). Tiene que estar en `develop` **antes de la primera operación real en USD**.
+Estado: **entregada** (PR #241, 2026-10-27; arreglos en #246 y #248). Diseño aprobado por Coordinación el 2026-10-27, con las respuestas a las cuatro preguntas al final. El cómo, en `plan.md`. Punto 2 del encargo del 26/10 (`docs/prompts/` no tiene prompt propio: el encargo es de la coordinadora, sobre la investigación fiscal del 26/10). Tiene que estar en `develop` **antes de la primera operación real en USD**.
 
 ## Por qué
 

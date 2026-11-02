@@ -328,23 +328,15 @@ Trabajo programado que compara las posiciones del libro mayor contra el extracto
 
 ## 9. Arquitectura
 
-### 9.1 Decisión: AWS, no Vercel ni VPS
+Este apartado enuncia la forma de la plataforma; el porqué y los detalles están en los ADR y en [`api.md`](api.md).
 
-| Opción | A favor | En contra |
-|---|---|---|
-| **AWS (estático + Lambda)** | Always Free estable desde hace más de una década; control total del scheduling; **es donde tiene sentido el Terraform** | Más trabajo inicial |
-| Vercel Hobby | Despliegue con `git push` | Sin base de datos incluida; cron limitado; timeouts cortos para scraping; nivel gratuito sujeto a política comercial |
-| VPS | Control total | Mantener un servidor durante 20 años: parches, actualizaciones, renovaciones |
+### 9.1 Decisión: AWS
 
-**Elegido: AWS.** "Estático" se refiere solo al frontend: la SPA se sirve desde S3, pero hay backend real en Lambda para scraping, cálculos y trabajos programados. No se pierde funcionalidad; se elimina el servidor de renderizado.
+Frontend estático en S3 y backend en Lambda, con Terraform para toda la infraestructura. «Estático» se refiere solo al frontend: hay backend real para la API y las tareas programadas, y se elimina el servidor de renderizado. Se descartaron Vercel (sin base de datos, cron limitado) y un VPS (mantener un servidor durante 20 años). La cuenta, la línea base de seguridad y el coste mínimo con alarma de presupuesto están en ADR-0028 y ADR-0034.
 
 ### 9.2 Componentes
 
-> **Atlas es siempre en la nube (ADR-0035).** El libro de S3 (`ledger/ledger.jsonl`) es la **única fuente de verdad**: la web y la consola escriben directamente contra la API con `If-Match`, sin cola local y sin libro en el dispositivo; la API es el único escritor y solo añade. Detalle del contrato: `docs/api.md` §5.8.
->
-> **La consola.** Una carpeta es **de nube** (`sync/remote.json`, sin `ledger.jsonl`: el libro es el de la nube, por la API y con el token de dispositivo) o **local** (`ledger.jsonl`, sin identidad remota); con las dos cosas se niega (`folder_mode_ambiguous`). Sin conexión la consola sale con el código 8, con la sesión caducada con el 10 (`atlas remote login`). `atlas backup` y `atlas export` valen en los dos modos; `compact` solo en local; la subida inicial es `atlas remote upload`. Ningún camino sincroniza lo local con la nube.
-
-> **Diagrama y decisiones vigentes desde ADR-0026, ADR-0027 y ADR-0028 (2026-09-24, Ronda 8).** Cognito desaparece: el acceso es solo con Google, verificado por la propia Lambda (ADR-0027). **Desde el 2026-09-25 no hay cuentas miembro dedicadas** (decisión del usuario; ADR-0034): `dev` y `prod` son dos pilas en una cuenta de AWS que el usuario comparte con otros proyectos, separadas por nombre, etiqueta, estado, prefijo de SSM, roles y un límite de permisos por entorno (detalle en §11.3).
+**Atlas es siempre en la nube (ADR-0035).** El libro de S3 (`ledger/ledger.jsonl`) es la única fuente de verdad: la web y la consola escriben directamente contra la API con `If-Match`, sin cola local y sin libro en el dispositivo; la API es el único escritor y solo añade ([`api.md`](api.md) §5.8). Una carpeta de la consola es **de nube** (`sync/remote.json`, sin `ledger.jsonl`) o **local** (`ledger.jsonl`, sin identidad remota); con las dos cosas se niega (`folder_mode_ambiguous`). Sin conexión la consola sale con el código 8, con la sesión caducada con el 10 (`atlas remote login`).
 
 ```
 Navegador (PC / móvil)      Consola (`atlas`; token de dispositivo
@@ -355,240 +347,133 @@ Navegador (PC / móvil)      Consola (`atlas`; token de dispositivo
            ├── /*      ──── S3 (SPA estática, privada vía OAC)
            │
            └── /api/*  ──── Lambda Function URL ─── Lambda (API) ─── S3 (datos: libro mayor
-                            (AuthType=AWS_IAM;                        JSONL versionado, precios,
-                             OAC firma la petición;                   histórico del BCE,
-                             la Lambda verifica la sesión             documentos de eventos;
-                             propia o el token de la                  nunca origen de CloudFront)
-                             consola y, en el acceso,
-                             el ID token de Google)
+                            (AuthType=AWS_IAM; OAC firma                JSONL versionado, precios,
+                             la petición; la Lambda verifica            histórico del BCE,
+                             la sesión propia, el token de              documentos; nunca origen
+                             la consola o el ID token de Google)        de CloudFront)
 
-EventBridge Scheduler ─── Lambdas programadas ──────── SES (correo; solo la
-                          (cinco, un solo artefacto        función de correo)
-                           `jobs.zip`, una por familia
-                           de permisos: BCE, precios,
-                           correo, volcado, integridad;
-                           las que no envían dejan sus
-                           hallazgos en `jobs/` del
-                           bucket de datos)
+EventBridge Scheduler ─── Lambdas programadas (cinco, un solo artefacto) ─── SES (solo la función de correo)
                                 │
-                                └── SSM Parameter Store (token IBKR, secreto de
-                                    cliente de Google, clave de sesión, claves
-                                    de las fuentes de precios, destinatario del
-                                    correo; registro de los tokens de consola,
-                                    que lee y escribe la API, ADR-0033)
+                                └── SSM Parameter Store (secretos, lista permitida, claves de precios,
+                                    destinatario del correo, registro de los tokens de consola)
 ```
 
-**Decisiones deliberadas para minimizar coste y servicios:**
+Decisiones deliberadas para minimizar coste y servicios, cada una en su ADR:
 
-- **Lambda Function URL en vez de API Gateway.** Un servicio menos. **La Lambda solo se alcanza a través de CloudFront**, en la misma distribución que la SPA y bajo `/api/*` (ADR-0028, fila 6): mismo origen, así que la cookie de sesión es del mismo sitio y no hace falta CORS. El navegador nunca llama a la Function URL directamente. Con Origin Access Control, CloudFront sobrescribe la cabecera `Authorization` para firmar la petición a la Function URL, así que la sesión y el acceso viajan en cookie o en cabeceras propias, nunca en `Authorization` (ADR-0027).
-- **Acceso solo con Google, verificado en la propia Lambda; sin Cognito ni Lambda@Edge** (ADR-0027). Código de autorización con PKCE, la Lambda como cliente OAuth: el token de Google nunca toca la SPA. Sesión propia en una cookie `__Host-` firmada, con lista permitida de `{sub, email}` en SSM. Detalle en §10.
-- **SSM Parameter Store en vez de Secrets Manager.** El estándar es gratuito; Secrets Manager cuesta ~0,40$/secreto/mes.
-- **DNS en el registrador, no en Route 53.** Un CNAME del subdominio propio a la distribución de CloudFront evita los 0,50$/mes de zona alojada. Certificado en ACM (gratuito), **obligatoriamente en us-east-1** para CloudFront. El dominio real vive en `terraform.tfvars`, fuera del repositorio.
-- **S3 como único almacén** (ADR-0002, ADR-0006): un único `ledger/ledger.jsonl` con **todos los eventos** (operaciones, catálogo de cuentas y activos, cambios de configuración); la Lambda lo carga entero, proyecta y guarda con escritura condicional (`If-Match`). El versionado del bucket da historial y backup sin servicios adicionales. La Lambda solo añade: nunca reescribe ni borra líneas (ADR-0026). Esquema y distribución del bucket en `docs/data-schema.md`.
-- **Plan Free de tarifa plana de CloudFront** como cortafuegos de aplicación: 0$, cubre 1 M de peticiones y 100 GB al mes, e incluye una *web ACL* de WAF con limitación de tasa por IP (ADR-0028).
+- Lambda Function URL en vez de API Gateway, alcanzada solo a través de CloudFront bajo `/api/*` (mismo origen: sin CORS) (ADR-0028, fila 6).
+- Acceso solo con Google, verificado en la propia Lambda; sin Cognito ni Lambda@Edge (ADR-0027, [`api.md`](api.md) §3).
+- SSM Parameter Store estándar en vez de Secrets Manager (ADR-0028, ADR-0034).
+- DNS en el registrador (un CNAME), sin Route 53; certificado ACM en us-east-1. El dominio real vive en `terraform.tfvars`, fuera del repositorio (ADR-0028).
+- S3 como único almacén: un `ledger/ledger.jsonl` con todos los eventos, escritura condicional y versionado del bucket como historial y copia (ADR-0002, ADR-0006, [`data-schema.md`](data-schema.md)).
+- Plan Free de tarifa plana de CloudFront como cortafuegos (ADR-0028).
 
 ### 9.3 Costes
 
-> **Rehecha desde ADR-0028 (2026-09-24, Ronda 8).** La tabla de abajo mezclaba límites de un modelo de precios anterior y contaba con Cognito; la restricción deja de ser «*always-free* indefinidamente» y pasa a ser **coste mínimo con alarma de presupuesto** (constitución, principio VI).
+Restricción: **coste mínimo con alarma de presupuesto**, no «always-free indefinido» (constitución VI, ADR-0028). Estimación de ≈ 0,01-0,05 $/mes, cubierta por los créditos de la cuenta mientras duren y pagada después. Una alarma de AWS Budgets, `atlas-cost`, avisa por correo a 1 $, medida antes de créditos y filtrada por la etiqueta `project=atlas` (ADR-0028, ADR-0034). Los niveles gratuitos de Lambda, SSM y CloudFront son por cuenta y se comparten con los otros proyectos de ella (ADR-0034). Las fuentes de precios (EODHD, Alpha Vantage) son planes gratuitos con cupo diario (ADR-0031).
 
-| Servicio | Límite gratuito mensual | Uso previsto |
-|---|---|---|
-| Lambda | 1M invocaciones, 400.000 GB-segundo, **por cuenta y compartido** con los otros proyectos de la cuenta (ADR-0034) | Unos cientos de invocaciones; si los otros proyectos agotan el nivel gratuito, Atlas paga su parte a precio de lista, céntimos |
-| CloudFront (plan Free de tarifa plana) | 1 M de peticiones, 100 GB de salida, WAF con 5 reglas incluido; **como mucho 3 planes Free por cuenta**, sin ampliación (ADR-0034, F9) | Unos MB. Al superar lo incluido **no hay cargos por exceso**; un exceso sostenido durante meses puede reducir la calidad de entrega (ADR-0034, F9). Con un solo plan Free libre, `dev` va con CloudFront de pago por uso, sin WAF (ADR-0034, fila 19) |
-| SSM Parameter Store (estándar) | Gratuito; cupo de 10.000 parámetros y rendimiento **por cuenta y región, compartidos** (ADR-0034) | Varios parámetros: token IBKR, secreto de cliente de Google, clave de sesión, claves de las fuentes de precios, destinatario del correo, tokens de la consola |
-| Acceso con Google (Lambda propia) | Sin coste de AWS | 1 usuario; sin Cognito |
-| SES | 0,10$ por 1.000 correos | ~10 correos/mes ≈ 0,001$. El *sandbox* es por cuenta y región y la cuenta compartida puede estar ya fuera: el rol que envía está acotado por IAM al remitente de Atlas y a la dirección del usuario (ADR-0034, fila 12) |
-| S3 (versionado, SSE-S3) | Sin nivel gratuito perpetuo | Unos MB de libro, configuración, histórico del BCE y precios → céntimos al año |
-| EODHD, Alpha Vantage | Planes gratuitos con clave | Cupos diarios (20 y 25 llamadas). CoinGecko, retirada (ADR-0031, tercera enmienda) |
+### 9.4 Cuenta en el Paid Plan
 
-**Coste estimado: ≈ 0,01-0,05 $/mes**, cubierto por los créditos de la cuenta mientras duren (investigación del 2026-09-24); agotados los créditos, la cuenta paga ese coste. **Alarma de AWS Budgets a 1 $** por correo, que mide el coste antes de aplicar créditos (ADR-0028).
-
-### 9.4 ⚠ Trampa crítica del Free Plan
-
-AWS cambió el modelo el 15 de julio de 2025. Las cuentas nuevas entran en un **Free Plan** con 100$ de crédito inicial y hasta 100$ más por completar actividades, con ventana de seis meses.
-
-**En el Free Plan, cuando se agotan los créditos o vencen los seis meses, la cuenta se cierra automáticamente**, sin factura previa ni periodo de gracia. Quedan 90 días para pasar al Paid Plan y recuperar los datos antes de que se borren.
-
-**Acción obligatoria: pasar al Paid Plan desde el principio.** Con tarjeta asociada y usando solo servicios de coste mínimo, la facturación queda cubierta por los créditos mientras duren y después es mínima, pero la cuenta no se cierra. Desde el 2026-09-25 Atlas se despliega en una cuenta que el usuario **ya tiene en el Paid Plan** y comparte con otros proyectos (ADR-0034), así que no hay organización ni cuentas miembro que crear. Una cuenta que esté usando el AWS Free Tier **no puede suscribir** los planes de tarifa plana de CloudFront (ADR-0034, F9): se comprueba antes de desplegar.
-
-**Además:** alerta de presupuesto (AWS Budgets) en 1$, con aviso por correo, que mide el coste **antes** de aplicar los créditos. Es la red que avisa si algo se sale de lo previsto (ADR-0028). En la cuenta compartida, el presupuesto **filtra por la etiqueta de asignación de costes `project=atlas`**, que activa el *bootstrap* con Terraform (`aws_ce_cost_allocation_tag`), salvo que la cuenta sea miembro de una organización ajena. Los impuestos no se etiquetan; lo que pase de los niveles gratuitos compartidos sale en las líneas de los recursos de Atlas, y lo arbitrario es cómo se reparte entre proyectos lo que cubre el nivel gratuito (ADR-0034, fila 9).
+En el Free Plan de AWS (cuentas nuevas desde julio de 2025) la cuenta se cierra sola, sin factura previa, al agotar los créditos o a los seis meses; quedan 90 días para pasar al Paid Plan y recuperar los datos. Atlas se despliega en una cuenta que el usuario **ya tiene en el Paid Plan** y comparte con otros proyectos (ADR-0034), así que no hay organización ni cuentas miembro. Los detalles de la trampa del Free Plan y de la suscripción al plan de tarifa plana de CloudFront están en ADR-0028 y ADR-0034 y en [`runbooks/bootstrap-and-ci.md`](runbooks/bootstrap-and-ci.md).
 
 ### 9.5 Lambdas programadas
 
-> **Construida en la feature 016 (fusionada el 2026-09-28), sin desplegar todavía**: la infraestructura es de la 017 y la prueba contra AWS real, de la 018 (`docs/decision-roadmap.md`). La importación diaria de IBKR y la conciliación semanal siguen **bloqueadas por la Ronda 6** (los importadores).
+Construidas (feature 016) y sin desplegar todavía: la infraestructura es de la 017 y la prueba contra AWS real, de la 018 ([`decision-roadmap.md`](decision-roadmap.md)). EventBridge Scheduler despierta **una vez al día** a cada una de las cinco funciones (`apps/jobs`, un solo artefacto), en hora de Madrid; el dominio decide qué tarea toca según su periodo y `job_frequencies`. Cada tarea deja un registro por periodo en `jobs/<familia>/<tarea>/<periodo>.json` ([`data-schema.md`](data-schema.md) §1). **Solo la función de correo envía**; las demás dejan sus hallazgos y `dispatch_findings` los avisa una vez por racha.
 
-EventBridge Scheduler despierta **una vez al día** a cada una de las cinco funciones (`apps/jobs`, un solo artefacto `jobs.zip`), con la hora de Madrid, y el dominio decide qué tarea toca según su periodo y `job_frequencies`. Cada tarea deja un registro por periodo en `jobs/<familia>/<tarea>/<periodo>.json` (`docs/data-schema.md` §1). **Solo la función de correo envía**: las demás dejan sus hallazgos en su registro, y la tarea `dispatch_findings` de la función de correo los avisa **una vez por racha**, no una vez al día. El evento de cada programación, las variables de cada función y los permisos están en `specs/016-scheduled-jobs/contracts/` (`scheduler-event.md`, `ssm-and-config.md`, `iam-permissions.md`); los textos de cada correo, en `contracts/mail.md`; qué hacer con cada uno, en [`docs/runbooks/scheduled-warnings.md`](runbooks/scheduled-warnings.md).
-
-| Función (hora de Madrid) | Tarea | Clave de `job_frequencies` (por defecto, primero) | Notifica |
+| Función (hora de Madrid) | Tarea | `job_frequencies` (por defecto, primero) | Notifica |
 |---|---|---|---|
-| `job-ecb` (17:15) | Actualizar el histórico del BCE, byte a byte, con el calendario TARGET como comprobación cruzada (ADR-0029) | `ecb`: `daily`, `weekly` | Solo con un hallazgo: descarga rechazada, calendario que no cuadra, histórico dañado, reconstruido o sin comparar, y actualización cortada que se ha deshecho (`ecb_update_undone`) |
-| `job-prices` (07:00) | Actualizar los precios de cierre: EODHD, respaldo Alpha Vantage (ADR-0031). **Nunca contrasta** una correspondencia ni escribe `prices/symbols.json` | `prices`: `daily`, `weekly` | Solo con un hallazgo: una fuente que falla en el umbral de fallos seguidos, correspondencias sin contrastar, tesis del cubo con el horizonte vencido y ficheros de cierres ilegibles. La condición de invalidación de una tesis es texto libre y **no avisa** |
-| `job-backup` (03:15) | Volcado mensual a `backups/<YYYY-MM>/`, para siempre (ADR-0032) | `backup`: `monthly` (fijo) | Solo si falla o queda incompleto: `backup_object_differs`, `backup_ecb_inconsistent`, `backup_ecb_missing`, `backup_positions_missing` y `task_failed` |
-| `job-integrity` (04:15) | Integridad: los **errores** de `atlas check --deep` sobre el libro vivo, el ensayo de restauración con el último volcado **en memoria**, y el tamaño del libro (ADR-0032) | `integrity`: `quarterly`, `monthly` | Solo con errores, con un ensayo que no reproduce el libro o con el libro por encima de `ATLAS_LEDGER_SIZE_WARNING_BYTES` |
-| `job-mail` (08:00) | Recordatorio mensual: el reparto de la aportación, **sin importes salvo que se active** (ADR-0028); los días desde el último inicio de sesión, web o consola, los tokens de consola vivos y emitidos en el mes, sin nombres (ADR-0027, ADR-0033); y la copia fuera de AWS (ADR-0032) | `reminder`: `monthly` (fijo) | **Siempre, al menos una vez**. Si no puede leer los cierres o el histórico del BCE, no sale ese día y sale en cuanto pueda leerlos |
-| `job-mail` | Revisión: desviaciones de los pesos del núcleo sobre `deviation_threshold_pp`, por **clase**, nunca por activo, y reglas 17 y 18 del cubo; informativa, con los cierres de la nube | `review`: `weekly`, `monthly` | Solo si se pasa un umbral; como mucho una vez por periodo |
-| `job-mail` | Datos de la Renta del ejercicio anterior (enero) | `tax_return`: `yearly` (fijo) | Sí, en enero, como mucho una vez: cuántas notas y cuántos criterios en disputa; **nunca la base ni ninguna cifra, ni con los importes encendidos** |
-| `job-mail` | Modelos 720 y 721 del año que acaba (enero) | `informative_thresholds`: `yearly` (fijo) | Solo si hay algo que hacer, lo mismo que la tarjeta fiscal de la web, con **valoraciones manuales** y los umbrales de aviso de `Settings`, nunca con precios automáticos. Texto neutro: sin cifras y sin decir si se pasa un umbral |
-| *(bloqueada, Ronda 6)* | Importar operaciones nuevas de IBKR vía Flex Query (diaria) | — | Solo si hay operaciones nuevas o discrepancias |
-| *(bloqueada, Ronda 6)* | Conciliar posiciones del libro contra el extracto de IBKR | `reconciliation`: **reservada**; hoy se ignora y se dice (`job_not_available`) | Sí, si divergen |
-| — (manual, anual) | Ensayo manual de restauración desde el último volcado, en la máquina del usuario (constitución VI, ADR-0032; [`docs/runbooks/restore-the-ledger.md`](runbooks/restore-the-ledger.md)) | — | — |
+| `job-ecb` (17:15) | Histórico del BCE, con el calendario TARGET como comprobación (ADR-0029) | `ecb`: `daily`, `weekly` | Solo con un hallazgo |
+| `job-prices` (07:00) | Precios de cierre: EODHD, respaldo Alpha Vantage; nunca escribe `prices/symbols.json` (ADR-0031) | `prices`: `daily`, `weekly` | Solo con un hallazgo (fuente caída, correspondencias sin contrastar, horizonte de una tesis vencido) |
+| `job-backup` (03:15) | Volcado mensual a `backups/<YYYY-MM>/` (ADR-0032) | `backup`: `monthly` (fijo) | Solo si falla o queda incompleto |
+| `job-integrity` (04:15) | Errores de `atlas check --deep`, ensayo de restauración en memoria y tamaño del libro (ADR-0032) | `integrity`: `quarterly`, `monthly` | Solo con errores |
+| `job-mail` (08:00) | Recordatorio mensual: reparto de la aportación (sin importes salvo que se active, ADR-0028), días desde el último inicio de sesión y tokens de consola vivos | `reminder`: `monthly` (fijo) | **Siempre, al menos una vez** |
+| `job-mail` | Revisión de desviaciones de los pesos del núcleo por clase y reglas 17 y 18 del cubo | `review`: `weekly`, `monthly` | Solo si se pasa un umbral, como mucho una vez por periodo |
+| `job-mail` | Datos de la Renta y modelos 720 y 721 (enero) | `tax_return` y `informative_thresholds`: `yearly` (fijos) | Una vez, sin cifras ni base |
+| *(bloqueadas, Ronda 6)* | Importación diaria de IBKR y conciliación semanal | `reconciliation`: reservada | — |
 
-**`job_frequencies` es un conjunto cerrado de claves y valores, sin `off`** (`docs/business-rules.md` §7): apagar un aviso es silenciar una alarma (constitución IV), y el recordatorio mensual llega siempre (constitución V). Se lee **con tolerancia**: una clave desconocida, un valor que no se admite o `reconciliation` no invalidan el libro; se usa el valor por defecto y se dice con su código en el registro. Las horas son la propuesta de la 016, que la 017 escribe en Terraform; ninguna cae entre las 02:00 y las 03:00, donde el cambio de hora salta o repite.
-
-**Cómo se reintenta.** Una tarea que falla se reintenta en la ejecución siguiente de su periodo. El recordatorio mensual se envía **al menos una vez**; los demás avisos, **como mucho una vez**: un aviso que pudo salir y no se sabe se cierra sin volver a enviarlo, y un periodo que ya pasó (la semana anterior, un enero pasado) se cierra `expired` sin enviar. Un fallo pasajero al leer el libro o lo que se valora no gasta un aviso periódico: se reintenta al día siguiente y, si el último día del periodo (el domingo, o el 31 de enero) sigue sin poderse, se dice con su código.
-
-**Principio de notificación:** el correo mensual siempre llega. Los demás solo cuando hay algo que hacer. Un sistema que envía correos rutinarios acaba filtrado a los seis meses. El destinatario del correo tiene **una sola fuente, `terraform.tfvars`**, fuera del repositorio, de la que Terraform escribe el parámetro de SSM que lee la Lambda y la condición de IAM del envío; nunca va en `Settings` ni en el repositorio (ADR-0028, ADR-0034; [`docs/runbooks/mail-recipient-and-amounts.md`](runbooks/mail-recipient-and-amounts.md)). Ningún correo lleva euros, cantidades, precios, posiciones, nombres de activos, ISIN, símbolos ni cuentas; con el interruptor de importes encendido, solo los euros del reparto mensual y de la regla 17.
+`job_frequencies` es un conjunto cerrado de claves y valores, sin `off`: apagar un aviso es silenciar una alarma (constitución IV) y el recordatorio mensual llega siempre (constitución V); se lee con tolerancia ([`business-rules.md`](business-rules.md) §7). El recordatorio se envía al menos una vez y los demás avisos como mucho una vez; un periodo que ya pasó se cierra `expired` sin enviar. El correo mensual siempre llega y los demás solo cuando hay algo que hacer: un sistema que envía correos rutinarios acaba filtrado. El destinatario tiene una sola fuente, `terraform.tfvars`, fuera del repositorio (ADR-0028, ADR-0034; [`runbooks/mail-recipient-and-amounts.md`](runbooks/mail-recipient-and-amounts.md)). Qué hacer con cada aviso: [`runbooks/`](runbooks/README.md).
 
 ### 9.6 Frontend
 
-SPA estática (Vite + Solid, ADR-0017; base de estilos propia, ADR-0023) servida desde S3 por CloudFront, sin servidor de renderizado. **Cloud-only (ADR-0035):**
+SPA estática (Vite + Solid, ADR-0017; base de estilos propia, ADR-0023) servida desde S3 por CloudFront. **Cloud-only (ADR-0035):** entra con Google, descarga el libro al arrancar y escribe directamente con `If-Match`; no guarda libro, borradores ni cierres en el dispositivo (solo el *shell*, preferencias y la copia pública del histórico del BCE). Sin conexión muestra solo «Sin conexión» con «Reintentar». Si dos sitios registran a la vez, el segundo recarga y confirma de nuevo. «Descargar copia» baja el libro (JSONL y CSV).
 
-- Entra con Google, descarga el libro de la nube al arrancar y escribe directamente con `If-Match`. No guarda libro, borradores ni cierres en el dispositivo: solo el *shell*, las preferencias de la interfaz y la copia pública del histórico del BCE.
-- Sin conexión muestra solo «Sin conexión» con «Reintentar»; si se corta con la aplicación abierta, oculta los datos al momento y recarga el libro al volver.
-- Si dos sitios registran a la vez, el segundo ve que sus datos han cambiado, se recarga el libro y se le pide confirmar otra vez; nada se mezcla sin que lo vea.
-- «Descargar copia» baja el libro (JSONL y CSV).
+Requisitos transversales:
 
-**Requisitos transversales:**
-- Responsive real: la misma interfaz en PC y móvil, sin funcionalidad recortada en móvil.
-- **Modo privacidad**: un interruptor, **activado por defecto** (mientras el usuario no lo apague en ese dispositivo), que oculta todos los importes y cantidades (saldos, posiciones, P&L, ejes de gráficas) sustituyéndolos por una máscara, como en las apps bancarias. Los porcentajes y las formas de las gráficas siguen visibles. La máscara mide siempre lo mismo y conserva la unidad («•••• €», «•••• part.»), que dice qué se oculta sin decir cuánto. Lo que el usuario escribe no se oculta; lo que la aplicación precarga en un campo (corregir un movimiento, la configuración) sí, hasta que el campo recibe el foco. Se implementa en un único componente de importe para que ninguna pantalla pueda saltárselo; el estado se recuerda por dispositivo.
+- Responsive real: la misma interfaz en PC y móvil, sin funcionalidad recortada.
+- **Modo privacidad**, activado por defecto: oculta importes y cantidades con una máscara de ancho fijo que conserva la unidad; porcentajes y formas de gráficas siguen visibles. Lo que el usuario escribe no se oculta ([`design/brief.md`](design/brief.md)).
 - Modo de solo lectura por defecto; registrar operaciones requiere acción explícita.
-- **Consistencia visual**: un sistema de componentes y tokens (colores, tipografía, espaciado) definido una vez y reutilizado; ninguna pantalla con estilos propios. El sistema está en `docs/design/system.md` y la base de estilos es propia (ADR-0023).
+- Un único sistema de componentes y tokens, en [`design/system.md`](design/system.md).
 
 ---
 
 ## 10. Seguridad
 
-Son datos financieros personales completos. Nivel de exigencia alto.
+Son datos financieros personales completos: nivel de exigencia alto. Las decisiones están en ADR-0026, ADR-0027, ADR-0028, ADR-0033 y ADR-0034; el contrato de acceso, en [`api.md`](api.md) §2-§4.
 
-> **Acceso y secretos vigentes desde ADR-0027 (2026-09-24, Ronda 8)**, que sustituye a «Cognito con MFA» en todo este documento.
-
-- **Nunca almacenar credenciales de brókers.** Ni usuario, ni contraseña, ni claves de exchange. Los secretos van en SSM Parameter Store como `SecureString`, jamás en el frontend ni en el repositorio: el token Flex de IBKR (**solo lectura**) y el secreto del cliente OAuth de Google y la clave de firma de la sesión (ADR-0027). **Las claves de las fuentes de precios** EODHD y Alpha Vantage (ADR-0031) van **en local, en un fichero fuera del repositorio y de la carpeta del libro, y en la nube, en SSM** (§11.8).
-- **S3 privado**, servido solo vía CloudFront con Origin Access Control. Sin buckets públicos.
-- **Acceso solo con Google, verificado en la propia Lambda de la API; sin Cognito ni Lambda@Edge** (ADR-0027). Código de autorización con PKCE y `state`: la Lambda es el cliente OAuth y canjea el código directamente con Google, así que el token nunca toca la SPA ni la URL. Verificación completa del ID token (firma, `aud` del entorno, `iss`, `exp`, `nonce`, `email_verified`) y lista permitida de `{sub, email}` en SSM, consultada en cada petición con una caché de pocos minutos. Sesión propia en una cookie `__Host-` firmada (`HttpOnly`, `Secure`, `SameSite=Strict`), sin *refresh token*: al caducar, se repite el flujo con Google. **La verificación en dos pasos de la cuenta de Google es un requisito operativo del usuario**, no algo que la aplicación pueda comprobar (`docs/prompts/000-director-handoff.md`).
-- **La consola, con un token de dispositivo propio** (ADR-0033, aceptada el 2026-09-25). Se emite **solo** al final de un inicio de sesión con Google que abre la propia consola (`atlas remote login`: *loopback* a `127.0.0.1` con PKCE, y una variante manual para WSL en modo NAT o SSH), **nunca desde la web**. Caduca a los 90 días, sin renovarse con el uso, bajo un techo fijo de 120 en el código; se revoca uno a uno desde la web o con `atlas remote logout`. Viaja en la cabecera `x-atlas-device-token`, solo al origen que lo emitió, por HTTPS y sin seguir redirecciones; una petición con cookie **y** token se rechaza. La API guarda solo su hash (SSM), lo comprueba en cada petición sin caché y vuelve a consultar la lista permitida; su alcance es leer y escribir el libro, nunca emitir ni revocar otros tokens. Contrato en `docs/api.md`.
-- **IAM de mínimo privilegio**: cada Lambda con su rol y solo los permisos que necesita.
-- **Cifrado en reposo** en S3, y en tránsito por TLS.
-- **Sin analítica de terceros, sin CDN externos, sin fuentes remotas.** Todo se sirve desde tu propio origen. Un script de terceros en una app financiera es una vía de exfiltración.
-- **CSP restrictiva** que solo permita el propio origen y los endpoints de API necesarios.
-- **Validación en el backend**, siempre. El frontend es una comodidad, no un control de seguridad.
-- **Registro de auditoría**: cada escritura queda registrada con marca temporal. El versionado de S3 aporta la segunda capa.
-- **Nada personal en el repositorio público**: ni dominio real, ni importes, ni entidades donde está el dinero más allá de las integraciones soportadas. Los valores reales viven en la configuración de la app y en `terraform.tfvars` ignorado.
+- **Nunca se almacenan credenciales de brókers.** Los secretos van en SSM como `SecureString`, nunca en el frontend ni en el repositorio (§11.8).
+- **S3 privado**, servido solo vía CloudFront con Origin Access Control; el bucket de datos nunca es origen de CloudFront.
+- **Acceso solo con Google**, verificado en la propia Lambda con PKCE y `state`, lista permitida de `{sub, email}` en SSM y sesión propia en una cookie `__Host-` firmada (ADR-0027).
+- **La consola usa un token de dispositivo propio**, emitido solo al final de un inicio de sesión con Google que abre la propia consola, nunca desde la web; caduca a los 90 días y se revoca uno a uno (ADR-0033).
+- IAM de mínimo privilegio, un rol por Lambda; cifrado en reposo y TLS en tránsito.
+- Sin analítica de terceros, CDN externos ni fuentes remotas; CSP restrictiva que solo permite el propio origen.
+- Validación siempre en el backend: el frontend es comodidad, no control de seguridad.
+- Registro de auditoría: cada escritura queda con marca temporal y el versionado de S3 aporta la segunda capa.
+- Nada personal en el repositorio público (dominio real, importes); los valores reales viven en la configuración de la app y en `terraform.tfvars`, ignorado.
 
 ### 10.1 Gestión de dependencias
 
-- Lockfile fijado y comprometido en el repositorio.
-- `npm audit` en CI, y revisión manual antes de cada actualización.
-- **Presupuesto explícito de dependencias.** Cada paquete nuevo requiere justificación. Menos dependencias es más seguridad y más probabilidad de que compile dentro de cinco años.
-- Preferir la biblioteca estándar frente a paquetes pequeños de utilidad.
-- Herramientas útiles: Dependabot para avisos, y servicios de análisis de cadena de suministro para detectar paquetes comprometidos.
+Lockfile comprometido, `npm audit` en CI, revisión manual antes de actualizar y **presupuesto cerrado de dependencias** ([`dependencies.md`](dependencies.md)): cada paquete nuevo requiere justificación y se prefiere la biblioteca estándar.
 
 ---
 
 ## 11. Prácticas de ingeniería
 
-Repositorio público en GitHub, así que las prácticas son también parte del entregable.
+Repositorio público en GitHub, así que las prácticas son también parte del entregable. Las reglas operativas están en `CLAUDE.md` y en la constitución; aquí, el enunciado.
 
 ### 11.1 Idioma
 
-- **Todo lo técnico en inglés**: código, identificadores, comentarios, mensajes de commit, nombres de rama, nombres de fichero, infraestructura.
-- **Documentos de `docs/` en español** (prosa), con los identificadores en inglés.
+Todo lo técnico en inglés (código, comentarios, commits, ramas, ficheros, infraestructura); la prosa de `docs/` en español, con los identificadores en inglés.
 
 ### 11.2 Git
 
-- **Git flow con comandos básicos de git** (sin la extensión `git-flow`): `main` (producción), `develop` (integración), `feature/*`, `fix/*`, `release/*`, `hotfix/*`. Fusiones con `--no-ff`.
-- **Pull requests obligatorias** hacia `develop` y `main`. Sin push directo. Protección de rama activada.
-- **Conventional Commits**, mensajes breves, en imperativo y en inglés; solo la línea de asunto siempre que sea posible:
-  `feat(ledger): add fund transfer event`
-  `fix(fifo): fix lot ordering on equal dates`
-  `test(tax): cover the two-month rule`
-- **Ninguna herramienta de IA puede figurar como coautora ni aparecer en los mensajes de commit.**
-- Commits atómicos: un cambio conceptual por commit.
-- Hooks de git versionados en `.githooks/` (`core.hooksPath`): `commit-msg` valida el formato y `pre-commit` hace dos comprobaciones antes de cada commit, y cualquiera de las dos que falle lo aborta. `gitleaks` revisa lo preparado (el índice); Biome revisa la **copia de trabajo** de los ficheros preparados:
-  - **`gitleaks`**, con las reglas por defecto más las del proyecto en `.gitleaks.toml`: la regla `atlas-console-device-token` reconoce el token de dispositivo de la consola (`atlasdt1.<token_id>.<secret>`, ADR-0033, `docs/api.md` §2.1) y deja pasar el `token_id` solo, que es público.
-  - **Biome** en modo de comprobación (`biome check`, las mismas reglas que `npm run lint`), sobre todos los ficheros preparados, con el binario del repositorio (`node_modules/.bin/biome`). Qué ficheros trata lo decide Biome, igual que en `npm run lint`: los tipos que no conoce y las rutas que excluye `biome.json` se saltan sin error, así que un commit solo de Markdown pasa. Si no hay nada preparado, no se ejecuta. Como lee la copia de trabajo y no el índice, un fichero preparado con cambios sin preparar se comprueba tal como está en disco (el hook lo avisa): un contenido preparado mal formateado puede pasar si la copia de trabajo ya está corregida, y lo recoge la CI con `npm run lint`. Si falla, `npm run format` arregla el formato y los arreglos seguros; lo demás se corrige a mano.
-  - Si falta la herramienta (`gitleaks` sin instalar, Biome sin `npm ci`, o un Biome que no arranca porque `biome --version` falla: sin `node` en el `PATH`, como cuando un cliente gráfico no carga nvm, o con `node_modules` instalado desde otra plataforma), el hook avisa y **no bloquea**. En una emergencia, `git commit --no-verify` se salta las dos comprobaciones; la CI sigue ejecutando `npm run lint`.
-  - El asistente de código tiene el mismo control de los mensajes en `.claude/settings.json`.
-- Plantilla de PR con la checklist de la constitución en `.github/pull_request_template.md`.
+- Git flow con comandos básicos (`main`, `develop`, `feature/*`, `fix/*`, `release/*`, `hotfix/*`), fusiones con `--no-ff`; commits atómicos, Conventional Commits en inglés y sin coautoría de herramientas de IA.
+- Pull requests obligatorias hacia `develop` y `main`, sin push directo: `main` tiene protección de rama en GitHub (PR con una aprobación, sin comprobaciones obligatorias); `develop` no está protegida y el «sin push directo» es disciplina (`CLAUDE.md`).
+- Hooks versionados en `.githooks/` (`core.hooksPath`): `commit-msg` valida el formato y `pre-commit` ejecuta `gitleaks` (reglas por defecto más las de `.gitleaks.toml`, entre ellas la del token de dispositivo, ADR-0033) y `biome check` sobre los ficheros preparados. Si falta la herramienta, el hook avisa y no bloquea; la CI sigue ejecutando `npm run lint`.
+- Plantilla de PR con la lista de la constitución en `.github/pull_request_template.md`.
 
 ### 11.3 Entornos
 
-> **Vigente desde ADR-0034 (2026-09-25)**, que sustituye en parte a ADR-0028: el usuario decidió no crear organización ni cuentas miembro. Hasta ese día el aislamiento era **por cuenta**; ahora es **por políticas**, dentro de una cuenta que el usuario comparte con otros proyectos.
-
-| Entorno | Rama | Infraestructura | Datos |
-|---|---|---|---|
-| `dev` | `develop` | Pila `atlas-dev-*` en la cuenta compartida del usuario, **en reposo** cuando no se usa (distribución de CloudFront desactivada, que se activa desde el pipeline con una variable del despliegue y nunca a mano; tareas programadas desactivadas; sin las claves de precios del usuario) | Datos sintéticos |
-| `prod` | `main` | Pila `atlas-prod-*` en la misma cuenta | Datos reales |
-
-- **Aislamiento por políticas, no por cuenta**: todo recurso lleva el prefijo `atlas-<entorno>-` y las etiquetas `project=atlas` y `env=<entorno>`; SSM, bajo `/atlas/<entorno>/`; cada entorno tiene su estado de Terraform, sus roles y **un límite de permisos** que ningún rol suyo puede quitarse. «Datos de producción jamás en dev» lo garantizan **dos cerraduras independientes**: la política de cada rol de `dev`, que solo nombra recursos de `dev`, y la política del bucket de datos de `prod`, que niega a todo principal que no sea de `prod`. **Frente a quien administra la cuenta no hay aislamiento**, y los parámetros de SSM no tienen política de recurso: el riesgo que queda está escrito en ADR-0034.
-- **Despliegue a producción solo desde `main`**, tras PR aprobada y CI en verde; el rol de despliegue de `prod` exige además el *environment* `prod` de GitHub con aprobación obligatoria.
-- **Los artefactos que se despliegan a producción son los mismos que se validaron en dev.** Se construye una vez y se promociona; no se reconstruye por entorno.
-- **Datos de producción jamás en dev.** Generador de datos sintéticos como parte del repositorio.
+`dev` (rama `develop`) y `prod` (rama `main`) son dos pilas en **una cuenta de AWS compartida** con otros proyectos (ADR-0034): el aislamiento es por políticas (prefijo `atlas-<entorno>-`, etiquetas `project=atlas` y `env`, SSM bajo `/atlas/<entorno>/`, un estado de Terraform y un límite de permisos por entorno), no por cuenta. `dev` está en reposo cuando no se usa y solo lleva datos sintéticos. A producción se despliega solo desde `main`, tras PR aprobada y CI en verde, con el *environment* `prod` de GitHub con aprobación; el artefacto es el mismo que se validó en `dev` (se construye una vez y se promociona). Datos de producción jamás en `dev`.
 
 ### 11.4 Infraestructura
 
-- **Terraform** para todos los recursos AWS. Nada creado a mano en la consola, **salvo las excepciones declaradas por ADR-0028 y ADR-0034, cada una con su condición de retirada**: la suscripción al plan de tarifa plana de CloudFront, que tampoco se hace a mano sino con un **guion idempotente de la CLI de AWS versionado en el repositorio**, y se retira cuando el proveedor de Terraform lo soporte; el cliente OAuth de Google por entorno (ADR-0027), el *bootstrap* de Terraform, **por entorno dentro de la cuenta compartida** y con su estado en local, fuera del repositorio, que **se vuelve a aplicar a mano cada vez que cambia `infra/bootstrap/`, primero en `dev` y después en `prod`** (ADR-0034, fila 20), y la petición de aumento de cuota de concurrencia si hace falta. **Los valores de los secretos no los crea Terraform**: los crea y los rota un guion versionado, ejecutado con el rol de administración del entorno (ADR-0034, fila 21). La activación de la etiqueta de asignación de costes la hace el propio *bootstrap*, salvo que la cuenta sea miembro de una organización ajena, y entonces es un paso manual de quien la administre. La organización y las cuentas miembro de ADR-0028 **no existen** (decisión del usuario del 2026-09-25).
-- Estado remoto en S3 con el bloqueo nativo de S3, en **un bucket propio de Atlas** con una clave por entorno; cada rol solo alcanza la de su entorno (ADR-0034).
-- Módulos reutilizables (`infra/modules/atlas/`) y una carpeta por entorno (`infra/envs/dev/`, `infra/envs/prod/`), las dos contra la misma cuenta. **Las carpetas se versionan; solo sus ficheros `.tfvars` quedan fuera del repositorio.**
-- `terraform plan` obligatorio en la PR, `apply` solo tras aprobación.
+Terraform para todos los recursos AWS, sin nada creado a mano salvo las excepciones de ADR-0028 y ADR-0034, cada una con su condición de retirada. Estado remoto en un bucket propio de Atlas con una clave por entorno (ADR-0034); módulos en `infra/modules/atlas/` y una carpeta por entorno en `infra/envs/` (solo los `.tfvars` quedan fuera del repositorio). `terraform plan` en la PR y `apply` solo tras aprobación.
 
 ### 11.5 Tests
 
-| Nivel | Cobertura |
-|---|---|
-| **Unitarios** | Motor FIFO, transformaciones de lotes por evento corporativo, conversión de divisa, regla de los dos meses, cálculo de reparto mensual |
-| **Integración** | API contra un `LedgerStore` en memoria o en fichero local, adaptadores de importación con extractos de ejemplo |
-| **Contrato** | Parsers de extractos contra ficheros reales anonimizados guardados en el repositorio |
-| **End-to-end** | Flujos críticos: registrar operación, importar extracto, calcular aportación |
-
-**Prioridad absoluta: el motor fiscal.** Es donde un error silencioso cuesta dinero y no se detecta hasta años después. **Cobertura del 100% de líneas y ramas en `packages/domain`, bloqueante en CI**; sin umbral numérico fuera del dominio (ahí mandan los tests de contrato e integración). Casos límite explícitos (misma fecha en varios lotes, fracciones, contrasplit con liquidación en efectivo, recompra en el límite de los dos meses).
-
-**Ficheros de ejemplo anonimizados** de cada formato de extracto, versionados en el repositorio. Cuando un bróker cambie el formato, el test falla y te enteras.
+Unitarios (FIFO, transformaciones de lotes, divisa, regla de los dos meses, reparto mensual), de integración (API contra un `LedgerStore` en memoria o fichero), de contrato (parsers contra extractos anonimizados) y de extremo a extremo (flujos críticos). **Prioridad absoluta: el motor fiscal.** Cobertura del 100 % de líneas y ramas en `packages/domain`, bloqueante en CI; sin umbral fuera del dominio. Casos límite explícitos en `CLAUDE.md`. Los extractos de ejemplo son sintéticos y están versionados.
 
 ### 11.6 CI/CD
 
-GitHub Actions:
-1. Lint y formateo (Biome, ADR-0008)
-2. Comprobación de tipos
-3. Tests unitarios y de integración
-4. `npm audit` y análisis de dependencias
-5. `terraform plan`
-6. Build
-7. Despliegue (solo en merge a `develop` o `main`)
+GitHub Actions: lint y formato (Biome, ADR-0008), tipos, tests, `npm audit`, `terraform plan`, build y despliegue (solo al fusionar en `develop` o `main`).
 
 ### 11.7 Logging por capas
 
-| Nivel | Uso |
-|---|---|
-| `ERROR` | Fallo que requiere intervención: importación fallida, discrepancia de conciliación |
-| `WARN` | Degradación: fuente de precios caída, precio obsoleto, umbral rozado |
-| `INFO` | Eventos de negocio: operación registrada, aportación calculada, correo enviado |
-| `DEBUG` | Detalle de ejecución, desactivado en producción |
-
-- **Logs estructurados en JSON**, con `request_id` para correlacionar entre Lambdas.
-- **Nunca registrar importes, posiciones ni identificadores de cuenta.** Los logs de CloudWatch son un almacén menos protegido que la base de datos; que un log filtre tu patrimonio sería absurdo.
-- **Retención corta** (30 días en prod, 7 en dev). CloudWatch cobra por almacenamiento y no aporta nada tener logs de 2029.
+Niveles `ERROR` (requiere intervención), `WARN` (degradación), `INFO` (eventos de negocio) y `DEBUG` (desactivado en producción), en JSON con `request_id`. **Nunca se registran importes, posiciones ni identificadores de cuenta**, ni tokens, correos o `sub` de Google (ADR-0027, ADR-0028, ADR-0033). Retención de 30 días en producción y 7 en `dev`.
 
 ### 11.8 Gestión de secretos
 
-> **Ampliada desde ADR-0027, ADR-0028 y ADR-0031 (2026-09-24, Ronda 8).**
+Todo en SSM Parameter Store estándar como `SecureString`; los valores nunca pasan por Terraform: un guion versionado, con el rol de administración, los crea y rota (ADR-0034, fila 21). Qué guarda y dónde:
 
-- **SSM Parameter Store** (nivel estándar, gratuito) con parámetros cifrados de tipo `SecureString`.
-- Token Flex de IBKR: **solo lectura**, rotado anualmente, jamás en el frontend ni en el repositorio.
-- **Secreto del cliente OAuth de Google y clave de firma de la sesión** (ADR-0027), uno por entorno: `dev` nunca acepta la cuenta de Google que da acceso a `prod`.
-- **Claves de las fuentes de precios** EODHD y Alpha Vantage (ADR-0031; CoinGecko, retirada en su tercera enmienda): en local, en `~/.config/atlas/secrets.json`, **fuera del repositorio y de la carpeta del libro**, con permisos `600` (con otros permisos, la consola no las usa); en la nube, SSM. ~~Con ellas van el orden de las fuentes y su presupuesto: configuración operativa de la máquina que descarga, que ninguna cifra del libro lee.~~ El orden de las fuentes y su presupuesto **no** van con ellas, porque no son secretos: en local viven en `prices/config.json`, junto al libro (`docs/data-schema.md` §1); en la nube, en las variables de la función de precios, que escribe Terraform (ADR-0031, nota del 2026-09-28; `docs/api.md` §9).
-- **Lista permitida** de `{sub, email}` de Google (ADR-0027) y **destinatario del correo** (ADR-0028): en SSM. La lista la crea y la rota el guion de secretos con el rol de administración, nunca Terraform; el destinatario sale de `terraform.tfvars`, de donde Terraform escribe también la condición de IAM de SES (ADR-0034, filas 12 y 21). No van en el repositorio porque son datos personales y el repositorio es público; y no van en `Settings` porque **ninguna cifra del libro los lee** y quien los usa es la Lambda (la API, que comprueba la lista; la que envía el correo, el destinatario): un dato personal que solo usa el servidor vive donde lo lee el servidor (principio IV). El campo `notification_email` de `Settings` **está retirado** desde la feature 016: la web ya no lo ofrece en Ajustes y ninguna foto nueva de `settings_changed` lo lleva, la escriba la web o la consola (`mergeSettings` lo quita). El cargador lo sigue aceptando en las líneas ya escritas (ADR-0018), y nadie lo lee.
-- **Interruptor de importes del correo** (ADR-0028, fila 18): también en SSM, junto al destinatario. No es dato personal ni secreto: es configuración operativa que ninguna cifra lee, y además un campo nuevo, que en `Settings` —una foto completa— un cliente antiguo borraría sin avisar al escribir la foto siguiente (ADR-0026, caso 6; enmienda de ADR-0018).
-- **Tokens de dispositivo de la consola** (ADR-0033): en la nube, un parámetro `SecureString` estándar por token bajo `/atlas/<entorno>/device-tokens/<id>`, con **solo el hash** del secreto, el par `{sub, email}`, el nombre, el dispositivo, la emisión, la caducidad y la revocación; se escribe solo al crearlo y al revocarlo, y la API nunca lo borra. **No va en el bucket de datos**, que se copia y se restaura: una restauración podría reactivar tokens revocados. En local, el token vive en `~/.config/atlas/credentials.json` (o `$XDG_CONFIG_HOME/atlas/`), hermano de `secrets.json` y con sus mismas reglas (`600`, fuera de la carpeta del libro, nunca en una copia, exportación ni sincronización), pero **lo escribe la consola**. En WSL, el `600` no protege frente a un proceso de Windows del mismo usuario; es el mismo límite que ya tienen `secrets.json` y la réplica del libro.
-- Sin secretos en variables de entorno de la Lambda visibles en la consola.
-- `.gitignore` estricto y escaneo de secretos en CI.
+- Token Flex de IBKR, solo lectura (cuando haya importador).
+- Secreto del cliente OAuth de Google y clave de firma de la sesión, uno por entorno (ADR-0027).
+- Claves de las fuentes de precios: en local, `~/.config/atlas/secrets.json` (`600`, fuera del repositorio y del libro); en la nube, SSM (ADR-0031).
+- Lista permitida de `{sub, email}` y destinatario del correo (que sale de `terraform.tfvars`) y el interruptor de importes del correo, en SSM (ADR-0028, ADR-0034).
+- Tokens de dispositivo de la consola: un `SecureString` por token bajo `/atlas/<entorno>/device-tokens/`, solo el hash, fuera del bucket de datos (ADR-0033).
+- Sin secretos en variables de entorno de la Lambda; `.gitignore` estricto y escaneo de secretos.
 
 ### 11.9 Documentación
 
-- `README` con arranque en local, arquitectura y despliegue.
-- Licencia **MIT** (`LICENSE`).
-- Versionado: etiquetas `vX.Y.Z` en `main` al cerrar cada `release/*`; `CHANGELOG.md` escrito a mano en la rama de release, sin herramienta de generación.
-- **ADRs** (registros de decisión de arquitectura) en `docs/adr/` para las decisiones importantes: lenguaje, almacenamiento, modelo del libro, por qué modelo propio, por qué aproximación por ETF.
-- **El esquema de datos documentado en el repositorio**, incluida la lógica de transformación de lotes de cada evento corporativo.
+`README` con arranque en local; licencia MIT; etiquetas `vX.Y.Z` en `main` al cerrar cada `release/*` y `CHANGELOG.md` a mano; ADR en `docs/adr/` para las decisiones importantes; esquema de datos en el repositorio, con la lógica de transformación de lotes de cada evento corporativo.
 
 ---
 
@@ -661,6 +546,6 @@ Puntos detectados al revisar la especificación. Sin decidir todavía; cada uno 
 - [x] **Despliegue desde GitHub Actions con OIDC**, sin claves de AWS de larga duración en el repositorio. Resuelto (ADR-0028, 2026-09-24; cuenta compartida desde ADR-0034, 2026-09-25): un rol de despliegue por entorno en la misma cuenta, que solo puede crear roles con el límite de permisos de su entorno; el de `dev` solo desde `develop`, el de `prod` solo desde el *environment* `prod` con aprobación obligatoria, y un rol de `terraform plan` de solo lectura que nunca se usa para una PR desde un *fork*.
 - [x] **Tests de propiedades** para el motor FIFO. Hecho con `fast-check` en `packages/domain/test/properties/`: los lotes abiertos igualan la posición física por activo, proyectar dos veces da lo mismo y el diario reconstruye cada lote y cada ganancia, y `scale` seguido de su inverso deja lotes y posiciones idénticos.
 - [x] **Reconsiderar DynamoDB frente a JSONL en S3**: S3 (ADR-0002).
-- [ ] **Esqueleto del repositorio**: `docs/adr/`, `docs/data-schema.md`, `LICENSE`, `.editorconfig`, CI, escaneo de secretos. Está todo salvo **`.editorconfig`, que no existe**; el escaneo de secretos es `gitleaks` en `.githooks/pre-commit`, local por clon y no en CI.
-- [x] **Protección de ramas** en GitHub para `main` y `develop` (hecho por el usuario).
-- [x] **Revisión externa (*challenge*) del 2026-08-30**: diez hallazgos aplicados (ADR-0012, ADR-0013, `docs/data-schema.md`); preguntas al asesor consolidadas en `docs/fiscal-questions.md`.
+- [ ] **Esqueleto del repositorio**: `docs/adr/`, `docs/data-schema.md`, `LICENSE`, CI, escaneo de secretos. El formato lo impone Biome, sin `.editorconfig`; el escaneo de secretos es `gitleaks` en `.githooks/pre-commit`, local por clon y no en CI.
+- [x] **Protección de ramas** en GitHub: hecha solo para `main` (comprobado el 2026-11-03); `develop` sin proteger.
+- [x] **Revisión externa (*challenge*) del 2026-08-30**: diez hallazgos aplicados (ADR-0012, ADR-0013, `docs/data-schema.md`); criterios fiscales consolidados en `docs/fiscal-questions.md`.

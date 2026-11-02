@@ -20,8 +20,8 @@ User: Spanish tax resident. Planned integrations: MyInvestor (fund statements) a
 - `docs/data-schema.md` — the ledger file format (bucket layout, line envelope, event types, migrations). `docs/adr/` — architecture decision records.
 - `docs/dependencies.md` — the closed dependency budget.
 - `docs/prompts/` — handoff prompts, one per feature, written by the high-level assistant for the implementing assistant.
-- `docs/statements/` — structural description of each broker export format (no real data), input for the `StatementSource` adapters.
-- `docs/fiscal-questions.md` — consolidated questions for the tax advisor; each answer becomes a `Settings` value or a note in `business-rules.md`.
+- `docs/statements/` — structural description of each broker export format (no real data), input for the planned `StatementSource` adapters (importers).
+- `docs/fiscal-questions.md` — tax criteria applied by Atlas (there is no tax advisor) and the doubts that remain; each one becomes a `Settings` value or a note in `business-rules.md`.
 
 ## Spec-driven development (GitHub Spec Kit)
 
@@ -72,7 +72,7 @@ Monorepo with npm workspaces, **hexagonal architecture** with a pure functional 
 
 ```
 packages/domain    pure core: types, money, events, projections, FIFO, tax, use cases, PORTS (interfaces). No I/O, no runtime npm deps.
-packages/adapters  port implementations: S3/file/memory LedgerStore, IBKR/MyInvestor StatementSource, price sources, ECB FxRateSource, SES Notifier. AWS SDK lives only here.
+packages/adapters  port implementations: S3/file/memory LedgerStore, price sources, ECB FxRateSource, SES Notifier. AWS SDK lives only here.
 apps/cli           Phase-1 interface over a local file or S3.
 apps/api           Lambda Function URL behind CloudFront (/api/*): verifies the Google token at sign-in, issues its own session, composes domain + adapters.
 apps/web           Vite SPA; uses domain to project/simulate the ledger it reads from the API.
@@ -80,7 +80,7 @@ apps/jobs          Scheduled Lambdas run by EventBridge Scheduler (ECB, prices, 
 infra/             Terraform.
 ```
 
-Dependency rule: `domain` imports nothing; `adapters` imports `domain`; apps import both (enforced by an architecture test). Ports: `LedgerStore`, `StatementSource`, `PriceSource`, `FxRateSource`, `DocumentStore`, `Notifier`, `Clock`, `RandomSource`. New integrations (banks, broker APIs) are new adapters, never domain changes. Use cases live in `domain/usecases` and receive ports as parameters.
+Dependency rule: `domain` imports nothing; `adapters` imports `domain`; apps import both (enforced by an architecture test). Ports: `LedgerStore`, `PriceSource`, `FxRateSource`, `Notifier`, `Clock`, `RandomSource`; `StatementSource` and `DocumentStore` are planned (importers) and do not exist yet. New integrations (banks, broker APIs) are new adapters, never domain changes. Use cases live in `domain/usecases` and receive ports as parameters.
 
 ## Working on a feature (for implementing assistants)
 
@@ -127,7 +127,7 @@ Errors that go unnoticed for years. Details in `docs/business-rules.md`.
 6. **Corporate actions are first-class transactions** with their own lot-transformation logic. No manual patches on the database.
 7. **The own ledger is the source of truth.** Broker statements are for reconciliation, not for feeding the system.
 8. **The ledger is append-only.** Transactions are never edited or deleted; "edit" = `reversal` + corrected transaction (ADR-0003). Reversing an event that later events consumed is **rejected** (rectify the dependants first). Amounts are serialised as strings in JSON, never as JSON numbers.
-9. **Fiscal date depends on asset type** (`trade_date` for listed securities, `value_date` for funds, configurable, ADR-0013); the wash-sale window is **two months for securities admitted to trading — funds among them, money-market funds included** (criterion #2, default `2:fund_2m` since 2026-09-22, medium certainty, aggressive direction), **one year for those not admitted**, and **one year after the sale only (never before it) for direct crypto**, art. 33.5.e) read literally (criterion #2, medium certainty; the user has yet to confirm it). All of it is per-asset-type configuration (`wash_sale_window`), never a constant; verify with the advisor.
+9. **Fiscal date depends on asset type** (`trade_date` for listed securities, `value_date` for funds, configurable, ADR-0013); the wash-sale window is **two months for securities admitted to trading — funds among them, money-market funds included** (criterion #2, default `2:fund_2m` since 2026-09-22, medium certainty, aggressive direction), **one year for those not admitted**, and **one year after the sale only (never before it) for direct crypto**, art. 33.5.e) read literally (criterion #2, medium certainty; the user has yet to confirm it). All of it is per-asset-type configuration (`wash_sale_window`), never a constant; certainty per criterion in `docs/fiscal-questions.md`.
 10. **Loader rejects newer schema versions; `append` never re-serialises existing lines.** An old client must never rewrite a newer ledger.
 
 ## Design principles
