@@ -89,7 +89,7 @@ atlas add buy --account acc_fund --asset ast_world --trade-date 2026-09-01 --val
   --quantity 10.123456 --amount 1000 --currency EUR --fx-rate 1 --fx-rate-date 2026-09-02 --yes
 
 # Consultas
-atlas positions          # posición física por cuenta y activo
+atlas positions          # posición física por cuenta y activo, a hoy (--date AAAA-MM-DD para otra fecha)
 atlas lots               # lotes fiscales (FIFO global por activo), con fecha y coste en EUR
 atlas cash               # efectivo por cuenta y divisa
 atlas gains 2027         # ganancias realizadas del ejercicio (redondeadas una vez por operación)
