@@ -17,8 +17,8 @@
 //    chunk, which `vite.config.ts` writes to `dist/.vite/atlas-modules.json`.
 //    This is the authoritative guard; the static ones of
 //    `tests/architecture/api.test.ts` are the quick warning.
-// 5. Size within one ceiling on the whole gzip output (JS + CSS). The boot
-//    size (what index.html preloads) is printed to see it, not enforced.
+// 5. Size within two ceilings (JS + CSS, gzip): the boot (what index.html
+//    preloads, what a phone feels) and the whole output.
 
 import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
@@ -28,8 +28,11 @@ import { gzipSync } from "node:zlib";
 const webRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const dist = join(webRoot, "dist");
 
+/** Ceiling of what the browser downloads before the first screen paints: ~10 % over what is measured. */
+const BOOT_BUDGET_GZIP_BYTES = 80_000;
+
 /**
- * Single ceiling on everything the browser may download (JS + CSS, gzip): about
+ * Ceiling on everything the browser may download (JS + CSS, gzip): about
  * 10 % over what is measured, so only a real growth edits it.
  */
 const TOTAL_BUDGET_GZIP_BYTES = 355_000;
@@ -542,11 +545,16 @@ for (const entry of sizes.sort((a, b) => b.gzip - a.gzip)) {
   const mark = boot.has(entry.name) ? "arranque" : "perezoso";
   console.log(`  ${entry.name}  ${kb(entry.raw)} sin comprimir  ${kb(entry.gzip)} gzip  ${mark}`);
 }
-console.log(`  ARRANQUE  ${kb(gzipBoot)} gzip  — lo que se descarga antes de la primera pantalla`);
+console.log(
+  `  ARRANQUE  ${kb(gzipBoot)} gzip  (techo ${kb(BOOT_BUDGET_GZIP_BYTES)})  — lo que se descarga antes de la primera pantalla`,
+);
 console.log(
   `  TOTAL     ${kb(gzipTotal)} gzip  (techo ${kb(TOTAL_BUDGET_GZIP_BYTES)})  — todo lo que puede llegar a descargarse`,
 );
 
+if (gzipBoot > BOOT_BUDGET_GZIP_BYTES) {
+  problems.push(`el arranque pesa ${gzipBoot} B gzip y el techo es ${BOOT_BUDGET_GZIP_BYTES} B`);
+}
 if (gzipTotal > TOTAL_BUDGET_GZIP_BYTES) {
   problems.push(`el bundle pesa ${gzipTotal} B gzip y el techo es ${TOTAL_BUDGET_GZIP_BYTES} B`);
 }
