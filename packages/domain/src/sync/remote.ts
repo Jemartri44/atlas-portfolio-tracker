@@ -4,7 +4,7 @@
 // `evaluateUnit`). The remote only ever **appends**; the validation is here, in
 // the backend, whatever the client did.
 
-import type { DomainError } from "../errors.js";
+import { asDomainError } from "../errors.js";
 import { isRecord, type UnknownRecord } from "../guards.js";
 import type { AppendEntry, LineRejection } from "../ports/remote-ledger.js";
 import { RemoteError } from "../ports/remote-ledger.js";
@@ -157,7 +157,7 @@ const readLine = (
   try {
     event = decodeLine(line, rules.schema).event;
   } catch (error) {
-    return { code: "line_invalid", details: { domain_code: (error as DomainError).code } };
+    return { code: "line_invalid", details: { domain_code: asDomainError(error).code } };
   }
   if (Date.parse(event.recorded_at) > rules.now.getTime() + rules.clockToleranceMs) {
     return { code: "recorded_at_in_future", details: { recorded_at: event.recorded_at } };
@@ -436,8 +436,8 @@ export const acceptInit = (
     state = projectLedger(events, { collectErrors: true });
   } catch (error) {
     throw initRejected("domain_rejected", {
-      domain_code: (error as DomainError).code,
-      id: (error as DomainError).details.event_id,
+      domain_code: asDomainError(error).code,
+      id: asDomainError(error).details.event_id,
     });
   }
   const first = state.invalid[0];
