@@ -1,6 +1,7 @@
 // atlas edit <id> --reason … [campos] · atlas delete <id> --reason …
 
 import {
+  type CivilDate,
   correctEvent,
   DomainError,
   type Draft,
@@ -17,6 +18,7 @@ import { closedYearImpact } from "@atlas/domain/fiscal";
 import { type Flags, requireFlag, stringFlag, UsageError } from "../args.js";
 import { type Context, describeWarnings, GLOBAL_FLAGS, summarize } from "../context.js";
 import { closedYearLines, unfiledYearsNote } from "../output/closed-years.js";
+import { day } from "../output/ecb.js";
 import { priorYearWarning } from "../output/messages.js";
 import { ADD_SPECS } from "./add.js";
 import { requireId } from "./catalogue.js";
@@ -100,6 +102,45 @@ const editableFlags = (type: string): readonly string[] => {
   }
 };
 
+const FX_FIELDS = ["fx_rate", "fx_rate_date", "fx_rate_sold", "fx_rate_bought"];
+
+/**
+ * The rate of an edited line. Moving a date moves the official rate with it: when the edit
+ * changes a date and types no rate, the rate of the original is dropped and the ECB's of the new
+ * date proposed in its place, said before the question. With no history that can say it, the
+ * original rate stays and the confirmation of a rate that is not the official one does the rest.
+ */
+const rateOfNewDate = async (
+  ctx: Context,
+  draft: Record<string, unknown>,
+  flags: Flags,
+): Promise<Awaited<ReturnType<typeof rateDraft>>> => {
+  const movesDate = [...flags.keys()].some(
+    (name) => name.endsWith("-date") && !name.startsWith("fx-"),
+  );
+  const typesRate = [...flags.keys()].some((name) => name.startsWith("fx-"));
+  const dropped = FX_FIELDS.filter((field) => draft[field] !== undefined);
+  if (!movesDate || typesRate || dropped.length === 0) {
+    return rateDraft(ctx, draft);
+  }
+  const bare = { ...draft };
+  for (const field of dropped) {
+    delete bare[field];
+  }
+  const proposed = await rateDraft(ctx, bare);
+  if (dropped.some((field) => proposed.draft[field] === undefined)) {
+    return rateDraft(ctx, draft);
+  }
+  const was = (field: string): string => String(draft[field]);
+  return {
+    ...proposed,
+    notes: [
+      `El tipo se ha vuelto a proponer porque cambia la fecha: antes ${was("fx_rate")} del ${day(draft.fx_rate_date as CivilDate)}, ahora ${String(proposed.draft.fx_rate)} del ${day(proposed.draft.fx_rate_date as CivilDate)} (el oficial del BCE). Teclea --fx-rate y --fx-rate-date para conservar otro.`,
+      ...proposed.notes,
+    ],
+  };
+};
+
 export const editCommand = async (
   ctx: Context,
   positionals: string[],
@@ -133,16 +174,20 @@ export const editCommand = async (
       `no se indica ningún campo que cambiar: «atlas edit» anula el evento y registra otro igual solo si se corrige algo (--campo valor); para anularlo sin más, «atlas delete ${id} --reason …»`,
     );
   }
-  preview(ctx, `Evento original ${summarize(target)}:`, draftOf(target));
-  preview(ctx, "Evento corregido (se anula el original y se registra este):", draft);
   // The corrected line carries its rate like a new one: if it is not the
   // official one, it asks the same explicit yes.
-  if (!(await confirmRates(ctx, (await rateDraft(ctx, draft)).mismatches))) {
+  const rated = await rateOfNewDate(ctx, draft, flags);
+  for (const note of rated.notes) {
+    aside(ctx, note);
+  }
+  preview(ctx, `Evento original ${summarize(target)}:`, draftOf(target));
+  preview(ctx, "Evento corregido (se anula el original y se registra este):", rated.draft);
+  if (!(await confirmRates(ctx, rated.mismatches))) {
     cancelled(ctx);
     return 0;
   }
   for (const line of await closedNotes(ctx, () =>
-    previewCorrection(ctx.deps, id, draft as unknown as Draft<SupportedEvent>, reason),
+    previewCorrection(ctx.deps, id, rated.draft as unknown as Draft<SupportedEvent>, reason),
   )) {
     aside(ctx, line);
   }
@@ -153,7 +198,7 @@ export const editCommand = async (
   const result = await correctEvent(
     ctx.deps,
     id,
-    draft as unknown as Draft<SupportedEvent>,
+    rated.draft as unknown as Draft<SupportedEvent>,
     reason,
     { confirmDuplicate: ctx.confirmDuplicate },
   );
