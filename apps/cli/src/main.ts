@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // atlas — command-line interface over a local ledger.jsonl.
 
+import { realpathSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
+import { pathToFileURL } from "node:url";
 import {
   FileLedgerStore,
   sweepOrphanTemporaries,
@@ -257,10 +259,30 @@ const sweepTemporaries = async (io: Io, ledgerPath: string): Promise<void> => {
   }
 };
 
-const invokedDirectly =
-  process.argv[1] !== undefined && import.meta.url === new URL(`file://${process.argv[1]}`).href;
-if (invokedDirectly) {
-  run(process.argv.slice(2), terminalIo()).then((code) => {
-    process.exitCode = code;
-  });
+/**
+ * Whether this module is the script being run. `argv[1]` may be a symlink (`npm link`, `npm i -g`)
+ * or hold characters a URL escapes, so both sides are compared as real-path file URLs.
+ */
+export const isInvokedDirectly = (script: string | undefined, moduleUrl: string): boolean => {
+  if (script === undefined) {
+    return false;
+  }
+  try {
+    return moduleUrl === pathToFileURL(realpathSync(script)).href;
+  } catch {
+    return false;
+  }
+};
+
+if (isInvokedDirectly(process.argv[1], import.meta.url)) {
+  run(process.argv.slice(2), terminalIo())
+    .then((code) => {
+      process.exitCode = code;
+    })
+    .catch((error: unknown) => {
+      process.stderr.write(
+        `Error inesperado: ${error instanceof Error ? error.message : String(error)}\n`,
+      );
+      process.exitCode = EXIT.domain;
+    });
 }
