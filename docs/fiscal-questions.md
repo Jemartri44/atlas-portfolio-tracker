@@ -223,5 +223,5 @@ Son de la clase "barata ahora, carísima después". **Ninguno exige decidir hoy 
 ## Estado
 
 - **La Fase 5 está entregada**: el motor trata las disputas como configuración y `tax_return_filed` (ADR-0020) deja constancia de lo declarado.
-- **En disputa** (criterio de Atlas, certeza baja o discutida): **#4** (ganancia en divisa), **#7 y #13** (fusiones extranjeras y neutralidad), **#8** (forks y airdrops) y **#15** (contra qué se libera la pérdida diferida). **#24** (ETC y ETP) no está en disputa, pero su certeza es media (la del ETP subió de baja a media el 2026-10-26): `income_category` es configurable.
-- No hay asesor fiscal: la primera declaración hecha con esta aplicación la presenta el usuario con estos criterios a la vista. No corre prisa: el libro está vacío y no hay nada presentado.
+- **En disputa** (criterio de Atlas, certeza baja o discutida): **#4** (ganancia en divisa), **#7 y #13** (fusiones extranjeras y neutralidad), **#8** (forks y airdrops) y **#15** (contra qué se libera la pérdida diferida). **#24** (ETC y ETP) no está en disputa, pero su certeza es media (la del ETP subió de baja a media el 2026-10-26) y la estructura de cada producto que se compre sigue siendo del usuario: `income_category` es configurable.
+- No hay asesor fiscal: la primera declaración hecha con esta aplicación la presenta el usuario con estos criterios a la vista.

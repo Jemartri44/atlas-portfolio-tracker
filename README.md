@@ -10,7 +10,7 @@ Aplicación personal para gestionar una cartera de inversión a 20 años: libro 
 - **La Fase 5, terminada.** El motor: la base imponible del ahorro de un ejercicio, con la regla de recompra calculada, la compensación del art. 49 y el arrastre a cuatro ejercicios. Y la salida: la Renta por casillas del Modelo 100 del ejercicio, los Modelos 720 y 721, la constancia de lo presentado frente a lo calculado, y todo ello en la consola y en la pantalla fiscal de la web.
 - **La nube, escrita y sin desplegar.** La API (Lambda), las tareas programadas (BCE, precios, correo, copias, integridad) y la infraestructura de Terraform están implementadas y probadas con dobles de S3, SSM y Google; falta desplegarlas. Hasta entonces la web solo se prueba contra el servidor local de pruebas (más abajo) y la consola trabaja sobre un fichero local.
 
-Cada funcionalidad tiene su especificación en [`specs/`](specs/).
+Las especificaciones de las últimas funcionalidades están en [`specs/`](specs/); las anteriores están en el historial de git.
 
 ## Documentación
 
@@ -18,6 +18,7 @@ Cada funcionalidad tiene su especificación en [`specs/`](specs/).
 - [`docs/business-rules.md`](docs/business-rules.md) — reglas de dominio y mecánica fiscal española.
 - [`docs/fiscal-questions.md`](docs/fiscal-questions.md) — los criterios fiscales que aplica la aplicación, cada uno con su grado de certeza y hacia qué lado caería el error si estuviera mal.
 - [`docs/data-schema.md`](docs/data-schema.md) — formato del libro (`ledger.jsonl`), eventos, proyecciones y FIFO.
+- [`docs/decision-roadmap.md`](docs/decision-roadmap.md) — lo que sigue pendiente; [`docs/first-deploy-checks.md`](docs/first-deploy-checks.md) — qué comprobar en el primer despliegue.
 - [`docs/adr/`](docs/adr/) — decisiones de arquitectura. [`docs/dependencies.md`](docs/dependencies.md) — presupuesto cerrado de dependencias.
 - [`docs/design/brief.md`](docs/design/brief.md) — requisitos de la interfaz: tamaños de pantalla, modo privacidad, estados y restricciones. [`docs/cli.md`](docs/cli.md) — guía de la consola.
 - [`CLAUDE.md`](CLAUDE.md) — contexto y convenciones para el asistente de código.

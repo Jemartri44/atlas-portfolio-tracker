@@ -441,7 +441,7 @@ Decidido el 2026-09-25 (feature 015). **Los valores los crea y los rota el guion
 
 ### 9.1 Las tareas programadas *(016)*
 
-Las cinco funciones de `apps/jobs` (`docs/specification.md` §9.5) siguen las mismas reglas que la API: **ningún secreto en una variable de entorno**, y una variable `ATLAS_*` desconocida o un valor que no se entiende impiden arrancar (`jobs_config_invalid`, con `details.variable` y `details.reason`). Cada variable es obligatoria en la función que la usa y desconocida en las demás. Los valores los escribe Terraform (017), salvo las claves de las fuentes, que crea y rota el guion de secretos (ADR-0034, fila 21). Contrato completo, con cada regla: `specs/016-scheduled-jobs/contracts/ssm-and-config.md`.
+Las cinco funciones de `apps/jobs` (`docs/specification.md` §9.5) siguen las mismas reglas que la API: **ningún secreto en una variable de entorno**, y una variable `ATLAS_*` desconocida o un valor que no se entiende impiden arrancar (`jobs_config_invalid`, con `details.variable` y `details.reason`). Cada variable es obligatoria en la función que la usa y desconocida en las demás. Los valores los escribe Terraform (017), salvo las claves de las fuentes, que crea y rota el guion de secretos (ADR-0034, fila 21). Contrato completo, con cada regla: `specs/016-scheduled-jobs/contracts/ssm-and-config.md` (retirada; en git).
 
 | Parámetro | Tipo | Quién lo escribe | Quién lo lee |
 |---|---|---|---|
