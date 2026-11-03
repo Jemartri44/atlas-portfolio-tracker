@@ -13,8 +13,6 @@ import { ERRORS_LEDGER } from "./errors-ledger.js";
 import { ERRORS_OPERATIONS } from "./errors-operations.js";
 import { ERRORS_REMOTE } from "./errors-remote.js";
 import { ERRORS_SETTINGS } from "./errors-settings.js";
-import { FINDINGS } from "./findings.js";
-import { REMOTE_FAILURES } from "./remote-failures.js";
 import { type Details, type Entry, render, type Voice } from "./voice.js";
 import { WARNINGS_OPERATIONS } from "./warnings-operations.js";
 import { WARNINGS_TAX } from "./warnings-tax.js";
