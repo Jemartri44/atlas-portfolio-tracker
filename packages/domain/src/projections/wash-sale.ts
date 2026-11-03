@@ -26,7 +26,7 @@ import { type CivilDate, yearOf } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
 import type { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
-import type { AssetId, AssetType } from "../schema/events.js";
+import type { AssetFields, AssetId, AssetType } from "../schema/events.js";
 import {
   washSaleLooksBack,
   washSaleWindowEnd,
@@ -138,12 +138,12 @@ export const isSinglePurchaseWindow = (
 export const warnRepurchase = (
   state: LedgerState,
   eventId: Ulid,
-  assetId: AssetId,
-  assetType: AssetType,
+  asset: AssetFields,
   fiscalDate: CivilDate,
   quantity: Quantity,
 ): void => {
-  const window = washSaleWindowOf(state.fiscalSettings, assetType);
+  const assetId = asset.asset_id;
+  const window = washSaleWindowOf(state.fiscalSettings, asset);
   for (const gain of state.gains) {
     if (gain.asset_id !== assetId || !gain.gain_eur.amount.isNegative()) {
       continue;
@@ -196,12 +196,12 @@ export const warnRepurchase = (
 export const warnPriorBuys = (
   state: LedgerState,
   eventId: Ulid,
-  assetId: AssetId,
-  assetType: AssetType,
+  asset: AssetFields,
   fiscalDate: CivilDate,
   loss: Money,
 ): void => {
-  const window = washSaleWindowOf(state.fiscalSettings, assetType);
+  const { asset_id: assetId, asset_type: assetType } = asset;
+  const window = washSaleWindowOf(state.fiscalSettings, asset);
   const start = washSaleWindowStart(fiscalDate, window, assetType);
   if (isSinglePurchaseWindow(state, assetId, assetType, start, state.lotJournal.length)) {
     return;

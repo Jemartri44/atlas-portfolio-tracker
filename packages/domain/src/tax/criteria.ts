@@ -45,19 +45,28 @@ export interface FiscalCriterion {
  *   crypto itself); conservative.
  * - `2:crypto_2m`: two months after the sale for crypto — a configuration, not a
  *   legal reading; aggressive.
- * - `2:fund_2m`: two months for a fund, what the document held from
- *   2026-09-22 to 2026-11-03 and a setting since. It rests on article 4.9 of
- *   RD 1082/2012, which its own last clause narrows, and on two consultations
- *   older than Ley 35/2006 (V0011-00, V2067-06); the Manual de Renta 2025 does
- *   not name funds. **Medium**; aggressive.
- * - `2:fund_1y`: one year for a fund, the default since 2026-11-03: the
- *   conservative side of the same dispute.
+ * - `2:fund_admitted_2m`: two months for a fund whose units count as
+ *   admitted (`fundAdmitted`): Spanish, which article 4.9 of RD 1082/2012
+ *   deems listed (V0011-00, 1897-01, 0881-02, V2067-06), or a class on an EU
+ *   regulated market. The default since 2026-11-03; aggressive, but backed by
+ *   binding consultations (art. 179.2.d LGT).
+ * - `2:fund_unlisted_2m`: two months for a fund that is **not** admitted (a
+ *   foreign UCITS only on a multilateral facility), only by configuration: what
+ *   the CNMV guide and common practice do, without a source. Aggressive. A new
+ *   identifier: `2:fund_2m` meant two months for any fund, and it is no longer
+ *   emitted.
+ * - `2:fund_1y`: one year for a fund, the default of one not admitted (article
+ *   33.5.g, the five steps of `DEFAULT_WASH_SALE_WINDOW`) and the conservative
+ *   side for an admitted one.
+ *   The document grades `2:fund_admitted_2m` and `2:fund_1y` medium-high; the
+ *   catalogue has no such grade and keeps **medium**, so that the other
+ *   reading of each fund still shows its figure in the doubtful section.
  * - `2:movable_capital`: two months for an asset that yields movable capital
  *   income (an ETC or an ETP by default), article 25.2.b) LIRPF: its own rule,
  *   with no market and no one-year variant — **high**; aggressive if wrong.
  * - `2:other`: any other window —a number of days— that no reading of the
  *   document supports. Two months for a fund is **not** one of these: it is
- *   `2:fund_2m`, a reading the document names.
+ *   `2:fund_unlisted_2m`, a reading the document names.
  *
  * **A new reading gets a new identifier; an identifier never changes meaning.**
  * That is why the year of funds is `2:fund_1y` and not the old bare `2:fund`,
@@ -106,7 +115,8 @@ export const FISCAL_CRITERIA = {
   "2:listed_1y": { doc: "2", certainty: "medium", risk: "conservative" },
   "2:crypto": { doc: "2", certainty: "medium", risk: "conservative" },
   "2:crypto_2m": { doc: "2", certainty: "low", risk: "aggressive" },
-  "2:fund_2m": { doc: "2", certainty: "medium", risk: "aggressive" },
+  "2:fund_admitted_2m": { doc: "2", certainty: "medium", risk: "aggressive" },
+  "2:fund_unlisted_2m": { doc: "2", certainty: "medium", risk: "aggressive" },
   "2:fund_1y": { doc: "2", certainty: "medium", risk: "conservative" },
   "2:other": { doc: "2", certainty: "low", risk: "both" },
   "2:movable_capital": { doc: "2", certainty: "high", risk: "aggressive" },
@@ -121,7 +131,7 @@ export const FISCAL_CRITERIA = {
   // A collective investment undertaking in currency: leg by leg, and the
   // currency invested imputed on the sale (V0777-21, V0207-24). Low: a US
   // (non-UCITS) ETF falls outside those consultations, and the catalogue does
-  // not know the domicile, so it keeps the weaker, like `2:fund_2m`.
+  // not know the domicile, so it keeps the weaker, like `2:fund_unlisted_2m`.
   "4:iic": { doc: "4", certainty: "low", risk: "both" },
   // The order of the currency lots: FIFO per currency across accounts.
   "4:currency_fifo": { doc: "4", certainty: "medium", risk: "both" },
@@ -179,6 +189,10 @@ export const FISCAL_CRITERIA = {
 
 export type CriterionId = keyof typeof FISCAL_CRITERIA;
 
+/** The readings of #2 a fund can apply; each one's other window is measured apart. */
+export const FUND_CRITERIA = ["2:fund_admitted_2m", "2:fund_unlisted_2m", "2:fund_1y"] as const;
+export type FundCriterion = (typeof FUND_CRITERIA)[number];
+
 /**
  * The order of the document, which is the order of every list of criteria the
  * report prints. Written out because `Object.keys` would put the numeric keys
@@ -190,7 +204,8 @@ export const CRITERION_IDS: readonly CriterionId[] = [
   "2:listed_1y",
   "2:crypto",
   "2:crypto_2m",
-  "2:fund_2m",
+  "2:fund_admitted_2m",
+  "2:fund_unlisted_2m",
   "2:fund_1y",
   "2:other",
   "2:movable_capital",

@@ -35,10 +35,10 @@ describe("DEFAULT_SETTINGS", () => {
     expect(DEFAULT_SETTINGS.fiscal_date_rule.etc).toBe("trade_date");
     expect(DEFAULT_SETTINGS.fiscal_date_rule.fund).toBe("value_date");
     expect(DEFAULT_SETTINGS.wash_sale_window.stock).toBe("2m");
-    // A year for a fund and a monetary fund (criterion #2, `2:fund_1y`): the
-    // prudent reading while the two months stay disputed.
-    expect(DEFAULT_SETTINGS.wash_sale_window.fund).toBe("1y");
-    expect(DEFAULT_SETTINGS.wash_sale_window.money_market).toBe("1y");
+    // A fund and a monetary fund by domicile (criterion #2): Spanish two
+    // months, foreign a year (`washSaleWindowOf`).
+    expect(DEFAULT_SETTINGS.wash_sale_window.fund).toBe("by_domicile");
+    expect(DEFAULT_SETTINGS.wash_sale_window.money_market).toBe("by_domicile");
     expect(DEFAULT_SETTINGS.wash_sale_window.crypto).toBe("1y");
     expect(DEFAULT_SETTINGS.wash_sale_window_days).toBeUndefined();
     expect(validateSettings(DEFAULT_SETTINGS)).toEqual(DEFAULT_SETTINGS);
@@ -283,6 +283,18 @@ describe("wash_sale_window (ADR-0014)", () => {
     const normalized = normalizeSettings(mixed);
     expect(normalized.wash_sale_window.stock).toBe("2m");
     expect(normalized.wash_sale_window.fund).toBe("365d");
+  });
+
+  it("accepts by_domicile for a fund and a money market fund only", () => {
+    expect(() =>
+      validateSettings({
+        ...DEFAULT_SETTINGS,
+        wash_sale_window: { fund: "by_domicile", money_market: "by_domicile" },
+      }),
+    ).not.toThrow();
+    expect(() =>
+      validateSettings({ ...DEFAULT_SETTINGS, wash_sale_window: { stock: "by_domicile" } }),
+    ).toThrow(expect.objectContaining({ code: "invalid_wash_sale_window" }));
   });
 
   it("rejects a legacy value that is not a positive integer, and both forms missing", () => {

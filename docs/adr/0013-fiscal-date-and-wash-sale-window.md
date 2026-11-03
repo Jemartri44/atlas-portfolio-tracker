@@ -36,6 +36,11 @@ Este ADR daba por hecho que las participaciones de fondos **no** están admitida
 
 La frase de la ayuda del Modelo 100 de 2025 que se citaba en la nota anterior no se ha encontrado, y el **Manual práctico de Renta 2025** (pérdidas que no se computan, actualizado el 17/03/2026) solo distingue valores admitidos (dos meses) de no admitidos (un año), sin nombrar los fondos. Quedan el art. 4.9 del RD 1082/2012, que su última cláusula acota, y dos consultas anteriores a la Ley 35/2006. Con la duda abierta, **`DEFAULT_WASH_SALE_WINDOW.fund` y `.money_market` vuelven a `"1y"`** (`2:fund_1y`, certeza media, conservador): una pérdida de fondo se difiere antes que computarse antes de tiempo, y arrastrar una pérdida indebida también se sanciona (art. 195 LGT). Los dos meses siguen como configuración (`2:fund_2m`) y el informe mide siempre la otra lectura en los dudosos. Criterio #2 de `docs/fiscal-questions.md`.
 
+
+## Nota del 2026-11-03 por la tarde (investigación de la regla de recompra): según el domicilio
+
+La nota anterior acertaba con los fondos extranjeros y no con los españoles: la cláusula del art. 4.9 que leía como restricción la ha leído la DGT a favor de la letra f) en **V2067-06** y **V0011-00**, vinculantes y no modificadas. **`DEFAULT_WASH_SALE_WINDOW.fund` y `.money_market` pasan a `"by_domicile"`**: un fondo español (ISIN `ES` o `issuer_country` `ES`), o con su clase en un mercado regulado de la UE escrito en `market`, lleva dos meses (`2:fund_admitted_2m`); uno extranjero sin cotización o sin ISIN ni país, un año (`2:fund_1y`), ya no por prudencia sino por los cinco pasos de la segunda investigación (certeza media-alta). Un valor escrito en la configuración sigue mandando. Detalle en `docs/fiscal-questions.md` #2 y `docs/business-rules.md` §5.4.
+
 ---
 
 ## Nota del 2026-09-24 (Ronda 8, ADR-0029): la forma canónica de «tal cual se publica»

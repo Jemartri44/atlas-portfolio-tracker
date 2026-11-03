@@ -36,6 +36,7 @@ import {
   savingsOffsetLimitPctOf,
 } from "../settings/settings.js";
 import { type CompensationRules, compensate, type YearBalances } from "./compensation.js";
+import type { FundCriterion } from "./criteria.js";
 import { type CurrencyWashResult, walkCurrencyWashSales } from "./currency-wash-sale.js";
 import { deferredAt, deferredByOrigin, releasedBetween } from "./deferred-origins.js";
 import { expenseLines, type LineContext } from "./lines.js";
@@ -72,6 +73,11 @@ export interface TaxOptions {
    * which runs the chain with the oldest first. Never a setting.
    */
   deferralOrder?: DeferralOrder;
+  /**
+   * The fund criterion of #2 whose funds take the other window: only the
+   * measure of that criterion asks for it. Never a setting.
+   */
+  flipFunds?: FundCriterion;
   /**
    * Integrate the savings income recorded **outside the portfolio**
    * (`external_income`) with the portfolio's, as the return does. Only the
@@ -276,7 +282,14 @@ export const taxChain = (
   );
   const types = new Map<Ulid, string>([...byId].map(([id, event]) => [id, event.type]));
   const entryYear = yearOfEntry(state, byId);
-  const walk = walkWashSales(state, options.today, types, entryYear, options.deferralOrder);
+  const walk = walkWashSales(
+    state,
+    options.today,
+    types,
+    entryYear,
+    options.deferralOrder,
+    options.flipFunds,
+  );
   const currencyWalk = walkCurrencyWashSales(state, options.today);
   const lots = new Map<string, FiscalLot>();
   for (const entry of state.lots.values()) {

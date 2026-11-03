@@ -40,3 +40,7 @@ Dicho de otro modo: la propagación automática de los valores por defecto es c�
 - Se vuelve más fácil: reproducir un ejercicio antiguo sin depender de qué decía un documento aquel año.
 - Se vuelve más difícil: propagar un cambio de criterio a un libro existente, que ahora exige un `settings_changed` explícito. **Es lo que se quiere**: un cambio de criterio fiscal debe ser un acto registrado, con fecha, y no un efecto secundario.
 - Los seis criterios **en disputa** de `docs/fiscal-questions.md` se benefician directamente: el día que alguno se resuelva, resolverlo no reescribirá en silencio los ejercicios ya calculados.
+
+## Nota del 2026-11-03: un valor que se resuelve con el catálogo
+
+`wash_sale_window` de `fund` y `money_market` admite `"by_domicile"` (criterio #2), que no es una ventana sino una regla: dos meses para un fondo admitido a negociación (español, o con su clase en un mercado regulado de `FUND_REGULATED_MARKETS`) y un año para el resto. El libro guarda el valor, no las ventanas. Para que un ejercicio se siga reproduciendo, **`"by_domicile"` significa siempre esa regla**: otra lectura sería un valor nuevo del enumerado, nunca un cambio de `ADMITTED_FUND_WINDOW`, `NOT_ADMITTED_FUND_WINDOW` o de la lista, que una prueba congela.

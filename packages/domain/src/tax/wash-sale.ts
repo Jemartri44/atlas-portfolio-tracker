@@ -50,7 +50,15 @@ import {
   incomeCategoryOf,
   type WashSaleWindow,
 } from "../settings/settings.js";
-import { washSaleWindowEnd, washSaleWindowOf, washSaleWindowStart } from "../settings/wash-sale.js";
+import {
+  fundAdmitted,
+  type WashSaleAsset,
+  washSaleWindowEnd,
+  washSaleWindowOf,
+  washSaleWindowStart,
+} from "../settings/wash-sale.js";
+import type { FundCriterion } from "./criteria.js";
+import { windowCriterion } from "./lines.js";
 
 /** A part of a deferred loss sitting on a lot, with the transmission it came from. */
 interface Share {
@@ -301,6 +309,7 @@ class Walker {
     private readonly scales: Map<AssetId, ScaleMark[]>,
     private readonly yearOf: ((eventId: Ulid) => number) | undefined,
     private readonly order: DeferralOrder,
+    private readonly flip: FundCriterion | undefined,
   ) {
     for (const list of acquired.values()) {
       for (const entry of list) {
@@ -526,9 +535,26 @@ class Walker {
     return incomeCategoryOf(this.state.fiscalSettings, this.assetType(assetId));
   }
 
+  /**
+   * The window of an asset: the one in force, or the other one when the
+   * measure of a fund criterion asks for it and the asset applies that criterion.
+   */
+  private windowOf(assetId: AssetId): WashSaleWindow {
+    const asset = this.state.assets.get(assetId) as WashSaleAsset;
+    const window = washSaleWindowOf(this.state.fiscalSettings, asset);
+    if (
+      this.flip === undefined ||
+      windowCriterion(asset.asset_type, window, this.categoryOf(assetId), fundAdmitted(asset)) !==
+        this.flip
+    ) {
+      return window;
+    }
+    return window === "2m" ? "1y" : "2m";
+  }
+
   private evaluate(gain: RealizedGain, outcome: WashSaleOutcome, journalIndex: number): void {
     const assetType = this.assetType(gain.asset_id);
-    const window = washSaleWindowOf(this.state.fiscalSettings, assetType);
+    const window = this.windowOf(gain.asset_id);
     const start = washSaleWindowStart(gain.fiscal_date, window, assetType);
     const end = washSaleWindowEnd(gain.fiscal_date, window);
     outcome.window = { window, start, end };
@@ -930,6 +956,8 @@ export const walkWashSales = (
   /** The tax year an event belongs to; without it no year is closed on the way. */
   yearOf?: (eventId: Ulid) => number,
   order: DeferralOrder = "nearest",
+  /** The fund criterion whose funds take the other window: only its measure asks. */
+  flip?: FundCriterion,
 ): WashSaleResult => {
   const firstOpen = new Map<string, number>();
   const scales = new Map<AssetId, ScaleMark[]>();
@@ -963,6 +991,7 @@ export const walkWashSales = (
     scales,
     yearOf,
     order,
+    flip,
   );
   walker.walk();
   return {

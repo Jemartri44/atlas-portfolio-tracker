@@ -7,7 +7,7 @@ import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 const EUR = { currency: "EUR", fx_rate: "1" } as const;
 
 /**
- * Funds on two months (`2:fund_2m`, a setting since 2026-11-03), for the cases
+ * Funds on two months (written in the settings), for the cases
  * whose dates are counted in two months: what they pin is how a transfer or a
  * forced sale meets the window, not which window a fund takes by default.
  */
@@ -176,7 +176,7 @@ describe("wash_sale_window_repurchase: buying back after a loss", () => {
     // (criterion #2, `2:fund_1y`): eleven months still warn, thirteen do not.
     expect(codes(fundCycle("2028-01-10"), "wash_sale_window_repurchase")).toHaveLength(1);
     expect(codes(fundCycle("2028-03-10"), "wash_sale_window_repurchase")).toEqual([]);
-    // With two months written into the ledger (`2:fund_2m`), the sale of 10
+    // With two months written into the ledger (`2:fund_unlisted_2m`), the sale of 10
     // February warns until 10 April and not on the 11th.
     expect(codes(fundCycle("2027-04-10", "2m"), "wash_sale_window_repurchase")).toHaveLength(1);
     expect(codes(fundCycle("2027-04-11", "2m"), "wash_sale_window_repurchase")).toEqual([]);

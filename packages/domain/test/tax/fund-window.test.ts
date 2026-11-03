@@ -1,7 +1,7 @@
-// The two readings of the repurchase window of a fund (criterion #2), worked
-// out by hand: two months (`2:fund_2m`, the default from 2026-09-22 to
-// 2026-11-03 and a setting since) and a year (`2:fund_1y`, the default since,
-// the prudent reading while the dispute is open).
+// The two readings of the repurchase window of a fund that is not admitted to
+// trading (criterion #2; here a fund without ISIN), worked out by hand: two
+// months (`2:fund_unlisted_2m`, only by configuration) and a year
+// (`2:fund_1y`, its default).
 //
 // This is the smallest ledger that tells the two readings apart: a loss on a
 // fund, one subscription **inside** the two months and another **outside**.
@@ -92,7 +92,7 @@ describe("§6.5 — the two-month window of a fund, when configured", () => {
   });
 
   it("puts the other reading in the doubtful section, with what it moves", () => {
-    const stake = report.doubtful.find((entry) => entry.criterion === "2:fund_2m");
+    const stake = report.doubtful.find((entry) => entry.criterion === "2:fund_unlisted_2m");
     expect(stake).toBeDefined();
     expect(stake?.certainty).toBe("medium");
     // The base is the same under both readings —a negative balance is not a

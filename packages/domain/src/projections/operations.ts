@@ -296,7 +296,7 @@ export const applyBuy = (state: LedgerState, event: BuyEvent, position: number):
     fiscal_date: fiscalDate,
     quantity,
   });
-  warnRepurchase(state, event.id, event.asset_id, asset.asset_type, fiscalDate, quantity);
+  warnRepurchase(state, event.id, asset, fiscalDate, quantity);
   warnCurrency(state, event, asset);
   warnFxDate(state, event, fiscalDate);
   warnHolders(state, event.asset_id, event.id);
@@ -360,7 +360,7 @@ export const applySell = (state: LedgerState, event: SellEvent, position: number
     );
   }
   if (gain.gain_eur.amount.isNegative()) {
-    warnPriorBuys(state, event.id, event.asset_id, asset.asset_type, fiscalDate, gain.gain_eur);
+    warnPriorBuys(state, event.id, asset, fiscalDate, gain.gain_eur);
   }
   warnCurrency(state, event, asset);
   warnFxDate(state, event, fiscalDate);
@@ -461,9 +461,9 @@ export const applySwap = (state: LedgerState, event: SwapEvent, position: number
     fiscal_date: dateIn,
     quantity: quantityIn,
   });
-  warnRepurchase(state, event.id, event.to_asset_id, to.asset_type, dateIn, quantityIn);
+  warnRepurchase(state, event.id, to, dateIn, quantityIn);
   if (gain.gain_eur.amount.isNegative()) {
-    warnPriorBuys(state, event.id, event.from_asset_id, from.asset_type, dateOut, gain.gain_eur);
+    warnPriorBuys(state, event.id, from, dateOut, gain.gain_eur);
   }
   if (dateOut !== dateIn) {
     addWarning(

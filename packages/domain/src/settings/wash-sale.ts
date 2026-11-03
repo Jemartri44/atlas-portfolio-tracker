@@ -8,33 +8,59 @@
 // transfers and swaps is the tax engine of phase 5.
 
 import { addDays, addMonths, addYears, type CivilDate } from "../dates/civil-date.js";
-import type { AssetType } from "../schema/events.js";
+import type { AssetFields, AssetType } from "../schema/events.js";
 import {
+  ADMITTED_FUND_WINDOW,
   DEFAULT_WASH_SALE_TRANSFER_COUNTS,
   DEFAULT_WASH_SALE_WINDOW,
+  FUND_REGULATED_MARKETS,
   incomeCategoryOf,
+  NOT_ADMITTED_FUND_WINDOW,
   type Settings,
   type WashSaleWindow,
 } from "./settings.js";
 
+/** What of an asset decides its window: the type, and for a fund its domicile and market. */
+export type WashSaleAsset = Pick<AssetFields, "asset_type" | "isin" | "issuer_country" | "market">;
+
 /**
- * The window in force for an asset type: the settings, the legacy form, or the
- * default (ADR-0018). Movable capital income has its own rule, article 25.2.b)
- * LIRPF: two months before or after, for any financial asset, whatever the
- * market and with no one-year variant, so a configured window does not apply.
+ * Whether the units of a fund count as admitted to trading (art. 33.5.f): a
+ * Spanish fund, which article 4.9 of RD 1082/2012 deems listed, or a class
+ * whose `market` the user set to one of `FUND_REGULATED_MARKETS`. **The ISIN
+ * decides the domicile**: an `IE…` fund is Irish whatever `issuer_country`
+ * says, which only counts when there is no ISIN.
  */
-export const washSaleWindowOf = (settings: Settings, assetType: AssetType): WashSaleWindow => {
-  if (incomeCategoryOf(settings, assetType) === "movable_capital") {
+export const fundAdmitted = (asset: WashSaleAsset): boolean =>
+  (asset.isin === undefined ? asset.issuer_country === "ES" : /^ES/i.test(asset.isin)) ||
+  FUND_REGULATED_MARKETS.includes(asset.market?.toUpperCase() as string);
+
+/**
+ * The window in force for an asset (criterion #2): the settings, the legacy
+ * form, or the default (ADR-0018). Movable capital income has
+ * its own rule, article 25.2.b) LIRPF: two months before or after, for any
+ * financial asset, whatever the market and with no one-year variant, so a
+ * configured window does not apply. A fund `"by_domicile"` takes two months
+ * when its units count as admitted (`fundAdmitted`, `2:fund_admitted_2m`) and a
+ * year otherwise (`2:fund_1y`, article 33.5.g), also without ISIN or country.
+ */
+export const washSaleWindowOf = (settings: Settings, asset: WashSaleAsset): WashSaleWindow => {
+  if (incomeCategoryOf(settings, asset.asset_type) === "movable_capital") {
     return "2m";
   }
-  const configured = (
-    settings.wash_sale_window as Partial<Settings["wash_sale_window"]> | undefined
-  )?.[assetType];
-  if (configured !== undefined) {
-    return configured;
+  const setting =
+    (settings.wash_sale_window as Partial<Settings["wash_sale_window"]> | undefined)?.[
+      asset.asset_type
+    ] ??
+    settings.wash_sale_window_days?.[asset.asset_type] ??
+    DEFAULT_WASH_SALE_WINDOW[asset.asset_type];
+  if (typeof setting === "number") {
+    return `${setting}d`;
   }
-  const legacyDays = settings.wash_sale_window_days?.[assetType];
-  return legacyDays === undefined ? DEFAULT_WASH_SALE_WINDOW[assetType] : `${legacyDays}d`;
+  return setting === "by_domicile"
+    ? fundAdmitted(asset)
+      ? ADMITTED_FUND_WINDOW
+      : NOT_ADMITTED_FUND_WINDOW
+    : setting;
 };
 
 /**

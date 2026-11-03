@@ -20,7 +20,7 @@ import {
   modelThresholdOf,
   rentaSeasonOf,
   type Settings,
-  type WashSaleWindow,
+  type WashSaleWindowSetting,
 } from "./defaults.js";
 
 export * from "./defaults.js";
@@ -39,7 +39,7 @@ export { validateSettings } from "./validation.js";
  */
 export const normalizeSettings = (settings: Settings): Settings => {
   const legacy = settings.wash_sale_window_days;
-  const windows = { ...settings.wash_sale_window } as Record<AssetType, WashSaleWindow>;
+  const windows = { ...settings.wash_sale_window } as Record<AssetType, WashSaleWindowSetting>;
   const rules = { ...settings.fiscal_date_rule } as Record<AssetType, FiscalDateRule>;
   const categories = { ...settings.income_category } as Record<AssetType, IncomeCategory>;
   for (const assetType of ASSET_TYPES) {

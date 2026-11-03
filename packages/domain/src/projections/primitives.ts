@@ -353,14 +353,7 @@ export const applyForcedSale = (
     // (data-schema.md §8.4). The other half of the window — an acquisition
     // **after** this loss — already worked, because it walks the recorded gains.
     if (gain.gain_eur.amount.isNegative()) {
-      warnPriorBuys(
-        state,
-        ctx.eventId,
-        asset.asset_id,
-        asset.asset_type,
-        ctx.effectiveDate,
-        gain.gain_eur,
-      );
+      warnPriorBuys(state, ctx.eventId, asset, ctx.effectiveDate, gain.gain_eur);
     }
   }
   warnCurrency(state, priced, asset);
@@ -437,14 +430,7 @@ export const applyGrant = (
         fiscal_date: effect.acquisition_date,
         quantity: entry.quantity,
       });
-      warnRepurchase(
-        state,
-        ctx.eventId,
-        asset.asset_id,
-        asset.asset_type,
-        effect.acquisition_date,
-        entry.quantity,
-      );
+      warnRepurchase(state, ctx.eventId, asset, effect.acquisition_date, entry.quantity);
     }
   }
   noteInKindIncome(state, effect, asset.asset_id, ctx.eventId);

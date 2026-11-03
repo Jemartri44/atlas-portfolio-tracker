@@ -120,7 +120,9 @@ export interface AssetFields {
    * The tax engine **reads it**: each transmission line carries
    * it, and the doubtful item of criterion `2:listed` lists the markets at
    * stake, so that the reading of the dispute can be checked market by market.
-   * Nothing chooses a window with it yet: that is the criterion's to decide.
+   * For a share it does not choose the window; for a fund `"by_domicile"` it
+   * does: a class written on an EU regulated market takes two months
+   * (`fundAdmitted`, criterion #2).
    *
    * With the currency and the ISIN it also guesses whether a share is admitted
    * on an EU regulated market (`projections/markets.ts`): that decides the
@@ -128,9 +130,11 @@ export interface AssetFields {
    */
   market?: string;
   /**
-   * Where the issuer sits: ISO 3166-1 alpha-2 (ADR-0021). Optional, and nothing
-   * reads it yet. For a fund or an ETF, article 95 LIRPF treats collective
-   * investment undertakings domiciled in non-cooperative jurisdictions apart.
+   * Where the issuer sits: ISO 3166-1 alpha-2 (ADR-0021). Optional. With the
+   * ISIN, it decides the wash-sale window of a fund `"by_domicile"`: a Spanish
+   * one takes two months (`fundAdmitted`, criterion #2). For a fund or an ETF,
+   * article 95 LIRPF treats collective investment undertakings domiciled in
+   * non-cooperative jurisdictions apart.
    * An ETC or an ETP is not one —it is a debt security of its issuer, criterion
    * #24—, so for them it only decides how a holding is classified in forms 720
    * and 721, as it does for every asset.
