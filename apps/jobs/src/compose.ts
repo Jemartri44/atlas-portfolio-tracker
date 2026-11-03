@@ -6,7 +6,7 @@
 // has no runner yet, and says only the **name** of what failed: an error of
 // the SDK carries ARNs and account ids in its message.
 
-import { AlphaVantagePriceSource, EcbFxRateSource, EodhdPriceSource } from "@atlas/adapters";
+import { EcbFxRateSource, EodhdPriceSource } from "@atlas/adapters";
 import type { ObjectStore, ParameterStore } from "@atlas/adapters/aws";
 import { SimulatedPriceSource } from "@atlas/adapters/aws-daily";
 import { type MailSender, sesNotifier } from "@atlas/adapters/aws-jobs";
@@ -41,7 +41,7 @@ export const SOURCE_TIMEOUT_MS = 15_000;
 
 const sourcesFor = (parts: ProductionParts): JobSources => {
   const timed = (url: string) =>
-    // `redirect: "error"`: EODHD and Alpha Vantage carry their key in the address, and a redirect
+    // `redirect: "error"`: EODHD carries its key in the address, and a redirect
     // would hand it to wherever it points.
     parts.fetch(url, { signal: AbortSignal.timeout(SOURCE_TIMEOUT_MS), redirect: "error" });
   return {
@@ -55,14 +55,7 @@ const sourcesFor = (parts: ProductionParts): JobSources => {
               if (key === undefined) {
                 return [];
               }
-              return [
-                [
-                  source,
-                  source === "eodhd"
-                    ? new EodhdPriceSource(key, timed)
-                    : new AlphaVantagePriceSource(key, timed),
-                ],
-              ];
+              return [[source, new EodhdPriceSource(key, timed)]];
             }),
           ),
   };

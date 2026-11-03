@@ -4,8 +4,7 @@ import { DEFAULT_PRICE_CONFIG, parsePriceConfig } from "../../src/quotes/config.
 describe("prices/config.json", () => {
   it("without a file, is the documented defaults", () => {
     expect(parsePriceConfig(undefined)).toEqual({
-      source_order: ["eodhd", "alpha_vantage"],
-      daily_calls: { eodhd: 20, alpha_vantage: 25 },
+      daily_calls: { eodhd: 20 },
       failure_threshold: 3,
       // Crypto trades every day and its last closes may be provisional (live
       // test of 2026-09-27): configuration by asset type, never a constant.
@@ -32,14 +31,9 @@ describe("prices/config.json", () => {
   });
 
   it("reads every key, each optional", () => {
-    expect(
-      parsePriceConfig(
-        '{"source_order":["alpha_vantage","eodhd"],"daily_calls":{"eodhd":0},"failure_threshold":5}',
-      ),
-    ).toEqual({
+    expect(parsePriceConfig('{"daily_calls":{"eodhd":0},"failure_threshold":5}')).toEqual({
       ...DEFAULT_PRICE_CONFIG,
-      source_order: ["alpha_vantage", "eodhd"],
-      daily_calls: { eodhd: 0, alpha_vantage: 25 },
+      daily_calls: { eodhd: 0 },
       failure_threshold: 5,
     });
   });
@@ -71,10 +65,9 @@ describe("prices/config.json", () => {
       ["nope", "json"],
       ["[]", "json"],
       ['{"eodhd_key":"x"}', "eodhd_key"],
-      ['{"source_order":[]}', "source_order"],
-      ['{"source_order":"eodhd"}', "source_order"],
-      ['{"source_order":["eodhd","eodhd"]}', "source_order"],
-      ['{"source_order":["coingecko"]}', "source_order"],
+      // Keys of the two-source days: no longer understood.
+      ['{"source_order":["eodhd"]}', "source_order"],
+      ['{"daily_calls":{"alpha_vantage":25}}', "daily_calls.alpha_vantage"],
       ['{"daily_calls":[]}', "daily_calls"],
       ['{"daily_calls":null}', "daily_calls"],
       ['{"daily_calls":{"coingecko":1}}', "daily_calls.coingecko"],

@@ -74,6 +74,7 @@ export const CRITERION_NAMES: Record<CriterionId, string> = {
   "24:etp_gain": "Un ETP tributa como ganancia patrimonial",
   "25": "El tipo del BCE es el de la fecha fiscal vigente; si no, se corrige",
   "26": "La devolución de prima o de aportaciones rebaja el coste; el exceso es rendimiento",
+  "27": "Cuota del ahorro estimada con la escala del año",
 };
 
 /** How firm the reading of the law is. */

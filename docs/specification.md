@@ -252,11 +252,11 @@ Es el libro con más funcionalidad propia: es una parte pequeña de la cartera p
 
 ## 7. Fuentes de datos
 
-> **Vigente desde ADR-0031 (2026-09-24, Ronda 8).** Yahoo Finance, Stooq y Morningstar quedan **descartados**: las condiciones de Yahoo prohíben por escrito el acceso automatizado, Stooq responde con un reto anti-*bot* y Morningstar solo ofrece API de empresa (investigación del 2026-09-24). Las fuentes de precio de cierre diario son APIs gratuitas con clave: **EODHD** (principal) y **Alpha Vantage** (respaldo). **CoinGecko y OpenFIGI quedaron retirados al cerrar la feature 013** (ADR-0031, tercera enmienda): las condiciones de CoinGecko describen su plan gratuito como para probar, y OpenFIGI no documenta qué bolsa es cada código. La tabla de abajo queda como referencia histórica salvo las filas corregidas.
+> **Vigente desde ADR-0031 (2026-09-24, Ronda 8).** Yahoo Finance, Stooq y Morningstar quedan **descartados**: las condiciones de Yahoo prohíben por escrito el acceso automatizado, Stooq responde con un reto anti-*bot* y Morningstar solo ofrece API de empresa (investigación del 2026-09-24). Las fuentes de precio de cierre diario es una API gratuita con clave: **EODHD**. **CoinGecko y OpenFIGI quedaron retirados al cerrar la feature 013** (ADR-0031, tercera enmienda): las condiciones de CoinGecko describen su plan gratuito como para probar, y OpenFIGI no documenta qué bolsa es cada código. La tabla de abajo queda como referencia histórica salvo las filas corregidas.
 
 | Dato | Fuente | Fiabilidad | Riesgo |
 |---|---|---|---|
-| Acciones, ETFs, ETCs | **EODHD (principal), Alpha Vantage (respaldo)**, APIs con clave gratuita (ADR-0031) | Buena | Cupo diario (20 y 25 llamadas) y condiciones de uso de una API gratuita. El plan gratuito de Alpha Vantage solo ve **los últimos 100 días de mercado**: sirve para el día a día, no para rellenar un año |
+| Acciones, ETFs, ETCs | **EODHD**, API con clave gratuita (ADR-0031) | Buena | Cupo diario (20 llamadas) y condiciones de uso de una API gratuita |
 | Cripto | **EODHD si su plan gratuito la cubre**; si no, entrada manual (ADR-0031, tercera enmienda). ~~CoinGecko Demo~~ | **Sin verificar** | Cobertura del plan gratuito **SIN VERIFICAR** hasta la prueba con la clave del usuario (`docs/runbooks/013-daily-close-prices-live-test.md`) |
 | Tipos de cambio | BCE (CSV/API oficial) | Excelente | Ninguno |
 | Valor liquidativo de fondos | `EUFUND` de EODHD si cubre el ISIN; si no, **aproximación por ETF equivalente**, siempre marcada como tal (ADR-0031) | Buena para consulta | No sirve para fiscalidad |
@@ -280,7 +280,7 @@ Estos precios son **exclusivamente informativos** y la interfaz los marca como a
 
 Cada fuente es un adaptador del puerto `PriceSource` (`packages/domain/src/ports/`, ADR-0031), asíncrono, que pide cierres diarios de un símbolo entre dos fechas. Requisitos:
 
-- **Cascada de respaldo**: fuente primaria (EODHD) → secundaria (Alpha Vantage) → último valor conocido con su antigüedad → entrada manual. ~~La entrada manual gana siempre.~~ **Para enseñar un valor, gana el dato de fecha más reciente, y con la misma fecha la valoración manual**, siempre entre los precios que tienen valor en euros (ADR-0031, segunda y tercera enmiendas). El Modelo 720 y toda ruta fiscal siguen leyendo solo la valoración manual.
+- **Cascada de respaldo**: EODHD → último valor conocido con su antigüedad → entrada manual. ~~La entrada manual gana siempre.~~ **Para enseñar un valor, gana el dato de fecha más reciente, y con la misma fecha la valoración manual**, siempre entre los precios que tienen valor en euros (ADR-0031, segunda y tercera enmiendas). El Modelo 720 y toda ruta fiscal siguen leyendo solo la valoración manual.
 - **Antigüedad siempre visible.** Si un precio lleva más de `stale_price_days` sin refrescarse, la interfaz lo indica.
 - **Nunca interpolar ni estimar en silencio.**
 - **Registro de fallos con tipo** (`unavailable`, `not_found`, `rate_limited`, `blocked`, `invalid_response`, `budget_exhausted`); si una fuente falla repetidamente, aviso por correo. Es lo que avisará de que una fuente ha cambiado sus condiciones o agotado su cupo.
@@ -369,7 +369,7 @@ Decisiones deliberadas para minimizar coste y servicios, cada una en su ADR:
 
 ### 9.3 Costes
 
-Restricción: **coste mínimo con alarma de presupuesto**, no «always-free indefinido» (constitución VI, ADR-0028). Estimación de ≈ 0,01-0,05 $/mes, cubierta por los créditos de la cuenta mientras duren y pagada después. Una alarma de AWS Budgets, `atlas-cost`, avisa por correo a 1 $, medida antes de créditos y filtrada por la etiqueta `project=atlas` (ADR-0028, ADR-0034). Los niveles gratuitos de Lambda, SSM y CloudFront son por cuenta y se comparten con los otros proyectos de ella (ADR-0034). Las fuentes de precios (EODHD, Alpha Vantage) son planes gratuitos con cupo diario (ADR-0031).
+Restricción: **coste mínimo con alarma de presupuesto**, no «always-free indefinido» (constitución VI, ADR-0028). Estimación de ≈ 0,01-0,05 $/mes, cubierta por los créditos de la cuenta mientras duren y pagada después. Una alarma de AWS Budgets, `atlas-cost`, avisa por correo a 1 $, medida antes de créditos y filtrada por la etiqueta `project=atlas` (ADR-0028, ADR-0034). Los niveles gratuitos de Lambda, SSM y CloudFront son por cuenta y se comparten con los otros proyectos de ella (ADR-0034). Las fuentes de precios (EODHD) son un plan gratuito con cupo diario (ADR-0031).
 
 ### 9.4 Cuenta en el Paid Plan
 
@@ -382,7 +382,7 @@ Construidas (feature 016) y sin desplegar todavía: la infraestructura es de la 
 | Función (hora de Madrid) | Tarea | `job_frequencies` (por defecto, primero) | Notifica |
 |---|---|---|---|
 | `job-ecb` (17:15) | Histórico del BCE, con el calendario TARGET como comprobación (ADR-0029) | `ecb`: `daily`, `weekly` | Solo con un hallazgo |
-| `job-prices` (07:00) | Precios de cierre: EODHD, respaldo Alpha Vantage; nunca escribe `prices/symbols.json` (ADR-0031). Cada llamada, 15 s de tope, sin seguir redirecciones (la clave va en la dirección) y leyendo como mucho 8 MiB | `prices`: `daily`, `weekly` | Solo con un hallazgo (fuente caída, correspondencias sin contrastar, horizonte de una tesis vencido) |
+| `job-prices` (07:00) | Precios de cierre: EODHD; nunca escribe `prices/symbols.json` (ADR-0031). Cada llamada, 15 s de tope, sin seguir redirecciones (la clave va en la dirección) y leyendo como mucho 8 MiB | `prices`: `daily`, `weekly` | Solo con un hallazgo (fuente caída, correspondencias sin contrastar, horizonte de una tesis vencido) |
 | `job-backup` (03:15) | Volcado mensual a `backups/<YYYY-MM>/` (ADR-0032) | `backup`: `monthly` (fijo) | Solo si falla o queda incompleto |
 | `job-integrity` (04:15) | Errores de `atlas check --deep`, ensayo de restauración en memoria y tamaño del libro (ADR-0032) | `integrity`: `quarterly`, `monthly` | Solo con errores |
 | `job-mail` (08:00) | Recordatorio mensual: reparto de la aportación (sin importes salvo que se active, ADR-0028), días desde el último inicio de sesión y tokens de consola vivos | `reminder`: `monthly` (fijo) | **Siempre, al menos una vez** |
@@ -542,7 +542,7 @@ Puntos detectados al revisar la especificación. Sin decidir todavía; cada uno 
 - [x] **Corrección de errores de registro**: libro append-only con rectificación; lotes como proyección (ADR-0003).
 - [x] **Posición de efectivo.** Decidido (ADR-0004): saldo derivado por cuenta de inversión; el colchón bancario queda fuera de la app.
 - [x] **Retención a cuenta en reembolsos de fondos.** Hecho: `sell.withholding` (`data-schema.md` §6.2), con su equivalente por cuenta en `forced_sale` (§6.5). Sale del efectivo que entra, no toca el valor de transmisión ni el coste de los lotes, y la salida fiscal la suma a las retenciones del ejercicio (criterio #12).
-- [x] **Valoración a 31 de diciembre.** Resuelta como se preveía (feature 010): los Modelos 720 y 721 valoran con la `valuation` registrada a mano, dato de **Nivel 1**, convertida al tipo del BCE de esa fecha. Es la única ruta fiscal que lee precios; si falta alguno, el veredicto es «no se puede determinar» y nunca «no obligado» (§5.8 de `business-rules.md`).
+- [x] **Valoración a 31 de diciembre.** Resuelta como se preveía (feature 010): los Modelos 720 y 721 valoran con la `valuation` registrada a mano, dato de **Nivel 1**, convertida al tipo del BCE de esa fecha (en una IIC, su valor liquidativo: criterio #11). Es la única ruta fiscal que lee precios; si falta alguno, el veredicto es «no se puede determinar» y nunca «no obligado» (§5.8 de `business-rules.md`).
 - [x] **Despliegue desde GitHub Actions con OIDC**, sin claves de AWS de larga duración en el repositorio. Resuelto (ADR-0028, 2026-09-24; cuenta compartida desde ADR-0034, 2026-09-25): un rol de despliegue por entorno en la misma cuenta, que solo puede crear roles con el límite de permisos de su entorno; el de `dev` solo desde `develop`, el de `prod` solo desde el *environment* `prod` con aprobación obligatoria, y un rol de `terraform plan` de solo lectura que nunca se usa para una PR desde un *fork*.
 - [x] **Tests de propiedades** para el motor FIFO. Hecho con `fast-check` en `packages/domain/test/properties/`: los lotes abiertos igualan la posición física por activo, proyectar dos veces da lo mismo y el diario reconstruye cada lote y cada ganancia, y `scale` seguido de su inverso deja lotes y posiciones idénticos.
 - [x] **Reconsiderar DynamoDB frente a JSONL en S3**: S3 (ADR-0002).

@@ -169,6 +169,8 @@ export const FISCAL_CRITERIA = {
   // Share premium and returns of contributions of a listed security lower the
   // cost of each lot down to zero; the excess is movable capital income.
   "26": { doc: "26", certainty: "high", risk: "aggressive" },
+  // The estimated quota of the savings base: scale of the year, second limit of art. 80.
+  "27": { doc: "27", certainty: "medium", risk: "conservative" },
 } as const satisfies Record<string, FiscalCriterion>;
 
 export type CriterionId = keyof typeof FISCAL_CRITERIA;
@@ -225,6 +227,7 @@ export const CRITERION_IDS: readonly CriterionId[] = [
   "24:etp_gain",
   "25",
   "26",
+  "27",
 ];
 
 /** Which variant of criterion #24 an ETC or an ETP applies, by the reading in force. */

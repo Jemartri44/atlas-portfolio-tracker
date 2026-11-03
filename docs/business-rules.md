@@ -159,9 +159,9 @@ La declaración es **por contribuyente, no por libro**: la base del ahorro, la c
 
 ### 5.1 Base del ahorro
 
-Tipos vigentes según se entienden en agosto de 2026 (**verificar y mantener configurable**, `savings_tax_brackets`):
+Escala de la base del ahorro, **por año** (arts. 66.1 y 76 LIRPF, mitad estatal y mitad autonómica, régimen común), leída en el BOE redacción a redacción y guardada como datos en `packages/domain/src/tax/savings-scale.ts`. Desde 2025:
 
-| Tramo de ganancia anual | Tipo |
+| Tramo de base del ahorro | Tipo |
 |---|---|
 | Hasta 6.000€ | 19% |
 | 6.000 - 50.000€ | 21% |
@@ -169,7 +169,11 @@ Tipos vigentes según se entienden en agosto de 2026 (**verificar y mantener con
 | 200.000 - 300.000€ | 27% |
 | Más de 300.000€ | 30% |
 
-Los tramos se aplican a la **ganancia realizada en el ejercicio**, no al patrimonio ni al importe retirado. Solo tributa la plusvalía, no el capital aportado.
+Antes: 28 % por encima de 300.000 € en 2023-2024, 26 % por encima de 200.000 € en 2021-2022 y 23 % por encima de 50.000 € hasta 2020. Un año sin escala comprobada no tiene cuota. `savings_tax_brackets`, si se configura, sustituye a la escala en todos los años, y la cuota avisa cuando difiere de la ley.
+
+**Cuota estimada** (`savingsQuota`, criterio #27 de `fiscal-questions.md`): la escala sobre la base del ahorro, la deducción por doble imposición con sus dos límites y las retenciones del ahorro. Es una estimación: no conoce el resto de la Renta y supone que el mínimo personal y familiar se agota en la base general.
+
+Los tramos se aplican a la **base liquidable del ahorro** del ejercicio: ganancias realizadas y rendimientos del capital mobiliario **tras compensar** (art. 49), no al patrimonio ni al importe retirado. La cuota estimada supone que el **mínimo personal y familiar se agota en la base general** (art. 56.2); si no, parte de él rebaja la base del ahorro y la cuota real es menor. Solo tributa la plusvalía, no el capital aportado.
 
 ### 5.2 Traspaso entre fondos — el caso crítico
 
@@ -270,6 +274,8 @@ Toda operación en divisa distinta del euro requiere conversión al **tipo de ca
 **Las dos cifras de una cuenta.** Una cuenta se juzga por el **saldo a 31/12** y por el **saldo medio del cuarto trimestre**, los dos, tanto para el umbral como para la subida de 20.000€ (criterio #11). El saldo medio es la media de los saldos al cierre de cada día natural entre el 1 de octubre —o el primer movimiento de la cuenta, si es posterior— y el 31 de diciembre, con una cuenta cancelada contando cero desde su cierre. Las dos cifras se convierten con el **último tipo del BCE que el libro conoce** para esa divisa, y la aplicación **lo marca** cuando no es el de fin de año. El día de referencia no es el 31/12 a secas sino el **último día hábil** hasta él inclusive, porque el BCE no publica en fin de semana. Dentro de la categoría, los saldos **negativos netean** con los positivos.
 
 **Los valores van en un bloque único.** Valores, instituciones de inversión colectiva y seguros comparten un solo umbral (art. 42 ter.4.c), así que fondos, ETF, ETC, ETP y acciones se suman juntos, y **la clave con la que cada uno se rellene en el impreso no mueve el umbral**. Qué clave le corresponde a cada vehículo es una pregunta abierta de `docs/fiscal-questions.md`, no un criterio aplicado: la aplicación decide si hay que presentar, no rellena el modelo. **Ningún ETP va al 721**: es un valor.
+
+**Con qué valor.** Fondos, ETF y monetarios (IIC) se declaran por su **valor liquidativo** a 31/12; acciones y ETC, por la cotización de ese día (criterio #11 de `fiscal-questions.md`). Atlas toma la `valuation` que anotes y te recuerda lo primero con `informative_iic_net_asset_value`.
 
 De las tres categorías del modelo, la aplicación calcula **dos** —cuentas y valores—: en el libro no hay inmuebles.
 
