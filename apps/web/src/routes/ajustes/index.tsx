@@ -10,8 +10,16 @@ import { countOf } from "../../format/number.js";
 import { type CopyFormat, downloadCopy } from "../../ledger/copy.js";
 import { toAppError } from "../../ledger/errors.js";
 import { type AppError, store, today } from "../../ledger/state.js";
+import { mediaQuery, TOP_BAR } from "../../shell/media.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
-import { privacy, setPrivacy, setTheme, theme } from "../../shell/preferences.js";
+import {
+  letterKeys,
+  privacy,
+  setLetterKeys,
+  setPrivacy,
+  setTheme,
+  theme,
+} from "../../shell/preferences.js";
 import { EcbCard } from "./EcbCard.jsx";
 import { PricesCard } from "./PricesCard.jsx";
 import { SessionCard } from "./SessionCard.jsx";
@@ -52,6 +60,7 @@ const LinkRow = (props: {
 );
 
 export default function AjustesRoute(): JSX.Element {
+  const wide = mediaQuery(TOP_BAR);
   const [busy, setBusy] = createSignal(false);
   const [message, setMessage] = createSignal<string | undefined>(undefined);
   const [error, setError] = createSignal<AppError | undefined>(undefined);
@@ -92,45 +101,9 @@ export default function AjustesRoute(): JSX.Element {
         )}
       </Show>
 
+      {/* In the order of a phone (the approved report, §4): what is used there first — privacy and
+          theme, the copy, the session — and then what is used at the computer. Two columns there. */}
       <div class="grid">
-        <Section title="Tus datos" class="span-6 is-natural">
-          <Show
-            when={store.source() !== undefined}
-            fallback={<p class="meta">No hay datos abiertos.</p>}
-          >
-            <dl class="facts">
-              <Fact label="Dónde están">Nube de Atlas</Fact>
-              <Show when={store.snapshot()}>
-                {(snapshot) => (
-                  <Fact label="Movimientos registrados">
-                    {countOf(snapshot().events.length, "movimiento", "movimientos")}
-                  </Fact>
-                )}
-              </Show>
-            </dl>
-            <p class="card-note">
-              Tus datos viven en la nube de Atlas y este dispositivo no guarda ninguna copia. La
-              copia fuera de la nube es esta: descárgala de vez en cuando y guárdala donde tú
-              quieras.
-            </p>
-            <div class="button-row">
-              <button type="button" disabled={busy()} onClick={() => void onCopy("jsonl")}>
-                <Icon name="export" class="icon-sm" />
-                Descargar copia
-              </button>
-              <button
-                type="button"
-                class="secondary"
-                disabled={busy()}
-                onClick={() => void onCopy("csv")}
-              >
-                <Icon name="export" class="icon-sm" />
-                Descargar en CSV
-              </button>
-            </div>
-          </Show>
-        </Section>
-
         <div class="stack span-6">
           <Section title="Privacidad y apariencia">
             <Switch
@@ -140,6 +113,15 @@ export default function AjustesRoute(): JSX.Element {
               onChange={(checked) => setPrivacy(checked)}
               hint="Activado por defecto. Los porcentajes, los pesos y las fechas siguen visibles."
             />
+            <Show when={wide()}>
+              <Switch
+                id="letters-setting"
+                label="Atajos de una tecla: C compra, V venta, P valoración"
+                checked={letterKeys()}
+                onChange={(checked) => setLetterKeys(checked)}
+                hint="Solo en el ordenador y fuera de un formulario. Apágalos si usas un lector de pantalla o dictas por voz. «/» abre siempre «Buscar o registrar»."
+              />
+            </Show>
             <fieldset class="theme-choice">
               <legend>Tema</legend>
               <div class="segmented">
@@ -157,13 +139,50 @@ export default function AjustesRoute(): JSX.Element {
               </div>
             </fieldset>
           </Section>
-
+          <Section title="Tus datos">
+            <Show
+              when={store.source() !== undefined}
+              fallback={<p class="meta">No hay datos abiertos.</p>}
+            >
+              <dl class="facts">
+                <Fact label="Dónde están">Nube de Atlas</Fact>
+                <Show when={store.snapshot()}>
+                  {(snapshot) => (
+                    <Fact label="Movimientos registrados">
+                      {countOf(snapshot().events.length, "movimiento", "movimientos")}
+                    </Fact>
+                  )}
+                </Show>
+              </dl>
+              <p class="card-note">
+                Tus datos viven en la nube de Atlas y este dispositivo no guarda ninguna copia. La
+                copia fuera de la nube es esta: descárgala de vez en cuando y guárdala donde tú
+                quieras.
+              </p>
+              <div class="button-row">
+                <button type="button" disabled={busy()} onClick={() => void onCopy("jsonl")}>
+                  <Icon name="export" class="icon-sm" />
+                  Descargar copia
+                </button>
+                <button
+                  type="button"
+                  class="secondary"
+                  disabled={busy()}
+                  onClick={() => void onCopy("csv")}
+                >
+                  <Icon name="export" class="icon-sm" />
+                  Descargar en CSV
+                </button>
+              </div>
+            </Show>
+          </Section>
           <div id="sincronizacion">
             <SessionCard />
           </div>
+        </div>
+        <div class="stack span-6">
           <EcbCard />
           <PricesCard />
-
           <Section title="Configuración y verificación">
             <ul class="rows">
               {/* The fiscal screen has no place in the bottom bar (it is reached from the summary and from here. */}

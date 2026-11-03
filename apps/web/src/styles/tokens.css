@@ -180,6 +180,11 @@
   /* What was put into the core, a dashed step: the same neutral grey as the
      index of the bucket, and they never share a chart. */
   --c-series-contrib: #8a8880;
+  /* The parts of an exposure bar: steps of grey, never a hue (a hue already means a class or a book), each at 3:1 or more on the card. */
+  --c-share-1: #201f1b;
+  --c-share-2: #4b4944;
+  --c-share-3: #6b6962;
+  --c-share-4: #86837b;
 
   --c-chart-grid: #ebe9e3;
   --c-chart-axis: #c9c6be;
@@ -282,6 +287,10 @@
     --c-series-cash: #2a9f80;
     --c-series-index: #8f8d86;
     --c-series-contrib: #8f8d86;
+    --c-share-1: #e9e8e3;
+    --c-share-2: #c7c5be;
+    --c-share-3: #a2a099;
+    --c-share-4: #7e7c75;
     --c-chart-grid: #2a2a27;
     --c-chart-axis: #45443f;
     --c-chart-gap: #242422;
@@ -330,6 +339,10 @@
   --c-series-cash: #2a9f80;
   --c-series-index: #8f8d86;
   --c-series-contrib: #8f8d86;
+  --c-share-1: #e9e8e3;
+  --c-share-2: #c7c5be;
+  --c-share-3: #a2a099;
+  --c-share-4: #7e7c75;
   --c-chart-grid: #2a2a27;
   --c-chart-axis: #45443f;
   --c-chart-gap: #242422;

@@ -5,8 +5,9 @@
  *   < 75rem  a status bar on top (where the data lives, privacy, settings)
  *            and the navigation fixed at the bottom, Registrar in the middle.
  *            A 1024px tablet in landscape keeps the thumb bar.
- *   ≥ 75rem  one top bar: brand, the four destinations as a group, Registrar
- *            as the primary button, and the status on the right. Compact
+ *   ≥ 75rem  one top bar: brand, the destinations as pills (the declaration
+ *            among them), Registrar as the primary button, and the status on
+ *            the right with «Buscar o registrar» (`command.css`). Compact
  *            (shorter privacy label, tighter tabs) until 90rem.
  *
  * The content grid has its own breakpoint (64rem): the shell and the grid
@@ -299,17 +300,19 @@
   background: var(--c-surface);
   border: var(--border) solid var(--c-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
   display: grid;
   gap: var(--space-3);
   justify-items: center;
   margin: var(--space-9) auto 0;
-  max-width: 24rem;
-  padding: var(--space-6) var(--space-5);
+  max-width: 26rem;
+  padding: var(--space-7) var(--space-6);
   text-align: center;
 }
 
+/* The name in the serif of the figures (direction A), the first thing the application says. */
 .gate h1 {
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
   margin: 0;
 }
 
@@ -319,8 +322,13 @@
 
 .gate .mark {
   color: var(--c-accent);
-  height: 2rem;
-  width: 2rem;
+  height: 2.5rem;
+  width: 2.5rem;
+}
+
+.gate button {
+  margin-top: var(--space-2);
+  min-width: 14rem;
 }
 
 .page-head {

@@ -78,8 +78,9 @@ a.card-foot:hover {
   margin: var(--space-5) 0 var(--space-1);
 }
 
-/* A button, or a row of them, under a paragraph of a card is not glued to it. */
-.card :is(p, .card-note) + :is(button, .button-row) {
+/* A button, or a row of them, and the paragraph that comes before or after it are not glued. */
+.card :is(p, .card-note) + :is(button, .button-row),
+.card :is(button, .button-row) + :is(p, .card-note) {
   margin-top: var(--space-3);
 }
 

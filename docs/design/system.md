@@ -172,6 +172,10 @@ Desde 1024 px, 12 columnas con espacio de 20 y clases `span-N`. Las tarjetas de 
 
 La hoja visual de componentes estaba en el prototipo retirado; hoy son los estilos de `apps/web/src/styles/`.
 
+### 4.4 El teclado del ordenador
+
+Solo desde la barra superior (≥ 1200 px): un botón **«Buscar o registrar»** con su tecla `/` (por debajo de 1600 px, solo el icono y la tecla, para que nada de la barra se parta en dos líneas) abre un diálogo con una caja de órdenes (un *combobox* ARIA: flechas, Intro y Esc). Ofrece registrar cada operación del día a día, ir a cada destino y, siempre al final, buscar lo escrito en los movimientos (`/movimientos?q=`). Desde una pantalla **sin formulario**, **C** compra, **V** venta y **P** valoración: en un formulario la letra no actúa, porque salir de él perdería lo escrito. Las teclas solo responden **solas** y una vez aunque se mantengan: con Ctrl, Cmd o Alt son del navegador o del sistema; dentro de un campo, una lista o algo editable, o mientras se compone un carácter, son lo que se escribe; con un diálogo abierto, del diálogo. Las letras **se pueden apagar** en Ajustes (WCAG 2.1.4: un lector de pantalla usa letras sueltas para moverse); «/» abre siempre la caja. La caja se cierra con Esc o con «Cerrar». En el móvil no hay teclas: la aplicación instalada ofrece «Registrar compra» y «Registrar valoración» con una pulsación larga en su icono (`shortcuts` del manifiesto).
+
 ### 5.1 Tarjeta (`.card`)
 
 Hoja cálida (`--c-surface`), borde de 1 px, radio 14, sombra mínima. Cabecera (`.card-head`): `h2` a la izquierda y, a la derecha, un dato de contexto (`--text-sm`, `--c-text-3`) o una etiqueta. **Sin franja gris.** Pie (`.card-foot`): fila de 44 px de borde a borde con un enlace, pulsable entera.
@@ -179,6 +183,8 @@ Hoja cálida (`--c-surface`), borde de 1 px, radio 14, sombra mínima. Cabecera 
 ### 5.2 Cifra protagonista, proporción y partes (`.hero-figure`, `.shares`, `.parts`)
 
 Una por pantalla. En el móvil, la cifra; debajo, **la barra de proporción** de las tres partes (una barra apilada de 12 px con cortes del color de la superficie) y las tres partes en filas: clave de serie, nombre, **porcentaje del total** e importe. En escritorio es una **banda** a lo ancho: la cifra y la barra a la izquierda y las tres partes en columnas con separador vertical, cada una con su etiqueta, su cifra en `--text-2xl` y su porcentaje. Los porcentajes **se ven con la privacidad activa**: no delatan la magnitud. Con el total parcial no se enseñan ni la barra ni los porcentajes, porque serían proporciones de un total incompleto. Las claves de las partes son las mismas líneas (color y trazo) de la gráfica de evolución.
+
+**La barra es un componente común** (`components/ShareBar.tsx`, estilos en `styles/share-bar.css`): `ShareBar` dibuja las partes de un todo en una barra, con cortes del color de la superficie, y `ShareLegend` escribe debajo el nombre y la cifra de cada parte, siempre en texto (el color nunca es el único portador, y los porcentajes se ven con la privacidad activa). El patrimonio la usa con sus tres libros (`is-core`, `is-bucket`, `is-cash`) y la exposición con las partes por orden de peso (`is-a`…`is-c` y `is-rest` para lo que no cabe, que se junta en «Otras (N)»), **en escalones de gris (`--c-share-1`…`4` de `tokens.css`, cada uno a 3:1 o más sobre la tarjeta y distinto del contiguo, con su prueba en `contrast.test.ts`) y nunca en un tono**: en Cartera los tonos ya significan una clase de activo o un libro, y una divisa no puede parecerse a ninguno; el orden y la cifra de la leyenda las distinguen. `is-thin` es la línea de una fila: 6 px y forma de píldora.
 
 ### 5.3 Fila de lista en dos líneas (`.row`)
 
@@ -296,7 +302,7 @@ Lista numerada con el estado de cada paso: **hecho** (círculo lleno con ✓), *
 
 ### 7.1 Entrada: «Entrar en Atlas»
 
-Marca y título «Entrar en Atlas»; una frase que dice que los datos están en la nube y que se entra con la cuenta de Google. **Una sola tarjeta**, centrada, con **el único botón principal**, «Entrar con Google» (si hay un aviso previo, «Entrar de todos modos»). Sin conexión, la pantalla solo dice «Sin conexión» con «Reintentar»; con la sesión caducada, «Entrar de nuevo». Sin navegación (D8). Desde ADR-0035 no hay elección de dónde guardar los datos, ni carpeta, ni almacenamiento del navegador, ni «Importar un archivo».
+Marca y título «Atlas» en la serifa de las cifras (la dirección A), en una tarjeta con sombra suave sobre el papel; una frase que dice que los datos están en la nube y que se entra con la cuenta de Google. **Una sola tarjeta**, centrada, con **el único botón principal**, «Entrar con Google» (si hay un aviso previo, «Entrar de todos modos»). Sin conexión, la pantalla solo dice «Sin conexión» con «Reintentar»; con la sesión caducada, «Entrar de nuevo». Sin navegación (D8). Desde ADR-0035 no hay elección de dónde guardar los datos, ni carpeta, ni almacenamiento del navegador, ni «Importar un archivo».
 
 ### 7.2 Resumen
 
@@ -328,13 +334,17 @@ Marca y título «Entrar en Atlas»; una frase que dice que los datos están en 
 - **Parcial**: sin barras de bala (no hay pesos sobre un total parcial), el bloque *pendiente* en lugar de los pesos y los objetivos por tipo. Nada rojo.
 - **Precios caducados**: se marcan en su fila, con el reloj del aviso y la antigüedad al pasar por encima; el aviso agrupado vive en *Atención* y la Cartera no lo repite debajo. El TER medio va también en *Costes*, en una línea propia, con su nombre. Un activo con objetivo y sin nada en cartera dice «sin posición», nunca «0,00 €»; los costes no listan un fondo fusionado que no pagó comisiones.
 
+- *Exposición* (`ExposureBlock`, a lo ancho y **siempre abierta**, también en el móvil: nada se oculta por defecto): el reparto del núcleo por divisa y por región con la barra común y su leyenda, el recuento de activos «por defecto / tuyos / sin propuesta» y, debajo, una línea completa por cada índice usado («por defecto · MSCI World (según la cartera de SPDR…) · ficha 02/11/2026»). Un activo sin propuesta quita la barra de esa dimensión y la sustituye por un aviso con los activos que faltan y el camino a Ajustes; un precio que falta quita todo. En el móvil va después de *Aportación*.
+
 ### 7.6 Cubo
 
 *Frente al índice* abre con la cifra protagonista: el resultado del cubo frente al mismo dinero en el índice **en porcentaje sobre lo aportado** (`BucketStats.vs_index_pct`), que se ve con la privacidad activa; el importe va debajo, enmascarado. Si alguna tesis no se puede comparar, el total es parcial y no hay porcentaje: en su sitio va un bloque *pendiente* que dice a cuántas tesis les falta el precio del índice, con la acción de registrar valoraciones. Debajo, la tira de estadísticas (comisiones sobre capital, tasa de acierto, tesis cerradas), el selector de rango **pegado a la gráfica**, la gráfica del cubo frente al índice y el resto de las estadísticas plegado. Después, *Posiciones abiertas* en filas, con la ganancia con signo. Luego, *Presupuesto y control*: el consumo del tope, la regla de parada y la de recogida dichas en llano con su umbral, y el peso del cubo sobre el patrimonio, marcado como la única cifra que suma cubo y cartera. Cierran las tesis y los costes. Si hay tesis abiertas, las cerradas van plegadas («7 tesis cerradas»): son historia y su suma frente al índice encabeza la pantalla. **No hay lista de avisos del cubo**: lo que una tarjeta ya dice no se repite, y lo que queda (un tope superado, una tesis cerrada con posición, el índice sin configurar) va en la tarjeta de la que trata. **Vacío: un único estado vacío.**
 
 ### 7.7 Ajustes y Configuración
 
-*Tus datos* (dónde están y «Descargar copia»), *Privacidad y apariencia* y *Verificación*, que agrupa sus hallazgos igual que Atención. La **Configuración** va en grupos plegables, con los pesos objetivo y su total en vivo. Se piden pesos **solo de activos vivos** (`view-models/weighted.ts`): no de uno dado de baja ni de uno que una fusión o un cambio de clase convirtió en otro y ya no tiene nada, aunque el catálogo lo siga dando por activo; uno que aún lleve peso sí sale, para que guardar nunca quite un peso sin verlo. La *Verificación* nombra `atlas backup` solo cuando los datos están en una carpeta del ordenador; en el móvil dice que la copia es exportar y guardar el archivo fuera del dispositivo. Con la privacidad activa **se enmascaran todos sus importes**, incluidos los tramos de la base del ahorro y los umbrales de los modelos 720 y 721: una sola regla. El índice de referencia del cubo no ofrece activos dados de baja. En escritorio, dos columnas de tarjetas, y los formularios nunca pasan de su ancho de lectura.
+En el orden del móvil (informe visual §4: lo que se usa allí primero): *Privacidad y apariencia* (con los atajos de una tecla en el ordenador), *Tus datos* (dónde están, «Descargar copia» y «Descargar en CSV») y la sesión; después el BCE, los precios y los enlaces a Configuración y *Verificación*, que agrupa sus hallazgos igual que Atención. En escritorio, esas dos pilas (6 + 6), cada tarjeta a su altura (D5). Un párrafo y la fila de botones que lo sigue o lo precede nunca van pegados. La **Configuración** va en grupos plegables, con los pesos objetivo y su total en vivo. Se piden pesos **solo de activos vivos** (`view-models/weighted.ts`): no de uno dado de baja ni de uno que una fusión o un cambio de clase convirtió en otro y ya no tiene nada, aunque el catálogo lo siga dando por activo; uno que aún lleve peso sí sale, para que guardar nunca quite un peso sin verlo. La *Verificación* recuerda que la copia fuera de la nube es «Descargar copia» o, en el ordenador, `atlas backup` de la consola. Con la privacidad activa **se enmascaran todos sus importes**, incluidos los tramos de la base del ahorro y los umbrales de los modelos 720 y 721: una sola regla. El índice de referencia del cubo no ofrece activos dados de baja. Los formularios nunca pasan de su ancho de lectura.
+
+La **Configuración** termina con *Exposición* (`ExposureCard`, ancla `#exposicion`): una fila por activo del núcleo con el selector «Índice que sigue» (la propuesta de Atlas por ISIN o clase como texto de la opción vacía), y por dimensión su etiqueta («tuyo», «por defecto» con el índice, el fondo y la fecha, o «sin propuesta»), la barra fina y su leyenda, «Editar» (un diálogo de filas clave y porcentaje que tiene que sumar exactamente 100, con la coma decimal y el error que dice cuánto falta o sobra) y «Restablecer». Guarda al momento, sin el botón de la configuración, en su propio objeto de la nube; si el índice elegido ya no está en la tabla, lo dice.
 
 ### 7.8 Declaración (`/fiscal`)
 
@@ -375,6 +385,7 @@ Dirección A «Cuaderno vivo», elegida por el dueño el 2026-11-03 sobre la aud
 | D15 | Avisos con placa, botones y pestañas en píldora, hoja cálida | Los tokens de color, casi sin tocar |
 | D16 | La Declaración, destino de la barra en escritorio | Pieza tomada de la dirección B; en el móvil sigue desde su tarjeta |
 | D17 | Resumen: baldosas con minigráfica, evolución en áreas apiladas, «Este mes» y reparto en barras de bala | Las baldosas, de B; la variación de la cartera y el plan del mes, del dominio (`docs/business-rules.md`) |
+| D18 | Atajos: «Buscar o registrar» con `/`, C, V y P en el ordenador y accesos del icono instalado | Decidido por el dueño el 2026-11-03 sobre el informe visual §4 |
 
 ---
 
@@ -391,6 +402,8 @@ Dirección A «Cuaderno vivo», elegida por el dueño el 2026-11-03 sobre la aud
 | Avisos, pendiente, vacío, esqueleto | `styles/feedback.css` |
 | Gráficas, leyenda, hueco, reparto | `styles/charts.css` |
 | Resumen: cifra protagonista, proporción y partes | `styles/summary.css` |
+| Barra de proporción y su leyenda (patrimonio, exposición) | `styles/share-bar.css` |
+| Exposición: bloque de Cartera y tarjeta de Configuración | `styles/exposure.css` |
 | Primeros pasos | `styles/steps.css` |
 | Cartera: tipos de activo, indicador de desviación, tira de cifras, costes | `styles/portfolio.css` |
 | Movimientos: filtros, días, detalle | `styles/movements.css` |

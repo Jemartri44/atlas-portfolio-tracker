@@ -12,11 +12,13 @@
 @import "./lists.css";
 @import "./feedback.css";
 @import "./charts.css";
+@import "./share-bar.css";
 @import "./summary.css";
 @import "./summary-cards.css";
 @import "./steps.css";
 @import "./indicators.css";
 @import "./portfolio.css";
+@import "./exposure.css";
 @import "./rebalance.css";
 @import "./movements.css";
 @import "./registrar.css";
@@ -24,3 +26,4 @@
 @import "./settings.css";
 @import "./fiscal.css";
 @import "./layout.css";
+@import "./command.css";

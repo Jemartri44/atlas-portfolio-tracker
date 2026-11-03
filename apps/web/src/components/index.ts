@@ -14,6 +14,7 @@ export { Notice, type NoticeItem, NoticeLink, NoticeList, type Severity } from "
 export { Parts } from "./Parts.jsx";
 export { Price, PriceDetail, type PriceInfo, PriceSource } from "./Price.jsx";
 export { Section } from "./Section.jsx";
+export { type BarSegment, type LegendEntry, ShareBar, ShareLegend } from "./ShareBar.jsx";
 export { StandaloneFees, type StandaloneFeesProps } from "./StandaloneFees.jsx";
 export { EmptyState, Pending, Skeleton } from "./States.jsx";
 export { StatLine, TotalLine } from "./StatLine.jsx";

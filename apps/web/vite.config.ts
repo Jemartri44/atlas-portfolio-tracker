@@ -145,6 +145,38 @@ const DEVELOPMENT_CSP = PRODUCTION_CSP.replace(
   .replace("style-src 'self'", "style-src 'self' 'unsafe-inline'")
   .replace("connect-src 'self'", "connect-src 'self' ws: wss:");
 
+/** The web manifest: what the installed application is called, looks like and offers. */
+export const MANIFEST: Exclude<VitePWAOptions["manifest"], false | undefined> = {
+  name: "Atlas",
+  short_name: "Atlas",
+  description: "Gestión de la cartera de inversión: movimientos, lotes FIFO y Renta.",
+  lang: "es",
+  dir: "ltr",
+  start_url: "/",
+  scope: "/",
+  display: "standalone",
+  orientation: "portrait-primary",
+  // The paper of the page for the splash, the top bar for the system bar:
+  // the light theme, the one a manifest can name (tokens.css).
+  background_color: "#f3f1ea",
+  theme_color: "#fffdf8",
+  // A long press on the icon of the installed application (docs/design/system.md §4.4).
+  shortcuts: [
+    { name: "Registrar compra", short_name: "Compra", url: "/registrar/buy" },
+    { name: "Registrar valoración", short_name: "Valoración", url: "/registrar/valuation" },
+  ],
+  icons: [
+    { src: "icon-192.png", sizes: "192x192", type: "image/png" },
+    { src: "icon-512.png", sizes: "512x512", type: "image/png" },
+    {
+      src: "icon-maskable-512.png",
+      sizes: "512x512",
+      type: "image/png",
+      purpose: "maskable",
+    },
+  ],
+};
+
 /**
  * What the service worker keeps: **the shell of the application and nothing
  * else** (ADR-0035, §3). No runtime caching rule exists, so no response of
@@ -177,31 +209,7 @@ export default defineConfig(({ command }) => ({
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["icon.svg", "icon-192.png", "icon-512.png", "icon-maskable-512.png"],
-      manifest: {
-        name: "Atlas",
-        short_name: "Atlas",
-        description: "Gestión de la cartera de inversión: movimientos, lotes FIFO y Renta.",
-        lang: "es",
-        dir: "ltr",
-        start_url: "/",
-        scope: "/",
-        display: "standalone",
-        orientation: "portrait-primary",
-        // The paper of the page for the splash, the top bar for the system bar:
-        // the light theme, the one a manifest can name (tokens.css).
-        background_color: "#f3f1ea",
-        theme_color: "#fffdf8",
-        icons: [
-          { src: "icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "icon-512.png", sizes: "512x512", type: "image/png" },
-          {
-            src: "icon-maskable-512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "maskable",
-          },
-        ],
-      },
+      manifest: MANIFEST,
       workbox: WORKBOX_OPTIONS,
       devOptions: { enabled: false },
     }),
@@ -253,7 +261,7 @@ export default defineConfig(({ command }) => ({
          * everything of the ECB (`ecb/`, the `ecb.ts` door and the local configuration in
          * `config/`), the automatic daily closes (`quotes/` and the `quotes.ts` door), the sync of
          * the ledger (`sync/`, the `sync.ts` door and its two ports) and the indicators of the Cubo
-         * (`charts/` and the `charts.ts` door) and the analysis of the Cartera and the Cubo (the `portfolio.ts` door and the modules behind it) and the rebalance (the `rebalance.ts` door, which carries the tax engine), none of which may be on the boot path. **The store
+         * (`charts/` and the `charts.ts` door) and the analysis of the Cartera and the Cubo (the `portfolio.ts` door and the modules behind it), the exposure (`exposure`, `exposure-file`, `index-profiles`: the tables of the indexes) and the rebalance (the `rebalance.ts` door, which carries the tax engine), none of which may be on the boot path. **The store
          * of the browser rides in the same chunk** (`blob.ts` and `idb.ts`): it is boot too —
          * opening the ledger is the boot. Without the group the bundler splits the store into a
          * boot chunk of its own (0,5 KB gzip, measured). `scripts/check-bundle.mjs` fails the build
@@ -263,7 +271,7 @@ export default defineConfig(({ command }) => ({
           groups: [
             {
               name: "domain",
-              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|quotes[\\/]|quotes\.ts|charts[\\/]|charts\.ts|messages[\\/]|messages\.ts|sync[\\/]|sync\.ts|remote[\\/]|remote-answers\.ts|tools\.ts|rebalance\.ts|projections[\\/](?:corporate-action-draft|deep-check|simulate-transfer|bucket-theses|bucket-stats|costs|contribution|month-plan|platform-plan|rebalance|sale-tax)\.ts|portfolio\.ts|ports[\\/]remote-ledger\.ts|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/]idb\.ts))/,
+              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|quotes[\\/]|quotes\.ts|charts[\\/]|charts\.ts|messages[\\/]|messages\.ts|sync[\\/]|sync\.ts|remote[\\/]|remote-answers\.ts|tools\.ts|rebalance\.ts|projections[\\/](?:corporate-action-draft|deep-check|simulate-transfer|bucket-theses|bucket-stats|costs|contribution|month-plan|platform-plan|rebalance|sale-tax|exposure|exposure-file|index-profiles)\.ts|portfolio\.ts|ports[\\/]remote-ledger\.ts|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/]idb\.ts))/,
             },
           ],
         },

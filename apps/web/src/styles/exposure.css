@@ -1,0 +1,90 @@
+/*
+ * The exposure of the core: the whole in Cartera (routes/cartera/ExposureBlock.tsx) and one row per
+ * asset in the configuration (routes/ajustes/ExposureCard.tsx). The bars are `share-bar.css`.
+ */
+
+.exposure-dimensions {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.exposure-dimension h3,
+.exposure-row h3 {
+  font-size: var(--text-md);
+  margin: 0 0 var(--space-2);
+}
+
+.exposure-counts {
+  margin-top: var(--space-4);
+}
+
+.exposure-sources {
+  color: var(--c-text-2);
+  display: grid;
+  font-size: var(--text-sm);
+  gap: var(--space-1);
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+}
+
+.exposure-rows {
+  display: grid;
+  gap: var(--space-5);
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+}
+
+.exposure-row {
+  border-top: var(--border) solid var(--c-border);
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+}
+
+.exposure-line {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.exposure-line > .shares {
+  width: 100%;
+}
+
+.exposure-line-head {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.split-row {
+  align-items: end;
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  margin-bottom: var(--space-3);
+}
+
+.split-sum {
+  font-weight: var(--fw-semibold);
+  margin: var(--space-3) 0 0;
+}
+
+@media (min-width: 48rem) {
+  .exposure-dimensions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .exposure-row {
+    column-gap: var(--space-6);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .exposure-row > :not(.exposure-line) {
+    grid-column: 1 / -1;
+  }
+}
