@@ -16,7 +16,7 @@ import {
   type RunRecord,
   runPeriods,
   runRecordKey,
-} from "@atlas/domain/jobs";
+} from "@atlas/domain/job-records";
 import type { Outcome } from "./outcome.js";
 import { json } from "./respond.js";
 

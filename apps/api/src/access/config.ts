@@ -5,7 +5,7 @@
 // read or ignored.
 
 import { ValidationError } from "@atlas/domain";
-import { JOB_FAMILIES, type JobFamily } from "@atlas/domain/jobs";
+import { JOB_FAMILIES, type JobFamily } from "@atlas/domain/job-records";
 
 /**
  * The ceilings of the durations and caches, **fixed in the code**: a typo of zeros in

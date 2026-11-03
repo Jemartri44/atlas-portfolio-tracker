@@ -57,6 +57,10 @@
     "./jobs": {
       "types": "./dist/jobs.d.ts",
       "import": "./dist/jobs.js"
+    },
+    "./job-records": {
+      "types": "./dist/job-records.d.ts",
+      "import": "./dist/job-records.js"
     }
   },
   "files": [
