@@ -13,6 +13,7 @@ variables {
   mail_recipient              = "user@example.invalid"
   oac_spa_id                  = "E2EXAMPLESPA000"
   oac_api_id                  = "E2EXAMPLEAPI000"
+  certificate_arn             = "arn:aws:acm:us-east-1:111122223333:certificate/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
   artifact_key                = "builds/0000/lambda.zip"
   artifact_sha256_base64      = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
   mail_sender                 = "atlas@example.invalid"

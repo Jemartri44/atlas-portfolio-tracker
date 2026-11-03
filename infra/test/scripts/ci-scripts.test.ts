@@ -3,7 +3,7 @@
 // prompt 017 §10 die here.
 
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -135,7 +135,8 @@ describe("the deployments (mutants 33, 34, 41, 54)", () => {
   it("lets only the dev deployment write the artifacts, and never uploads .vite nor maps", () => {
     const dev = flow("deploy-dev.yml");
     expect(dev).toMatch(/on:\n {2}push:\n {4}branches: \[develop\]\n/);
-    expect(dev).toContain("s3://$ARTIFACT_BUCKET/builds/$TREE/");
+    expect(dev).toContain('publish-set.sh "$RUNNER_TEMP/artifact" "$TREE"');
+    expect(code("infra/scripts/ci/publish-set.sh")).toContain("--if-none-match '*'");
     expect(dev).not.toContain("environment:");
     for (const name of ["deploy-dev.yml", "deploy-prod.yml"]) {
       const sync =
@@ -293,6 +294,158 @@ describe("the scripts of the CI", () => {
     const bad = promote(true);
     expect(bad.result.status).toBe(1);
     expect(bad.result.stderr).toContain("no coincide");
+  });
+
+  it("publish-set.sh never overwrites a published tree, and a run that died half way can finish it", () => {
+    const root = fixture();
+    const first = join(root, "first");
+    spawnSync("bash", [join(SCRIPTS, "package.sh"), first], { cwd: root });
+    writeFileSync(join(root, "state.json"), "{}");
+    writeFileSync(join(root, "log"), "");
+    const run = (dir: string) =>
+      spawnSync("bash", [join(SCRIPTS, "publish-set.sh"), dir, TREE], {
+        encoding: "utf8",
+        env: {
+          PATH: `${FAKES}:${process.env.PATH}`,
+          ARTIFACT_BUCKET: "b",
+          RUNNER_TEMP: root,
+          FAKE_S3_DIR: join(root, "bucket"),
+          FAKE_AWS_LOG: join(root, "log"),
+          FAKE_AWS_STATE: join(root, "state.json"),
+        },
+      });
+    const another = (name: string) => {
+      const dir = join(root, name);
+      mkdirSync(dir);
+      for (const file of ["lambda.zip", "jobs.zip", "spa.tgz"]) {
+        writeFileSync(join(dir, file), `${name} ${file}`);
+      }
+      return dir;
+    };
+    const stored = (file: string) =>
+      readFileSync(join(root, "bucket", "builds", TREE, file), "utf8");
+    const published = run(first);
+    expect(published.status, published.stderr).toBe(0);
+    expect(published.stdout).toContain("set publicado");
+    const kept = stored("lambda.zip");
+    // Another run of the same tree, with another build: it cannot replace what is there.
+    const second = another("second");
+    const again = run(second);
+    expect(again.status, again.stderr).toBe(0);
+    expect(again.stdout).toContain("ya tenía su set");
+    expect(readFileSync(join(second, "lambda.zip"), "utf8")).toBe(kept);
+    expect(stored("lambda.zip")).toBe(kept);
+    // A run that died after the first object: the next one keeps it and writes the rest.
+    const half = join(root, "bucket", "builds", TREE);
+    for (const file of ["jobs.zip", "spa.tgz", "SHA256SUMS"]) {
+      rmSync(join(half, file));
+    }
+    const third = another("third");
+    const finished = run(third);
+    expect(finished.status, finished.stderr).toBe(0);
+    expect(finished.stdout).toContain("set publicado");
+    expect(stored("lambda.zip")).toBe(kept);
+    expect(stored("jobs.zip")).toBe("third jobs.zip");
+  });
+
+  describe("verify-attestation.sh", () => {
+    // Two commits of the source repository, each with its tree, as the API would answer.
+    const world = () => ({
+      root: fixture(),
+      good: "1".repeat(40),
+      other: "2".repeat(40),
+      tree: "a".repeat(40),
+      otherTree: "b".repeat(40),
+    });
+    const run = (
+      commits: string[],
+      fail = "",
+      mutate?: (w: ReturnType<typeof world>) => string,
+      branch = "refs/heads/develop",
+    ) => {
+      const w = world();
+      const tree = mutate ? mutate(w) : w.tree;
+      writeFileSync(join(w.root, "gh.log"), "");
+      const result = spawnSync("bash", [join(SCRIPTS, "verify-attestation.sh"), w.root, tree], {
+        encoding: "utf8",
+        env: {
+          PATH: `${FAKES}:${process.env.PATH}`,
+          GITHUB_REPOSITORY: "owner/repo",
+          FAKE_GH_LOG: join(w.root, "gh.log"),
+          FAKE_GH_FAIL: fail,
+          FAKE_GH_BRANCH: branch,
+          FAKE_GH_TREES: JSON.stringify({ [w.good]: w.tree, [w.other]: w.otherTree }),
+          FAKE_GH_COMMITS: commits
+            .map((c) => (c === "good" ? w.good : c === "unknown" ? "3".repeat(40) : w.other))
+            .join(","),
+        },
+      });
+      return { result, log: readFileSync(join(w.root, "gh.log"), "utf8") };
+    };
+
+    it("accepts files signed by the dev workflow on develop from a commit with the tree it deploys", () => {
+      const ok = run(["good"]);
+      expect(ok.result.status, ok.result.stderr).toBe(0);
+      const lines = ok.log.trim().split("\n");
+      expect(lines.filter((line) => line.startsWith("attestation verify"))).toHaveLength(3);
+      expect(
+        lines.filter((line) => line.startsWith("api repos/owner/repo/git/commits/")),
+      ).toHaveLength(3);
+      expect(ok.log).toContain("--signer-workflow owner/repo/.github/workflows/deploy-dev.yml");
+      expect(ok.log).toContain("--source-ref refs/heads/develop");
+      // Several runs signed the same file: one of them is for this tree.
+      expect(run(["other", "good"]).result.status).toBe(0);
+    });
+
+    it("refuses a file signed for another source tree (a run of dev on another commit)", () => {
+      const bad = run(["other"]);
+      expect(bad.result.status).toBe(1);
+      expect(bad.result.stderr).toContain("no para este árbol");
+    });
+
+    it("refuses a file signed from another branch even if its tree is the right one", () => {
+      const bad = run(["good"], "", undefined, "refs/heads/another-branch");
+      expect(bad.result.status).toBe(1);
+      expect(bad.result.stderr).toContain("no tiene una atestación del flujo de dev en develop");
+    });
+
+    it("refuses, with its own message, a commit the API cannot read", () => {
+      const bad = run(["unknown"]);
+      expect(bad.result.status).toBe(1);
+      expect(bad.result.stderr).toContain("no se pudo leer de GitHub el commit firmado");
+    });
+
+    it("refuses a file nobody signed on develop, such as a set uploaded ahead of the build", () => {
+      const bad = run(["good"], "jobs.zip");
+      expect(bad.result.status).toBe(1);
+      expect(bad.result.stderr).toContain("jobs.zip no tiene una atestación");
+    });
+
+    it("refuses an invalid tree before asking GitHub anything", () => {
+      const bad = run(["good"], "", () => "not-a-tree");
+      expect(bad.result.status).toBe(64);
+      expect(bad.log).toBe("");
+    });
+  });
+
+  it("dev attests the three files it publishes, and prod verifies before it applies", () => {
+    const dev = flow("deploy-dev.yml");
+    expect(dev).toMatch(/actions\/attest-build-provenance@[0-9a-f]{40}/);
+    expect(dev).toContain("attestations: write");
+    // Signed before it is published: what the build of this run made, not what the bucket holds.
+    expect(dev.indexOf("attest-build-provenance")).toBeLessThan(dev.indexOf("publish-set.sh"));
+    for (const file of ["lambda.zip", "jobs.zip", "spa.tgz"]) {
+      expect(dev).toContain(`artifact/${file}`);
+    }
+    const prod = flow("deploy-prod.yml");
+    expect(prod).toContain('verify-attestation.sh "$RUNNER_TEMP/artifact" "$TREE"');
+    expect(prod.indexOf("verify-attestation.sh")).toBeGreaterThan(prod.indexOf("promote.sh"));
+    expect(prod.indexOf("verify-attestation.sh")).toBeLessThan(prod.indexOf("terraform-run.sh"));
+    // The tree of the signed commit comes from the API with the token of the job.
+    expect(prod).toMatch(/permissions:\n {6}attestations: read\n {6}contents: read/);
+    expect(prod).toMatch(
+      /actions\/checkout@[0-9a-f]{40} # v4\n\s+with:\n\s+persist-credentials: false/,
+    );
   });
 
   it("promote.sh and artifact-env.sh refuse a SHA256SUMS that does not list both ZIPs", () => {

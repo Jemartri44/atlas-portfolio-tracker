@@ -32,7 +32,7 @@ variable "bucket_suffix" {
 }
 
 variable "data_bucket_name" {
-  description = "Name of the data bucket, created by the module the root chose."
+  description = "Name of the data bucket, made with its configuration and policy by the bootstrap (bootstrap/env)."
   type        = string
 
   validation {

@@ -203,6 +203,21 @@ describe("the artifacts bucket (B6): the lock of promoting what dev built", () =
     expect(ask(role("atlas-prod-deploy"), "s3:GetObject", object)).not.toBe("deny");
   });
 
+  it("makes a published build immutable: only if absent, and deleted by no one but administration", () => {
+    const statements = policyOf(renderAccount(), "artifacts");
+    expect(statements.find((s) => s.Sid === "BuildsOnlyIfAbsent")).toMatchObject({
+      Effect: "Deny",
+      Principal: "*",
+      Action: "s3:PutObject",
+      Resource: `${artifacts}/builds/*`,
+      Condition: { Null: { "s3:if-none-match": "true" } },
+    });
+    const deletes = statements.find((s) => s.Sid === "BuildsNeverDeleted");
+    expect(deletes).toMatchObject({ Effect: "Deny", Resource: `${artifacts}/builds/*` });
+    expect([deletes?.Action].flat().sort()).toEqual(["s3:DeleteObject", "s3:DeleteObjectVersion"]);
+    expect(deletes?.Condition).toEqual({ ArnNotLike: { "aws:PrincipalArn": ADMIN } });
+  });
+
   it("expires what is old (90 days, 30 noncurrent, 7 for multipart) and is versioned, not force-destroyed", () => {
     const plan = renderAccount();
     const rule = JSON.stringify(
