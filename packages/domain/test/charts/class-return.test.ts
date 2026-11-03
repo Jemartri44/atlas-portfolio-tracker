@@ -231,6 +231,67 @@ describe("classReturns", () => {
     expect(gold?.unsupported).toEqual([]);
   });
 
+  const intoUsdFund = (b: LedgerBuilder) => {
+    b.asset("ast_usd_bonds", { asset_class: "fixed_income", asset_type: "fund", currency: "USD" });
+    return b.transfer({
+      from_account_id: "acc_fund",
+      from_asset_id: "ast_world",
+      quantity_out: "10",
+      nav_out: "100",
+      value_date_out: "2027-02-05",
+      to_account_id: "acc_fund",
+      to_asset_id: "ast_usd_bonds",
+      quantity_in: "10",
+      nav_in: "120",
+      value_date_in: "2027-02-06",
+    });
+  };
+
+  it("reads the NAV in the currency of its fund and converts it with the ECB rate of that very day", () => {
+    const b = bought();
+    intoUsdFund(b);
+    // The ledger carries the rate of the 6th of February in this valuation.
+    b.valuation({
+      account_id: "acc_fund",
+      asset_id: "ast_usd_bonds",
+      date: END,
+      quantity: "10",
+      unit_value: "130",
+      currency: "USD",
+      fx_rate: "1.2",
+      fx_rate_date: "2027-02-06",
+    });
+    // 10 × 120 USD at 1.2 USD per euro = 1000 euros into the class, not 1200.
+    expect(of(b, "fixed_income")?.invested_eur?.amount.toString()).toBe("1000");
+    expect(of(b, "fixed_income")?.unsupported).toEqual([]);
+  });
+
+  it("gives no figure for a NAV in a foreign currency with no rate of that exact day, and says which", () => {
+    const b = bought();
+    const transfer = intoUsdFund(b);
+    // A rate of the day before is not the rate of the day.
+    b.valuation({
+      account_id: "acc_fund",
+      asset_id: "ast_usd_bonds",
+      date: END,
+      quantity: "10",
+      unit_value: "130",
+      currency: "USD",
+      fx_rate: "1.2",
+      fx_rate_date: "2027-02-05",
+    });
+    expect(of(b, "fixed_income")?.unsupported).toEqual([
+      {
+        reason: "transfer_without_rate",
+        event_id: transfer.id,
+        date: "2027-02-06",
+        asset_ids: ["ast_usd_bonds"],
+      },
+    ]);
+    // The leg in euros keeps its figure.
+    expect(of(b, "equity")?.returned_eur?.amount.toString()).toBe("1000");
+  });
+
   it("values a transfer leg with no NAV at the price of that day in its own currency", () => {
     const b = bought();
     b.asset("ast_usd_bonds", {

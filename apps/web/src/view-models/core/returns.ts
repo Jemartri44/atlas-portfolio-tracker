@@ -36,6 +36,8 @@ const reasonOf = (item: UnsupportedEvent, names: NameIndex): string => {
   switch (item.reason) {
     case "transfer_without_nav":
       return `falta el valor del traspaso de ${assets} del ${date}: añade el valor liquidativo al traspaso o una valoración de ese día`;
+    case "transfer_without_rate":
+      return `falta el tipo de cambio del BCE del ${date} para el traspaso de ${assets}, cuyo valor liquidativo va en divisa: añade una operación o una valoración de ese día en esa divisa`;
     case "corporate_action_reclassifies":
       return `la operación corporativa de ${assets} del ${date} cambia de clase de activo o de libro y todavía no se calcula`;
     case "corporate_action_grant":

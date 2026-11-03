@@ -12,7 +12,8 @@
 //
 // A transfer between funds of the same class is no flow (no cash moves); one that changes class
 // leaves the origin class at `quantity_out × nav_out` and enters the other at `quantity_in × nav_in`,
-// each on its own value date, like a swap by the market values of its legs; a missing NAV is
+// each on its own value date, like a swap by the market values of its legs; a NAV is read in the
+// currency of its fund and converted with the ECB rate of that very day the ledger carries; a missing NAV is
 // replaced only by the price the ledger holds for **that exact day**, and without one the class
 // has no figure and the reason says how to mend it. A corporate action is read by its effects: a
 // scale (split, reverse split) moves no money; a forced sale and a cost adjustment bring cash out of
@@ -25,7 +26,8 @@
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { daysBetween } from "../dates/civil-date.js";
-import { type Decimal, HUNDRED } from "../money/decimal.js";
+import { ratePointsOf } from "../ecb/ledger-rates.js";
+import { Decimal, HUNDRED } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
 import { EUR, Money } from "../money/money.js";
 import { Price } from "../money/price.js";
@@ -62,7 +64,9 @@ export type UnsupportedReason =
   /** Shares or tokens received at no price the event gives (a fork, a stock dividend). */
   | "corporate_action_grant"
   /** A transfer that changes class, a leg with no NAV and no price of that exact day. */
-  | "transfer_without_nav";
+  | "transfer_without_nav"
+  /** A transfer that changes class, a leg in a foreign currency with no ECB rate of that day. */
+  | "transfer_without_rate";
 
 export interface UnsupportedEvent {
   reason: UnsupportedReason;
@@ -127,28 +131,45 @@ export const classReturns = (events: readonly LedgerEvent[], to: CivilDate): Cla
   for (const gain of state.gains) {
     gainsOf.set(gain.event_id, [...(gainsOf.get(gain.event_id) ?? []), gain]);
   }
-  // The value of what a transfer leg moves: its NAV, else the price the ledger holds for that very
-  // day (the one the valuation of the core uses). Nothing is interpolated.
+  // The ECB rates the ledger carries, by currency and the day they were published for: a leg whose
+  // NAV is in the currency of its fund needs the rate of **its own day**, never the nearest one.
+  const publishedRates = new Map<string, Decimal>();
+  for (const event of events) {
+    for (const point of ratePointsOf(state, event as unknown as Record<string, unknown>)) {
+      if (point.rate !== undefined && point.rate_date !== undefined) {
+        publishedRates.set(`${point.currency}|${point.rate_date}`, Decimal.parse(point.rate));
+      }
+    }
+  }
+  // The value of what a transfer leg moves, in euros: its NAV in the currency of the fund (with the
+  // rate of that day), else the price the ledger holds for that very day (the one the valuation of
+  // the core uses). Nothing is interpolated: what is missing is named.
   const legValue = (
     assetId: string,
     quantity: string,
     nav: string | undefined,
     date: CivilDate,
-  ): Money | undefined => {
+  ): Money | "no_nav" | "no_rate" => {
     const units = Quantity.parse(quantity);
     if (nav !== undefined) {
-      return Price.parse(nav, EUR).times(units);
+      const currency = state.assets.get(assetId)?.currency ?? EUR;
+      const worth = Price.parse(nav, currency).times(units);
+      if (currency === EUR) {
+        return worth;
+      }
+      const rate = publishedRates.get(`${currency}|${date}`);
+      return rate === undefined ? "no_rate" : FxRate.of(rate, currency, date).toEur(worth);
     }
     const found = priceAt(state, assetId, date, settingsAt(state, date).settings);
     if (found === undefined || found.date !== date) {
-      return undefined;
+      return "no_nav";
     }
     const worth = Price.parse(found.unit_value.toString(), found.currency).times(units);
     if (found.currency === EUR) {
       return worth;
     }
     return found.fx_rate === undefined || found.fx_rate_date === undefined
-      ? undefined
+      ? "no_rate"
       : FxRate.of(found.fx_rate, found.currency, found.fx_rate_date).toEur(worth);
   };
 
@@ -295,9 +316,9 @@ export const classReturns = (events: readonly LedgerEvent[], to: CivilDate): Cla
             continue;
           }
           const value = legValue(leg.asset, leg.quantity, leg.nav, leg.date);
-          if (value === undefined) {
+          if (typeof value === "string") {
             flag(leg.side, {
-              reason: "transfer_without_nav",
+              reason: value === "no_nav" ? "transfer_without_nav" : "transfer_without_rate",
               event_id: event.id,
               date: leg.date,
               asset_ids: [leg.asset],

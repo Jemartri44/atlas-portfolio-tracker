@@ -148,6 +148,12 @@ describe("the classes", () => {
         asset_ids: ["ast_world"],
       },
       {
+        reason: "transfer_without_rate",
+        event_id: "e5",
+        date: "2027-02-06",
+        asset_ids: ["ast_mm"],
+      },
+      {
         reason: "corporate_action_reclassifies",
         event_id: "e2",
         date: "2027-06-06",
@@ -174,6 +180,7 @@ describe("the classes", () => {
     ).classes;
     expect(only?.reasons).toEqual([
       "falta el valor del traspaso de World Index Fund del 05/02/2027: añade el valor liquidativo al traspaso o una valoración de ese día",
+      "falta el tipo de cambio del BCE del 06/02/2027 para el traspaso de Money Market Fund, cuyo valor liquidativo va en divisa: añade una operación o una valoración de ese día en esa divisa",
       "la operación corporativa de World Index Fund, Money Market Fund del 06/06/2027 cambia de clase de activo o de libro y todavía no se calcula",
       "la entrega de unidades de Oro físico del 01/07/2027 no trae un precio y todavía no se calcula",
       "World Index Fund cambió de clase o de libro (registrado el 01/01/2028) y todavía no se calcula",
