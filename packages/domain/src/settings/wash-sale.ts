@@ -8,33 +8,56 @@
 // transfers and swaps is the tax engine of phase 5.
 
 import { addDays, addMonths, addYears, type CivilDate } from "../dates/civil-date.js";
-import type { AssetType } from "../schema/events.js";
+import type { AssetFields, AssetType } from "../schema/events.js";
 import {
   DEFAULT_WASH_SALE_TRANSFER_COUNTS,
   DEFAULT_WASH_SALE_WINDOW,
+  FOREIGN_FUND_WINDOW,
   incomeCategoryOf,
   type Settings,
+  SPANISH_FUND_WINDOW,
   type WashSaleWindow,
 } from "./settings.js";
 
+/** What of an asset decides its window: the type, and for a fund where it is domiciled. */
+export type WashSaleAsset = Pick<AssetFields, "asset_type" | "isin" | "issuer_country">;
+
 /**
- * The window in force for an asset type: the settings, the legacy form, or the
- * default (ADR-0018). Movable capital income has its own rule, article 25.2.b)
- * LIRPF: two months before or after, for any financial asset, whatever the
- * market and with no one-year variant, so a configured window does not apply.
+ * Whether a fund is Spanish: its ISIN says `ES`, or its issuer country does.
+ * Only what the catalogue states counts; a fund that states neither is not.
  */
-export const washSaleWindowOf = (settings: Settings, assetType: AssetType): WashSaleWindow => {
-  if (incomeCategoryOf(settings, assetType) === "movable_capital") {
+export const isSpanishFund = (asset: WashSaleAsset): boolean =>
+  /^ES/.test(asset.isin ?? "") || asset.issuer_country === "ES";
+
+/**
+ * The window in force for an asset (criterion #2): the settings, the legacy
+ * form, or the default (ADR-0018). Movable capital income has
+ * its own rule, article 25.2.b) LIRPF: two months before or after, for any
+ * financial asset, whatever the market and with no one-year variant, so a
+ * configured window does not apply. A fund `"by_domicile"` takes two months
+ * when it is Spanish (`2:fund_es_2m`: DGT V0011-00 and V2067-06 read article
+ * 4.9 of RD 1082/2012 as making its units admitted to trading) and a year
+ * otherwise (`2:fund_1y`, article 33.5.g): a fund without ISIN or country takes
+ * the prudent year.
+ */
+export const washSaleWindowOf = (settings: Settings, asset: WashSaleAsset): WashSaleWindow => {
+  if (incomeCategoryOf(settings, asset.asset_type) === "movable_capital") {
     return "2m";
   }
-  const configured = (
-    settings.wash_sale_window as Partial<Settings["wash_sale_window"]> | undefined
-  )?.[assetType];
-  if (configured !== undefined) {
-    return configured;
+  const setting =
+    (settings.wash_sale_window as Partial<Settings["wash_sale_window"]> | undefined)?.[
+      asset.asset_type
+    ] ??
+    settings.wash_sale_window_days?.[asset.asset_type] ??
+    DEFAULT_WASH_SALE_WINDOW[asset.asset_type];
+  if (typeof setting === "number") {
+    return `${setting}d`;
   }
-  const legacyDays = settings.wash_sale_window_days?.[assetType];
-  return legacyDays === undefined ? DEFAULT_WASH_SALE_WINDOW[assetType] : `${legacyDays}d`;
+  return setting === "by_domicile"
+    ? isSpanishFund(asset)
+      ? SPANISH_FUND_WINDOW
+      : FOREIGN_FUND_WINDOW
+    : setting;
 };
 
 /**

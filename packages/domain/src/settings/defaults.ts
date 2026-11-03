@@ -40,6 +40,21 @@ const WASH_SALE_WINDOW_PATTERN = /^(2m|1y|[1-9][0-9]*d)$/;
 export const isWashSaleWindow = (value: unknown): value is WashSaleWindow =>
   typeof value === "string" && WASH_SALE_WINDOW_PATTERN.test(value);
 
+/**
+ * What the settings may say of a fund or a money market fund besides a window:
+ * `"by_domicile"`, the window chosen asset by asset from where the fund is
+ * domiciled (criterion #2, `washSaleWindowOf`). Only the types whose default it
+ * is take it: for a security or crypto the domicile decides nothing.
+ */
+export type WashSaleWindowSetting = WashSaleWindow | "by_domicile";
+
+/**
+ * The window `"by_domicile"` gives a Spanish fund and any other (criterion #2):
+ * the one place to change either reading.
+ */
+export const SPANISH_FUND_WINDOW: WashSaleWindow = "2m";
+export const FOREIGN_FUND_WINDOW: WashSaleWindow = "1y";
+
 export interface TaxBracket {
   up_to?: DecimalString;
   rate_pct: DecimalString;
@@ -53,7 +68,7 @@ export interface Settings {
    */
   fiscal_date_rule: Partial<Record<AssetType, FiscalDateRule>>;
   /** Partial too, and for the same reason (ADR-0018). */
-  wash_sale_window: Partial<Record<AssetType, WashSaleWindow>>;
+  wash_sale_window: Partial<Record<AssetType, WashSaleWindowSetting>>;
   /**
    * Partial as well, and **optional as a whole**: every `settings_changed`
    * written before ADR-0021 lacks it, and demanding it would make the loader
@@ -192,35 +207,40 @@ export const DEFAULT_INCOME_CATEGORY: Record<AssetType, IncomeCategory> = {
 };
 
 /**
- * Same, for the wash-sale window (ADR-0013, ADR-0014; verify with the tax
- * advisor).
+ * Same, for the wash-sale window (ADR-0013, ADR-0014; criterion #2).
  *
- * A **fund** takes a year by default (criterion #2, `2:fund_1y`, since
- * 2026-11-03): the prudent reading while the dispute is open. What separates
- * the two months of article 33.5 f) from the year of g) is being admitted to
- * trading, and the law does not name funds. For two months there is only
- * article 4.9 of RD 1082/2012, whose last clause ("a los efectos de aquellas
- * disposiciones que regulen regímenes específicos de inversión") narrows it,
- * and two consultations older than Ley 35/2006 (V0011-00, V2067-06); the
- * Manual de Renta 2025 does not name funds in the two months, and a sentence
- * of the help of 2025 the documents used to quote could not be found. With
- * a year, a loss of a fund is deferred rather than computed too early. Two
- * months stays a setting (`2:fund_2m`), and the output measures it.
+ * A **fund** and a **money market fund** take it **by domicile** by default
+ * (since 2026-11-03, `washSaleWindowOf`):
  *
- * **A monetary fund too** (`money_market`), for exactly the same reason: in
- * this catalogue the type is a **money market fund** —it carries an ISIN, a
- * TER and `transferable`, which is the Spanish transfer regime and only
- * exists for collective investment undertakings— not a treasury bill, a repo
- * or a deposit.
+ * - **Spanish** (ISIN `ES…` or `issuer_country` ES): **two months**,
+ *   `2:fund_es_2m`. Article 4.9 of RD 1082/2012 treats the units of a Spanish
+ *   fund with a daily net asset value as "valores admitidos a cotización", and
+ *   the DGT has read that clause as reaching article 33.5.f) in writing, twice:
+ *   V2067-06 ("Esta regla resulta aplicable en relación con las participaciones
+ *   de fondos de inversión dada la consideración de valores admitidos a
+ *   cotización que les otorga el artículo 4, apartado 9, del Reglamento […]")
+ *   and V0011-00, question 10 ("en el caso de las participaciones en fondos de
+ *   inversión debe resultar de aplicación la regla prevista en la letra f)").
+ *   Both are binding and unchanged, so the AEAT applies them (art. 89.1 LGT)
+ *   and following them carries no penalty (art. 179.2.d LGT).
+ * - **Foreign** (an Irish or Luxembourg UCITS), or with neither ISIN nor
+ *   country: **one year**, `2:fund_1y`. That clause is about funds a Spanish
+ *   management company registers with the CNMV; without it the letter of the
+ *   law is left, units "no admitidos a negociación", article 33.5.g).
+ *
+ * In this catalogue `money_market` is a **money market fund** —it carries an
+ * ISIN, a TER and `transferable`, the Spanish transfer regime of collective
+ * investment undertakings— not a treasury bill or a deposit, so it follows the
+ * fund. A window written in the settings for either type replaces the rule.
  */
-export const DEFAULT_WASH_SALE_WINDOW: Record<AssetType, WashSaleWindow> = {
+export const DEFAULT_WASH_SALE_WINDOW: Record<AssetType, WashSaleWindowSetting> = {
   stock: "2m",
   etf: "2m",
   etc: "2m",
   etp: "2m",
   crypto: "1y",
-  fund: "1y",
-  money_market: "1y",
+  fund: "by_domicile",
+  money_market: "by_domicile",
 };
 
 /** Provisional defaults (ADR-0013, ADR-0014). Verify with the tax advisor; change via `settings_changed`, not code. */

@@ -128,8 +128,9 @@ export interface AssetFields {
    */
   market?: string;
   /**
-   * Where the issuer sits: ISO 3166-1 alpha-2 (ADR-0021). Optional, and nothing
-   * reads it yet. For a fund or an ETF, article 95 LIRPF treats collective
+   * Where the issuer sits: ISO 3166-1 alpha-2 (ADR-0021). Optional. With the
+   * ISIN, it decides the wash-sale window of a fund `"by_domicile"`: a Spanish
+   * one takes two months (`washSaleWindowOf`, criterion #2). For a fund or an ETF, article 95 LIRPF treats collective
    * investment undertakings domiciled in non-cooperative jurisdictions apart.
    * An ETC or an ETP is not one —it is a debt security of its issuer, criterion
    * #24—, so for them it only decides how a holding is classified in forms 720

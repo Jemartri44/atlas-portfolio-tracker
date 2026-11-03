@@ -7,6 +7,7 @@ import { isRecord, type UnknownRecord } from "../guards.js";
 import { Decimal, HUNDRED, isDecimalString } from "../money/decimal.js";
 import { ASSET_TYPES } from "../schema/events.js";
 import {
+  DEFAULT_WASH_SALE_WINDOW,
   FISCAL_DATE_RULES,
   FX_GAIN_METHODS,
   INCOME_CATEGORIES,
@@ -115,7 +116,12 @@ const checkWashSaleWindow = (raw: UnknownRecord): void => {
   }
   for (const assetType of ASSET_TYPES) {
     const value = isRecord(windows) ? windows[assetType] : undefined;
-    if (value !== undefined && !isWashSaleWindow(value)) {
+    // `"by_domicile"` only where it is the default: a fund or a money market fund.
+    const known =
+      value === "by_domicile"
+        ? DEFAULT_WASH_SALE_WINDOW[assetType] === value
+        : isWashSaleWindow(value);
+    if (value !== undefined && !known) {
       throw new ValidationError(
         "invalid_wash_sale_window",
         `wash_sale_window.${assetType} must be "2m", "1y" or "<n>d"`,
