@@ -3,18 +3,10 @@
 import { DomainError, previewEvent, settingsAt, todayInMadrid } from "@atlas/domain";
 import { bucketStats } from "@atlas/domain/portfolio";
 import type { Flags } from "../args.js";
-import { booleanFlag, UsageError } from "../args.js";
+import { UsageError } from "../args.js";
 import { CommandFailure, type Context, describeWarnings, EXIT } from "../context.js";
-import { saveAsDraft } from "./draft.js";
 import { confirmRates, rateDraft } from "./rates.js";
-import {
-  asDraft,
-  aside,
-  cancelled,
-  confirmAndRecord,
-  type DraftSpec,
-  draftFromFlags,
-} from "./shared.js";
+import { asDraft, cancelled, confirmAndRecord, type DraftSpec, draftFromFlags } from "./shared.js";
 
 const COMMON = [
   "account",
@@ -245,28 +237,11 @@ export const addCommand = async (
       "un traspaso no lleva comisión: registra el cargo del depositario con `atlas add fee` (standalone_fee)",
     );
   }
-  // `--draft` is not a field of the operation: it says where to keep it.
-  const asDraft = booleanFlag(flags, "draft");
-  flags.delete("draft");
   const rated = await rateDraft(ctx, draftFromFlags(spec, flags));
   const draft = rated.draft;
   if (rated.waiting) {
-    if (!asDraft) {
-      throw new CommandFailure(EXIT.domain, "ecb_rate_pending", [
-        ...rated.notes,
-        "Para guardarla como borrador, repite el comando con --draft.",
-      ]);
-    }
-    for (const note of rated.notes) {
-      aside(ctx, note);
-    }
-    return saveAsDraft(ctx, draft, rated.history, rated.staleDays);
-  }
-  if (asDraft) {
-    // Nothing waits for the ECB: a draft would only be a second copy.
-    throw new UsageError(
-      "--draft solo sirve para una operación cuyo tipo del BCE aún no se ha publicado: esta se registra como siempre",
-    );
+    // Nothing is estimated: without the official rate of its date, the operation is not recorded.
+    throw new CommandFailure(EXIT.domain, "ecb_rate_pending", rated.notes);
   }
   // A swap shows them too: it is a disposal and an acquisition at once, so both
   // halves of the wash-sale rule can fire and the user has to see them before

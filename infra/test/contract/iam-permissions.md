@@ -59,10 +59,10 @@ Condiciones de `ses:SendEmail` (questions §1.1, verificadas contra la API v2):
 
 | Acción | Recurso | Para qué |
 |---|---|---|
-| `s3:GetObject` | `B/ledger/ledger.jsonl`, `B/reference/ecb/manifest.json`, `B/reference/ecb/eurofxref-hist.csv`, `B/reference/ecb/api-exr.csv`, `B/prices/*` | lo que se vuelca; `prices/` y el histórico también valoran `positions.json`. **Estrechado en la ronda 1 de la PR #109 (N4)**: ni `previous/` ni `rejected/`, que el volcado no lee |
+| `s3:GetObject` | `B/ledger/ledger.jsonl`, `B/reference/ecb/manifest.json`, `B/reference/ecb/eurofxref-hist.csv`, `B/reference/ecb/api-exr.csv`, `B/prices/*`, `B/settings/exposure.json` | lo que se vuelca (la exposición, contrato `EXP-1`); `prices/` y el histórico también valoran `positions.json`. **Estrechado en la ronda 1 de la PR #109 (N4)**: ni `previous/` ni `rejected/`, que el volcado no lee |
 | `s3:GetObject`, `s3:PutObject` | `B/backups/*` | escribir con `If-None-Match: *` (basta `s3:PutObject`, questions §20.1) y comparar lo que ya existe (`s3:GetObject`) |
 | `s3:GetObject`, `s3:PutObject` | `B/jobs/backup/*` | su registro |
-| `s3:ListBucket` | `B`, con `s3:prefix` en `prices/`, `reference/ecb/`, `backups/`, `jobs/backup/`, `ledger/` | listar `prices/` (primer nivel) y `404` |
+| `s3:ListBucket` | `B`, con `s3:prefix` en `prices/`, `reference/ecb/`, `backups/`, `jobs/backup/`, `ledger/`, `settings/` | listar `prices/` (primer nivel) y `404` |
 
 **Política del bucket, aceptada por la dirección** (questions §1.7 y §9), con la forma que verificó el bloque 0 de E4 (questions §20.1, `conditional-writes-enforce.html`): así, ni un error del código puede sobrescribir un volcado.
 
@@ -91,7 +91,8 @@ Condiciones de `ses:SendEmail` (questions §1.1, verificadas contra la API v2):
 |---|---|---|
 | `s3:GetObject`, `s3:PutObject` | `B/access/last-web-sign-in.json` | avanzar la fecha del último inicio de sesión web (Q3; §8.1 P6) |
 | `s3:GetObject`, `s3:PutObject` | `B/access/sessions-valid-from.json` | «Cerrar sesión en todos los dispositivos»: se lee en cada petición con cookie y se escribe en `POST /api/auth/logout-all` (ADR-0037) |
-| `s3:ListBucket` | `B`, con `s3:prefix` en `access/` | `404` en vez de `403` en el primer inicio de sesión web de un entorno nuevo (nota del 2026-10-03) |
+| `s3:GetObject`, `s3:PutObject` | `B/settings/exposure.json` | la exposición por activo que declara el dueño (`docs/api.md` §6.2; contrato `EXP-1`): se lee y se reemplaza con `If-Match`, nunca se borra |
+| `s3:ListBucket` | `B`, con `s3:prefix` en `access/` y `settings/` | `404` en vez de `403` en el primer inicio de sesión web de un entorno nuevo (nota del 2026-10-03) y mientras no exista la exposición |
 | `logs:CreateLogStream`, `logs:PutLogEvents` | su propio grupo, `/aws/lambda/atlas-<entorno>-api` | sus registros (nota del 2026-10-03) |
 
 **Nota del 2026-10-03 (revisión de la PR #110, ronda 1; decisión del usuario, `docs/prompts/017-infrastructure-as-code.md` §12.2 B5 y N6).**

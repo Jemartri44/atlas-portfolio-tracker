@@ -240,6 +240,10 @@ Tres poderes del rol de despliegue se retiran antes del primer despliegue. **Cam
 
 [ADR-0037](0037-web-only-access.md) retira el token de la consola y los objetos de dispositivo. Lo que esta ADR dice de ellos es historia: los parámetros `device-tokens/` y sus hashes (opción 3, filas 9 y 21, «Riesgo que queda» punto 2), su rastro en CloudTrail (fila 10), `sync/devices/` en la fila 6, y olvidar un dispositivo o revocar todos los tokens en la fila 16. El rol de la API solo gana Get y Put sobre `access/sessions-valid-from.json`, la marca de «cerrar sesión en todos los dispositivos».
 
+## Nota del 2026-11-03 (exposición por activo)
+
+El rol de la API gana además Get y Put **solo** sobre `settings/exposure.json` (la exposición por divisa y región que declara el dueño, fuera del libro; [`docs/api.md`](../api.md) §6.2), y `settings/*` en el prefijo de su `s3:ListBucket` para que una clave ausente sea `404` y no `403`. El rol de la tarea de copia gana `s3:GetObject` sobre la misma clave y el mismo prefijo de listado, para volcarla. Nada que borrar. El límite de permisos del entorno y la política del bucket de datos no enumeran claves por rol, así que no cambian.
+
 ## Notas de estado
 
 **Aceptada (2026-09-25)** por la dirección: desarrolla la decisión del usuario del 2026-09-25 de desplegar en su cuenta AWS existente, de pago y compartida, con coste mínimo; los detalles de aislamiento los decide la dirección por la delegación del usuario; el usuario puede revocarla. Pasó tres rondas de revisión adversarial en la PR #87. **Sustituye en parte a ADR-0028**: sus filas 1, 2, 3, 10 y 12, la parte de la fila 13 que habla de cuentas, la salvaguarda y la fuente única de la fila 17, el bloque «Terraform» y dos de sus excepciones escritas; y a ADR-0027 en quién crea los parámetros de la lista permitida, del secreto del cliente de Google y de la clave de sesión. El resto de ADR-0028 sigue en pie (ver «Qué queda de ADR-0028»). Los hechos de la plataforma proceden de la documentación de AWS consultada el 2026-09-25 (fuentes F1-F15 al final); lo que no se pudo comprobar va marcado **SIN VERIFICAR**.

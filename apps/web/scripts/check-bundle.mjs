@@ -284,8 +284,8 @@ const kb = (value) => `${(value / 1024).toFixed(1)} KB`;
  * or shaken off, reaching it is already the defect. `rendering`: loaded
  * through a door that also serves the web is tolerated, **rendering a byte**
  * is not. Every path is relative to the repository, and `dist/` is named
- * with `src/`: a subpath without an alias resolves through `exports` to the
- * compiled package.
+ * with `src/`: every door is aliased to its source, but a specifier that is no
+ * door resolves through `exports` to the compiled package.
  */
 const FORBIDDEN_IN_WEB = [
   // The rules of the access are the API's, never the web's.

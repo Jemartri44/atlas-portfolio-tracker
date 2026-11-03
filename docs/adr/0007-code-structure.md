@@ -1,6 +1,6 @@
 # ADR-0007 — Estructura del código: monorepo, arquitectura hexagonal y CLI primero
 
-**Estado:** Aceptada (2026-08-30). Nota del 2026-09-25 sobre los adaptadores de `PriceSource` y enmienda del 2026-11-03 sobre `@atlas/access` (ver al final).
+**Estado:** Aceptada (2026-08-30). Nota del 2026-09-25 sobre los adaptadores de `PriceSource` y enmienda del 2026-11-03 sobre `@atlas/access` y las puertas (ver al final).
 
 ## Contexto
 
@@ -62,3 +62,14 @@ Las reglas del acceso a la API (ADR-0027) vivían en `packages/domain/src/access
 - **Regla de dependencias:** `@atlas/access` importa solo el barril de `@atlas/domain` (sus errores y guardas puras, sin copiarlas; ninguna otra puerta). Los adaptadores, la API y la consola pueden importarlo. **El dominio y la web nunca lo alcanzan.** Lo fijan `tests/architecture/access.test.ts`, `domain-imports.test.ts` y `api.test.ts`.
 - **Cobertura:** cada área se mide en una pasada propia (`npm run test:coverage:<área>`). `packages/access` y `apps/api/src/access` van al 100 %, porque son seguridad.
 - No cambia ninguna línea de lógica: se movieron los ficheros y sus pruebas.
+
+### Las puertas de los paquetes (P6, 2026-11-03)
+
+- **Una sola lista de puertas: los `exports` de cada `package.json`.** Los alias de Vite y de Vitest se generan de ellos (`scripts/workspace-aliases.mjs`), igual que ya los leían el empaquetado de las Lambdas y los tests de arquitectura. Ninguna configuración nombra una puerta a mano, y `tests/workspace-aliases.test.ts` lo fija.
+- **Las puertas no se unen.** Las candidatas están separadas por una frontera que importa:
+  - `aws-jobs` y `aws-daily`: la API no alcanza el envío de correo, y ni la API ni la función de correo alcanzan las claves de precios.
+  - `aws-admin`: la API nunca llega a la administración.
+  - `remote-answers`: la web la usa fuera del motor de la sincronización.
+  - `rebalance`: lleva el motor fiscal, que no puede viajar con `portfolio`.
+- **El grupo de chunks del dominio** (`advancedChunks` en `apps/web/vite.config.ts`) se mantiene. Medido sin él, el arranque pasa de 74,5 a 77,3 KB gzip y el total de 335,0 a 340,7.
+

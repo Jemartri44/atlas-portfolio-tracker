@@ -16,7 +16,7 @@ import type { Presented } from "./cookies.js";
 export type RoutePolicy = "public" | "login_return" | "session" | "logout";
 
 export interface RouteSpec {
-  readonly method: "GET" | "POST";
+  readonly method: "GET" | "POST" | "PUT";
   readonly path: string;
   readonly policy: RoutePolicy;
   /** A write: JSON body required, and `Origin` checked when it comes with the cookie. */
@@ -40,6 +40,9 @@ export const ROUTES: readonly RouteSpec[] = [
   { method: "POST", path: "/api/drafts", policy: "session", writes: true },
   { method: "POST", path: "/api/drafts/{id}/stamp", policy: "session", writes: true },
   { method: "POST", path: "/api/drafts/{id}/end", policy: "session", writes: true },
+  // The exposure the owner declares per asset (`docs/api.md` §6.2).
+  { method: "GET", path: "/api/exposure", policy: "session", writes: false },
+  { method: "PUT", path: "/api/exposure", policy: "session", writes: true },
 ];
 
 /**

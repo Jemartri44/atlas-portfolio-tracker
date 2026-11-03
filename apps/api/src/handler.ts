@@ -11,6 +11,7 @@ import {
   closeSessionsBefore,
   DependencyUnavailable,
   draftObjects,
+  exposureObject,
   referenceReader,
 } from "@atlas/adapters/aws";
 import { bodyTooLarge, expectEmptyObject, readJsonBody } from "./access/body.js";
@@ -20,6 +21,7 @@ import { admit, findRoute, matchRoute } from "./access/routes.js";
 import { createContext, type HandlerDeps } from "./context.js";
 import { draftRoutes } from "./drafts.js";
 import { type FunctionUrlEvent, type FunctionUrlResult, normalise, type Request } from "./event.js";
+import { exposureRoutes } from "./exposure.js";
 import { type LogEntry, logLine } from "./log.js";
 import { fail, type Outcome } from "./outcome.js";
 import { clearSessionCookie, json, noContent } from "./respond.js";
@@ -40,9 +42,10 @@ export const createHandler = (deps: HandlerDeps): Handler => {
     now: deps.now,
   });
   const drafts = draftRoutes({ objects: draftObjects(deps.objects), now: deps.now });
+  const exposure = exposureRoutes({ object: exposureObject(deps.objects) });
   const { login, callback } = signInRoutes(ctx);
 
-  /** A route of the ledger, the reference data or the drafts, once its session is checked. */
+  /** A route of the ledger, the reference data, the drafts or the exposure, once its session is checked. */
   const syncRoute = async (
     request: Request,
     path: string,
@@ -62,6 +65,16 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         return drafts.stamp(params.id as string, body);
       case "/api/drafts/{id}/end":
         return drafts.end(params.id as string, body);
+      case "/api/exposure":
+        return request.method === "GET"
+          ? exposure.read()
+          : exposure.write({
+              ifMatch: request.headers.get("if-match"),
+              ifNoneMatch: request.headers.get("if-none-match"),
+              // Never undefined here: a body that is not UTF-8 was refused above (415 body_not_json).
+              text: request.bodyText as string,
+              bytes: request.bodyBytes,
+            });
       default:
         return sync.readReference(
           path === "/api/reference/ecb/{name}" ? "ecb" : "prices",
@@ -158,7 +171,8 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       case "/api/reference/prices/{name}":
       case "/api/drafts":
       case "/api/drafts/{id}/stamp":
-      case "/api/drafts/{id}/end": {
+      case "/api/drafts/{id}/end":
+      case "/api/exposure": {
         const session = await checkedSession(admission);
         if ("code" in session) {
           return { outcome: fail(session), route: at };

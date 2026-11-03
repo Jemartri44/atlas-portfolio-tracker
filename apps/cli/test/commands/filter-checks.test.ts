@@ -21,8 +21,8 @@ describe("filters on an id that does not exist", () => {
 });
 
 describe("options that mean nothing are refused", () => {
-  it("draft refuses an option it does not take", async () => {
+  it("fx status refuses an option it does not take", async () => {
     const h = harness({ events: seed() });
-    expect(await h.exec(["draft", "list", "--bogus"])).toBe(64);
+    expect(await h.exec(["fx", "status", "--bogus"])).toBe(64);
   });
 });
