@@ -12,9 +12,8 @@ import { isRecord } from "../guards.js";
 import type { SourceFailureKind } from "../ports/price-source.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
-import { repeatedKey } from "../schema/json-keys.js";
 import type { MarketDays } from "./config.js";
-import { repeatedKeyError } from "./repeated-key.js";
+import { parseStrictJson } from "./repeated-key.js";
 import { isQuoteSource } from "./sources.js";
 
 export const STATUS_FORMAT = 1;
@@ -67,16 +66,7 @@ export const parseStatus = (text: string | undefined): PriceStatus => {
   if (text === undefined) {
     return EMPTY_STATUS;
   }
-  let raw: unknown;
-  try {
-    raw = JSON.parse(text);
-  } catch {
-    throw wrong("json");
-  }
-  const repeated = repeatedKey(text);
-  if (repeated !== undefined) {
-    throw repeatedKeyError("prices/_status.json", repeated);
-  }
+  const raw = parseStrictJson(text, "prices/_status.json", () => wrong("json"));
   if (!isRecord(raw) || raw.status_format !== STATUS_FORMAT) {
     throw wrong("status_format");
   }

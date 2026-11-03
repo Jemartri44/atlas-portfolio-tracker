@@ -19,7 +19,7 @@ import { isRecord } from "../guards.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
 import { repeatedKey } from "../schema/json-keys.js";
-import { repeatedKeyError } from "./repeated-key.js";
+import { parseStrictJson } from "./repeated-key.js";
 import { isQuoteSource, QUOTE_SOURCES } from "./sources.js";
 
 /**
@@ -228,17 +228,8 @@ export const parseSymbols = (text: string | undefined): SymbolsFile => {
   if (text === undefined) {
     return EMPTY_SYMBOLS;
   }
-  let raw: unknown;
-  try {
-    raw = JSON.parse(text);
-  } catch {
-    throw wrong("json");
-  }
   // A key twice says two things: refused first.
-  const repeated = repeatedKey(text);
-  if (repeated !== undefined) {
-    throw repeatedKeyError("prices/symbols.json", repeated);
-  }
+  const raw = parseStrictJson(text, "prices/symbols.json", () => wrong("json"));
   if (
     isRecord(raw) &&
     typeof raw.symbols_format === "number" &&
