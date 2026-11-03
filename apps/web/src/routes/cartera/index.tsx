@@ -38,8 +38,10 @@ import { RequireLedger } from "../guard.jsx";
 import { ContributionCard } from "./ContributionCard.jsx";
 import { CostsCard } from "./CostsCard.jsx";
 import { ExposureBlock } from "./ExposureBlock.jsx";
+import { ProjectionCard } from "./ProjectionCard.jsx";
 import { RebalanceCard } from "./RebalanceCard.jsx";
 import { ReturnsCard } from "./ReturnsCard.jsx";
+import { TotalCostCard } from "./TotalCostCard.jsx";
 import { WeightsCard } from "./WeightsCard.jsx";
 
 export default function CarteraRoute(): JSX.Element {
@@ -98,13 +100,10 @@ export default function CarteraRoute(): JSX.Element {
         );
         /** Funds converted into another and holding nothing: not listed, not offered. */
         const absorbed = createMemo(() => absorbedAssets(dated(), snapshot.events, date()));
-        const costs = createMemo(() =>
-          costsView(
-            costSummary(dated(), snapshot.events, date(), settings(), date(), external()),
-            names,
-            absorbed(),
-          ),
+        const summary = createMemo(() =>
+          costSummary(dated(), snapshot.events, date(), settings(), date(), external()),
         );
+        const costs = createMemo(() => costsView(summary(), names, absorbed()));
 
         const returns = createMemo(() =>
           returnsView(
@@ -170,6 +169,8 @@ export default function CarteraRoute(): JSX.Element {
                 names={names}
               />
               <CostsCard view={costs()} />
+              <TotalCostCard summary={summary()} settings={settings()} />
+              <ProjectionCard weights={projection()} settings={settings()} />
             </div>
           </>
         );
