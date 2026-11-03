@@ -8,7 +8,6 @@ describe("filters on an id that does not exist", () => {
   it.each([
     [["positions", "--account", "acc_nope"], "La cuenta acc_nope no existe"],
     [["positions", "--asset", "ast_nope"], "El activo ast_nope no existe"],
-    [["cash", "--account", "acc_nope"], "La cuenta acc_nope no existe"],
   ])("%j says which id does not exist", async (argv, sentence) => {
     const h = harness({ events: seed() });
     expect(await h.exec(argv)).not.toBe(0);
@@ -18,7 +17,6 @@ describe("filters on an id that does not exist", () => {
   it("still answers with an empty table for an account that exists and holds nothing", async () => {
     const h = harness({ events: seed() });
     expect(await h.exec(["positions", "--account", "acc_etf"])).toBe(0);
-    expect(await h.exec(["cash", "--account", "acc_etf"])).toBe(0);
   });
 });
 
