@@ -84,6 +84,28 @@ interface TextFieldProps extends BaseProps {
   unit?: string | undefined;
 }
 
+/**
+ * The dot is never part of a number typed here (`format/input.ts`): it is not written, and the
+ * dot of the numeric keypad writes the comma. A pasted dot is not touched: the parser refuses the
+ * whole text, because dropping the dot would turn `0.500` into `500`.
+ */
+const decimalKey = (event: KeyboardEvent & { currentTarget: HTMLInputElement }): void => {
+  if (event.key !== "." || event.ctrlKey || event.metaKey || event.altKey) {
+    return;
+  }
+  event.preventDefault();
+  if (event.code === "NumpadDecimal") {
+    const input = event.currentTarget;
+    input.setRangeText(
+      ",",
+      input.selectionStart ?? input.value.length,
+      input.selectionEnd ?? input.value.length,
+      "end",
+    );
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+};
+
 export const Field = (props: TextFieldProps): JSX.Element => {
   const [focused, setFocused] = createSignal(false);
   const [typed, setTyped] = createSignal(false);
@@ -115,6 +137,7 @@ export const Field = (props: TextFieldProps): JSX.Element => {
       disabled={props.disabled}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
+      onKeyDown={props.kind === "decimal" || props.kind === "integer" ? decimalKey : undefined}
       onInput={(event) => {
         // The value first: marking the field as typed re-renders it, and
         // the control would be read back after that with the old value.

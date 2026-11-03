@@ -25,7 +25,7 @@ import { SessionNotice } from "../../shell/SessionNotice.jsx";
 import { detailView } from "../../view-models/index.js";
 import { saleResult } from "../../view-models/sale.js";
 import { movementSentence } from "../../view-models/sentence.js";
-import { RequireLedger } from "../guard.jsx";
+import { liveLedger, RequireLedger } from "../guard.jsx";
 import { EventEnvelope, EventLinks, Facts, SaleResult } from "./DetailFields.jsx";
 import { doneUrl, Rectified } from "./Rectified.jsx";
 import { ReverseDialog } from "./ReverseDialog.jsx";
@@ -102,11 +102,12 @@ export default function MovimientoDetalleRoute(): JSX.Element {
         // A memo, not an arrow: `ledgerEntries` projects and sorts the whole
         // ledger (10,66 ms with 5.000 events), and this is read four times per
         // render — a tenth of a second on a phone each time a signal changes.
-        const entry = createMemo(() =>
-          ledgerEntries(snapshot.state, snapshot.events).find(
+        const entry = createMemo(() => {
+          const live = liveLedger(snapshot);
+          return ledgerEntries(live.state, live.events).find(
             (candidate) => candidate.event.id === params.id,
-          ),
-        );
+          );
+        });
         const names = nameIndex(snapshot.state);
         const refs = eventReferences(snapshot.events, names);
 

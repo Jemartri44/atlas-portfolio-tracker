@@ -28,7 +28,7 @@ import { PageHeader } from "../../shell/PageHeader.jsx";
 import { SessionNotice } from "../../shell/SessionNotice.jsx";
 import { filingFields, filingTitle } from "../../view-models/fiscal/index.js";
 import { asEventDraft } from "../../view-models/forms/values.js";
-import { RequireLedger } from "../guard.jsx";
+import { liveLedger, RequireLedger } from "../guard.jsx";
 import { DuplicateDialog } from "../registrar/DuplicateDialog.jsx";
 import { FormActions } from "../registrar/FormActions.jsx";
 import { createProblem } from "../registrar/form-problems.js";
@@ -64,7 +64,8 @@ export default function PresentarRoute(): JSX.Element {
       {(snapshot) => {
         const model = params.modelo as FilingModel;
         const year = Number(params.ano);
-        if (!MODELS.has(model) || !Number.isInteger(year)) {
+        // Four digits and nothing else: `Number` would also take `1e3` or `0x7E9`.
+        if (!MODELS.has(model) || !/^\d{4}$/.test(params.ano ?? "")) {
           return (
             <Notice severity="danger" title="Esa declaración no existe">
               Vuelve a <A href="/fiscal">la pantalla de la declaración</A> y elige el ejercicio
@@ -73,9 +74,9 @@ export default function PresentarRoute(): JSX.Element {
           );
         }
         const names = nameIndex(snapshot.state);
-        const proposal = createMemo(() =>
-          filingProposal(snapshot.events, model, year, { today: today() }),
-        );
+        const proposal = createMemo(() => {
+          return filingProposal(liveLedger(snapshot).events, model, year, { today: today() });
+        });
         const fields = createMemo(() => filingFields(proposal(), names));
         /** What the field shows: what was typed, or what the application computes. */
         const shown = (key: string, proposed: string): string =>

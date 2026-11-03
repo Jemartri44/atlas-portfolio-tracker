@@ -24,7 +24,7 @@ import {
 } from "../../../view-models/forms/corporate.js";
 import type { FieldSpec, FormValues } from "../../../view-models/forms/index.js";
 import { inputErrors, missingRequired, missingSentence } from "../../../view-models/forms/index.js";
-import { RequireLedger } from "../../guard.jsx";
+import { liveLedger, RequireLedger } from "../../guard.jsx";
 import { DuplicateDialog } from "../DuplicateDialog.jsx";
 import { FormActions } from "../FormActions.jsx";
 import { FormFields } from "../FormFields.jsx";
@@ -55,12 +55,13 @@ export default function CorporateFormRoute(): JSX.Element {
         const [signedOut, setSignedOut] = createSignal(false);
         /** The filed returns it reaches, said before «Registrar» (ADR-0020). */
         const [closed, setClosed] = createSignal<readonly ClosedYearImpact[]>([]);
-        const names = nameIndex(snapshot.state);
-        const catalogue = accounts(snapshot.state);
+        // Both read the ledger that is there now: a `412` reloads it under this form in place.
+        const names = () => nameIndex(liveLedger(snapshot).state);
+        const catalogue = () => accounts(liveLedger(snapshot).state);
 
         /** What the form can tell on its own: unreadable numbers and fee lines, by field. */
         const errors = createMemo((): Record<string, string> => {
-          const fees = feeLinesError(values(), catalogue);
+          const fees = feeLinesError(values(), catalogue());
           const current = form();
           const ratio = current === undefined ? undefined : ratioError(current, values());
           return {
@@ -80,7 +81,7 @@ export default function CorporateFormRoute(): JSX.Element {
             corporateActionDraft(
               snapshot.state as LedgerState,
               snapshot.events,
-              toCorporateParams(current, values(), catalogue),
+              toCorporateParams(current, values(), catalogue()),
             ),
           );
         });
@@ -193,7 +194,7 @@ export default function CorporateFormRoute(): JSX.Element {
                     <Fractions
                       none={draft()?.no_fractions === true}
                       fractional={draft()?.fractional ?? []}
-                      names={names}
+                      names={names()}
                     />
 
                     <FormActions
@@ -214,7 +215,7 @@ export default function CorporateFormRoute(): JSX.Element {
                     {(shown) => (
                       <EffectSection
                         preview={shown()}
-                        names={names}
+                        names={names()}
                         closed={closed()}
                         problem={problem()}
                         writing={store.writing()}

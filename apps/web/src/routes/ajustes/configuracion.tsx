@@ -46,7 +46,7 @@ import {
   withText,
 } from "../../view-models/index.js";
 import { weightedAssets } from "../../view-models/weighted.js";
-import { RequireLedger } from "../guard.jsx";
+import { liveLedger, RequireLedger } from "../guard.jsx";
 import { FormActions } from "../registrar/FormActions.jsx";
 import { FiscalCard } from "./FiscalCard.jsx";
 import { useRuleChangeQuestion } from "./rule-change.js";
@@ -71,7 +71,8 @@ export default function ConfiguracionRoute(): JSX.Element {
     <RequireLedger skeleton={10}>
       {(snapshot) => {
         const date = today();
-        const resolution = () => settingsAt(snapshot.state, date);
+        // Read through the revision: a `412` reloads the ledger under this screen in place.
+        const resolution = () => settingsAt(liveLedger(snapshot).state, date);
         const current = (): Settings => resolution().settings;
 
         // Weights are asked for live assets only (`weightedAssets`): not for
@@ -104,7 +105,22 @@ export default function ConfiguracionRoute(): JSX.Element {
           setWeights(undefined);
         };
 
+        // The whole of a save, not only the write: the checks before it wait on the network, and
+        // a second press in that time would write against an etag the first one is about to move.
+        const [busy, setBusy] = createSignal(false);
         const save = async (acceptInvalid = false): Promise<void> => {
+          if (busy()) {
+            return;
+          }
+          setBusy(true);
+          try {
+            await saveOnce(acceptInvalid);
+          } finally {
+            setBusy(false);
+          }
+        };
+
+        const saveOnce = async (acceptInvalid: boolean): Promise<void> => {
           setError(undefined);
           setSaved(false);
           let next: Settings;
@@ -205,7 +221,7 @@ export default function ConfiguracionRoute(): JSX.Element {
                   </button>
                   <button
                     type="button"
-                    disabled={!touched() || store.writing()}
+                    disabled={!touched() || store.writing() || busy()}
                     onClick={() => void save()}
                   >
                     Guardar configuración
@@ -216,7 +232,7 @@ export default function ConfiguracionRoute(): JSX.Element {
 
             <SettingsDialogs
               rates={rates}
-              events={snapshot.events}
+              events={liveLedger(snapshot).events}
               silenced={silenced()}
               moved={moved()}
               closedYears={closedYears()}
@@ -231,7 +247,7 @@ export default function ConfiguracionRoute(): JSX.Element {
                 }
               }}
               onSave={(acceptInvalid) => void save(acceptInvalid ?? false)}
-              names={nameIndex(snapshot.state)}
+              names={nameIndex(liveLedger(snapshot).state)}
             />
           </>
         );
