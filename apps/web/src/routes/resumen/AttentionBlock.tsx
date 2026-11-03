@@ -34,16 +34,19 @@ export const AttentionBlock = (props: {
    * nothing. It counts among the four in sight.
    */
   fiscal?: (() => "reserved" | NoticeItem | undefined) | undefined;
+  /** A scheduled task that stopped running: it arrives after the first paint, and in sight. */
+  jobs?: (() => NoticeItem | undefined) | undefined;
 }): JSX.Element => {
   const fiscal = (): "reserved" | NoticeItem | undefined => props.fiscal?.();
   const notices = (): NoticeItem[] => {
     const all = props.items.map(noticeOf);
     const item = fiscal();
-    if (item === undefined || item === "reserved") {
-      return all;
-    }
-    const at = Math.min(VISIBLE - 1, all.length);
-    return [...all.slice(0, at), item, ...all.slice(at)];
+    const extra = [
+      ...(item === undefined || item === "reserved" ? [] : [item]),
+      ...(props.jobs?.() === undefined ? [] : [props.jobs?.() as NoticeItem]),
+    ];
+    const at = Math.max(0, Math.min(VISIBLE - extra.length, all.length));
+    return [...all.slice(0, at), ...extra, ...all.slice(at)];
   };
   const count = (): number => notices().length;
   return (

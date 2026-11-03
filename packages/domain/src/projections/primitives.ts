@@ -7,6 +7,7 @@ import { type CivilDate, yearOf } from "../dates/civil-date.js";
 import { ProjectionError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
 import { Decimal } from "../money/decimal.js";
+import type { FxRate } from "../money/fx-rate.js";
 import { EUR, Money } from "../money/money.js";
 import { Price } from "../money/price.js";
 import { Quantity } from "../money/quantity.js";
@@ -368,9 +369,8 @@ export const applyForcedSale = (
  * splitting it between accounts would mean deciding a rounding nobody asked
  * for. The lots are per account because a position is; the income is not.
  *
- * It reaches `investmentIncome`, `realizedGains` and no taxable base: declaring
- * income on receipt is a criterion in dispute (`docs/fiscal-questions.md` #8)
- * and phase 5 decides it, not this.
+ * It reaches `investmentIncome`, `realizedGains` and no taxable base of Atlas:
+ * income of the general base is the user's to add (`docs/fiscal-questions.md` #8).
  */
 const noteInKindIncome = (
   state: LedgerState,
@@ -391,6 +391,27 @@ const noteInKindIncome = (
   });
 };
 
+/**
+ * What a free grant declared as income of the general base costs: the income
+ * itself, or its sale would tax the same value twice (criterion #8).
+ */
+const costOfGrant = (
+  effect: Resolved<"grant">,
+  quantity: Quantity,
+  total: Decimal,
+  listed: Money,
+  fx: FxRate,
+): { cost: Money; cost_eur: Money } => {
+  if (effect.income_eur === undefined || effect.income_base !== "general" || !listed.isZero()) {
+    return { cost: listed, cost_eur: fx.toEur(listed) };
+  }
+  const costEur = Decimal.parse(effect.income_eur).mul(quantity.value).div(total);
+  return {
+    cost: Money.of(costEur.mul(Decimal.parse(effect.fx_rate)), effect.currency),
+    cost_eur: Money.of(costEur, EUR),
+  };
+};
+
 export const applyGrant = (
   state: LedgerState,
   effect: Resolved<"grant">,
@@ -407,16 +428,24 @@ export const applyGrant = (
     return { account_id: entry.account_id, quantity: Quantity.parse(entry.quantity) };
   });
 
+  const total = entries.reduce((sum, entry) => sum.add(entry.quantity.value), Decimal.ZERO);
   for (const entry of entries) {
-    const cost = unitCost.times(entry.quantity);
-    // No currency is spent on a grant: what is tied up in it is its cost.
+    const { cost, cost_eur } = costOfGrant(
+      effect,
+      entry.quantity,
+      total,
+      unitCost.times(entry.quantity),
+      fx,
+    );
+    // No currency is spent on a grant: what is tied up in it is its cost, so
+    // selling it leaves no exchange difference.
     openLot(state, {
       asset_id: asset.asset_id,
       acquisition_date: effect.acquisition_date,
       quantity: entry.quantity,
-      cost_eur: fx.toEur(cost),
+      cost_eur,
       cost,
-      funding_eur: fx.toEur(cost),
+      funding_eur: cost_eur,
       source_event_id: ctx.eventId,
       position: ctx.position,
     });

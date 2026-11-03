@@ -10,7 +10,11 @@ import { currencyLots } from "../projections/currency-lots.js";
 import { exchangeNotices } from "../projections/exchange-notices.js";
 import { sharedIsins } from "../projections/isin.js";
 import type { LedgerState, RealizedGain, Warning } from "../projections/state.js";
-import { ASSET_TYPES, type CashWithdrawalEvent } from "../schema/events.js";
+import {
+  ASSET_TYPES,
+  type CashWithdrawalEvent,
+  type CorporateActionEvent,
+} from "../schema/events.js";
 import { TREATY_RATE_SUGGESTIONS, treatyWithholdingPctOf } from "../settings/settings.js";
 import { type Core, exchangesOfYear } from "./core.js";
 import { sortCriteria } from "./criteria.js";
@@ -324,10 +328,34 @@ export const notesOf = (
       eventNote(
         "tax_in_kind_income_not_integrated",
         entry.event_id,
-        "income in kind is recorded and not integrated (criterion #8 in force)",
+        "income in kind is shown apart and integrated in no base of Atlas (criterion #8)",
         { income_eur: entry.amount_eur.amount.toString(), base: entry.base },
       ),
     );
+  }
+  for (const event of core.ctx.events.values()) {
+    if (
+      event.type === "corporate_action" &&
+      (event as CorporateActionEvent).kind === "crypto_fork"
+    ) {
+      const unvalued = (event as CorporateActionEvent).effects.some(
+        (effect) =>
+          effect.op === "grant" &&
+          yearOf(effect.acquisition_date) === year &&
+          effect.income_eur === undefined &&
+          Decimal.parse(effect.unit_cost).isZero(),
+      );
+      if (unvalued) {
+        notes.push(
+          eventNote(
+            "tax_in_kind_income_missing",
+            event.id,
+            "a free crypto grant states no value",
+            {},
+          ),
+        );
+      }
+    }
   }
   for (const line of core.transmissions) {
     if (line.provisional_until !== undefined) {

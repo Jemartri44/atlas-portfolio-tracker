@@ -46,6 +46,7 @@ import {
   netWorthView,
   onboardingOf,
 } from "../../view-models/index.js";
+import { lateJobsNotice } from "../../view-models/late-jobs.js";
 import { netWorthPlot, withBookCash, withContributed } from "../../view-models/series.js";
 import { type SummaryCard, summaryOrder } from "../../view-models/summary-order.js";
 import { RequireLedger } from "../guard.jsx";
@@ -127,6 +128,14 @@ export default function ResumenRoute(): JSX.Element {
             }
           },
         );
+        // A task that stopped running sends no mail: said here, after the first paint.
+        const [jobs] = createResource(
+          () => ({ frequencies: settings.job_frequencies, date }),
+          async (input) =>
+            (await import("../../jobs/job-health.js")).loadJobHealth(input.frequencies, input.date),
+        );
+        const jobsNotice = (): NoticeItem | undefined =>
+          jobs.state === "ready" ? lateJobsNotice(jobs()) : undefined;
         const fiscal = (): FiscalStatus | undefined => outcome()?.status;
         const failure = (): AppError | undefined => outcome()?.failure;
         // Out of the season, what is pending of the 720 and the 721 goes to
@@ -201,7 +210,7 @@ export default function ResumenRoute(): JSX.Element {
           allocation: () => (
             <AllocationCard view={allocation()} threshold={settings.deviation_threshold_pp} />
           ),
-          attention: () => <AttentionBlock items={items} fiscal={fiscalNotice} />,
+          attention: () => <AttentionBlock items={items} fiscal={fiscalNotice} jobs={jobsNotice} />,
           moves: () => <RecentMoves entries={recent} />,
           fiscal: () => (
             <FiscalCard
