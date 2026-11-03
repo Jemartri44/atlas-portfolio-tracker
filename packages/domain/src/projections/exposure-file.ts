@@ -1,7 +1,10 @@
 // The exposure the owner declares per asset, as `settings/exposure.json` keeps it outside the
 // ledger (`docs/data-schema.md` §1, `docs/api.md` §6.2):
 //
-//   { "exposure_format": 1, "assets": { "<asset_id>": { "currency"?: {…}, "region"?: {…} } } }
+//   { "exposure_format": 1, "assets": { "<asset_id>": { "index"?: "<key>", "currency"?: {…}, "region"?: {…} } } }
+//
+// `index` names the profile of an index (`index-profiles.ts`) the defaults come from; a `currency` or
+// `region` written here is the owner's own and wins over it.
 //
 // **One validator** for every reader and writer: the API when it writes, `exposure()` when it
 // reads. An unreadable or invalid object is **no data**, never an estimate (`exposureOrNone`).
@@ -29,6 +32,7 @@ const ASSET_ID = /^[^\u0000-\u001f\u007f]{1,128}$/u;
 const INHERITED = new Set(["__proto__", "constructor", "prototype"]);
 const CURRENCY_KEY = /^[A-Z]{3}$/;
 const REGION_KEY = /^[a-z][a-z0-9_]{0,39}$/;
+const INDEX_KEY = /^[a-z][a-z0-9_]{0,39}$/;
 const PERCENT = /^-?\d{1,12}(\.\d{1,12})?$/;
 
 export type ExposureReason =
@@ -41,6 +45,7 @@ export type ExposureReason =
   | "asset_id"
   | "asset"
   | "dimension"
+  | "index"
   | "empty"
   | "key"
   | "percent"
@@ -99,7 +104,7 @@ export const validateExposure = (document: unknown): Exposures => {
   if (assets.length > MAX_EXPOSURE_ASSETS) {
     refuse("too_many_assets", { max: MAX_EXPOSURE_ASSETS });
   }
-  const exposures: Record<string, { currency?: Split; region?: Split }> = {};
+  const exposures: Record<string, { index?: string; currency?: Split; region?: Split }> = {};
   for (const [assetId, declared] of assets) {
     if (!ASSET_ID.test(assetId) || INHERITED.has(assetId)) {
       refuse("asset_id");
@@ -108,10 +113,16 @@ export const validateExposure = (document: unknown): Exposures => {
       refuse("asset", { asset_id: assetId });
     }
     const own = declared as Record<string, unknown>;
-    if (Object.keys(own).some((key) => key !== "currency" && key !== "region")) {
+    if (Object.keys(own).some((key) => key !== "currency" && key !== "region" && key !== "index")) {
       refuse("dimension", { asset_id: assetId });
     }
-    const checked: { currency?: Split; region?: Split } = {};
+    const checked: { index?: string; currency?: Split; region?: Split } = {};
+    if ("index" in own) {
+      if (typeof own.index !== "string" || !INDEX_KEY.test(own.index)) {
+        refuse("index", { asset_id: assetId });
+      }
+      checked.index = own.index as string;
+    }
     for (const dimension of DIMENSIONS) {
       if (dimension in own) {
         validSplit(assetId, dimension, own[dimension]);

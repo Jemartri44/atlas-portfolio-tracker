@@ -12,7 +12,7 @@ import Detail from "../src/routes/movimientos/detail.jsx";
 import Movimientos from "../src/routes/movimientos/index.jsx";
 import { movementGlyph } from "../src/routes/movimientos/MovementLine.jsx";
 import { setPrivacy } from "../src/shell/preferences.js";
-import { byMonth, type MovementRow, movementRows } from "../src/view-models/index.js";
+import { byDay, type MovementRow, movementRows } from "../src/view-models/index.js";
 import { draftSentence, movementSentence } from "../src/view-models/sentence.js";
 import { goldenEvents } from "./helpers/golden.js";
 import { show, text, withGoldenLedger } from "./helpers/render.jsx";
@@ -50,17 +50,16 @@ const said = (type: string): string => plain(movementSentence(current(type), nam
 const drafted = (type: string): string => plain(draftSentence(current(type).event, names));
 
 describe("the list of movements", () => {
-  it("puts the rows under one heading per month, in the order given (feature 020, M8)", () => {
-    // It replaces the grouping by day: a heading per day cost one more row per movement on a phone.
+  it("puts the rows under one heading per day, in the order given (direction A)", () => {
     const rows = movementRows(entries.slice(0, 30), names);
-    const months = byMonth(rows.map((row) => ({ kind: "row" as const, row })));
+    const days = byDay(rows.map((row) => ({ kind: "row" as const, row })));
     expect(
-      months.flatMap((month) => month.entries.map((entry) => (entry as { row: MovementRow }).row)),
+      days.flatMap((day) => day.entries.map((entry) => (entry as { row: MovementRow }).row)),
     ).toEqual(rows);
-    expect(new Set(months.map((month) => month.month)).size).toBe(months.length);
-    for (const month of months) {
-      for (const entry of month.entries) {
-        expect((entry as { row: MovementRow }).row.date.slice(0, 7)).toBe(month.month);
+    expect(new Set(days.map((day) => day.day)).size).toBe(days.length);
+    for (const day of days) {
+      for (const entry of day.entries) {
+        expect((entry as { row: MovementRow }).row.date).toBe(day.day);
       }
     }
   });
