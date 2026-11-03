@@ -209,12 +209,15 @@ export const AppShell = (props: { children?: JSX.Element }): JSX.Element => (
         <Show when={hasLedger()}>
           <Nav />
         </Show>
-        <div class="status">
-          <LedgerChip />
-          <DraftSlot />
-          <PrivacyToggle />
-          <SettingsButton />
-        </div>
+        {/* Without a session there is nothing to hide and nowhere to go: the gate is alone. */}
+        <Show when={hasLedger()}>
+          <div class="status">
+            <LedgerChip />
+            <DraftSlot />
+            <PrivacyToggle />
+            <SettingsButton />
+          </div>
+        </Show>
       </div>
     </header>
     <DegradedBand />

@@ -1,7 +1,7 @@
 // The columns of a table, with the privacy mode in mind.
 //
 // With the mode on, the columns that would only hold masks are fused into one,
-// "importes ocultos", and the percentages that stand for them go in front. It
+// one that keeps the name of the lead column, and the percentages that stand for them go in front. It
 // is a **shape** of the table and not a second way of deciding what is hidden:
 // the decision is still `Amount`'s, and the fused cell is the cell of one of
 // the columns it replaces, so what paints the mask is the same component. With
@@ -50,7 +50,6 @@ export interface DataColumn<R> {
 export const tableColumns = <R>(
   columns: readonly DataColumn<R>[],
   privacy: boolean,
-  header: string,
 ): DataColumn<R>[] => {
   if (!privacy) {
     return columns.filter((column) => column.whenMasked !== true);
@@ -64,7 +63,11 @@ export const tableColumns = <R>(
   }
   const plain = columns.filter((column) => !amounts.includes(column) && column.whenMasked !== true);
   const standing = columns.filter((column) => column.whenMasked === true);
-  return [...plain, ...standing, { key: "hidden", header, numeric: true, cell: lead.cell }];
+  return [
+    ...plain,
+    ...standing,
+    { key: "hidden", header: lead.header, numeric: true, cell: lead.cell },
+  ];
 };
 
 /** The columns of the **rows of a phone**: the percentages take the slot of the amounts they replace. */

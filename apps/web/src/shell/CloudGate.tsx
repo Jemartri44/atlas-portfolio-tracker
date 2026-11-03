@@ -8,6 +8,7 @@
 
 import { createSignal, type JSX, Match, Show, Switch } from "solid-js";
 import { signInHref } from "../auth/session.js";
+import { Icon } from "../components/Icon.jsx";
 import { Notice } from "../components/Notice.jsx";
 import type { SignedOutReason } from "../ledger/state.js";
 import { store } from "../ledger/state.js";
@@ -56,26 +57,25 @@ export default function CloudGate(): JSX.Element {
   return (
     <Switch>
       <Match when={phase().phase === "signed_out"}>
-        <Notice
-          severity="info"
-          title="Entrar en Atlas"
-          action={
-            // A full navigation to our own origin, never the router (it would take an
-            // `<a>` for a screen of its own, found in a real browser): the Lambda
-            // answers with a redirect to Google and the token never reaches the page.
-            <button type="button" onClick={enter}>
-              {warned() ? "Entrar de todos modos" : "Entrar con Google"}
-            </button>
-          }
-        >
-          {SENTENCES[(phase() as { reason: SignedOutReason }).reason]}
+        <section class="gate" aria-labelledby="gate-title">
+          <Icon name="globe" class="mark" />
+          <h1 id="gate-title">Atlas</h1>
+          <p>{SENTENCES[(phase() as { reason: SignedOutReason }).reason]}</p>
           <Show when={warned() && unresolved()}>
-            <p>
+            <p class="meta">
               Hay una operación sin resolver (puede que no esté guardada), y este aviso se pierde al
               entrar. Cuando vuelvas, compruébalo en Movimientos antes de repetirla.
             </p>
           </Show>
-        </Notice>
+          {/*
+            A full navigation to our own origin, never the router (it would take an `<a>` for a
+            screen of its own, found in a real browser): the Lambda answers with a redirect to
+            Google and the token never reaches the page.
+          */}
+          <button type="button" onClick={enter}>
+            {warned() ? "Entrar de todos modos" : "Entrar con Google"}
+          </button>
+        </section>
       </Match>
       <Match when={phase().phase === "offline"}>
         <Notice severity="caution" title="Sin conexión" action={<Retry />}>

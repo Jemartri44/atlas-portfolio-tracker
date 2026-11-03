@@ -148,17 +148,32 @@
   width: var(--icon-md);
 }
 
-/* A switch that looks like one: a track and a knob, never a stretched oval. */
+/*
+ * A switch that looks like one: a track and a knob, never a stretched oval. The input itself is a
+ * 44px target (`--tap`); the track is drawn inside it, centred, so the control is what is touched.
+ */
 :where(input[type="checkbox"][role="switch"]) {
   appearance: none;
+  background: none;
+  border: 0;
+  flex: none;
+  height: var(--tap);
+  isolation: isolate;
+  position: relative;
+  width: calc(var(--icon-lg) * 1.75);
+}
+
+:where(input[type="checkbox"][role="switch"])::after {
   background-color: var(--c-fill-hover);
   border: var(--border) solid var(--c-border-control);
   border-radius: var(--radius-pill);
-  flex: none;
+  content: "";
   height: var(--icon-lg);
-  position: relative;
+  inset-inline: 0;
+  position: absolute;
+  top: calc((var(--tap) - var(--icon-lg)) / 2);
   transition: background-color var(--dur-fast) var(--ease);
-  width: calc(var(--icon-lg) * 1.75);
+  z-index: -1;
 }
 
 :where(input[type="checkbox"][role="switch"])::before {
@@ -169,12 +184,26 @@
   height: calc(var(--icon-lg) - var(--space-2));
   left: calc(var(--space-1) - var(--border));
   position: absolute;
-  top: calc(var(--space-1) - var(--border));
+  top: calc((var(--tap) - var(--icon-lg)) / 2 + var(--space-1) - var(--border));
   transition: transform var(--dur-fast) var(--ease);
   width: calc(var(--icon-lg) - var(--space-2));
 }
 
-:where(input[type="checkbox"][role="switch"]):checked {
+:where(input[type="checkbox"][role="switch"]):focus {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* The ring goes on the track, not around the 44px target that holds it. */
+:where(input[type="checkbox"][role="switch"]):focus-visible {
+  outline: none;
+}
+
+:where(input[type="checkbox"][role="switch"]):focus-visible::after {
+  box-shadow: 0 0 0 var(--space-1) var(--c-accent);
+}
+
+:where(input[type="checkbox"][role="switch"]):checked::after {
   background-color: var(--c-accent);
   border-color: var(--c-accent);
 }

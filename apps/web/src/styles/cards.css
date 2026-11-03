@@ -78,6 +78,11 @@ a.card-foot:hover {
   margin: var(--space-5) 0 var(--space-1);
 }
 
+/* A button, or a row of them, under a paragraph of a card is not glued to it. */
+.card :is(p, .card-note) + :is(button, .button-row) {
+  margin-top: var(--space-3);
+}
+
 .button-row {
   display: flex;
   flex-wrap: wrap;
@@ -95,11 +100,18 @@ a.card-foot:hover {
   }
 }
 
-/* Inside a card, a disclosure is its last row, edge to edge. */
+/*
+ * Inside a card, a disclosure is a row edge to edge; as the last child it also takes the card's
+ * bottom padding. With something after it (a total) the negative margin would pull that on top of it.
+ */
 .card > .disclosure {
   border-top: var(--border) solid var(--c-border);
-  margin: var(--space-3) calc(-1 * var(--space-4)) calc(-1 * var(--space-4));
+  margin: var(--space-3) calc(-1 * var(--space-4)) 0;
   padding-inline: var(--space-4);
+}
+
+.card > .disclosure:last-child {
+  margin-bottom: calc(-1 * var(--space-4));
 }
 
 .card > .disclosure + .disclosure {
@@ -108,8 +120,12 @@ a.card-foot:hover {
 
 @media (min-width: 64rem) {
   .card > .disclosure {
-    margin: var(--space-4) calc(-1 * var(--space-6)) calc(-1 * var(--space-5));
+    margin: var(--space-4) calc(-1 * var(--space-6)) 0;
     padding-inline: var(--space-6);
+  }
+
+  .card > .disclosure:last-child {
+    margin-bottom: calc(-1 * var(--space-5));
   }
 
   /*
