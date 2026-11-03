@@ -131,6 +131,7 @@ describe("the core's return after tax", () => {
     expect(text(result.tax_eur)).toBe("19");
     expect(text(result.gain_eur)).toBe("181");
     expect(result.xirr_pct?.toString()).toBe("18.1");
+    expect(result.criteria).toEqual(["27", "29"]);
   });
 
   it("charges only what the portfolio adds over the income from outside, dated on each instalment", () => {
@@ -154,6 +155,7 @@ describe("the core's return after tax", () => {
     expect(y2028?.core_share_pct?.toString()).toBe("0");
     expect(y2028?.dated).toEqual([]);
     expect(text(result.tax_eur)).toBe("21");
+    expect(result.criteria).toEqual(["27", "28", "29"]);
     // 731, 186 and 58 days to the end date.
     const rate = Number(result.xirr_pct?.toString()) / 100;
     const grown =

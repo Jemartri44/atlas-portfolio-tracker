@@ -37,6 +37,7 @@ import { settingsAt } from "../projections/settings-at.js";
 import type { Account, LedgerState } from "../projections/state.js";
 import type { LedgerEvent } from "../schema/events.js";
 import { tryReading } from "../tax/chain.js";
+import type { CriterionId } from "../tax/criteria.js";
 import { type QuotaNote, savingsQuota } from "../tax/quota.js";
 import type { TaxYearReport } from "../tax/report.js";
 import { taxYear } from "../tax/year.js";
@@ -70,6 +71,8 @@ export interface CoreXirrAfterTax {
   tax_eur?: Money;
   /** `value − contributed − tax`. */
   gain_eur?: Money;
+  /** The criteria the figure rests on: the estimate (#27), outside income (#28), the split (#29). */
+  criteria?: CriterionId[];
   /** The annual money-weighted rate with the tax as a contribution, percent, 4 decimals. */
   xirr_pct?: Decimal;
   /**
@@ -213,6 +216,14 @@ export const coreXirrAfterTax = (
     ...costs,
   ].map((flow) => ({ days: Math.max(0, daysBetween(flow.date, to)), eur: flow.eur.amount }));
   const rate = annualRateOf(flows, value.amount);
-  const common = { before, years, tax_eur: tax, gain_eur: value.sub(contributed).sub(tax) };
+  const common = {
+    before,
+    years,
+    tax_eur: tax,
+    gain_eur: value.sub(contributed).sub(tax),
+    criteria: (state.externalIncome.length === 0
+      ? ["27", "29"]
+      : ["27", "28", "29"]) as CriterionId[],
+  };
   return rate === undefined ? { ...common, gap: "no_rate" } : { ...common, xirr_pct: rate };
 };

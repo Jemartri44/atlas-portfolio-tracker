@@ -173,6 +173,8 @@ export const FISCAL_CRITERIA = {
   "27": { doc: "27", certainty: "medium", risk: "conservative" },
   // Savings income from outside the portfolio, integrated with it in the estimate.
   "28": { doc: "28", certainty: "high", risk: "neutral" },
+  // The tax of the portfolio for its return after tax: what it adds, split between the books.
+  "29": { doc: "29", certainty: "medium", risk: "neutral" },
 } as const satisfies Record<string, FiscalCriterion>;
 
 export type CriterionId = keyof typeof FISCAL_CRITERIA;
@@ -231,6 +233,7 @@ export const CRITERION_IDS: readonly CriterionId[] = [
   "26",
   "27",
   "28",
+  "29",
 ];
 
 /** Which variant of criterion #24 an ETC or an ETP applies, by the reading in force. */
