@@ -8,7 +8,7 @@ const decoder = new TextDecoder();
 
 const NEWLINE = 0x0a;
 
-/** The lines of the ledger bytes, whatever read them: a leading byte-order mark is dropped. */
+/** The lines of the ledger bytes: `TextDecoder` drops a leading byte-order mark by default. */
 export const ledgerLinesOf = (bytes: Uint8Array): string[] => linesOfText(decoder.decode(bytes));
 
 /** The events as lines of a file, each followed by its newline. */

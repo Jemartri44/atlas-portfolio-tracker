@@ -22,7 +22,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import type { ListedObject, ObjectStore, StoredObject } from "./object-store.js";
-import { factsOf, SDK_TIMEOUTS, transient } from "./sdk-errors.js";
+import { factsOf, SDK_MAX_ATTEMPTS, SDK_TIMEOUTS, transient } from "./sdk-errors.js";
 
 /** What the adapter sends: the client of the SDK, or a simulated one with the same calls. */
 export interface S3Sender {
@@ -144,4 +144,7 @@ export class SdkObjectStore implements ObjectStore {
 
 /** The store of the data bucket in production, with the default chain of credentials of the Lambda. */
 export const productionObjectStore = (bucket: string): SdkObjectStore =>
-  new SdkObjectStore(new S3Client({ requestHandler: SDK_TIMEOUTS }), bucket);
+  new SdkObjectStore(
+    new S3Client({ requestHandler: SDK_TIMEOUTS, maxAttempts: SDK_MAX_ATTEMPTS }),
+    bucket,
+  );
