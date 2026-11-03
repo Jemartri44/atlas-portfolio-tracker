@@ -15,6 +15,7 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import type { Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
+import { byCode } from "../order.js";
 import { bucketPositions, openUnitCostOf } from "../projections/bucket.js";
 import { netWorth } from "../projections/networth.js";
 import { physicalPositions } from "../projections/positions.js";
@@ -105,8 +106,8 @@ const priceOf = (price: PriceLookup | undefined): PositionPrice =>
 
 const byAccountThenAsset = (a: PositionRow, b: PositionRow): number =>
   a.account_id === b.account_id
-    ? a.asset_id.localeCompare(b.asset_id)
-    : a.account_id.localeCompare(b.account_id);
+    ? byCode(a.asset_id, b.asset_id)
+    : byCode(a.account_id, b.account_id);
 
 /** The cost of `quantity` at the average cost of the open lots of the asset; none without lots. */
 const costOf = (state: LedgerState, assetId: AssetId, quantity: Quantity): Money | undefined =>
@@ -164,8 +165,8 @@ export const positionsDocument = (input: PositionsInput): PositionsDocument => {
     }))
     .sort((a, b) =>
       a.account_id === b.account_id
-        ? a.currency.localeCompare(b.currency)
-        : a.account_id.localeCompare(b.account_id),
+        ? byCode(a.currency, b.currency)
+        : byCode(a.account_id, b.account_id),
     );
   const warnings = [
     ...new Set(
