@@ -18,6 +18,7 @@
     "test/cloud/cloud-boot.test.tsx",
     "test/cloud/cloud-device.test.tsx",
     "test/ecb-drafts.test.tsx",
+    "test/exposure-screen.test.tsx",
     "test/helpers/render.tsx",
     "test/helpers/golden.ts",
     "test/helpers/memory-blob.ts",

@@ -82,7 +82,7 @@ export const barOf = (
     legend.push({
       key: "rest",
       label: `Otras (${rest.length})`,
-      figure: formatPercent(String(Math.round(width * 100) / 100), { decimals: 1 }),
+      figure: percentOf(String(Math.round(width * 100) / 100)),
     });
   }
   return { segments, legend };
