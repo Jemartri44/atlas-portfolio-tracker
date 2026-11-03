@@ -1,12 +1,14 @@
 // The projection of the core as the screen shows it: the scenarios the owner writes, read into
 // assumptions for `projection`, and its result as plain data.
 
-import type { Decimal, Money } from "@atlas/domain";
+import { addYears, type Decimal, EUR, Money } from "@atlas/domain";
 import type {
   ProjectionAssumptions,
   Projection as ProjectionResult,
 } from "@atlas/domain/portfolio";
 import { valueLabel } from "../../format/labels.js";
+import { formatDecimalString } from "../../format/number.js";
+import { numberOrNull, secondsOf, stringOrUndefined } from "../series.js";
 import { DEFAULT_YEARS, decimalOf, GAPS, missingPhrase, yearsOf } from "./long-run.js";
 
 export const MAX_SCENARIOS = 3;
@@ -100,6 +102,17 @@ export interface ScenarioView {
   goal?: "now" | "never" | number;
 }
 
+/** What the card draws: a line per scenario that has a figure, and what was contributed. */
+export interface ProjectionPlot {
+  /** Seconds since the epoch of each year of the horizon, counted from the date asked about. */
+  x: number[];
+  /** The scenarios that have a figure, then what was contributed. */
+  labels: string[];
+  values: (number | null)[][];
+  /** Rows of the equivalent table, in the same order as `values`. */
+  rows: { date: string; values: (string | undefined)[] }[];
+}
+
 export interface ProjectionView {
   /** Why there is no projection at all, when there is none: everything that is missing. */
   gap?: string;
@@ -107,6 +120,9 @@ export interface ProjectionView {
   monthly?: Money;
   years: number;
   scenarios: ScenarioView[];
+  /** The goal, an amount: shown with the privacy mask like any other. */
+  goalAmount?: Money;
+  plot?: ProjectionPlot;
 }
 
 /** The reasons the domain gives for not projecting, with what each one lacks. */
@@ -116,7 +132,7 @@ const gapOf = (result: ProjectionResult): string | undefined => {
       ? []
       : [
           result.gap === "targets_not_100"
-            ? `los pesos objetivo suman ${result.target_total_pct.toString().replace(".", ",")} y tienen que sumar 100`
+            ? `los pesos objetivo suman ${formatDecimalString(result.target_total_pct.toString())} y tienen que sumar 100`
             : (GAPS[result.gap] ?? result.gap),
         ]),
     ...(missingPhrase(result.missing) === undefined
@@ -126,13 +142,64 @@ const gapOf = (result: ProjectionResult): string | undefined => {
   return reasons.length === 0 ? undefined : reasons.join("; ");
 };
 
-export const projectionView = (result: ProjectionResult, hasGoal: boolean): ProjectionView => {
+/** In what time a goal is reached, in words: «en 5 meses», «en 1 año», «en 3 años y 2 meses». */
+export const goalText = (goal: ScenarioView["goal"]): string => {
+  if (goal === "now") {
+    return "ya lo tienes";
+  }
+  if (goal === "never" || goal === undefined) {
+    return "no se alcanza en el horizonte";
+  }
+  const years = Math.floor(goal / 12);
+  const months = goal % 12;
+  const parts = [
+    ...(years === 0 ? [] : [years === 1 ? "1 año" : `${years} años`]),
+    ...(months === 0 ? [] : [months === 1 ? "1 mes" : `${months} meses`]),
+  ];
+  return `en ${parts.join(" y ")}`;
+};
+
+const plotOf = (result: ProjectionResult, asOf: string): ProjectionPlot | undefined => {
+  const drawn = result.scenarios.filter((scenario) => scenario.points !== undefined);
+  const first = drawn[0]?.points;
+  if (first === undefined) {
+    return undefined;
+  }
+  const dates = first.map((point) => addYears(asOf, point.year));
+  return {
+    x: dates.map((date) => secondsOf(date)),
+    labels: [...drawn.map((scenario) => scenario.name), "Aportado"],
+    values: [
+      ...drawn.map((scenario) =>
+        (scenario.points ?? []).map((point) => numberOrNull(point.value_eur)),
+      ),
+      // What goes in does not depend on what it earns: the same line for every scenario.
+      first.map((point) => numberOrNull(point.contributed_eur)),
+    ],
+    rows: first.map((point, at) => ({
+      date: dates[at] as string,
+      values: [
+        ...drawn.map((scenario) => stringOrUndefined(scenario.points?.[at]?.value_eur)),
+        stringOrUndefined(point.contributed_eur),
+      ],
+    })),
+  };
+};
+
+export const projectionView = (
+  result: ProjectionResult,
+  asOf: string,
+  goal?: Decimal,
+): ProjectionView => {
   const gap = gapOf(result);
+  const plot = plotOf(result, asOf);
   return {
     years: result.years,
     ...(gap === undefined ? {} : { gap }),
     ...(result.start_eur === undefined ? {} : { start: result.start_eur }),
     monthly: result.monthly_core_eur,
+    ...(goal === undefined ? {} : { goalAmount: Money.of(goal, EUR) }),
+    ...(plot === undefined ? {} : { plot }),
     scenarios: result.scenarios.map((scenario) => {
       const last = scenario.points?.at(-1);
       return {
@@ -147,7 +214,7 @@ export const projectionView = (result: ProjectionResult, hasGoal: boolean): Proj
               end: last.value_eur,
               contributed: last.contributed_eur,
             }),
-        ...(hasGoal && scenario.points !== undefined
+        ...(goal !== undefined && scenario.points !== undefined
           ? {
               goal:
                 scenario.goal_month === undefined
