@@ -326,15 +326,13 @@ describe.each(ENVS)(
       }
     });
 
-    it("(S1) the boundary alone leaves an untagged distribution, certificate or web ACL unchangeable, and still readable", () => {
+    it("(S1) the boundary alone leaves an untagged distribution or certificate unchangeable (the web ACL and the functions are scoped by name), and still readable", () => {
       const boundary = boundaryOf(plans[env] as Plan);
       const none = { "aws:RequestedRegion": "us-east-1" };
       for (const [action, resource] of [
         ["cloudfront:UpdateDistribution", own.distribution],
         ["cloudfront:DeleteDistribution", own.distribution],
         ["acm:DeleteCertificate", own.certificate],
-        ["wafv2:UpdateWebACL", own.webAcl],
-        ["wafv2:DeleteWebACL", own.webAcl],
       ] as const) {
         expect(decide(boundary, { action, resource, context: none }), action).not.toBe("allow");
         expect(

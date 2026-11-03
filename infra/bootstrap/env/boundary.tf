@@ -190,11 +190,11 @@ locals {
     {
       # Edge resources are scoped by tag, and `StringEqualsIfExists` in `Edge` lets an
       # untagged one through: a resource without the `project` tag (another project of
-      # the account) can be read but never changed nor deleted. CloudFront functions are
-      # out of it: the provider cannot tag them, their name is their scope.
-      sid       = "DenyUntaggedEdgeChange"
+      # the account) can be read but never changed nor deleted. CloudFront functions and the
+      # web ACL are out of it: the provider cannot tag the former and both are scoped by name.
+      sid       = "DenyUntaggedEdge"
       effect    = "Deny"
-      actions   = ["acm:Delete*", "cloudfront:DeleteDistribution", "cloudfront:UpdateDistribution", "wafv2:Delete*", "wafv2:Update*"]
+      actions   = ["acm:Delete*", "cloudfront:DeleteDistribution", "cloudfront:UpdateDistribution"]
       resources = ["*"]
       condition = { Null = { "aws:ResourceTag/project" = "true" } }
     },
