@@ -29,7 +29,8 @@ export interface FormRates {
 
 export const useFormRates = (options: {
   spec: EventFormSpec;
-  state: LedgerState;
+  /** Read at each use: a `412` replaces the ledger the form was opened on. */
+  state: Accessor<LedgerState>;
   values: Accessor<FormValues>;
   setValues: (values: FormValues) => void;
   typed: Accessor<ReadonlySet<string>>;
@@ -69,7 +70,7 @@ export const useFormRates = (options: {
     const next = proposedValues(
       options.spec,
       current,
-      options.state,
+      options.state(),
       loaded.history,
       loaded.staleDays,
     );
@@ -101,7 +102,7 @@ export const useFormRates = (options: {
       setToConfirm(
         loaded === undefined
           ? []
-          : ratesToConfirm(options.spec, values, options.state, loaded.history, loaded.staleDays),
+          : ratesToConfirm(options.spec, values, options.state(), loaded.history, loaded.staleDays),
       );
     },
     cleared: () => toConfirm().length === 0 || acknowledged(),
