@@ -35,7 +35,6 @@ module "atlas" {
   jobs_artifact_sha256_base64      = var.jobs_artifact_sha256_base64
   reserve_jobs_concurrency         = var.reserve_jobs_concurrency
   prices_eodhd_daily_calls         = var.prices_eodhd_daily_calls
-  prices_alpha_vantage_daily_calls = var.prices_alpha_vantage_daily_calls
   prices_failure_threshold         = var.prices_failure_threshold
   oauth_idle_warning_days          = var.oauth_idle_warning_days
   ledger_size_warning_bytes        = var.ledger_size_warning_bytes
