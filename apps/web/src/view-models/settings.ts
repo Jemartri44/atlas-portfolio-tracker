@@ -19,11 +19,10 @@
 // The tables are the documentation of `Settings` as the screen sees it, and
 // they are worth reading in one piece.
 
-import { type AssetType, Decimal, mergeSettings, type Settings } from "@atlas/domain";
+import { type AssetType, Decimal, HUNDRED, mergeSettings, type Settings } from "@atlas/domain";
 import { decimalForInput, parseDecimalInput } from "../format/input.js";
 
 /** What the weights of the core have to add up to (rule 3 of the plan). */
-const HUNDRED = Decimal.parse("100");
 
 export interface WeightTotal {
   /** The exact sum of what is written, as a decimal string; the screen rounds it. */
@@ -185,6 +184,13 @@ const asRecord = (value: unknown): Record<string, string> =>
   typeof value === "object" && value !== null ? (value as Record<string, string>) : {};
 
 /**
+ * A decimal in the canonical `1234.5` form shown with its comma; anything else is text the user
+ * typed that could not be read, and is shown as it was typed (the point of `1.200,50` is theirs).
+ */
+const shownDecimal = (value: string): string =>
+  /^-?\d+\.\d+$/.test(value) ? decimalForInput(value) : value;
+
+/**
  * What a field shows: what was typed if it was, otherwise what is in force —
  * written the way it is typed, with a decimal comma (`2.5` → `2,5`): the rule
  * that reads what the user types refuses a bare point as ambiguous.
@@ -196,13 +202,13 @@ export const settingValue = (
 ): string => {
   const override = patch[key as string];
   if (override !== undefined) {
-    return typeof override === "string" ? decimalForInput(override) : String(override);
+    return typeof override === "string" ? shownDecimal(override) : String(override);
   }
   const existing = current[key];
   if (existing === undefined) {
     return "";
   }
-  return typeof existing === "string" ? decimalForInput(existing) : String(existing);
+  return typeof existing === "string" ? shownDecimal(existing) : String(existing);
 };
 
 /**
@@ -338,7 +344,7 @@ export const weightValues = (
   const from = current.target_weights ?? {};
   const result: Record<string, string> = {};
   for (const assetId of coreAssetIds) {
-    result[assetId] = decimalForInput(from[assetId] ?? "");
+    result[assetId] = shownDecimal(from[assetId] ?? "");
   }
   return result;
 };

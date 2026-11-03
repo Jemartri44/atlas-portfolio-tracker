@@ -9,7 +9,15 @@
 // that is an amount or a quantity stays a `Money` or a `Quantity` until the
 // component paints it through the gate.
 
-import { type AssetId, Decimal, type Effect, Money, Quantity, type Settings } from "@atlas/domain";
+import {
+  type AssetId,
+  Decimal,
+  type Effect,
+  HUNDRED,
+  Money,
+  Quantity,
+  type Settings,
+} from "@atlas/domain";
 import { formatDate } from "../format/date.js";
 import { SETTING_LABELS, settingLabel, valueLabel } from "../format/labels.js";
 import { displayName, type NameIndex } from "../format/names.js";
@@ -43,7 +51,7 @@ const money = (value: string, currency: string): Part => ({
 const ratio = (value: string): string => (value.includes("/") ? value : formatExact(value));
 
 const percentOf = (share: string): string =>
-  `${formatExact(Decimal.parse(share).mul(Decimal.parse("100")).toString())}${NBSP}%`;
+  `${formatExact(Decimal.parse(share).mul(HUNDRED).toString())}${NBSP}%`;
 
 /** The ECB rate and its date, when the currency is not the euro. */
 const rateOf = (effect: { currency: string; fx_rate: string; fx_rate_date: string }): Part[] =>

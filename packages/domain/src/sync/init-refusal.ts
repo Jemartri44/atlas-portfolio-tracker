@@ -1,7 +1,7 @@
 // What an initialisation refuses before calling the remote (ADR-0026, Part B):
 // an invalid ledger never reaches the cloud.
 
-import type { DomainError } from "../errors.js";
+import { asDomainError } from "../errors.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import type { LedgerEvent } from "../schema/events.js";
 import type { Refusal } from "./permission.js";
@@ -14,9 +14,7 @@ const invalidOf = (events: readonly LedgerEvent[]): { id: string; code: string }
       code: entry.error.code,
     }));
   } catch (error) {
-    return [
-      { id: String((error as DomainError).details.event_id), code: (error as DomainError).code },
-    ];
+    return [{ id: String(asDomainError(error).details.event_id), code: asDomainError(error).code }];
   }
 };
 

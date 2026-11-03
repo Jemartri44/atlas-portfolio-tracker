@@ -6,7 +6,7 @@
 // say every time — that the bucket share is a budget and not an allocation, and
 // that this is a proposal nobody has recorded.
 
-import { type ContributionPlan, Decimal, Money, type Warning } from "@atlas/domain";
+import { type ContributionPlan, HUNDRED, Money, type Warning } from "@atlas/domain";
 import { parseDecimalInput } from "../../format/input.js";
 import { valueLabel } from "../../format/labels.js";
 import { displayName, type NameIndex, NO_NAMES, unitsOf } from "../../format/names.js";
@@ -64,8 +64,6 @@ export interface ContributionView {
    */
   purchasesOnly?: { total: Money; missing: Money };
 }
-
-const HUNDRED = Decimal.parse("100");
 
 /**
  * `part / whole` in percent, as a decimal string, **never rounded here**: the
