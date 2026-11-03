@@ -85,4 +85,15 @@ describe("the total cost", () => {
     await settle(30);
     expect(text(host.querySelector(".total-cost"))).not.toContain("Coste total en el horizonte");
   });
+  it("masks the amounts with the privacy mode on", async () => {
+    setPrivacy(true);
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => host.querySelector("#tc-gross") !== null, "the card");
+    type(host, "tc-gross", "5");
+    await settle(30);
+    const card = text(host.querySelector(".total-cost"));
+    expect(card).toContain("Coste total en el horizonte");
+    expect(card).not.toMatch(/\d,\d{2}\s*€/);
+    setPrivacy(false);
+  });
 });
