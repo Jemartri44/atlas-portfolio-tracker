@@ -1,4 +1,4 @@
-// What the remote accepts (`docs/api.md` §5.2, §5.3 and §5.5; ADR-0026, Part A
+// What the remote accepts (`docs/api.md` §5.2; ADR-0026, Part A
 // and its notes of 2026-09-25). Pure: the simulated remotes and the Lambda both
 // call it, over the same use case the client re-applies with (`reapplyUnits` +
 // `evaluateUnit`). The remote only ever **appends**; the validation is here, in

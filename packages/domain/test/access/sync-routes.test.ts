@@ -16,7 +16,7 @@ import { REMOTE_FAILURE_CODES, RemoteError } from "../../src/ports/remote-ledger
 
 const SHA = "a".repeat(64);
 
-describe("requestedEtag: the If-Match of a write (§5.2 and §5.5)", () => {
+describe("requestedEtag: the If-Match of a write (§5.2)", () => {
   it("is absent without the header, and the quoted SHA-256 otherwise", () => {
     expect(requestedEtag(undefined)).toEqual({ absent: true });
     expect(requestedEtag(`"${SHA}"`)).toEqual({ etag: SHA });
