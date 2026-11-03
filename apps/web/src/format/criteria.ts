@@ -49,7 +49,7 @@ export const CRITERION_NAMES: Record<CriterionId, string> = {
   "5": "Se usa el tipo del Banco Central Europeo del último día publicado",
   "6": "Cada operación es su transmisión menos su adquisición, las dos redondeadas al céntimo",
   "7": "Reparto del coste en una escisión y régimen de neutralidad",
-  "8": "Una bifurcación o un reparto gratuito entran a coste cero",
+  "8": "Una bifurcación o un reparto gratuito son renta de la base general, y su valor es el coste",
   "9": "Pérdida por la liquidación de la sociedad",
   "10": "Las pérdidas compensan hasta el 25 % y se arrastran cuatro años",
   "11": "Qué obliga a presentar la declaración de bienes en el extranjero",

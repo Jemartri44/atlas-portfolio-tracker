@@ -108,7 +108,7 @@ describe("the provisions of ADR-0021 change nothing by default", () => {
     expect(JSON.stringify(bareState.warnings)).toBe(JSON.stringify(fullState.warnings));
   });
 
-  it("records the income of a grant, and that is the only thing it adds", () => {
+  it("records the income of a grant, and adds only that and the cost of its lot", () => {
     const withIncome = new LedgerBuilder();
     catalogue(withIncome);
     withIncome.asset("ast_fork", {
@@ -143,6 +143,6 @@ describe("the provisions of ADR-0021 change nothing by default", () => {
     ) as LedgerEvent[];
     const loud = snapshotOf(projectLedger(events));
     const quiet = snapshotOf(projectLedger(silent));
-    expect(snapshotDiff(quiet, loud)).toEqual(["in_kind_income"]);
+    expect(snapshotDiff(quiet, loud)).toEqual(["in_kind_income", "lots"]);
   });
 });

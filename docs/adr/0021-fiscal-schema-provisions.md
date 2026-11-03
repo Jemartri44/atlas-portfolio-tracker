@@ -40,6 +40,8 @@ Se añaden al esquema las nueve previsiones de abajo. **Ninguna decide una pregu
 
 **Momento.** Las nueve se implementan **antes de que el usuario registre su primera operación real**, es decir, junto a la Fase 5 o antes si la web se termina primero. La novena es la que manda el calendario: pasado ese punto, endurecer `fx_rate_date` deja de ser posible dentro de la v1 y pasa a exigir `schema_version = 2` y migración.
 
+> **Nota del 2026-11-03, previsión 6.** Con la V0648-24, `income_eur` deja de ser solo informativo en un caso: con base `general` y `unit_cost` cero es el coste del lote, y la Declaración lo enseña para que el usuario lo sume (criterio **#8**). Un `carve_out` con `neutrality_regime: false` ya no se registra, así que una escisión no amparada no tiene aún forma de registrarse (`fiscal-questions.md`, #7 y #13).
+
 **Lo que esta decisión NO hace.** No resuelve ninguno de los criterios en disputa de `docs/fiscal-questions.md`, no cambia ninguna cifra que el sistema calcule hoy, y no presupone qué contestará una revisión profesional. Los valores por defecto están elegidos para que **el comportamiento actual no varíe**: si nadie toca nada, el sistema calcula exactamente lo que calculaba.
 
 ## Consecuencias
