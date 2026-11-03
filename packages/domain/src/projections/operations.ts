@@ -41,7 +41,7 @@ export const fxOf = (event: Priced): FxRate =>
 export const money = (amount: string, currency: string): Money => Money.parse(amount, currency);
 
 /** Cost or proceeds basis: `amount` when present, else `quantity × unit_price` (ADR-0012). */
-const basisOf = (event: {
+export const basisOf = (event: {
   id: string;
   type: string;
   amount?: string;

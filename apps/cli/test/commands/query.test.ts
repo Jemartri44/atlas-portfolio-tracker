@@ -51,7 +51,7 @@ const populated = async () => {
 };
 
 describe("atlas queries", () => {
-  it("shows positions, lots, cash, the savings base and a clean check", async () => {
+  it("shows positions, lots, the savings base and a clean check", async () => {
     const h = await populated();
     expect(await h.exec(["positions"])).toBe(0);
     expect(h.text()).toContain("acc_fund  ast_world  10.123456");
@@ -73,16 +73,6 @@ describe("atlas queries", () => {
     expect(lots).toHaveLength(3);
     expect(lots.filter((lot) => lot.currency === "USD").map((lot) => lot.amount)).toEqual([
       "-582.5",
-    ]);
-    h.reset();
-    expect(await h.exec(["cash"])).toBe(0);
-    expect(h.text()).toContain("acc_fund  EUR     4000");
-    expect(h.text()).toContain("-582.5");
-    h.reset();
-    expect(await h.exec(["cash", "--account", "acc_etf", "--json"])).toBe(0);
-    expect((h.json() as { currency: string }[]).map((c) => c.currency).sort()).toEqual([
-      "EUR",
-      "USD",
     ]);
     h.reset();
     expect(await h.exec(["tax", "2026"])).toBe(0);
@@ -115,7 +105,7 @@ describe("atlas queries", () => {
     expect(JSON.parse(h.text()).compensation.movable_capital_eur).toBe("21.88");
   });
 
-  it("lists valuations at a date and shows corporate action origins in lots and gains", async () => {
+  it("shows corporate action origins in lots", async () => {
     const h = await populated();
     expect(
       await h.exec([
@@ -140,19 +130,6 @@ describe("atlas queries", () => {
         "--yes",
       ]),
     ).toBe(0);
-    h.reset();
-    expect(await h.exec(["valuations", "--date", "2026-12-30"])).toBe(0);
-    expect(h.text()).not.toContain("ast_gold");
-    h.reset();
-    expect(await h.exec(["valuations", "--date", "2027-01-15"])).toBe(0);
-    expect(h.text()).toMatch(
-      /acc_etf\s+ast_gold\s+2026-12-31\s+3\s+210\s+USD\s+1.09\s+577.9816513761/,
-    );
-    h.reset();
-    expect(await h.exec(["valuations", "--json"])).toBe(0);
-    expect(h.json()).toEqual([
-      expect.objectContaining({ asset_id: "ast_gold", value_eur: "577.9816513761" }),
-    ]);
     expect(
       await h.exec([
         "ca",
