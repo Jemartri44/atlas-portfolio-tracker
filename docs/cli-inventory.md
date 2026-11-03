@@ -38,7 +38,7 @@ Documento de trabajo para decidir qué órdenes de `apps/cli` se quedan. Decisi�
 | `tax <año>` (texto y `--boxes`; `--json` se queda) | base del ahorro, casillas, criterios | Fiscal, `routes/fiscal/` (`BaseCard`, `BoxesCard`, `CriteriaCards`, `LossesCard`) | sale |
 | `gains <año>` | ganancias realizadas por operación | Fiscal, `routes/fiscal/BaseCard.tsx` (filas de `view-models/fiscal/year.ts`) | sale |
 | `income <año>` | dividendos e intereses del ejercicio | Fiscal, mismas filas (`incomeRow` en `view-models/fiscal/year.ts`) | sale |
-| `m720`, `m721` | bienes en el extranjero a 31/12 | Fiscal, `routes/fiscal/InformativeCard.tsx` | sale |
+| `m720`, `m721` | bienes en el extranjero a 31/12 | Fiscal, `routes/fiscal/InformativeCard.tsx` | **se quedan solo en JSON** (la web calcula el veredicto; el JSON de `tax` no lo lleva) |
 | `valuations` | última valoración por cuenta y activo | Movimientos, valoraciones agrupadas (`view-models/movement-entries.ts`) | sale (ver nota 1) |
 | `cash` | efectivo por cuenta y divisa | Resumen, bloque de efectivo de `NetWorthBlock.tsx`; Cartera, `PlatformsBlock.tsx` | sale (ver nota 2) |
 | `positions` | posición física por cuenta y activo | Cartera y Cubo muestran posiciones valoradas, no la posición física cruda por cuenta | **se queda** (ver nota 2) |
@@ -56,7 +56,7 @@ Nota sobre `valuations` (1): la web enseña las valoraciones como movimientos, n
 
 ## Qué saldría, en el peor y el mejor caso
 
-- Sale (15): `networth`, `weights`, `contribute`, `rebalance`, `transfer simulate`, `costs`, `bucket`, `thesis list`, `tax` (texto y `--boxes`), `gains`, `income`, `m720`, `m721`, `valuations`, `cash`.
+- Sale (15): `networth`, `weights`, `contribute`, `rebalance`, `transfer simulate`, `costs`, `bucket`, `thesis list`, `tax` (texto y `--boxes`), `gains`, `income`, `valuations`, `cash`.
 - Se queda: `tax` (JSON), `lots`, `positions`, `order list`, `transfer pending`, `thesis show`.
 
 ## Orden propuesto de la retirada

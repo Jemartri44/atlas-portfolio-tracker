@@ -109,11 +109,13 @@ Y al registrar una compra o una venta con pérdida, la aplicación avisa si cae 
 
 ## La Renta (Fase 5)
 
-La lectura de la Renta (la base del ahorro, las casillas del Modelo 100, el 720 y el 721) es de la web (`/fiscal`). La consola conserva el informe en JSON, para revisar una cifra sin la web, y el registro de lo presentado.
+La lectura de la Renta (la base del ahorro, las casillas del Modelo 100, el 720 y el 721) es de la web (`/fiscal`). La consola conserva los informes en JSON (`tax`, `m720`, `m721`), para revisar una cifra sin la web, y el registro de lo presentado.
 
 ```bash
 atlas tax 2028            # el informe entero en JSON, con los importes como cadenas y, en cada operación, los lotes que consumió y su linaje
 atlas tax 2025 --boxes    # la misma base ordenada por casillas del Modelo 100, en JSON
+atlas m720 2027           # obligación, saldos a 31/12 y media del 4T de bienes en el extranjero (JSON)
+atlas m721 2027           # lo mismo para las criptomonedas en tenencia directa (JSON)
 atlas filed renta 2027 --receipt 100-2027-… --set base=1950.00   # registra lo presentado
 ```
 

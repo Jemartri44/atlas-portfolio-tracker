@@ -6,7 +6,7 @@
 
 import { todayInMadrid } from "@atlas/domain";
 import { taxBoxes, taxBoxesJson, taxReportJson, taxYear } from "@atlas/domain/fiscal";
-import { assertKnownFlags, booleanFlag, type Flags } from "../args.js";
+import { assertKnownFlags, booleanFlag, type Flags, UsageError } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { rateFindingsOf } from "./rates.js";
 import { jsonText, reportYear, warnIfLedgerMissing } from "./shared.js";
@@ -18,6 +18,11 @@ export const taxCommand = async (
   positionals: string[],
   flags: Flags,
 ): Promise<number> => {
+  if (flags.has("lots")) {
+    throw new UsageError(
+      "--lots ya no existe: los lotes que consumió cada operación y su linaje vienen en el JSON de «atlas tax <año>»",
+    );
+  }
   assertKnownFlags(flags, ["boxes", ...GLOBAL_FLAGS]);
   const year = reportYear(ctx, positionals[1], USAGE, "atlas tax");
   await warnIfLedgerMissing(ctx);
