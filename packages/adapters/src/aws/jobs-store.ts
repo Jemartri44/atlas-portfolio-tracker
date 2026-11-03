@@ -20,16 +20,10 @@ import {
   serializeNotice,
   serializeRunRecord,
 } from "@atlas/domain/jobs";
-import { decodeUtf8Strict } from "../utf8.js";
+import { utf8TextOrUndefined } from "../utf8.js";
 import type { ObjectStore } from "./object-store.js";
 
-const textOf = (bytes: Uint8Array): string | undefined => {
-  try {
-    return decodeUtf8Strict(bytes, true);
-  } catch {
-    return undefined;
-  }
-};
+const textOf = (bytes: Uint8Array): string | undefined => utf8TextOrUndefined(bytes, true);
 
 export type Read<T> =
   | { readonly kind: "absent" }

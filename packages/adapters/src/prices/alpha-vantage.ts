@@ -17,7 +17,7 @@ import type { DailyClose, PriceSource, SourceResult } from "@atlas/domain/quotes
 import { ask, type Fetch, failure } from "./fetch.js";
 import { closeOf, saidCurrency } from "./shape.js";
 
-export const ALPHA_VANTAGE_API = "https://www.alphavantage.co/query";
+const ALPHA_VANTAGE_API = "https://www.alphavantage.co/query";
 
 type Body = Record<string, unknown>;
 

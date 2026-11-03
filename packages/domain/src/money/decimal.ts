@@ -125,3 +125,6 @@ export class Decimal {
     return this.value.toFixed();
   }
 }
+
+/** 100, for percentages. */
+export const HUNDRED = /* @__PURE__ */ Decimal.parse("100");

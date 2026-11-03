@@ -424,7 +424,6 @@
     "model_720_alert_threshold_eur": "45000",
     "model_721_alert_threshold_eur": "45000",
     "monthly_contribution_eur": "600",
-    "notification_email": "atlas@example.invalid",
     "satellite_min_weight_pct": "2",
     "savings_tax_brackets": [
       {
@@ -2782,7 +2781,6 @@
         "model_720_alert_threshold_eur": "45000",
         "model_721_alert_threshold_eur": "45000",
         "monthly_contribution_eur": "600",
-        "notification_email": "atlas@example.invalid",
         "satellite_min_weight_pct": "2",
         "savings_tax_brackets": [
           {
@@ -2853,7 +2851,6 @@
         "model_720_alert_threshold_eur": "45000",
         "model_721_alert_threshold_eur": "45000",
         "monthly_contribution_eur": "600",
-        "notification_email": "atlas@example.invalid",
         "satellite_min_weight_pct": "2",
         "savings_tax_brackets": [
           {
@@ -2924,7 +2921,6 @@
         "model_720_alert_threshold_eur": "45000",
         "model_721_alert_threshold_eur": "45000",
         "monthly_contribution_eur": "600",
-        "notification_email": "atlas@example.invalid",
         "satellite_min_weight_pct": "2",
         "savings_tax_brackets": [
           {

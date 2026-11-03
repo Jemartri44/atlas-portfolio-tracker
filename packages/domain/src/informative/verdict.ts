@@ -12,7 +12,7 @@
 // 50.000,01 does; a rise of 20.000,00 does not and one of 20.000,01 does. The
 // law says "superior a", so the tests sit on both edges on purpose.
 
-import { Decimal } from "../money/decimal.js";
+import { type Decimal, HUNDRED } from "../money/decimal.js";
 import type { Money } from "../money/money.js";
 import type { AccountId, AssetId } from "../schema/events.js";
 import type { InformativeCategory, InformativeItem, VerdictReason } from "./report.js";
@@ -56,8 +56,6 @@ export interface VerdictInput {
 }
 
 const above = (amount: Money, limit: Decimal): boolean => amount.amount.gt(limit);
-
-const HUNDRED = Decimal.parse("100");
 
 /**
  * How much of the threshold the category is. It is the one figure of the
