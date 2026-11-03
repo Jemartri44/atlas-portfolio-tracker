@@ -109,7 +109,7 @@ describe("repurchaseCalendar", () => {
   });
 
   it("reaches as far back as a custom window in days", () => {
-    // A window of 400 days for funds: sold 15/09/2025, open until 20/10/2026 (15 + 31 + 30 + 31 + 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 = 380 to 30/09, then 20).
+    // A window of 400 days for funds: sold 15/09/2025, open until 20/10/2026 (365 days to 15/09/2026, then 35 more).
     const b = taxBuilder({
       ...HAND_SETTINGS,
       wash_sale_window: { ...HAND_SETTINGS.wash_sale_window, fund: "400d" },
@@ -151,6 +151,78 @@ describe("repurchaseCalendar", () => {
       ["fund_h", "2026-10-14"],
       ["fund_f", "2026-11-15"],
       ["fund_g", "2026-11-15"],
+    ]);
+  });
+
+  it("drops a sale whose loss a repurchase already deferred in full", () => {
+    // All 10 units bought back on 20/10/2026: the 200 are deferred, nothing is left at stake.
+    const b = lossOn("2026-09-15");
+    b.buy({ account_id: "acc_a", asset_id: "fund_f", quantity: "10", value_date: "2026-10-20" });
+    expect(repurchaseCalendar(b.build(), "2026-10-25").blocks).toEqual([]);
+  });
+
+  it("counts the loss a sale with a gain released", () => {
+    // Sold at 80 on 02/03/2026 (−200), bought back at 80 on 10/03/2026: the 200
+    // ride on the new lot. Sold at 110 on 01/09/2026: own gain +300 and the 200
+    // released (#21), which a purchase until 01/11/2026 would defer again.
+    const b = lossOn("2026-03-02");
+    b.buy({
+      account_id: "acc_a",
+      asset_id: "fund_f",
+      quantity: "10",
+      unit_price: "80",
+      value_date: "2026-03-10",
+    });
+    b.sell({
+      account_id: "acc_a",
+      asset_id: "fund_f",
+      quantity: "10",
+      unit_price: "110",
+      value_date: "2026-09-01",
+    });
+    expect(view(repurchaseCalendar(b.build(), "2026-10-01"))).toEqual([
+      ["fund_f", "2026-11-01", "200.00", [["2026-09-01", "2026-11-01", "0.00"]]],
+    ]);
+  });
+
+  it("keeps two months for an ETC as movable capital, whatever the window set", () => {
+    // Art. 25.2.b) LIRPF: two months for any financial asset; a window of one year
+    // configured for ETCs does not apply. Sold 15/09/2026 at a loss → 15/11/2026.
+    const b = taxBuilder({
+      ...HAND_SETTINGS,
+      income_category: { ...HAND_SETTINGS.income_category, etc: "movable_capital" },
+      wash_sale_window: { ...HAND_SETTINGS.wash_sale_window, etc: "1y" },
+    });
+    b.buy({ account_id: "acc_a", asset_id: "etc_e", value_date: "2025-01-10" });
+    b.sell({
+      account_id: "acc_a",
+      asset_id: "etc_e",
+      quantity: "10",
+      unit_price: "80",
+      value_date: "2026-09-15",
+    });
+    expect(repurchaseCalendar(b.build(), "2026-10-01").blocks.map((x) => x.until)).toEqual([
+      "2026-11-15",
+    ]);
+  });
+
+  it("reads two years back for a custom window longer than a year", () => {
+    // 400 days for funds: sold 20/12/2024, open until 24/01/2026 (365 days to
+    // 20/12/2025, then 35 more), consulted on 10/01/2026.
+    const b = taxBuilder({
+      ...HAND_SETTINGS,
+      wash_sale_window: { ...HAND_SETTINGS.wash_sale_window, fund: "400d" },
+    });
+    b.buy({ account_id: "acc_a", asset_id: "fund_f", value_date: "2024-01-10" });
+    b.sell({
+      account_id: "acc_a",
+      asset_id: "fund_f",
+      quantity: "10",
+      unit_price: "80",
+      value_date: "2024-12-20",
+    });
+    expect(repurchaseCalendar(b.build(), "2026-01-10").blocks.map((x) => x.until)).toEqual([
+      "2026-01-24",
     ]);
   });
 });

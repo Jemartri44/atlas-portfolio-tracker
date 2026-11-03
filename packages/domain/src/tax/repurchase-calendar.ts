@@ -9,10 +9,15 @@
 // lines, never a second computation: a calendar that disagreed with the tax
 // report would be worse than none.
 //
-// What would block the loss is any acquisition of the same asset (ADR-0009:
-// an ISIN is one asset, whatever account or market), a transfer in when
-// `wash_sale_transfer_counts` says so (#2b), and nothing more: a different fund
-// that tracks the same index is not homogeneous (DGT V2234-25).
+// What would block the loss is a purchase of the same asset (ADR-0009: an ISIN
+// is one asset, whatever account or market) or a transfer in when
+// `wash_sale_transfer_counts` says so (#2b); bonus shares (`scale`) and a grant
+// at zero cost do not, and a different fund that tracks the same index is not
+// homogeneous (DGT V2234-25). The exception of the single purchase (#18) looks
+// only at the window **before** the sale, so it never frees a purchase made
+// now. A sale whose loss a repurchase already deferred in full is not listed:
+// buying more defers nothing more. Exchange differences of currency (#4) have
+// a window of their own and no asset, and are not here.
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { yearOf } from "../dates/civil-date.js";
@@ -80,14 +85,18 @@ export const repurchaseCalendar = (
   const byAsset = new Map<AssetId, BlockingSale[]>();
   for (const report of reports) {
     for (const line of [...report.capital_gains.lines, ...report.movable_capital.transmissions]) {
-      if (line.provisional_until === undefined) {
+      // What the rule looks at —the own loss, never a gain, plus what the sale
+      // released (#21)— minus what a repurchase already deferred.
+      const ownLoss = line.own_eur.isNegative() ? line.own_eur : zero;
+      const atStake = positive(ownLoss.add(line.released_eur).sub(line.deferred_eur));
+      if (line.provisional_until === undefined || atStake.isZero()) {
         continue;
       }
       const sale: BlockingSale = {
         event_id: line.event_id,
         fiscal_date: line.fiscal_date,
         until: line.provisional_until,
-        at_stake_eur: positive(line.computable_eur),
+        at_stake_eur: atStake,
         deferred_eur: positive(line.deferred_eur),
       };
       byAsset.set(line.asset_id, [...(byAsset.get(line.asset_id) ?? []), sale]);
