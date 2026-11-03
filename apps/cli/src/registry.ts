@@ -17,6 +17,7 @@ import { lockCommand } from "./commands/lock.js";
 import { pricesCommand } from "./commands/prices.js";
 import { checkCommand, lotsCommand, positionsCommand } from "./commands/query.js";
 import { deleteCommand, editCommand } from "./commands/rectify.js";
+import { rehearseCommand } from "./commands/rehearse.js";
 import { synthCommand } from "./commands/synth.js";
 import { taxCommand } from "./commands/tax.js";
 import { thesisCommand } from "./commands/thesis.js";
@@ -56,6 +57,7 @@ export const COMMANDS: Readonly<Record<string, CommandSpec>> = {
   synth: { run: synthCommand, arity: 1 },
   compact: { run: compactCommand, arity: 1 },
   backup: { run: backupCommand, arity: 1 },
+  rehearse: { run: rehearseCommand, arity: 1 },
   lock: { run: lockCommand, arity: { show: 2, break: 2 } },
   fx: { run: fxCommand, arity: { update: 2, status: 2, correct: 2 } },
   draft: { run: draftCommand, arity: { list: 2, confirm: 3, discard: 3 } },

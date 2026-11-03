@@ -21,6 +21,7 @@ import type { IncomeCategory } from "../../settings/settings.js";
 import { type ChainCore, categoryOf } from "../chain.js";
 import { type CriterionId, sortCriteria } from "../criteria.js";
 import { deferredByOrigin, releasedBetween } from "../deferred-origins.js";
+import { foreignNetOf } from "../foreign-net.js";
 import type {
   CurrencyLine,
   IncomeLine,
@@ -531,6 +532,7 @@ const deductions = (
   // both interfaces printed "undefined undefined" beside the deduction of a
   // foreign dividend.
   const deduction = new Map(report.double_taxation.lines.map((line) => [line.event_id, line]));
+  const netOf = foreignNetOf(report);
   for (const income of report.movable_capital.dividends.filter(
     (line): line is IncomeLine & { asset_id: AssetId } => line.asset_id !== undefined,
   )) {
@@ -545,7 +547,7 @@ const deductions = (
       fiscal_date: income.fiscal_date,
     };
     drafts.push(
-      { concept: "ddi.income", row, exact: line.gross_eur, criteria: line.criteria },
+      { concept: "ddi.income", row, exact: netOf(line.gross_eur), criteria: line.criteria },
       // What Renta WEB asks for is the tax **deductible** under the treaty (DGT
       // V0080-20): copying the whole withholding would deduct the excess, which
       // is reclaimed at source. Without a treaty rate there is no such figure,

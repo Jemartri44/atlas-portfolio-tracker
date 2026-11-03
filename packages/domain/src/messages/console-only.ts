@@ -27,6 +27,9 @@ export const CONSOLE_ONLY: Record<string, Entry> = {
   prompt_interrupted: () => "Interrumpido: no se ha escrito nada de lo que quedaba por preguntar.",
   // --- Backups, exports and paths ------------------------------------------
   ledger_missing: (d, v) => `No hay libro en ${v.text(d.path)}: nada que copiar.`,
+  dump_unreadable: () =>
+    "El volcado no se puede leer como un libro de Atlas (no es UTF-8 o alguna línea no es válida). No se enseña su contenido.",
+  dump_empty: () => "El volcado no tiene ningún evento: una copia vacía no prueba nada.",
   backup_mismatch: (d, v) =>
     `La copia ${v.text(d.path)} no coincide con el libro (etag o número de líneas): bórrala y repite.`,
   path_exists: (d, v) => `La ruta ${v.text(d.path)} ya existe: no se sobrescribe nada.`,
