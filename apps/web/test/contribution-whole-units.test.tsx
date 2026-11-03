@@ -263,3 +263,36 @@ describe("the card, further", () => {
     expect(host.querySelector("[data-testid=whole-leftover]")).toBeNull();
   });
 });
+
+describe("the repurchase warning of the plan", () => {
+  it("says beside the purchase what loss it would defer, masked with privacy, without removing it", async () => {
+    const view = contributionView(goldenPlan());
+    const target = view.rows.find((row) => !row.idle)?.assetId as string;
+    const warning = {
+      asset_id: target,
+      sale_event_id: "01J0000000000000000000000",
+      sale_date: "2028-12-01",
+      until: "2029-02-01",
+      at_stake_eur: eur("400"),
+    };
+    const screen = () => (
+      <ContributionCard
+        view={view}
+        error={undefined}
+        repurchase={(id) => (id === target ? [warning] : [])}
+      />
+    );
+    setPrivacy(true);
+    const masked = await show("/", screen);
+    const notes = masked.querySelectorAll("[data-testid=plan-repurchase]");
+    expect(notes).toHaveLength(1);
+    expect(text(notes[0])).toContain("Esta compra aplazaría hasta");
+    expect(text(notes[0])).toContain("01/12/2028");
+    expect(notes[0]?.querySelector(".mask")).not.toBeNull();
+    // The purchase is still in the plan.
+    expect(masked.querySelectorAll("[aria-label='Reparto de la aportación'] > li").length).toBe(
+      view.rows.filter((row) => !row.idle).length,
+    );
+    setPrivacy(false);
+  });
+});

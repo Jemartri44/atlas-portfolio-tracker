@@ -11,6 +11,7 @@
 // three figures, what goes to each asset, and the note. The whole calculation
 // — value today, shortfall, weight after — is one tap away.
 
+import type { PlanRepurchaseWarning } from "@atlas/domain/fiscal";
 import { A } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
 import {
@@ -26,7 +27,7 @@ import {
   Section,
   Tag,
 } from "../../components/index.js";
-import { formatMonth } from "../../format/date.js";
+import { formatDate, formatMonth } from "../../format/date.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { type NameIndex, NO_NAMES } from "../../format/names.js";
 import type { AppError } from "../../ledger/state.js";
@@ -48,7 +49,10 @@ const Refusal = (props: { error: AppError }): JSX.Element => (
   </Show>
 );
 
-const Split = (props: { view: ContributionView }): JSX.Element => {
+/** Warnings of the plan by asset: a purchase that would defer a loss (criterion #2). */
+type Repurchase = (assetId: string) => PlanRepurchaseWarning[];
+
+const Split = (props: { view: ContributionView; repurchase?: Repurchase }): JSX.Element => {
   const wide = mediaQuery(GRID);
   const active = (): ContributionRowView[] => props.view.rows.filter((row) => !row.idle);
   return (
@@ -141,6 +145,18 @@ const Split = (props: { view: ContributionView }): JSX.Element => {
                   </svg>
                 )}
               </Show>
+              <For each={props.repurchase?.(row.assetId) ?? []}>
+                {(warning) => (
+                  <Notice severity="caution">
+                    <span data-testid="plan-repurchase">
+                      Esta compra aplazaría hasta <Amount value={warning.at_stake_eur} /> de pérdida
+                      de la venta del {formatDate(warning.sale_date)}: su ventana de recompra sigue
+                      abierta hasta el {formatDate(warning.until)}. La pérdida no se pierde, cuenta
+                      cuando vendas lo recomprado.
+                    </span>
+                  </Notice>
+                )}
+              </For>
             </li>
           )}
         </For>
@@ -188,6 +204,8 @@ export const ContributionCard = (props: {
   onAmountText?: (text: string) => void;
   /** Why the typed text was not used, if it was not. */
   amountError?: string | undefined;
+  /** What a purchase of the plan would defer; loaded apart, so absent at first. */
+  repurchase?: Repurchase;
 }): JSX.Element => (
   <Section
     title={
@@ -233,7 +251,7 @@ export const ContributionCard = (props: {
               </Notice>
             )}
           </Show>
-          <Split view={view()} />
+          <Split view={view()} {...(props.repurchase ? { repurchase: props.repurchase } : {})} />
         </>
       )}
     </Show>

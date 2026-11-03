@@ -39,6 +39,7 @@ import { ContributionCard } from "./ContributionCard.jsx";
 import { CostsCard } from "./CostsCard.jsx";
 import { ExposureBlock } from "./ExposureBlock.jsx";
 import { ProjectionCard } from "./ProjectionCard.jsx";
+import { usePlanRepurchase } from "./plan-repurchase.js";
 import { RebalanceCard } from "./RebalanceCard.jsx";
 import { ReturnsCard } from "./ReturnsCard.jsx";
 import { TotalCostCard } from "./TotalCostCard.jsx";
@@ -121,6 +122,12 @@ export default function CarteraRoute(): JSX.Element {
           const outcome = contribution();
           return outcome.ok ? undefined : outcome.error;
         };
+        // A purchase of the plan that would defer a loss: said beside it, never removed.
+        const repurchase = usePlanRepurchase(() => ({
+          events: snapshot.events,
+          view: plan(),
+          date: date(),
+        }));
 
         return (
           <>
@@ -152,6 +159,7 @@ export default function CarteraRoute(): JSX.Element {
                 view={plan()}
                 error={planError()}
                 names={names}
+                repurchase={repurchase}
                 amountText={amountText()}
                 onAmountText={setAmountText}
                 amountError={(() => {
