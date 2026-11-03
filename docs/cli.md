@@ -136,7 +136,7 @@ Y un aviso que llega antes: `atlas settings set` compara la base del ahorro de l
 
 Cuatro grupos de comandos que el ciclo normal no necesita a diario. La lista completa y vigente es `atlas --help` (`apps/cli/src/usage.ts`); aquí, una línea por comando.
 
-- `atlas fx update|status`: descarga el histórico oficial del BCE junto al libro y dice cuál está en vigor. `atlas fx correct [--reason …]` corrige los tipos que no son los de su fecha fiscal, tras cambiar `fiscal_date_rule`.
+- `atlas fx update|status`: descarga el histórico oficial del BCE junto al libro **local** y dice cuál está en vigor. Con el libro de la nube el camino normal es la web (Ajustes, BCE). `atlas fx correct [--reason …]` corrige los tipos que no son los de su fecha fiscal, tras cambiar `fiscal_date_rule`.
 - Una operación cuyo tipo del BCE aún no se ha publicado no se registra en la consola (`ecb_rate_pending`): se repite cuando se publique, hacia las 16:00 CET, o se teclea el tipo con `--fx-rate` y `--fx-rate-date`. Los borradores solo existen en la web ([ADR-0029](adr/0029-ecb-reference-rates.md), nota del 2026-11-03).
 - `atlas rehearse --dump <fichero>`: ensayo de restauración en local. Decodifica el volcado (una copia de `atlas backup` o descargada), lo proyecta y lo compara con el libro cortado en los mismos eventos, con la misma función que la prueba trimestral (`restoreRehearsal`, ADR-0032). Solo lee y nunca toca la nube: compara con un libro local (`--ledger`), el de la carpeta o una copia bajada con `atlas backup`; sobre un libro sintético es un simulacro. Un volcado vacío o ilegible se rechaza. Sale con 1 y dice por código y recuento qué difiere.
 - `atlas lock show|break`: quién tiene el cerrojo de la carpeta del libro, y romperlo a petición.
@@ -156,7 +156,7 @@ atlas backup --to ~/personal/atlas/privado/backups --from-bucket --env prod   # 
 
 Cada copia se escribe fechada, nunca encima de otra, `0400`, y se relee para verificarla (el libro, por SHA-256). Sin `--from-bucket`, copia el libro local de `--ledger` y su `documents/`.
 
-`.gitignore` ignora `ledger*.jsonl`, `demo*.jsonl` y `backups/` en todo el árbol como red de seguridad, pero la regla es no escribir datos reales dentro del repositorio.
+`.gitignore` ignora `ledger*.jsonl`, `demo*.jsonl` y `backups/` en todo el árbol como red de seguridad, pero la regla es no escribir datos reales dentro del repositorio. Si el destino de `backup --to` o de `export --out` cae dentro de un árbol git, la consola pregunta aunque lleves `--yes` (es una pregunta de privacidad, no de confirmación); sin terminal, solo `--allow-in-repository` lo permite. `backup` sale con 1 si no ha podido copiar todo `documents/` (enlaces simbólicos u otros que no son ficheros) y lo dice; una carpeta `documents/` ilegible es un error, no «nada que copiar». Con `--from-bucket` no copia el `documents/` local.
 
 ## Eventos corporativos y tesis
 
