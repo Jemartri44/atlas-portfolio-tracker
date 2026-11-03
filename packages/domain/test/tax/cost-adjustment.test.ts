@@ -196,12 +196,16 @@ describe("a return of share premium or contributions (H2)", () => {
     ["with no market written", undefined, "market_missing"],
     ["with a market Atlas does not know", "XXXX", "market_unknown"],
     ["with a blank market", " ", "market_missing"],
-  ])("is refused on a share %s (art. 25.1.e)", (_name, market, reason) => {
+    // Bought on Xetra, but admitted in the US: the venue does not decide.
+    ["of the US bought on Xetra", "XETR", "admission_unknown", "US0378331005"],
+    ["on Xetra with no ISIN", "XETR", "admission_unknown"],
+  ])("is refused on a share %s (art. 25.1.e)", (_name, market, reason, isin?: string) => {
     const b = taxBuilder(HAND_SETTINGS);
     b.asset("stock_u", {
       asset_type: "stock",
       transferable: false,
       ...(market === undefined ? {} : { market }),
+      ...(isin === undefined ? {} : { isin }),
     });
     buy(b, "stock_u", "2027-01-11", "10", "10");
     b.corporateAction({
@@ -215,6 +219,26 @@ describe("a return of share premium or contributions (H2)", () => {
       ["capital_return_needs_eu_listed", reason],
     ]);
     expect(state.lots.get("stock_u")?.open.map((lot) => text(lot.cost_eur))).toEqual(["100"]);
+  });
+
+  it("is accepted on a German share bought on Xetra", () => {
+    const b = taxBuilder(HAND_SETTINGS);
+    b.asset("stock_de", {
+      asset_type: "stock",
+      transferable: false,
+      market: "XETR",
+      isin: "DE0007236101",
+    });
+    buy(b, "stock_de", "2027-01-11", "10", "10");
+    b.corporateAction({
+      kind: "capital_return",
+      asset_id: "stock_de",
+      effective_date: "2027-06-01",
+      effects: [cash("30")],
+    });
+    const state = projectLedger(b.build(), { collectErrors: true });
+    expect(state.invalid).toEqual([]);
+    expect(state.lots.get("stock_de")?.open.map((lot) => text(lot.cost_eur))).toEqual(["70"]);
   });
 
   // The FIFO is global, so the cash of acc_a lowers the lots bought from acc_b

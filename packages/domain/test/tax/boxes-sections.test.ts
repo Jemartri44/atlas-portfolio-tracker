@@ -141,12 +141,13 @@ describe("subscription rights (H5)", () => {
 });
 
 describe("a share outside the EU regulated markets (H4)", () => {
-  const sale = (market: string | undefined) => {
+  const sale = (market: string | undefined, isin?: string) => {
     const b = taxBuilder(HAND_SETTINGS);
     b.asset("stock_us", {
       asset_type: "stock",
       transferable: false,
       ...(market === undefined ? {} : { market }),
+      ...(isin === undefined ? {} : { isin }),
     });
     buy(b, "stock_us", "2025-01-10", "10", "100");
     sell(b, "stock_us", "2025-09-01", "10", "80");
@@ -173,10 +174,8 @@ describe("a share outside the EU regulated markets (H4)", () => {
       expect(codes(boxes)).not.toContain("tax_box_section_doubtful");
     }
     expect(transmissionSection("stock", "capital_gain")).toBe("listed_shares");
-    expect(transmissionSection("stock", "capital_gain", { market: "Nasdaq GS" })).toBe(
-      "other_shares",
-    );
-    expect(transmissionSection("etf", "capital_gain", { market: "XNYS" })).toBe("etf");
+    expect(transmissionSection("stock", "capital_gain", { eu: false })).toBe("other_shares");
+    expect(transmissionSection("etf", "capital_gain", { eu: false })).toBe("etf");
   });
 
   // Without a market Atlas knows, a share stays among "acciones negociadas",
@@ -185,8 +184,15 @@ describe("a share outside the EU regulated markets (H4)", () => {
     ["with no market", undefined, true],
     ["with an unknown market", "somewhere", true],
     ["on an EU market", "XMAD", false],
-  ])("notes a share %s", (_name, market, noted) => {
-    const found = sale(market).notes.filter((entry) => entry.code === "tax_box_market_unknown");
+    // Xetra also trades shares not admitted on its regulated market: a US
+    // share bought there is not "admitida" in the EU (help of 2025, key 2).
+    ["of the US bought on Xetra", "XETR", true, "US0378331005"],
+    ["on Xetra with no ISIN", "XETR", true],
+    ["of Germany on Xetra", "XETR", false, "DE0007236101"],
+  ])("notes a share %s", (_name, market, noted, isin?: string) => {
+    const found = sale(market, isin).notes.filter(
+      (entry) => entry.code === "tax_box_market_unknown",
+    );
     expect(found.map((entry) => entry.details)).toEqual(noted ? [{ assets: ["stock_us"] }] : []);
   });
 });
