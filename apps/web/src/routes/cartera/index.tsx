@@ -108,6 +108,7 @@ export default function CarteraRoute(): JSX.Element {
           returnsView(
             coreXirr(snapshot.events, date(), spanishCpiPct()),
             classReturns(snapshot.events, date()),
+            names,
           ),
         );
 

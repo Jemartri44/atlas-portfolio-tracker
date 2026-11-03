@@ -52,8 +52,9 @@ describe("the return of the core", () => {
     expect(shown).toContain("Rentabilidad anual, ponderada por dinero");
     expect(shown).toContain("Rentabilidad anual real, descontando el IPC");
     expect(shown).toContain("Por tipo de activo");
-    // A class without a figure says why, in a sentence, and not squeezed in a cell.
-    expect(shown).toContain("Oro: sin cifra por una operación corporativa.");
+    // The transfers and the corporate actions of the golden ledger are read: every class has a figure.
+    expect(shown).not.toContain("todavía no se calcula");
+    expect(shown).toContain("recuperado");
     // The golden ledger has no inflation for its years: the real rate says so instead of a figure.
     expect(shown).toContain("Real: falta el IPC de");
   });
