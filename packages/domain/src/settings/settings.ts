@@ -3,6 +3,7 @@
 // to be verified with the tax advisor); every other parameter is optional until
 // the user sets it.
 
+import { ValidationError } from "../errors.js";
 import { ASSET_TYPES, type AssetType } from "../schema/events.js";
 import {
   DEFAULT_FISCAL_DATE_RULE,
@@ -23,6 +24,9 @@ import {
 } from "./defaults.js";
 
 export * from "./defaults.js";
+
+import { validJobFrequencies } from "./job-frequencies.js";
+
 export { validateSettings } from "./validation.js";
 
 /**
@@ -112,6 +116,14 @@ export const normalizeSettings = (settings: Settings): Settings => {
  * the compiler cannot see that the spread has covered them.
  */
 export const mergeSettings = (current: Settings, patch: Partial<Settings>): Settings => {
+  // Written strictly, read tolerantly (ADR-0018): a form may not store a frequency the jobs ignore.
+  if (patch.job_frequencies !== undefined && !validJobFrequencies(patch.job_frequencies)) {
+    throw new ValidationError(
+      "invalid_settings",
+      "job_frequencies must map known jobs to a frequency they admit",
+      { field: "job_frequencies" },
+    );
+  }
   const {
     wash_sale_window_days: _legacy,
     notification_email: _retired,

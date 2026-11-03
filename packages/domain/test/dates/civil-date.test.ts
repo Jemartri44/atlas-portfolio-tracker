@@ -62,6 +62,9 @@ describe("civil dates", () => {
   it("adds days across months, years and leap days", () => {
     expect(addDays("2026-08-30", 2)).toBe("2026-09-01");
     expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
+    // Years below 100 are years, not 19xx.
+    expect(addDays("0026-03-01", 1)).toBe("0026-03-02");
+    expect(daysBetween("0026-03-01", "0026-03-02")).toBe(1);
     expect(addDays("2024-02-28", 1)).toBe("2024-02-29");
     expect(addDays("2023-02-28", 1)).toBe("2023-03-01");
     expect(addDays("2027-01-02", -3)).toBe("2026-12-30");

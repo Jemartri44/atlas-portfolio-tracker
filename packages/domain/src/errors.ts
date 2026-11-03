@@ -13,6 +13,18 @@ export class DomainError extends Error {
   }
 }
 
+/**
+ * The error a `catch` of a domain operation may report as a code. Anything else
+ * is a bug (a `TypeError`) and keeps propagating instead of being shown as a
+ * domain failure.
+ */
+export const asDomainError = (error: unknown): DomainError => {
+  if (error instanceof DomainError) {
+    return error;
+  }
+  throw error;
+};
+
 /** A value or an event does not have the required shape. */
 export class ValidationError extends DomainError {}
 

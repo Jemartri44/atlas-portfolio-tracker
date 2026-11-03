@@ -85,7 +85,6 @@ const INVOCATIONS: {
   { command: "thesis", argv: ["thesis", "list"], readOnly: true },
   { command: "order", argv: ["order", "list"], readOnly: true },
   { command: "transfer", argv: ["transfer", "pending"], readOnly: true },
-  { command: "transfers", argv: ["transfers", "pending"], readOnly: true },
   { command: "export", argv: ["export", "--format", "csv"], readOnly: true },
   // `check` is the tool that lists the invalid events: it reports them, it does not warn about itself.
   { command: "check", argv: ["check"], readOnly: true },
@@ -163,8 +162,6 @@ const INVOCATIONS: {
   // The sessions of the console live in credentials.json, outside the folder; the ledger is never
   // read nor written by them.
   { command: "remote", argv: ["remote", "status"], readOnly: true, folderOnly: true },
-  // Retired (ADR-0035): it only says so, and touches no ledger.
-  { command: "sync", argv: ["sync"], readOnly: true, folderOnly: true },
   // The administration works on the remote with the role of administration, never on the figures of
   // the local ledger.
   {

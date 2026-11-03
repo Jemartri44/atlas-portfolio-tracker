@@ -1,7 +1,7 @@
 // The signed payloads and what the SPA learns of its session.
 
 import { describe, expect, it } from "vitest";
-import { instantOf, isId22, isId43, isInstant } from "../../src/access/ids.js";
+import { instantOf, isId22, isId43 } from "../../src/access/ids.js";
 import { presentedDeviceId, sessionView } from "../../src/access/session.js";
 import {
   isSubject,
@@ -12,6 +12,7 @@ import {
   sessionPayload,
   splitSigned,
 } from "../../src/access/signed.js";
+import { isInstant } from "../../src/guards.js";
 
 const ID22 = "AAAAAAAAAAAAAAAAAAAAAA";
 const ID22B = "BBBBBBBBBBBBBBBBBBBBBB";
