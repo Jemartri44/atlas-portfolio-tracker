@@ -14,7 +14,7 @@ import type { Ulid } from "../ids/ulid.js";
 import type { Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
 import type { CurrencyGainKind } from "../projections/currency-lots.js";
-import type { Warning } from "../projections/state.js";
+import type { IncomeKind, Warning } from "../projections/state.js";
 import type { AccountId, AssetId, AssetType, Book, IncomeBase } from "../schema/events.js";
 import type { IncomeCategory } from "../settings/settings.js";
 import type { Certainty, CriterionId, RiskDirection } from "./criteria.js";
@@ -127,7 +127,7 @@ export interface TransmissionLine {
 
 export interface IncomeLine {
   event_id: Ulid;
-  kind: "dividend" | "interest";
+  kind: IncomeKind;
   account_id: AccountId;
   asset_id?: AssetId;
   fiscal_date: CivilDate;

@@ -49,7 +49,7 @@ describe("every new workflow", () => {
 
 describe("checkouts and concurrency", () => {
   it("never persist the token in the checkout, and a deployment of an environment never overlaps itself", () => {
-    for (const name of WORKFLOWS) {
+    for (const name of [...WORKFLOWS, "ci.yml"]) {
       const text = flow(name);
       const checkouts =
         text.match(
@@ -146,6 +146,17 @@ describe("the deployments (mutants 33, 34, 41, 54)", () => {
       expect(sync).toContain("--exclude '*.map'");
     }
     expect(code("infra/scripts/ci/package.sh")).toContain("--exclude='.vite' --exclude='*.map'");
+  });
+  it("reads from the environment prod every secret it needs, and builds with no install script", () => {
+    const names = [...flow("deploy-prod.yml").matchAll(/secrets\.([A-Z0-9_]+)/g)].map((m) => m[1]);
+    expect(names.length).toBeGreaterThan(0);
+    expect(flow("deploy-prod.yml")).toContain("environment: prod");
+    for (const name of names) {
+      expect(name, "a secret of the repository must not be read by the prod flow").toMatch(
+        /^ATLAS_PROD_/,
+      );
+    }
+    expect(flow("deploy-dev.yml")).toContain("npm ci --ignore-scripts");
   });
   it("builds without the OIDC token: id-token only in the job that holds the role, and no npm there", () => {
     const [build, deploy] = flow("deploy-dev.yml").split(/^ {2}deploy:\n/m);

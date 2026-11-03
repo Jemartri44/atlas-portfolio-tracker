@@ -5,6 +5,7 @@ import type { RealizedGain } from "../../src/projections/state.js";
 import type { LedgerEvent } from "../../src/schema/events.js";
 import { DEFAULT_SETTINGS, type Settings } from "../../src/settings/settings.js";
 import { boxesOf } from "../../src/tax/boxes/boxes.js";
+import { SECTIONS } from "../../src/tax/boxes/concepts.js";
 import type { BoxEntry } from "../../src/tax/boxes/report.js";
 import { categoryOf } from "../../src/tax/chain.js";
 import type { TaxYearReport, TransmissionLine } from "../../src/tax/report.js";
@@ -184,7 +185,7 @@ export const rowsAddUpToTheEngine = (
   const rows = sumOf(
     (entry) =>
       entry.row !== undefined &&
-      /^gp\.(iic|etf|listed_shares|crypto|other)\.(gain|loss_imputable)$/.test(entry.concept),
+      new RegExp(`^gp\\.(${SECTIONS.join("|")})\\.(gain|loss_imputable)$`).test(entry.concept),
   ).add(sumOf((entry) => entry.concept === "gp.prior_years.loss"));
   // What the engine puts into the balance of capital gains: what each disposal
   // of the category computes, every release of a loss of this category that

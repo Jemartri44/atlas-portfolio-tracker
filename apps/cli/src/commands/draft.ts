@@ -12,7 +12,7 @@
 // with the reminder while one is pending (`pendingDraftsNote`).
 
 import { dirname } from "node:path";
-import { FileDraftStore, readLocalConfig } from "@atlas/adapters";
+import { FileDraftStore } from "@atlas/adapters";
 import { type CivilDate, loadAndProject, type Ulid } from "@atlas/domain";
 import {
   type DraftStatus,
@@ -26,9 +26,9 @@ import {
 } from "@atlas/domain/ecb";
 import { assertKnownFlags, type Flags, UsageError } from "../args.js";
 import { CommandFailure, type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
+import { ecbOf } from "../ecb-history.js";
 import { cloudStoreOf } from "../folder-mode.js";
 import { day } from "../output/ecb.js";
-import { historyOf } from "./rates.js";
 import { answer, aside, cancelled, confirm, confirmAndRecord, preview, render } from "./shared.js";
 
 /** The drafts of the cloud for a cloud folder (ADR-0035), the folder's own `drafts/` otherwise. */
@@ -36,6 +36,10 @@ const storeOf = async (ctx: Context): Promise<PendingDraftStore> => {
   const cloud = cloudStoreOf(ctx);
   return cloud === undefined ? new FileDraftStore(dirname(ctx.ledgerPath)) : cloud.drafts();
 };
+
+/** Where the drafts are, for the messages: the folder's `drafts/` or those of the cloud. */
+const placeOf = (ctx: Context): string =>
+  cloudStoreOf(ctx) === undefined ? "drafts/" : "los borradores de la nube";
 
 /** One line that tells a draft apart: what, where and when. */
 const summaryOf = (draft: PendingDraft): string => {
@@ -89,7 +93,7 @@ export const saveAsDraft = async (
   await (await storeOf(ctx)).save(prepared.draft);
   aside(
     ctx,
-    `Guardado el borrador ${prepared.draft.id} en drafts/. No cuenta en ninguna cifra y no se registra solo: cuando el BCE publique el tipo, \`atlas fx update\` y \`atlas draft confirm ${prepared.draft.id}\`.`,
+    `Guardado el borrador ${prepared.draft.id} en ${placeOf(ctx)}. No cuenta en ninguna cifra y no se registra solo: cuando el BCE publique el tipo, \`atlas fx update\` y \`atlas draft confirm ${prepared.draft.id}\`.`,
   );
   answer(ctx, { status: "draft_saved", draft_id: prepared.draft.id, draft: prepared.draft.event });
   return EXIT.ok;
@@ -102,7 +106,7 @@ const find = async (ctx: Context, id: string | undefined): Promise<PendingDraft>
   const found = (await (await storeOf(ctx)).list()).drafts.find((draft) => draft.id === id);
   if (found === undefined) {
     throw new CommandFailure(EXIT.domain, "draft_not_found", [
-      `Error: no hay ningún borrador ${id} en drafts/. Consulta \`atlas draft list\`.`,
+      `Error: no hay ningún borrador ${id} en ${placeOf(ctx)}. Consulta \`atlas draft list\`.`,
     ]);
   }
   return found;
@@ -150,13 +154,6 @@ const listDrafts = async (ctx: Context): Promise<number> => {
   return EXIT.ok;
 };
 
-const ecbOf = async (
-  ctx: Context,
-): Promise<{ history?: EcbHistory; problem?: string; staleDays: number }> => {
-  const { ecb_stale_currency_days } = await readLocalConfig(dirname(ctx.ledgerPath));
-  return { ...(await historyOf(ctx)), staleDays: ecb_stale_currency_days };
-};
-
 const confirmDraft = async (ctx: Context, id: string | undefined): Promise<number> => {
   const draft = await find(ctx, id);
   const { history, staleDays } = await ecbOf(ctx);
@@ -171,7 +168,7 @@ const confirmDraft = async (ctx: Context, id: string | undefined): Promise<numbe
     });
     aside(
       ctx,
-      `El borrador ${draft.id} ya estaba registrado (${recorded.join(", ")}): se quita de drafts/ sin registrarlo otra vez.`,
+      `El borrador ${draft.id} ya estaba registrado (${recorded.join(", ")}): se quita de ${placeOf(ctx)} sin registrarlo otra vez.`,
     );
     answer(ctx, { status: "already_recorded", draft_id: draft.id, event_ids: recorded });
     return EXIT.ok;
@@ -209,8 +206,8 @@ const confirmDraft = async (ctx: Context, id: string | undefined): Promise<numbe
     aside(
       ctx,
       removed
-        ? `Borrador ${draft.id} registrado y quitado de drafts/.`
-        : `Borrador ${draft.id} registrado, pero no se ha podido quitar de drafts/: \`atlas draft confirm ${draft.id}\` lo quitará sin registrarlo otra vez.`,
+        ? `Borrador ${draft.id} registrado y quitado de ${placeOf(ctx)}.`
+        : `Borrador ${draft.id} registrado, pero no se ha podido quitar de ${placeOf(ctx)}: \`atlas draft confirm ${draft.id}\` lo quitará sin registrarlo otra vez.`,
     );
   }
   return EXIT.ok;

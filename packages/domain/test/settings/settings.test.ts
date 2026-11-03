@@ -352,6 +352,16 @@ describe("wash_sale_window (ADR-0014)", () => {
 });
 
 describe("mergeSettings", () => {
+  it("rejects job frequencies the jobs would ignore, and keeps valid ones", () => {
+    for (const bad of [{ reminder: "off" }, { nope: "daily" }, { prices: "monthly" }]) {
+      expect(() => mergeSettings(DEFAULT_SETTINGS, { job_frequencies: bad })).toThrow(
+        ValidationError,
+      );
+    }
+    const merged = mergeSettings(DEFAULT_SETTINGS, { job_frequencies: { prices: "weekly" } });
+    expect(merged.job_frequencies).toEqual({ prices: "weekly" });
+  });
+
   it("merges per-type maps instead of replacing them", () => {
     const merged = mergeSettings(DEFAULT_SETTINGS, {
       fiscal_date_rule: { ...DEFAULT_SETTINGS.fiscal_date_rule, etc: "value_date" },

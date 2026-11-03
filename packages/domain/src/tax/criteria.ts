@@ -139,7 +139,12 @@ export const FISCAL_CRITERIA = {
   "10": { doc: "10", certainty: "high", risk: "conservative" },
   "11": { doc: "11", certainty: "medium", risk: "conservative" },
   "12": { doc: "12", certainty: "high", risk: "conservative" },
-  "13": { doc: "13", certainty: "disputed", risk: "conservative" },
+  // The cash of an exchange recorded as a `forced_sale`: the fractions the
+  // depositary sells, a transmission. Right only when that is what happened.
+  "13": { doc: "13", certainty: "medium", risk: "both" },
+  // The cash of an exchange under the neutrality regime lowers the value of
+  // what is received (arts. 80.3 and 81.2 LIS, literal).
+  "13:cost_adjustment": { doc: "13", certainty: "high", risk: "both" },
   "14": { doc: "14", certainty: "high", risk: "conservative" },
   "15": { doc: "15", certainty: "disputed", risk: "conservative" },
   "16": { doc: "16", certainty: "high", risk: "conservative" },
@@ -159,6 +164,9 @@ export const FISCAL_CRITERIA = {
   "24:etp": { doc: "24", certainty: "medium", risk: "both" },
   "24:etp_gain": { doc: "24", certainty: "low", risk: "both" },
   "25": { doc: "25", certainty: "medium", risk: "both" },
+  // Share premium and returns of contributions of a listed security lower the
+  // cost of each lot down to zero; the excess is movable capital income.
+  "26": { doc: "26", certainty: "high", risk: "aggressive" },
 } as const satisfies Record<string, FiscalCriterion>;
 
 export type CriterionId = keyof typeof FISCAL_CRITERIA;
@@ -195,6 +203,7 @@ export const CRITERION_IDS: readonly CriterionId[] = [
   "11",
   "12",
   "13",
+  "13:cost_adjustment",
   "14",
   "15",
   "16",
@@ -212,6 +221,7 @@ export const CRITERION_IDS: readonly CriterionId[] = [
   "24:etp",
   "24:etp_gain",
   "25",
+  "26",
 ];
 
 /** Which variant of criterion #24 an ETC or an ETP applies, by the reading in force. */

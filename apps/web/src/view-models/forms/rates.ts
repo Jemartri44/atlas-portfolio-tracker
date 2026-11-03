@@ -13,7 +13,7 @@ import {
 } from "@atlas/domain/ecb";
 import { decimalForInput } from "../../format/input.js";
 import type { EventFormSpec } from "./specs.js";
-import { type FormValues, toDraft } from "./values.js";
+import { asDraftRecord, type FormValues, toDraft } from "./values.js";
 
 export type RateHint =
   | {
@@ -46,7 +46,7 @@ export const proposedValues = (
     return { values, hint: { kind: "none" } };
   }
   const blank = { ...values, fx_rate: "", fx_rate_date: "" };
-  const draft = toDraft(spec, blank, state) as unknown as Record<string, unknown>;
+  const draft = asDraftRecord(toDraft(spec, blank, state));
   const { draft: proposed, proposed: list } = proposeRates(history, state, draft, staleDays);
   const official = list[0];
   if (official !== undefined && official.resolution.kind === "resolved") {
@@ -99,7 +99,7 @@ export const ratesToConfirm = (
   history: EcbHistory | undefined,
   staleDays: number,
 ): RateToConfirm[] =>
-  rateConfirmations(history, state, toDraft(spec, values, state) as never, staleDays).map(
+  rateConfirmations(history, state, toDraft(spec, values, state), staleDays).map(
     ({ point, official }) => ({
       currency: point.currency,
       typed: point.rate as string,

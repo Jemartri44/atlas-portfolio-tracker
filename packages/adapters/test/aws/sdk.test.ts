@@ -72,6 +72,21 @@ describe("SdkObjectStore", () => {
     expect((sent[0] as GetObjectCommand).input).toEqual({ Bucket: "atlas-dev-data", Key: "there" });
   });
 
+  it("reads a body that is cut as a transient failure, not as a 500", async () => {
+    const cut = Object.assign(new Error("socket hang up"), { name: "TimeoutError" });
+    const { client } = s3Client(() => ({
+      Body: {
+        transformToByteArray: async () => {
+          throw cut;
+        },
+      },
+      ETag: '"e1"',
+    }));
+    await expect(new SdkObjectStore(client, "atlas-dev-data").get("there")).rejects.toBeInstanceOf(
+      DependencyUnavailable,
+    );
+  });
+
   it("says the version of what it got when the bucket is versioned (review of PR #106, N5)", async () => {
     const { client } = s3Client(() => ({ Body: body("hola"), ETag: '"e1"', VersionId: "v-1" }));
     const got = await new SdkObjectStore(client, "atlas-dev-data").get("there");

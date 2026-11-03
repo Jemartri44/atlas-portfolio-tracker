@@ -53,10 +53,6 @@ export const formatMoney = (value: Money, format: AmountFormat = {}): string => 
 export const formatQuantity = (value: Quantity, decimals = 8): string =>
   formatQuantityString(value.toString(), decimals);
 
-/** A unit price: four decimals, which is what a NAV needs. */
-export const formatUnitValue = (value: Money, decimals = 4): string =>
-  formatMoney(value, { decimals });
-
 /** Which of the three things the gate paints. */
 type AmountState = "nodata" | "masked" | "value";
 

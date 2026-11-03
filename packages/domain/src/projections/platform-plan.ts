@@ -14,7 +14,7 @@ import type { Quantity } from "../money/quantity.js";
 import type { AccountId, AssetId, BuyEvent, LedgerEvent, SellEvent } from "../schema/events.js";
 import { feeEurOf } from "./costs.js";
 import { businessDateOf, liveOperations } from "./project-ledger.js";
-import { type Account, cashKey, type LedgerState } from "./state.js";
+import { type Account, cashKey, type LedgerState, splitPositionKey } from "./state.js";
 
 const HUNDRED = Decimal.parse("100");
 
@@ -95,7 +95,7 @@ export const holdersOf = (
   const open = new Set(openAccounts(state));
   const holders: { account_id: AccountId; quantity: Quantity }[] = [];
   for (const [key, quantity] of state.positions) {
-    const [account, asset] = key.split("|") as [AccountId, AssetId];
+    const [account, asset] = splitPositionKey(key);
     if (asset === assetId && open.has(account) && quantity.isPositive()) {
       holders.push({ account_id: account, quantity });
     }

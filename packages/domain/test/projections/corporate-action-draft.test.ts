@@ -133,6 +133,28 @@ describe("corporateActionDraft: the sequence each kind admits", () => {
     ]);
   });
 
+  it("composes a return of capital: the amount per unit times each account's units", () => {
+    const result = compose(
+      { ...base, kind: "capital_return", cash: { ...CASH, unit_price: "0.25" } },
+      [
+        { account: "acc_a", quantity: "10" },
+        { account: "acc_b", quantity: "2.5" },
+      ],
+    );
+    expect(effectsOf(result)).toEqual([
+      {
+        op: "cost_adjustment",
+        per_account: [
+          { account_id: "acc_a", amount: "2.5" },
+          { account_id: "acc_b", amount: "0.625" },
+        ],
+        currency: "EUR",
+        fx_rate: "1",
+        fx_rate_date: "2027-03-01",
+      },
+    ]);
+  });
+
   it("composes a delisting with no effects at all", () => {
     expect(effectsOf(compose({ ...base, kind: "delisting" }))).toEqual([]);
   });
@@ -173,6 +195,7 @@ describe("corporateActionDraft: the sequence each kind admits", () => {
       { ...base, kind: "merger", to_asset_id: "ast_new", ratio: "1" },
       { ...base, kind: "spin_off", to_asset_id: "ast_spin", ratio: "1/2", cost_share: "0.2" },
       { ...base, kind: "fund_liquidation", cash: CASH },
+      { ...base, kind: "capital_return", cash: CASH },
       { ...base, kind: "delisting" },
     ];
     for (const params of cases) {

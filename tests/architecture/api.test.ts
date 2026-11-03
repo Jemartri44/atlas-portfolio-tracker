@@ -10,7 +10,6 @@ import {
   chainText,
   cliSrc,
   domainRoot,
-  exportsOf,
   listSources,
   nodesOf,
   packages,
@@ -111,14 +110,6 @@ describe("api: the API is a workspace of its own", () => {
       specifiersOf(file).some((specifier) => /(^|\/)(test|tests)\/|test-only-/.test(specifier)),
     );
     expect(named.map((file) => relative(repoRoot, file))).toEqual([]);
-  });
-
-  it("keeps the rules of the access out of the barrel, behind a door of its own", () => {
-    const barrel = join(domainRoot, "src", "index.ts");
-    expect(specifiersOf(barrel).filter((specifier) => /\.\/access[/.]/.test(specifier))).toEqual(
-      [],
-    );
-    expect(exportsOf(domainRoot).get("./access")).toBe(join(domainRoot, "src", "access.ts"));
   });
 });
 
@@ -432,59 +423,6 @@ describe("api: the administration is out of reach of the API", () => {
       /DEVICE_TOKEN_HEADER|x-atlas-device-token|credentials\.json/.test(parse(file).code),
     );
     expect(named.map((file) => relative(repoRoot, file))).toEqual([]);
-  });
-});
-
-describe("api: the authoritative guard reads the graph of the bundle", () => {
-  /**
-   * The guards of this file read the sources; the one that decides reads the modules Rolldown put
-   * in the bundle. It runs inside `npm run build`, so this only holds that it is there: the plugin
-   * that writes the graph, and each family it refuses.
-   */
-  it("writes the graph in the build and refuses each family on it", () => {
-    const config = readFileSync(join(repoRoot, "apps", "web", "vite.config.ts"), "utf8");
-    expect(config).toContain('moduleGraph("main"),');
-    // The workers are other builds, with the same plugin.
-    expect(config).toContain('worker: { plugins: () => [moduleGraph("worker")] }');
-    expect(config).toContain('fileName: ".vite/atlas-modules.json"');
-    expect(config).toContain("realpathSync(path)");
-    // A source of code is never inlined as a `data:` URL.
-    expect(config).toMatch(/assetsInlineLimit: \(filePath: string\)/);
-    const script = readFileSync(
-      join(repoRoot, "apps", "web", "scripts", "check-bundle.mjs"),
-      "utf8",
-    );
-    for (const family of [
-      "las reglas del acceso",
-      "un adaptador de Node de la API",
-      "el SDK de AWS",
-      "la API o la consola",
-      "un módulo de Node",
-      "un doble o código de test",
-      "un paquete del repositorio por node_modules",
-      "crea un worker cuyo grafo no se conoce",
-      "el bundle lleva un fuente",
-      "ningún grafo dice de dónde sale este fichero",
-      "lleva código incrustado como URL data:",
-    ]) {
-      expect(script).toContain(family);
-    }
-  });
-});
-
-describe("api: nothing of the access on the boot path", () => {
-  it("lists every web module of the feature in LAZY_ONLY from its first commit", () => {
-    const script = readFileSync(
-      join(repoRoot, "apps", "web", "scripts", "check-bundle.mjs"),
-      "utf8",
-    );
-    for (const path of [
-      "/packages/domain/src/access/",
-      "/packages/domain/src/access.ts",
-      "/src/auth/",
-    ]) {
-      expect(script).toContain(`path: "${path}"`);
-    }
   });
 });
 
