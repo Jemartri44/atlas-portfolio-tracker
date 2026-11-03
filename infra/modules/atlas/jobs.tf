@@ -86,7 +86,6 @@ locals {
       { Sid = "Write", Effect = "Allow", Action = ["s3:PutObject"], Resource = ["${local.data_arn}/jobs/mail/*"] },
       { Sid = "List", Effect = "Allow", Action = ["s3:ListBucket"], Resource = [local.data_arn], Condition = { StringLike = { "s3:prefix" = ["jobs/*", "prices/*", "reference/ecb/*", "access/*", "ledger/*"] } } },
       { Sid = "Config", Effect = "Allow", Action = ["ssm:GetParameter"], Resource = ["${local.ssm_base}/mail/recipient", "${local.ssm_base}/mail/amounts"] },
-      { Sid = "Tokens", Effect = "Allow", Action = ["ssm:GetParametersByPath"], Resource = ["${local.ssm_base}/device-tokens"], Condition = { StringEquals = { "ssm:Recursive" = "false" } } },
       {
         # The sender and its domain, the two identities (accepted, 016 questions section 9; which
         # one SES evaluates is SIN VERIFICAR, questions.md E3 b0.1). The recipient of the condition
