@@ -5,6 +5,7 @@ import { SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { describe, expect, it } from "vitest";
 import { MailRefused, MailUnknown, recipientParameter, sesNotifier } from "../../src/aws/mail.js";
 import { SDK_MAX_ATTEMPTS } from "../../src/aws/sdk-errors.js";
+import { productionObjectStore } from "../../src/aws/sdk-s3.js";
 import { productionMailSender, SdkMailSender } from "../../src/aws/sdk-ses.js";
 import { TestOnlyFakeSes } from "./test-only-fake-ses.js";
 import { TestOnlyFakeSsm } from "./test-only-fake-ssm.js";
@@ -142,10 +143,19 @@ describe("the thin adapter of SES v2", () => {
 });
 
 describe("the production SES client", () => {
-  it("carries the same timeouts and attempts as the S3 and SSM clients", async () => {
+  it("never retries by itself: SendEmail is not idempotent and the notices go at most once", async () => {
     const sender = productionMailSender() as unknown as {
       client: { config: { maxAttempts: () => Promise<number> } };
     };
-    expect(await sender.client.config.maxAttempts()).toBe(SDK_MAX_ATTEMPTS);
+    expect(await sender.client.config.maxAttempts()).toBe(1);
+  });
+
+  it("writes to the data bucket through a client without retries, and reads with them", async () => {
+    const store = productionObjectStore("b") as unknown as {
+      client: { config: { maxAttempts: () => Promise<number> } };
+      writer: { config: { maxAttempts: () => Promise<number> } };
+    };
+    expect(await store.writer.config.maxAttempts()).toBe(1);
+    expect(await store.client.config.maxAttempts()).toBe(SDK_MAX_ATTEMPTS);
   });
 });

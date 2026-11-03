@@ -65,6 +65,7 @@ export {
   parseExposureText,
   validateExposure,
 } from "./projections/exposure-file.js";
+export { MAX_HORIZON_YEARS } from "./projections/growth.js";
 export {
   DEFAULT_INDEX_TABLES,
   INDEX_PROFILES,

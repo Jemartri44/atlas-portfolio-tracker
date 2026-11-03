@@ -4,6 +4,7 @@
 //
 // It is a what-if over assumptions the owner edits. It reads no price and no tax rule.
 
+import { ValidationError } from "../errors.js";
 import { Decimal, HUNDRED } from "../money/decimal.js";
 
 export interface GrowthInput {
@@ -26,6 +27,27 @@ export interface GrowthPoint {
 
 const MONTHS = 12;
 const TWELVE = Decimal.parse("12");
+/**
+ * The pot is rounded to the precision of `div` every month: kept exact, its digits grow with every
+ * step (2,402 at 20 years) and so does the time, 0.7 s at 100 years on a calculation that runs on
+ * every key. The drift is below a millionth of a euro at 20 years.
+ */
+const DECIMALS = 10;
+
+/**
+ * The longest horizon a projection takes. Each year is twelve steps, and the domain bounds it
+ * itself so that no client (the web, the API, a job) can make one run for minutes.
+ */
+export const MAX_HORIZON_YEARS = 100;
+
+export const checkHorizon = (years: number): void => {
+  if (!Number.isInteger(years) || years < 0 || years > MAX_HORIZON_YEARS) {
+    throw new ValidationError("invalid_horizon", "the horizon is a whole number of years", {
+      years,
+      max: MAX_HORIZON_YEARS,
+    });
+  }
+};
 
 /** One month of growth, the same for every consumer so they cannot diverge. */
 const stepOf = (input: GrowthInput): ((value: Decimal) => Decimal) => {
@@ -33,7 +55,7 @@ const stepOf = (input: GrowthInput): ((value: Decimal) => Decimal) => {
   const invested = input.monthly.mul(
     Decimal.ONE.sub((input.entryFeePct ?? Decimal.ZERO).div(HUNDRED)),
   );
-  return (value) => value.add(value.mul(rate)).add(invested);
+  return (value) => value.add(value.mul(rate)).add(invested).round(DECIMALS);
 };
 
 export const grow = (input: GrowthInput): GrowthPoint[] => {

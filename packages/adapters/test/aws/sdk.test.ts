@@ -102,6 +102,18 @@ describe("SdkObjectStore", () => {
     });
   });
 
+  it("sends writes through the writer client and reads through the other", async () => {
+    const reads = s3Client(() => ({ ETag: '"e"', Body: body("x") }));
+    const writes = s3Client(() => ({}));
+    const store = new SdkObjectStore(reads.client, "b", writes.client);
+    await store.get("k");
+    await store.putIfNoneMatch("k", new Uint8Array([1]));
+    await store.putIfMatch("k", new Uint8Array([2]), '"e"');
+    expect(reads.sent).toHaveLength(1);
+    expect(writes.sent).toHaveLength(2);
+    expect(writes.sent.every((command) => command instanceof PutObjectCommand)).toBe(true);
+  });
+
   it("never takes a missing bucket for a failed condition when writing with If-Match", async () => {
     const { client } = s3Client(() => s3Error("NoSuchBucket", 404));
     await expect(

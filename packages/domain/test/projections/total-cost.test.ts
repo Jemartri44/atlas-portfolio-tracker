@@ -149,8 +149,8 @@ describe("totalCost", () => {
     expect(result.monthly_core_eur.isZero()).toBe(true);
   });
 
-  it("refuses a horizon that is not a whole number of years", () => {
-    for (const years of [0.5, -1, Number.NaN]) {
+  it("refuses a horizon that is not a whole number of years, or longer than the ceiling", () => {
+    for (const years of [0.5, -1, Number.NaN, 101]) {
       expect(() => costOf(pot("1"), settings, { years })).toThrow("whole number");
     }
     expect(costOf(pot("1"), settings, { years: 0 }).ter_cost_eur?.amount.isZero()).toBe(true);

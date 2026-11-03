@@ -23,6 +23,7 @@ import { DomainError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
 import { zero } from "../money/eur.js";
 import { EUR, Money } from "../money/money.js";
+import { byCode } from "../order.js";
 import type { Filing } from "../projections/filings.js";
 import { filingInForce } from "../projections/filings.js";
 import { settingsAt } from "../projections/settings-at.js";
@@ -124,7 +125,7 @@ const accountItems = (
       flags: [...flags],
     });
   }
-  return items.sort((a, b) => a.account_id.localeCompare(b.account_id));
+  return items.sort((a, b) => byCode(a.account_id, b.account_id));
 };
 
 /** One item per (account, asset) held abroad, valued at 31 December. */
@@ -152,8 +153,7 @@ const assetItems = (
     })
     .sort(
       (a, b) =>
-        a.account_id.localeCompare(b.account_id) ||
-        (a.asset_id as string).localeCompare(b.asset_id as string),
+        byCode(a.account_id, b.account_id) || byCode(a.asset_id as string, b.asset_id as string),
     );
 };
 

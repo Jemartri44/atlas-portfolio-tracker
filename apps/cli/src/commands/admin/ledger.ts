@@ -215,7 +215,9 @@ export const restoreOrder = async (
       ? "tiene los mismos eventos que la nube, en el mismo orden."
       : comparison.kind === "prefix"
         ? `es un prefijo de la nube: se pierde esta cola de ${comparison.lost.length} eventos: ${comparison.lost.join(", ")}.`
-        : `difiere de la nube. Solo en la copia: ${comparison.onlyCandidate.join(", ") || "nada"}. Solo en la nube, que se pierde: ${comparison.onlyRemote.join(", ") || "nada"}.`;
+        : comparison.kind === "reordered"
+          ? "tiene los mismos eventos que la nube, en otro orden."
+          : `difiere de la nube. Solo en la copia: ${comparison.onlyCandidate.join(", ") || "nada"}. Solo en la nube, que se pierde: ${comparison.onlyRemote.join(", ") || "nada"}.`;
   say(`3. La copia ${said}`);
   // 4. The explicit yes, with that list on screen.
   if (

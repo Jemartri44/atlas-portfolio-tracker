@@ -15,6 +15,7 @@
 
 import { Decimal, HUNDRED } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
+import { byCode } from "../order.js";
 import type { AssetClass, AssetId } from "../schema/events.js";
 import { EXPOSURE_FORMAT, validateExposure } from "./exposure-file.js";
 import { DEFAULT_INDEX_TABLES, type IndexProfile, type IndexTables } from "./index-profiles.js";
@@ -199,7 +200,7 @@ const dimensionOf = (
       value_eur: value,
       pct: value.amount.mul(HUNDRED).div(weights.total_eur.amount),
     }))
-    .sort((a, b) => b.value_eur.amount.cmp(a.value_eur.amount) || a.key.localeCompare(b.key));
+    .sort((a, b) => b.value_eur.amount.cmp(a.value_eur.amount) || byCode(a.key, b.key));
   return { shares, missing_assets: [], defaulted, assets };
 };
 

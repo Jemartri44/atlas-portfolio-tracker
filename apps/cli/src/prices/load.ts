@@ -67,7 +67,7 @@ export const keysFor = async (ctx: Context): Promise<{ keys: Keys; note?: string
     if (error instanceof SecretsError && error.code === "secrets_too_open") {
       return {
         keys: {},
-        note: `No se usan las claves de ${path}: otros usuarios de la máquina pueden leer ese fichero. Déjalo solo para ti con «chmod 600 ${path}» y vuelve a intentarlo. Todo lo demás funciona igual; la entrada manual sigue ahí.`,
+        note: `No se usan las claves de ${path}: otros usuarios de la máquina pueden leer ese fichero o entrar en su carpeta. Déjalo solo para ti con «chmod 600 ${path}» y «chmod 700» de su carpeta, y vuelve a intentarlo. Todo lo demás funciona igual; la entrada manual sigue ahí.`,
       };
     }
     throw error;
@@ -79,7 +79,7 @@ interface LoadedQuotes {
   readonly notes: readonly string[];
 }
 
-const historyOf = async (folder: string): Promise<{ history?: EcbHistory; note?: string }> => {
+const historyOrNote = async (folder: string): Promise<{ history?: EcbHistory; note?: string }> => {
   const { history, problem } = await historyIn(folder);
   return problem === undefined
     ? history === undefined
@@ -112,7 +112,7 @@ export const loadQuotes = async (ctx: Context, state: LedgerState): Promise<Load
     // No closes, but the ECB history still values the cash in a foreign
     // currency (live test of 2026-09-27); a history that does not read is
     // said by the views that convert quotes, not here.
-    const { history } = await historyOf(folder);
+    const { history } = await historyOrNote(folder);
     return history === undefined ? { notes: [] } : { external: ecbRatesOnly(history), notes: [] };
   }
   let config: Awaited<ReturnType<typeof readLocalConfig>>;
@@ -144,7 +144,7 @@ export const loadQuotes = async (ctx: Context, state: LedgerState): Promise<Load
     throw error;
   }
   const read = readCloses(files, symbols);
-  const { history, note } = await historyOf(folder);
+  const { history, note } = await historyOrNote(folder);
   const notes = [...mismatchedNotes(read.mismatched)];
   const unreadableNotes = read.unreadable.map(
     (problem: UnreadableCloses) =>

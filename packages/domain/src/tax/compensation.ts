@@ -43,6 +43,7 @@
 import { type Decimal, HUNDRED } from "../money/decimal.js";
 import { positive } from "../money/eur.js";
 import { EUR, Money } from "../money/money.js";
+import { byCode } from "../order.js";
 import { sortCriteria } from "./criteria.js";
 import type { BalanceCategory, Compensation, CompensationStep, PendingLoss } from "./report.js";
 
@@ -143,7 +144,7 @@ export const compensate = (
   const open = pending
     .filter((entry) => entry.origin_year < year && entry.expires_after >= year)
     .map((entry) => ({ ...entry }))
-    .sort((a, b) => a.origin_year - b.origin_year || a.category.localeCompare(b.category));
+    .sort((a, b) => a.origin_year - b.origin_year || byCode(a.category, b.category));
   for (const entry of open) {
     entry.amount_eur = offset(
       2,
