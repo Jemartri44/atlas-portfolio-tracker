@@ -298,9 +298,12 @@ describe("marking a fund transferable (art. 94 LIRPF)", () => {
     expect(h.text()).toContain("más de 500 accionistas");
   });
 
-  it("says nothing for a Spanish fund or one that is not transferable", async () => {
+  it("reminds only the SICAV condition for a Spanish one, and nothing if not transferable", async () => {
     const h = harness({ events: seed() });
     expect(await h.exec(fund("ast_es", ["--transferable", "--isin", "ES0000000001"]))).toBe(0);
+    expect(h.text()).toContain("más de 500 accionistas");
+    expect(h.text()).not.toContain("art. 94.2.a");
+    h.reset();
     expect(await h.exec(fund("ast_nt", ["--not-transferable", "--isin", "IE0000000002"]))).toBe(0);
     expect(h.text()).not.toContain("art. 94");
   });

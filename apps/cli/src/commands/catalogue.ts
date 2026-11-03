@@ -101,19 +101,24 @@ const catalogueDraft = (
 /**
  * A transfer between funds keeps the tax deferral only under the conditions of
  * art. 94 LIRPF, which the ledger cannot check and `transferable` takes on
- * trust: said before recording, when the fund is not known to be Spanish (an
- * ISIN or an issuer country of Spain).
+ * trust: said before recording, in full for a fund not known to be Spanish (an
+ * ISIN or an issuer country of Spain) and only the SICAV condition otherwise,
+ * because the catalogue does not tell a SICAV from a fund.
  */
 const transferNotes = (draft: Record<string, unknown>): string[] => {
   const fund = draft.asset_type === "fund" || draft.asset_type === "money_market";
+  if (draft.transferable !== true || !fund) {
+    return [];
+  }
   const spanish =
     draft.issuer_country === "ES" ||
     (typeof draft.isin === "string" && draft.isin.toUpperCase().startsWith("ES"));
-  if (draft.transferable !== true || !fund || spanish) {
-    return [];
-  }
+  const sicav =
+    "una SICAV solo admite traspaso si tiene más de 500 accionistas y no tienes más del 5 % (art. 94.1.a.2.º)";
   return [
-    "Aviso (art. 94 LIRPF): marcar un fondo extranjero como traspasable solo es correcto si es una IIC armonizada (UCITS) de la UE, inscrita en la CNMV y comprada a través de una comercializadora inscrita en España (art. 94.2.a); una SICAV, además, si tiene más de 500 accionistas y no tienes más del 5 % (art. 94.1.a.2.º). Si no lo cumple, un traspaso tributa como venta: regístralo con --not-transferable.",
+    spanish
+      ? `Aviso (art. 94 LIRPF): ${sicav}. Si no lo cumple, un traspaso tributa como venta: regístrala con --not-transferable.`
+      : `Aviso (art. 94 LIRPF): marcar un fondo extranjero como traspasable solo es correcto si es una IIC armonizada (UCITS) de la UE, inscrita en la CNMV y comprada a través de una comercializadora inscrita en España (art. 94.2.a); ${sicav}. Si no lo cumple, un traspaso tributa como venta: regístralo con --not-transferable.`,
   ];
 };
 
