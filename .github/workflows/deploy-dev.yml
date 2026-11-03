@@ -65,7 +65,7 @@ jobs:
         env:
           ROLE_ARN: ${{ secrets.ATLAS_DEV_DEPLOY_ROLE_ARN }}
       - name: Write the set to the artifacts bucket
-        run: aws s3 cp "$RUNNER_TEMP/artifact/" "s3://$ARTIFACT_BUCKET/builds/$TREE/" --recursive --only-show-errors > "$RUNNER_TEMP/aws.log" 2>&1
+        run: infra/scripts/ci/publish-set.sh "$RUNNER_TEMP/artifact" "$TREE"
         env:
           ARTIFACT_BUCKET: ${{ secrets.ATLAS_ARTIFACT_BUCKET }}
       - name: Apply dev

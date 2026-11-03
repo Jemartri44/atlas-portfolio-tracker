@@ -135,7 +135,8 @@ describe("the deployments (mutants 33, 34, 41, 54)", () => {
   it("lets only the dev deployment write the artifacts, and never uploads .vite nor maps", () => {
     const dev = flow("deploy-dev.yml");
     expect(dev).toMatch(/on:\n {2}push:\n {4}branches: \[develop\]\n/);
-    expect(dev).toContain("s3://$ARTIFACT_BUCKET/builds/$TREE/");
+    expect(dev).toContain('publish-set.sh "$RUNNER_TEMP/artifact" "$TREE"');
+    expect(code("infra/scripts/ci/publish-set.sh")).toContain("--if-none-match '*'");
     expect(dev).not.toContain("environment:");
     for (const name of ["deploy-dev.yml", "deploy-prod.yml"]) {
       const sync =
@@ -282,6 +283,43 @@ describe("the scripts of the CI", () => {
     const bad = promote(true);
     expect(bad.result.status).toBe(1);
     expect(bad.result.stderr).toContain("no coincide");
+  });
+
+  it("publish-set.sh never overwrites a published tree: the stored set replaces the local one", () => {
+    const root = fixture();
+    const first = join(root, "first");
+    spawnSync("bash", [join(SCRIPTS, "package.sh"), first], { cwd: root });
+    writeFileSync(join(root, "state.json"), "{}");
+    writeFileSync(join(root, "log"), "");
+    const run = (dir: string) =>
+      spawnSync("bash", [join(SCRIPTS, "publish-set.sh"), dir, TREE], {
+        encoding: "utf8",
+        env: {
+          PATH: `${FAKES}:${process.env.PATH}`,
+          ARTIFACT_BUCKET: "b",
+          RUNNER_TEMP: root,
+          FAKE_S3_DIR: join(root, "bucket"),
+          FAKE_AWS_LOG: join(root, "log"),
+          FAKE_AWS_STATE: join(root, "state.json"),
+        },
+      });
+    const published = run(first);
+    expect(published.status, published.stderr).toBe(0);
+    expect(published.stdout).toContain("set publicado");
+    // Another run of the same tree, with another build: it cannot replace what is there.
+    const second = join(root, "second");
+    mkdirSync(second);
+    for (const name of ["lambda.zip", "jobs.zip", "spa.tgz"]) {
+      writeFileSync(join(second, name), "hostile");
+    }
+    writeFileSync(join(second, "SHA256SUMS"), "hostile");
+    const again = run(second);
+    expect(again.status, again.stderr).toBe(0);
+    expect(again.stdout).toContain("ya tenía su set");
+    expect(readFileSync(join(second, "lambda.zip"), "utf8")).not.toBe("hostile");
+    expect(readFileSync(join(root, "bucket", "builds", TREE, "lambda.zip"), "utf8")).not.toBe(
+      "hostile",
+    );
   });
 
   it("promote.sh and artifact-env.sh refuse a SHA256SUMS that does not list both ZIPs", () => {
