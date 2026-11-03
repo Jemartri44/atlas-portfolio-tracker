@@ -216,7 +216,9 @@ describe("FileEcbHistoryStore", () => {
     // A second rejection of the same source replaces the first; another source adds its own.
     await store.keepRejected(downloaded(Buffer.from("tercero"), "zip", "2026-09-26T10:00:00.000Z"));
     expect((await store.manifest())?.rejected).toHaveLength(1);
-    expect(await readFile(join(folder, "rejected", "eurofxref-hist.csv"), "utf8")).toBe("tercero");
+    expect(
+      await readFile(join(folder, "reference", "ecb", "rejected", "eurofxref-hist.csv"), "utf8"),
+    ).toBe("tercero");
     await store.keepRejected(downloaded(Buffer.from("api"), "api", "2026-09-27T10:00:00.000Z"));
     expect((await store.manifest())?.rejected.map((meta) => meta.file)).toEqual([
       "rejected/eurofxref-hist.csv",
