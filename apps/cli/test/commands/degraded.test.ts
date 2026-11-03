@@ -11,7 +11,7 @@ import { EXIT } from "../../src/context.js";
 import { COMMANDS } from "../../src/registry.js";
 import { harness, seed } from "../harness.js";
 
-/** Enough configuration for `contribute` and `rebalance` to have something to answer. */
+/** A configured ledger: target weights and the bucket share. */
 const configured = () => [
   ...seed(),
   {
@@ -68,12 +68,6 @@ const INVOCATIONS: {
   folderOnly?: true;
 }[] = [
   { command: "positions", argv: ["positions"], readOnly: true },
-  { command: "weights", argv: ["weights"], readOnly: true },
-  { command: "contribute", argv: ["contribute", "--amount", "100"], readOnly: true },
-  { command: "rebalance", argv: ["rebalance"], readOnly: true },
-  { command: "costs", argv: ["costs"], readOnly: true },
-  { command: "networth", argv: ["networth"], readOnly: true },
-  { command: "bucket", argv: ["bucket"], readOnly: true },
   { command: "lots", argv: ["lots"], readOnly: true },
   { command: "cash", argv: ["cash"], readOnly: true },
   { command: "gains", argv: ["gains", "2027"], readOnly: true },
@@ -82,7 +76,11 @@ const INVOCATIONS: {
   { command: "account", argv: ["account", "list"], readOnly: true },
   { command: "asset", argv: ["asset", "list"], readOnly: true },
   { command: "settings", argv: ["settings", "show"], readOnly: true },
-  { command: "thesis", argv: ["thesis", "list"], readOnly: true },
+  {
+    command: "thesis",
+    argv: ["thesis", "close", "th_none", "--notes", "n", "--yes"],
+    readOnly: false,
+  },
   { command: "order", argv: ["order", "list"], readOnly: true },
   { command: "transfer", argv: ["transfer", "pending"], readOnly: true },
   { command: "export", argv: ["export", "--format", "csv"], readOnly: true },

@@ -1,4 +1,4 @@
-// atlas thesis open · close <id> · list [--closed] [--at]
+// atlas thesis open · close <id> · show <id> [--date]
 
 import {
   type BenchmarkGap,
@@ -8,15 +8,8 @@ import {
   type ThesisLeg,
 } from "@atlas/domain";
 import { bucketTheses } from "@atlas/domain/portfolio";
-import {
-  assertKnownFlags,
-  booleanFlag,
-  type Flags,
-  requireFlag,
-  UsageError,
-  wholeNumber,
-} from "../args.js";
-import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
+import { assertKnownFlags, type Flags, requireFlag, UsageError, wholeNumber } from "../args.js";
+import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { eur } from "../output/format.js";
 import { keyValue, table } from "../output/table.js";
 import { loadQuotes, sayNotes } from "../prices/load.js";
@@ -180,70 +173,6 @@ export const thesisCommand = async (
     });
     return 0;
   }
-  if (action === "list") {
-    // `--at` is gone: every dated view projects with `asOf` (ADR-0016), and one
-    // name for one thing.
-    if (flags.has("at")) {
-      throw new UsageError(
-        "usa --date YYYY-MM-DD: la vista se proyecta a esa fecha (ADR-0016), no solo los precios",
-      );
-    }
-    assertKnownFlags(flags, ["closed", "date", ...GLOBAL_FLAGS]);
-    const date = dateFlag(ctx, flags);
-    const { state } = await loadForQuery(ctx, date);
-    const includeClosed = booleanFlag(flags, "closed");
-    const quotes = await loadQuotes(ctx, state);
-    sayNotes(ctx, quotes.notes);
-    const view = bucketTheses(state, date, settingsAt(state, date).settings, quotes.external);
-    const rows = view.rows.filter((thesis) => includeClosed || thesis.status === "open");
-    renderQuery(
-      ctx,
-      state,
-      rows.map(jsonThesis),
-      [
-        table(
-          [
-            "tesis",
-            "cuenta",
-            "activo",
-            "estado",
-            "apertura",
-            "cierre",
-            "días",
-            "plazo",
-            "invertido EUR",
-            "resultado EUR",
-            "vs índice EUR",
-            "comisiones EUR",
-            "posición",
-            "previsto EUR",
-          ],
-          rows.map((t) => [
-            t.thesis_id,
-            t.account_id,
-            t.asset_id,
-            t.status === "open" ? "abierta" : "cerrada",
-            t.opened_at,
-            t.closed_at ?? "",
-            String(t.days_open),
-            String(t.expected_horizon_days),
-            // Rounded once, when shown, like `atlas bucket` (ADR-0005). Two
-            // commands printing the same figure with different decimals is a
-            // defect of presentation, not a difference of fact.
-            eur(t.invested_eur),
-            eur(t.result_eur_rounded),
-            eur(t.result_vs_index_eur),
-            eur(t.fees_eur),
-            t.position.toString(),
-            eur(t.planned_size_eur),
-          ]),
-        ),
-        // A column of dashes is not an explanation: the index says why it is empty.
-        ...(view.warnings.length === 0 ? [] : ["", "Avisos:", ...describeWarnings(view.warnings)]),
-      ].join("\n"),
-    );
-    return 0;
-  }
   if (action === "show") {
     const thesisId = requireId(positionals, 2, "uso: atlas thesis show <thesis_id> [--date]");
     assertKnownFlags(flags, ["date", ...GLOBAL_FLAGS]);
@@ -265,7 +194,5 @@ export const thesisCommand = async (
     renderQuery(ctx, state, jsonThesis(thesis), thesisSheet(thesis));
     return 0;
   }
-  throw new UsageError(
-    "uso: atlas thesis open|close <id>|show <id>|list [--closed] [--date YYYY-MM-DD]",
-  );
+  throw new UsageError("uso: atlas thesis open|close <id>|show <id> [--date YYYY-MM-DD]");
 };

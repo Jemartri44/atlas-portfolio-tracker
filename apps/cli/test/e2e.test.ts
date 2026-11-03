@@ -342,8 +342,8 @@ describe("atlas over a ledger file", () => {
     expect(await buy("acc_bucket", "ast_spec", "10", "2027-07-01", "--thesis", "th1")).toBe(0);
     expect(await atlas("thesis", "close", "th1", "--notes", "done")).toBe(0);
     lines.length = 0;
-    expect(await atlas("thesis", "list", "--closed")).toBe(0);
-    expect(lines.join("\n")).toMatch(/th1\s+acc_bucket\s+ast_spec\s+cerrada/);
+    expect(await atlas("thesis", "show", "th1")).toBe(0);
+    expect(lines.join("\n")).toMatch(/th1/);
     expect(await atlas("check")).toBe(0);
     expect((await readFile(ledger, "utf8")).trim().split("\n")).toHaveLength(11);
   });

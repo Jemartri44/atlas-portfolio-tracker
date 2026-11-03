@@ -6,7 +6,6 @@ import { UsageError } from "./args.js";
 import { addCommand } from "./commands/add.js";
 import { adminCommand } from "./commands/admin/index.js";
 import { backupCommand } from "./commands/backup.js";
-import { bucketCommand, netWorthCommand } from "./commands/bucket.js";
 import { accountCommand, assetCommand, settingsCommand } from "./commands/catalogue.js";
 import { compactCommand } from "./commands/compact.js";
 import { corporateActionCommand } from "./commands/corporate-actions.js";
@@ -16,7 +15,6 @@ import { filedCommand } from "./commands/filed.js";
 import { fxCommand } from "./commands/fx.js";
 import { m720Command, m721Command } from "./commands/informative.js";
 import { lockCommand } from "./commands/lock.js";
-import { contributeCommand, costsCommand, weightsCommand } from "./commands/portfolio.js";
 import { pricesCommand } from "./commands/prices.js";
 import {
   cashCommand,
@@ -27,7 +25,6 @@ import {
   positionsCommand,
   valuationsCommand,
 } from "./commands/query.js";
-import { rebalanceCommand } from "./commands/rebalance.js";
 import { deleteCommand, editCommand } from "./commands/rectify.js";
 import { remoteCommand } from "./commands/remote.js";
 import { synthCommand } from "./commands/synth.js";
@@ -60,19 +57,13 @@ export const COMMANDS: Readonly<Record<string, CommandSpec>> = {
   settings: { run: settingsCommand, arity: { set: 2, show: 2 } },
   add: { run: addCommand, arity: 2 },
   order: { run: orderCommand, arity: { place: 2, cancel: 3, note: 3, list: 2 } },
-  transfer: { run: transferCommand, arity: { request: 2, update: 3, pending: 2, simulate: 2 } },
+  transfer: { run: transferCommand, arity: { request: 2, update: 3, pending: 2 } },
   ca: { run: corporateActionCommand, arity: 2 },
   thesis: { run: thesisCommand, arity: { open: 2, close: 3, show: 3, list: 2 } },
   valuations: { run: valuationsCommand, arity: 1 },
   edit: { run: editCommand, arity: 2 },
   delete: { run: deleteCommand, arity: 2 },
   positions: { run: positionsCommand, arity: 1 },
-  networth: { run: netWorthCommand, arity: 1 },
-  bucket: { run: bucketCommand, arity: 1 },
-  weights: { run: weightsCommand, arity: 1 },
-  contribute: { run: contributeCommand, arity: 1 },
-  rebalance: { run: rebalanceCommand, arity: 1 },
-  costs: { run: costsCommand, arity: 1 },
   lots: { run: lotsCommand, arity: 2 },
   cash: { run: cashCommand, arity: 1 },
   gains: { run: gainsCommand, arity: 2 },
