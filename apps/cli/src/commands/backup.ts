@@ -35,7 +35,7 @@ const describeCopied = (copied: Copied): string =>
  * The ledger of the cloud, down by the API: the SHA-256 of the bytes has to be
  * its etag (`httpRemote` already says so on the way; said again here, over what
  * is on the disk), written **dated and never over another** (`wx`) and left
- * read-only, so nobody writes in it by mistake and a second ledger is born.
+ * read-only for its owner alone (`400`), so nobody writes in it by mistake and a second ledger is born.
  */
 const copyFromCloud = async (
   remote: { read(): Promise<{ text: string; etag: string }> },
@@ -52,9 +52,9 @@ const copyFromCloud = async (
   if (sha256(bytes) !== snapshot.etag) {
     throw mismatch(sha256(bytes));
   }
-  await writeFile(destination, bytes, { flag: "wx", mode: 0o444 });
+  await writeFile(destination, bytes, { flag: "wx", mode: 0o400 });
   try {
-    await chmod(destination, 0o444);
+    await chmod(destination, 0o400);
     const written = await readFile(destination);
     if (sha256(written) !== snapshot.etag) {
       throw mismatch(sha256(written));
@@ -97,10 +97,11 @@ export const backupCommand = async (
     cancelled(ctx);
     return 0;
   }
-  await mkdir(directory, { recursive: true });
+  await mkdir(directory, { recursive: true, mode: 0o700 });
   let copy: { etag: string; lines: readonly string[] };
   if (cloud === undefined) {
     await copyFile(ctx.ledgerPath, destination, constants.COPYFILE_EXCL);
+    await chmod(destination, 0o400);
     try {
       const original = await new FileLedgerStore(ctx.ledgerPath, ctx.deps.store.schema).load();
       copy = await new FileLedgerStore(destination, ctx.deps.store.schema).load();

@@ -433,7 +433,7 @@ describe("backup and export of a cloud folder", () => {
     const [name] = await readdir(to);
     expect(name).toMatch(/^ledger-\d{4}-\d{2}-\d{2}\.jsonl$/);
     const path = join(to, name as string);
-    expect((await stat(path)).mode & 0o777).toBe(0o444);
+    expect((await stat(path)).mode & 0o777).toBe(0o400);
     expect(await readFile(path, "utf8")).toBe(c.api.s3.text(LEDGER_KEY));
     expect(await c.exec(["backup", "--to", to])).toBe(EXIT.domain);
     expect(said(c)).toContain("path_exists");
