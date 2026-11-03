@@ -263,4 +263,14 @@ describe("planRepurchaseWarnings", () => {
     expect(planRepurchaseWarnings(closed, plan([["fund_f", "300"]]))).toEqual([]);
     expect(planRepurchaseWarnings(open, plan([["fund_f", "0"]]))).toEqual([]);
   });
+
+  it("refuses a ledger the engine does not read, as the report of the year does", () => {
+    const b = taxBuilder(HAND_SETTINGS);
+    // A sale of 2017 starts the chain before the regime: no year after it can be read either.
+    b.buy({ account_id: "acc_a", asset_id: "fund_f", value_date: "2017-05-02" });
+    b.sell({ account_id: "acc_a", asset_id: "fund_f", quantity: "1", value_date: "2017-06-02" });
+    expect(() => repurchaseCalendar(b.build(), "2019-05-02")).toThrow(
+      expect.objectContaining({ code: "tax_year_unsupported" }),
+    );
+  });
 });
