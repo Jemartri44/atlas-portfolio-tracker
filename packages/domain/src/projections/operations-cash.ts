@@ -12,6 +12,7 @@ import type {
   FxExchangeEvent,
   InterestEvent,
   StandaloneFeeEvent,
+  TaxPaymentEvent,
 } from "../schema/events.js";
 import { adjustCash } from "./cash.js";
 import { assertSameBook, requireAccount, requireAsset } from "./catalogue.js";
@@ -24,7 +25,7 @@ import {
 } from "./currency-lots.js";
 import { recordIncome } from "./income.js";
 import { fxOf, money, receiveProceeds } from "./operations.js";
-import type { LedgerState } from "./state.js";
+import { addWarning, type LedgerState } from "./state.js";
 
 export const applyDividend = (state: LedgerState, event: DividendEvent): void => {
   const account = requireAccount(state, event.account_id, event.id);
@@ -74,6 +75,49 @@ export const applyExternalIncome = (state: LedgerState, event: ExternalIncomeEve
     ...(event.payer === undefined ? {} : { payer: event.payer }),
     gross_eur: Money.parse(event.gross_eur, EUR),
     withholding_eur: Money.parse(event.withholding_eur, EUR),
+  });
+};
+
+/**
+ * A payment of the income tax return: no cash moves here (it leaves the bank).
+ * Two first or two second instalments of a year, or a second with no first,
+ * are said, never refused: the ledger records what happened.
+ */
+export const applyTaxPayment = (state: LedgerState, event: TaxPaymentEvent): void => {
+  const sameYear = state.taxPayments.filter((entry) => entry.tax_year === event.tax_year);
+  if (
+    event.instalment !== "single" &&
+    sameYear.some((entry) => entry.instalment === event.instalment)
+  ) {
+    addWarning(
+      state,
+      "tax_instalment_repeated",
+      event.id,
+      "this instalment of the year is already recorded",
+      {
+        tax_year: event.tax_year,
+        instalment: event.instalment,
+      },
+    );
+  }
+  if (event.instalment === "second" && !sameYear.some((entry) => entry.instalment === "first")) {
+    addWarning(
+      state,
+      "tax_second_without_first",
+      event.id,
+      "a second instalment with no first one before it",
+      {
+        tax_year: event.tax_year,
+      },
+    );
+  }
+  const amount = Money.parse(event.amount_eur, EUR);
+  state.taxPayments.push({
+    event_id: event.id,
+    tax_year: event.tax_year,
+    date: event.date,
+    instalment: event.instalment,
+    amount_eur: event.kind === "refund" ? amount.neg() : amount,
   });
 };
 

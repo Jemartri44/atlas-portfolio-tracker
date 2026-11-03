@@ -27,6 +27,7 @@ import type {
   StandaloneFeeEvent,
   SupportedEvent,
   SwapEvent,
+  TaxPaymentEvent,
   TaxReturnFiledEvent,
   ThesisClosedEvent,
   ThesisOpenedEvent,
@@ -249,6 +250,17 @@ export class LedgerBuilder {
       value_date: "2027-06-30",
       gross_eur: "1000",
       withholding_eur: "190",
+      ...overrides,
+    });
+  }
+
+  taxPayment(overrides: Partial<Fields<TaxPaymentEvent>> = {}): TaxPaymentEvent {
+    return this.push<TaxPaymentEvent>("tax_payment", {
+      tax_year: 2027,
+      date: "2028-06-30",
+      amount_eur: "1000",
+      kind: "payment",
+      instalment: "single",
       ...overrides,
     });
   }

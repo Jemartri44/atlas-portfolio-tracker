@@ -38,6 +38,7 @@ import { RequireLedger } from "../guard.jsx";
 import { ContributionCard } from "./ContributionCard.jsx";
 import { CostsCard } from "./CostsCard.jsx";
 import { ExposureBlock } from "./ExposureBlock.jsx";
+import { ProjectionCard } from "./ProjectionCard.jsx";
 import { RebalanceCard } from "./RebalanceCard.jsx";
 import { ReturnsCard } from "./ReturnsCard.jsx";
 import { TotalCostCard } from "./TotalCostCard.jsx";
@@ -170,6 +171,7 @@ export default function CarteraRoute(): JSX.Element {
               />
               <CostsCard view={costs()} />
               <TotalCostCard summary={summary()} settings={settings()} />
+              <ProjectionCard weights={projection()} settings={settings()} asOf={date()} />
             </div>
           </>
         );

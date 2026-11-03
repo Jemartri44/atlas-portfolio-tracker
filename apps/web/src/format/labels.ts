@@ -29,6 +29,7 @@ export const EVENT_LABELS: Record<string, string> = {
   dividend: "Dividendo",
   interest: "Interés",
   external_income: "Rendimiento de fuera de la cartera",
+  tax_payment: "Pago de la Renta",
   fx_exchange: "Cambio de divisa",
   cash_deposit: "Ingreso de efectivo",
   cash_withdrawal: "Retirada de efectivo",
@@ -111,6 +112,8 @@ export const FIELD_LABELS: Record<string, string> = {
   gross_eur: "Importe bruto en euros",
   withholding_eur: "Retención en euros",
   payer: "Pagador",
+  // Payments of the income tax return
+  instalment: "Plazo",
   source_country: "País del pagador",
   per_unit: "Por título",
   // Transfers
@@ -235,6 +238,12 @@ export const VALUE_LABELS: Record<string, string> = {
   // The kind of an income from outside the portfolio.
   dividend: "Dividendo",
   interest: "Interés",
+  // A payment of the income tax return: what it is and which instalment.
+  payment: "Pago",
+  refund: "Devolución",
+  single: "Único",
+  first: "Primero (60 %)",
+  second: "Segundo (40 %)",
   true: "Sí",
   false: "No",
 };

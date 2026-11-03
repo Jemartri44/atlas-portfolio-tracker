@@ -206,6 +206,16 @@ export interface ExternalIncome {
   withholding_eur: Money;
 }
 
+/** A payment (positive) or refund (negative) of the income tax return of `tax_year`. */
+export interface TaxPayment {
+  event_id: Ulid;
+  tax_year: number;
+  date: CivilDate;
+  instalment: "single" | "first" | "second";
+  /** Paid is positive; refunded, negative. */
+  amount_eur: Money;
+}
+
 /**
  * Income received in kind, without a transfer (ADR-0021): a fork, an airdrop,
  * shares from a spin-off outside the neutrality regime, a dividend in kind.
@@ -377,6 +387,8 @@ export interface LedgerState {
   income: InvestmentIncome[];
   /** Savings income received outside the portfolio: only the estimate of the quota reads it. */
   externalIncome: ExternalIncome[];
+  /** Payments and refunds of the income tax return, as recorded. */
+  taxPayments: TaxPayment[];
   /** Income in kind a grant declares; read by nobody yet (ADR-0021). */
   inKindIncome: InKindIncome[];
   valuations: ValuationEvent[];
@@ -449,6 +461,7 @@ export const createEmptyState = (fiscalSettings: Settings): LedgerState => ({
   currencyJournal: [],
   income: [],
   externalIncome: [],
+  taxPayments: [],
   inKindIncome: [],
   valuations: [],
   orders: new Map(),

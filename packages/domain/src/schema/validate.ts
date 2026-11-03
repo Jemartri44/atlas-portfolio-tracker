@@ -376,6 +376,26 @@ const CONSISTENCY: Partial<Record<SupportedEventType, (raw: UnknownRecord) => vo
   },
   dividend: (raw) => checkBrokerSettled(raw, true),
   interest: (raw) => checkBrokerSettled(raw, true),
+  tax_payment: (raw) => {
+    // A return is paid after the year it declares; a refund is never split.
+    if ((raw.date as string) <= `${raw.tax_year as number}-12-31`) {
+      throw invalid(
+        "payment_before_year_end",
+        "tax_payment: date must be after 31/12 of tax_year",
+        {
+          type: raw.type,
+          date: raw.date,
+          tax_year: raw.tax_year,
+        },
+      );
+    }
+    if (raw.kind === "refund" && raw.instalment !== "single") {
+      throw invalid("refund_split", "tax_payment: a refund is paid in one go", {
+        type: raw.type,
+        instalment: raw.instalment,
+      });
+    }
+  },
   external_income: (raw) => {
     // What is withheld comes out of what was paid: more than it is a typo.
     if (Decimal.parse(raw.withholding_eur as string).gt(Decimal.parse(raw.gross_eur as string))) {

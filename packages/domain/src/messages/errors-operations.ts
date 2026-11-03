@@ -1,6 +1,7 @@
 // Errors of operations: positions and lots, transfers, exchange rates, orders and transfer requests.
 
 import type { Details, Entry, Voice } from "./voice.js";
+import { year } from "./words.js";
 
 /** The stage of an order or request in Spanish; the console's word is the ledger's English one. */
 const stage = (d: Details, v: Voice): string =>
@@ -24,6 +25,10 @@ export const ERRORS_OPERATIONS: Record<string, Entry> = {
     `Tu residencia fiscal no es España${d.tax_residence === undefined ? "" : ` (${v.text(d.tax_residence)})`}: el diferimiento del traspaso solo existe para residentes en España.`,
   withholding_exceeds_gross: (d, v) =>
     `La retención (${v.money(d.withholding)}) no puede ser mayor que el bruto (${v.money(d.gross)}).`,
+  payment_before_year_end: (d, v) =>
+    `La Renta de ${year(v, d.tax_year)} se paga después de que acabe el año: la fecha (${v.date(d.date)}) tiene que ser posterior al 31/12/${year(v, d.tax_year)}.`,
+  refund_split: () =>
+    "Una devolución de la Renta llega de una vez: no tiene primer ni segundo plazo.",
   sale_asset_not_held: (d, v) =>
     `No tienes ${v.one(d.asset_id)} en ninguna cuenta activa: solo se puede simular la venta de lo que tienes.`,
   sale_exceeds_holding: (d, v) =>

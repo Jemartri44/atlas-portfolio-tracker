@@ -256,6 +256,17 @@ export const RULES: Record<SupportedEventType, Rules> = {
     fingerprint: req("string"),
     notes: opt("string"),
   },
+  // A payment (or refund) of the income tax return, as the bank or the tax
+  // agency says it: the whole return, not only the part Atlas estimates.
+  tax_payment: {
+    tax_year: req("positive_integer"),
+    date: req("date"),
+    amount_eur: req("positive_decimal"),
+    kind: oneOf(["payment", "refund"]),
+    instalment: oneOf(["single", "first", "second"]),
+    fingerprint: req("string"),
+    notes: opt("string"),
+  },
   fx_exchange: {
     account_id: req("string"),
     value_date: req("date"),

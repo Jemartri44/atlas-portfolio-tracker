@@ -48,6 +48,7 @@ import {
   applyFxExchange,
   applyInterest,
   applyStandaloneFee,
+  applyTaxPayment,
 } from "./operations-cash.js";
 import { applyTransfer } from "./operations-transfer.js";
 import {
@@ -206,6 +207,7 @@ export const businessDateOf = (state: LedgerState, event: OperationEvent): Civil
     case "valuation":
     case "order_updated":
     case "transfer_request_updated":
+    case "tax_payment":
       return event.date;
     case "order_placed":
     case "transfer_requested":
@@ -292,6 +294,9 @@ const applyOperation = (state: LedgerState, event: OperationEvent, position: num
       return;
     case "external_income":
       applyExternalIncome(state, event);
+      return;
+    case "tax_payment":
+      applyTaxPayment(state, event);
       return;
     case "fx_exchange":
       applyFxExchange(state, event);

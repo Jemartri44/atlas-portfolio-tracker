@@ -76,6 +76,7 @@ export const CRITERION_NAMES: Record<CriterionId, string> = {
   "26": "La devolución de prima o de aportaciones rebaja el coste; el exceso es rendimiento",
   "27": "Cuota del ahorro estimada con la escala del año",
   "28": "Los rendimientos de fuera de la cartera entran en la estimación de la cuota",
+  "29": "El impuesto de la cartera es lo que añade a la cuota, repartido entre núcleo y cubo",
 };
 
 /** How firm the reading of the law is. */

@@ -49,6 +49,12 @@ export const WARNINGS_OPERATIONS: Record<string, Entry> = {
     cli: (d, v) => taxHint("Cuánto", v, d.tax_year),
   },
 
+  // --- Payments of the income tax return ---
+  tax_instalment_repeated: (d, v) =>
+    `Ya constaba un ${d.instalment === "second" ? "segundo" : "primer"} plazo de la Renta de ${year(v, d.tax_year)}: comprueba que no lo hayas registrado dos veces.`,
+  tax_second_without_first: (d, v) =>
+    `Este segundo plazo de la Renta de ${year(v, d.tax_year)} no tiene un primero registrado antes: el fraccionamiento es un 60 % al presentarla y un 40 % después.`,
+
   // --- Swap ---
   swap_fiscal_dates_differ: {
     say: (d, v) =>
