@@ -29,7 +29,7 @@ interface AmountFormat {
 }
 
 import { currencyUnit } from "./currency.js";
-import { formatDecimalString, formatQuantityString, NBSP } from "./number.js";
+import { formatDecimalString, formatQuantityString } from "./number.js";
 import { MASK } from "./privacy.js";
 
 /** The mask, re-exported: this is the module every figure of a screen goes through. */
@@ -42,12 +42,6 @@ export const formatMoneyNumber = (value: Money, format: AmountFormat = {}): stri
     decimals: format.decimals ?? 2,
     ...(format.signed === undefined ? {} : { signed: format.signed }),
   });
-
-/** An amount with its unit, the two joined by a non-breaking space. */
-export const formatMoney = (value: Money, format: AmountFormat = {}): string => {
-  const body = formatMoneyNumber(value, format);
-  return format.currency === false ? body : `${body}${NBSP}${currencyUnit(value.currency)}`;
-};
 
 /** A quantity of units: up to eight decimals, trailing zeros trimmed (fractions are real). */
 export const formatQuantity = (value: Quantity, decimals = 8): string =>
