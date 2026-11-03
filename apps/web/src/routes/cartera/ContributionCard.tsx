@@ -30,11 +30,13 @@ import { formatMonth } from "../../format/date.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { type NameIndex, NO_NAMES } from "../../format/names.js";
 import type { AppError } from "../../ledger/state.js";
+import { GRID, mediaQuery } from "../../shell/media.js";
 import { privacy } from "../../shell/preferences.js";
 import type { ContributionRowView, ContributionView } from "../../view-models/core/index.js";
 import { COLUMNS } from "./contribution-columns.jsx";
 import { PlatformSection } from "./PlatformsBlock.jsx";
 import { REMEDIES } from "./remedies.js";
+import { SplitNotes } from "./SplitNotes.jsx";
 
 /** A refusal with a known remedy is a pending datum, never an error. */
 const Refusal = (props: { error: AppError }): JSX.Element => (
@@ -47,8 +49,8 @@ const Refusal = (props: { error: AppError }): JSX.Element => (
 );
 
 const Split = (props: { view: ContributionView }): JSX.Element => {
+  const wide = mediaQuery(GRID);
   const active = (): ContributionRowView[] => props.view.rows.filter((row) => !row.idle);
-  const idle = (): string[] => props.view.rows.filter((row) => row.idle).map((row) => row.name);
   return (
     <>
       <dl class="kpis">
@@ -124,43 +126,55 @@ const Split = (props: { view: ContributionView }): JSX.Element => {
                   </span>
                 </span>
               </div>
+              <Show when={row.sharePct}>
+                {(share) => (
+                  <svg class={`share-line is-${row.classKey}`} aria-hidden="true">
+                    <rect class="share-line-track" x="0" y="0" width="100%" height="100%" rx="2" />
+                    <rect
+                      class="share-line-bar"
+                      x="0"
+                      y="0"
+                      width={`${Math.min(100, Math.max(0, Number.parseFloat(share())))}%`}
+                      height="100%"
+                      rx="2"
+                    />
+                  </svg>
+                )}
+              </Show>
             </li>
           )}
         </For>
       </ul>
-      <Show when={active().some((row) => row.whole !== undefined)}>
-        <p class="card-note" data-testid="whole-leftover">
-          <Show when={props.view.wholeLeftover}>
-            {(leftover) => (
-              <>
-                Con participaciones enteras sobrarían <Amount value={leftover()} /> en total.{" "}
-              </>
-            )}
-          </Show>
-          Es solo una ayuda: los fondos admiten fracciones y la propuesta en euros es la que vale.
-        </p>
-      </Show>
-      <Show when={idle().length > 0}>
-        <p class="card-note">{idle().join(", ")}: nada este mes.</p>
-      </Show>
       <PlatformSection view={props.view} />
-      <Show when={props.view.surplusDistributed}>
-        <p class="card-note">
-          La aportación cubre el déficit de todos los activos: el sobrante se reparte por pesos
-          objetivo.
-        </p>
+      <A href="/registrar/buy" class="card-foot">
+        <span>Registrar estas compras</span>
+        <Icon name="arrow" class="icon-sm" />
+      </A>
+      <SplitNotes view={props.view} />
+      {/* The calculation, whole on a computer and folded on a phone (the approved report, §4). */}
+      <Show
+        when={wide()}
+        fallback={
+          <Disclosure label="Por qué este reparto">
+            <DataTable
+              label="Cálculo del reparto"
+              columns={COLUMNS}
+              rows={props.view.rows}
+              size="sm"
+            />
+          </Disclosure>
+        }
+      >
+        <h3 class="block-title">Por qué este reparto</h3>
+        <div class="split-calc">
+          <DataTable
+            label="Cálculo del reparto"
+            columns={COLUMNS}
+            rows={props.view.rows}
+            size="sm"
+          />
+        </div>
       </Show>
-
-      <p class="note-line">
-        <Icon name="info" class="icon-sm" />
-        <span>
-          Es una propuesta y nada se ha registrado: da las órdenes a mano en tu plataforma y
-          regístralas después desde <A href="/registrar">Registrar</A>.
-        </span>
-      </p>
-      <Disclosure label="Ver el cálculo">
-        <DataTable label="Cálculo del reparto" columns={COLUMNS} rows={props.view.rows} size="sm" />
-      </Disclosure>
     </>
   );
 };

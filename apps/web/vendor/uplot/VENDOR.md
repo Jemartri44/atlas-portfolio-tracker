@@ -36,7 +36,7 @@ The **ESM source** (`uPlot.esm.js`), not the minified IIFE:
 
 ## What uPlot does not do, and what we do instead
 
-- **No pie or donut**: the core allocation is drawn by hand in SVG (`components/chart/Allocation.tsx`), which is what ADR-0017 already said.
+- **No pie or donut**: the weights of the core are drawn by hand in SVG as bullet bars (`components/Bullet.tsx`), which is what ADR-0017 already said.
 - **No touch gestures**: the time range is chosen with buttons (1M / 1A / 5A / Todo). That is a decision of ADR-0017, not a workaround.
 - **No gap policy of its own beyond `null`**: a `null` in a series is drawn as a gap when `spanGaps` is false, which is exactly the rule of this project — where there is no price there is a hole.
 
