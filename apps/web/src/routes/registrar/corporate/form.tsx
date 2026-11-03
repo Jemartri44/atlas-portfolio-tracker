@@ -80,8 +80,8 @@ export default function CorporateFormRoute(): JSX.Element {
           }
           return attempt(() =>
             corporateActionDraft(
-              snapshot.state as LedgerState,
-              snapshot.events,
+              liveLedger(snapshot).state as LedgerState,
+              liveLedger(snapshot).events,
               toCorporateParams(current, values(), catalogue()),
             ),
           );

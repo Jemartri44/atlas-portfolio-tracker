@@ -73,11 +73,11 @@ export default function PresentarRoute(): JSX.Element {
             </Notice>
           );
         }
-        const names = nameIndex(snapshot.state);
+        const names = createMemo(() => nameIndex(liveLedger(snapshot).state));
         const proposal = createMemo(() => {
           return filingProposal(liveLedger(snapshot).events, model, year, { today: today() });
         });
-        const fields = createMemo(() => filingFields(proposal(), names));
+        const fields = createMemo(() => filingFields(proposal(), names()));
         /** What the field shows: what was typed, or what the application computes. */
         const shown = (key: string, proposed: string): string =>
           typed()[key] ?? decimalForInput(proposed);
