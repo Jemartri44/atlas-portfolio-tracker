@@ -603,6 +603,8 @@ const checkEnvelope = (raw: UnknownRecord, schema: LedgerSchema): void => {
     throw invalid("invalid_envelope", "id must be a ULID", { field: "id", value: raw.id });
   }
   const recordedAt = raw.recorded_at;
+  // The loader stays tolerant (ADR-0018: hardening it is a breaking change); a line that is
+  // written is checked for an instant that exists in `sync/remote.ts`.
   if (
     typeof recordedAt !== "string" ||
     !INSTANT_PATTERN.test(recordedAt) ||

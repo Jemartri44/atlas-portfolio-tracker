@@ -21,7 +21,7 @@
 //   against it.
 
 import { addDays, addYears, type CivilDate } from "../dates/civil-date.js";
-import { DomainError } from "../errors.js";
+import { asDomainError, DomainError } from "../errors.js";
 import type { DailyClose, PriceSource, SourceFailureKind } from "../ports/price-source.js";
 import type { PriceStore, PriceTransaction } from "../ports/price-store.js";
 import type { QuoteSource } from "../projections/prices.js";
@@ -129,7 +129,7 @@ const lastDateOf = (
   try {
     return effectiveCloses(readCloseFile(assetId, text ?? "")).at(-1)?.date;
   } catch (error) {
-    return error as DomainError;
+    return asDomainError(error);
   }
 };
 
@@ -489,7 +489,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       } catch (error) {
         // Another writer left a line this code does not read between the
         // reading above and this one: nothing is appended to that file.
-        added.set(download.asset_id, (error as DomainError).code);
+        added.set(download.asset_id, asDomainError(error).code);
         continue;
       }
       const lines = linesToAppend(
