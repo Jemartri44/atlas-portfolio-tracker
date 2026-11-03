@@ -239,7 +239,7 @@ describe("a return of share premium or contributions (H2)", () => {
       (entry) => entry.code === "capital_return_partial_accounts",
     );
     expect(warnings.map((entry) => [entry.event_id, entry.details])).toEqual([
-      [action.id, { asset_id: "stock_s", missing: ["acc_b"] }],
+      [action.id, { asset_id: "stock_s", uncovered: ["acc_b"] }],
     ]);
   });
 

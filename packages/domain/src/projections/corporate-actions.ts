@@ -75,14 +75,16 @@ const warnUncoveredHolders = (
   // The kind's row admits a single cost_adjustment.
   const [effect] = effects as [Resolved<"cost_adjustment">];
   const listed = new Set(effect.per_account.map((entry) => entry.account_id));
-  const missing = accountsHolding(state, event.asset_id).filter((account) => !listed.has(account));
-  if (missing.length > 0) {
+  const uncovered = accountsHolding(state, event.asset_id).filter(
+    (account) => !listed.has(account),
+  );
+  if (uncovered.length > 0) {
     addWarning(
       state,
       "capital_return_partial_accounts",
       event.id,
       `the capital_return names no cash for every account holding ${event.asset_id}`,
-      { asset_id: event.asset_id, missing },
+      { asset_id: event.asset_id, uncovered },
     );
   }
 };
