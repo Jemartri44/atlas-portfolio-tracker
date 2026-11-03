@@ -228,7 +228,6 @@ export const parseSymbols = (text: string | undefined): SymbolsFile => {
   if (text === undefined) {
     return EMPTY_SYMBOLS;
   }
-  // A key twice says two things: refused first.
   const raw = parseStrictJson(text, "prices/symbols.json", () => wrong("json"));
   if (
     isRecord(raw) &&
