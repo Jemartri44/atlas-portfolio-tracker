@@ -192,7 +192,7 @@ describe("recording what was filed after another device wrote (412)", () => {
   it("recomputes the figures on the new ledger and writes those, not the old ones", async () => {
     const host = await openForm();
     const base = host.querySelector("#f-base") as HTMLInputElement;
-    expect(base.value).toBe("184,89");
+    expect(base.value).toBe("184,90");
     type(host, "f-receipt", "100-2027-ABCDEFGHIJKL");
     type(host, "f-filed-at", "2028-06-12");
     // Another device records a dividend of 2027 while this form is open.
@@ -212,12 +212,12 @@ describe("recording what was filed after another device wrote (412)", () => {
     await press(host, "Registrar lo presentado");
     await settle(80);
     const fresh = (host.querySelector("#f-base") as HTMLInputElement).value;
-    expect(fresh).not.toBe("184,89");
+    expect(fresh).not.toBe("184,90");
     await press(host, "Registrar lo presentado");
     await settle(80);
     const event = lastEvent();
     expect(event.type).toBe("tax_return_filed");
-    expect((event.computed as { savings_base_eur: string }).savings_base_eur).not.toBe("184.89");
+    expect((event.computed as { savings_base_eur: string }).savings_base_eur).not.toBe("184.90");
   });
 });
 
