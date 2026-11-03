@@ -19,11 +19,10 @@ describe("prices/symbols.json", () => {
       symbols_format: 2,
       assets: {
         ast_x: {
-          currencies: { eodhd: "GBX", alpha_vantage: "GBX" },
+          currencies: { eodhd: "GBX" },
           eodhd: "CSPX.LSE",
-          alpha_vantage: "CSPX.LON",
           confirmed_at: AT,
-          currency_check: { eodhd: { found: "GBP", at: AT }, alpha_vantage: { at: AT } },
+          currency_check: { eodhd: { found: "GBP", at: AT } },
           currency_confirmed_over: { eodhd: "GBP" },
         },
       },
@@ -84,7 +83,9 @@ describe("prices/symbols.json", () => {
       [entry({ currency: "EUR" }), "a.currency"],
       [entry({ confirmed_at: 1 }), "a.confirmed_at"],
       [entry({ eodhd: " " }), "a.eodhd"],
-      [entry({ alpha_vantage: 3 }), "a.alpha_vantage"],
+      // The second source of the two-source days is an unknown key like any other.
+      [entry({ alpha_vantage: "CSPX.LON" }), "a.alpha_vantage"],
+      [entry({ currency_check: { alpha_vantage: { at: AT } } }), "a.currency_check.alpha_vantage"],
       [entry({ currency_check: [] }), "a.currency_check"],
       [entry({ currency_check: { yahoo: { at: AT } } }), "a.currency_check.yahoo"],
       [entry({ currency_check: { eodhd: { at: 1 } } }), "a.currency_check.eodhd"],
@@ -103,14 +104,13 @@ describe("prices/symbols.json", () => {
 describe("the declared currency (D-Q2)", () => {
   it("is never assumed: a disagreement of the metadata is pending until confirmed", () => {
     const { entry, pending } = declareSymbols(
-      declared("GBX", { eodhd: "CSPX.LSE", alpha_vantage: "CSPX.LON" }),
-      { eodhd: "GBP", alpha_vantage: "GBX" },
+      declared("GBX", { eodhd: "CSPX.LSE" }),
+      { eodhd: "GBP" },
       AT,
       [],
     );
     expect(pending).toEqual([{ source: "eodhd", declared: "GBX", found: "GBP" }]);
     expect(currencyAgrees(entry, "eodhd")).toBe(false);
-    expect(currencyAgrees(entry, "alpha_vantage")).toBe(true);
   });
 
   it("keeps an explicit confirmation over exactly what the source said", () => {
@@ -131,15 +131,14 @@ describe("the declared currency (D-Q2)", () => {
 
   it("records metadata that say nothing, and leaves unchecked what was not asked", () => {
     const { entry } = declareSymbols(
-      declared("EUR", { eodhd: "X.EUFUND", alpha_vantage: "X" }),
+      declared("EUR", { eodhd: "X.EUFUND" }),
       { eodhd: undefined },
       AT,
       [],
     );
     expect(entry).toEqual({
-      currencies: { eodhd: "EUR", alpha_vantage: "EUR" },
+      currencies: { eodhd: "EUR" },
       eodhd: "X.EUFUND",
-      alpha_vantage: "X",
       confirmed_at: AT,
       currency_check: { eodhd: { at: AT } },
     });

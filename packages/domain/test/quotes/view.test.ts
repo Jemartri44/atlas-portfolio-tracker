@@ -5,23 +5,10 @@ import { EMPTY_STATUS, reserveCall, withAssetFailures } from "../../src/quotes/s
 import { priceStatusView } from "../../src/quotes/view.js";
 
 describe("what `atlas prices status` shows", () => {
-  it("each source with what it spent today, and the age of each asset", () => {
+  it("the source with what it spent today, and the age of each asset", () => {
     const now = new Date("2027-01-06T08:00:00.000Z");
-    let status = reserveCall(EMPTY_STATUS, "eodhd", 20, now) ?? EMPTY_STATUS;
-    status = {
-      ...status,
-      sources: {
-        ...status.sources,
-        alpha_vantage: {
-          consecutive_failures: 3,
-          calls_at: [],
-          last_failure: { kind: "blocked", at: "t" },
-          last_success: "s",
-        },
-      },
-    };
-    status = withAssetFailures(
-      status,
+    const status = withAssetFailures(
+      reserveCall(EMPTY_STATUS, "eodhd", 20, now) ?? EMPTY_STATUS,
       new Map([["ast_b", { kind: "not_found", source: "eodhd", at: "t" }]]),
     );
     const closes = new Map([
@@ -55,16 +42,6 @@ describe("what `atlas prices status` shows", () => {
         remaining: 19,
         consecutive_failures: 0,
         failing: false,
-      },
-      {
-        source: "alpha_vantage",
-        spent_today: 0,
-        daily_calls: 25,
-        remaining: 25,
-        consecutive_failures: 3,
-        failing: true,
-        last_success: "s",
-        last_failure: { kind: "blocked", at: "t" },
       },
     ]);
     expect(view.assets).toEqual([

@@ -13,7 +13,7 @@ interface PriceFields {
   priceDate?: string;
   ageDays?: number;
   stale: boolean;
-  /** «manual», «EODHD», «Alpha Vantage». */
+  /** «manual» or «EODHD». */
   priceOrigin?: string;
   /** An approximation through the reference ETF: always marked. */
   approximate?: boolean;
@@ -23,7 +23,7 @@ interface PriceFields {
   newerQuote?: string;
 }
 
-const SOURCES: Record<string, string> = { eodhd: "EODHD", alpha_vantage: "Alpha Vantage" };
+const SOURCES: Record<string, string> = { eodhd: "EODHD" };
 
 export const priceFieldsOf = (price: PriceLookup | undefined): PriceFields =>
   price === undefined

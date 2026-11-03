@@ -20,7 +20,7 @@ const AT = "2026-09-01T00:00:00.000Z";
 const close = (
   date: string,
   value: string,
-  source: "eodhd" | "alpha_vantage" = "eodhd",
+  source: "eodhd" = "eodhd",
   fetched = "2026-10-01T05:00:00.000Z",
 ): string =>
   JSON.stringify({
@@ -40,17 +40,16 @@ const synced = async (assets: readonly string[] = ["ast_a"]) => {
     ok: true,
     value: [{ date: "2026-09-30", close: "50" }],
   }));
-  const alpha = new ScriptedSource("alpha_vantage", () => ({ ok: true, value: [] }));
   const holder: { secrets?: string } = {};
   const c = await setupConsole({}, undefined, {
     get secretsPath() {
       return holder.secrets;
     },
-    sources: () => ({ eodhd, alpha_vantage: alpha }),
+    sources: () => ({ eodhd }),
   } as never);
   holder.secrets = join(c.config, "atlas", "secrets.json");
   await mkdir(join(c.config, "atlas"), { recursive: true, mode: 0o700 });
-  await writeFile(holder.secrets, JSON.stringify({ eodhd: "k", alpha_vantage: "k" }));
+  await writeFile(holder.secrets, JSON.stringify({ eodhd: "k" }));
   await chmod(holder.secrets, 0o600);
   const b = new Events();
   b.settings(CLI_SETTINGS);
@@ -86,20 +85,19 @@ const synced = async (assets: readonly string[] = ["ast_a"]) => {
   );
   c.out.length = 0;
   c.err.length = 0;
-  return { c, eodhd, alpha };
+  return { c, eodhd };
 };
 
 const local = (dir: string, name: string) => readFile(join(dir, "prices", name), "utf8");
 
 describe("atlas prices update in a cloud folder whose cloud has prices", () => {
   it("takes the closes from the API, with the token of the folder, and calls no source", async () => {
-    const { c, eodhd, alpha } = await synced();
+    const { c, eodhd } = await synced();
     const cloud = text([close("2026-09-29", "10"), close("2026-09-30", "11")]);
     c.api.s3.seed("prices/ast_a.jsonl", cloud);
     expect(await c.exec(["prices", "update"])).toBe(0);
     expect(await local(c.ledger, "ast_a.jsonl")).toBe(cloud);
     expect(eodhd.calls).toEqual([]);
-    expect(alpha.calls).toEqual([]);
     const reference = c.seen.filter((seen) => seen.url.includes("/api/reference/"));
     expect(reference.map((seen) => new URL(seen.url).pathname)).toEqual([
       "/api/reference/index",
@@ -116,7 +114,7 @@ describe("atlas prices update in a cloud folder whose cloud has prices", () => {
     const { c } = await synced();
     // A local line as a hand or an older version wrote it: a rewrite would show.
     const before = text([
-      close("2026-09-28", "9", "alpha_vantage", "2026-09-29T06:00:00.000Z").replace(
+      close("2026-09-28", "9", "eodhd", "2026-09-29T06:00:00.000Z").replace(
         '"close":"9"',
         '"close": "9"',
       ),
@@ -126,9 +124,8 @@ describe("atlas prices update in a cloud folder whose cloud has prices", () => {
     c.api.s3.seed(
       "prices/ast_a.jsonl",
       text([
-        close("2026-09-28", "9.5", "eodhd"), // a source before the one in force: added
-        close("2026-09-29", "10.00", "eodhd"), // the same value: nothing
-        close("2026-09-29", "12", "alpha_vantage"), // a source after: never
+        close("2026-09-28", "9.00", "eodhd"), // the same value: nothing
+        close("2026-09-29", "10.5", "eodhd"), // another value for the date: added
         close("2026-09-30", "11", "eodhd"), // a new date: added
       ]),
     );
@@ -136,7 +133,7 @@ describe("atlas prices update in a cloud folder whose cloud has prices", () => {
     const after = await local(c.ledger, "ast_a.jsonl");
     expect(after.startsWith(before)).toBe(true);
     expect(after.slice(before.length)).toBe(
-      text([close("2026-09-28", "9.5", "eodhd"), close("2026-09-30", "11", "eodhd")]),
+      text([close("2026-09-29", "10.5", "eodhd"), close("2026-09-30", "11", "eodhd")]),
     );
   });
 

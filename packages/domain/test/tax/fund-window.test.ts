@@ -1,13 +1,10 @@
-// The **default** repurchase window of a fund: two months (criterion #2,
-// `2:fund_2m`), worked out by hand before this file existed.
+// The two readings of the repurchase window of a fund (criterion #2), worked
+// out by hand: two months (`2:fund_2m`, the default from 2026-09-22 to
+// 2026-11-03 and a setting since) and a year (`2:fund_1y`, the default since,
+// the prudent reading while the dispute is open).
 //
-// Why it exists: the other hand calculations all fix the window of funds at
-// **one year**, which was the default when they were written. On 2026-09-22
-// the reading changed and the default of the product became two months — and
-// from that day no hand calculation backed the value the application actually
-// applies. This is the smallest ledger that tells the two readings apart: a
-// loss on a fund, one subscription **inside** the two months and another
-// **outside**.
+// This is the smallest ledger that tells the two readings apart: a loss on a
+// fund, one subscription **inside** the two months and another **outside**.
 //
 // The literals below come from that hand calculation. Any discrepancy is
 // investigated, and the literal is not touched until it is clear who was
@@ -45,7 +42,7 @@ const ledger = (settings: Settings): LedgerEvent[] => {
   return b.build();
 };
 
-describe("§6.5 — the default two-month window of a fund", () => {
+describe("§6.5 — the two-month window of a fund, when configured", () => {
   const report = taxYear(ledger(TWO_MONTHS), 2026, { today: TODAY });
   const line = report.capital_gains.lines[0];
 
@@ -104,5 +101,19 @@ describe("§6.5 — the default two-month window of a fund", () => {
     expect(text(stake?.base_difference_eur)).toBe("0");
     expect(text(stake?.pending_difference_eur)).toBe("240");
     expect(text(stake?.deferred_difference_eur)).toBe("-240");
+  });
+});
+
+// The default since 2026-11-03: the whole loss waits, and the output shows the
+// two-month figure beside it, the same 240 the other way round.
+describe("§6.5 — the one-year window of a fund, its default", () => {
+  const report = taxYear(ledger(ONE_YEAR), 2026, { today: TODAY });
+
+  it("shows the two-month figure in the doubtful section", () => {
+    const stake = report.doubtful.find((entry) => entry.criterion === "2:fund_1y");
+    expect(stake?.certainty).toBe("medium");
+    expect(text(stake?.base_difference_eur)).toBe("0");
+    expect(text(stake?.pending_difference_eur)).toBe("-240");
+    expect(text(stake?.deferred_difference_eur)).toBe("240");
   });
 });

@@ -71,7 +71,6 @@ export interface NoticeFacts {
 /** The price sources, as the mail says them: a closed list. */
 const SOURCES: Readonly<Record<string, string>> = {
   eodhd: "EODHD",
-  alpha_vantage: "Alpha Vantage",
 };
 
 interface Redaction {

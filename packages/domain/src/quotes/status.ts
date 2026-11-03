@@ -91,27 +91,14 @@ export const serializeStatus = (status: PriceStatus): string =>
   `${JSON.stringify(status, null, 2)}\n`;
 
 /**
- * How each source counts its day:
- * EODHD resets at midnight GMT, which it documents; Alpha Vantage documents
- * no reset at all, so a rolling window of 24 hours is used, which never goes
- * over the quota whatever the hour of its reset. Facts of the providers, not
- * configuration.
+ * The calls of `source` that count against today's budget at `now`: EODHD
+ * resets its quota at midnight GMT, which it documents (a fact of the
+ * provider, not configuration).
  */
-export const BUDGET_WINDOW: Readonly<Record<QuoteSource, "gmt_day" | "rolling_24h">> = {
-  eodhd: "gmt_day",
-  alpha_vantage: "rolling_24h",
-};
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-/** The calls of `source` that count against today's budget at `now`. */
 export const spentAt = (status: PriceStatus, source: QuoteSource, now: Date): number => {
-  const calls = status.sources[source]?.calls_at ?? [];
-  if (BUDGET_WINDOW[source] === "gmt_day") {
-    const day = now.toISOString().slice(0, 10);
-    return calls.filter((stamp) => stamp.slice(0, 10) === day).length;
-  }
-  return calls.filter((stamp) => now.getTime() - Date.parse(stamp) < DAY_MS).length;
+  const day = now.toISOString().slice(0, 10);
+  return (status.sources[source]?.calls_at ?? []).filter((stamp) => stamp.slice(0, 10) === day)
+    .length;
 };
 
 const sourceOf = (status: PriceStatus, source: QuoteSource): SourceStatus =>
@@ -138,7 +125,9 @@ export const reserveCall = (
     return undefined;
   }
   const current = sourceOf(status, source);
-  const recent = current.calls_at.filter((stamp) => now.getTime() - Date.parse(stamp) < 2 * DAY_MS);
+  const recent = current.calls_at.filter(
+    (stamp) => now.getTime() - Date.parse(stamp) < 2 * 24 * 60 * 60 * 1000,
+  );
   return withSource(status, source, { ...current, calls_at: [...recent, now.toISOString()] });
 };
 
