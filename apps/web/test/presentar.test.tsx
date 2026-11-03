@@ -102,7 +102,7 @@ describe("recording what was filed", () => {
     type(host, "f-receipt", "100-2027-ABCDEFGHIJKL");
     type(host, "f-filed-at", "2028-06-12");
     await press(host, "Registrar lo presentado");
-    await settle(30);
+    await until(() => lastEvent().type === "tax_return_filed", "the filing");
     const event = lastEvent();
     expect(event.type).toBe("tax_return_filed");
     expect(event.tax_year).toBe(2027);
@@ -120,7 +120,7 @@ describe("recording what was filed", () => {
     type(host, "f-receipt", "100-2020-ABCDEFGHIJKL");
     type(host, "f-filed-at", "2021-06-10");
     await press(host, "Registrar lo presentado");
-    await settle(30);
+    await until(() => lastEvent().type === "tax_return_filed", "the filing");
     expect(lastEvent().type).toBe("tax_return_filed");
     const again = await openForm(2020);
     expect(text(again)).toContain("Esto es una complementaria");
@@ -136,7 +136,7 @@ describe("recording what was filed", () => {
     type(host, "f-receipt", "100-2020-ABCDEFGHIJKL");
     type(host, "f-filed-at", "2021-06-10");
     await press(host, "Registrar lo presentado");
-    await settle(30);
+    await until(() => lastEvent().type === "tax_return_filed", "the filing");
     const before = filings();
     const again = await openForm(2020);
     type(again, "f-receipt", "100-2020-ABCDEFGHIJKL");
@@ -148,8 +148,7 @@ describe("recording what was filed", () => {
       node.hasAttribute("open"),
     ) as HTMLElement;
     await press(dialog, "Registrar de todas formas");
-    await settle(30);
-    expect(filings()).toBe(before + 1);
+    await until(() => filings() === before + 1, "the second filing");
   });
 
   // The dialog does not freeze the form. A field changed with the warning open is another filing,
@@ -161,7 +160,7 @@ describe("recording what was filed", () => {
     type(host, "f-receipt", "100-2020-ABCDEFGHIJKL");
     type(host, "f-filed-at", "2021-06-10");
     await press(host, "Registrar lo presentado");
-    await settle(30);
+    await until(() => lastEvent().type === "tax_return_filed", "the filing");
     const before = filings();
     const again = await openForm(2020);
     type(again, "f-receipt", "100-2020-ABCDEFGHIJKL");
@@ -179,8 +178,7 @@ describe("recording what was filed", () => {
     expect(filings()).toBe(before);
     await until(() => open() !== undefined, "la pregunta otra vez", 3000);
     await press(open(), "Registrar de todas formas");
-    await settle(30);
-    expect(filings()).toBe(before + 1);
+    await until(() => filings() === before + 1, "the second filing");
   });
 });
 
@@ -210,11 +208,13 @@ describe("recording what was filed after another device wrote (412)", () => {
       source_country: "ES",
     } as never);
     await press(host, "Registrar lo presentado");
-    await settle(80);
+    await until(
+      () => (host.querySelector("#f-base") as HTMLInputElement).value !== "184,90",
+      "the base to be computed again",
+    );
     const fresh = (host.querySelector("#f-base") as HTMLInputElement).value;
-    expect(fresh).not.toBe("184,90");
     await press(host, "Registrar lo presentado");
-    await settle(80);
+    await until(() => lastEvent().type === "tax_return_filed", "the filing");
     const event = lastEvent();
     expect(event.type).toBe("tax_return_filed");
     expect((event.computed as { savings_base_eur: string }).savings_base_eur).not.toBe("184.90");
