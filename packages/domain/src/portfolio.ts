@@ -41,6 +41,26 @@ export {
   type StandaloneFees,
 } from "./projections/costs.js";
 export {
+  type AssetExposure,
+  type Exposure,
+  type ExposureDimension,
+  type ExposureShare,
+  type Exposures,
+  exposure,
+  type Split,
+} from "./projections/exposure.js";
+export {
+  EXPOSURE_FORMAT,
+  EXPOSURE_KEY,
+  type ExposureReason,
+  exposureOrNone,
+  exposureText,
+  MAX_EXPOSURE_ASSETS,
+  MAX_EXPOSURE_BYTES,
+  parseExposureText,
+  validateExposure,
+} from "./projections/exposure-file.js";
+export {
   type MonthAssetTask,
   type MonthPlan,
   type MonthTask,
