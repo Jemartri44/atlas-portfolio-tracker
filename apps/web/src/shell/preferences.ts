@@ -1,5 +1,5 @@
-// What the device remembers of the person's preferences: whether the amounts are covered and which
-// theme to paint. They are the only things of the application kept on the device (ADR-0035) and
+// What the device remembers of the person's preferences: whether the amounts are covered, which
+// theme to paint and whether the one-letter shortcuts act. They are the only things of the application kept on the device (ADR-0035) and
 // they have nothing to do with the ledger, so they live apart from its store.
 
 import { createSignal } from "solid-js";
@@ -8,6 +8,7 @@ export type Theme = "system" | "light" | "dark";
 
 const PRIVACY_KEY = "atlas.privacy";
 const THEME_KEY = "atlas.theme";
+const LETTERS_KEY = "atlas.letters";
 
 /** localStorage, tolerant: in private mode it can throw or come back empty. */
 const readLocal = (key: string): string | undefined => {
@@ -62,4 +63,18 @@ export const theme = currentTheme;
 export const setTheme = (value: Theme): void => {
   setCurrentTheme(value);
   writeLocal(THEME_KEY, value);
+};
+
+/**
+ * The one-letter shortcuts of a computer (C, V, P): on unless the device says «off». They can be
+ * turned off (WCAG 2.1.4) for whoever reads with a screen reader, which uses single letters to
+ * move, or dictates with the voice.
+ */
+const [lettersOn, setLettersOn] = createSignal(readLocal(LETTERS_KEY) !== "off");
+
+export const letterKeys = lettersOn;
+
+export const setLetterKeys = (value: boolean): void => {
+  setLettersOn(value);
+  writeLocal(LETTERS_KEY, value ? "on" : "off");
 };

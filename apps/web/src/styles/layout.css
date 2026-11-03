@@ -5,8 +5,9 @@
  *   < 75rem  a status bar on top (where the data lives, privacy, settings)
  *            and the navigation fixed at the bottom, Registrar in the middle.
  *            A 1024px tablet in landscape keeps the thumb bar.
- *   ≥ 75rem  one top bar: brand, the four destinations as a group, Registrar
- *            as the primary button, and the status on the right. Compact
+ *   ≥ 75rem  one top bar: brand, the destinations as pills (the declaration
+ *            among them), Registrar as the primary button, and the status on
+ *            the right with «Buscar o registrar» (`command.css`). Compact
  *            (shorter privacy label, tighter tabs) until 90rem.
  *
  * The content grid has its own breakpoint (64rem): the shell and the grid
