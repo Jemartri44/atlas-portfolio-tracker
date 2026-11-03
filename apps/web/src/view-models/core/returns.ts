@@ -37,7 +37,9 @@ const gapOf = (row: ClassReturns["classes"][number]): string | undefined =>
 
 export interface RealView {
   xirrPct?: string;
-  /** Why there is no real rate, or that it stops before the date: always said. */
+  /** What was earned up to the date the real figures are measured at, in euros of that date. */
+  gain?: Money;
+  /** Why a figure is missing, or that it stops before the date: always said. */
   note?: string;
 }
 
@@ -45,6 +47,8 @@ export interface ClassReturnRowView {
   assetClass: string;
   label: string;
   invested?: Money;
+  /** Sold and received as dividends. */
+  returned?: Money;
   value?: Money;
   gainPct?: string;
   xirrPct?: string;
@@ -70,40 +74,51 @@ const realOf = (xirr: CoreXirr): RealView | undefined => {
   if (real === undefined) {
     return undefined;
   }
+  const years = real.missing_years.join(", ");
   if (real.until === undefined) {
-    return {
-      note: `falta el IPC de ${real.missing_years.join(", ")}: sin él no hay cifra real`,
-    };
+    return { note: `falta el IPC de ${years}: sin él no hay cifra real` };
   }
   if (real.gap === "partial") {
     return { note: "falta un precio a la fecha del IPC" };
   }
-  const note =
-    real.until < xirr.to
-      ? `medida hasta el ${formatDate(real.until)}: el IPC de un año se conoce al terminar`
-      : undefined;
+  const notes = [
+    ...(real.until < xirr.to
+      ? [
+          `medida hasta el ${formatDate(real.until)}: falta el IPC de ${years}, que se conoce al terminar el año`,
+        ]
+      : []),
+    ...(real.xirr_pct === undefined ? ["los movimientos no dan una rentabilidad anual real"] : []),
+  ];
   return {
     ...(real.xirr_pct === undefined ? {} : { xirrPct: real.xirr_pct.toString() }),
-    ...(note === undefined ? {} : { note }),
+    ...(real.gain_eur === undefined ? {} : { gain: real.gain_eur }),
+    ...(notes.length === 0 ? {} : { note: notes.join("; ") }),
   };
 };
 
-export const returnsView = (xirr: CoreXirr, classes: ClassReturns): ReturnsView => ({
-  ...(xirr.gap === undefined ? {} : { gap: GAPS[xirr.gap] }),
-  ...(xirr.from === undefined ? {} : { from: xirr.from }),
-  ...(xirr.contributed_eur === undefined ? {} : { contributed: xirr.contributed_eur }),
-  ...(xirr.value_eur === undefined ? {} : { value: xirr.value_eur }),
-  ...(xirr.gain_eur === undefined ? {} : { gain: xirr.gain_eur }),
-  ...(xirr.gain_pct === undefined ? {} : { gainPct: xirr.gain_pct.toString() }),
-  ...(xirr.xirr_pct === undefined ? {} : { xirrPct: xirr.xirr_pct.toString() }),
-  ...(realOf(xirr) === undefined ? {} : { real: realOf(xirr) as RealView }),
-  classes: classes.classes.map((row) => ({
-    assetClass: row.asset_class,
-    label: valueLabel(row.asset_class),
-    ...(row.invested_eur === undefined ? {} : { invested: row.invested_eur }),
-    ...(row.value_eur === undefined ? {} : { value: row.value_eur }),
-    ...(row.gain_pct === undefined ? {} : { gainPct: row.gain_pct.toString() }),
-    ...(row.xirr_pct === undefined ? {} : { xirrPct: row.xirr_pct.toString() }),
-    ...(gapOf(row) === undefined ? {} : { gap: gapOf(row) as string }),
-  })),
-});
+export const returnsView = (xirr: CoreXirr, classes: ClassReturns): ReturnsView => {
+  const real = realOf(xirr);
+  return {
+    ...(xirr.gap === undefined ? {} : { gap: GAPS[xirr.gap] }),
+    ...(xirr.from === undefined ? {} : { from: xirr.from }),
+    ...(xirr.contributed_eur === undefined ? {} : { contributed: xirr.contributed_eur }),
+    ...(xirr.value_eur === undefined ? {} : { value: xirr.value_eur }),
+    ...(xirr.gain_eur === undefined ? {} : { gain: xirr.gain_eur }),
+    ...(xirr.gain_pct === undefined ? {} : { gainPct: xirr.gain_pct.toString() }),
+    ...(xirr.xirr_pct === undefined ? {} : { xirrPct: xirr.xirr_pct.toString() }),
+    ...(real === undefined ? {} : { real }),
+    classes: classes.classes.map((row) => {
+      const gap = gapOf(row);
+      return {
+        assetClass: row.asset_class,
+        label: valueLabel(row.asset_class),
+        ...(row.invested_eur === undefined ? {} : { invested: row.invested_eur }),
+        ...(row.returned_eur === undefined ? {} : { returned: row.returned_eur }),
+        ...(row.value_eur === undefined ? {} : { value: row.value_eur }),
+        ...(row.gain_pct === undefined ? {} : { gainPct: row.gain_pct.toString() }),
+        ...(row.xirr_pct === undefined ? {} : { xirrPct: row.xirr_pct.toString() }),
+        ...(gap === undefined ? {} : { gap }),
+      };
+    }),
+  };
+};

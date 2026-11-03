@@ -9,6 +9,7 @@ import { FakeIdbFactory } from "../../../packages/adapters/test/fake-idb.js";
 import { bootCloud } from "../src/ledger/cloud.js";
 import { store } from "../src/ledger/state.js";
 import Cartera from "../src/routes/cartera/index.jsx";
+import { setPrivacy } from "../src/shell/preferences.js";
 import { type Api, apiAt, sameOrigin, signedIn } from "./cloud/api-support.js";
 import { goldenText } from "./helpers/golden.js";
 import { settle, show, text, type, until, withGoldenLedger } from "./helpers/render.jsx";
@@ -53,6 +54,18 @@ describe("the return of the core", () => {
     expect(shown).toContain("Por tipo de activo");
     // A class without a figure says why, in a sentence, and not squeezed in a cell.
     expect(shown).toContain("Oro: sin cifra por una operación corporativa.");
+    // The golden ledger has no inflation for its years: the real rate says so instead of a figure.
+    expect(shown).toContain("Real: falta el IPC de");
+  });
+
+  it("masks the amounts with the privacy mode on and leaves the percentages in sight", async () => {
+    setPrivacy(true);
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => text(host).includes("Has aportado"), "the card");
+    const card = text(host.querySelector(".returns-card"));
+    expect(card).toMatch(/Has aportado\s*[•·]{4}/);
+    expect(card).toMatch(/−?\d+,\d+\s*%/);
+    setPrivacy(false);
   });
 });
 
