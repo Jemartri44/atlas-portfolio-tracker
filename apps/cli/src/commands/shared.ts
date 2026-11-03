@@ -103,7 +103,7 @@ export const aside = (ctx: Context, text: string): void =>
  * What `--json` writes: amounts, quantities, prices and rates as strings (data-schema.md), never as
  * the object that wraps the decimal.
  */
-const jsonText = (data: unknown): string =>
+export const jsonText = (data: unknown): string =>
   JSON.stringify(
     data,
     (_key, value: unknown) => {

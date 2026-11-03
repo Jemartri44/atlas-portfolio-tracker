@@ -109,8 +109,10 @@ describe("atlas ca", () => {
     expect(text).toMatch(/acc_etf\s+ast_gold\s+10\s+2/);
     expect(text).toMatch(/acc_fund\s+ast_gold\s+7\s+1/);
     h.reset();
-    expect(await h.exec(["gains", "2027"])).toBe(0);
-    expect(h.text()).toContain("corporate_action:reverse_split");
+    expect(await h.exec(["tax", "2027"])).toBe(0);
+    // The cash in lieu is a taxable transmission, even when its gain is zero.
+    const lines = JSON.parse(h.text()).capital_gains.currency_lines as { account_id: string }[];
+    expect(lines.map((line) => line.account_id).sort()).toEqual(["acc_etf", "acc_fund"]);
     h.reset();
     expect(await h.exec(["positions"])).toBe(0);
     expect(h.text()).toMatch(/acc_etf\s+ast_gold\s+2/);

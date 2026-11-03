@@ -13,14 +13,11 @@ import { draftCommand } from "./commands/draft.js";
 import { exportCommand } from "./commands/export.js";
 import { filedCommand } from "./commands/filed.js";
 import { fxCommand } from "./commands/fx.js";
-import { m720Command, m721Command } from "./commands/informative.js";
 import { lockCommand } from "./commands/lock.js";
 import { pricesCommand } from "./commands/prices.js";
 import {
   cashCommand,
   checkCommand,
-  gainsCommand,
-  incomeCommand,
   lotsCommand,
   positionsCommand,
   valuationsCommand,
@@ -66,12 +63,8 @@ export const COMMANDS: Readonly<Record<string, CommandSpec>> = {
   positions: { run: positionsCommand, arity: 1 },
   lots: { run: lotsCommand, arity: 2 },
   cash: { run: cashCommand, arity: 1 },
-  gains: { run: gainsCommand, arity: 2 },
-  income: { run: incomeCommand, arity: 2 },
   tax: { run: taxCommand, arity: 2 },
   filed: { run: filedCommand, arity: 3 },
-  m720: { run: m720Command, arity: 2 },
-  m721: { run: m721Command, arity: 2 },
   check: { run: checkCommand, arity: 1 },
   export: { run: exportCommand, arity: 1 },
   synth: { run: synthCommand, arity: 1, looksAtMode: blind },

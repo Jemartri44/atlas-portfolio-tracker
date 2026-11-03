@@ -9,9 +9,8 @@ comandos:
   ca split|reverse-split|merger|spin-off|fund-merger|share-class-change|fund-liquidation|capital-return|delisting|raw
   thesis open|close <id>|show <id> [--date]   add buy|sell … --thesis <id>
   edit <id> --reason …           delete <id> --reason …
-  positions [--date]  lots [activo]  cash  gains <año>  income <año>  valuations [--date]  check [--deep]
-  tax <año> [--lots] [--boxes]   base del ahorro: total fiscal de núcleo y cubo, no la cuota
-  m720 <año>   m721 <año>        bienes en el extranjero a 31/12 y si hay que presentar
+  positions [--date]  lots [activo]  cash  valuations [--date]  check [--deep]
+  tax <año> [--boxes]            la base del ahorro (total fiscal de núcleo y cubo, no la cuota) como JSON; la lectura está en la web
   filed <renta|720|721> <año> [--set <clave>=<importe>]… [--receipt …] [--filed-at …]
   export --format jsonl|csv [--out <ruta>]
   synth --out <ruta> [--seed <n>]   backup --to <directorio> [--from-bucket --env <entorno>]
