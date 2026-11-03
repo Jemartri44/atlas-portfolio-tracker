@@ -3,12 +3,12 @@
 // asset type never leaves the data half configured (ADR-0018).
 
 import {
+  ADMITTED_FUND_WINDOW,
   ASSET_TYPES,
   type AssetType,
   DEFAULT_FISCAL_DATE_RULE,
   DEFAULT_WASH_SALE_WINDOW,
-  FOREIGN_FUND_WINDOW,
-  SPANISH_FUND_WINDOW,
+  NOT_ADMITTED_FUND_WINDOW,
 } from "@atlas/domain";
 import { createSignal, For, type JSX, Show } from "solid-js";
 import { Field, Fold, SelectField } from "../../components/index.js";
@@ -49,7 +49,7 @@ const WindowField = (props: { draft: SettingsDraft; type: AssetType }): JSX.Elem
             ? [
                 {
                   value: "by_domicile",
-                  label: `Según domicilio: español ${windowLabel(SPANISH_FUND_WINDOW)}, extranjero ${windowLabel(FOREIGN_FUND_WINDOW)}`,
+                  label: `Según domicilio: español ${windowLabel(ADMITTED_FUND_WINDOW)}, extranjero ${windowLabel(NOT_ADMITTED_FUND_WINDOW)}`,
                 },
               ]
             : []),
@@ -106,10 +106,11 @@ export const FiscalCard = (props: { draft: SettingsDraft }): JSX.Element => (
     <p class="card-note">
       Por tipo de activo. Lo que dejes por defecto toma el valor indicado entre paréntesis, así que
       añadir un tipo de activo nuevo nunca deja tus datos a medias. Un fondo o un monetario según
-      domicilio lleva {windowLabel(SPANISH_FUND_WINDOW)} si su ISIN empieza por ES o su emisor es
-      español, y {windowLabel(FOREIGN_FUND_WINDOW)} si no. A un ETC o un ETP que tributa como
-      capital mobiliario no se le aplica la ventana de aquí: lleva siempre 2 meses (art. 25.2.b
-      LIRPF).
+      domicilio lleva {windowLabel(ADMITTED_FUND_WINDOW)} si su ISIN empieza por ES o su emisor es
+      español, o si en su ficha pones como mercado uno regulado de la UE en el que esté admitida esa
+      clase (no un sistema multilateral), y {windowLabel(NOT_ADMITTED_FUND_WINDOW)} si no. A un ETC
+      o un ETP que tributa como capital mobiliario no se le aplica la ventana de aquí: lleva siempre
+      2 meses (art. 25.2.b LIRPF).
     </p>
     <div class="fieldset">
       <For each={ASSET_TYPES}>

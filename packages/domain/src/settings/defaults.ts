@@ -49,11 +49,12 @@ export const isWashSaleWindow = (value: unknown): value is WashSaleWindow =>
 export type WashSaleWindowSetting = WashSaleWindow | "by_domicile";
 
 /**
- * The window `"by_domicile"` gives a Spanish fund and any other (criterion #2):
- * the one place to change either reading.
+ * The windows `"by_domicile"` gives (criterion #2), the one place to change
+ * either reading: a fund whose units count as admitted to trading —Spanish, or
+ * its class on an EU regulated market— and any other.
  */
-export const SPANISH_FUND_WINDOW: WashSaleWindow = "2m";
-export const FOREIGN_FUND_WINDOW: WashSaleWindow = "1y";
+export const ADMITTED_FUND_WINDOW: WashSaleWindow = "2m";
+export const NOT_ADMITTED_FUND_WINDOW: WashSaleWindow = "1y";
 
 export interface TaxBracket {
   up_to?: DecimalString;
@@ -210,23 +211,32 @@ export const DEFAULT_INCOME_CATEGORY: Record<AssetType, IncomeCategory> = {
  * Same, for the wash-sale window (ADR-0013, ADR-0014; criterion #2).
  *
  * A **fund** and a **money market fund** take it **by domicile** by default
- * (since 2026-11-03, `washSaleWindowOf`):
+ * (since 2026-11-03, `washSaleWindowOf`, `fundAdmitted`); medium-high both:
  *
- * - **Spanish** (ISIN `ES…` or `issuer_country` ES): **two months**,
- *   `2:fund_es_2m`. Article 4.9 of RD 1082/2012 treats the units of a Spanish
- *   fund with a daily net asset value as "valores admitidos a cotización", and
- *   the DGT has read that clause as reaching article 33.5.f) in writing, twice:
- *   V2067-06 ("Esta regla resulta aplicable en relación con las participaciones
- *   de fondos de inversión dada la consideración de valores admitidos a
- *   cotización que les otorga el artículo 4, apartado 9, del Reglamento […]")
- *   and V0011-00, question 10 ("en el caso de las participaciones en fondos de
- *   inversión debe resultar de aplicación la regla prevista en la letra f)").
- *   Both are binding and unchanged, so the AEAT applies them (art. 89.1 LGT)
- *   and following them carries no penalty (art. 179.2.d LGT).
- * - **Foreign** (an Irish or Luxembourg UCITS), or with neither ISIN nor
- *   country: **one year**, `2:fund_1y`. That clause is about funds a Spanish
- *   management company registers with the CNMV; without it the letter of the
- *   law is left, units "no admitidos a negociación", article 33.5.g).
+ * - **Admitted** —Spanish (ISIN `ES…` or `issuer_country` ES), or a foreign
+ *   class whose `market` is an EU regulated market—: **two months**,
+ *   `2:fund_admitted_2m`. Article 4.9 of RD 1082/2012 deems the units of a
+ *   Spanish fund with a daily net asset value "valores admitidos a
+ *   cotización", and the DGT reads it as reaching article 33.5.f): V0011-00
+ *   ("debe resultar de aplicación la regla prevista en la letra f)"), 1897-01,
+ *   0881-02 and V2067-06 ("dada la consideración de valores admitidos a
+ *   cotización que les otorga el artículo 4, apartado 9"). Binding and
+ *   unchanged: arts. 89.1 and 179.2.d LGT.
+ * - **Not admitted** —a foreign UCITS whose class trades only on a
+ *   multilateral facility or nowhere, or a fund without ISIN or country—:
+ *   **one year**, `2:fund_1y`, article 33.5.g). Not prudence: the only road the
+ *   DGT took to two months is closed to it. (1) The law gives a year to what is
+ *   not admitted on a regulated market. (2) The four consultations above rest
+ *   on the Spanish fiction, and 1897-01 limits it to funds "regulados en la Ley
+ *   46/1984". (3) The fiction needs an SGIIC registering the fund with the
+ *   CNMV (art. 4.8), and the CNMV "no exigirá información o documentación
+ *   adicional" to a foreign UCITS (art. 15.1 Ley 35/2003). (4) The usual index
+ *   funds are only on multilateral facilities (ESMA FIRDS, 2026-11-03). (5) A
+ *   multilateral facility is not an official secondary market (V0422-09;
+ *   V0778-25: official secondary market = regulated market). The help of the
+ *   Modelo 100 of 2018 to 2020 sent funds "que no estén admitidos a
+ *   negociación" to letter g). Against it, without reasoning: the CNMV guide of
+ *   2026 and common practice (Indexa) say two months for every fund.
  *
  * In this catalogue `money_market` is a **money market fund** —it carries an
  * ISIN, a TER and `transferable`, the Spanish transfer regime of collective

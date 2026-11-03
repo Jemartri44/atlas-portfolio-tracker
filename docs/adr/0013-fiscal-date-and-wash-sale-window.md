@@ -39,7 +39,7 @@ La frase de la ayuda del Modelo 100 de 2025 que se citaba en la nota anterior no
 
 ## Nota del 2026-11-03 por la tarde (investigación de la regla de recompra): según el domicilio
 
-La nota anterior acertaba con los fondos extranjeros y no con los españoles: la cláusula del art. 4.9 que leía como restricción la ha leído la DGT a favor de la letra f) en **V2067-06** y **V0011-00**, vinculantes y no modificadas. **`DEFAULT_WASH_SALE_WINDOW.fund` y `.money_market` pasan a `"by_domicile"`**: un fondo español (ISIN `ES` o `issuer_country` `ES`) lleva dos meses (`2:fund_es_2m`) y uno extranjero o sin ISIN ni país, un año (`2:fund_1y`). Un valor escrito en la configuración sigue mandando. Detalle en `docs/fiscal-questions.md` #2 y `docs/business-rules.md` §5.4.
+La nota anterior acertaba con los fondos extranjeros y no con los españoles: la cláusula del art. 4.9 que leía como restricción la ha leído la DGT a favor de la letra f) en **V2067-06** y **V0011-00**, vinculantes y no modificadas. **`DEFAULT_WASH_SALE_WINDOW.fund` y `.money_market` pasan a `"by_domicile"`**: un fondo español (ISIN `ES` o `issuer_country` `ES`), o con su clase en un mercado regulado de la UE escrito en `market`, lleva dos meses (`2:fund_admitted_2m`); uno extranjero sin cotización o sin ISIN ni país, un año (`2:fund_1y`), ya no por prudencia sino por los cinco pasos de la segunda investigación (certeza media-alta). Un valor escrito en la configuración sigue mandando. Detalle en `docs/fiscal-questions.md` #2 y `docs/business-rules.md` §5.4.
 
 ---
 

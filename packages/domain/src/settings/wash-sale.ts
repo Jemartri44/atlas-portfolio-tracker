@@ -8,26 +8,34 @@
 // transfers and swaps is the tax engine of phase 5.
 
 import { addDays, addMonths, addYears, type CivilDate } from "../dates/civil-date.js";
+import { euRegulatedAdmission } from "../projections/markets.js";
 import type { AssetFields, AssetType } from "../schema/events.js";
 import {
+  ADMITTED_FUND_WINDOW,
   DEFAULT_WASH_SALE_TRANSFER_COUNTS,
   DEFAULT_WASH_SALE_WINDOW,
-  FOREIGN_FUND_WINDOW,
   incomeCategoryOf,
+  NOT_ADMITTED_FUND_WINDOW,
   type Settings,
-  SPANISH_FUND_WINDOW,
   type WashSaleWindow,
 } from "./settings.js";
 
-/** What of an asset decides its window: the type, and for a fund where it is domiciled. */
-export type WashSaleAsset = Pick<AssetFields, "asset_type" | "isin" | "issuer_country">;
+/** What of an asset decides its window: the type, and for a fund its domicile and market. */
+export type WashSaleAsset = Pick<AssetFields, "asset_type" | "isin" | "issuer_country" | "market">;
 
 /**
- * Whether a fund is Spanish: its ISIN says `ES`, or its issuer country does.
- * Only what the catalogue states counts; a fund that states neither is not.
+ * Whether the units of a fund count as admitted to trading (art. 33.5.f):
+ * a Spanish fund (ISIN `ES` or issuer country ES), which article 4.9 of RD
+ * 1082/2012 deems listed, or a class whose `market` the user set to an EU
+ * regulated market with no open segment. Asked without a currency, the guess
+ * of `euRegulatedAdmission` says `true` only for such a market: a mixed venue
+ * proves nothing, and a multilateral facility (Euronext Dublin GEM `XEYE`,
+ * Euro MTF `EMTF`, Stuttgart) is not a regulated market (DGT V0422-09).
  */
-export const isSpanishFund = (asset: WashSaleAsset): boolean =>
-  /^ES/.test(asset.isin ?? "") || asset.issuer_country === "ES";
+export const fundAdmitted = (asset: WashSaleAsset): boolean =>
+  /^ES/.test(asset.isin ?? "") ||
+  asset.issuer_country === "ES" ||
+  euRegulatedAdmission({ market: asset.market, currency: "" }) === true;
 
 /**
  * The window in force for an asset (criterion #2): the settings, the legacy
@@ -35,10 +43,8 @@ export const isSpanishFund = (asset: WashSaleAsset): boolean =>
  * its own rule, article 25.2.b) LIRPF: two months before or after, for any
  * financial asset, whatever the market and with no one-year variant, so a
  * configured window does not apply. A fund `"by_domicile"` takes two months
- * when it is Spanish (`2:fund_es_2m`: DGT V0011-00 and V2067-06 read article
- * 4.9 of RD 1082/2012 as making its units admitted to trading) and a year
- * otherwise (`2:fund_1y`, article 33.5.g): a fund without ISIN or country takes
- * the prudent year.
+ * when its units count as admitted (`fundAdmitted`, `2:fund_admitted_2m`) and a
+ * year otherwise (`2:fund_1y`, article 33.5.g), also without ISIN or country.
  */
 export const washSaleWindowOf = (settings: Settings, asset: WashSaleAsset): WashSaleWindow => {
   if (incomeCategoryOf(settings, asset.asset_type) === "movable_capital") {
@@ -54,9 +60,9 @@ export const washSaleWindowOf = (settings: Settings, asset: WashSaleAsset): Wash
     return `${setting}d`;
   }
   return setting === "by_domicile"
-    ? isSpanishFund(asset)
-      ? SPANISH_FUND_WINDOW
-      : FOREIGN_FUND_WINDOW
+    ? fundAdmitted(asset)
+      ? ADMITTED_FUND_WINDOW
+      : NOT_ADMITTED_FUND_WINDOW
     : setting;
 };
 

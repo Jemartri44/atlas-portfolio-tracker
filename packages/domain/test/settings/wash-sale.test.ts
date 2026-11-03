@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AssetType } from "../../src/schema/events.js";
 import { DEFAULT_SETTINGS, mergeSettings, type Settings } from "../../src/settings/settings.js";
 import {
+  fundAdmitted,
   washSaleTransferCounts,
   washSaleWindowEnd,
   washSaleWindowOf,
@@ -105,5 +106,26 @@ describe("washSaleWindowEnd / washSaleWindowStart", () => {
   it("counts calendar days in the legacy form", () => {
     expect(washSaleWindowEnd("2027-01-15", "61d")).toBe("2027-03-17");
     expect(washSaleWindowStart("2027-03-17", "61d", "fund")).toBe("2027-01-15");
+  });
+});
+
+describe("fundAdmitted", () => {
+  // A foreign class counts as admitted only on an EU regulated market with no
+  // open segment, written by hand in `market` (criterion #2, V0422-09).
+  it.each([
+    ["XDUB", true],
+    ["xlux", true],
+    ["XEYE", false],
+    ["EMTF", false],
+    ["XETR", false],
+    [undefined, false],
+  ] as const)("a foreign fund on %s counts as admitted: %s", (market, admitted) => {
+    const asset = {
+      asset_type: "fund" as const,
+      isin: "IE0000000001",
+      ...(market ? { market } : {}),
+    };
+    expect(fundAdmitted(asset)).toBe(admitted);
+    expect(washSaleWindowOf(DEFAULT_SETTINGS, asset)).toBe(admitted ? "2m" : "1y");
   });
 });

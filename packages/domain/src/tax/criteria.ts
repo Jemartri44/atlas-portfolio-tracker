@@ -45,18 +45,21 @@ export interface FiscalCriterion {
  *   crypto itself); conservative.
  * - `2:crypto_2m`: two months after the sale for crypto — a configuration, not a
  *   legal reading; aggressive.
- * - `2:fund_es_2m`: two months for a **Spanish** fund (ISIN `ES` or issuer
- *   country ES), the default since 2026-11-03. Article 4.9 of RD 1082/2012
- *   makes its units "valores admitidos a cotización", and the binding
- *   V0011-00 and V2067-06 read that clause as reaching article 33.5.f). The
- *   document says medium-high; the catalogue has no such grade and keeps
- *   **medium**, so the figure of the year still shows in the doubtful section.
- *   Aggressive, but backed by a consultation (art. 179.2.d LGT).
- * - `2:fund_2m`: two months for a **foreign** fund (an Irish or Luxembourg
- *   UCITS), only by configuration: the clause and the consultations are about
- *   Spanish funds, and nothing carries them abroad. **Medium**; aggressive.
- * - `2:fund_1y`: one year for a fund, the default of a foreign one (article
- *   33.5.g) and the conservative side for a Spanish one.
+ * - `2:fund_admitted_2m`: two months for a fund whose units count as
+ *   admitted (`fundAdmitted`): Spanish, which article 4.9 of RD 1082/2012
+ *   deems listed (V0011-00, 1897-01, 0881-02, V2067-06), or a class on an EU
+ *   regulated market. The default since 2026-11-03; aggressive, but backed by
+ *   binding consultations (art. 179.2.d LGT).
+ * - `2:fund_2m`: two months for a fund that is **not** admitted (a foreign
+ *   UCITS only on a multilateral facility), only by configuration: what the
+ *   CNMV guide and common practice do, without a source. Aggressive.
+ * - `2:fund_1y`: one year for a fund, the default of one not admitted (article
+ *   33.5.g, the five steps of `DEFAULT_WASH_SALE_WINDOW`) and the conservative
+ *   side for an admitted one.
+ *
+ * The document grades the first and the last medium-high; the catalogue has no
+ * such grade and keeps **medium**, so that the other reading of each fund still
+ * shows its figure in the doubtful section.
  * - `2:movable_capital`: two months for an asset that yields movable capital
  *   income (an ETC or an ETP by default), article 25.2.b) LIRPF: its own rule,
  *   with no market and no one-year variant — **high**; aggressive if wrong.
@@ -111,7 +114,7 @@ export const FISCAL_CRITERIA = {
   "2:listed_1y": { doc: "2", certainty: "medium", risk: "conservative" },
   "2:crypto": { doc: "2", certainty: "medium", risk: "conservative" },
   "2:crypto_2m": { doc: "2", certainty: "low", risk: "aggressive" },
-  "2:fund_es_2m": { doc: "2", certainty: "medium", risk: "aggressive" },
+  "2:fund_admitted_2m": { doc: "2", certainty: "medium", risk: "aggressive" },
   "2:fund_2m": { doc: "2", certainty: "medium", risk: "aggressive" },
   "2:fund_1y": { doc: "2", certainty: "medium", risk: "conservative" },
   "2:other": { doc: "2", certainty: "low", risk: "both" },
@@ -186,7 +189,7 @@ export const FISCAL_CRITERIA = {
 export type CriterionId = keyof typeof FISCAL_CRITERIA;
 
 /** The readings of #2 a fund can apply; each one's other window is measured apart. */
-export const FUND_CRITERIA = ["2:fund_es_2m", "2:fund_2m", "2:fund_1y"] as const;
+export const FUND_CRITERIA = ["2:fund_admitted_2m", "2:fund_2m", "2:fund_1y"] as const;
 export type FundCriterion = (typeof FUND_CRITERIA)[number];
 
 /**
@@ -200,7 +203,7 @@ export const CRITERION_IDS: readonly CriterionId[] = [
   "2:listed_1y",
   "2:crypto",
   "2:crypto_2m",
-  "2:fund_es_2m",
+  "2:fund_admitted_2m",
   "2:fund_2m",
   "2:fund_1y",
   "2:other",

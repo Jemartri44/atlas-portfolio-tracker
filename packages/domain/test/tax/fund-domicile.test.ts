@@ -6,7 +6,7 @@
 //
 // - `fund_es` (ISIN ES…): two months (V0011-00, V2067-06), window
 //   [10/01/2026, 10/05/2026]. The repurchase of 10/06 is outside it, so the
-//   −400 count in 2026: `2:fund_es_2m`.
+//   −400 count in 2026: `2:fund_admitted_2m`.
 // - `fund_ie` (ISIN IE…): a year (art. 33.5.g), window [10/03/2025,
 //   10/03/2027]. The repurchase is inside it and covers the 100 units sold, so
 //   the −400 are deferred whole: `2:fund_1y`.
@@ -49,7 +49,7 @@ describe("§6.5 — the window of a fund by its domicile", () => {
   it("computes the loss of the Spanish fund: two months, the repurchase falls outside", () => {
     expect(text(line("fund_es")?.own_eur)).toBe("-400");
     expect(text(line("fund_es")?.deferred_eur)).toBe("0");
-    expect(line("fund_es")?.criteria).toContain("2:fund_es_2m");
+    expect(line("fund_es")?.criteria).toContain("2:fund_admitted_2m");
   });
 
   it("defers the loss of the Irish fund: a year, the repurchase falls inside", () => {
@@ -67,8 +67,8 @@ describe("§6.5 — the window of a fund by its domicile", () => {
   it("measures the other reading of each fund apart in the doubtful section", () => {
     const stake = (criterion: string) =>
       report.doubtful.find((entry) => entry.criterion === criterion);
-    expect(text(stake("2:fund_es_2m")?.pending_difference_eur)).toBe("400");
-    expect(text(stake("2:fund_es_2m")?.deferred_difference_eur)).toBe("-400");
+    expect(text(stake("2:fund_admitted_2m")?.pending_difference_eur)).toBe("400");
+    expect(text(stake("2:fund_admitted_2m")?.deferred_difference_eur)).toBe("-400");
     expect(text(stake("2:fund_1y")?.pending_difference_eur)).toBe("-400");
     expect(text(stake("2:fund_1y")?.deferred_difference_eur)).toBe("400");
   });

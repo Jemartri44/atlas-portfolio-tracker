@@ -51,7 +51,7 @@ import {
   type WashSaleWindow,
 } from "../settings/settings.js";
 import {
-  isSpanishFund,
+  fundAdmitted,
   type WashSaleAsset,
   washSaleWindowEnd,
   washSaleWindowOf,
@@ -544,7 +544,7 @@ class Walker {
     const window = washSaleWindowOf(this.state.fiscalSettings, asset);
     if (
       this.flip === undefined ||
-      windowCriterion(asset.asset_type, window, this.categoryOf(assetId), isSpanishFund(asset)) !==
+      windowCriterion(asset.asset_type, window, this.categoryOf(assetId), fundAdmitted(asset)) !==
         this.flip
     ) {
       return window;

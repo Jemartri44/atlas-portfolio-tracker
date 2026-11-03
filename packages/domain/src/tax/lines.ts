@@ -36,7 +36,7 @@ import {
   type SwapEvent,
 } from "../schema/events.js";
 import { type IncomeCategory, incomeCategoryOf, type Settings } from "../settings/settings.js";
-import { isSpanishFund, type WashSaleAsset } from "../settings/wash-sale.js";
+import { fundAdmitted, type WashSaleAsset } from "../settings/wash-sale.js";
 import { type CriterionId, categoryCriterion, sortCriteria } from "./criteria.js";
 import {
   type CurrencyWashOutcome,
@@ -81,7 +81,7 @@ export const windowCriterion = (
   type: AssetType,
   window: string,
   category: IncomeCategory = "capital_gain",
-  spanishFund = false,
+  admittedFund = false,
 ): CriterionId => {
   if (category === "movable_capital") {
     return "2:movable_capital";
@@ -96,7 +96,7 @@ export const windowCriterion = (
   // of the same dispute, and it is labelled as such (criterion #2).
   // Two months is backed by consultations for a Spanish fund only.
   if (window === "2m") {
-    return spanishFund ? "2:fund_es_2m" : "2:fund_2m";
+    return admittedFund ? "2:fund_admitted_2m" : "2:fund_2m";
   }
   return window === "1y" ? "2:fund_1y" : "2:other";
 };
@@ -333,7 +333,7 @@ const deferralCriteria = (ctx: LineContext, outcome: WashSaleOutcome): Criterion
       type,
       (outcome.window as { window: string }).window,
       incomeCategoryOf(ctx.settings, type),
-      isSpanishFund(asset),
+      fundAdmitted(asset),
     ),
     "14",
   ];
