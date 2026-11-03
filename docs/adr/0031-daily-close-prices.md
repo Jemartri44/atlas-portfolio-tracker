@@ -77,7 +77,7 @@ Decidida por la dirección al contestar las diez preguntas de la primera redacci
 7. **Dos fuentes con cierre para la misma fecha:** gana **la primera en el orden configurado**, y se guarda de qué fuente vino. No se promedia nada.
 8. **El correo por fallos seguidos es de la feature 016.** La 013 solo lleva el registro de fallos.
 9. ~~**Atribución de CoinGecko: texto y enlace**, con `rel="noopener noreferrer"`. Un enlace no carga nada de fuera, así que no choca con la CSP. Si la comprobación del paquete rechaza URLs externas, se añade la excepción con su motivo escrito, como la del BOE.~~ Retirada con CoinGecko (tercera enmienda): la web no enlaza a ninguna fuente de precios.
-10. **El techo del total del paquete web** sube con la regla de siempre, en su propio commit, a lo medido más un margen pequeño y con el desglose. **El arranque no sube en ningún caso**, y si no cabe, la feature para.
+10. **El techo del total del paquete web** sube con la regla de siempre, en su propio commit, a lo medido más un margen pequeño y con el desglose. ~~**El arranque no sube en ningún caso**, y si no cabe, la feature para.~~ Sin techo del arranque desde el 2026-11-03; solo el del total.
 
 **Lo que esta ADR dejaba sin decir:**
 

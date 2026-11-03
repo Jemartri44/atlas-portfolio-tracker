@@ -239,44 +239,6 @@ export default defineConfig(({ command }) => ({
       /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)(\?|$)/.test(filePath) ? false : undefined,
     // No `minify: "esbuild"` here on purpose (see the header).
     chunkSizeWarningLimit: 300,
-    rollupOptions: {
-      output: {
-        /*
-         * **The domain travels in one chunk.**
-         *
-         * The browser downloads the domain at boot: the first screen projects
-         * the ledger, so there is no way around it (ADR-0007). What there is a
-         * way around is downloading it **in pieces**: when the fiscal engine
-         * became reachable from a lazily loaded corner of the summary, the
-         * grouping split the domain into two boot chunks to let the fiscal
-         * chunk import only its half, and the same code cost 1,3 KB gzip more
-         * — compression does not cross a chunk boundary, and each half pays
-         * its own import plumbing. Measured: 73,0 KB before the card, 74,3
-         * with it and 72,7 with this group, against a ceiling of 74,0.
-         * Measured again on 2026-11-03, without the group: boot 77,3 KB and
-         * total 340,7, against 74,5 and 335,0 with it.
-         *
-         * The test keeps out exactly what must **not** be on the boot path: `tax/`, `informative/`,
-         * the `fiscal.ts` door and the three modules of `filings/` that reach the tax chain — and
-         * everything of the ECB (`ecb/`, the `ecb.ts` door and the local configuration in
-         * `config/`), the automatic daily closes (`quotes/` and the `quotes.ts` door), the sync of
-         * the ledger (`sync/`, the `sync.ts` door and its two ports) and the indicators of the Cubo
-         * (`charts/` and the `charts.ts` door) and the analysis of the Cartera and the Cubo (the `portfolio.ts` door and the modules behind it), the exposure (`exposure`, `exposure-file`, `index-profiles`: the tables of the indexes) and the rebalance (the `rebalance.ts` door, which carries the tax engine), none of which may be on the boot path. **The store
-         * of the browser rides in the same chunk** (`blob.ts` and `idb.ts`): it is boot too —
-         * opening the ledger is the boot. Without the group the bundler splits the store into a
-         * boot chunk of its own (0,5 KB gzip, measured). `scripts/check-bundle.mjs` fails the build
-         * if any lazily loaded module turns up in a chunk `index.html` preloads.
-         */
-        advancedChunks: {
-          groups: [
-            {
-              name: "domain",
-              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|quotes[\\/]|quotes\.ts|charts[\\/]|charts\.ts|messages[\\/]|messages\.ts|sync[\\/]|sync\.ts|remote[\\/]|remote-answers\.ts|tools\.ts|rebalance\.ts|projections[\\/](?:corporate-action-draft|deep-check|simulate-transfer|bucket-theses|bucket-stats|costs|contribution|month-plan|platform-plan|rebalance|sale-tax|exposure|exposure-file|index-profiles|projection|total-cost|core-monthly)\.ts|portfolio\.ts|ports[\\/]remote-ledger\.ts|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/]idb\.ts))/,
-            },
-          ],
-        },
-      },
-    },
   },
   server: {
     port: 5173,
