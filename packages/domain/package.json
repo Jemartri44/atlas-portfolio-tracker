@@ -14,6 +14,10 @@
       "types": "./dist/fiscal.d.ts",
       "import": "./dist/fiscal.js"
     },
+    "./messages": {
+      "types": "./dist/messages.d.ts",
+      "import": "./dist/messages.js"
+    },
     "./portfolio": {
       "types": "./dist/portfolio.d.ts",
       "import": "./dist/portfolio.js"

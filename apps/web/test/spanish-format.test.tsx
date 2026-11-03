@@ -5,32 +5,18 @@
 // without their currency, and a unit that could fall on the next line.
 
 import { describe, expect, it } from "vitest";
-import type { ERROR_MESSAGES } from "../src/format/messages/errors.js";
-import { WARNING_MESSAGES } from "../src/format/messages/warnings.js";
-import { namingOf } from "../src/format/names.js";
 import { meaningfulDecimals } from "../src/format/number.js";
 import { figuresOf } from "../src/format/privacy.js";
 import Cartera from "../src/routes/cartera/index.jsx";
 import Cubo from "../src/routes/cubo/index.jsx";
+import { sayWarning } from "./helpers/messages.js";
 import { show, text, today, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
-const messageNames = {
-  ast_world: "World Index Fund",
-  acc_mi: "Fondos indexados",
-  "tesis:th_alpha": "sobre Alpha Robotics (abierta el 01/09/2026)",
-};
-const render = (catalogue: typeof ERROR_MESSAGES, code: string, details: Record<string, unknown>) =>
-  (catalogue[code] as (d: unknown, n: unknown, f: unknown) => string)(
-    details,
-    namingOf(messageNames),
-    figuresOf(false),
-  );
-
 describe("the missing treaty rate", () => {
   const missing = (details: Record<string, unknown>) =>
-    render(WARNING_MESSAGES, "tax_treaty_rate_missing", {
+    sayWarning("tax_treaty_rate_missing", {
       country: "US",
       foreign_tax_eur: "24",
       ...details,
@@ -39,7 +25,9 @@ describe("the missing treaty rate", () => {
   it("suggests the rate with its source when there is one, and nothing otherwise", () => {
     expect(
       missing({ suggested_pct: "15", suggested_source: "BOE-A-1990-30940, art. 10.2.b)" }),
-    ).toContain("Sugerencia: 15\u00a0% (BOE-A-1990-30940, art. 10.2.b))");
+    ).toContain(
+      "Sugerencia para dividendos de una persona física: 15\u00a0% (BOE-A-1990-30940, art. 10.2.b))",
+    );
     expect(missing({})).not.toContain("Sugerencia");
     expect(missing({ country: "12.5", suggested_pct: "12.5" })).not.toContain("BOE");
   });
@@ -47,14 +35,14 @@ describe("the missing treaty rate", () => {
 
 describe("figures and units", () => {
   it("writes deviations and weights with a comma and one minus sign", () => {
-    const text = render(WARNING_MESSAGES, "deviation_above_threshold", {
+    const text = sayWarning("deviation_above_threshold", {
       asset_id: "ast_world",
       deviation_pp: "-6.59",
       threshold_pp: "5",
     });
     expect(text).toContain("−6,59\u00a0pp");
     expect(text).toContain("umbral 5,00\u00a0pp");
-    const satellite = render(WARNING_MESSAGES, "satellite_below_minimum", {
+    const satellite = sayWarning("satellite_below_minimum", {
       asset_class: "gold",
       weight_pct: "30.2",
       minimum_pct: "2",

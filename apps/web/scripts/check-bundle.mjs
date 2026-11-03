@@ -226,6 +226,10 @@ const LAZY_ONLY = [
   // `@atlas/domain/charts` from their first commit.
   { path: "/packages/domain/src/charts.ts", what: "la puerta de los indicadores de las pantallas" },
   { path: "/packages/domain/src/charts/", what: "los indicadores y las series de las pantallas" },
+  // The one catalogue of messages, behind `@atlas/domain/messages`: it is said when something
+  // is said, never at boot.
+  { path: "/packages/domain/src/messages.ts", what: "la puerta del catálogo de mensajes" },
+  { path: "/packages/domain/src/messages/", what: "el catálogo de mensajes" },
   // The analysis of the Cartera and the Cubo, behind `@atlas/domain/portfolio`.
   {
     path: "/packages/domain/src/portfolio.ts",

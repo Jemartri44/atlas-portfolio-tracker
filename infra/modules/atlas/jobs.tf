@@ -1,5 +1,5 @@
 # The five functions of the scheduled tasks (feature 016; specs/016-scheduled-jobs/
-# contracts/iam-permissions.md sections 1 to 5, 7 and 9, ssm-and-config.md section 2):
+# contracts/iam-permissions.md, retired; in git, now `infra/test/contract/iam-permissions.md`, sections 1 to 5, 7 and 9, ssm-and-config.md section 2):
 # one artifact (`jobs.zip`, `index.handler`) and one function per family of permissions,
 # each with its own role, exactly its table. Only the mail role has `ses:*`, and it
 # reaches nothing under `/atlas/<env>/prices/`. No `kms:` line: see questions.md, E2 b0.4.

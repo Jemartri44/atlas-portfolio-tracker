@@ -87,7 +87,7 @@ export const DevicesCard = (props: { readonly request?: Fetch }): JSX.Element =>
 
   return (
     <section aria-label="Dispositivos de la consola">
-      <h3>Dispositivos de la consola</h3>
+      <h3 class="block-title">Dispositivos de la consola</h3>
       <Show when={tokens()} fallback={<p class="meta">Leyendo los dispositivos…</p>}>
         {(state) => (
           <Switch>
