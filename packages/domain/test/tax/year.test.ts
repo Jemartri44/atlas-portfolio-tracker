@@ -395,6 +395,40 @@ describe("income in kind and exchanges without regime", () => {
     expect(items.map((d) => [d.measure, text(d.exposure_eur)])).toEqual([["exposure", "60"]]);
   });
 
+  it("leaves no exchange difference on a grant in dollars with its income as cost", () => {
+    const b = taxBuilder();
+    b.asset("coin_u", {
+      asset_type: "crypto",
+      asset_class: "crypto",
+      transferable: false,
+      currency: "USD",
+    });
+    buy(b, "coin_c", "2027-01-11", "10", "100");
+    b.corporateAction({
+      kind: "crypto_fork",
+      asset_id: "coin_c",
+      effective_date: "2027-03-01",
+      effects: [
+        {
+          op: "grant",
+          asset_id: "coin_u",
+          per_account: [{ account_id: "acc_a", quantity: "10" }],
+          unit_cost: "0",
+          currency: "USD",
+          fx_rate: "1.25",
+          fx_rate_date: "2027-03-01",
+          acquisition_date: "2027-03-01",
+          income_eur: "50",
+          income_base: "general",
+        },
+      ],
+    });
+    sell(b, "coin_u", "2027-06-01", "10", "8");
+    const report = reportOf(b.build(), 2027);
+    expect(text(report.base_eur)).toBe("30");
+    expect(report.capital_gains.currency_lines).toEqual([]);
+  });
+
   it("asks for the value of a free crypto grant that states none", () => {
     const b = taxBuilder();
     buy(b, "coin_c", "2027-01-11", "10", "100");

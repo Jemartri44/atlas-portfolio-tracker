@@ -335,18 +335,25 @@ export const notesOf = (
   for (const event of core.ctx.events.values()) {
     if (
       event.type === "corporate_action" &&
-      (event as CorporateActionEvent).kind === "crypto_fork" &&
-      yearOf((event as CorporateActionEvent).effective_date) === year &&
-      !inKind.some((entry) => entry.event_id === event.id)
+      (event as CorporateActionEvent).kind === "crypto_fork"
     ) {
-      notes.push(
-        eventNote(
-          "tax_in_kind_income_missing",
-          event.id,
-          "a free crypto grant states no value",
-          {},
-        ),
+      const unvalued = (event as CorporateActionEvent).effects.some(
+        (effect) =>
+          effect.op === "grant" &&
+          yearOf(effect.acquisition_date) === year &&
+          effect.income_eur === undefined &&
+          Decimal.parse(effect.unit_cost).isZero(),
       );
+      if (unvalued) {
+        notes.push(
+          eventNote(
+            "tax_in_kind_income_missing",
+            event.id,
+            "a free crypto grant states no value",
+            {},
+          ),
+        );
+      }
     }
   }
   for (const line of core.transmissions) {

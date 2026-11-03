@@ -51,11 +51,9 @@ export type TransferRequestStage = (typeof TRANSFER_REQUEST_STAGES)[number];
 /**
  * Which base income in kind goes into (ADR-0021). The savings base is where
  * capital gains and movable capital income live; the **general** base is the
- * one for income not derived from a transfer, and the project has never had the
- * notion — which is precisely the hole: DGT doctrine treats the free receipt of
- * crypto-assets as a gain **not derived from a transfer**, integrated in the
- * general base, and the criterion in force here (cost zero, nothing declared on
- * receipt) is the opposite reading (`docs/fiscal-questions.md` #8).
+ * one for income not derived from a transfer, where the DGT puts the free
+ * receipt of crypto-assets. Atlas does not compute it: the return shows that
+ * income apart for the user to add (`docs/fiscal-questions.md` #8).
  */
 export const INCOME_BASES = ["general", "savings"] as const;
 export type IncomeBase = (typeof INCOME_BASES)[number];

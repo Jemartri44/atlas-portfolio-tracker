@@ -524,12 +524,12 @@ describe("applyGrant", () => {
         base: "general",
       },
     ]);
-    // It feeds no income and no gain, and it is what the lot costs: no money went in.
+    // It feeds no income and no gain, and it is what the lot costs.
     expect(state.income).toEqual([]);
     expect(state.gains).toEqual([]);
     const lot = open(state, "ast_fork")[0];
     expect(lot?.cost_eur.amount.toString()).toBe("420.5");
-    expect(lot?.funding_eur.amount.toString()).toBe("0");
+    expect(lot?.funding_eur.amount.toString()).toBe("420.5");
   });
 
   it("shares the income between accounts by units, in the currency of the grant too", () => {

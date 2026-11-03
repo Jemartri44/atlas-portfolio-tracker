@@ -27,7 +27,7 @@ import { LossesCard } from "./LossesCard.jsx";
 import { PartFailed } from "./PartFailed.jsx";
 import { CannotCompute, NothingThisYear, NothingYet } from "./Placeholders.jsx";
 import { EstimateCards } from "./QuotaCard.jsx";
-import { RateNotes } from "./RateNotes.jsx";
+import { InKindNotes, RateNotes } from "./RateNotes.jsx";
 import { RepurchaseCard } from "./RepurchaseCard.jsx";
 import { SaleSimulatorCard } from "./SaleSimulatorCard.jsx";
 import { useYear, type YearChoice, YearPicker } from "./YearPicker.jsx";
@@ -224,6 +224,12 @@ export default function FiscalRoute(): JSX.Element {
                   view={repurchaseView(repurchaseCalendar(snapshot.events, today()), names)}
                 />
                 <RateNotes
+                  notes={((computed) => (computed.ok ? computed.value.notes : []))(report())}
+                  events={snapshot.events}
+                  names={names}
+                  privacy={privacy()}
+                />
+                <InKindNotes
                   notes={((computed) => (computed.ok ? computed.value.notes : []))(report())}
                   events={snapshot.events}
                   names={names}

@@ -393,8 +393,7 @@ const noteInKindIncome = (
 
 /**
  * What a free grant declared as income of the general base costs: the income
- * itself, or its sale would tax the same value twice (criterion #8). `funding`
- * stays at zero, because no money went into it.
+ * itself, or its sale would tax the same value twice (criterion #8).
  */
 const costOfGrant = (
   effect: Resolved<"grant">,
@@ -431,14 +430,22 @@ export const applyGrant = (
 
   const total = entries.reduce((sum, entry) => sum.add(entry.quantity.value), Decimal.ZERO);
   for (const entry of entries) {
-    const listed = unitCost.times(entry.quantity);
-    // No currency is spent on a grant: what is tied up in it is its listed cost.
+    const { cost, cost_eur } = costOfGrant(
+      effect,
+      entry.quantity,
+      total,
+      unitCost.times(entry.quantity),
+      fx,
+    );
+    // No currency is spent on a grant: what is tied up in it is its cost, so
+    // selling it leaves no exchange difference.
     openLot(state, {
       asset_id: asset.asset_id,
       acquisition_date: effect.acquisition_date,
       quantity: entry.quantity,
-      ...costOfGrant(effect, entry.quantity, total, listed, fx),
-      funding_eur: fx.toEur(listed),
+      cost_eur,
+      cost,
+      funding_eur: cost_eur,
       source_event_id: ctx.eventId,
       position: ctx.position,
     });
