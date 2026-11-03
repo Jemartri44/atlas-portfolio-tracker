@@ -77,7 +77,7 @@ describe("systemAdminAccess", () => {
     const clients = await systemAdminAccess().clientsFor("prod");
     expect(clients.ssmPrefix).toBe("/atlas/prod/");
     expect(typeof clients.objects.getVersion).toBe("function");
-    expect(typeof clients.parameters.listByPath).toBe("function");
+    expect(typeof clients.parameters.get).toBe("function");
   });
 });
 

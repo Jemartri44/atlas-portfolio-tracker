@@ -84,12 +84,6 @@ describe("compose (the Lambda of production)", () => {
         get: async () => {
           throw denied;
         },
-        getVersioned: async () => {
-          throw denied;
-        },
-        putNew: async () => "created" as const,
-        overwrite: async () => 1,
-        listByPath: async () => [],
       }),
     };
     const thrown = await composeOrFail(ENV, failing).catch((error: unknown) => error);
@@ -113,7 +107,7 @@ describe("compose (the Lambda of production)", () => {
       { ...ENV, ATLAS_ENV: "staging" },
       { ...ENV, ATLAS_SOMETHING: "1" },
       { ...ENV, ATLAS_SESSION_TTL_SECONDS: "86401" },
-      // Retired with the token of the console: an old deploy stops instead of running.
+      // A variable no longer read: an old deploy stops instead of running.
       { ...ENV, ATLAS_TOKEN_LIFETIME_DAYS: "90" },
     ]) {
       await expect(compose(env, parts(SESSION_KEY).make)).rejects.toThrow();

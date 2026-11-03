@@ -81,15 +81,9 @@ const NOT_SHOWN: Record<string, string> = {
   invalid_archive_name: "guarda interna de los adaptadores: el nombre lo construye el programa",
   operation_not_supported: "guarda interna: la administración no pasa por el almacén de la API",
   // Raised only inside the Lambda of the API, which answers with a code of docs/api.md §7
-  // (remote_unavailable, device_forgotten) or refuses to start; neither interface ever holds one of
-  // these errors.
+  // (remote_unavailable) or refuses to start; neither interface ever holds one of these errors.
   allow_list_unreadable: "solo en la Lambda: responde remote_unavailable",
   api_config_invalid: "solo en la Lambda: no arranca",
-  device_id_invalid: "solo en la Lambda: nunca construye la clave de un id que no vale",
-  // Guards of the names and the tokens the API and the console build from values they validated
-  // first; they can only fire on a bug.
-  token_id_invalid: "solo en la Lambda: nunca construye el nombre de un token_id que no vale",
-  device_token_malformed: "nunca se da formato a un token con partes que no valen",
 };
 
 /**

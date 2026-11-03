@@ -259,18 +259,17 @@ describe("api: AWS and Google only where they belong", () => {
   });
 });
 
-describe("api: the records of the tokens are never deleted nor labelled", () => {
+describe("api: the Lambdas only read SSM", () => {
   /**
-   * ADR-0033, point 9: a record is written to create it and to revoke it, and never deleted; a
-   * label or a delete is a way to bring a revoked token back. The narrow interface of SSM offers
-   * exactly five operations, and no source of the product names the others of the service.
+   * Every parameter is written by the script of secrets or by Terraform (ADR-0034): the narrow
+   * interface of SSM offers one read, and no source of the product names a delete or a label.
    */
-  it("offers get, getVersioned, putNew, overwrite and listByPath, and nothing else", () => {
+  it("offers get and nothing else", () => {
     const file = join(adaptersRoot, "src", "aws", "parameter-store.ts");
     const members = [...parse(file).code.matchAll(/^\s{2}([a-zA-Z]+)\(/gm)].map(
       (match) => match[1],
     );
-    expect(members).toEqual(["get", "putNew", "getVersioned", "overwrite", "listByPath"]);
+    expect(members).toEqual(["get"]);
     const offenders = productSources().filter((path) =>
       /DeleteParameters?|LabelParameterVersion|UnlabelParameterVersion|deleteParameter|labelParameter/.test(
         parse(path).code,

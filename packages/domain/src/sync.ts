@@ -29,7 +29,6 @@ export {
   type UnitFailure,
 } from "./sync/evaluate.js";
 export { EMPTY_ETAG, linesOfText, textOfLines } from "./sync/lines.js";
-export { type Refusal, RefusedError } from "./sync/permission.js";
 export {
   type AppendAcceptance,
   acceptAppend,

@@ -13,7 +13,7 @@ export type {
   ObjectStore,
   StoredObject,
 } from "./object-store.js";
-export type { ParameterEntry, ParameterStore } from "./parameter-store.js";
+export type { ParameterStore } from "./parameter-store.js";
 export {
   REFERENCE_PREFIXES,
   type ReferencePrefix,
