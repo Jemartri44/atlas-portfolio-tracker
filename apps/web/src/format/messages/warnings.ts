@@ -9,6 +9,7 @@
 
 import type { Warning } from "@atlas/domain";
 import { TREATY_RATE_SUGGESTIONS } from "@atlas/domain";
+import { say } from "@atlas/domain/messages";
 import { valueLabel } from "../labels.js";
 import { type Naming, NO_NAMES, namingOf } from "../names.js";
 import { countOf } from "../number.js";
@@ -26,6 +27,7 @@ import {
   pricesOf,
   text,
 } from "./prose.js";
+import { webVoice } from "./voice.js";
 
 /** Why a quote has no value in euros. */
 export const fxMissingText = (reason: unknown): string =>
@@ -344,6 +346,10 @@ export const describeWarningGroup = (
 };
 
 export const describeWarning = (warning: Warning, prose: Prose): string => {
+  const said = say("warning", warning.code, warning.details, webVoice(prose), warning.message);
+  if (said !== undefined) {
+    return said;
+  }
   const render = WARNING_MESSAGES[warning.code];
   return render === undefined
     ? maskFigures(warning.message, prose.privacy)

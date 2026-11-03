@@ -33,6 +33,7 @@ export default defineConfig({
       "@atlas/domain/fiscal": local("./packages/domain/src/fiscal.ts"),
       "@atlas/domain/tools": local("./packages/domain/src/tools.ts"),
       "@atlas/domain/charts": local("./packages/domain/src/charts.ts"),
+      "@atlas/domain/messages": local("./packages/domain/src/messages.ts"),
       "@atlas/domain/portfolio": local("./packages/domain/src/portfolio.ts"),
       "@atlas/domain/rebalance": local("./packages/domain/src/rebalance.ts"),
       "@atlas/domain/quotes": local("./packages/domain/src/quotes.ts"),

@@ -16,6 +16,7 @@
 // area would scatter the drift test's target over five files.
 
 import type { DomainError } from "@atlas/domain";
+import { say } from "@atlas/domain/messages";
 import { type Naming, NO_NAMES, namingOf } from "../names.js";
 import { countOf } from "../number.js";
 import { type Figures, figuresOf, maskFigures, type Prose } from "../privacy.js";
@@ -31,6 +32,7 @@ import {
   setting,
   text,
 } from "./prose.js";
+import { webVoice } from "./voice.js";
 
 /**
  * The failures of the remote one by one (`docs/api.md` §7), each
@@ -475,6 +477,10 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
  * (`NO_NAMES`).
  */
 export const describeError = (error: DomainError, prose: Prose): string => {
+  const said = say("error", error.code, error.details, webVoice(prose), error.message);
+  if (said !== undefined) {
+    return said;
+  }
   const render = ERROR_MESSAGES[error.code];
   return render === undefined
     ? maskFigures(error.message, prose.privacy)

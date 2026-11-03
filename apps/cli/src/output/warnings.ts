@@ -1,7 +1,9 @@
 // What a warning of the domain says to the person, in Spanish.
 
 import type { Warning } from "@atlas/domain";
+import { say } from "@atlas/domain/messages";
 import { text } from "./format.js";
+import { CLI_VOICE } from "./voice.js";
 
 /** Why a quote has no value in euros. */
 export const fxMissingText = (reason: unknown): string => {
@@ -59,6 +61,10 @@ const gapText = (d: Record<string, unknown>): string => {
  */
 export const describeWarning = (warning: Warning): string => {
   const d = warning.details;
+  const said = say("warning", warning.code, d, CLI_VOICE, warning.message);
+  if (said !== undefined) {
+    return said;
+  }
   switch (warning.code) {
     case "unknown_target_weight":
       return `El peso objetivo de ${text(d.asset_id)} no corresponde a ningún activo del núcleo: revisa si el asset_id está mal escrito.`;

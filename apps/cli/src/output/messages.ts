@@ -1,8 +1,10 @@
 // User-facing messages in Spanish, derived from domain error codes.
 
 import type { DependentEventsError, DomainError, DuplicateFingerprintError } from "@atlas/domain";
+import { say } from "@atlas/domain/messages";
 import { text } from "./format.js";
 import { table } from "./table.js";
+import { CLI_VOICE } from "./voice.js";
 
 /**
  * The safe way out of a ledger with Windows line endings: `compact` does not normalise, so the
@@ -99,6 +101,10 @@ const describeInvalidField = (error: DomainError): string => {
 
 export const describeError = (error: DomainError): string => {
   const d = error.details;
+  const said = say("error", error.code, d, CLI_VOICE, error.message);
+  if (said !== undefined) {
+    return said;
+  }
   switch (error.code) {
     case "unknown_account":
       return `La cuenta ${text(d.account_id)} no existe.`;

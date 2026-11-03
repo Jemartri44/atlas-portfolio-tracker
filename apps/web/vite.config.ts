@@ -212,6 +212,7 @@ export default defineConfig(({ command }) => ({
       "@atlas/domain/fiscal": repo("../../packages/domain/src/fiscal.ts"),
       "@atlas/domain/tools": repo("../../packages/domain/src/tools.ts"),
       "@atlas/domain/charts": repo("../../packages/domain/src/charts.ts"),
+      "@atlas/domain/messages": repo("../../packages/domain/src/messages.ts"),
       "@atlas/domain/portfolio": repo("../../packages/domain/src/portfolio.ts"),
       "@atlas/domain/rebalance": repo("../../packages/domain/src/rebalance.ts"),
       "@atlas/domain/quotes": repo("../../packages/domain/src/quotes.ts"),
@@ -281,7 +282,7 @@ export default defineConfig(({ command }) => ({
           groups: [
             {
               name: "domain",
-              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|quotes[\\/]|quotes\.ts|charts[\\/]|charts\.ts|sync[\\/]|sync\.ts|remote[\\/]|remote-answers\.ts|tools\.ts|rebalance\.ts|projections[\\/](?:corporate-action-draft|deep-check|simulate-transfer|bucket-theses|bucket-stats|costs|contribution|platform-plan|rebalance|sale-tax)\.ts|portfolio\.ts|ports[\\/]remote-ledger\.ts|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/]idb\.ts))/,
+              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|quotes[\\/]|quotes\.ts|charts[\\/]|charts\.ts|messages[\\/]|messages\.ts|sync[\\/]|sync\.ts|remote[\\/]|remote-answers\.ts|tools\.ts|rebalance\.ts|projections[\\/](?:corporate-action-draft|deep-check|simulate-transfer|bucket-theses|bucket-stats|costs|contribution|platform-plan|rebalance|sale-tax)\.ts|portfolio\.ts|ports[\\/]remote-ledger\.ts|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/]idb\.ts))/,
             },
           ],
         },
