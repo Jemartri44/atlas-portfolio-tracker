@@ -17,7 +17,7 @@ Documento de trabajo para decidir qué órdenes de `apps/cli` se quedan. Decisi�
 | `filed` | registrar lo presentado | alta o corrección |
 | `fx update\|status\|correct`, `prices update\|status\|symbols\|purge` | tipos del BCE y cierres diarios | alta o corrección |
 | `check [--deep]` | integridad del libro | verificación |
-| `compact`, `backup`, `lock show\|break` | migrar, copiar, cerrojo | copias y restauración |
+| `compact`, `backup`, `rehearse`, `lock show\|break` | migrar, copiar, ensayar la restauración, cerrojo | copias y restauración |
 | `export` | libro entero en jsonl/csv | exportar |
 | `remote login\|logout\|status\|upload` | carpeta de nube | acceso remoto |
 | `admin …` | administración de la nube | administración |
