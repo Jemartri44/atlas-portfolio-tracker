@@ -3,7 +3,7 @@
  * uses lives here; nothing outside this file writes a colour, a size, a radius
  * or a shadow by hand.
  *
- * Direction: "papel y tinta". A warm paper canvas, white sheets, ink text and
+ * Direction A, "cuaderno vivo": paper and ink. A warm paper canvas, warm sheets, ink text and
  * ONE accent, a Prussian ink blue, reserved for what can be pressed. Data
  * colours (asset classes, chart series) are a separate, validated set and never
  * double as the accent. Status colours are reserved for status and always ship
@@ -20,11 +20,13 @@
 
   /* ---- Type ------------------------------------------------------------- */
 
-  /* System fonts only (CSP font-src 'self'): Segoe UI on Windows, Roboto on
-     Android, SF on Apple, each with tabular figures. */
+  /* Inter for the interface, with tabular figures; Fraunces 600 for the figure that answers a
+     screen and its title. Both are hosted with the app (CSP font-src 'self', apps/web/public/fonts,
+     latin subset, OFL); the system fonts stay behind them for a glyph out of the subset. */
   --font-sans:
-    "Segoe UI Variable Text", "Segoe UI", Roboto, -apple-system, BlinkMacSystemFont, "Ubuntu Sans",
-    "Noto Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+    "Inter", "Segoe UI Variable Text", "Segoe UI", Roboto, -apple-system, BlinkMacSystemFont,
+    "Ubuntu Sans", "Noto Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-serif: "Fraunces", Georgia, "Times New Roman", serif;
   --font-mono:
     ui-monospace, "Cascadia Mono", "Roboto Mono", "Ubuntu Sans Mono", Menlo, Consolas, monospace;
 
@@ -33,9 +35,9 @@
   --text-sm: 0.875rem; /* 14 · second line of a row, hints, meta */
   --text-md: 1rem; /* 16 · body, first line of a row, controls */
   --text-lg: 1.125rem; /* 18 · card titles */
-  --text-xl: 1.375rem; /* 22 · page title */
+  --text-xl: 1.75rem; /* 28 · page title, in the serif */
   --text-2xl: 1.625rem; /* 26 · the figure that answers a card */
-  --text-display: 2.25rem; /* 36 · the one hero figure of a screen */
+  --text-display: 2.5rem; /* 40 · the one hero figure of a screen, in the serif */
   /* Form controls stay at 16px at every width: below it mobile Safari zooms. */
   --text-control: 1rem;
 
@@ -67,7 +69,7 @@
 
   --radius-sm: 0.375rem; /* 6 · skeleton lines, bars */
   --radius-md: 0.5rem; /* 8 · buttons, fields, segmented items */
-  --radius-lg: 0.75rem; /* 12 · cards, notices, panels */
+  --radius-lg: 0.875rem; /* 14 · cards, notices, panels */
   --radius-xl: 1rem; /* 16 · dialogs */
   --radius-pill: 999px;
 
@@ -127,12 +129,12 @@
 
   /* ---- Colour: light ---------------------------------------------------- */
 
-  --c-canvas: #f3f2ee; /* the page: warm paper */
-  --c-surface: #ffffff; /* cards, bars, dialogs */
-  --c-raised: #ffffff; /* the current tab on its track */
-  --c-fill: #f0efea; /* wells: pending block, skeleton, tab track */
+  --c-canvas: #f3f1ea; /* the page: warm paper */
+  --c-surface: #fffdf8; /* cards, bars, dialogs: a warm sheet */
+  --c-raised: #fffdf8; /* the current tab on its track */
+  --c-fill: #efece4; /* wells: pending block, skeleton, tab track */
   --c-fill-hover: #e9e7e1;
-  --c-border: #e3e1db; /* hairlines */
+  --c-border: #e2ded3; /* hairlines */
   --c-border-control: #8a877f; /* field and secondary-button outline: 3,2:1 on the paper */
   --c-backdrop: rgb(28 27 24 / 0.45);
 
@@ -187,7 +189,7 @@
   /* ---- Elevation -------------------------------------------------------- */
 
   --shadow-1: 0 1px 2px rgb(28 27 24 / 0.05);
-  --shadow-2: 0 1px 2px rgb(28 27 24 / 0.05), 0 4px 12px rgb(28 27 24 / 0.06);
+  --shadow-2: 0 1px 0 rgb(40 30 10 / 0.04), 0 6px 24px -12px rgb(40 30 10 / 0.18);
   --shadow-3: 0 16px 40px rgb(28 27 24 / 0.18);
   --shadow-bar: 0 -1px 0 var(--c-border), 0 -6px 16px rgb(28 27 24 / 0.04);
 }
@@ -197,9 +199,9 @@
   :root {
     --text-md: 0.9375rem; /* 15 */
     --text-lg: 1.0625rem; /* 17 */
-    --text-xl: 1.625rem; /* 26 */
+    --text-xl: 2.125rem; /* 34 */
     --text-2xl: 1.75rem; /* 28 */
-    --text-display: 2.75rem; /* 44 */
+    --text-display: 3.75rem; /* 60 */
     --gutter: var(--space-7);
     --grid-gap: var(--space-5);
     --chart-h: var(--chart-h-wide);
@@ -215,8 +217,8 @@
   :root {
     --text-md: 1rem; /* 16 */
     --text-lg: 1.1875rem; /* 19 */
-    --text-xl: 1.75rem; /* 28 */
-    --text-display: 3rem; /* 48 */
+    --text-xl: 2.25rem; /* 36 */
+    --text-display: 4rem; /* 64 */
     --chart-h: clamp(15rem, 28vh, 22rem);
     --panel-h: var(--chart-h);
     --panel-strip-h: 4rem;
@@ -245,8 +247,8 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --c-canvas: #161615;
-    --c-surface: #1f1f1d;
+    --c-canvas: #141412;
+    --c-surface: #1d1c19;
     --c-raised: #3a3a36;
     --c-fill: #2a2a27;
     --c-fill-hover: #33332f;
@@ -293,8 +295,8 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --c-canvas: #161615;
-  --c-surface: #1f1f1d;
+  --c-canvas: #141412;
+  --c-surface: #1d1c19;
   --c-raised: #3a3a36;
   --c-fill: #2a2a27;
   --c-fill-hover: #33332f;

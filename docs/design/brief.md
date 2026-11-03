@@ -1,6 +1,6 @@
 # Encargo de diseño de la interfaz de Atlas
 
-> **Estado.** El encargo original (septiembre de 2026) ya se entregó y se implementó; este documento conserva solo lo que sigue valiendo como requisito. El sistema visual resultante está en [`system.md`](system.md) y en `apps/web/src/styles/`. Lo que el diseño de entonces suponía sobre dónde viven los datos (fichero local, navegador) quedó superado por [ADR-0035](../adr/0035-cloud-ledger-single-source.md).
+> **Estado.** El encargo original (septiembre de 2026) ya se entregó y se implementó; este documento conserva solo lo que sigue valiendo como requisito. El sistema visual resultante está en [`system.md`](system.md) y en `apps/web/src/styles/`; desde el 2026-11-03 sigue la dirección A, «Cuaderno vivo» (system.md §8). Lo que el diseño de entonces suponía sobre dónde viven los datos (fichero local, navegador) quedó superado por [ADR-0035](../adr/0035-cloud-ledger-single-source.md).
 
 ## Qué es la interfaz
 
@@ -16,7 +16,7 @@ Móvil de referencia 400 × 890 (prioridad principal, uso con una mano), móvil 
 
 ## Navegación
 
-Una sola navegación a la vez, con cinco destinos: Resumen, Movimientos, Registrar (la acción principal), Cartera y Cubo. Ajustes aparte. En móvil, barra inferior con Registrar al centro. El interruptor del modo privacidad, siempre a un toque.
+Una sola navegación a la vez, con cinco destinos: Resumen, Movimientos, Registrar (la acción principal), Cartera y Cubo; en escritorio, también la Declaración. Ajustes aparte. En móvil, barra inferior con Registrar al centro. El interruptor del modo privacidad, siempre a un toque.
 
 ## Modo privacidad
 
@@ -41,4 +41,4 @@ Todo en español natural, sin identificadores internos. Formato español (`1.234
 
 ## Restricciones técnicas
 
-HTML y CSS planos con variables CSS, sin *framework* de estilos; nada de recursos externos (fuentes, imágenes, iconos remotos); iconos en SVG en línea; objetivos táctiles de al menos 44 px; contraste AA en claro y oscuro; texto de cuerpo de 15-16 px en móvil y nada por debajo de 13 px; sin animaciones decorativas (respetar «reducir movimiento»).
+HTML y CSS planos con variables CSS, sin *framework* de estilos; nada de recursos externos (fuentes, imágenes, iconos remotos: las fuentes se alojan con la aplicación); iconos en SVG en línea; objetivos táctiles de al menos 44 px; contraste AA en claro y oscuro; texto de cuerpo de 15-16 px en móvil y nada por debajo de 13 px; sin animaciones decorativas (respetar «reducir movimiento»).
