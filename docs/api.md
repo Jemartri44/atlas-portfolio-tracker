@@ -1,76 +1,34 @@
 # Contrato de la API
 
-El contrato HTTP de la Lambda de la API (`apps/api`), que se alcanza **solo a través de CloudFront**, bajo `/api/*` (ADR-0028, fila 6). Lo encargan **ADR-0026** («Consecuencias»: rutas, cuerpos, códigos, la confirmación y el rechazo por línea, la pareja de anulación y corrección como una sola línea, y el rechazo de una anulación cuya corrección no viene en la misma petición) y **ADR-0033** («Reparto entre features»: la cabecera, las rutas de inicio, canje, revocación y lista, sus códigos de error, los límites del nombre del dispositivo y cómo se liga a su sesión el identificador de dispositivo de la web). 
+El contrato HTTP de la Lambda de la API (`apps/api`), que se alcanza **solo a través de CloudFront**, bajo `/api/*` (ADR-0028, fila 6). Lo encarga **ADR-0026** («Consecuencias»: rutas, cuerpos, códigos, la confirmación y el rechazo por línea, la pareja de anulación y corrección como una sola línea, y el rechazo de una anulación cuya corrección no viene en la misma petición). Desde **ADR-0037** (2026-11-03) su único cliente es la web: la consola no tiene acceso propio a la API.
 
-**Estado:** implementado (features 015, 016 y 021-027) y probado con dobles de S3, SSM y Google; **sin desplegar todavía** (017 y 018). Desde **ADR-0035** (2026-10-06) el libro de S3 es la única fuente de verdad: no hay cola local ni sincronización entre dispositivos, y la web y la consola escriben directamente con `If-Match` (§5.8). Lo que el código concretó respecto del diseño previo va marcado «*(014)*», «*(015)*» o «*(016)*» según la feature. Lo que quede sin decidir se marca **[PENDIENTE]**.
+**Estado:** implementado (features 015, 016 y 021-027) y probado con dobles de S3, SSM y Google; **sin desplegar todavía** (017 y 018). Desde **ADR-0035** (2026-10-06) el libro de S3 es la única fuente de verdad: no hay cola local ni sincronización entre dispositivos, y la web escribe directamente con `If-Match` (§5.8). Lo que el código concretó respecto del diseño previo va marcado «*(014)*», «*(015)*» o «*(016)*» según la feature. Lo que quede sin decidir se marca **[PENDIENTE]**.
 
 **Si este documento discrepa de una ADR, manda la ADR**, y la discrepancia se anota en el `questions.md` de la feature que la encuentre.
 
 ## 1. Reglas generales
 
-- **Un solo origen.** La SPA y la API comparten distribución de CloudFront: la cookie es del mismo sitio y **la API no responde a CORS** (ADR-0028, fila 6). El navegador y la consola nunca llaman a la Function URL directamente.
-- **`Authorization` no se usa nunca.** CloudFront la sobrescribe para firmar con OAC (ADR-0027, hecho 1). Toda credencial va en la cookie o en `x-atlas-device-token` (§2).
-- **Todo `POST` y `PUT` lleva `x-amz-content-sha256`** con el SHA-256 hexadecimal del cuerpo exacto (ADR-0027, hecho 2). Si falta o no cuadra, la petición la rechaza AWS **antes** de llegar a la Lambda, con una respuesta que **no** tiene el formato de error de §7: el cliente la trata como `transport_rejected` y nunca como un rechazo de sus líneas.
+- **Un solo origen.** La SPA y la API comparten distribución de CloudFront: la cookie es del mismo sitio y **la API no responde a CORS** (ADR-0028, fila 6). El navegador nunca llama a la Function URL directamente.
+- **`Authorization` no se usa nunca.** CloudFront la sobrescribe para firmar con OAC (ADR-0027, hecho 1). La única credencial es la cookie (§2).
+- **Todo `POST` lleva `x-amz-content-sha256`** con el SHA-256 hexadecimal del cuerpo exacto (ADR-0027, hecho 2). Si falta o no cuadra, la petición la rechaza AWS **antes** de llegar a la Lambda, con una respuesta que **no** tiene el formato de error de §7: el cliente la trata como `transport_rejected` y nunca como un rechazo de sus líneas.
 - **Cuerpo JSON obligatorio** en toda petición que escribe (`Content-Type: application/json`), incluso vacío (`{}`): es una de las defensas contra la falsificación de peticiones de ADR-0027.
 - **Fechas** en ISO 8601; instantes en UTC con `Z`. **Importes**, si alguna vez viajan fuera de una línea del libro, como cadenas (ADR-0005).
-- **Ninguna ruta de datos redirige.** Solo las del inicio de sesión (§3 y §4) responden con `302`. La consola hace sus peticiones con `redirect: "error"` (ADR-0033, punto 4), así que una redirección inesperada es un fallo y el token nunca sale hacia otro origen.
-- **Registros de la Lambda:** el código del resultado y, como mucho, el identificador público de un token (`token_id`). Nunca el token, su hash, el correo, el `sub`, una línea del libro, un importe, una posición ni una cuenta (ADR-0027, ADR-0028 fila 16, ADR-0033 punto 10, `CLAUDE.md` → *Logging*).
+- **Ninguna ruta de datos redirige.** Solo las del inicio de sesión (§3) responden con `302`.
+- **Registros de la Lambda:** el código del resultado. Nunca la cookie, el correo, el `sub`, una línea del libro, un importe, una posición ni una cuenta (ADR-0027, ADR-0028 fila 16, `CLAUDE.md` → *Logging*).
 
 ## 2. Credenciales
 
-Hay **dos**, y cada petición lleva **exactamente una**:
+La única es la **cookie de sesión** `__Host-atlas_session` de la web (`HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/`, firmada con la subclave `session` y con `typ`; ADR-0027 y §3). El token de dispositivo de la consola se retiró con ADR-0037.
 
-| Credencial | Quién | Dónde viaja | Definida en |
-|---|---|---|---|
-| Cookie de sesión `__Host-…` | La web | Cookie `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/`, firmada con la subclave `session` (HKDF) y con `typ` | ADR-0027, ADR-0033 punto 2 |
-| Token de dispositivo | La consola | Cabecera **`x-atlas-device-token`** | ADR-0033 |
+- **Sin cookie: `401 unauthenticated`**, salvo en las rutas de inicio de sesión y en `logout`.
+- **Toda petición que escribe** comprueba además `Origin` contra el origen propio (`403 origin_rejected`).
+- **Cada petición comprueba la cookie en este orden:** firma y `typ`, caducidad (`401 session_invalid`), lista permitida (`403 not_allowed`) y la marca de `logout-all` (`401 session_invalid` con `details.reason = "closed"`, §3).
+- **La lista permitida se vuelve a consultar en cada petición** (ADR-0027, enmienda), con su caché de **120 s** (decidido el 2026-09-25). La cookie no lleva el correo: se comprueba que **el `sub` de la sesión siga teniendo una entrada**; el par `{sub, email}` entero se comprobó al iniciar la sesión (decisión Q10, 2026-09-26). **Retirar el acceso es quitar la entrada de ese `sub`**, no cambiarle el correo: con el mismo `sub` y otro correo, las sesiones vivas siguen valiendo hasta que caducan, y un inicio de sesión nuevo ya no pasa.
+- **Un fallo transitorio** de SSM (`ThrottlingException`) o de S3 al comprobar la cookie es **`503 remote_unavailable`**, que se puede reintentar, y **nunca** deja pasar la cookie ni la da por inválida para siempre (ADR-0034, fila 13).
 
-- **Cookie y token a la vez: `400 credentials_ambiguous`**, sin mirar ninguna de las dos (ADR-0033, punto 4).
-- **Sin ninguna: `401 unauthenticated`**, salvo en las rutas de inicio de sesión.
-- **Con cookie, toda petición que escribe** comprueba además `Origin` contra el origen propio (`403 origin_rejected`). Con el token no hace falta: un navegador no añade una cabecera propia a otro sitio sin una comprobación CORS previa, y la API no responde a CORS.
-- **Cada petición vuelve a consultar la lista permitida** (ADR-0027, enmienda; ADR-0033, punto 5), con la caché de la lista de ADR-0027: **120 s** (decidido el 2026-09-25). **Con el token**, se comprueba el par `{sub, email}` de su registro (§2.2). **Con la cookie**, que no lleva el correo, se comprueba que **el `sub` de la sesión siga teniendo una entrada** en la lista; el par entero se comprobó al iniciar la sesión (decisión Q10, 2026-09-26). **Retirar el acceso es quitar la entrada de ese `sub`**, no cambiarle el correo: con el mismo `sub` y otro correo, las sesiones vivas siguen valiendo hasta que caducan, y un inicio de sesión nuevo ya no pasa. El registro del token **no** se cachea (§2.2).
-- **Cada petición con credencial comprueba el objeto de su dispositivo** (`sync/devices/<device_id>.json`, §5.3): tiene que **existir**, ser **del tipo de la credencial** (cookie → `web`, token → `console`) y estar **activo**. Si no, `403 device_forgotten`, con `details.reason` = `missing` \| `wrong_type` \| `forgotten` o `unreadable` si el objeto no se lee (confirmado por la dirección el 2026-09-26, Q9). Un objeto que falta **nunca** cuenta como vivo (decisiones B1 y R2-B2 del prompt de la 015).
-- **Un fallo transitorio** de SSM (`ThrottlingException`) o de S3 al comprobar una credencial es **`503 remote_unavailable`**, que se puede reintentar, y **nunca** deja pasar la credencial ni la da por inválida para siempre (ADR-0034, fila 13).
+### 2.3 Alcance de la cookie
 
-### 2.1 Formato del token de dispositivo
-
-```
-atlasdt1.<token_id>.<secret>
-```
-
-- `atlasdt1` — prefijo fijo y reconocible (versión 1 del formato), para que un escáner de secretos lo encuentre. La regla de `gitleaks` era configuración de herramientas y se propuso al usuario (ADR-0033, punto 1); **el usuario la aprobó el 2026-09-25** y vive en `.gitleaks.toml` como `atlas-console-device-token`: detecta el token completo con un secreto aleatorio y deja pasar el `token_id` solo y los marcadores de posición de este documento.
-- `<token_id>` — **22 caracteres exactos de `[A-Za-z0-9_-]`** (128 bits aleatorios en base64url sin relleno). Es **público**: nombra el parámetro de SSM, sale en la lista de la web y puede ir a un registro. **Nunca contiene `:` ni `/`**: `GetParameter` interpreta `nombre:versión` y `nombre:etiqueta`, y sin esta regla un token revocado volvería a valer leyendo una versión anterior del registro (ADR-0033, bloqueante B1).
-- `<secret>` — **43 caracteres exactos de `[A-Za-z0-9_-]`** (256 bits de `crypto.randomBytes` en base64url sin relleno). El servidor guarda solo su SHA-256.
-- Expresión completa: `^atlasdt1\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}$`. Lo que no cuadre es `401 device_token_invalid` **antes** de tocar SSM.
-
-### 2.2 Comprobación del token, en cada petición
-
-En este orden, rechazando al primer fallo (ADR-0033, punto 5):
-
-1. Formato (§2.1) → `device_token_invalid`.
-2. Registro `/atlas/<entorno>/device-tokens/<token_id>`, leído de SSM **sin caché** y **sin selector de versión**; si no existe, o **su propio `token_id` no es el pedido** → `device_token_invalid`.
-3. SHA-256 del secreto, comparado en tiempo constante (`crypto.timingSafeEqual`) → `device_token_invalid`.
-4. No revocado → `device_token_revoked`.
-5. No caducado: antes de `expires_at` **y** antes de `issued_at` + 120 días (techo fijo en el código, ADR-0033 punto 7) → `device_token_expired`.
-6. Su par `{sub, email}` sigue en la lista permitida → `403 not_allowed`.
-7. El objeto de su dispositivo existe, es de tipo `console` y está activo → `403 device_forgotten` (§2).
-
-Los pasos 2 y 3 dan la **misma respuesta** (`device_token_invalid` sin `details`): el cliente no averigua qué `token_id` existen.
-
-Solo pueden cachearse los negativos que no pueden volver a valer (revocado, caducado); un «no existe» no se cachea.
-
-### 2.3 Alcance de cada credencial
-
-| Ruta | Sesión (web) | Token (consola) |
-|---|---|---|
-| §5 El libro: leer, añadir líneas y la subida inicial a una nube vacía (§5.5) | Sí | Sí |
-| §6 Datos de referencia | Sí | Sí |
-| §6.1 Borradores (E6 de ADR-0035) | Sí | Sí |
-| §4.4 Revocar **el propio** token | — | Sí |
-| §4.5 Listar tokens y revocar uno cualquiera; leer el estado de todos los dispositivos | Sí | **No**: `403 forbidden_for_credential` |
-| §4.1 Emitir un token | Solo al final de un inicio de sesión que abre la consola (§4) | **No** |
-
-**El identificador del dispositivo sale siempre de la credencial, nunca del cuerpo** (ADR-0033, punto 6; ADR-0026, paso 7). Un campo `device_id` en el cuerpo de una petición es `400 body_invalid`.
+Toda ruta de §5 (el libro), §6 (datos de referencia) y §6.1 (borradores) pide la cookie, igual que `GET /api/session` y `POST /api/auth/logout-all` (§3). La tabla de rutas vive en `packages/domain/src/access/routes.ts`. **La API no toma ningún identificador del cuerpo**: un campo `device_id` en el cuerpo de una petición es `400 body_invalid`.
 
 ## 3. Acceso de la web (ADR-0027)
 
@@ -78,92 +36,34 @@ La **vía c**: la Lambda es el cliente OAuth y el token de Google nunca toca la 
 
 | Método y ruta | Qué hace |
 |---|---|
-| `GET /api/auth/login[?device_id=<22>]` | Crea el intento (`state`, `nonce`, verificador PKCE y, si la web lo presenta, su `device_id`) en la **cookie transitoria** `__Host-atlas_login` (`SameSite=Lax`, firmada, de un solo uso), y redirige (`302`) a Google con `scope=openid email`, PKCE S256, `state` y `nonce`. Una credencial presente se ignora. Un `device_id` con otro formato se descarta en silencio: no es credencial (§5.4). **El `device_id` solo se tiene en cuenta si el inicio viene del propio sitio** (`Sec-Fetch-Site: same-origin`, u `Origin` propio); desde otro sitio, o sin forma de saberlo, se ignora y el inicio sigue sin él (revisión de seguridad de la PR #90, S2). |
-| `GET /api/auth/callback` | Vuelta de Google. Verifica en el orden de ADR-0027 (`state` contra la cookie transitoria, PKCE, firma, `aud` del entorno, `iss`, `exp`, `nonce`, `email_verified`, par `{sub, email}` en la lista). Si el intento es de la **web**, emite la cookie de sesión y redirige a la raíz de la SPA (`/`; no hay `return_to`). Si es de la **consola**, sigue §4.2. La cookie transitoria **se borra en toda respuesta**. Un par que no está en la lista recibe la **página de acceso denegado**; cualquier otro fallo, la **página de error** (§3.1). |
-| `POST /api/auth/logout` | Cuerpo `{}` obligatorio (`415 body_not_json`). Borra la cookie de sesión (`Max-Age=0`) **sin validarla** —cerrar una sesión caducada o firmada con una clave rotada también la borra— y responde `204`. Con cookie, la comprobación de `Origin` de §2. Con el token, `403 forbidden_for_credential`. |
-| `GET /api/session` | Solo cookie. `200 { "signed_in": true, "expires_at": "<Z>", "device_id": "<22>" }`, con `Cache-Control: no-store`: así sabe la SPA si tiene sesión (la cookie es `HttpOnly`) y qué `device_id` le asignó la API. Si no, la misma respuesta que cualquier ruta con cookie (`401 unauthenticated`, `401 session_invalid`, `403 not_allowed`, `403 device_forgotten`, `503 remote_unavailable`). Con el token, `403 forbidden_for_credential`. |
+| `GET /api/auth/login` | Crea el intento (`state`, `nonce` y verificador PKCE) en la **cookie transitoria** `__Host-atlas_login` (`SameSite=Lax`, firmada, de un solo uso), y redirige (`302`) a Google con `scope=openid email`, PKCE S256, `state` y `nonce`. Una credencial presente se ignora. |
+| `GET /api/auth/callback` | Vuelta de Google. Verifica en el orden de ADR-0027 (`state` contra la cookie transitoria, PKCE, firma, `aud` del entorno, `iss`, `exp`, `nonce`, `email_verified`, par `{sub, email}` en la lista), emite la cookie de sesión y redirige a la raíz de la SPA (`/`; no hay `return_to`). La cookie transitoria **se borra en toda respuesta**. Un par que no está en la lista recibe la **página de acceso denegado**; cualquier otro fallo, la **página de error** (§3.1). |
+| `POST /api/auth/logout` | Cuerpo `{}` obligatorio (`415 body_not_json`). Borra la cookie de sesión (`Max-Age=0`) **sin validarla** —cerrar una sesión caducada o firmada con una clave rotada también la borra— y responde `204`. Con cookie, la comprobación de `Origin` de §2. |
+| `POST /api/auth/logout-all` | **Cierra la sesión en todos los dispositivos** (ADR-0037), esta incluida. Pide cookie válida, `Origin` propio y cuerpo **exactamente** `{}` (otro cuerpo, `400 body_invalid`). Avanza la marca (abajo) a la hora del servidor, borra la cookie y responde `204`. |
+| `GET /api/session` | `200 { "signed_in": true, "expires_at": "<Z>" }`, con `Cache-Control: no-store`: así sabe la SPA si tiene sesión (la cookie es `HttpOnly`) y hasta cuándo. Si no, la misma respuesta que cualquier ruta con cookie (`401 unauthenticated`, `401 session_invalid`, `403 not_allowed`, `503 remote_unavailable`). |
 
 **Duraciones**: la sesión, **24 h absolutas**, sin renovación (ADR-0035, pregunta 6, 2026-10-06; antes eran 8 h, ADR-0027); la cookie transitoria, **10 min** (2026-09-25). Las dos son configuración de la Lambda (§9). **Antes de abrir un formulario, la web avisa si a la sesión le quedan menos de 15 minutos** (`expires_at` de `GET /api/session`), porque un formulario a medias se pierde si la sesión caduca (ADR-0035, §2 y «Riesgos aceptados»).
 
-**La cookie de sesión** es `__Host-atlas_session`, con `Path=/`, `Secure`, `HttpOnly`, `SameSite=Strict` y sin `Domain`, firmada con HMAC-SHA256 y la subclave HKDF de `info` `atlas session v1`, con `typ: "atlas.session"`. Lleva **solo** `sub`, un identificador de sesión, el `device_id` de la web, la emisión y la caducidad: **ninguna cookie lleva el correo**. La transitoria, `__Host-atlas_login`, con su propia subclave (`atlas login v1`, `typ: "atlas.login"`). Formato exacto: `specs/015-api-access/data-model.md` (retirada; en git) §1.
+**La cookie de sesión** es `__Host-atlas_session`, con `Path=/`, `Secure`, `HttpOnly`, `SameSite=Strict` y sin `Domain`, firmada con HMAC-SHA256 y la subclave HKDF de `info` `atlas session v1`, con `typ: "atlas.session"`. Lleva **solo** `sub`, un identificador de sesión (`sid`), la emisión (`iat`, en segundos) y la caducidad (`exp`): **ninguna cookie lleva el correo**. La transitoria, `__Host-atlas_login`, con su propia subclave (`atlas login v1`, `typ: "atlas.login"`). Formato exacto: `packages/domain/src/access/signed.ts`.
 
-**El último inicio de sesión web** *(016)*. Tras emitir la cookie de una sesión web, la API avanza `access/last-web-sign-in.json` (formato en `docs/data-schema.md` §1) a la fecha de hoy en Madrid, **solo si es posterior** a la guardada, con `If-Match` sobre lo leído o `If-None-Match: *` si no existía. Lo lee el recordatorio mensual, para avisar antes de que Google borre un cliente OAuth sin uso (ADR-0027). **El inicio de sesión nunca falla por ello**: lo que pasó es el `reason` de su línea de registro (`signed_in` o `signed_in_new_device`), uno de `sign_in_date_written`, `sign_in_date_unchanged`, `sign_in_date_conflict` (otra escritura ganó) y `sign_in_date_unavailable` (S3 no respondió). Un inicio de sesión de la consola no lo toca: los de la consola los cuenta el correo por sus tokens.
+**La marca de `logout-all`** es `access/sessions-valid-from.json` del bucket de datos, `{"sessions_valid_from_format":1,"at":<segundos epoch>}` (`docs/data-schema.md` §1). `at` es siempre la hora de la Lambda, nunca una que mande el cliente. **Solo avanza**: se escribe con `If-Match` sobre lo leído (o `If-None-Match: *` si no existía) y una marca guardada igual o posterior no se toca. Toda cookie cuyo `iat` sea **estrictamente anterior** a `at` es `401 session_invalid` con `details.reason = "closed"`; una emitida en el mismo segundo o después vale, así que el inicio de sesión que sigue al cierre funciona en el acto. **Una marca que no se lee de forma estricta cierra todas las sesiones** (falla cerrado): solo puede venir de una escritura que quería cerrarlas. Para salir de ahí, la administración borra o rehace el objeto ([`runbooks/stolen-google-account.md`](runbooks/stolen-google-account.md)). La web, ante `reason: "closed"`, dice: «Se ha cerrado la sesión en todos tus dispositivos. Si fuiste tú, entra de nuevo con Google.» Por qué una marca y no objetos por dispositivo: ADR-0037.
+
+**El último inicio de sesión web** *(016)*. Tras emitir la cookie de una sesión, la API avanza `access/last-web-sign-in.json` (formato en `docs/data-schema.md` §1) a la fecha de hoy en Madrid, **solo si es posterior** a la guardada, con `If-Match` sobre lo leído o `If-None-Match: *` si no existía. Lo lee el recordatorio mensual, para avisar antes de que Google borre un cliente OAuth sin uso (ADR-0027). **El inicio de sesión nunca falla por ello**: lo que pasó es el `reason` de su línea de registro (`signed_in`), uno de `sign_in_date_written`, `sign_in_date_unchanged`, `sign_in_date_conflict` (otra escritura ganó) y `sign_in_date_unavailable` (S3 no respondió).
 
 ### 3.1 Las páginas propias de la Lambda
 
-Todas `text/html; charset=utf-8`, **sin *script* y sin nada externo**, con `Cache-Control: no-store`, `Referrer-Policy: no-referrer` y CSP `default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'` (las de la consola, además, `sandbox`, §4.2).
+Todas `text/html; charset=utf-8`, **sin *script* y sin nada externo**, con `Cache-Control: no-store`, `Referrer-Policy: no-referrer` y CSP `default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`.
 
 - **Acceso denegado** (`403`): la vuelta de Google fue válida pero el par no está en la lista. Enseña **solo el `sub` de la cuenta que acaba de autenticarse en esa misma petición**, escapado, y cómo darlo de alta. **Nunca el correo.** El `sub` no se registra ni va en ninguna URL.
-- **Error del inicio de sesión** (`400`, `403`, `500` o `503`): cualquier otro fallo del inicio o de la vuelta, con su código literal y una frase por código: `login_attempt_missing` (el intento no está o caducó), `login_attempt_invalid` (la cookie del intento no se lee o está repetida; añadido en E1 de la 015, a confirmar por la dirección), `login_state_mismatch`, `google_error`, `google_exchange_failed`, `id_token_invalid`, `id_token_audience`, `id_token_issuer`, `id_token_expired`, `id_token_nonce`, `email_not_verified`, `reissue_device_missing`, `reissue_device_forgotten`, `reissue_device_not_console`, `reissue_device_unreadable` (el objeto existe pero no se lee; E2 de la 015, decidido el 2026-09-26), `remote_unavailable` (con `Retry-After: 5`, como en JSON) e `internal` (`500`: cualquier fallo inesperado del inicio o de la vuelta, que también borra la cookie del intento; revisión de la PR #90, N1).
+- **Error del inicio de sesión** (`400`, `403`, `500` o `503`): cualquier otro fallo del inicio o de la vuelta, con su código literal y una frase por código: `login_attempt_missing` (el intento no está o caducó), `login_attempt_invalid` (la cookie del intento no se lee o está repetida; añadido en E1 de la 015, a confirmar por la dirección), `login_state_mismatch`, `google_error`, `google_exchange_failed`, `id_token_invalid`, `id_token_audience`, `id_token_issuer`, `id_token_expired`, `id_token_nonce`, `email_not_verified`, `remote_unavailable` (con `Retry-After: 5`, como en JSON) e `internal` (`500`: cualquier fallo inesperado del inicio o de la vuelta, que también borra la cookie del intento; revisión de la PR #90, N1).
 
-## 4. El token de dispositivo de la consola (ADR-0033)
+## 4. (Retirada)
 
-### 4.1 Inicio del intento
-
-`GET /api/auth/console/start`, sin credencial, abierto en el navegador por `atlas remote login` (la consola **siempre imprime la URL**). Parámetros de consulta:
-
-| Parámetro | Regla |
-|---|---|
-| `port` | Entero de 1024 a 65535: el puerto que la consola abrió en `127.0.0.1` (puerto 0, elegido por el sistema). Obligatorio salvo en `mode=manual`. |
-| `state` | 43 caracteres de `[A-Za-z0-9_-]` generados por la consola. |
-| `code_challenge` | 43 caracteres de `[A-Za-z0-9_-]` (S256 del verificador, RFC 7636). |
-| `code_challenge_method` | Exactamente `S256`. |
-| `device_name` | El nombre que la consola propone para el dispositivo: **de 1 a 40 puntos de código en NFC**, solo `A-Z a-z 0-9`, `ÁÉÍÓÚÜÑáéíóúüñ`, el espacio, `.`, `_` y `-`, sin espacio al principio ni al final y sin dos seguidos (decidido el 2026-09-25). **Se escapa** allí donde se muestre (página manual, lista de la web, correo). |
-| `reissue_device_id` | Opcional: 22 caracteres de `[A-Za-z0-9_-]`. Solo en la **reemisión** para un dispositivo sin credencial (§4.3). Viaja en la cookie transitoria y después en el código. |
-| `mode` | `loopback` (por defecto) o `manual`. |
-
-Cualquier parámetro que no cumpla es `400 console_start_invalid`, con el nombre del parámetro en `details`, y no se abre ningún intento. Si cumplen, la Lambda guarda los parámetros **en la cookie transitoria** de ADR-0027, junto a los suyos, y sigue la vía c pidiendo a Google una **pantalla interactiva** (`prompt=select_account`).
-
-### 4.2 La vuelta de Google, rama de la consola
-
-`GET /api/auth/callback` verifica **todo** lo de §3, lista permitida incluida. Si el intento es de la consola, **no emite cookie de sesión**: emite un **código de un solo uso**, firmado con la subclave `console_code` (HKDF) y con `typ` de código —el verificador de la cookie lo rechaza, y el del código rechaza una cookie—, que lleva el `token_id` que tendrá el token, el `code_challenge`, el `sub` —**no el correo**: decidido el 2026-09-26 (Q8 (a) de la 015); en el canje la API toma el correo de la entrada de la lista permitida con ese `sub`, vuelve a comprobar el par entero y se niega si el `sub` tiene dos entradas—, el nombre del dispositivo y su caducidad: **5 minutos** (decidido el 2026-09-25).
-
-- **`mfa_required` no se emite** (decidido el 2026-09-25, tras el bloque 0 de la 015): Google solo entrega `amr` a una aplicación publicada y verificada con una función en Beta activada, y aun así puede no venir; Google no admite forzar la reautenticación. La verificación en dos pasos sigue siendo un requisito operativo del usuario (ADR-0033, nota del 2026-09-25).
-- **`mode=loopback`:** `302` a `http://127.0.0.1:<port>/callback?code=<código>&state=<state>`. El destino es el **literal** `127.0.0.1`, fijado en el código, y el puerto, el número validado en §4.1: la ruta no puede redirigir a ningún otro sitio. La página que la consola sirve en ese puerto no carga nada externo y lleva `Referrer-Policy: no-referrer`; un `state` erróneo se ignora y el puerto sigue esperando.
-- **`mode=manual`:** una página propia de la Lambda **sin script**, con `Content-Security-Policy: sandbox`, `Cache-Control: no-store` y `Referrer-Policy: no-referrer`. Primero pide **confirmar expresamente el nombre del dispositivo**; después enseña el código, la hora del intento y el aviso de que el código solo se teclea en una consola que el usuario acaba de abrir él mismo. La confirmación, sin *script* y sin formulario (la `sandbox` los bloquea), es un `<details>` cuyo `<summary>` la dice: **el código solo aparece al desplegarlo**. La consola lo lee sin mostrarlo.
-- **Reemisión** (§4.3): tras verificar a Google, la Lambda lee `sync/devices/<reissue_device_id>.json`; si falta, está olvidado, es de tipo `web` o no se lee, responde con la página de error (`reissue_device_missing`, `reissue_device_forgotten`, `reissue_device_not_console`, `reissue_device_unreadable`). Si es aceptable, sirve **una página de confirmación** con el dato **del servidor** —el nombre del dispositivo—: con `loopback`, un enlace «Sí, es este dispositivo: continuar» al literal `http://127.0.0.1:<port>/callback?code=…&state=…`; con `manual`, el mismo `<details>`. Sin esa confirmación no hay código.
-
-### 4.3 Canje
-
-`POST /api/auth/console/token`, sin cookie. Cuerpo:
-
-```json
-{ "code": "<código de §4.2>", "code_verifier": "<verificador PKCE>" }
-```
-
-- **Renovación:** si la carpeta desde la que se inicia sesión tiene `sync/remote.json` y `credentials.json` tiene la entrada de **ese** `device_id`, la consola envía **ese** token en `x-atlas-device-token`, **y ningún otro**; sin `sync/remote.json`, no envía ninguno, aunque haya entradas del mismo origen, que son de otras carpetas (un token por dispositivo y por carpeta, ADR-0033, punto 6). *(Corregido el 2026-09-25, revisión de la PR #89, B2: decía «si la consola tiene un token anterior para ese origen».)* Para esta ruta, y solo para ella, un token **caducado pero no revocado** vale para identificar el dispositivo. La API **conserva su `device_id`** y **revoca el token anterior antes de crear el nuevo**. Dos emisiones a la vez para el mismo dispositivo (dos reemisiones con códigos distintos, o una reemisión y una renovación) tampoco: tras crear el suyo, cada una lista los tokens vivos del dispositivo; el de mayor `token_id` se queda y revoca a los demás, y la que ve uno mayor revoca el suyo y responde `409 console_renewal_conflict`. Dos renovaciones a la vez del mismo token con códigos distintos no dejan dos tokens vivos: SSM no tiene sobrescritura condicional, pero responde la versión nueva, y solo la renovación que lee la versión `v` y obtiene `v + 1` gana; la otra no crea nada y responde `409 console_renewal_conflict` (otra renovación se adelantó, o una revocación: no se crea ningún token y el cliente no borra nada; vuelve a ejecutar, y si el token ya no vale, `device_token_revoked` lo dirá). Un token revocado aquí es `401 device_token_revoked`, y la consola vuelve a iniciar sesión sin él.
-- Comprobaciones, en orden: firma y `typ` del código (`console_code_invalid`), caducidad (`console_code_expired`), verificador contra el `code_challenge` (`pkce_mismatch`), lista permitida otra vez (`not_allowed`).
-- **Uso único obligatorio:** el registro se crea **sin sobrescribir** (`PutParameter` sin `Overwrite`) con el `token_id` que trae el código; si ya existe, el código ya se usó: `409 console_code_used`. Que eso sea atómico ante dos canjes simultáneos **se aceptó por deducción** de la documentación de SSM (el nombre es único, sin `Overwrite` responde `ParameterAlreadyExists` y las actualizaciones concurrentes se rechazan con `TooManyUpdates`) y **se prueba contra SSM de verdad en la 018** (ADR-0033, nota del 2026-09-26; decisión de la dirección, `specs/015-api-access/questions.md (en el historial de git)` §21). Además, un código enviado otra vez se contesta **antes de revocar nada**: si su registro ya existe, `409 console_code_used` sin escribir (revisión de la PR #95, N1).
-- **`device_id` lo asigna la API** en el primer canje: 22 caracteres de `[A-Za-z0-9_-]`, aleatorios. La consola nunca lo propone, **salvo en la reemisión** (ADR-0033, nota del 2026-09-25 sobre la reemisión): una carpeta cuyo `sync/remote.json` nombra un dispositivo sin credencial pide el token para **ese** `device_id`, y la API solo lo concede si el dispositivo existe, no está olvidado y es de tipo consola, tras un inicio de sesión con Google y PKCE completo, y revocando antes cualquier token anterior de ese dispositivo. El `device_id` pedido viaja como `reissue_device_id` en §4.1, dentro de la cookie transitoria y después en el código. Al canjear, la API **vuelve a comprobar las tres condiciones** sobre el objeto (pudo cambiar entre la vuelta y el canje) —si no, `403 reissue_device_missing`, `reissue_device_forgotten`, `reissue_device_not_console` o `reissue_device_unreadable`—, **revoca todos los tokens activos de ese dispositivo**, uno a uno, y solo después crea el nuevo sin sobrescribir.
-
-Respuesta `200`, **una sola vez**:
-
-```json
-{
-  "token": "atlasdt1.<token_id>.<secret>",
-  "token_id": "<token_id>",
-  "device_id": "<device_id>",
-  "device_name": "<nombre>",
-  "issued_at": "2026-10-01T10:00:00Z",
-  "expires_at": "2026-12-30T10:00:00Z"
-}
-```
-
-`expires_at` = `issued_at` + la caducidad configurada (90 días, ADR-0033 punto 7), **nunca** más que el techo de 120. La consola lo guarda en `~/.config/atlas/credentials.json` con el origen para el que se emitió (`docs/data-schema.md` §1).
-
-### 4.4 Revocar el propio token
-
-`POST /api/auth/console/revoke`, con `x-atlas-device-token` y cuerpo `{}`. Revoca **ese** token y solo ese: sobrescribe su registro con `revoked_at` (la única sobrescritura del registro). Respuesta `200 { "token_id": "…", "revoked_at": "…" }`. `atlas remote logout` **solo borra su entrada local cuando recibe este 200**; sin él, avisa de que el token sigue vivo en el servidor (ADR-0033, punto 8).
-
-### 4.5 Lista y revocación desde la web (solo con sesión)
-
-- `GET /api/devices/tokens` → `200 { "tokens": [ … ] }`, uno por registro: `token_id`, `device_id`, `device_name`, `issued_at`, `expires_at`, `status` (`active` \| `expired` \| `revoked`), `revoked_at?` y `recent` (emitido en los últimos **7 días**, decidido el 2026-09-25). Sin correo ni `sub`. Un registro ilegible sale como `{ "token_id": "<del nombre>", "status": "unreadable" }`, nunca se omite.
-- `POST /api/devices/tokens/<token_id>/revoke`, cuerpo `{}` → `200 { "token_id": "…", "revoked_at": "…" }`. `<token_id>` pasa la regla de §2.1 **antes** de construir el nombre del parámetro (`400 body_invalid` si no). Revocar uno ya revocado devuelve el mismo `revoked_at`, sin volver a escribir. Un `<token_id>` sin registro, o con un registro ilegible, es `404 not_found` con `details.reason` `token_missing` o `token_unreadable`, **sin escribir nada** (decidido el 2026-09-26).
-- **Revocar todos sin Google** no es una ruta: es una operación de administración con credenciales de AWS (ADR-0028, fila 12), con procedimiento escrito en la 015 (`atlas admin revoke-all-tokens`).
+El token de dispositivo de la consola, su inicio de sesión, su canje y su revocación se retiraron el 2026-11-03 (ADR-0037, que reemplaza a ADR-0033). La sección conserva su número para no romper las referencias antiguas.
 
 ## 5. El libro (ADR-0026, ADR-0035)
 
-> **ADR-0035.** No hay cola por dispositivo ni sincronización: la API es el único escritor y solo añade y valida cada línea (§5.2); `GET /api/ledger`, `POST /api/ledger/lines` y `PUT /api/ledger` (este, solo la subida inicial a una nube vacía, §5.5; la restauración es `atlas admin restore`, que nunca pasa por la API). Las escrituras de la web y de la consola son directas con `If-Match` (§5.8).
+> **ADR-0035.** No hay cola por dispositivo ni sincronización: la API es el único escritor y solo añade y valida cada línea (§5.2); `GET /api/ledger` y `POST /api/ledger/lines`. La subida inicial a una nube vacía y la restauración son `atlas admin restore`, que nunca pasa por la API (ADR-0037). La web escribe directamente con `If-Match` (§5.8).
 
 El remoto es `ledger/ledger.jsonl` del bucket de datos. **La API solo añade**: nunca reescribe ni borra una línea (ADR-0026, Parte A). Las líneas se escriben **tal como las serializó el cliente**, byte a byte: ni la API ni nadie reserializa lo ya escrito (trampa 10 de `CLAUDE.md`).
 
@@ -226,7 +126,7 @@ Cuerpo:
 | 6 | El libro proyectado con la línea añadida sigue siendo válido. Un `id` repetido lo detecta la proyección (`duplicate_id`), así que es de esta fila, no de la 4 (decisión de la dirección, 2026-09-25). Una anulación con corrección no se proyecta sola: la unidad entera, abajo | `domain_rejected`, con `details.domain_code` |
 | 7 | Si la huella está repetida, la línea trae `confirm_duplicate` | `duplicate_unconfirmed`, con los `id` que la repiten |
 | 8 | Una `tax_return_filed` **sella el prefijo**: su `ledger_fingerprint` cuadra con el prefijo sobre el que cae, remoto más las líneas ya aceptadas de la petición (decisión de la dirección, 2026-09-25: «lo que sella el prefijo no se mueve de sitio», defendido también en el servidor; la proyección no lo comprueba al registrar, solo `check --deep` y `compact`) | `seal_mismatch` |
-| 9 | La línea no es una `filing_fingerprint_waived`: una renuncia solo nace dentro de una compactación, que es de administración, y **nunca llega por esta ruta**; solo viaja dentro de los bytes de la inicialización (§5.5) (decisión de la dirección, 2026-09-25) | `waiver_not_appendable` |
+| 9 | La línea no es una `filing_fingerprint_waived`: una renuncia solo nace dentro de una compactación, que es de administración, y **nunca llega por esta ruta**; solo la escribe la administración, fuera de la API (decisión de la dirección, 2026-09-25) | `waiver_not_appendable` |
 
 **La pareja de anulación y corrección cuenta como una sola línea** (ADR-0026, segunda y tercera enmiendas):
 
@@ -240,7 +140,7 @@ Cuerpo:
 *(014)* Detalles que fija el código (`acceptAppend`):
 
 - `rejected.index` es siempre el de **la primera línea de la unidad** que falla, y `rejected.id`, el de su primer evento si se pudo leer. En una pareja o una cadena, `details.member_index` dice qué miembro falló: en los rechazos de las filas 1 a 5, en `pair_incomplete` y `pair_not_contiguous`, en `duplicate_unconfirmed`, en `seal_mismatch` y en `pair_rejected`, de una pareja o de una cadena, salvo con `member: "other"`, que no es un miembro.
-- `duplicate_unconfirmed` lleva en `details.existing` los `id` cuya huella repite. Al añadir, la huella se compara con la de los eventos **no anulados**, la regla de siempre (decisión D-Q16 de la 014; en la inicialización vale la de §5.5).
+- `duplicate_unconfirmed` lleva en `details.existing` los `id` cuya huella repite. Al añadir, la huella se compara con la de los eventos **no anulados**, la regla de siempre (decisión D-Q16 de la 014).
 - **Un remoto que ya tiene eventos inválidos** (una regla endurecida después) no acepta nada más hasta que se repare. Responde `accepted: 0` y el rechazo en el índice 0, con `code: "domain_rejected"` y en `details` `domain_code: "ledger_has_invalid_events"` e `invalid_count`.
 
 Respuesta `200` siempre que `If-Match` cuadró:
@@ -266,44 +166,13 @@ Respuesta `200` siempre que `If-Match` cuadró:
 - **Una respuesta perdida no pierde nada:** el cliente (`ApiLedgerStore`) no da una escritura por hecha sin este `200`; si no llegó, vuelve a leer el remoto (§5.1) y mira si sus líneas están dentro, byte a byte, antes de repetir (ADR-0035).
 - `details` puede contener lo que el dominio diga de la línea (un importe, una cantidad): va al cliente del propio usuario, **nunca a un registro**.
 
-### 5.3 Los objetos de dispositivo (identidad)
+### 5.3 a 5.5 (retiradas)
 
-> **Enmendado en E4 (ADR-0035).** `PUT /api/sync/devices/self` **ya no existe**: responde `404 not_found` con cualquier credencial y no escribe nada. Ya nadie publica `last_sync_at` y `compact` y la restauración **no se niegan por pendientes** (ADR-0032). Los objetos se conservan **como identidad del dispositivo**: sirven para olvidar un navegador o una consola y para saber a qué dispositivo pertenece cada token (§2 y §4.5).
-
-**El objeto del dispositivo** (decidido el 2026-09-25; formato sin cambios en E4):
-
-```json
-{ "device_format": 1, "device_id": "<22>", "type": "web", "state": "active", "created_at": "…" }
-```
-
-`type` es `web` o `console`; `state`, `active` o `forgotten` (con `forgotten_at`); un objeto `console` lleva además `device_name`. Se lee de forma estricta. **`last_sync_at` y `published_at` son restos del formato** (`docs/data-schema.md`): los dispositivos nuevos no llevan ningún instante y nada los escribe. Los campos `pending` y `held` se retiraron del objeto: uno que los lleve es ilegible (nada está desplegado, no hay datos que migrar). **Lo crea la API al asignar el identificador** —la web al iniciar sesión, la consola en el primer canje— con `If-None-Match: *`. **Olvidar** lo hace la administración, reescribiéndolo con `state: "forgotten"`, **nunca borrándolo**, después de revocar sus tokens.
-
-`GET /api/sync/devices` (**solo sesión**) → `200 { "devices": [ { "device_id", "type", "state", … } ] }` con lo que lleve el objeto (sin `pending` ni `held`). Ninguna pantalla lo usa hoy. *(015)* **Un objeto que no se puede leer** de forma estricta sale como `{ "device_id", "state": "unreadable" }`, sin los demás campos, y **nunca se omite**. Solo se listan los nombres que son un `device_id`.
-
-### 5.4 Cómo se liga a su sesión el identificador de dispositivo de la web
-
-> **Enmendado en E4 (ADR-0035).** La cabecera `x-atlas-expected-device` y sus códigos `expected_device_required` y `sync_device_changed` **se retiraron**: la API ni la pide ni la lee (con o sin ella, con cookie o con token, la petición se juzga igual), y el cliente HTTP ya no la envía. Protegía que una página pintada con una sesión no publicara la cola de otro dispositivo; sin cola ni almacén unido a un dispositivo (`sync:device`), no protege nada. La política de origen de CloudFront (`AllViewerExceptHostHeader`) reenvía toda cabecera menos `Host`: no hubo cambio de `infra/`.
-
-La API toma el dispositivo de la credencial y **nunca del cuerpo, de la URL ni de una cabecera** (ADR-0033, punto 6).
-
-- Un cliente puede presentar un `device_id` **solo al iniciar sesión** (`GET /api/auth/login?device_id=…`). La API lo lleva en la cookie transitoria y, tras verificar a Google, lo acepta **solo si ella misma lo emitió para un dispositivo web y no está olvidado**. Si no —y desde que la web no guarda ninguno, siempre—, **asigna uno nuevo** (22 caracteres aleatorios) y crea su objeto con `If-None-Match: *`. **Cada inicio de sesión de la web crea así un dispositivo nuevo** (unos 365 objetos pequeños al año con sesiones de 24 h, que nada borra): se acepta, sin efecto en el coste ni en la seguridad (decidido el 2026-10-26). Se volverá a mirar si la web deja de leer su `device_id` o si el listado de dispositivos molesta.
-- El `device_id` va **firmado dentro de la cookie de sesión**, y cada petición con cookie comprueba su objeto (§2): olvidado o ausente es `403 device_forgotten`.
-- La web lo puede leer de `GET /api/session`; no es credencial y no se guarda en el dispositivo (ADR-0035).
-- **`device_forgotten`** en cualquier respuesta es un fallo remoto más (§7); la web dice que hay que volver a iniciar sesión, y la sesión nueva recibe otro dispositivo.
-
-### 5.5 Inicializar un remoto vacío
-
-`PUT /api/ledger`, solo con **`If-Match: "<sha256 de cero bytes>"`**, es decir, sobre un remoto **vacío o inexistente**: sin `If-Match`, `428 precondition_required`; con otro valor o con un remoto que no está vacío, `412 precondition_failed`. *(015, verificado en el bloque 0 de E3, §23.1: con el objeto inexistente, `If-Match` da `404` en S3, así que la Lambda escribe con `If-None-Match: *`. Si el objeto existe, S3 responde `412`, o `409` en una carrera, y la API responde `412 precondition_failed`.)* Cuerpo:
-
-```json
-{ "content": "<los bytes enteros del libro del primer dispositivo, como cadena, con sus saltos de línea>", "confirm_duplicate_ids": ["<id>", "…"] }
-```
-
-Es como **el primer dispositivo** sube su libro (decisión de la dirección, 2026-09-25): **los bytes enteros**, escritos con la operación de líneas crudas, **no línea a línea** por §5.2. Así una presentación o una renuncia de una carpeta ya compactada viaja **con su prefijo intacto**, y su sello sigue cuadrando. La API comprueba antes de escribir que el contenido **carga** con su esquema (ninguna versión más nueva, ninguna línea ilegible), que su proyección es **válida**, y **las dos reglas de ADR-0026 que valen para toda línea que entra en el remoto** (decisión de la dirección, 2026-09-25; nota fechada en ADR-0026): ningún `recorded_at` más allá de la tolerancia del reloj, y **toda huella repetida confirmada** por su `id` en `confirm_duplicate_ids`. **El cliente la deduce del libro, sin volver a preguntar** (decisión de la dirección, 2026-09-25): toda línea que está en el libro local fue aceptada en local —pasó por `confirmDuplicate`, o la escribió una cadena de correcciones de tipos (`writeRateCorrections`) que el usuario confirmó entera—, así que envía los `id` de todo evento cuya huella repite la de uno anterior en el fichero. El contenido no pasa de `MAX_LEDGER_BYTES` (16 MiB) ni lleva una línea de más de `MAX_LINE_BYTES` (`ledger_too_large`, `line_too_large`). Cualquier fallo es `init_rejected`, con el código (`line_unreadable`, `schema_version_unsupported`, `domain_rejected`, `recorded_at_in_future`, `duplicate_unconfirmed`…) y la línea en `details`, y no se escribe nada. *(014)* `details.code` es el código; `details.line` es el número de línea, contando desde 1, en los rechazos de una línea, y `details.id` es el evento en `domain_rejected` y `duplicate_unconfirmed`. Una línea con `"\r"` es `init_rejected` con `code: "raw_line_break"`. Las declaraciones de pareja y de cadena no se aplican: no hay cola que partir, porque sube el libro entero. **El cliente se niega a inicializar antes de llamar si su libro no es válido** (por ejemplo, con un `settings_changed` registrado con `acceptInvalid`), y lo explica: hay que repararlo primero. Un `init_rejected` nunca es el camino normal, y nunca deja al dispositivo parado sin explicación. Respuesta `200 { "etag": "…", "lines": n }`.
+Los objetos de dispositivo (§5.3), su ligadura con la sesión (§5.4) y la inicialización de una nube vacía por la API (§5.5) se retiraron el 2026-11-03 (ADR-0037). La subida inicial a una nube vacía es `atlas admin restore --env <e> --from <ledger.jsonl>` (`docs/cli.md`).
 
 ### 5.8 El cliente de escritura directa (ADR-0035)
 
-Decidido por ADR-0035. **El adaptador está implementado (E1, `specs/021-api-ledger-store`)**: `ApiLedgerStore` sobre `httpRemote`, con los errores `remote_rejected` (`RemoteRejectedError`) y `write_outcome_unknown` (`WriteOutcomeUnknownError`) y `findOutcome(ids)` para resolver el resultado desconocido. La web lo usa desde E2b (feature 023) y la consola desde E3 (feature 024).
+Decidido por ADR-0035. **El adaptador está implementado (E1, `specs/021-api-ledger-store`)**: `ApiLedgerStore` sobre `httpRemote`, con los errores `remote_rejected` (`RemoteRejectedError`) y `write_outcome_unknown` (`WriteOutcomeUnknownError`) y `findOutcome(ids)` para resolver el resultado desconocido. La web lo usa desde E2b (feature 023); la consola lo usó de E3 (feature 024) a ADR-0037.
 
 - **Un solo almacén, `ApiLedgerStore`**, implementa `LedgerStore` sobre HTTP: `load()` es `GET /api/ledger` (se comprueba que el `ETag` es el SHA-256 de los bytes); `append(events, etag)` serializa cada evento con `encodeLine` y lo envía en `POST /api/ledger/lines` con `If-Match: "<etag>"`. `replace`, `appendLines` y `replaceLines` se niegan. Sin cola local y sin libro guardado en el dispositivo.
 - **Las declaraciones de §5.2 las deduce el adaptador:** `has_correction` y `chain_continues`, de la forma del lote; `confirm_duplicate`, por unidad, con las huellas del libro cargado más la unidad entera (miembros posteriores incluidos), que es la regla de la fila 7 de la tabla de §5.2.
@@ -321,11 +190,11 @@ Decidido por ADR-0035. **El adaptador está implementado (E1, `specs/021-api-led
 - **Lo que las interfaces dicen de un rechazo** (catálogo único, `packages/domain/src/messages/errors-remote.ts`): `remote_rejected` se traduce por `remote_code` con una tabla de motivos (`line_invalid`, `domain_rejected`, `duplicate_unconfirmed`, `seal_mismatch`, `recorded_at_in_future`, `partial_write`, etc.), cada uno con su remedio de consola o de web; un código que la tabla no conoce da «no la ha aceptado tal como estaba». Si `accepted` es 0 añade «No se ha guardado nada»; si no, el número de líneas guardadas y que se mire el libro antes de repetir. Un `RemoteError` antes de enviar se dice con `REMOTE_FAILURES` (`remote-failures.ts`, el mismo catálogo) y termina en «No se ha guardado nada».
 - **Sin conexión, la web no muestra datos ni deja registrar** («Sin conexión» y «Reintentar»).
 - **`compact` y la restauración** siguen como operaciones de administración sobre el remoto (ADR-0032); sin pendientes que comprobar, tras ellas el siguiente `412` recarga el libro.
-- **La consola** usa `ApiLedgerStore` con su token en una carpeta «de nube» y falla sin conexión. Un libro local no se sincroniza con la nube: para subir, `PUT /api/ledger` sobre una nube vacía o `atlas admin restore`. **Implementado en E3 (`specs/024-console-cloud`):** una carpeta es de nube si tiene `sync/remote.json` y no tiene `ledger.jsonl` (con las dos cosas, `folder_mode_ambiguous`); el almacén se abre al primer uso con la entrada de `credentials.json` que nombra `remote.json` (`CloudLedgerStore`, `apps/cli/src/folder-mode.ts`). Sin respuesta de la nube sale con el código **8** («no se ha leído ni registrado nada»); si una escritura se corta tras enviarse, la consola intenta `findOutcome` una vez y, si sigue sin saberse, sale con el **9**; con la sesión ausente, caducada o rechazada (`device_token_*`, `session_invalid`, `device_forgotten`, `not_allowed`), con el **10** y remite a `atlas remote login`. `atlas remote login` en una carpeta sin libro la hace de nube; `atlas remote upload --from <ledger.jsonl>` es la subida inicial (`PUT /api/ledger` sobre una nube vacía; con libro en la nube se niega y remite a `atlas admin restore`). `atlas backup --to` baja el libro, comprueba SHA-256 = `ETag` y lo escribe fechado, sin sobrescribir, `0400`. `atlas sync` se retiró de la consola en E3; el motor se borró en E5 (feature 026).
+- **La consola no es cliente de la API** (ADR-0037): trabaja sobre una carpeta local, y llega a la nube solo como administración, con credenciales cortas de AWS y MFA (`atlas admin pull|compact|restore`, `docs/cli.md`). Las carpetas «de nube» de E3 (`specs/024-console-cloud`) se retiraron.
 
 ## 6. Datos de referencia
 
-Decidido el 2026-09-25 (feature 015) y ampliado por la 016 (2026-09-28): la regla de los nombres de `prices/`, el `symbols.json` que no se sirve y los clientes de la consola y de la web. Leen con la sesión o el token (ADR-0033, punto 6), **no escriben nada** y no alcanzan nada fuera de `reference/ecb/` y `prices/`:
+Decidido el 2026-09-25 (feature 015) y ampliado por la 016 (2026-09-28): la regla de los nombres de `prices/`, el `symbols.json` que no se sirve y el cliente de la web. Leen con la sesión, **no escriben nada** y no alcanzan nada fuera de `reference/ecb/` y `prices/`:
 
 | Ruta | Respuesta |
 |---|---|
@@ -335,9 +204,9 @@ Decidido el 2026-09-25 (feature 015) y ampliado por la 016 (2026-09-28): la regl
 
 **El nombre se comprueba antes de tocar S3**, y si no cumple la regla de su prefijo, `400 reference_name_invalid`:
 - en `reference/ecb/`, `<name>` cumple `^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$` y no contiene `..`;
-- en `prices/` *(016)*, `symbols.json` por su nombre, o un nombre que es **exactamente el que escribe `priceFileName`** para algún `asset_id` no vacío: termina en `.jsonl`, tiene como mucho 255 caracteres y `priceFileName(decodeURIComponent(<base>))` lo devuelve igual (una secuencia `%` rota se niega). Así nada sale de `prices/` y cualquier `asset_id` del libro tiene su fichero. **`_status.json`, `config.json` y `_cloud.json` no se sirven.**
+- en `prices/` *(016)*, `symbols.json` por su nombre, o un nombre que es **exactamente el que escribe `priceFileName`** para algún `asset_id` no vacío: termina en `.jsonl`, tiene como mucho 255 caracteres y `priceFileName(decodeURIComponent(<base>))` lo devuelve igual (una secuencia `%` rota se niega). Así nada sale de `prices/` y cualquier `asset_id` del libro tiene su fichero. **`_status.json` y `config.json` no se sirven.**
 
-Si no existe, `404 not_found` (`details.reason: "missing"`). `Content-Type` por la extensión: `.csv` → `text/csv; charset=utf-8`, `.jsonl` → `application/x-ndjson; charset=utf-8`, `.json` → `application/json`; cualquier otra, `404`. **Los clientes** *(016)*: uno solo, `@atlas/adapters/reference-http`, con la credencial inyectada (el token de la carpeta en la consola, la cookie en la web) y `redirect: "error"`. Pide cada fichero con `If-None-Match` sobre la versión que ya tiene, y no acepta una respuesta de más de 20 MB (64 MB para `eurofxref-hist.csv` y `api-exr.csv`). La consola lo usa en `atlas prices update` de una carpeta sincronizada, que baja los cierres en lugar de llamar a las fuentes (ADR-0031, nota del 2026-09-28); la web, para el histórico del BCE con la sesión iniciada, también en el móvil (ADR-0029, nota del 2026-09-28). Qué guarda cada uno en local: `docs/data-schema.md` §1 (`prices/_cloud.json`, `reference/ecb/`).
+Si no existe, `404 not_found` (`details.reason: "missing"`). `Content-Type` por la extensión: `.csv` → `text/csv; charset=utf-8`, `.jsonl` → `application/x-ndjson; charset=utf-8`, `.json` → `application/json`; cualquier otra, `404`. **El cliente** *(016)*: uno solo, `@atlas/adapters/reference-http`, con la cookie de la web y `redirect: "error"`. Pide cada fichero con `If-None-Match` sobre la versión que ya tiene, y no acepta una respuesta de más de 20 MB (64 MB para `eurofxref-hist.csv` y `api-exr.csv`). La web lo usa para el histórico del BCE con la sesión iniciada, también en el móvil (ADR-0029, nota del 2026-09-28); la consola ya no baja nada de la nube (ADR-0037). Qué guarda la web en local: `docs/data-schema.md` §1 (`reference/ecb/`).
 
 **Compresión** *(fallos 2, 2026-10-22)*: la Function URL responde como mucho 6 MB y `api-exr.csv` pesa unos 12 MB. Un fichero de 256 KiB o más se sirve en gzip (`Content-Encoding: gzip`, `Vary: Accept-Encoding`, cuerpo en base64) si el cliente manda `Accept-Encoding: gzip`, que `fetch` envía siempre. El `ETag` es el mismo con y sin compresión: nombra el fichero, no su codificación. La ruta no se cachea (`CachingDisabled`), así que no hay clave de caché que separar. Sin gzip, un fichero que supere los 6 MB no cabe (`502`): con datos como los reales (relación ~4:1) el tope del CSV está en unos 17 MB: cuando el histórico se acerque, hay que partirlo o servirlo por tramos.
 
@@ -345,7 +214,7 @@ Si no existe, `404 not_found` (`details.reason: "missing"`). `Content-Type` por 
 
 ### 6.1 Borradores *(E6 de ADR-0035, feature 027)*
 
-Decidido el 2026-10-06 (ADR-0035, pregunta 1, y ADR-0029, punto 9, opción B). Una operación en divisa registrada **antes** de que el BCE publique el tipo de su fecha fiscal no es un hecho: no entra en el libro, no cuenta en ninguna cifra y **nunca se confirma sola**. Hasta E6 los clientes de nube no la guardaban; desde E6 se guarda **en la nube**, por la API, con el formato propio de ADR-0029 (`docs/data-schema.md` §1, fila `drafts/`), y es **compartida** por la web y la consola (no es de un dispositivo). Con la cookie o con el token (§2.3), como §5 y §6; con la cookie, toda escritura comprueba `Origin` (§2). El libro **nunca** guarda un dato provisional: confirmar es registrar el evento por §5 (`POST /api/ledger/lines`), con su vista previa y su pregunta de duplicado, y después cerrar el borrador.
+Decidido el 2026-10-06 (ADR-0035, pregunta 1, y ADR-0029, punto 9, opción B). Una operación en divisa registrada **antes** de que el BCE publique el tipo de su fecha fiscal no es un hecho: no entra en el libro, no cuenta en ninguna cifra y **nunca se confirma sola**. Hasta E6 los clientes de nube no la guardaban; desde E6 se guarda **en la nube**, por la API, con el formato propio de ADR-0029 (`docs/data-schema.md` §1, fila `drafts/`), y no es de un dispositivo. Con la cookie (§2.3), como §5 y §6; toda escritura comprueba `Origin` (§2). El libro **nunca** guarda un dato provisional: confirmar es registrar el evento por §5 (`POST /api/ledger/lines`), con su vista previa y su pregunta de duplicado, y después cerrar el borrador.
 
 **Nada se sobrescribe ni se borra.** El rol de la API tiene `GetObject`, `PutObject` y `ListBucket` sobre `drafts/` y **ningún permiso de borrado**, y cada objeto se crea con `If-None-Match: *`: la creación es atómica y un segundo intento recibe `412`, que la API traduce. La sentencia `DraftsOnlyIfAbsent` de la política del bucket repite la condición para cualquier otro escritor y se mantiene: no cuesta nada y protege lo que puede ser la única copia de una operación (decidido el 2026-10-26). Un borrador son **hasta tres objetos inmutables**, uno por estado (`docs/data-schema.md` §1): `drafts/<id>.json` (guardado), `drafts/<id>.stamp.json` (el identificador que tendrá su evento, `pending_event_id`) y `drafts/<id>.end.json` (confirmado o descartado). «Pendiente» es tener el primero y no el tercero. Es la única forma de cumplir «sin borrar y sin sobrescribir» con las reglas de `pending_event_id` (§6.3 del esquema): sellar es **crear** el objeto de sello, y «solo si sigue como se leyó» es que ese `If-None-Match` falle.
 
@@ -372,37 +241,22 @@ Decidido el 2026-10-06 (ADR-0035, pregunta 1, y ADR-0029, punto 9, opción B). U
 Todo error de la Lambda tiene esta forma, sin mensaje en lenguaje natural (lo ponen las interfaces, que traducen cada código, `tests/messages.test.ts`):
 
 ```json
-{ "error": { "code": "device_token_expired", "details": {} } }
+{ "error": { "code": "session_invalid", "details": { "reason": "closed" } } }
 ```
 
 | Código | HTTP | Cuándo |
 |---|---|---|
 | `unauthenticated` | 401 | Ninguna credencial en una ruta que la pide |
-| `credentials_ambiguous` | 400 | Cookie **y** token en la misma petición |
-| `session_invalid` | 401 | Cookie mal firmada, de otro `typ` o caducada |
-| `device_token_invalid` | 401 | Token con mal formato, sin registro, con otro `token_id` en el registro o con un secreto que no cuadra |
-| `device_token_revoked` | 401 | Token revocado |
-| `device_token_expired` | 401 | Token caducado (`expires_at` o el techo de 120 días) |
-| `not_allowed` | 403 | Con el token, el par `{sub, email}` no está en la lista permitida; con la cookie, el `sub` de la sesión ya no tiene entrada (§2). En el canje de §4.3, además, con `details.reason`: `ambiguous_subject` (el `sub` del código tiene dos entradas en la lista, Q8 (a)) u `other_subject` (el token que renueva es de otro `sub`); decididos el 2026-09-26 |
-| `forbidden_for_credential` | 403 | Un token en una ruta solo de sesión (§2.3) |
+| `session_invalid` | 401 | Cookie mal firmada, de otro `typ`, repetida o caducada; con `details.reason = "closed"`, emitida antes de la marca de `logout-all`, o con una marca ilegible (§3) |
+| `not_allowed` | 403 | El `sub` de la sesión ya no tiene entrada en la lista permitida (§2) |
 | `origin_rejected` | 403 | Escritura con cookie y `Origin` ajeno |
-| `mfa_required` | 403 | Emisión de un token sin `amr` con `mfa`, si se puede exigir (§4.2) |
-| `console_start_invalid` | 400 | Un parámetro de §4.1 no cumple su regla |
-| `console_code_invalid` | 400 | Código mal firmado o de otro `typ` |
-| `console_code_expired` | 400 | Código caducado |
-| `console_code_used` | 409 | Código ya canjeado |
-| `console_renewal_conflict` | 409 | Otra renovación del mismo token, una revocación o otra emisión para el mismo dispositivo se adelantó (§4.3); reintentable, sin cerrar la sesión |
-| `pkce_mismatch` | 400 | El verificador no corresponde al `code_challenge` |
-| `body_invalid` | 400 | Cuerpo que no cumple el de la ruta (campo desconocido, `device_id`, salto de línea en `line`…). En el canje de §4.3, `reason: renewal_and_reissue` si llegan a la vez un token para renovar y un código de reemisión |
+| `body_invalid` | 400 | Cuerpo que no cumple el de la ruta (campo desconocido, `device_id`, salto de línea en `line`, un cuerpo que no es `{}` en `logout-all`…) |
 | `body_not_json` | 415 | Cuerpo que no es JSON en una ruta que escribe |
-| `precondition_required` | 428 | `POST /api/ledger/lines` o `PUT /api/ledger` sin `If-Match` |
-| `init_rejected` | 422 | La inicialización de §5.5 trae un contenido que no carga o no proyecta válido; nada escrito |
+| `precondition_required` | 428 | `POST /api/ledger/lines` sin `If-Match` |
 | `precondition_failed` | 412 | `If-Match` distinto del etag actual; nada escrito |
-| `not_found` | 404 | Ruta que no existe; y en §4.5, un token sin registro o con un registro ilegible (`details.reason`: `token_missing` \| `token_unreadable`); y en §6.1, un borrador que no existe (`details.reason`: `draft_missing`) |
+| `not_found` | 404 | Ruta que no existe; y en §6.1, un borrador que no existe (`details.reason`: `draft_missing`) |
 | `internal` | 500 | Cualquier otro fallo; nada escrito |
-| `device_forgotten` | 403 | El objeto del dispositivo de la credencial falta, es de otro tipo o está olvidado (§2), con `details.reason` |
 | `remote_unavailable` | 503 | Fallo transitorio de SSM o de S3; se puede reintentar (`Retry-After: 5`, `details.dependency`: `ssm` \| `s3`). Nunca deja pasar una credencial |
-| `reissue_device_missing`, `reissue_device_forgotten`, `reissue_device_not_console`, `reissue_device_unreadable` | 403 | La reemisión de §4.3 pide un dispositivo que no existe, está olvidado, no es de consola o cuyo objeto no se lee (el cuarto, decidido el 2026-09-26) |
 | `reference_name_invalid` | 400 | Un nombre de §6 que no cumple su regla |
 | `draft_exists` | 409 | `POST /api/drafts` con un `id` que ya tiene borrador (§6.1) |
 | `too_many_drafts` | 409 | `POST /api/drafts` con `MAX_PENDING_DRAFTS` (32) borradores ya pendientes, `details.max` (§6.1); nada escrito |
@@ -410,7 +264,7 @@ Todo error de la Lambda tiene esta forma, sin mensaje en lenguaje natural (lo po
 | `append_too_many_units` | 413 | `POST /api/ledger/lines` con más de `MAX_APPEND_UNITS` (100) unidades, `details.max` (§5.2); nada escrito |
 | `body_too_large` | 413 | Un cuerpo por encima del tope propio de la Lambda, antes de leerlo (la Function URL admite 6 MB) |
 
-*(014)* **La lista cerrada de los fallos que no son de una línea** es `REMOTE_FAILURE_CODES` (`packages/domain/src/ports/remote-ledger.ts`). Contiene los códigos de esta tabla que pueden responder las rutas de §5, menos los de las rutas de acceso de §4, más `device_forgotten` y `remote_unavailable` (feature 015), y dos que nombra el cliente para lo que no llegó a la API: `transport_rejected` (abajo) y `network_failed`, un fallo de red. El cliente los lleva tal cual en `remote_failed`, y cada interfaz tiene una frase para cada uno.
+*(014)* **La lista cerrada de los fallos que no son de una línea** es `REMOTE_FAILURE_CODES` (`packages/domain/src/ports/remote-ledger.ts`). Contiene los códigos de esta tabla que pueden responder las rutas de §5 y §6.1, y dos que nombra el cliente para lo que no llegó a la API: `transport_rejected` (abajo) y `network_failed`, un fallo de red. El cliente los lleva tal cual en `remote_failed`, y cada interfaz tiene una frase para cada uno.
 
 Y los **motivos de rechazo de una línea** (dentro de un `200`, en `rejected.code`, §5.2): `line_unreadable`, `schema_version_unsupported`, `line_invalid`, `recorded_at_in_future`, `domain_rejected`, `duplicate_unconfirmed`, `pair_declaration_invalid`, `pair_incomplete`, `pair_not_contiguous`, `pair_rejected`, `seal_mismatch`, `waiver_not_appendable`, `line_too_large` y `ledger_too_large`.
 
@@ -423,12 +277,13 @@ Fuera de la Lambda: `transport_rejected` es el nombre que da **el cliente** a un
 | Pieza | Feature |
 |---|---|
 | El caso de uso puro que acepta líneas (el mismo para el cliente y para la Lambda), las operaciones de líneas crudas del puerto y un **remoto simulado** que cumple §5 sin HTTP | **014**, fusionada (PR #83, 2026-09-25) |
-| `ApiLedgerStore`, la web y la consola contra la nube, la API sin cola y el código muerto, retirados | **021 a 026** (E1 a E5 de ADR-0035) |
-| Las órdenes de administración de la consola contra el almacén remoto: `compact` del remoto, restaurar y olvidar un dispositivo, **fuera de la API** (ADR-0026, Parte A) | **015** |
-| La Lambda: §1 a §7 sobre HTTP, `LedgerStore` sobre S3 con `If-Match`, el registro en SSM, los clientes HTTP de la web y de la consola, `atlas remote login` y `logout`, la pantalla de dispositivos de la web | **015** |
-| El correo mensual con los inicios de sesión de la web y de la consola y los tokens vivos y emitidos; `access/last-web-sign-in.json` (§3); la regla de nombres de `prices/` y los clientes de §6 | **016**, fusionada (PR #104, #106, #108 y #109, 2026-09-28) |
-| El prefijo de SSM y sus permisos, la política de origen que reenvía a `/api/*` `x-atlas-device-token`, **`Sec-Fetch-Site` y `Origin`** (sin las dos últimas, la Lambda nunca sabe que un inicio de sesión viene del propio sitio: ignora siempre el `device_id` de §3 y cada inicio de sesión de la web crea un dispositivo nuevo, sin avisar; y sin `Origin`, toda escritura con cookie se rechaza con `origin_rejected`, §2; revisión de la PR #90, ronda 2), la CSP que respeta la `sandbox` de §4.2 | **017** |
-| Los borradores en la nube: §6.1, el prefijo `drafts/` del rol de la API sin permiso de borrado, el puerto sobre la API y los clientes de la web y de la consola | **027** (E6 de ADR-0035) |
+| `ApiLedgerStore`, la web contra la nube (la consola, hasta ADR-0037), la API sin cola y el código muerto, retirados | **021 a 026** (E1 a E5 de ADR-0035) |
+| Las órdenes de administración de la consola contra el almacén remoto (`pull`, `compact` y `restore`), **fuera de la API** (ADR-0026, Parte A; ADR-0037) | **015** y ADR-0037 |
+| La Lambda: §1 a §7 sobre HTTP, `LedgerStore` sobre S3 con `If-Match`, la lista permitida en SSM y el cliente HTTP de la web | **015** |
+| El correo mensual con el último inicio de sesión de la web (`access/last-web-sign-in.json`, §3); la regla de nombres de `prices/` y el cliente de §6 | **016**, fusionada (PR #104, #106, #108 y #109, 2026-09-28) |
+| El prefijo de SSM y sus permisos, y la política de origen que reenvía `Origin` a `/api/*` (sin él, toda escritura se rechaza con `origin_rejected`, §2; revisión de la PR #90, ronda 2) | **017** |
+| `POST /api/auth/logout-all` y su marca (§3), y la retirada del token de la consola | ADR-0037 |
+| Los borradores en la nube: §6.1, el prefijo `drafts/` del rol de la API sin permiso de borrado, el puerto sobre la API y el cliente de la web | **027** (E6 de ADR-0035) |
 
 ## 9. Parámetros de SSM y configuración de la Lambda
 
@@ -440,9 +295,8 @@ Decidido el 2026-09-25 (feature 015). **Los valores los crea y los rota el guion
 | `/atlas/<entorno>/auth/google-client-id` | `String` | el identificador del cliente OAuth del entorno | 300 s |
 | `/atlas/<entorno>/auth/google-client-secret` | `SecureString` | el secreto, tal cual | 300 s |
 | `/atlas/<entorno>/auth/session-key` | `SecureString` | 32 bytes aleatorios en base64url (43 caracteres); de ella salen las subclaves HKDF | 300 s: rotarla cierra todas las sesiones como mucho en 5 minutos |
-| `/atlas/<entorno>/device-tokens/<token_id>` | `SecureString` | el registro del token (formato en `specs/015-api-access/data-model.md` (retirada; en git) §2) | **ninguna** (§2.2) |
 
-**Configuración que no es secreta**, en variables de entorno de la Lambda (**ningún secreto en una variable de entorno**): `ATLAS_ENV`, `ATLAS_ORIGIN`, `ATLAS_DATA_BUCKET`, `ATLAS_SESSION_TTL_SECONDS` (86.400), `ATLAS_LOGIN_TTL_SECONDS` (600), `ATLAS_CONSOLE_CODE_TTL_SECONDS` (300), `ATLAS_TOKEN_LIFETIME_DAYS` (90; más de 120 impide arrancar), `ATLAS_RECENT_ISSUE_DAYS` (7), `ATLAS_CLOCK_TOLERANCE_SECONDS` (600), `ATLAS_ALLOW_LIST_CACHE_SECONDS` (120) y `ATLAS_SECRETS_CACHE_SECONDS` (300). Una variable `ATLAS_*` desconocida, o un valor que no se entiende, impide arrancar. **Techos fijos en el código** (revisión de seguridad de la PR #90, S4): la sesión, como mucho 24 h (86.400); la cookie transitoria, 30 min (1.800); el código de la consola, 15 min (900); las dos cachés, 1 h (3.600); la tolerancia del reloj, 1 h (3.600); la ventana de las emisiones «recientes», 90 días; la caducidad del token, 120 días. Por encima, la configuración se rechaza y la Lambda no arranca.
+**Configuración que no es secreta**, en variables de entorno de la Lambda (**ningún secreto en una variable de entorno**): `ATLAS_ENV`, `ATLAS_ORIGIN`, `ATLAS_DATA_BUCKET`, `ATLAS_SESSION_TTL_SECONDS` (86.400), `ATLAS_LOGIN_TTL_SECONDS` (600), `ATLAS_CLOCK_TOLERANCE_SECONDS` (600), `ATLAS_ALLOW_LIST_CACHE_SECONDS` (120) y `ATLAS_SECRETS_CACHE_SECONDS` (300). Una variable `ATLAS_*` desconocida, o un valor que no se entiende, impide arrancar. **Techos fijos en el código** (revisión de seguridad de la PR #90, S4): la sesión, como mucho 24 h (86.400); la cookie transitoria, 30 min (1.800); las dos cachés, 1 h (3.600); la tolerancia del reloj, 1 h (3.600). Por encima, la configuración se rechaza y la Lambda no arranca.
 
 ### 9.1 Las tareas programadas *(016)*
 

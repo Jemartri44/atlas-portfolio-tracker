@@ -177,6 +177,8 @@ La segunda enmienda de ADR-0031 ponía esta ADR en la lista de documentos que ac
 
 ## Nota del 2026-09-25 (ADR-0033 aceptada)
 
+> **Historia (2026-11-03).** [ADR-0037](0037-web-only-access.md) reemplaza a ADR-0033: no hay token de consola ni objetos de dispositivo.
+
 ADR-0033 cierra lo que «Quién sincroniza» dejaba por decidir: **la consola se autentica frente a la API con un token de dispositivo propio**, emitido solo al final de un inicio de sesión con Google que abre la propia consola (`atlas remote login`, *loopback* con PKCE y una variante manual), guardado en `~/.config/atlas/credentials.json` y registrado en SSM. Tres consecuencias aquí, aplicadas arriba con la fecha de esta nota:
 
 - «Quién sincroniza»: la frase «está por decidir» queda tachada y remite a ADR-0033.
@@ -267,6 +269,10 @@ La feature 014 (PR #83) construyó el núcleo de esta ADR sin desplegar: el caso
 - la Parte C.
 
 La enmienda está vigente en la decisión; el código cambia con las entregas de ADR-0035 (§7), y hasta que la nube esté desplegada (features 018 y 019) lo construido sigue como está.
+
+## Nota del 2026-11-03 (ADR-0037)
+
+[ADR-0037](0037-web-only-access.md) retira el token de la consola, los objetos `sync/devices/` y la inicialización por la API; la web es el único cliente. **Parte A: `has_correction` y `chain_continues` se conservan tras ADR-0035.** Protegen una unidad (una pareja anulación + corrección, o una cadena de correcciones de tipo) que `ApiLedgerStore` reparte en lotes de `MAX_APPEND_UNITS` = 100; deducirlas del propio lote convertiría una pareja partida en una anulación aceptada y una corrección rechazada. La propuesta de deducirlas (P5) se descartó el 2026-11-03.
 
 ## Notas de estado
 

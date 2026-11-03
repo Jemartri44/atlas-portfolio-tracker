@@ -1,5 +1,6 @@
 <!--
 Sync Impact Report
+- Version change: 2.1.0 → 2.1.1 (2026-11-03): Restricciones técnicas (Seguridad) drops the console's device tokens, retired by ADR-0037 (PATCH, the reverse of 1.6.0 → 1.6.1).
 - Version change: 2.0.0 → 2.1.0 (2026-11-03): VII, domain coverage 100% only in money/projections/tax/informative/dates and ~90% elsewhere; MINOR, a guideline materially narrowed. Previous report (1.6.2 → 2.0.0) follows.
 - Version change: 1.6.2 → 2.0.0
 - Modified principles: VI (the bullet "Cero servicios de pago de terceros en el camino crítico" is redefined: daily use now depends on AWS, with minimum cost and a budget alarm, and on Google sign-in; survival does not depend on them. ADR-0035, accepted 2026-10-06). V gains a clarification (the ledger is never shown offline; a visible failure, not a silence), without changing its rules.
@@ -102,7 +103,7 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 ## Restricciones técnicas
 
 - **Plataforma:** AWS con **coste mínimo y alarma de presupuesto** (ADR-0028), no dentro del *always-free* indefinidamente (S3 + CloudFront, Lambda con Function URL, S3 versionado como único almacén de datos, **acceso solo con Google verificado en la Lambda, sin Cognito** (ADR-0027), EventBridge Scheduler, SES, SSM Parameter Store). TypeScript en todo el código, con el dominio en un paquete compartido (ADR-0001, ADR-0002). Terraform para todo; nada creado a mano, **salvo las excepciones declaradas en ADR-0028 y ADR-0034 (*bootstrap* de la cuenta compartida y guion de los secretos), cada una con su condición de retirada**. Antes de introducir un servicio nuevo, verificar que su coste es mínimo a esta escala.
-- **Seguridad:** nunca credenciales de brókers. Secretos en SSM Parameter Store como `SecureString`: el token Flex de IBKR (solo lectura) y el secreto del cliente OAuth de Google y la clave de sesión (ADR-0027). Las claves de las fuentes de precios (ADR-0031): en local, en un fichero de configuración fuera del repositorio; en la nube, en SSM. El registro de los tokens de dispositivo de la consola (ADR-0033): en SSM, un `SecureString` por token con solo el hash del secreto; en local, el token vive en un fichero de credenciales fuera del repositorio y de la carpeta del libro, que solo escribe la consola. Sin analítica ni CDN de terceros; CSP restrictiva. Validación siempre en el backend. IAM de mínimo privilegio, un rol por Lambda.
+- **Seguridad:** nunca credenciales de brókers. Secretos en SSM Parameter Store como `SecureString`: el token Flex de IBKR (solo lectura) y el secreto del cliente OAuth de Google y la clave de sesión (ADR-0027). Las claves de las fuentes de precios (ADR-0031): en local, en un fichero de configuración fuera del repositorio; en la nube, en SSM. La consola no tiene credencial propia frente a la API (ADR-0037). Sin analítica ni CDN de terceros; CSP restrictiva. Validación siempre en el backend. IAM de mínimo privilegio, un rol por Lambda.
 - **Privacidad:** nunca se registran en logs importes, posiciones, saldos ni identificadores de cuenta. Nada personal en el repositorio público: ni dominio real, ni importes, ni el plan financiero (`plan-financiero.md`, ignorado por git).
 - **Idioma:** todo lo técnico (código, identificadores, commits, ramas, ficheros, infraestructura) en inglés. Documentos, especificaciones y esta constitución en español con identificadores en inglés.
 - **Entornos:** `dev` (rama `develop`) y `prod` (rama `main`) con pilas separadas. Se construye una vez y se promociona. Datos de producción jamás en `dev`.
@@ -123,4 +124,4 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 - Versionado semántico: MAJOR para eliminar o redefinir principios, MINOR para añadir principios o secciones o ampliar materialmente una guía, PATCH para aclaraciones y redacción.
 - Toda revisión de spec, plan o PR DEBE comprobar el cumplimiento de los principios I–VII. Cualquier complejidad que los contradiga debe justificarse por escrito o rechazarse.
 
-**Version**: 2.1.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-11-03
+**Version**: 2.1.1 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-11-03

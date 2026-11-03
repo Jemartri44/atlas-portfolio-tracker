@@ -67,7 +67,7 @@ ls -l "$D/secrets.json"
 
 > **Nota, solo si usas WSL:** hazlo en la terminal de WSL (Ubuntu), no en PowerShell ni en `cmd`. El fichero va en el `HOME` de Linux, `/home/<tu usuario>/.config/atlas/secrets.json`, **no** en `C:\Users\…` ni en `/mnt/c/…`: en las unidades de Windows los permisos de Linux no funcionan como aquí, el fichero suele aparecer abierto a todos y la consola no usaría la clave. **No lo abras con el Bloc de notas de Windows** a través de `\\wsl.localhost`: puede cambiar los finales de línea o dejar una copia.
 >
-> **El límite de WSL, dicho claro:** el `600` protege frente a otros usuarios de Linux, pero **no frente a un programa de Windows de tu mismo usuario**, que puede leer el fichero a través de `\\wsl$` o `\\wsl.localhost`. Es el mismo límite que ya tienen el libro y el token de la consola (ADR-0033). Lo que protege aquí es tu cuenta de Windows.
+> **El límite de WSL, dicho claro:** el `600` protege frente a otros usuarios de Linux, pero **no frente a un programa de Windows de tu mismo usuario**, que puede leer el fichero a través de `\\wsl$` o `\\wsl.localhost`. Es el mismo límite que ya tiene el libro. Lo que protege aquí es tu cuenta de Windows.
 
 > **`${XDG_CONFIG_HOME:-$HOME/.config}`** es `~/.config`, salvo que la variable `XDG_CONFIG_HOME` tenga algo: entonces la consola busca la clave en `$XDG_CONFIG_HOME/atlas/secrets.json`, y el bloque la escribe ahí mismo. Lo normal es que `echo $XDG_CONFIG_HOME` no escriba nada. Las órdenes de esta guía usan esa misma expresión para dar siempre con el fichero que lee la consola.
 

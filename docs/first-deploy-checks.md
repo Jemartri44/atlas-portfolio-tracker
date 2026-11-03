@@ -18,9 +18,8 @@ Lo que las features 015, 016 y 017 dejaron **sin verificar contra AWS real**. Ca
 
 **Acceso y sesión**
 - **Cookies de la Function URL:** si una misma `__Host-atlas_session` llega en `cookies` **y** en la cabecera `cookie`. La API lo trata como `session_invalid`, así que toda sesión fallaría. Se comprueba con un inicio de sesión real.
-- **`Sec-Fetch-Site` y `Origin`** llegan a la Lambda en `/api/*`. Sin ellas el inicio de sesión de la web crea un dispositivo nuevo cada vez y toda escritura con cookie da `origin_rejected`. Dos inicios de sesión seguidos desde el mismo navegador tienen que conservar el `device_id`.
-- **Uso único del código de la consola:** dos canjes simultáneos de `POST /api/auth/console/token`; solo uno prospera (el otro, `409 console_code_used` o `503 remote_unavailable`) y queda un solo registro en `/atlas/dev/device-tokens/`.
-- **Revocar surte efecto al instante:** un `GetParameter` justo después del `PutParameter` de revocación lee el valor revocado; usar el token en la petición siguiente da `401 device_token_revoked`.
+- **`Origin`** llega a la Lambda en `/api/*`. Sin él, toda escritura con cookie da `origin_rejected`.
+- **Cerrar todas las sesiones** (ADR-0037): tras «Cerrar sesión en todos los dispositivos» en una pestaña, la cookie de otra da `401 session_invalid` (`closed`), y un inicio de sesión nuevo entra en el acto.
 - **Vuelta a `http://127.0.0.1`** en el navegador real del usuario, incluido que el reenvío de WSL en modo NAT escuche en el literal `127.0.0.1`.
 - **Qué principal asume el rol de administración** (C5): con IAM Identity Center, `aws sso login`; con un usuario IAM con MFA, la sesión se abre antes por la CLI (`aws configure export-credentials`). Y que `aws:PrincipalArn` de una sesión de Identity Center deje al administrador dentro de las cerraduras de los buckets.
 
@@ -32,7 +31,7 @@ Lo que las features 015, 016 y 017 dejaron **sin verificar contra AWS real**. Ca
 - IAM acepta `eu-west-1` y `us-east-1` en `aws:RequestedRegion` de las llamadas globales; el nombre IAM exacto de S3 Metadata v2 y su disponibilidad en `eu-west-1`; `wafv2:AssociateWebACL` y las lecturas de políticas gestionadas de CloudFront en el `apply`.
 
 **KMS, SES y SSM**
-- `kms:Decrypt` sobre `aws/ssm` para la API, las claves de precios y los tokens (la documentación se contradice; la salida, una declaración con `kms:ViaService`, está en el bloque 0.4 de E2 de la 017). «Sin descifrar» no lo impone IAM.
+- `kms:Decrypt` sobre `aws/ssm` para la API y las claves de precios (la documentación se contradice; la salida, una declaración con `kms:ViaService`, está en el bloque 0.4 de E2 de la 017). «Sin descifrar» no lo impone IAM.
 - Qué ARN evalúa SES con dominio y dirección verificados a la vez, y si el *sandbox* exige permiso sobre la identidad del destinatario. Un correo llega de verdad solo a la dirección de la condición.
 - `GetParameter` sin descifrar basta para comprobar la existencia con `aws/ssm`; `PutParameter` con `Overwrite` y el mismo `Type` no cambia el tipo.
 
@@ -47,7 +46,7 @@ Lo que las features 015, 016 y 017 dejaron **sin verificar contra AWS real**. Ca
 
 ## Ensayos contra `dev`
 
-Con datos sintéticos: restaurar el libro, **revocar todos los tokens** y **la cuenta de Google robada** ([`runbooks/`](runbooks/README.md)); la lista permitida con `file://` desde `~/.config/atlas`, la clave de sesión con `--value="$(…)"`, el programa de `jq` contra SSM de verdad y `atlas admin` contra el versionado real del bucket (`restore --from s3-version:<id>`). Después, vaciar el bucket de `dev` con su rol de administración, destruir `dev` y levantarlo restaurando desde la copia fuera de AWS (ADR-0032). Los procedimientos de los runbooks `bootstrap-and-ci.md` y `atlas-admin-secrets.md` solo se comprobaron por lectura. Lo que no cuadre vuelve al procedimiento.
+Con datos sintéticos: restaurar el libro (también la subida inicial a una nube vacía) y **la cuenta de Google robada** ([`runbooks/`](runbooks/README.md)); la lista permitida con `file://` desde `~/.config/atlas`, la clave de sesión con `--value="$(…)"`, el programa de `jq` contra SSM de verdad y `atlas admin` contra el versionado real del bucket (`restore --from s3-version:<id>`). Después, vaciar el bucket de `dev` con su rol de administración, destruir `dev` y levantarlo restaurando desde la copia fuera de AWS (ADR-0032). Los procedimientos de los runbooks `bootstrap-and-ci.md` y `atlas-admin-secrets.md` solo se comprobaron por lectura. Lo que no cuadre vuelve al procedimiento.
 
 ## Decisiones que la 017 dejó abiertas (propuestas, las decide el usuario)
 
