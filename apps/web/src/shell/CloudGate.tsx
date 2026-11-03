@@ -8,7 +8,6 @@
 
 import { createSignal, type JSX, Match, Show, Switch } from "solid-js";
 import { SIGN_IN_HREF } from "../auth/session.js";
-import { Icon } from "../components/Icon.jsx";
 import { Notice } from "../components/Notice.jsx";
 import type { SignedOutReason } from "../ledger/state.js";
 import { store } from "../ledger/state.js";
@@ -59,7 +58,8 @@ export default function CloudGate(): JSX.Element {
     <Switch>
       <Match when={phase().phase === "signed_out"}>
         <section class="gate" aria-labelledby="gate-title">
-          <Icon name="globe" class="mark" />
+          <img src="/simbolo-claro.svg" alt="" class="mark mark-light" />
+          <img src="/simbolo-oscuro.svg" alt="" class="mark mark-dark" />
           <h1 id="gate-title">Atlas</h1>
           <p>{SENTENCES[(phase() as { reason: SignedOutReason }).reason]}</p>
           <Show when={warned() && unresolved()}>
