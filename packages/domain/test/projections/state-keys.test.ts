@@ -35,6 +35,7 @@ describe("the keys of the state of the ledger", () => {
         "currencyGains",
         "currencyJournal",
         "income",
+        "externalIncome",
         "inKindIncome",
         "valuations",
         "orders",

@@ -70,6 +70,9 @@ const tupleOf = (event: FingerprintInput): string[] | undefined => {
         event.gross,
         event.currency,
       ];
+    // No account and no reference: the same day, kind and gross twice asks for confirmation.
+    case "external_income":
+      return ["", "", "", "", event.type, event.value_date, event.kind, event.gross_eur, "EUR"];
     case "fx_exchange":
       return [
         "",

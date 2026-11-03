@@ -44,6 +44,7 @@ import {
   applyCashDeposit,
   applyCashWithdrawal,
   applyDividend,
+  applyExternalIncome,
   applyFxExchange,
   applyInterest,
   applyStandaloneFee,
@@ -196,6 +197,7 @@ export const businessDateOf = (state: LedgerState, event: OperationEvent): Civil
       return event.value_date_out;
     case "dividend":
     case "interest":
+    case "external_income":
     case "fx_exchange":
     case "cash_deposit":
     case "cash_withdrawal":
@@ -287,6 +289,9 @@ const applyOperation = (state: LedgerState, event: OperationEvent, position: num
       return;
     case "interest":
       applyInterest(state, event);
+      return;
+    case "external_income":
+      applyExternalIncome(state, event);
       return;
     case "fx_exchange":
       applyFxExchange(state, event);

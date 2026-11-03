@@ -327,6 +327,28 @@ export interface InterestEvent extends Envelope {
   broker_settled_eur?: DecimalString;
 }
 
+/**
+ * Savings income received **outside the portfolio**: the interest of a bank
+ * account, the dividend of the user's own company. No account, no asset and no
+ * cash: it only feeds the estimate of the quota, where it is integrated and
+ * offset with the portfolio's movable capital income (art. 49 LIRPF). The
+ * payer already reports it to the tax agency (modelos 193 and 196), so it
+ * never enters the boxes Atlas lays out for the portfolio.
+ */
+export interface ExternalIncomeEvent extends Envelope {
+  type: "external_income";
+  kind: "dividend" | "interest";
+  value_date: CivilDate;
+  /** Gross amount in euros, as the payer's certificate says it. */
+  gross_eur: DecimalString;
+  /** Spanish withholding on account, in euros; never above the gross. */
+  withholding_eur: DecimalString;
+  /** Who paid it, in the user's words. */
+  payer?: string;
+  fingerprint: string;
+  notes?: string;
+}
+
 export interface FxExchangeEvent extends Envelope {
   type: "fx_exchange";
   account_id: AccountId;
@@ -869,6 +891,7 @@ export type SupportedEvent =
   | TransferEvent
   | DividendEvent
   | InterestEvent
+  | ExternalIncomeEvent
   | FxExchangeEvent
   | CashDepositEvent
   | CashWithdrawalEvent

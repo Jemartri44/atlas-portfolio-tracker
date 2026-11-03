@@ -94,6 +94,9 @@ describe("architecture: apps/web", () => {
   const A_FIGURE_ANYWAY = new Set([
     "invalid_amount.value",
     "invalid_quantity.value",
+    // The two amounts of an income from outside the portfolio.
+    "withholding_exceeds_gross.gross",
+    "withholding_exceeds_gross.withholding",
     // What is held of an asset: a quantity, masked like any other.
     "sale_exceeds_holding.held",
     // The configured figures of the informative returns: amounts in euros the

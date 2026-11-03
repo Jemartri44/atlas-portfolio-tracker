@@ -96,7 +96,7 @@ const sellOf = (date: CivilDate, sale: HypotheticalSale, sequence: number): Sell
 };
 
 const lineOf = (events: readonly LedgerEvent[], year: number, date: CivilDate, id: string) => {
-  const report = taxYear(events, year, { today: date });
+  const report = taxYear(events, year, { today: date, external: true });
   const line: TransmissionLine | undefined = [
     ...report.capital_gains.lines,
     ...report.movable_capital.transmissions,
@@ -119,7 +119,7 @@ export const estimateSale = (
   const year = yearOf(date);
   const event = sellOf(date, sale, before.length + 1);
   const base = [...events, ...before];
-  const without = taxYear(base, year, { today: date });
+  const without = taxYear(base, year, { today: date, external: true });
   // The engine refuses a ledger it cannot project (a sale larger than the
   // lots, say), so a report that reaches here always holds the line of the sale.
   const { report, line: found } = lineOf([...base, event], year, date, event.id);
