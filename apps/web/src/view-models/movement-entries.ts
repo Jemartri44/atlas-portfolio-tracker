@@ -60,9 +60,9 @@ export interface DayOfEntries {
 }
 
 /**
- * The list under one heading per day, in small capitals (direction A, docs/design/system.md §7.3;
- * it replaces the heading per month of feature 020, M8). The dates are civil dates of the ledger,
- * already the days of Madrid, so the day is read off them and never off an instant.
+ * The list under one heading per day, in small capitals (docs/design/system.md §7.3). The dates
+ * are civil dates of the ledger, already the days of Madrid, so the day is read off them and never
+ * off an instant.
  */
 export const byDay = (entries: readonly ListEntry[]): DayOfEntries[] => {
   const days: DayOfEntries[] = [];

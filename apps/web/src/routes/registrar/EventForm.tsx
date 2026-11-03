@@ -18,7 +18,7 @@
 import type { EventPreview, LedgerEvent, LedgerState } from "@atlas/domain";
 import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { useNavigate } from "@solidjs/router";
-import { createSignal, type JSX, onCleanup, Show } from "solid-js";
+import { createEffect, createSignal, type JSX, on, onCleanup, Show } from "solid-js";
 import { nameIndex } from "../../format/names.js";
 import { today } from "../../ledger/state.js";
 import { GRID, mediaQuery } from "../../shell/media.js";
@@ -36,9 +36,10 @@ import { DuplicateDialog } from "./DuplicateDialog.jsx";
 import { createDraftSaver } from "./draft-save.js";
 import { Effect } from "./Effect.jsx";
 import { FormActions } from "./FormActions.jsx";
-import { FormFields, withDerived } from "./FormFields.jsx";
+import { FormFields } from "./FormFields.jsx";
 import { CorrectionReason, dependentsSentence, Reloaded, ThesisFirst } from "./FormNotices.jsx";
 import { useFormProblems } from "./form-problems.js";
+import { withPrefill } from "./prefill.js";
 import { previewStep } from "./preview-step.js";
 import { RateHint } from "./RateNotes.jsx";
 import { useFormRates } from "./rates.js";
@@ -61,21 +62,6 @@ interface EventFormProps {
    */
   prefill?: FormValues | undefined;
 }
-
-/** The values of a new form with what the application proposes, derived fields included. */
-const withPrefill = (
-  spec: EventFormSpec,
-  state: LedgerState,
-  base: FormValues,
-  prefill: FormValues,
-): FormValues =>
-  Object.entries(prefill).reduce(
-    (values, [name, value]) =>
-      spec.fields.some((field) => field.name === name)
-        ? withDerived(spec.fields, state, values, name, value)
-        : values,
-    base,
-  );
 
 type Step = "form" | "preview";
 
@@ -137,18 +123,21 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
    * Nothing is written until «Registrar». On a phone the effect stays a step of its own, before
    * the button that writes. Rectifying asks for a reason first, so it keeps the button.
    */
+  // Every change takes a ticket; an answer is shown only if no change came after it.
   let pending: ReturnType<typeof setTimeout> | undefined;
+  let edits = 0;
   const livePreview = (): void => {
     clearTimeout(pending);
+    const ticket = ++edits;
     if (!wide() || props.correcting !== undefined || blocked() !== undefined) {
       return;
     }
-    const asked = values();
     pending = setTimeout(() => {
+      const asked = values();
       void (async () => {
         try {
           const live = await previewStep(toDraft(props.spec, asked, props.state), undefined, "");
-          if (values() === asked) {
+          if (ticket === edits) {
             rates.check(asked);
             setPreview(live.preview);
             setClosedYears(live.closedYears);
@@ -160,7 +149,12 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
       })();
     }, LIVE_DELAY_MS);
   };
-  onCleanup(() => clearTimeout(pending));
+  // Any change of the values asks again: a key, and what the form fills on its own (the ECB rate).
+  createEffect(on(values, livePreview, { defer: true }));
+  onCleanup(() => {
+    clearTimeout(pending);
+    edits++;
+  });
 
   /** Editing a field clears what was said about it. */
   const onChange = (next: FormValues): void => {
@@ -173,7 +167,6 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
       setStep("form");
       setPreview(undefined);
     }
-    livePreview();
   };
 
   const onPreview = async (): Promise<void> => {
