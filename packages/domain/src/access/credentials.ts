@@ -5,8 +5,8 @@
 // entry is its own. Read strictly; which entry an order may use is decided
 // here, by identity and never by resemblance.
 
-import { isRecord } from "../guards.js";
-import { isId22, isInstant } from "./ids.js";
+import { isInstant, isRecord } from "../guards.js";
+import { isId22 } from "./ids.js";
 import { DEVICE_TOKEN, parseDeviceToken } from "./token.js";
 
 /** `https://` and a host (and a port), no path: what `ATLAS_ORIGIN` is on the other side. */

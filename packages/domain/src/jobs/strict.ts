@@ -37,12 +37,6 @@ export const strictJsonObject = (text: string): Plain | undefined => {
   return isPlainObject(value) && !repeatsKey(text) ? value : undefined;
 };
 
-/** An instant as the jobs write it: ISO 8601 UTC, with or without milliseconds. */
-export const isInstantText = (value: unknown): value is string =>
-  typeof value === "string" &&
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/.test(value) &&
-  !Number.isNaN(Date.parse(value));
-
 /** A count: a whole number from 0 to a billion. */
 export const isCount = (value: unknown): value is number =>
   typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 1_000_000_000;

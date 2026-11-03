@@ -27,11 +27,12 @@ export interface FileOps {
 
 export const nodeFileOps: FileOps = {
   readFile: (path) => fs.readFile(path),
-  open: (path, flags) => fs.open(path, flags),
+  // Everything the console writes is the owner's alone: files `600`, folders `700`.
+  open: (path, flags) => fs.open(path, flags, 0o600),
   rename: (from, to) => fs.rename(from, to),
   rm: (path) => fs.rm(path, { force: true }),
   mkdir: async (path) => {
-    await fs.mkdir(path, { recursive: true });
+    await fs.mkdir(path, { recursive: true, mode: 0o700 });
   },
   syncDir: async (path) => {
     const handle = await fs.open(path, "r");

@@ -3,6 +3,7 @@
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { FileLedgerStore, webCryptoRandom } from "@atlas/adapters";
 import { describe, expect, it } from "vitest";
 import type { Io } from "../src/context.js";
 import { run } from "../src/main.js";
@@ -300,10 +301,19 @@ describe("atlas over a ledger file", () => {
       ),
     ).toBe(0);
     lines.length = 0;
-    expect(await atlas("positions")).toBe(0);
+    expect(await atlas("positions", "--date", "2027-12-31")).toBe(0);
     expect(lines.join("\n")).toMatch(/acc_a\s+ast_old\s+2\n.*acc_b\s+ast_old\s+1/);
     lines.length = 0;
-    expect(await atlas("gains", "2027")).toBe(0);
+    // The quickstart is dated in 2027: a year that has not begun is refused, so read it from 2028.
+    const in2028 = (...argv: string[]) =>
+      run(["--ledger", ledger, ...argv], io, {
+        compose: (path) => ({
+          store: new FileLedgerStore(path),
+          clock: { now: () => new Date("2028-01-15T10:00:00.000Z") },
+          random: webCryptoRandom,
+        }),
+      });
+    expect(await in2028("gains", "2027")).toBe(0);
     expect(lines.join("\n")).toContain("corporate_action:reverse_split");
 
     expect(await account("acc_bucket", "bucket")).toBe(0);

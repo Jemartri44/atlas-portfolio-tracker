@@ -24,7 +24,7 @@ import { madridDateOf } from "../dates/madrid.js";
 import { Decimal } from "../money/decimal.js";
 import { Money } from "../money/money.js";
 import { businessDateOf, isOperationEvent, projectLedger } from "../projections/project-ledger.js";
-import { cashKey } from "../projections/state.js";
+import { cashKey, splitCashKey } from "../projections/state.js";
 import type { AccountCreatedEvent, AccountId, LedgerEvent } from "../schema/events.js";
 import type { AccountAt } from "./holdings.js";
 
@@ -169,7 +169,7 @@ export const quarterAverages = (
   const currencies = new Map<AccountId, Set<string>>();
   for (const cash of balances.values()) {
     for (const key of cash.keys()) {
-      const [id, currency] = key.split("|") as [AccountId, string];
+      const [id, currency] = splitCashKey(key);
       if (accounts.has(id)) {
         currencies.set(id, (currencies.get(id) ?? new Set<string>()).add(currency));
       }

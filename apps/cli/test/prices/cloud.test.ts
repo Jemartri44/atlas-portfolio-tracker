@@ -49,7 +49,7 @@ const synced = async (assets: readonly string[] = ["ast_a"]) => {
     sources: () => ({ eodhd, alpha_vantage: alpha }),
   } as never);
   holder.secrets = join(c.config, "atlas", "secrets.json");
-  await mkdir(join(c.config, "atlas"), { recursive: true });
+  await mkdir(join(c.config, "atlas"), { recursive: true, mode: 0o700 });
   await writeFile(holder.secrets, JSON.stringify({ eodhd: "k", alpha_vantage: "k" }));
   await chmod(holder.secrets, 0o600);
   const b = new Events();
@@ -243,6 +243,14 @@ describe("atlas prices update in a cloud folder whose cloud has prices", () => {
     expect(c.err.join("\n")).toContain("session_missing");
     expect(eodhd.calls).toEqual([]);
     expect(existsSync(join(c.ledger, "prices", "ast_a.jsonl"))).toBe(false);
+  });
+
+  it("skips a file of the prices folder whose name is not a valid asset id instead of failing", async () => {
+    const { c } = await synced();
+    await writeFile(join(c.ledger, "prices", "%E0%A4%A.jsonl"), "");
+    await writeFile(join(c.ledger, "prices", "ast_a.jsonl"), text([close("2026-09-29", "10")]));
+    expect(await c.exec(["prices", "status"])).toBe(0);
+    expect(c.out.join("\n")).toContain("ast_a");
   });
 
   it("never takes a close of today or of a day to come, and says it", async () => {

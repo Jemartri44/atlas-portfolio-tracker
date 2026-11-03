@@ -4,7 +4,13 @@
 // new key turns this red until somebody adds it here by hand, knowingly.
 
 import { describe, expect, it } from "vitest";
-import { createEmptyState } from "../../src/projections/state.js";
+import {
+  cashKey,
+  createEmptyState,
+  positionKey,
+  splitCashKey,
+  splitPositionKey,
+} from "../../src/projections/state.js";
 import { DEFAULT_SETTINGS } from "../../src/settings/settings.js";
 
 describe("the keys of the state of the ledger", () => {
@@ -44,5 +50,22 @@ describe("the keys of the state of the ledger", () => {
         "usage",
       ].sort(),
     );
+  });
+});
+
+describe("the key of a position or a balance", () => {
+  it("is the plain `account|other` for ordinary ids", () => {
+    expect(positionKey("acc_a", "ast_x")).toBe("acc_a|ast_x");
+    expect(cashKey("acc_a", "EUR")).toBe("acc_a|EUR");
+  });
+
+  it("does not mix an id that contains the separator with its neighbour", () => {
+    const first = positionKey("A|B", "F");
+    const second = positionKey("A", "B|F");
+    expect(first).not.toBe(second);
+    expect(splitPositionKey(first)).toEqual(["A|B", "F"]);
+    expect(splitPositionKey(second)).toEqual(["A", "B|F"]);
+    expect(splitCashKey(cashKey("100%|x", "USD"))).toEqual(["100%|x", "USD"]);
+    expect(splitPositionKey(positionKey("a%7Cb", "c"))).toEqual(["a%7Cb", "c"]);
   });
 });

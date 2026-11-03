@@ -411,6 +411,64 @@ describe("atlas ca", () => {
     expect(h.text()).toContain("queda sin posición");
   });
 
+  it("capital-return lowers the cost by the amount per unit of each account", async () => {
+    const h = harness({ events: seed() });
+    const stock = [
+      "--type",
+      "stock",
+      "--asset-class",
+      "equity",
+      "--book",
+      "core",
+      "--name",
+      "Core",
+    ];
+    expect(
+      await h.exec([
+        "asset",
+        "add",
+        "--id",
+        "ast_core",
+        ...stock,
+        "--currency",
+        "USD",
+        "--not-transferable",
+        "--yes",
+      ]),
+    ).toBe(0);
+    expect(await h.exec(withOption(buyGoldIn("acc_etf", "12.5"), "--asset", "ast_core"))).toBe(0);
+    h.reset();
+    expect(
+      await h.exec([
+        "ca",
+        "capital-return",
+        "--asset",
+        "ast_core",
+        "--cash-per-share",
+        "0.4",
+        "--currency",
+        "USD",
+        "--fx-rate",
+        "1.1",
+        "--fx-rate-date",
+        "2027-03-01",
+        ...CA,
+        "--yes",
+      ]),
+    ).toBe(0);
+    const event = await lastEvent(h);
+    expect(event.kind).toBe("capital_return");
+    expect(event.effects).toEqual([
+      {
+        op: "cost_adjustment",
+        per_account: [{ account_id: "acc_etf", amount: "5" }],
+        currency: "USD",
+        fx_rate: "1.1",
+        fx_rate_date: "2027-03-01",
+      },
+    ]);
+  });
+
   it("delisting records no effects and reminds that inactive is a separate update", async () => {
     const h = harness({ events: seed() });
     expect(await h.exec(BUY_GOLD)).toBe(0);
