@@ -172,6 +172,15 @@ Dos cosas que el comando se niega a hacer:
 
 Y un aviso que llega antes: `atlas settings set` compara la base del ahorro de los ejercicios ya cerrados con la configuración en vigor y con la propuesta, y dice cuáles se mueven. Cambiar la ventana de recompra o la categoría de renta mueve una declaración pasada sin mover ni una ganancia realizada.
 
+## Tipos del BCE, borradores, cerrojo y nube
+
+Cuatro grupos de comandos que el ciclo normal no necesita a diario. La lista completa y vigente es `atlas --help` (`apps/cli/src/usage.ts`); aquí, una línea por comando.
+
+- `atlas fx update|status`: descarga el histórico oficial del BCE junto al libro y dice cuál está en vigor. `atlas fx correct [--reason …]` corrige los tipos que no son los de su fecha fiscal, tras cambiar `fiscal_date_rule`.
+- `atlas add … --draft` y `atlas draft list|confirm <id>|discard <id>`: guardan como borrador una operación cuyo tipo del BCE aún no se ha publicado; un borrador no cuenta en ninguna cifra hasta registrarlo.
+- `atlas lock show|break`: quién tiene el cerrojo de la carpeta del libro, y romperlo a petición.
+- `atlas remote login|logout|status|upload`: la carpeta «de nube» (`sync/remote.json`, sin `ledger.jsonl`). `login` abre el inicio de sesión con Google y guarda el token de este dispositivo; `logout` lo revoca y lo borra; `status` lista las sesiones y su caducidad; `upload --from <ledger.jsonl>` sube un libro entero a una nube vacía. Contrato en [`api.md`](api.md).
+
 ## Copia de seguridad provisional (Fases 1-3)
 
 Mientras el libro real viva en un fichero local, haz una copia verificada tras cada sesión de registro y **siempre fuera del repositorio** (el repo es público):

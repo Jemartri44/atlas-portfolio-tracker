@@ -73,7 +73,7 @@ describe("atlas compact", () => {
     ];
     const h = harness({ lines: invalid, schema: TEST_SCHEMA_V2 });
     expect(await h.exec(["compact", "--yes"])).toBe(1);
-    expect(h.text()).toContain("eventos inválidos");
+    expect(h.text()).toContain("movimiento inválido");
     expect(h.text()).toContain("acc_missing");
     expect(h.store.archives.size).toBe(0);
   });

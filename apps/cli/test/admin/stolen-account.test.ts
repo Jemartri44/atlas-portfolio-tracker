@@ -172,7 +172,7 @@ describe("the stolen Google account, rehearsed step by step with the doubles", (
     intruder.out.length = 0;
     intruder.err.length = 0;
     expect(await intruder.exec(["check"])).not.toBe(EXIT.ok);
-    expect(said(intruder)).toContain("el token de este dispositivo está revocado");
+    expect(said(intruder)).toContain("la credencial de este dispositivo está revocada");
     expect(errorOf(await api.call("GET", "/api/session")).code).toBe("session_invalid");
   });
 });

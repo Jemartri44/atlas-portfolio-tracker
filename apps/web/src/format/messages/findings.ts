@@ -11,6 +11,9 @@
 // `AppError`: the explanation is Spanish, the evidence is raw.
 
 import type { IntegrityFinding } from "@atlas/domain";
+import { FINDINGS } from "@atlas/domain/messages";
+import type { Prose } from "../privacy.js";
+import { webVoice } from "./voice.js";
 
 export interface FindingText {
   /** What it means, in one line. */
@@ -19,110 +22,25 @@ export interface FindingText {
   todo: string;
 }
 
-export const FINDING_TEXTS: Record<string, FindingText> = {
-  // --- integrity(): the projection against itself ------------------------
-  negative_position: {
-    what: "Una posición física ha quedado negativa: hay más vendido que comprado.",
-    todo: "Falta registrar una compra, o sobra una venta. Búscala en Movimientos y rectifícala.",
-  },
-  lots_mismatch: {
-    what: "Los lotes fiscales de un activo no suman su posición física.",
-    todo: "Es un desajuste del motor FIFO: no registres nada más sobre ese activo y revisa sus operaciones desde la primera.",
-  },
-  duplicate_fingerprint: {
-    what: "Dos eventos tienen la misma huella: puede ser la misma operación registrada dos veces.",
-    todo: "Abre los dos en Movimientos. Si son la misma, anula uno; si son dos operaciones idénticas de verdad, no hay nada que hacer.",
-  },
-  duplicate_isin: {
-    what: "Dos activos del catálogo tienen el mismo ISIN: para Hacienda son el mismo valor, y la regla de recompra y el FIFO los tratan como dos.",
-    todo: "Registra las operaciones de ese valor en un solo activo. Mientras los dos existan, las cifras fiscales de ese valor pueden estar mal.",
-  },
-  dangling_reference: {
-    what: "Un activo apunta a un ETF de referencia que no existe en el catálogo.",
-    todo: "Da de alta el activo al que apunta, o quítale la referencia desde la configuración del activo.",
-  },
-  // --- The ECB rates against the official history ---------
-  fx_rate_mismatch: {
-    what: "Un tipo del BCE del libro no es el oficial de su fecha.",
-    todo: "Si es un error, corrige el movimiento: se anula y se registra de nuevo con el tipo bueno. Si lo confirmaste a sabiendas, no hay nada que hacer.",
-  },
-  fx_rate_date_unpublished: {
-    what: "Un tipo del libro está fechado en un día en que el BCE no publicó.",
-    todo: "Corrige el movimiento con el último tipo publicado en o antes de su fecha fiscal.",
-  },
-  fx_rate_date_not_latest: {
-    what: "La fecha del tipo no es la última publicación en o antes de la fecha fiscal del movimiento.",
-    todo: "Corrige el movimiento con el tipo que corresponde. Si cambió la regla de la fecha fiscal, la solución es la misma: anular y registrar de nuevo, nunca recalcular.",
-  },
-  fx_rate_currency_unlisted: {
-    what: "El BCE no publica la divisa de un movimiento, o no la publicaba en su fecha.",
-    todo: "Ese tipo no se puede contrastar con el oficial: revísalo con el extracto.",
-  },
-  fx_rate_currency_stale: {
-    what: "El BCE dejó de publicar la divisa de un movimiento antes de su fecha.",
-    todo: "Ese tipo no se puede contrastar con el oficial: revísalo con el extracto.",
-  },
-  fx_rate_not_yet_in_history: {
-    what: "El histórico del BCE no llega todavía a la fecha de un movimiento: su tipo está sin contrastar.",
-    todo: "Actualiza el histórico (la consola lo descarga, o impórtalo en Ajustes).",
-  },
-  target_calendar_mismatch: {
-    what: "El calendario TARGET y el histórico del BCE no coinciden en un día de los años que usa el libro.",
-    todo: "No bloquea nada: o al histórico le falta un día o el calendario cambió. Descarga de nuevo el histórico y, si sigue, avísalo.",
-  },
-  // --- deepCheck(): the raw lines and the fingerprints -------------------
-  duplicate_id: {
-    what: "Dos líneas del archivo tienen el mismo identificador.",
-    todo: "El archivo se ha editado a mano o se han juntado dos archivos. Recupera una copia y compárala antes de escribir nada más.",
-  },
-  non_canonical_line: {
-    what: "Una línea no está en su forma canónica: el orden de sus campos no es el que escribe la aplicación.",
-    todo: "No afecta a ningún cálculo. La orden «atlas compact» de la CLI la reescribe cuando quieras.",
-  },
-  unknown_field: {
-    what: "Una línea trae un campo que su tipo de evento no define.",
-    todo: "Suele venir de una edición a mano. El campo se ignora; si sobra, quítalo con una rectificación.",
-  },
-  outdated_lines: {
-    what: "Hay líneas escritas por una versión anterior de la aplicación.",
-    todo: "Se leen sin problema porque la aplicación las convierte al cargarlas. La orden «atlas compact» de la CLI las reescribe en el formato actual.",
-  },
-  fingerprint_mismatch: {
-    what: "La huella guardada de un evento no coincide con sus campos: alguien lo editó a mano.",
-    todo: "En tus datos nada se edita: un movimiento equivocado se anula y se registra corregido. Recupera la copia anterior a la edición.",
-  },
-  // --- What was filed (ADR-0020) ----------------------------------------
-  filing_fingerprint_lines: {
-    what: "Una declaración presentada dice que se calculó sobre un número de movimientos distinto de los que tiene delante en el archivo.",
-    todo: "Alguien ha insertado o quitado una línea antes de esa declaración. Recupera la copia anterior y compárala: lo que consta en Hacienda no se puede recalcular sin esos movimientos.",
-  },
-  filing_fingerprint_mismatch: {
-    what: "Los movimientos anteriores a una declaración presentada ya no son los que había cuando se presentó.",
-    todo: "Se han editado a mano. Recupera la copia anterior a la edición: sin ellos, la aplicación no puede explicar por qué lo declarado y lo calculado difieren.",
-  },
-  // **No es una edición**, y por eso no comparte código con el de arriba: los
-  // movimientos están ahí, pero escritos en un formato que esta versión no
-  // sabe releer en el punto en que la huella lo declara. Mandar restaurar una
-  // copia de seguridad no arreglaría nada y acusaría de algo que no ha pasado.
-  filing_fingerprint_unreadable: {
-    what: "Los movimientos anteriores a una declaración presentada no se pueden leer en el formato que dice su huella, así que no se puede comprobar.",
-    todo: "No es una edición y no hay copia que restaurar. El detalle técnico de abajo dice en qué formato habría que poder leerlos; conserva el archivo tal como está y no lo edites a mano.",
-  },
-  // **Registra el hecho, no lo borra** (ADR-0025). No caduca y no se esconde:
-  // ni acusa de haber editado a mano ni certifica que todo está bien.
-  filing_fingerprint_waived: {
-    what: "La huella de una declaración presentada nunca llegó a comprobarse, y tú lo diste por bueno para poder compactar.",
-    todo: "No hay nada que hacer: queda escrito aquí para siempre, con el motivo y el día en que lo aceptaste. Lo que esa declaración dice sobre sí misma no se ha podido contrastar con tus movimientos.",
-  },
-  projection_not_reproducible: {
-    what: "Volver a leer el archivo da un resultado distinto del que tienes en pantalla.",
-    todo: "Es el fallo más grave que hay: no registres nada. Exporta tus datos tal como están, guárdalos aparte y revísalos antes de seguir.",
-  },
-};
-
-/** Spanish text of a finding; an unknown code falls back to its own code. */
-export const describeFinding = (finding: IntegrityFinding): FindingText =>
-  FINDING_TEXTS[finding.code] ?? {
-    what: "La verificación ha encontrado algo que esta versión todavía no sabe explicar.",
-    todo: "Este hallazgo no tiene explicación escrita todavía: el detalle técnico de abajo es lo que hay.",
+/**
+ * Spanish text of a finding: from the shared catalogue. The texts
+ * carry no figures, so the mask is on by default.
+ */
+export const describeFinding = (
+  finding: IntegrityFinding,
+  prose: Prose = { privacy: true },
+): FindingText => {
+  const entry = FINDINGS[finding.code];
+  if (entry === undefined) {
+    return {
+      what: "La verificación ha encontrado algo que esta versión todavía no sabe explicar.",
+      todo: "Este hallazgo no tiene explicación escrita todavía: el detalle técnico de abajo es lo que hay.",
+    };
+  }
+  const voice = webVoice(prose);
+  const details = finding.details ?? {};
+  return {
+    what: entry.what(details, voice, finding.message),
+    todo: entry.todo(details, voice, finding.message),
   };
+};

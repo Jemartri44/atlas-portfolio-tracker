@@ -477,8 +477,8 @@ describe("the tax report and the ECB rates (block 4)", () => {
     const report = await atlas(undefined, "tax", "2026");
     expect(report.code).toBe(0);
     expect(report.text).toContain(
-      "Esta línea depende de un tipo del BCE que no es el oficial de su fecha (fx_rate_mismatch",
+      "Esta línea depende de un tipo del BCE que no es el oficial de su fecha.",
     );
-    expect(report.text).toContain("La cifra se calcula con el tipo del libro");
+    expect(report.text).toContain("La cifra se calcula con el tipo de tus datos");
   });
 });

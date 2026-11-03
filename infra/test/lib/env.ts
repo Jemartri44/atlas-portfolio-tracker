@@ -5,7 +5,7 @@ import { join } from "node:path";
 /**
  * The variables that could give a test a way into an AWS account. The suite
  * runs with every one of them **unset**, and a guardian fails when any comes
- * set (`specs/017-infrastructure-as-code/spec.md`; prompt 017 §4): not even a
+ * set (`specs/017-infrastructure-as-code/spec.md`, retired; in git): not even a
  * user with credentials in their machine can make a test reach AWS.
  */
 export const FORBIDDEN_AWS_VARIABLES = [
