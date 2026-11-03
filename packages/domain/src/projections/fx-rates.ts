@@ -40,7 +40,6 @@ interface RawPair {
   date: CivilDate | undefined;
 }
 
-/** The euro is its own reference: the ECB publishes no rate of the euro against itself. */
 /** Every (currency, rate) pair an event declares, effects included. */
 const pairsOf = (event: LedgerEvent): RawPair[] => {
   const raw = event as unknown as {
@@ -75,6 +74,7 @@ export const noteFxRates = (
   businessDate: CivilDate,
 ): void => {
   for (const pair of pairsOf(event)) {
+    // The euro is its own reference: the ECB publishes no rate of the euro against itself.
     if (pair.currency === undefined || pair.currency === EUR || pair.rate === undefined) {
       continue;
     }
