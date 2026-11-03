@@ -64,8 +64,8 @@ const variablesOf = (fn: Record<string, unknown>): Record<string, string> =>
 const roleName = (env: Env, family: string): string => `atlas-${env}-job-${family}`;
 
 // What the documents say, read from the documents and not copied (family 4).
-const permissionsDoc = doc("specs/016-scheduled-jobs/contracts/iam-permissions.md");
-const eventDoc = doc("specs/016-scheduled-jobs/contracts/scheduler-event.md");
+const permissionsDoc = doc("infra/test/contract/iam-permissions.md");
+const eventDoc = doc("infra/test/contract/scheduler-event.md");
 const specification = doc("docs/specification.md");
 
 const sizing = new Map<string, { timeout: number; memory: number }>(

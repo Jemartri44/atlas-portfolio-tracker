@@ -1,4 +1,4 @@
-# EventBridge Scheduler (specs/016-scheduled-jobs/contracts/scheduler-event.md,
+# EventBridge Scheduler (infra/test/contract/scheduler-event.md,
 # iam-permissions.md section 7): one group per environment, the only taggable object of
 # the service (016 questions, 1.6); one daily schedule per function, in Madrid time, with
 # the exact `Input` of the contract; the role that invokes, `lambda:InvokeFunction` on the

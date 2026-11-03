@@ -232,11 +232,11 @@ describe("the simulation is the one its source publishes", () => {
   );
 
   it("reproduces the ΔE the proposal measured, today's colours and its gain and loss", () => {
-    // docs/design/proposals/2026-09-25-visual-improvements.md §5.1: its gain and
+    // the visual-improvements proposal of 2026-09-25 (§5.1, retired from the tree; in git history): its gain and
     // loss, worst case protanopia, 8,9 in light and 9,9 in dark.
     expect(deltaE("#0f6b5c", "#b04a12", "protan")).toBeCloseTo(8.9, 1);
     expect(deltaE("#5cc6b0", "#f2a066", "protan")).toBeCloseTo(9.9, 1);
-    // docs/design/proposals/2026-09-25-visual-improvements.md §5.1, "Hoy".
+    // the visual-improvements proposal of 2026-09-25 (§5.1, retired from the tree; in git history), "Hoy".
     expect(deltaE("#1b6a44", "#a2392b", "deutan")).toBeCloseTo(6.3, 1);
     expect(deltaE("#6fc79a", "#f0917e", "deutan")).toBeCloseTo(4.2, 1);
     expect(deltaE("#a2392b", "#9e2f27")).toBeCloseTo(2.1, 1);
