@@ -15,12 +15,15 @@ for file in lambda.zip jobs.zip spa.tgz; do
     --signer-workflow "$repo/.github/workflows/deploy-dev.yml" \
     --source-ref refs/heads/develop --format json 2>/dev/null)" ||
     { echo "$file no tiene una atestación del flujo de dev en develop: no se despliega" >&2; exit 1; }
-  matched=0
+  matched=0; fetched=0
   for sha in $(jq -r '.[].verificationResult.signature.certificate.sourceRepositoryDigest // empty' <<<"$json" | sort -u); do
     [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || continue
     git fetch -q --no-tags --depth=1 origin "$sha" 2>/dev/null || continue
+    fetched=1
     if [[ "$(git rev-parse 'FETCH_HEAD^{tree}')" == "$tree" ]]; then matched=1; break; fi
   done
+  [[ "$matched" == 1 || "$fetched" == 1 ]] ||
+    { echo "$file: no se pudo traer de GitHub el commit firmado (¿repositorio privado?)" >&2; exit 1; }
   [[ "$matched" == 1 ]] ||
     { echo "$file está firmado, pero no para este árbol de código: no se despliega" >&2; exit 1; }
 done

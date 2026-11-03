@@ -378,6 +378,7 @@ describe("the scripts of the CI", () => {
       commits: string[],
       fail = "",
       mutate?: (w: ReturnType<typeof world>) => string,
+      branch = "refs/heads/develop",
     ) => {
       const w = world();
       const tree = mutate ? mutate(w) : w.tree;
