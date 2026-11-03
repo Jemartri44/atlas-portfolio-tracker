@@ -10,6 +10,7 @@
 // origins hold it.
 
 import type { DownloadedHistory, FxRateSource } from "@atlas/domain/ecb";
+import { safeFetch } from "../safe-fetch.js";
 import { entryOfZip, MAX_ENTRY_BYTES } from "./zip.js";
 
 export const ECB_ZIP_URL = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.zip";
@@ -28,14 +29,23 @@ export class EcbDownloadFailed extends Error {
   }
 }
 
-const reasonOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
+/** Longest reason kept: it is printed by the console and stored in the metadata. */
+const REASON_LENGTH = 120;
+
+/**
+ * Why a download failed, as printable ASCII of a bounded length: a message may quote the name of an
+ * entry of a downloaded ZIP, and that is text from outside (escape sequences of a terminal).
+ */
+export const reasonOf = (error: unknown): string =>
+  (error instanceof Error ? error.message : String(error))
+    .replace(/[^\x20-\x7e]/g, "?")
+    .slice(0, REASON_LENGTH);
 
 type Fetch = (url: string) => Promise<Response>;
 
 export class EcbFxRateSource implements FxRateSource {
   constructor(
-    private readonly fetchUrl: Fetch = (url) => fetch(url),
+    private readonly fetchUrl: Fetch = safeFetch(60_000),
     private readonly now: () => Date = () => new Date(),
     private readonly maxBytes: number = MAX_ENTRY_BYTES,
   ) {}

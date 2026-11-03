@@ -3,7 +3,7 @@
 import { chmod, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   acquireFolderLock,
   LedgerLockedError,
@@ -120,6 +120,7 @@ describe("the file of the keys", () => {
   const config = () => join(root, "config", "atlas");
   const write = async (text: string, mode = 0o600) => {
     await mkdir(config(), { recursive: true });
+    await chmod(config(), 0o700);
     const path = join(config(), "secrets.json");
     await writeFile(path, text);
     await chmod(path, mode);
@@ -197,6 +198,19 @@ describe("the file of the keys", () => {
   it("refuses a file readable by the group or by others", async () => {
     await refused(await write(JSON.stringify({ eodhd: KEY }), 0o640), "secrets_too_open");
     await refused(await write(JSON.stringify({ eodhd: KEY }), 0o604), "secrets_too_open");
+  });
+
+  it("refuses a folder others can enter, and a file that is not the user's", async () => {
+    const path = await write(JSON.stringify({ eodhd: KEY }));
+    await chmod(config(), 0o750);
+    await refused(path, "secrets_too_open");
+    await chmod(config(), 0o700);
+    const uid = vi.spyOn(process, "getuid").mockReturnValue((process.getuid?.() ?? 0) + 1);
+    try {
+      await refused(path, "secrets_not_yours");
+    } finally {
+      uid.mockRestore();
+    }
   });
 
   it("refuses when the folder of the keys is inside the folder of the ledger, or the other way round", async () => {

@@ -397,13 +397,18 @@ describe("the reference data (§6)", () => {
     expect(packed.headers["content-encoding"]).toBe("gzip");
     expect(packed.headers.vary).toBe("accept-encoding");
     expect(packed.headers.etag).toBe(plain.headers.etag);
-    expect(gunzipSync(Buffer.from(packed.body, "base64")).toString("utf8")).toBe(csv);
+    // Length and hash, not `toBe` of two strings of 10 MB: the same proof, far cheaper to compare.
+    const unpacked = gunzipSync(Buffer.from(packed.body, "base64"));
+    expect(unpacked.length).toBe(Buffer.byteLength(csv));
+    expect(sha(unpacked)).toBe(sha(csv));
     // Under the 6 MB of the Function URL, which the plain CSV (some 10 MB here) would exceed.
     expect(csv.length).toBeGreaterThan(9 * 1024 * 1024);
     expect(packed.body.length).toBeLessThan(6 * 1024 * 1024);
     expect(plain.headers["content-encoding"]).toBeUndefined();
-    expect(plain.body).toBe(csv);
-  });
+    expect(plain.body.length).toBe(csv.length);
+    expect(sha(plain.body)).toBe(sha(csv));
+    // 400,000 rows built, packed and unpacked: seconds on a loaded machine, above the default 5 s.
+  }, 20_000);
 
   it("does not compress for a client that refuses or does not name gzip", async () => {
     const api = setup();

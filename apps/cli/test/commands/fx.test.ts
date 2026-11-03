@@ -59,6 +59,7 @@ describe("atlas fx", () => {
       "status",
     );
     expect(none.text()).toContain("No hay histórico del BCE");
+    expect(none.text()).toContain("desde la web");
     const update = await atlas(
       sourceOf(async () => ({ bytes: csv })),
       "fx",
@@ -141,6 +142,23 @@ describe("atlas fx", () => {
       "Aviso: el calendario TARGET y el histórico no coinciden en 1 día",
     );
     expect(result.text()).toContain("05/01/2026: día hábil sin publicación");
+  });
+
+  it("warns, and still stores, when a download fills in a day the stored one lacked", async () => {
+    const { csv, atlas } = await setup();
+    const missing = Buffer.from(csv.toString("utf8").replace(/^2026-01-05.*\n/m, ""));
+    await atlas(
+      sourceOf(async () => ({ bytes: missing })),
+      "fx",
+      "update",
+    );
+    const result = await atlas(
+      sourceOf(async () => ({ bytes: csv, fetched_at: "2026-09-25T10:00:00.000Z" })),
+      "fx",
+      "update",
+    );
+    expect(result.code).toBe(0);
+    expect(result.text()).toMatch(/Aviso: la descarga trae \d+ tipos de días ya conocidos/);
   });
 
   it("touches nothing when the download fails or is not a history, and says why", async () => {
