@@ -20,10 +20,18 @@ export interface ListedObject {
   readonly size: number;
 }
 
+/** A retention for a new object: governance mode until that instant. */
+export interface ObjectLock {
+  readonly retainUntil: Date;
+}
+
 export interface ObjectStore {
   get(key: string): Promise<StoredObject | undefined>;
-  /** `PutObject` with `If-None-Match: *`: `exists` on a 412 (or a 409 of a race). */
-  putIfNoneMatch(key: string, body: Uint8Array): Promise<"created" | "exists">;
+  /**
+   * `PutObject` with `If-None-Match: *`: `exists` on a 412 (or a 409 of a race). With `lock`,
+   * the object is written under an Object Lock in governance mode until `retainUntil`.
+   */
+  putIfNoneMatch(key: string, body: Uint8Array, lock?: ObjectLock): Promise<"created" | "exists">;
   /**
    * `PutObject` with `If-Match: <etag>`: `precondition_failed` on a 412, a 409
    * or a 404.

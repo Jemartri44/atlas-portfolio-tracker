@@ -46,6 +46,27 @@ Es la línea con la que se lee la evolución del núcleo: cuánto dinero ha pues
 7. **Una fecha de consulta** (ADR-0016): el punto de la fecha `d` cuenta los eventos de fecha de negocio `<= d`, en las mismas fechas que la serie del patrimonio. No depende de ningún precio: no tiene huecos.
 8. **El libro de la cuenta** es el actual, como en las aportaciones del cubo.
 
+### Variación de la cartera principal («este mes» y «12 meses»)
+
+Cuánto ha variado la cartera principal en un periodo, **descontado el dinero que entró o salió** (`coreReturn`, en `charts/core-return.ts`). Definición aprobada por la coordinadora el 2026-11-03.
+
+1. **Solo la cartera principal**: sus activos y el efectivo de sus cuentas, los mismos valores que la línea de `bookCashSeries`. Un rendimiento sobre el total mezclaría núcleo y cubo en una métrica (constitución III); el cubo tiene su comparación propia, frente al índice.
+2. **Dietz modificado**: `r = (V1 − V0 − F) / (V0 + Σ wᵢ·Fᵢ)`, con `wᵢ = (fin − dᵢ) / (fin − inicio)` en días. Los flujos `Fᵢ` son exactamente los de lo aportado (apartado anterior), con fecha de negocio en `(inicio, fin]`. Un dividendo o un interés no es flujo: es rendimiento.
+3. **Periodos.** «Este mes», del último día del mes anterior a la fecha consultada. «12 meses», del mismo día un año antes (el 29/02 pasa al 28/02).
+4. **Sin cifra, con su motivo**, nunca estimada: falta un precio o un tipo en un extremo (`partial`); el núcleo empieza después del inicio del periodo (`short_history`: «menos de 12 meses de historia», sin recalcular desde el primer día); una compra anterior al dinero que la pagó (`uncovered_buys`); o nada invertido en el periodo (`no_base`).
+5. Depende de precios: **es informativa** y nada fiscal la lee. Se enseña en porcentaje con un decimal, también con la privacidad puesta.
+
+Ejemplo: 1.000 € el 31/01, 300 € ingresados el 15/02 y 1.400 € el 28/02 dan `(1.400 − 1.000 − 300) / (1.000 + 300 × 13/28)` = **+8,8 %**.
+
+### Este mes: el plan de la aportación como lista de tareas
+
+`monthPlan` (`projections/month-plan.ts`) dice qué compras del plan del mes ya están registradas. Definición aprobada el 2026-11-03.
+
+1. **El plan queda fijo todo el mes.** Es `contributionPlan` sobre el libro tal como estaba el **último día del mes anterior**, con los ajustes vigentes ese día (el libro guarda su historia) y `monthly_contribution_eur`. Calculado con la fecha de hoy, cada compra registrada movería lo que falta y la lista nunca se cerraría.
+2. **Tareas**: el ingreso de efectivo del mes, una por activo del núcleo al que el plan manda dinero y el presupuesto del cubo.
+3. **Hecha**, con los eventos vivos del mes hasta la fecha consultada: el ingreso, con cualquier `cash_deposit` en una cuenta del núcleo; un activo, con cualquier `buy` de ese activo en una cuenta del núcleo; el cubo, con cualquier `buy` en una cuenta del cubo. Cada tarea hecha lleva la fecha de la primera operación y lo registrado en euros (base bruta de la compra o el ingreso, al tipo de su evento) frente a lo propuesto. No se marca «a medias» por importe: se ve cuánto entró.
+4. **Sin plan**: sin `monthly_contribution_eur`, sin pesos o con un precio que falta a fin de mes, la tarjeta dice el motivo (el código del dominio) en lugar de una lista.
+
 ---
 
 ## 2. Reglas de cartera

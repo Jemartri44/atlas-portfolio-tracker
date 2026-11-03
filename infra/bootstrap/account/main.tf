@@ -145,7 +145,7 @@ resource "aws_budgets_budget" "atlas_cost" {
 
   name         = "atlas-cost"
   budget_type  = "COST"
-  limit_amount = var.use_customer_managed_key ? "2" : "1"
+  limit_amount = "1"
   limit_unit   = "USD"
   time_unit    = "MONTHLY"
 

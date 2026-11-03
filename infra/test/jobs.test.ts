@@ -143,6 +143,26 @@ describe.each(ENVS)("the roles of the task functions of %s", (env) => {
     },
   );
 
+  it("only the backup role can lock a copy, only under backups/, and no task can delete, shorten or bypass a lock", () => {
+    for (const family of FAMILIES) {
+      const lines = roleStatements(plan, roleName(env, family)).flatMap((statement) =>
+        [statement.Action ?? []].flat().map((action) => ({ action, statement })),
+      );
+      for (const { action } of lines) {
+        expect(action, family).not.toMatch(/^s3:(Delete|BypassGovernance|PutBucketObjectLock)/);
+      }
+      const retention = lines.filter((line) => line.action === "s3:PutObjectRetention");
+      if (family !== "backup") {
+        expect(retention, family).toEqual([]);
+        continue;
+      }
+      expect(retention).toHaveLength(1);
+      expect([retention[0]?.statement.Resource].flat()).toEqual([
+        `arn:aws:s3:::atlas-${env}-data-${SUFFIX}/backups/*`,
+      ]);
+    }
+  });
+
   it("only the mail role has an ses: action, and it reaches nothing under /prices/ in SSM", () => {
     for (const family of FAMILIES) {
       const statements = roleStatements(plan, roleName(env, family));
