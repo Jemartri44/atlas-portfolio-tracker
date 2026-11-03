@@ -262,10 +262,6 @@ export interface SaleSimulation {
   tax_eur: Money;
 }
 
-const refuse = (code: string, message: string, details: Record<string, unknown>): never => {
-  throw new ValidationError(code, message, details);
-};
-
 /**
  * Sells `quantity` of an asset (all of it when absent) on `date` at its
  * informative price, across the accounts that hold it, on a copy of the ledger.
@@ -289,18 +285,24 @@ export const simulateSale = (
     Quantity.ZERO,
   );
   if (!held.isPositive()) {
-    refuse("sale_asset_not_held", "no active account holds the asset", { asset_id: assetId });
+    throw new ValidationError("sale_asset_not_held", "no active account holds the asset", {
+      asset_id: assetId,
+    });
   }
   const quantity = query.quantity ?? held;
   if (!quantity.isPositive() || quantity.gt(held)) {
-    refuse("sale_exceeds_holding", "the quantity is not positive or exceeds what is held", {
-      asset_id: assetId,
-      held: held.toString(),
-    });
+    throw new ValidationError(
+      "sale_exceeds_holding",
+      "the quantity is not positive or exceeds what is held",
+      {
+        asset_id: assetId,
+        held: held.toString(),
+      },
+    );
   }
   const price = priceAt(state, assetId, date, query.settings, query.external);
   if (price?.unit_value_eur === undefined || price.fx_rate === undefined) {
-    refuse("sale_missing_price", "the asset has no price in euros on the date", {
+    throw new ValidationError("sale_missing_price", "the asset has no price in euros on the date", {
       asset_id: assetId,
       date,
     });

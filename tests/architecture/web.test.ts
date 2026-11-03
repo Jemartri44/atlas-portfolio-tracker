@@ -94,6 +94,8 @@ describe("architecture: apps/web", () => {
   const A_FIGURE_ANYWAY = new Set([
     "invalid_amount.value",
     "invalid_quantity.value",
+    // What is held of an asset: a quantity, masked like any other.
+    "sale_exceeds_holding.held",
     // The configured figures of the informative returns: amounts in euros the
     // user set, said back to him when one contradicts the other.
     "alert_above_threshold.alert",
