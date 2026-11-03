@@ -3,8 +3,10 @@
 // used, and when a write was cut. Each tells the truth about what **was** and
 // **was not** read or recorded: the user decides what to do from it.
 
+import { REMOTE_FAILURES, render } from "@atlas/domain/messages";
 import type { CloudSessionError } from "../folder-mode.js";
 import { text } from "./format.js";
+import { CLI_VOICE } from "./voice.js";
 
 /** Codes of the cloud that say «this credential does not work»: the way out is to sign in again. */
 export const SESSION_CODES: ReadonlySet<string> = new Set([
@@ -49,58 +51,9 @@ export const UNKNOWN_OUTCOME =
  * different.
  */
 export const describeRemoteFailure = (code: unknown): string => {
-  switch (code) {
-    case "unauthenticated":
-      return "la nube pide iniciar sesión.";
-    case "credentials_ambiguous":
-      return "la petición llevaba dos credenciales a la vez; es un fallo de la aplicación.";
-    case "session_invalid":
-      return "la sesión ha caducado: vuelve a iniciar sesión.";
-    case "device_token_invalid":
-      return "el token de este dispositivo no vale: vuelve a iniciar sesión desde la consola.";
-    case "device_token_revoked":
-      return "el token de este dispositivo está revocado: vuelve a iniciar sesión desde la consola.";
-    case "device_token_expired":
-      return "el token de este dispositivo ha caducado: vuelve a iniciar sesión desde la consola.";
-    case "not_allowed":
-      return "esa cuenta de Google no está en la lista permitida.";
-    case "forbidden_for_credential":
-      return "esta credencial no puede usar esa ruta; es un fallo de la aplicación.";
-    case "origin_rejected":
-      return "la petición no venía de la propia aplicación.";
-    case "body_invalid":
-      return "la nube no ha entendido la forma de la petición; es un fallo de la aplicación.";
-    case "body_not_json":
-      return "la petición no era JSON; es un fallo de la aplicación.";
-    case "precondition_required":
-      return "la petición no decía sobre qué versión de la nube escribía; es un fallo de la aplicación.";
-    case "precondition_failed":
-      return "otro dispositivo ha escrito en la nube a la vez.";
-    case "init_rejected":
-      return "la nube no ha aceptado el libro para empezar.";
-    case "not_found":
-      return "la ruta de la nube no existe; es un fallo de la aplicación.";
-    case "internal":
-      return "la nube ha tenido un fallo interno y no ha escrito nada.";
-    case "device_forgotten":
-      return "este dispositivo fue olvidado en la nube: vuelve a iniciar sesión con «atlas remote login».";
-    case "remote_unavailable":
-      return "la nube no está disponible ahora mismo (un fallo pasajero): inténtalo de nuevo en unos minutos.";
-    case "draft_changed":
-      return "el borrador ya no está como se leyó (se cerró o se está confirmando en otro sitio); no se ha escrito nada.";
-    case "draft_exists":
-      return "ya hay un borrador con ese identificador en la nube; no se ha guardado nada.";
-    case "too_many_drafts":
-      return "hay demasiados borradores sin cerrar en la nube; cierra o descarta alguno antes de guardar otro.";
-    case "append_too_many_units":
-      return "la operación tiene demasiadas partes indivisibles para una sola escritura; no se ha escrito nada.";
-    case "body_too_large":
-      return "la petición era demasiado grande para la nube; no se ha escrito nada.";
-    case "transport_rejected":
-      return "la petición la ha rechazado la red antes de llegar a la nube (CloudFront o el cortafuegos).";
-    case "network_failed":
-      return "no hay conexión con la nube.";
-    default:
-      return `la nube ha respondido ${text(code)}.`;
+  const entry = typeof code === "string" ? REMOTE_FAILURES[code] : undefined;
+  if (entry !== undefined) {
+    return render(entry, {}, CLI_VOICE, "");
   }
+  return `la nube ha respondido ${text(code)}.`;
 };

@@ -310,7 +310,7 @@ describe("atlas bucket", () => {
     const text = h.text();
     expect(text).toContain("La regla de parada (30 %) no se ha podido evaluar");
     expect(text).toContain("La regla de peso (10 %) no se ha podido evaluar");
-    expect(text).toContain("faltan ast_alpha_spin");
+    expect(text).toContain("falta ast_alpha_spin");
     // And the line that cannot be filled ends in a dash, not in nothing.
     expect(text).toContain("Peso sobre el patrimonio —");
     h.reset();

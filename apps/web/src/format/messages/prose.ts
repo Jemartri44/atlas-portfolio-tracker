@@ -20,9 +20,6 @@ export type Details = Record<string, unknown>;
 export const text = (value: unknown): string =>
   typeof value === "string" ? value : value === undefined ? "sin dato" : JSON.stringify(value);
 
-export const list = (value: unknown): string =>
-  Array.isArray(value) ? value.map((entry) => text(entry)).join(", ") : text(value);
-
 export const count = (value: unknown): number => (Array.isArray(value) ? value.length : 0);
 
 /** The verb agrees with what is missing: «falta Alpha Spin-off», «faltan A, B». */
