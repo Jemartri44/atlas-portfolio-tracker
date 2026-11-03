@@ -6,12 +6,17 @@
 locals {
   github_oidc_arn = "${local.iam}:oidc-provider/token.actions.githubusercontent.com"
 
-  # dev deploys from the branch `develop`; prod only from the GitHub environment
-  # `prod`, which carries the mandatory approval (ADR-0028, row 13).
-  deploy_sub = var.env == "dev" ? "repo:${var.github_repository}:ref:refs/heads/develop" : "repo:${var.github_repository}:environment:prod"
+  # The `sub` claim of the repository is customised (GitHub, `actions/oidc/customization/sub`,
+  # keys `repo`, `context`, `job_workflow_ref`; docs/first-deploy-checks.md), so a role is
+  # assumed only by one workflow file on one ref, not by any flow that declares the same
+  # environment or branch. dev deploys from `deploy-dev.yml` on `develop`; prod only from
+  # `deploy-prod.yml` on `main` through the GitHub environment `prod`, which carries the
+  # mandatory approval (ADR-0028, row 13).
+  deploy_sub = var.env == "dev" ? "repo:${var.github_repository}:ref:refs/heads/develop:job_workflow_ref:${var.github_repository}/.github/workflows/deploy-dev.yml@refs/heads/develop" : "repo:${var.github_repository}:environment:prod:job_workflow_ref:${var.github_repository}/.github/workflows/deploy-prod.yml@refs/heads/main"
   # The sub of a pull request carries neither a branch nor an environment: the plan
-  # job declares no `environment:` for that reason (research b0.4).
-  plan_sub = "repo:${var.github_repository}:pull_request"
+  # job declares no `environment:` for that reason (research b0.4). The ref of the
+  # workflow is `refs/pull/<n>/merge`, hence the only wildcard of the trusts.
+  plan_sub = "repo:${var.github_repository}:pull_request:job_workflow_ref:${var.github_repository}/.github/workflows/infra-plan.yml@refs/pull/*/merge"
 
   oidc_trust = { for key, sub in { deploy = local.deploy_sub, plan = local.plan_sub } : key => jsonencode({
     Version = "2012-10-17"
@@ -20,7 +25,10 @@ locals {
       Effect    = "Allow"
       Principal = { Federated = local.github_oidc_arn }
       Action    = "sts:AssumeRoleWithWebIdentity"
-      Condition = {
+      Condition = key == "plan" ? {
+        StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com" }
+        StringLike   = { "token.actions.githubusercontent.com:sub" = sub }
+        } : {
         StringEquals = {
           "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           "token.actions.githubusercontent.com:sub" = sub
