@@ -3,8 +3,12 @@ import type { ValidationError } from "../../src/errors.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import { simulateTransfer } from "../../src/projections/simulate-transfer.js";
 import { DEFAULT_SETTINGS, mergeSettings } from "../../src/settings/settings.js";
+import { evaluateUnit } from "../../src/sync/evaluate.js";
 import { checkInvalid } from "../../src/usecases/record-event.js";
+import { correctEvent } from "../../src/usecases/rectify.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
+import { TestStore } from "../memory-store.js";
+import { testDeps } from "../usecases/helpers.js";
 
 const transferFields = (from: string, to: string) => ({
   from_account_id: "acc_fund",
@@ -79,6 +83,32 @@ describe("transfers only defer tax between funds (art. 94.1.a LIRPF)", () => {
     });
     expect(codesOf(b)).toContain("transfer_not_between_funds");
     expect(recording(b)?.code).toBe("not_transferable");
+  });
+
+  it("refuses an ETF to ETF transfer brought in by a correction, locally or from another device", async () => {
+    const b = withEtfs();
+    const legal = b.transfer(transferFields("ast_world", "ast_bonds"));
+    const base = b.build();
+    b.reversal(legal.id);
+    const illegal = b.transfer(transferFields("ast_etf_a", "ast_etf_b"));
+    const unit = [...b.build().slice(base.length, -1), { ...illegal, corrects_id: legal.id }];
+    const { schema_version, id, recorded_at, fingerprint, ...draft } = illegal;
+    const local = await correctEvent(
+      testDeps(new TestStore(base)),
+      legal.id,
+      draft as never,
+      "wrong asset",
+    ).catch((error: ValidationError) => error);
+    expect((local as ValidationError).code).toBe("not_transferable");
+    const remote = evaluateUnit(base, unit);
+    expect(remote.ok ? undefined : [remote.failure.member, remote.failure.domain_code]).toEqual([
+      "correction",
+      "not_transferable",
+    ]);
+    // Replayed, the same ledger opens with a warning, as before the rule.
+    expect(projectLedger([...base, ...unit]).warnings.map((warning) => warning.code)).toContain(
+      "transfer_not_between_funds",
+    );
   });
 
   it("accepts fund to money-market, and custody moves and requests of an ETF", () => {

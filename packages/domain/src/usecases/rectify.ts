@@ -7,13 +7,19 @@ import { yearOf } from "../dates/civil-date.js";
 import { todayInMadrid } from "../dates/madrid.js";
 import { DependentEventsError, DuplicateFingerprintError, NotFoundError } from "../errors.js";
 import { type ClosedYear, closedYearsTouched, unfiledPastYears } from "../filings/touched.js";
-import { createUlidGenerator, type UlidGenerator } from "../ids/ulid.js";
+import { createUlidGenerator } from "../ids/ulid.js";
 import { businessDateOf, isOperationEvent, projectLedger } from "../projections/project-ledger.js";
 import type { LedgerState, Warning } from "../projections/state.js";
 import type { Draft, LedgerEvent, ReversalEvent, SupportedEvent } from "../schema/events.js";
 import type { UseCaseDeps } from "./deps.js";
 import { describeAffected, newlyInvalid } from "./invalid-events.js";
-import { checkOnWrite, completeDraft, duplicatesOf, type RecordOptions } from "./record-event.js";
+import {
+  checkDraft,
+  checkOnWrite,
+  completeDraft,
+  duplicatesOf,
+  type RecordOptions,
+} from "./record-event.js";
 
 export interface ReverseResult {
   reversal: ReversalEvent;
@@ -125,8 +131,9 @@ export const prepareCorrection = <E extends SupportedEvent>(
   targetId: string,
   replacement: Draft<E>,
   reason: string,
-  ids: UlidGenerator = createUlidGenerator(deps),
+  options: RecordOptions = {},
 ): PreparedCorrection<E> => {
+  const ids = options.ids ?? createUlidGenerator(deps);
   const target = findTarget(events, targetId);
   const reversal = completeDraft<ReversalEvent>(
     deps,
@@ -138,6 +145,7 @@ export const prepareCorrection = <E extends SupportedEvent>(
     { ...replacement, corrects_id: targetId } as Draft<E>,
     ids.next(),
   );
+  checkDraft(event, options);
   const state = checkCandidate(
     events,
     [...events, reversal, event],
@@ -163,7 +171,7 @@ export const correctEvent = async <E extends SupportedEvent>(
     targetId,
     replacement,
     reason,
-    options.ids,
+    options,
   );
   const duplicates = duplicatesOf(state.fingerprints, event);
   if (duplicates.length > 0 && options.confirmDuplicate !== true) {

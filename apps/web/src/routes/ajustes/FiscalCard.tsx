@@ -91,7 +91,9 @@ export const FiscalCard = (props: { draft: SettingsDraft }): JSX.Element => (
   <Fold class="span-6" title="Fecha fiscal y ventana de recompra">
     <p class="card-note">
       Por tipo de activo. Lo que dejes por defecto toma el valor indicado entre paréntesis, así que
-      añadir un tipo de activo nuevo nunca deja tus datos a medias.
+      añadir un tipo de activo nuevo nunca deja tus datos a medias. A un ETC o un ETP que tributa
+      como capital mobiliario no se le aplica la ventana de aquí: lleva siempre 2 meses (art. 25.2.b
+      LIRPF).
     </p>
     <div class="fieldset">
       <For each={ASSET_TYPES}>

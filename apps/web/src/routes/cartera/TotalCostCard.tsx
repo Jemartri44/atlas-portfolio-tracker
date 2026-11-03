@@ -6,7 +6,7 @@
 import type { Settings } from "@atlas/domain";
 import { type CostSummary, totalCost } from "@atlas/domain/portfolio";
 import { createMemo, createSignal, type JSX, Show } from "solid-js";
-import { Amount, Field, Notice, Section, StatLine, TotalLine } from "../../components/index.js";
+import { Amount, Field, FoldSection, Notice, StatLine, TotalLine } from "../../components/index.js";
 import {
   type CostInputs,
   emptyCostInputs,
@@ -27,7 +27,19 @@ export const TotalCostCard = (props: { summary: CostSummary; settings: Settings 
   });
   const errors = () => read().errors;
   return (
-    <Section title="Coste total a largo plazo" class="span-12 total-cost">
+    <FoldSection
+      title="Coste total a largo plazo"
+      class="span-12 total-cost"
+      summary={
+        <Show when={view()} fallback="Escribe la rentabilidad bruta para ver el coste">
+          {(shown) => (
+            <Show when={shown().gap === undefined} fallback={`Sin cifra: ${shown().gap}`}>
+              <Amount value={shown().total} missingReason="sin dato" /> en {shown().years} años
+            </Show>
+          )}
+        </Show>
+      }
+    >
       <p class="card-note">
         Lo que el TER, las comisiones y los impuestos al vender se llevarían de la cartera principal
         en el horizonte. Es un supuesto tuyo, no una previsión: nada de esto se guarda.
@@ -116,6 +128,6 @@ export const TotalCostCard = (props: { summary: CostSummary; settings: Settings 
           </Show>
         )}
       </Show>
-    </Section>
+    </FoldSection>
   );
 };
