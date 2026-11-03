@@ -368,6 +368,7 @@ Dirección A «Cuaderno vivo», elegida por el dueño el 2026-11-03 sobre la aud
 |---|---|
 | Variables | `apps/web/src/styles/tokens.css` |
 | Base y elementos (sustituye a Pico) | `styles/base.css` |
+| Las dos fuentes alojadas | `styles/fonts.css` |
 | Controles: botones, campos, desplegable, rango, etiquetas, diálogo | `styles/controls.css` |
 | Tarjetas, pie de tarjeta, líneas de panel y de total | `styles/cards.css` |
 | Filas en dos líneas y tablas | `styles/lists.css` |
