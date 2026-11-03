@@ -198,9 +198,10 @@ describe("rebalancePlan", () => {
     expect(eur(plan.purchases_only_eur)).toBe("1666.67");
   });
 
-  it("leaves the tax unknown, not zero, without brackets", () => {
+  it("prices the sale with the scale of the law without brackets", () => {
+    // The same gain of 333.33 as above, each half at 9.5 % rounded: 31.67 + 31.67.
     const sale = run(core(), { savings_tax_brackets: undefined }).steps[1] as SaleStep;
-    expect(sale.tax.available && sale.tax.tax_eur).toBeUndefined();
+    expect(sale.tax.available && eur(sale.tax.tax_eur)).toBe("63.34");
     expect(sale.tax.available && eur(sale.tax.gain_eur)).toBe("333.33");
   });
 
@@ -218,7 +219,7 @@ describe("rebalancePlan", () => {
     const plan = run(b, { target_weights: { ast_world: "30", ast_bonds: "30", ast_gold: "40" } });
     const sale = plan.steps.find((step) => step.kind === "sale") as SaleStep;
     expect(sale.tax.available && sale.tax.gain_eur.isNegative()).toBe(true);
-    expect(sale.tax.available && sale.tax.tax_eur?.isZero()).toBe(true);
+    expect(sale.tax.available && sale.tax.tax_eur.isZero()).toBe(true);
     expect(sale.tax.available && sale.tax.deferred_eur.amount.isPositive()).toBe(true);
     expect(sale.tax.available && sale.tax.deferral_window_end).toBe("2028-02-29");
   });

@@ -3,10 +3,12 @@
 // The sale is added to a **copy of the ledger in memory** and the engine reads
 // the year with and without it, so the FIFO across accounts, the compensation
 // and the repurchase rule come out of the same code that will compute the real
-// one. Nothing is written and the copy is thrown away. The brackets of the
-// savings base are then applied to both bases: the engine gives the base, not the
-// quota, and the tax of the sale is the difference (marginal, because the
-// brackets are progressive).
+// one. Nothing is written and the copy is thrown away. The estimated quota of
+// both years (`savingsQuota`, criterion #27: the scale of the law of the year,
+// or `savings_tax_brackets` when set) gives the tax of the sale as the
+// difference of the two cuotas íntegras: marginal, because the scale is
+// progressive. It is the same estimate the "what if I sell" query of the
+// fiscal screen and the sales of the rebalance show.
 //
 // It is an estimate at today's informative price, labelled as such. It never
 // feeds a tax output: the real sale, when it is recorded, is computed from the
@@ -15,13 +17,14 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import { yearOf } from "../dates/civil-date.js";
 import { systemUlid } from "../ids/ulid.js";
-import { Decimal, HUNDRED } from "../money/decimal.js";
-import { Money } from "../money/money.js";
+import type { Decimal } from "../money/decimal.js";
+import type { Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
 import { CURRENT_SCHEMA_VERSION } from "../schema/envelope.js";
 import type { AccountId, AssetId, LedgerEvent, SellEvent } from "../schema/events.js";
 import { fingerprintOf } from "../schema/fingerprint.js";
 import type { TaxBracket } from "../settings/defaults.js";
+import { type SavingsQuota, savingsQuota } from "../tax/quota.js";
 import type { TransmissionLine, TransmissionLot } from "../tax/report.js";
 import { taxYear } from "../tax/year.js";
 
@@ -49,32 +52,22 @@ export interface SaleEstimate {
   /** Part of a loss the repurchase rule defers, as a positive amount, and where its window ends. */
   deferred_eur: Money;
   deferral_window_end?: CivilDate;
+  /**
+   * For a loss: the last day on which buying the asset back would still defer
+   * what is left of it (criteria #2 and #14). Absent for a gain.
+   */
+  repurchase_until?: CivilDate;
   /** The savings base of the year with the sale, and what it added to it. */
   base_after_eur: Money;
   base_added_eur: Money;
-  /** Absent when the brackets are not configured: the tax is then unknown, never zero. */
-  tax_eur?: Money;
+  /** The estimated quota of the year without and with the sale. */
+  quota_before: SavingsQuota;
+  quota_after: SavingsQuota;
+  /** `quota_after − quota_before`: negative when a loss saves tax. Always an estimate. */
+  tax_eur: Money;
   /** The synthetic event, so that the next estimate can build on it. */
   event: LedgerEvent;
 }
-
-/** Tax of a savings base under progressive brackets whose `up_to` are cumulative limits. */
-export const taxOfBase = (base: Money, brackets: readonly TaxBracket[]): Money => {
-  let tax = Money.zero("EUR");
-  let from = Money.zero("EUR");
-  for (const bracket of brackets) {
-    const limit = bracket.up_to === undefined ? undefined : Money.parse(bracket.up_to, "EUR");
-    const top = limit === undefined || limit.cmp(base) >= 0 ? base : limit;
-    if (top.cmp(from) > 0) {
-      tax = tax.add(top.sub(from).mul(Decimal.parse(bracket.rate_pct)).div(HUNDRED));
-    }
-    if (top === base) {
-      break;
-    }
-    from = top;
-  }
-  return tax;
-};
 
 const sellOf = (date: CivilDate, sale: HypotheticalSale, sequence: number): SellEvent => {
   const draft: Omit<SellEvent, "fingerprint"> = {
@@ -128,6 +121,10 @@ export const estimateSale = (
   const { report, line: found } = lineOf([...base, event], year, date, event.id);
   const own = found as TransmissionLine;
   const added = report.base_eur.sub(without.base_eur);
+  const quotaBefore = savingsQuota(without, brackets);
+  const quotaAfter = savingsQuota(report, brackets);
+  // What the rule would still defer with a repurchase: the own loss minus what is deferred already.
+  const open = own.own_eur.isNegative() && own.deferred_eur.cmp(own.own_eur) > 0;
   return {
     gain_eur: own.own_eur,
     cost_eur: own.cost_eur,
@@ -135,13 +132,14 @@ export const estimateSale = (
     // The engine keeps a deferred loss with the sign of the loss; here it is an amount.
     deferred_eur: own.deferred_eur.isNegative() ? own.deferred_eur.neg() : own.deferred_eur,
     ...(own.deferral === undefined ? {} : { deferral_window_end: own.deferral.window_end }),
+    // A loss priced on `date` has its window open on `date`: the engine always marks it.
+    ...(open ? { repurchase_until: own.provisional_until as CivilDate } : {}),
     base_after_eur: report.base_eur,
     base_added_eur: added,
-    ...(brackets === undefined
-      ? {}
-      : {
-          tax_eur: taxOfBase(report.base_eur, brackets).sub(taxOfBase(without.base_eur, brackets)),
-        }),
+    quota_before: quotaBefore,
+    quota_after: quotaAfter,
+    // The scales start at the first year the engine computes (`savings-scale.ts`), so both have a quota.
+    tax_eur: (quotaAfter.quota_eur as Money).sub(quotaBefore.quota_eur as Money),
     event,
   };
 };

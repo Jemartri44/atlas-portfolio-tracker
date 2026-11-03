@@ -3,7 +3,7 @@ import { DomainError } from "../../src/errors.js";
 import { Decimal } from "../../src/money/decimal.js";
 import { Money } from "../../src/money/money.js";
 import { Quantity } from "../../src/money/quantity.js";
-import { estimateSale, type HypotheticalSale, taxOfBase } from "../../src/projections/sale-tax.js";
+import { estimateSale, type HypotheticalSale } from "../../src/projections/sale-tax.js";
 import type { TaxBracket } from "../../src/settings/defaults.js";
 import { LedgerBuilder } from "../ledger-builder.js";
 
@@ -63,16 +63,23 @@ describe("estimateSale", () => {
     expect(result.deferral_window_end).toBeUndefined();
   });
 
-  it("leaves the tax unknown, never zero, when the brackets are not configured", () => {
+  it("uses the scale of the law when the settings carry no brackets", () => {
+    // Gain 333.33, all in the first bracket: each half 333.33 × 9.5 % = 31.666…
+    // rounds to 31.67 (arts. 66.1 and 76), so the quota is 63.34. The settings
+    // above give one rate and round the total once: 63.33.
     const result = estimateSale(fund().build(), [], DATE, sale("6.66666667", "150"), undefined);
-    expect(result.tax_eur).toBeUndefined();
-    expect(eur(result.gain_eur)).toBe("333.33");
+    expect(result.quota_after.scale_origin).toBe("law");
+    expect(eur(result.tax_eur)).toBe("63.34");
+    expect(result.repurchase_until).toBeUndefined();
   });
 
-  it("brings no tax for a loss", () => {
+  it("brings no tax for a loss and says until when not to buy it back", () => {
+    // 5 units at 80 against a cost of 100: −100. Two months from 31/12/2027,
+    // date to date, end on the last day of February: 29/02/2028 (criterion #14).
     const result = estimateSale(fund().build(), [], DATE, sale("5", "80"), BRACKETS);
-    expect(result.gain_eur.isNegative()).toBe(true);
-    expect(result.tax_eur?.isZero()).toBe(true);
+    expect(eur(result.gain_eur)).toBe("-100");
+    expect(result.tax_eur.isZero()).toBe(true);
+    expect(result.repurchase_until).toBe("2028-02-29");
   });
 
   it("defers a loss when the same fund was bought inside the window", () => {
@@ -87,6 +94,8 @@ describe("estimateSale", () => {
     const result = estimateSale(b.build(), [], DATE, sale("5", "80"), BRACKETS);
     expect(result.deferred_eur.amount.isPositive()).toBe(true);
     expect(result.deferral_window_end).toBe("2028-02-29");
+    // The 5 units bought on 01/12 defer the whole loss: buying more defers nothing more.
+    expect(result.repurchase_until).toBeUndefined();
   });
 
   it("counts the sales already planned as done when it prices the next one", () => {
@@ -105,32 +114,19 @@ describe("estimateSale", () => {
     const gain = estimateSale(events, [], DATE, sale("6.66666667", "150"), BRACKETS);
     const loss = estimateSale(events, [gain.event], DATE, sale("5", "80"), BRACKETS);
     expect(loss.gain_eur.isNegative()).toBe(true);
-    expect(loss.tax_eur?.isNegative()).toBe(true);
+    expect(loss.tax_eur.isNegative()).toBe(true);
+  });
+
+  it("never writes: the ledger it was given is the same afterwards", () => {
+    const events = fund().build();
+    const before = JSON.stringify(events);
+    estimateSale(events, [], DATE, sale("5", "80"), undefined);
+    expect(JSON.stringify(events)).toBe(before);
   });
 
   it("refuses to estimate a sale larger than the lots the ledger holds", () => {
     expect(() => estimateSale(fund().build(), [], DATE, sale("100", "150"), BRACKETS)).toThrow(
       DomainError,
     );
-  });
-});
-
-describe("taxOfBase", () => {
-  const tax = (base: string) => eur(taxOfBase(Money.parse(base, "EUR"), BRACKETS));
-
-  it("applies each rate to its slice only", () => {
-    expect(tax("1000")).toBe("190");
-    expect(tax("6000")).toBe("1140");
-    expect(tax("10000")).toBe("1980");
-    expect(tax("60000")).toBe("12680");
-  });
-
-  it("is zero for a base of zero or a loss", () => {
-    expect(tax("0")).toBe("0");
-    expect(tax("-500")).toBe("0");
-  });
-
-  it("is zero without brackets", () => {
-    expect(eur(taxOfBase(Money.parse("100", "EUR"), []))).toBe("0");
   });
 });
