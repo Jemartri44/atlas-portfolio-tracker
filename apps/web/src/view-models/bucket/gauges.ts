@@ -9,7 +9,7 @@
 // string and is rounded once, when it is shown.
 
 import type { BucketGauges } from "@atlas/domain/charts";
-import { formatPercent, meaningfulDecimals } from "../../format/number.js";
+import { pct } from "../../format/number.js";
 import type { ThesisRow } from "./theses.js";
 
 export interface GaugesView {
@@ -102,10 +102,6 @@ export interface MeterView {
   /** The one figure that adds the two books (constitution III). */
   both: boolean;
 }
-
-/** A percentage with the decimals that say something: «80 %», «6,5 %». */
-const pct = (value: string, signed = false): string =>
-  formatPercent(value, { decimals: meaningfulDecimals(value), ...(signed ? { signed } : {}) });
 
 /** The gauge `which`, or nothing when the domain could not measure it. */
 export const meterOf = (gauges: GaugesView, which: MeterKey): MeterView | undefined => {

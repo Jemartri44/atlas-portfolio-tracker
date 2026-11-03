@@ -1,6 +1,3 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   assertKnownFlags,
@@ -39,17 +36,17 @@ describe("parseArgs", () => {
 
   it("rejects malformed options and enforces value/boolean use", () => {
     expect(() => parseArgs(["---x"])).toThrow(UsageError);
-    const flags = parseArgs(["--a", "1", "--b"]).flags;
+    const flags = parseArgs(["--a", "1", "--json"]).flags;
     expect(stringFlag(flags, "a")).toBe("1");
     expect(stringFlag(flags, "missing")).toBeUndefined();
-    expect(() => stringFlag(flags, "b")).toThrow(UsageError);
+    expect(() => stringFlag(flags, "json")).toThrow(UsageError);
     expect(() => requireFlag(flags, "missing")).toThrow(UsageError);
     expect(requireFlag(flags, "a")).toBe("1");
-    expect(booleanFlag(flags, "b")).toBe(true);
-    expect(booleanFlag(flags, "missing")).toBe(false);
-    expect(() => booleanFlag(flags, "a")).toThrow(UsageError);
+    expect(booleanFlag(flags, "json")).toBe(true);
+    expect(booleanFlag(flags, "lots")).toBe(false);
+    expect(() => booleanFlag(new Map([["lots", "1"]]), "lots")).toThrow(UsageError);
     expect(() => assertKnownFlags(flags, ["a"])).toThrow(UsageError);
-    expect(() => assertKnownFlags(flags, ["a", "b"])).not.toThrow();
+    expect(() => assertKnownFlags(flags, ["a", "json"])).not.toThrow();
   });
 });
 
@@ -97,22 +94,9 @@ describe("parseArgs: a flag that never takes a value never swallows the next wor
     expect(parseArgs(["tax", "--lots", "2027"]).positionals).toEqual(["tax", "2027"]);
   });
 
-  it("knows every flag the commands read as a boolean", () => {
-    const src = join(dirname(fileURLToPath(import.meta.url)), "../src");
-    const files = (dir: string): string[] =>
-      readdirSync(dir).flatMap((entry) => {
-        const path = join(dir, entry);
-        return statSync(path).isDirectory() ? files(path) : path.endsWith(".ts") ? [path] : [];
-      });
-    const read = new Set(
-      files(src).flatMap((file) =>
-        [...readFileSync(file, "utf8").matchAll(/booleanFlag\(\s*[\w.]+,\s*"([a-z-]+)"/g)].map(
-          (match) => match[1] as string,
-        ),
-      ),
-    );
-    expect(read.size).toBeGreaterThan(8);
-    expect([...read].filter((name) => !BOOLEAN_FLAGS.has(name))).toEqual([]);
+  it("refuses to read as a boolean a flag the parser does not know as one", () => {
+    expect(() => booleanFlag(new Map(), "not-declared")).toThrow("BOOLEAN_FLAGS");
+    expect(() => booleanFlag(new Map(), "json")).not.toThrow();
   });
 });
 

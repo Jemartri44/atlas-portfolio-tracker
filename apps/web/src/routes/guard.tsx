@@ -8,11 +8,24 @@
 // typed and rebuilds its preview over the new ledger.
 
 import { A } from "@solidjs/router";
-import { createMemo, type JSX, Show } from "solid-js";
+import { createMemo, createSignal, type JSX, Show } from "solid-js";
 import { Notice, Skeleton } from "../components/index.js";
 import type { LedgerSnapshot } from "../ledger/state.js";
 import { store, today } from "../ledger/state.js";
 import { SessionNotice } from "../shell/SessionNotice.jsx";
+
+/**
+ * Counts the ledgers taken into the held view in place. The view is the same object, so a value
+ * computed from it (a memo over `snapshot.events`) would never learn that the ledger moved under
+ * it: reading this inside the memo is what makes it compute again after a `412`.
+ */
+const [revision, setRevision] = createSignal(0);
+
+/** The view, read so that the reader computes again when a `412` moves the ledger under it. */
+export const liveLedger = (snapshot: LedgerSnapshot): LedgerSnapshot => {
+  revision();
+  return snapshot;
+};
 
 interface RequireLedgerProps {
   /** Painted with the loaded ledger. */
@@ -64,6 +77,7 @@ export const RequireLedger = (props: RequireLedgerProps): JSX.Element => {
       if (next !== undefined) {
         Object.assign(held, next);
         heldEtag = next.etag;
+        setRevision((count) => count + 1);
       }
       return held;
     }
