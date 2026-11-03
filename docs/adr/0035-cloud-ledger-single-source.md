@@ -228,7 +228,7 @@ Va **antes de la 018**, para que el protocolo de la cola no llegue nunca a una n
   - en **ADR-0019** y **ADR-0026**, que ya llevan su nota de enmienda;
   - en **ADR-0032**: la capa 1, la tabla de qué falla, el paso 6 y la negativa por pendientes;
   - en **ADR-0027**: la salida de emergencia «sobre la réplica local» pasa a ser la consola en local sobre una copia;
-  - en **ADR-0029**: en la web, el BCE llega desde la nube (con su copia pública en IndexedDB), y los borradores pasan a la nube (E6), sin borradores en los clientes de nube hasta entonces;
+  - en **ADR-0029**: en la web, el BCE llega desde la nube (a memoria; sin copia en el dispositivo desde el 2026-11-03), y los borradores pasan a la nube (E6), sin borradores en los clientes de nube hasta entonces;
   - en **ADR-0027**, además: la sesión de la web pasa de 8 h a 24 h (`docs/api.md` §3);
   - en **ADR-0033**: el alcance del token ya no incluye publicar su cola;
   - en **ADR-0015**: `acceptInvalid` vale solo en local;

@@ -30,7 +30,7 @@ export interface WebQuotes {
   /**
    * Closes stored in a currency their source does not declare in
    * `prices/symbols.json`: left out, and
-   * said. Only known where `symbols.json` was imported with the closes.
+   * said. Only known where the cloud serves `symbols.json` with the closes.
    */
   readonly mismatched: readonly MismatchedCloses[];
   /**
@@ -106,7 +106,7 @@ export const forgetPrices = (): void => {
   held.clear();
 };
 
-const decoder = new TextDecoder("utf-8", { fatal: true });
+const decoder = new TextDecoder("utf-8");
 
 /** One file of `prices/` from the API, once per page; a failed read is not held. */
 const fileOf = (
@@ -122,7 +122,11 @@ const fileOf = (
       return decoder.decode(read.bytes);
     });
     held.set(name, reading);
-    reading.catch(() => held.delete(name));
+    reading.catch(() => {
+      if (held.get(name) === reading) {
+        held.delete(name);
+      }
+    });
   }
   return reading;
 };

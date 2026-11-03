@@ -100,12 +100,25 @@ let cached: Promise<WebHistory> | undefined;
 export const loadWebHistory = (
   request: typeof fetch = (...args) => fetch(...args),
 ): Promise<WebHistory> => {
-  cached ??= fromCloud(request, new Date()).then((web) => {
-    if (web.problem === "unavailable") {
-      cached = undefined;
-    }
-    return web;
-  });
+  if (cached === undefined) {
+    const reading: Promise<WebHistory> = fromCloud(request, new Date()).then(
+      (web) => {
+        // Only a clean answer is held; a failure, a half-rotated file or a damaged one is asked
+        // again next time. The identity check keeps a late answer from erasing a newer reading.
+        if (web.problem !== undefined && cached === reading) {
+          cached = undefined;
+        }
+        return web;
+      },
+      (error: unknown) => {
+        if (cached === reading) {
+          cached = undefined;
+        }
+        throw error;
+      },
+    );
+    cached = reading;
+  }
   return cached;
 };
 

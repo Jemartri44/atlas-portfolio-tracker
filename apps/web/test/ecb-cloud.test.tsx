@@ -68,6 +68,19 @@ describe("the ECB history of the cloud in the web", () => {
     expect(web.problem).toBe("unreadable");
   });
 
+  it("does not hold a half-rotated file: the next call asks again", async () => {
+    const holder = globalThis as { fetch: typeof fetch };
+    let hash: string | undefined = "0".repeat(64);
+    holder.fetch = (async (input: RequestInfo | URL) =>
+      referenceAnswer(
+        String(input),
+        hash === undefined ? { ecb: { csv } } : { ecb: { csv, hash } },
+      ) as Response) as typeof fetch;
+    expect((await loadWebHistory()).problem).toBe("unreadable");
+    hash = undefined;
+    expect((await loadWebHistory()).latest).toBe("2026-03-31");
+  });
+
   it("has no history, and no problem, when the cloud has none yet", async () => {
     expect(await loadWebHistory()).toEqual({ staleDays: 30 });
   });

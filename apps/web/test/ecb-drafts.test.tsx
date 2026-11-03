@@ -35,7 +35,6 @@ import {
 withGoldenLedger();
 
 const LEDGER = "ledger/ledger.jsonl";
-const _holder = globalThis as { indexedDB?: unknown };
 const synthetic = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), "../../../tests/fixtures/ecb/eurofxref-hist.csv"),
   "utf8",
