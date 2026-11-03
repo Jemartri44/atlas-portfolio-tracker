@@ -23,6 +23,7 @@ export const SUPPORTED_EVENT_TYPES = [
   "dividend",
   "interest",
   "external_income",
+  "tax_payment",
   "fx_exchange",
   "cash_deposit",
   "cash_withdrawal",
