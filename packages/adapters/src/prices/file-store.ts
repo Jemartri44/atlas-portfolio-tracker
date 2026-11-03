@@ -1,6 +1,6 @@
 // `prices/` next to the ledger, on the disk (ADR-0031, «Almacén»; data-schema
-// §1): `<asset_id>.jsonl`, `symbols.json`, `_status.json`, the `config.json`
-// the user writes and, in a folder that pulls from the cloud, `_cloud.json`.
+// §1): `<asset_id>.jsonl`, `symbols.json`, `_status.json` and the `config.json`
+// the user writes.
 //
 // **Every write under the lock of the ledger folder** (ADR-0026, Part B,
 // amended: one lock covers every write in the folder), atomic: a temporary
