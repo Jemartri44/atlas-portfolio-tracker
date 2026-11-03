@@ -31,8 +31,7 @@ describe("barOf", () => {
       "70 %",
       "10 %",
       "6 %",
-      "5 %",
-      "7 %",
+      "12 %",
     ]);
     expect(view.segments.reduce((sum, s) => sum + s.width, 0)).toBe(98);
   });
