@@ -32,3 +32,14 @@ export const computableRounded = (
   const rounded = gain.gain_eur_rounded.add(computable.sub(gain.gain_eur).roundToCents());
   return gain.gain_eur.isNegative() && rounded.amount.isPositive() ? zero() : rounded;
 };
+
+/**
+ * What a loss of the year leaves imputable on the form: its own result by its
+ * legs less what is **still** deferred of it at 31/12, each rounded on its own,
+ * as the row of the loss and the engine both compute it (criterion #6). Never
+ * above zero: a deferral cannot turn a loss into a gain.
+ */
+export const imputableRounded = (legs: Money, stillDeferred: Money): Money => {
+  const rounded = legs.sub(stillDeferred.roundToCents());
+  return rounded.isNegative() ? rounded : zero();
+};
