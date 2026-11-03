@@ -20,8 +20,7 @@ import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
 import { eur } from "../output/format.js";
 import { keyValue, table } from "../output/table.js";
 import { loadQuotes, sayNotes } from "../prices/load.js";
-import { requireId } from "./catalogue.js";
-import { confirmAndRecord, dateFlag, loadForQuery, renderQuery } from "./shared.js";
+import { confirmAndRecord, dateFlag, loadForQuery, renderQuery, requireId } from "./shared.js";
 
 /** A thesis as `--json` shows it, index comparison included. */
 export const jsonThesis = (thesis: BucketThesisView) => ({

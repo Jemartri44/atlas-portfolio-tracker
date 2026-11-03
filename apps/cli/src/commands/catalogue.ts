@@ -22,7 +22,6 @@ import {
   assertKnownFlags,
   booleanFlag,
   type Flags,
-  requireFlag,
   stringFlag,
   UsageError,
   wholeNumber,
@@ -586,13 +585,3 @@ export const settingsCommand = async (
   }
   throw new UsageError("uso: atlas settings set|show [--at YYYY-MM-DD]");
 };
-
-export const requireId = (positionals: string[], index: number, usage: string): string => {
-  const id = positionals[index];
-  if (id === undefined) {
-    throw new UsageError(usage);
-  }
-  return id;
-};
-
-export { requireFlag };

@@ -12,7 +12,7 @@
 // with the reminder while one is pending (`pendingDraftsNote`).
 
 import { dirname } from "node:path";
-import { FileDraftStore, readLocalConfig } from "@atlas/adapters";
+import { FileDraftStore } from "@atlas/adapters";
 import { type CivilDate, loadAndProject, type Ulid } from "@atlas/domain";
 import {
   type DraftStatus,
@@ -26,9 +26,9 @@ import {
 } from "@atlas/domain/ecb";
 import { assertKnownFlags, type Flags, UsageError } from "../args.js";
 import { CommandFailure, type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
+import { ecbOf } from "../ecb-history.js";
 import { cloudStoreOf } from "../folder-mode.js";
 import { day } from "../output/ecb.js";
-import { historyOf } from "./rates.js";
 import { answer, aside, cancelled, confirm, confirmAndRecord, preview, render } from "./shared.js";
 
 /** The drafts of the cloud for a cloud folder (ADR-0035), the folder's own `drafts/` otherwise. */
@@ -152,13 +152,6 @@ const listDrafts = async (ctx: Context): Promise<number> => {
     lines.join("\n"),
   );
   return EXIT.ok;
-};
-
-const ecbOf = async (
-  ctx: Context,
-): Promise<{ history?: EcbHistory; problem?: string; staleDays: number }> => {
-  const { ecb_stale_currency_days } = await readLocalConfig(dirname(ctx.ledgerPath));
-  return { ...(await historyOf(ctx)), staleDays: ecb_stale_currency_days };
 };
 
 const confirmDraft = async (ctx: Context, id: string | undefined): Promise<number> => {
