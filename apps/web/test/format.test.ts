@@ -14,7 +14,13 @@ import {
 } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { formatDate, formatInstantDate, formatLongDate } from "../src/format/date.js";
-import { eventLabel, FIELD_LABELS, fieldLabel, valueLabel } from "../src/format/labels.js";
+import {
+  eventLabel,
+  FIELD_LABELS,
+  fieldLabel,
+  VALUE_LABELS,
+  valueLabel,
+} from "../src/format/labels.js";
 import { describeError } from "../src/format/messages/errors.js";
 import { describeWarning } from "../src/format/messages/warnings.js";
 import { amountDisplay, formatMoney, formatQuantity, MASK, NO_DATA } from "../src/format/money.js";
@@ -34,6 +40,7 @@ import {
 } from "../src/format/number.js";
 import { maskFigures } from "../src/format/privacy.js";
 import { privacyFromPreference, themeFromPreference } from "../src/shell/preferences.js";
+import { FORM_SPECS } from "../src/view-models/forms/specs.js";
 import { goldenEvents } from "./helpers/golden.js";
 
 describe("roundDecimalString", () => {
@@ -232,6 +239,17 @@ describe("the label catalogue", () => {
       }
     }
     expect([...missing]).toEqual([]);
+  });
+
+  it("has a Spanish name for every literal option of a form", () => {
+    const raw = FORM_SPECS.flatMap((spec) =>
+      spec.fields.flatMap((field) =>
+        (field.values ?? [])
+          .filter((value) => VALUE_LABELS[value] === undefined)
+          .map((value) => `${spec.slug}.${field.name}=${value}`),
+      ),
+    );
+    expect(raw).toEqual([]);
   });
 
   it("falls back to the raw name instead of hiding an unknown field", () => {

@@ -28,12 +28,6 @@ export const EVENT_LABELS: Record<string, string> = {
   transfer_request_updated: "Cambio del traspaso",
   dividend: "Dividendo",
   interest: "Interés",
-  // A payment of the income tax return: what it is and which instalment.
-  payment: "Pago",
-  refund: "Devolución",
-  single: "Único",
-  first: "Primero (60 %)",
-  second: "Segundo (40 %)",
   external_income: "Rendimiento de fuera de la cartera",
   tax_payment: "Pago de la Renta",
   fx_exchange: "Cambio de divisa",
@@ -244,6 +238,12 @@ export const VALUE_LABELS: Record<string, string> = {
   // The kind of an income from outside the portfolio.
   dividend: "Dividendo",
   interest: "Interés",
+  // A payment of the income tax return: what it is and which instalment.
+  payment: "Pago",
+  refund: "Devolución",
+  single: "Único",
+  first: "Primero (60 %)",
+  second: "Segundo (40 %)",
   true: "Sí",
   false: "No",
 };
