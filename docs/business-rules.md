@@ -159,9 +159,9 @@ La declaración es **por contribuyente, no por libro**: la base del ahorro, la c
 
 ### 5.1 Base del ahorro
 
-Tipos vigentes según se entienden en agosto de 2026 (**verificar y mantener configurable**, `savings_tax_brackets`):
+Escala de la base del ahorro, **por año** (arts. 66.1 y 76 LIRPF, mitad estatal y mitad autonómica, régimen común), leída en el BOE redacción a redacción y guardada como datos en `packages/domain/src/tax/savings-scale.ts`. Desde 2025:
 
-| Tramo de ganancia anual | Tipo |
+| Tramo de base del ahorro | Tipo |
 |---|---|
 | Hasta 6.000€ | 19% |
 | 6.000 - 50.000€ | 21% |
@@ -169,7 +169,11 @@ Tipos vigentes según se entienden en agosto de 2026 (**verificar y mantener con
 | 200.000 - 300.000€ | 27% |
 | Más de 300.000€ | 30% |
 
-Los tramos se aplican a la **ganancia realizada en el ejercicio**, no al patrimonio ni al importe retirado. Solo tributa la plusvalía, no el capital aportado.
+Antes: 28 % por encima de 300.000 € en 2023-2024, 26 % por encima de 200.000 € en 2021-2022 y 23 % por encima de 50.000 € hasta 2020. Un año sin escala comprobada no tiene cuota. `savings_tax_brackets`, si se configura, sustituye a la escala en todos los años, y la cuota avisa cuando difiere de la ley.
+
+**Cuota estimada** (`savingsQuota`, criterio #27 de `fiscal-questions.md`): la escala sobre la base del ahorro, la deducción por doble imposición con sus dos límites y las retenciones del ahorro. Es una estimación: no conoce el resto de la Renta y supone que el mínimo personal y familiar se agota en la base general.
+
+Los tramos se aplican a la **base liquidable del ahorro** del ejercicio: ganancias realizadas y rendimientos del capital mobiliario **tras compensar** (art. 49), no al patrimonio ni al importe retirado. La cuota estimada supone que el **mínimo personal y familiar se agota en la base general** (art. 56.2); si no, parte de él rebaja la base del ahorro y la cuota real es menor. Solo tributa la plusvalía, no el capital aportado.
 
 ### 5.2 Traspaso entre fondos — el caso crítico
 
