@@ -79,6 +79,8 @@ describe("the monthly dump (E4, plan §8)", () => {
       expect(s3.conditions.filter((condition) => condition.key === key)).toEqual([
         { key, ifNoneMatch: "*" },
       ]);
+      // Born locked for 366 days, one over the floor the bucket policy demands (ADR-0032).
+      expect(s3.locks.get(key)?.toISOString(), key).toBe("2027-10-02T01:15:00.000Z");
     }
     const positions = JSON.parse(s3.text(`${DUMP}positions.json`) as string);
     expect(positions).toMatchObject({
@@ -220,12 +222,12 @@ describe("the monthly dump (E4, plan §8)", () => {
     const put = s3.putIfNoneMatch.bind(s3);
     let hang = true;
     let hung = false;
-    s3.putIfNoneMatch = (key, body) => {
+    s3.putIfNoneMatch = (key, body, lock) => {
       if (hang && key === `${DUMP}reference/ecb/eurofxref-hist.csv`) {
         hung = true;
         return new Promise(() => undefined);
       }
-      return put(key, body);
+      return put(key, body, lock);
     };
     void backup(s3).run(["monthly_backup"]);
     while (!hung) {

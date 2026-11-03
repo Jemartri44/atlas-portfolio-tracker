@@ -15,7 +15,9 @@ export {
 export { isMailAddress } from "./jobs/address.js";
 export { type AmountsSwitch, amountsSwitch } from "./jobs/amounts.js";
 export {
+  BACKUP_LOCK_DAYS,
   backupFindings,
+  backupRetainUntil,
   DUMP_LEDGER,
   DUMP_POSITIONS,
   type DumpStep,
