@@ -7,7 +7,7 @@
 import type { CoreWeights, Settings } from "@atlas/domain";
 import { projection } from "@atlas/domain/portfolio";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
-import { Amount, Field, Figure, Notice, Section, StatLine } from "../../components/index.js";
+import { Amount, Field, Figure, FoldSection, Notice, StatLine } from "../../components/index.js";
 import { valueLabel } from "../../format/labels.js";
 import {
   emptyProjectionInputs,
@@ -57,7 +57,28 @@ export const ProjectionCard = (props: {
     });
 
   return (
-    <Section title="Proyección" class="span-12 projection-card">
+    <FoldSection
+      title="Proyección"
+      class="span-12 projection-card"
+      summary={
+        <Show when={view()} fallback="Escribe las rentabilidades para ver dónde podría estar">
+          {(shown) => (
+            <Show when={shown().gap === undefined} fallback={`Sin cifra: ${shown().gap}`}>
+              <Show
+                when={shown().scenarios[0]?.end}
+                fallback="Falta la rentabilidad de algún tipo de activo"
+              >
+                {(end) => (
+                  <>
+                    <Amount value={end()} /> dentro de {shown().years} años
+                  </>
+                )}
+              </Show>
+            </Show>
+          )}
+        </Show>
+      }
+    >
       <p class="card-note">
         Dónde podría estar la cartera principal con tu aportación mensual y los pesos objetivo de
         Configuración, si cada tipo de activo rindiera lo que escribas. Sin rentabilidades por
@@ -189,6 +210,6 @@ export const ProjectionCard = (props: {
           </Show>
         )}
       </Show>
-    </Section>
+    </FoldSection>
   );
 };
