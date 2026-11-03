@@ -76,7 +76,7 @@
   font-weight: var(--fw-semibold);
 }
 
-.alloc + .pending {
+.bullets + .pending {
   margin-bottom: var(--space-2);
 }
 

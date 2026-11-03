@@ -126,6 +126,7 @@ export default function CarteraRoute(): JSX.Element {
                 settings={settings()}
                 absorbed={absorbed()}
                 names={names}
+                weightedTer={costs().core.weightedTer}
               />
               <ContributionCard
                 view={plan()}
