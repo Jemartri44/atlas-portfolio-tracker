@@ -25,5 +25,12 @@ export {
   type ContributedSeries,
   contributedSeries,
 } from "./charts/contributed.js";
+export {
+  type CoreReturn,
+  type CoreReturnGap,
+  coreReturn,
+  monthPeriod,
+  yearPeriod,
+} from "./charts/core-return.js";
 export { type BucketGauges, bucketGauges } from "./charts/gauges.js";
 export { type ThesisPct, thesisVsIndexPct } from "./charts/theses.js";

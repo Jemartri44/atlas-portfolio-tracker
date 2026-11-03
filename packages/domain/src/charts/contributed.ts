@@ -29,6 +29,7 @@ import { cashEurOf } from "../projections/bucket-stats.js";
 import { netWorth } from "../projections/networth.js";
 import { businessDateOf, liveOperations, projectLedger } from "../projections/project-ledger.js";
 import { readSeries, type SeriesOptions } from "../projections/series.js";
+import type { LedgerState } from "../projections/state.js";
 import type { LedgerEvent } from "../schema/events.js";
 
 export interface ContributedPoint {
@@ -45,17 +46,25 @@ export interface ContributedSeries {
   uncovered_buys: boolean;
 }
 
-interface Flow {
+export interface CoreFlow {
   date: CivilDate;
+  /** Positive for a deposit, negative for a withdrawal, in euros at the rate of its event. */
   eur: Money;
 }
 
-export const contributedSeries = (
-  events: readonly LedgerEvent[],
-  options: SeriesOptions,
-): ContributedSeries => {
-  const state = projectLedger(events, { collectErrors: true });
-  const flows: Flow[] = [];
+export interface CoreFlows {
+  flows: CoreFlow[];
+  firstBuy?: CivilDate;
+  firstDeposit?: CivilDate;
+}
+
+/**
+ * The money put into and taken out of the core book, by business date, and the first purchase and
+ * deposit, which say whether every purchase has the cash it came from. Shared with `coreReturn`, so
+ * the line drawn and the return measured count the same flows.
+ */
+export const coreCashFlows = (state: LedgerState, events: readonly LedgerEvent[]): CoreFlows => {
+  const flows: CoreFlow[] = [];
   let firstBuy: CivilDate | undefined;
   let firstDeposit: CivilDate | undefined;
   for (const event of liveOperations(state, events)) {
@@ -73,6 +82,24 @@ export const contributedSeries = (
       firstBuy = date;
     }
   }
+  return {
+    flows,
+    ...(firstBuy === undefined ? {} : { firstBuy }),
+    ...(firstDeposit === undefined ? {} : { firstDeposit }),
+  };
+};
+
+/** A purchase came before any deposit to pay for it (or there never was one). */
+export const buysUncovered = ({ firstBuy, firstDeposit }: CoreFlows): boolean =>
+  firstBuy !== undefined && (firstDeposit === undefined || firstBuy < firstDeposit);
+
+export const contributedSeries = (
+  events: readonly LedgerEvent[],
+  options: SeriesOptions,
+): ContributedSeries => {
+  const state = projectLedger(events, { collectErrors: true });
+  const core = coreCashFlows(state, events);
+  const { flows } = core;
   // The axis of the net worth, which tells the dates it cannot draw by their prices.
   const { dates, from, to } = readSeries(events, options, (at, date, settings, scan) => ({
     point: date,
@@ -87,7 +114,6 @@ export const contributedSeries = (
         .filter((flow) => flow.date <= date)
         .reduce((sum, flow) => sum.add(flow.eur), Money.zero("EUR")),
     })),
-    uncovered_buys:
-      firstBuy !== undefined && (firstDeposit === undefined || firstBuy < firstDeposit),
+    uncovered_buys: buysUncovered(core),
   };
 };
