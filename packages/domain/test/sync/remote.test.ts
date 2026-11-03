@@ -3,20 +3,25 @@
 
 import { describe, expect, it } from "vitest";
 import { fingerprintOfEvents } from "../../src/filings/fingerprint.js";
+import { MAX_DECIMAL_DIGITS } from "../../src/money/decimal.js";
 import type { AppendEntry } from "../../src/ports/remote-ledger.js";
 import { RemoteError } from "../../src/ports/remote-ledger.js";
 import type { BuyEvent, CashDepositEvent, LedgerEvent } from "../../src/schema/events.js";
-import { encodeLine } from "../../src/schema/line.js";
+import { decodeLine, encodeLine } from "../../src/schema/line.js";
 import { CURRENT_LEDGER_SCHEMA } from "../../src/schema/migrations/index.js";
+import { linesOfText } from "../../src/sync/lines.js";
 import {
   acceptAppend,
   acceptInit,
   initDuplicateIds,
   MAX_APPEND_UNITS,
+  MAX_LEDGER_BYTES,
+  MAX_LINE_BYTES,
   parseAppendBody,
   parseInitBody,
   type RemoteRules,
 } from "../../src/sync/remote.js";
+import { fixtureLines, fixtureText } from "../fixtures-path.js";
 import {
   baseLedger,
   byTradeDate,
@@ -26,6 +31,10 @@ import {
   reorderable,
   textOf,
 } from "./helpers.js";
+
+/** The ids a first device confirms for a whole file, as the client derives them. */
+const initIdsOf = (text: string): string[] =>
+  initDuplicateIds(linesOfText(text).map((line) => decodeLine(line, CURRENT_LEDGER_SCHEMA).event));
 
 const rules: RemoteRules = {
   schema: CURRENT_LEDGER_SCHEMA,
@@ -621,5 +630,84 @@ describe("the initialisation of an empty remote (§5.5, V6, V17)", () => {
       code: "domain_rejected",
       domain_code: "duplicate_id",
     });
+  });
+});
+
+describe("the size bounds of what the remote keeps", () => {
+  const { events } = baseLedger();
+  const remote = linesOf(events);
+  const withNotes = (builder: ReturnType<typeof device>, bytes: number, amount = "10") =>
+    builder.deposit({ account_id: "acc_fund", amount, notes: "n".repeat(bytes) });
+
+  it("refuses a line over MAX_LINE_BYTES, counted in bytes, and admits one at the bound", () => {
+    const b = device(700);
+    const bound = withNotes(b, MAX_LINE_BYTES - encodeLine(withNotes(device(701), 0)).length);
+    expect(encodeLine(bound).length).toBe(MAX_LINE_BYTES);
+    expect(acceptAppend(remote, plain([bound]), rules).accepted).toBe(1);
+    const over = withNotes(device(702), MAX_LINE_BYTES);
+    expect(acceptAppend(remote, plain([over]), rules)).toMatchObject({
+      accepted: 0,
+      rejected: { index: 0, code: "line_too_large", details: { limit: MAX_LINE_BYTES } },
+    });
+    // Two bytes per character: its length in characters is under the bound.
+    const multibyte = encodeLine(withNotes(device(703), 0)).replace(
+      /"notes":"[^"]*"/,
+      `"notes":"${"é".repeat(MAX_LINE_BYTES * 0.55)}"`,
+    );
+    expect(multibyte.length).toBeLessThan(MAX_LINE_BYTES);
+    expect(acceptAppend(remote, [{ line: multibyte }], rules).rejected?.code).toBe(
+      "line_too_large",
+    );
+  });
+
+  it("refuses an amount of more than MAX_DECIMAL_DIGITS digits as an invalid line", () => {
+    const b = device(710);
+    const long = b.deposit({ account_id: "acc_fund", amount: "1".repeat(MAX_DECIMAL_DIGITS + 1) });
+    expect(acceptAppend(remote, plain([long]), rules)).toMatchObject({
+      accepted: 0,
+      rejected: { code: "line_invalid", details: { domain_code: "invalid_field" } },
+    });
+    const ok = b.deposit({ account_id: "acc_fund", amount: "1".repeat(MAX_DECIMAL_DIGITS) });
+    expect(acceptAppend(remote, plain([ok]), rules).accepted).toBe(1);
+  });
+
+  it("refuses a unit that would take the ledger past MAX_LEDGER_BYTES, and keeps the units before it", () => {
+    const b = device(800);
+    const filler: LedgerEvent[] = [];
+    const room = MAX_LEDGER_BYTES - textOf(events).length;
+    const each = MAX_LINE_BYTES - 200;
+    for (let n = 0; n < Math.floor(room / (each + 1)) - 1; n += 1) {
+      filler.push(withNotes(b, each - 330, String(n + 1)));
+    }
+    const fat = linesOf([...events, ...filler]);
+    const size = fat.reduce((sum, line) => sum + line.length + 1, 0);
+    expect(size).toBeLessThan(MAX_LEDGER_BYTES);
+    const small = b.deposit({ account_id: "acc_fund", amount: "9999991" });
+    const big = withNotes(b, MAX_LINE_BYTES - 400, "9999992");
+    const answer = acceptAppend(fat, plain([small, big]), rules);
+    expect(answer.accepted).toBe(1);
+    expect(answer.rejected).toMatchObject({
+      index: 1,
+      code: "ledger_too_large",
+      details: { limit: MAX_LEDGER_BYTES },
+    });
+  });
+
+  it("refuses the initialisation of a ledger over MAX_LEDGER_BYTES, before reading a line", () => {
+    const huge = `${"x".repeat(MAX_LEDGER_BYTES)}\n`;
+    expect(() => acceptInit(huge, [], rules)).toThrow(
+      expect.objectContaining({
+        code: "init_rejected",
+        details: expect.objectContaining({ code: "ledger_too_large", limit: MAX_LEDGER_BYTES }),
+      }),
+    );
+  });
+
+  it("still takes the synthetic ledger and the hand-checked one, which the narrower schema must admit", () => {
+    for (const name of ["synthetic-v1.jsonl", "tax-hand-v1.jsonl"]) {
+      const text = fixtureText(name);
+      const later = { ...rules, now: new Date("2030-01-01T00:00:00Z") };
+      expect(acceptInit(text, initIdsOf(text), later)).toHaveLength(fixtureLines(name).length);
+    }
   });
 });

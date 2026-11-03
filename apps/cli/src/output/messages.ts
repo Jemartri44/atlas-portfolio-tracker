@@ -433,6 +433,8 @@ export const describeError = (error: DomainError): string => {
       return "--broker-settled-eur no puede ser cero en una compra, una venta o una comisión: si el extracto no da la cifra, no lo indiques (sin él, la cifra queda como desconocida).";
     case "ecb_history_unreadable":
       return `El histórico del BCE no tiene el formato esperado${d.line === undefined ? "" : ` (línea ${text(d.line)})`}: no se ha usado. Vuelve a descargarlo con \`atlas fx update\`.`;
+    case "ecb_history_future":
+      return `El histórico del BCE trae un día posterior a hoy (${text(d.latest)}): no se ha usado. Comprueba la fecha del equipo y vuelve a descargarlo con \`atlas fx update\`.`;
     case "draft_not_needed":
       return "Ningún tipo de esta operación está esperando al BCE: regístrala como siempre, sin --draft.";
     case "draft_changed":

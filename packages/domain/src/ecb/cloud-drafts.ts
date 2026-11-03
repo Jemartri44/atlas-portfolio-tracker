@@ -23,6 +23,13 @@ export const DRAFTS_PREFIX = "drafts/";
 /** A draft once serialized: far above a real one (a few hundred bytes). */
 export const MAX_DRAFT_BYTES = 65_536;
 
+/**
+ * Drafts that may be pending at once. A real one lives the seconds between saving an operation and
+ * writing it; some dozens of pending ones mean something is wrong. With this bound `GET /api/drafts`
+ * stays under the 6 MB the Function URL answers (32 x 64 KiB, JSON-escaped, is some 3 MB).
+ */
+export const MAX_PENDING_DRAFTS = 32;
+
 export type DraftObjectKind = "draft" | "stamp" | "end";
 
 const SUFFIX: Readonly<Record<DraftObjectKind, string>> = {

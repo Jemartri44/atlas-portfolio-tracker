@@ -14,6 +14,7 @@ import {
   endObjectText,
   listDraftNames,
   MAX_DRAFT_BYTES,
+  MAX_PENDING_DRAFTS,
   parseCreateDraftBody,
   parseEndBody,
   parseStampBody,
@@ -60,20 +61,28 @@ export const draftRoutes = (context: DraftsContext) => {
     const { pending, unreadable } = listDraftNames(
       listed.map(({ key }) => key.slice("drafts/".length)),
     );
-    const drafts = [];
     const lost = [...unreadable];
-    for (const { id, stamped: hasStamp } of pending) {
-      const saved = await textOf(objects, draftKey(id, "draft"));
-      const stamp = hasStamp ? await textOf(objects, draftKey(id, "stamp")) : undefined;
-      const pendingEventId = stamp === undefined ? undefined : readStampObject(id, stamp);
-      const draft =
-        saved === undefined || (hasStamp && pendingEventId === undefined)
-          ? undefined
-          : composeDraft(id, saved, pendingEventId);
-      if (draft === undefined) {
-        lost.push(`${id}.json`);
+    // In parallel: a listing of tens of drafts is tens of reads, one round-trip to S3 each.
+    const read = await Promise.all(
+      pending.map(async ({ id, stamped: hasStamp }) => {
+        const [saved, stamp] = await Promise.all([
+          textOf(objects, draftKey(id, "draft")),
+          hasStamp ? textOf(objects, draftKey(id, "stamp")) : undefined,
+        ]);
+        const pendingEventId = stamp === undefined ? undefined : readStampObject(id, stamp);
+        const draft =
+          saved === undefined || (hasStamp && pendingEventId === undefined)
+            ? undefined
+            : composeDraft(id, saved, pendingEventId);
+        return draft === undefined ? { lost: `${id}.json` } : { draft };
+      }),
+    );
+    const drafts = [];
+    for (const entry of read) {
+      if ("draft" in entry) {
+        drafts.push(entry.draft);
       } else {
-        drafts.push(draft);
+        lost.push(entry.lost);
       }
     }
     return {
@@ -91,6 +100,11 @@ export const draftRoutes = (context: DraftsContext) => {
     const bytes = utf8Encode(draftObjectText(read.value));
     if (bytes.length > MAX_DRAFT_BYTES) {
       return fail(refusal("body_too_large", { limit: MAX_DRAFT_BYTES }));
+    }
+    const names = (await objects.list()).map(({ key }) => key.slice("drafts/".length));
+    const { pending } = listDraftNames(names);
+    if (pending.length >= MAX_PENDING_DRAFTS && !names.includes(`${read.value.id}.json`)) {
+      return fail(refusal("too_many_drafts", { max: MAX_PENDING_DRAFTS }));
     }
     if ((await objects.create(draftKey(read.value.id, "draft"), bytes)) === "exists") {
       return fail(refusal("draft_exists"));

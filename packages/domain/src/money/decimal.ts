@@ -14,8 +14,18 @@ export type DecimalString = string;
 
 const DECIMAL_PATTERN = /^-?\d+(\.\d+)?$/;
 
+/**
+ * Digits a decimal string may carry, sign and point aside. Far above any amount, quantity or
+ * rate of a real ledger (the widest, a rate to ten decimals of a large sum, takes some 25);
+ * what it stops is a number of thousands of digits, whose arithmetic grows with its length.
+ */
+export const MAX_DECIMAL_DIGITS = 40;
+
 export const isDecimalString = (value: unknown): value is DecimalString =>
-  typeof value === "string" && DECIMAL_PATTERN.test(value);
+  typeof value === "string" &&
+  value.length <= MAX_DECIMAL_DIGITS + 2 &&
+  DECIMAL_PATTERN.test(value) &&
+  value.replace(/[-.]/g, "").length <= MAX_DECIMAL_DIGITS;
 
 export class Decimal {
   private constructor(private readonly value: BigValue) {}

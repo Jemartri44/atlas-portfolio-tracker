@@ -1,7 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "../../src/errors.js";
-import { Decimal, isDecimalString } from "../../src/money/decimal.js";
+import { Decimal, isDecimalString, MAX_DECIMAL_DIGITS } from "../../src/money/decimal.js";
 import { decimal, decimalString } from "../arbitraries.js";
 
 const d = (text: string): Decimal => Decimal.parse(text);
@@ -116,5 +116,16 @@ describe("Decimal properties", () => {
         expect(once.round(places).eq(once)).toBe(true);
       }),
     );
+  });
+});
+
+describe("the digit bound", () => {
+  it("accepts MAX_DECIMAL_DIGITS digits, the sign and the point aside, and refuses one more", () => {
+    const digits = "9".repeat(MAX_DECIMAL_DIGITS);
+    expect(isDecimalString(digits)).toBe(true);
+    expect(isDecimalString(`-${digits.slice(1)}.5`)).toBe(true);
+    expect(isDecimalString(`${digits}1`)).toBe(false);
+    expect(isDecimalString(`1.${"0".repeat(MAX_DECIMAL_DIGITS)}`)).toBe(false);
+    expect(() => Decimal.parse("1".repeat(200_000))).toThrow(ValidationError);
   });
 });

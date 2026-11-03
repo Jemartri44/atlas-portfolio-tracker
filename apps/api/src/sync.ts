@@ -37,7 +37,7 @@ import {
   textOfLines,
 } from "@atlas/domain/sync";
 import { fail, type Outcome } from "./outcome.js";
-import { bytes, bytesCompressed, json, notModified } from "./respond.js";
+import { bytesCompressed, json, notModified } from "./respond.js";
 
 /** The device a checked credential speaks for: the cookie's or the token's, never the body's. */
 export interface SyncCredential {
@@ -100,14 +100,19 @@ export const syncRoutes = (context: SyncContext) => {
     return { body, etag: sha256Hex(body), lines: linesOfText(decodeUtf8Strict(body, false)) };
   };
 
-  /** `GET /api/ledger` (§5.1): the exact bytes and their SHA-256, uninterpreted. */
-  const readLedger = async (): Promise<Outcome> => {
+  /** `GET /api/ledger` (§5.1): the exact bytes and their SHA-256, uninterpreted; gzip from 256 KiB. */
+  const readLedger = async (acceptEncoding?: string): Promise<Outcome> => {
     const body = await ledger.read();
     return {
-      result: bytes(200, body, {
-        "content-type": "application/x-ndjson; charset=utf-8",
-        etag: `"${sha256Hex(body)}"`,
-      }),
+      result: bytesCompressed(
+        200,
+        body,
+        {
+          "content-type": "application/x-ndjson; charset=utf-8",
+          etag: `"${sha256Hex(body)}"`,
+        },
+        acceptEncoding,
+      ),
       code: "ledger_read",
     };
   };
