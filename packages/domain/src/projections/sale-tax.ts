@@ -15,7 +15,7 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import { yearOf } from "../dates/civil-date.js";
 import { systemUlid } from "../ids/ulid.js";
-import { Decimal } from "../money/decimal.js";
+import { Decimal, HUNDRED } from "../money/decimal.js";
 import { Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
 import { CURRENT_SCHEMA_VERSION } from "../schema/envelope.js";
@@ -24,8 +24,6 @@ import { fingerprintOf } from "../schema/fingerprint.js";
 import type { TaxBracket } from "../settings/defaults.js";
 import type { TransmissionLine, TransmissionLot } from "../tax/report.js";
 import { taxYear } from "../tax/year.js";
-
-const HUNDRED = Decimal.parse("100");
 
 /** What is sold: the quantity and what the market pays for it at the informative price. */
 export interface HypotheticalSale {

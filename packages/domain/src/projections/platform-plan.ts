@@ -8,15 +8,13 @@
 // zero. It proposes and never writes: the orders are placed by hand.
 
 import type { CivilDate } from "../dates/civil-date.js";
-import { Decimal } from "../money/decimal.js";
+import { type Decimal, HUNDRED } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
 import type { AccountId, AssetId, BuyEvent, LedgerEvent, SellEvent } from "../schema/events.js";
 import { feeEurOf } from "./costs.js";
 import { businessDateOf, liveOperations } from "./project-ledger.js";
 import { type Account, cashKey, type LedgerState } from "./state.js";
-
-const HUNDRED = Decimal.parse("100");
 
 export type TradeSide = "buy" | "sell";
 

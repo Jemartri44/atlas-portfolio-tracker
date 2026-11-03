@@ -9,7 +9,7 @@
 // average at all.
 
 import type { CivilDate } from "../dates/civil-date.js";
-import { Decimal } from "../money/decimal.js";
+import { Decimal, HUNDRED } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
 import type { Currency } from "../money/money.js";
 import { EUR, Money } from "../money/money.js";
@@ -29,7 +29,6 @@ import type { ExternalPrices } from "./prices.js";
 import { businessDateOf, liveOperations } from "./project-ledger.js";
 import type { FiscalLot, LedgerState, RealizedGain, Warning } from "./state.js";
 
-const HUNDRED = Decimal.parse("100");
 /** Below this many closed theses, the sample says nothing (specification §6.2). */
 const SIGNIFICANT_SAMPLE = 100;
 /**

@@ -6,7 +6,7 @@
 // a partial total (constitution V).
 
 import type { CivilDate } from "../dates/civil-date.js";
-import { Decimal } from "../money/decimal.js";
+import { Decimal, HUNDRED } from "../money/decimal.js";
 import { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
 import type { AssetClass, AssetId } from "../schema/events.js";
@@ -63,8 +63,6 @@ export interface CoreWeights {
   stale_prices: AssetId[];
   warnings: Warning[];
 }
-
-const HUNDRED = Decimal.parse("100");
 
 const warn = (
   warnings: Warning[],

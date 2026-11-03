@@ -17,13 +17,11 @@
 import { type TokenRecord, tokenStatus } from "../access/token.js";
 import { addMonths, type CivilDate, daysBetween } from "../dates/civil-date.js";
 import { madridDateOf } from "../dates/madrid.js";
-import { Decimal } from "../money/decimal.js";
+import { Decimal, HUNDRED } from "../money/decimal.js";
 import { Money } from "../money/money.js";
 import type { ContributionPlan } from "../projections/contribution.js";
 import { ASSET_CLASSES, type AssetClass } from "../schema/events.js";
 import { previousPeriod } from "./periods.js";
-
-const HUNDRED = Decimal.parse("100");
 
 export interface ReminderInput {
   /** The period of the job, `YYYY-MM`. */

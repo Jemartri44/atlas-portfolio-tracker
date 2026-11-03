@@ -15,7 +15,7 @@
 // Informative: nothing fiscal reads it.
 
 import { type CivilDate, daysBetween } from "../dates/civil-date.js";
-import { Decimal } from "../money/decimal.js";
+import { type Decimal, HUNDRED } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
 import type { Currency } from "../money/money.js";
 import { EUR, Money } from "../money/money.js";
@@ -92,8 +92,6 @@ export interface NetWorthShares {
   bucket: Decimal;
   cash: Decimal;
 }
-
-const HUNDRED = Decimal.parse("100");
 
 const sharesOf = (
   total: Money,

@@ -6,7 +6,7 @@
 // bucket metric of rule 14 arrives with phase 3).
 
 import type { CivilDate } from "../dates/civil-date.js";
-import { Decimal } from "../money/decimal.js";
+import { Decimal, HUNDRED } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
 import { EUR, Money } from "../money/money.js";
 import { Price } from "../money/price.js";
@@ -29,7 +29,6 @@ import { businessDateOf, liveOperations } from "./project-ledger.js";
 import type { LedgerState } from "./state.js";
 import { coreAccountIds, coreQuantityOf } from "./weights.js";
 
-const HUNDRED = Decimal.parse("100");
 export interface CoreCostRow {
   asset_id: AssetId;
   asset_class: AssetClass;

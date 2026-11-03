@@ -9,11 +9,9 @@
 // `contribution_pct_of_cap > near_limit_pct` to `bucket_contribution_near_limit`
 // and `bucket_contribution_exceeded`. The interface draws; it never compares.
 
-import { Decimal } from "../money/decimal.js";
+import { Decimal, HUNDRED } from "../money/decimal.js";
 import { type BucketControls, NEAR_LIMIT_PCT } from "../projections/bucket-stats.js";
 import type { Settings } from "../settings/settings.js";
-
-const HUNDRED = Decimal.parse("100");
 
 export interface BucketGauges {
   /**

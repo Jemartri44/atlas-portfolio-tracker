@@ -18,7 +18,7 @@
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { type DomainError, ValidationError } from "../errors.js";
-import { Decimal } from "../money/decimal.js";
+import { Decimal, HUNDRED } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
 import type { AccountId, AssetClass, AssetId, LedgerEvent } from "../schema/events.js";
@@ -39,7 +39,6 @@ import type { Account, LedgerState, Warning } from "./state.js";
 import { transferBlock } from "./transfer-rule.js";
 import { coreWeights } from "./weights.js";
 
-const HUNDRED = Decimal.parse("100");
 const ZERO = Money.zero(EUR);
 
 export interface RebalanceInput {
