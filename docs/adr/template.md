@@ -13,7 +13,7 @@ Qué problema o pregunta obliga a decidir, y qué restricciones pesan (constituc
 
 ## Decisión
 
-Qué se elige y por qué, en un párrafo. Si depende de un criterio fiscal, marcar *verificar con asesor*.
+Qué se elige y por qué, en un párrafo. Si depende de un criterio fiscal, indicar el criterio de `docs/fiscal-questions.md` y su certeza.
 
 ## Consecuencias
 

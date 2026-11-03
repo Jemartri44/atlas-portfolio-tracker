@@ -1,6 +1,6 @@
 # ADR-0013 — Fecha fiscal y ventana de recompra por tipo de activo; sentido de `fx_rate`
 
-**Estado:** Aceptada (2026-08-30). Verificación resuelta el 2026-09-18: los criterios están fijados en `docs/fiscal-questions.md`, con su fundamento y su grado de certeza, por la dirección del proyecto y **sin asesor fiscal**; los de certeza baja quedan marcados allí para revisarlos antes de que muevan cantidades relevantes. Los valores por defecto se confirman con el asesor fiscal (`docs/fiscal-questions.md`). Origen: hallazgos 5, 6 y 7 del *challenge* externo. *La decisión 2 (ventana en días) está revisada por ADR-0014: se cuenta de fecha a fecha, con la forma `wash_sale_window` definida en `docs/data-schema.md` §8.4. La misma decisión 2 está revisada de nuevo el 2026-09-18 en lo relativo al traspaso entrante: ver la nota bajo la decisión.*
+**Estado:** Aceptada (2026-08-30); la decisión 2 (ventana en días) la revisa ADR-0014.
 
 ## Contexto
 
@@ -20,7 +20,7 @@ El esquema decía "la fecha valor manda para fiscalidad" de forma global. Para v
 
 - La constitución II pasa a decir "tipo de cambio del BCE de la fecha fiscal".
 - Casos límite obligatorios: venta el 30/12 con liquidación el 02/01; pérdida en fondo seguida de aportación mensual a los cinco meses.
-- Si el asesor corrige un valor por defecto, es un `settings_changed`, no un despliegue.
+- Si el criterio de un valor por defecto cambia, es un `settings_changed`, no un despliegue.
 
 ---
 
@@ -37,3 +37,7 @@ Este ADR daba por hecho que las participaciones de fondos **no** están admitida
 La decisión 3 de este ADR dice que `fx_rate` es «el tipo del BCE tal cual» sin fijar una forma exacta de la cadena. ADR-0029 lo resuelve al construir el histórico oficial en local: **solo el XML diario conserva los ceros finales** (por ejemplo, GBP `0.85950`); el histórico y la API del BCE los quitan (`0.8595`). Mismo número, distinta cadena — «tal cual se publica» tenía, sin que este ADR lo supiera, **dos lecturas posibles**.
 
 **La forma canónica es la del histórico oficial, sin ceros finales**, porque es la única reproducible para cualquier fecha pasada: es lo que la aplicación propone al registrar. **Toda comparación de integridad es numérica, nunca de cadena**, así que un tipo tecleado desde el XML diario con sus ceros finales sigue siendo el mismo tipo. También fija ADR-0029 qué tipo aplica un día sin publicación (la última fecha ≤ la fiscal con valor en el histórico, con el calendario TARGET como comprobación cruzada, no como fuente) y qué pasa cuando `fiscal_date_rule` cambia y un tipo guardado deja de corresponder a la fecha fiscal vigente (criterio nuevo, `docs/fiscal-questions.md`).
+
+## Notas de estado
+
+Aceptada (2026-08-30). Verificación resuelta el 2026-09-18: los criterios están fijados en `docs/fiscal-questions.md`, con su fundamento y su grado de certeza, por la dirección del proyecto y **sin asesor fiscal**; los de certeza baja quedan marcados allí para revisarlos antes de que muevan cantidades relevantes. Origen: hallazgos 5, 6 y 7 del *challenge* externo. *La decisión 2 (ventana en días) está revisada por ADR-0014: se cuenta de fecha a fecha, con la forma `wash_sale_window` definida en `docs/data-schema.md` §8.4. La misma decisión 2 está revisada de nuevo el 2026-09-18 en lo relativo al traspaso entrante: ver la nota bajo la decisión.*
