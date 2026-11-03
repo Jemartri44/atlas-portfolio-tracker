@@ -32,6 +32,8 @@ export const CONSOLE_ONLY: Record<string, Entry> = {
   dump_empty: () => "El volcado no tiene ningún evento: una copia vacía no prueba nada.",
   backup_mismatch: (d, v) =>
     `La copia ${v.text(d.path)} no coincide con el libro (etag o número de líneas): bórrala y repite.`,
+  documents_unreadable: (d, v) =>
+    `La carpeta ${v.text(d.path)} no se puede leer entera: no se sabe qué documentos hay que copiar. Arregla sus permisos y repite.`,
   path_exists: (d, v) => `La ruta ${v.text(d.path)} ya existe: no se sobrescribe nada.`,
   not_a_directory: (d, v) =>
     `La ruta ${v.text(d.path)} existe y no es una carpeta: indica la carpeta donde dejar la copia.`,

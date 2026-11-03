@@ -122,19 +122,22 @@ describe("atlas backup says what it could not copy of documents/", () => {
     expect(await readFile(join(target, "documents", "nota.txt"), "utf8")).toBe("nota");
   });
 
-  it("is an error, not «nothing to copy», when documents/ cannot be read", async () => {
-    const f = await folder();
-    await mkdir(join(f.dir, "documents", "cerrada"), { recursive: true });
-    await chmod(join(f.dir, "documents", "cerrada"), 0o000);
-    try {
-      const target = join(f.dir, "..", `copies-closed-${Date.now()}`);
-      expect(await f.atlas("backup", "--to", target)).toBe(EXIT.domain);
-      expect(f.text()).toContain("documents_unreadable");
-      expect(f.text()).not.toContain("no hay nada que copiar");
-    } finally {
-      await chmod(join(f.dir, "documents", "cerrada"), 0o700);
-    }
-  });
+  it.skipIf(process.getuid?.() === 0)(
+    "is an error, not «nothing to copy», when documents/ cannot be read",
+    async () => {
+      const f = await folder();
+      await mkdir(join(f.dir, "documents", "cerrada"), { recursive: true });
+      await chmod(join(f.dir, "documents", "cerrada"), 0o000);
+      try {
+        const target = join(f.dir, "..", `copies-closed-${Date.now()}`);
+        expect(await f.atlas("backup", "--to", target)).toBe(EXIT.domain);
+        expect(f.text()).toContain("no se puede leer entera");
+        expect(f.text()).not.toContain("no hay nada que copiar");
+      } finally {
+        await chmod(join(f.dir, "documents", "cerrada"), 0o700);
+      }
+    },
+  );
 });
 
 describe("atlas backup --from-bucket", () => {
