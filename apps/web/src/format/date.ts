@@ -38,31 +38,6 @@ export const formatMonth = (date: CivilDate): string => {
   return MONTHS[Number.parseInt(month, 10) - 1] ?? month;
 };
 
-/** An age in days, said the way a person says it. */
-export const formatAge = (days: number): string => {
-  if (days <= 0) {
-    return "hoy";
-  }
-  if (days === 1) {
-    return "ayer";
-  }
-  if (days < 30) {
-    return `hace ${days} días`;
-  }
-  if (days < 365) {
-    const months = Math.round(days / 30);
-    return months === 1 ? "hace un mes" : `hace ${months} meses`;
-  }
-  const years = Math.floor(days / 365);
-  return years === 1 ? "hace más de un año" : `hace más de ${years} años`;
-};
-
-/** Whole days between two civil dates, never negative. */
-export const daysSince = (from: CivilDate, to: CivilDate): number => {
-  const ms = Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`);
-  return Math.max(0, Math.round(ms / 86_400_000));
-};
-
 /**
  * `2026-09-18T20:15:00.000Z` → `18/09/2026`, for an export timestamp. The day is the
  * one in Madrid, as everywhere else in the application: 22:30 UTC on the 22nd is the 23rd there.

@@ -32,20 +32,9 @@ import {
   unpublishedRates,
 } from "@atlas/domain/ecb";
 import { ConfirmationRequired, type Context } from "../context.js";
+import { ecbOf } from "../ecb-history.js";
 import { day, ecbCheckSkipped } from "../output/ecb.js";
 import { aside } from "./shared.js";
-
-/** The history in force, or `undefined` — with the reason when there is one but it cannot be used. */
-export const historyOf = async (
-  ctx: Context,
-): Promise<{ history?: EcbHistory; problem?: string }> => {
-  try {
-    const active = await new FileEcbHistoryStore(dirname(ctx.ledgerPath)).active();
-    return active === undefined ? {} : { history: readEcbHistory(active.text, active.meta.source) };
-  } catch (error) {
-    return { problem: error instanceof Error ? error.message : String(error) };
-  }
-};
 
 interface RatedDraft {
   draft: Record<string, unknown>;
@@ -64,8 +53,7 @@ export const rateDraft = async (
   ctx: Context,
   draft: Record<string, unknown>,
 ): Promise<RatedDraft> => {
-  const { history, problem } = await historyOf(ctx);
-  const { ecb_stale_currency_days: stale } = await readLocalConfig(dirname(ctx.ledgerPath));
+  const { history, problem, staleDays: stale } = await ecbOf(ctx);
   let state: Awaited<ReturnType<typeof loadAndProject>>["state"];
   try {
     state = (await loadAndProject(ctx.deps, { collectErrors: true })).state;

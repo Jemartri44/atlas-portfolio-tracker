@@ -8,7 +8,7 @@
 // its field has the focus (§5.10), and what is written is what is on the form.
 
 import { BlobLedgerStore } from "@atlas/adapters/blob";
-import { decodeLine, type UseCaseDeps } from "@atlas/domain";
+import { decodeLine, recordEvent, type UseCaseDeps } from "@atlas/domain";
 import { beforeEach, describe, expect, it } from "vitest";
 import { loadInto } from "../src/ledger/actions.js";
 import Presentar from "../src/routes/fiscal/presentar.jsx";
@@ -20,11 +20,12 @@ import { press, settle, show, text, type, until, withGoldenLedger } from "./help
 withGoldenLedger();
 
 let blob: MemoryBlob;
+let deps: UseCaseDeps;
 
 const open = async (): Promise<void> => {
   blob = new MemoryBlob(goldenText());
   let counter = 0;
-  const deps: UseCaseDeps = {
+  deps = {
     store: new BlobLedgerStore(blob),
     clock: { now: () => new Date("2029-07-01T10:00:00.000Z") },
     random: (target) => {
@@ -180,5 +181,53 @@ describe("recording what was filed", () => {
     await press(open(), "Registrar de todas formas");
     await settle(30);
     expect(filings()).toBe(before + 1);
+  });
+});
+
+// A `412` reloads the ledger in place under the open form. The figures it shows (and the
+// declaration it would write, with its fingerprint) must be the ones of the new ledger.
+describe("recording what was filed after another device wrote (412)", () => {
+  beforeEach(open);
+
+  it("recomputes the figures on the new ledger and writes those, not the old ones", async () => {
+    const host = await openForm();
+    const base = host.querySelector("#f-base") as HTMLInputElement;
+    expect(base.value).toBe("184,89");
+    type(host, "f-receipt", "100-2027-ABCDEFGHIJKL");
+    type(host, "f-filed-at", "2028-06-12");
+    // Another device records a dividend of 2027 while this form is open.
+    await recordEvent(deps, {
+      type: "dividend",
+      account_id: "acc_mi",
+      asset_id: "ast_world",
+      value_date: "2027-12-01",
+      gross: "50",
+      withholding_origin: "0",
+      withholding_spain: "0",
+      currency: "EUR",
+      fx_rate: "1",
+      fx_rate_date: "2027-12-01",
+      source_country: "ES",
+    } as never);
+    await press(host, "Registrar lo presentado");
+    await settle(80);
+    const fresh = (host.querySelector("#f-base") as HTMLInputElement).value;
+    expect(fresh).not.toBe("184,89");
+    await press(host, "Registrar lo presentado");
+    await settle(80);
+    const event = lastEvent();
+    expect(event.type).toBe("tax_return_filed");
+    expect((event.computed as { savings_base_eur: string }).savings_base_eur).not.toBe("184.89");
+  });
+});
+
+describe("the year of the route", () => {
+  beforeEach(open);
+
+  it("is four digits: Number() would also read 1e3 or 0x7E9", async () => {
+    for (const year of ["1e3", "0x7E9"]) {
+      const host = await openForm(year as unknown as number);
+      expect(text(host)).toContain("Esa declaración no existe");
+    }
   });
 });

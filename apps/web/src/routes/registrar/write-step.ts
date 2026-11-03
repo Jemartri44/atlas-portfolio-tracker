@@ -10,6 +10,7 @@ import type { SaveResult } from "../../drafts/records.js";
 import type { WebHistory } from "../../ecb/history.js";
 import { correct, recordDraft, type WriteResult } from "../../ledger/write.js";
 import type { toDraft } from "../../view-models/forms/index.js";
+import { asDraftRecord } from "../../view-models/forms/values.js";
 import { doneUrl } from "../movimientos/Rectified.jsx";
 
 type Draft = ReturnType<typeof toDraft>;
@@ -26,11 +27,7 @@ export const writeStep = async (
     // the draft closed after (`drafts/records.ts`). A draft closed elsewhere
     // meanwhile is refused there: never recorded as a new operation.
     const { confirmDraft } = await import("../../drafts/records.js");
-    return confirmDraft(
-      target.fromDraft.id,
-      draft as unknown as Record<string, unknown>,
-      confirmDuplicate,
-    );
+    return confirmDraft(target.fromDraft.id, asDraftRecord(draft), confirmDuplicate);
   }
   const result =
     target.correcting === undefined
@@ -53,5 +50,5 @@ export const draftStep = async (
   again?: PendingDraft,
 ): Promise<SaveResult> => {
   const { saveDraft } = await import("../../drafts/records.js");
-  return saveDraft(draft as unknown as Record<string, unknown>, web, again);
+  return saveDraft(asDraftRecord(draft), web, again);
 };
