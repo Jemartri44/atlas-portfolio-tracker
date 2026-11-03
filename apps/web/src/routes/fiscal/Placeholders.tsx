@@ -42,7 +42,7 @@ export const NothingThisYear = (props: { year: number }): JSX.Element => (
   <Section title={`Ejercicio ${props.year}`} class="span-12">
     <EmptyState
       what="No hay nada que declarar en este ejercicio"
-      why="No se ha vendido nada, no han llegado rendimientos y no arrastras pérdidas. La base del ahorro es cero."
+      why="En tu cartera no se ha vendido nada, no han llegado rendimientos y no arrastras pérdidas: su base del ahorro es cero."
       glyph="check"
     />
   </Section>
