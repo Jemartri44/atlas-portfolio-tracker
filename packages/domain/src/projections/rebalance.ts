@@ -21,6 +21,7 @@ import { ValidationError } from "../errors.js";
 import { Decimal, HUNDRED } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
+import { byCode } from "../order.js";
 import type { AccountId, AssetClass, AssetId, LedgerEvent } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import type { TransmissionLot } from "../tax/report.js";
@@ -460,7 +461,7 @@ export const rebalancePlan = (
   }
 
   const moves: CashMove[] = [...cash.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => byCode(a, b))
     .map(([account_id, entry]) => ({
       account_id,
       platform: (state.accounts.get(account_id) as Account).platform,

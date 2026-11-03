@@ -32,6 +32,7 @@ import { FxRate } from "../money/fx-rate.js";
 import { EUR, Money } from "../money/money.js";
 import { Price } from "../money/price.js";
 import { Quantity } from "../money/quantity.js";
+import { byCode } from "../order.js";
 import { basisOf, fxOf, money } from "../projections/operations.js";
 import { priceAt } from "../projections/prices.js";
 import { businessDateOf, liveOperations, projectLedger } from "../projections/project-ledger.js";
@@ -341,7 +342,7 @@ export const classReturns = (events: readonly LedgerEvent[], to: CivilDate): Cla
     to,
     classes: ASSET_CLASSES.map((assetClass): ClassReturn => {
       const events = (unsupported.get(assetClass) as UnsupportedEvent[]).sort((a, b) =>
-        a.date === b.date ? a.event_id.localeCompare(b.event_id) : a.date.localeCompare(b.date),
+        a.date === b.date ? byCode(a.event_id, b.event_id) : byCode(a.date, b.date),
       );
       const base = { asset_class: assetClass, unsupported: events };
       const own = flows.get(assetClass) as Flow[];

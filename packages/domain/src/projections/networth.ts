@@ -19,6 +19,7 @@ import { type Decimal, HUNDRED } from "../money/decimal.js";
 import { FxRate } from "../money/fx-rate.js";
 import type { Currency } from "../money/money.js";
 import { EUR, Money } from "../money/money.js";
+import { byCode } from "../order.js";
 import type { AccountId, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import { type BucketPosition, bucketPositions, warn } from "./bucket.js";
@@ -185,8 +186,8 @@ const cashBlockOf = (
   }
   rows.sort((a, b) =>
     a.account_id === b.account_id
-      ? a.currency.localeCompare(b.currency)
-      : a.account_id.localeCompare(b.account_id),
+      ? byCode(a.currency, b.currency)
+      : byCode(a.account_id, b.account_id),
   );
   return { rows, total_eur: total, partial: missing.length > 0, missing_rates: missing };
 };

@@ -23,6 +23,7 @@ import type { CivilDate } from "../dates/civil-date.js";
 import { yearOf } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
 import { Money } from "../money/money.js";
+import { byCode } from "../order.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import type { AssetId, LedgerEvent } from "../schema/events.js";
 import { ASSET_TYPES } from "../schema/events.js";
@@ -109,13 +110,11 @@ export const repurchaseCalendar = (
       .sort()
       .at(-1) as CivilDate,
     at_stake_eur: sales.reduce((sum, sale) => sum.add(sale.at_stake_eur), zero),
-    sales: sales.sort((a, b) => a.until.localeCompare(b.until)),
+    sales: sales.sort((a, b) => byCode(a.until, b.until)),
   }));
   return {
     today,
     transfer_in_counts: washSaleTransferCounts(settings),
-    blocks: blocks.sort(
-      (a, b) => a.until.localeCompare(b.until) || a.asset_id.localeCompare(b.asset_id),
-    ),
+    blocks: blocks.sort((a, b) => byCode(a.until, b.until) || byCode(a.asset_id, b.asset_id)),
   };
 };

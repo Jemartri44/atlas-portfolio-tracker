@@ -11,6 +11,7 @@ import type { CivilDate } from "../dates/civil-date.js";
 import { type Decimal, HUNDRED } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
+import { byCode } from "../order.js";
 import type {
   AccountId,
   AssetId,
@@ -109,9 +110,7 @@ export const holdersOf = (
       holders.push({ account_id: account, quantity });
     }
   }
-  return holders.sort(
-    (a, b) => b.quantity.cmp(a.quantity) || a.account_id.localeCompare(b.account_id),
-  );
+  return holders.sort((a, b) => b.quantity.cmp(a.quantity) || byCode(a.account_id, b.account_id));
 };
 
 /**
@@ -240,7 +239,7 @@ export const platformPlan = (
   }
   return {
     rows: [...byAccount.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
+      .sort(([a], [b]) => byCode(a, b))
       .map(([account, lines]) => rowOf(state, account, lines)),
     unassigned,
   };

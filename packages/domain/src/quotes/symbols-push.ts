@@ -15,6 +15,7 @@
 // to repair it without the command line of AWS.
 
 import { DomainError, ValidationError } from "../errors.js";
+import { byCode } from "../order.js";
 import type { AssetId } from "../schema/events.js";
 import { parseSymbols, type SymbolEntry, type SymbolsFile } from "./symbols.js";
 
@@ -42,7 +43,7 @@ const canonical = (value: unknown): string =>
   JSON.stringify(value, (_key, item: unknown) =>
     typeof item === "object" && item !== null && !Array.isArray(item)
       ? Object.fromEntries(
-          Object.entries(item as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)),
+          Object.entries(item as Record<string, unknown>).sort(([a], [b]) => byCode(a, b)),
         )
       : item,
   );
