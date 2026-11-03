@@ -308,7 +308,7 @@ Decidido el 2026-09-25 (feature 015). **Los valores los crea y los rota el guion
 
 | Parámetro | Tipo | Valor | Caché en cada instancia |
 |---|---|---|---|
-| `/atlas/<entorno>/auth/allow-list` | `SecureString` | `{"allow_list_format":1,"entries":[{"sub":"…","email":"…"}]}`; el correo se compara **exacto** y además se exige `email_verified` | 120 s |
+| `/atlas/<entorno>/auth/allow-list` | `SecureString` | `{"allow_list_format":1,"entries":[{"sub":"…","email":"…"}]}`; el correo se compara **exacto** y además se exige `email_verified`; una clave repetida la hace ilegible (nadie entra) | 120 s |
 | `/atlas/<entorno>/auth/google-client-id` | `String` | el identificador del cliente OAuth del entorno | 300 s |
 | `/atlas/<entorno>/auth/google-client-secret` | `SecureString` | el secreto, tal cual | 300 s |
 | `/atlas/<entorno>/auth/session-key` | `SecureString` | 32 bytes aleatorios en base64url (43 caracteres); de ella salen las subclaves HKDF | 300 s: rotarla cierra todas las sesiones como mucho en 5 minutos |

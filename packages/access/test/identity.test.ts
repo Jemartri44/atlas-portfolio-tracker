@@ -130,6 +130,8 @@ describe("the allow list: the pair, together and exact (R17)", () => {
       JSON.stringify({ allow_list_format: 1, entries: [{ sub: "1", email: "e", x: 1 }] }),
       JSON.stringify({ allow_list_format: 1, entries: ["x"] }),
       JSON.stringify({ allow_list_format: 1, entries: [{ sub: "", email: "e" }] }),
+      '{"allow_list_format":1,"entries":[{"sub":"111","email":"a@example.test","email":"b@example.test"}]}',
+      '{"allow_list_format":1,"allow_list_format":1,"entries":[]}',
     ]) {
       expect(() => parseAllowList(bad)).toThrow(
         expect.objectContaining({ code: "allow_list_unreadable" }),
