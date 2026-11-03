@@ -1,4 +1,5 @@
-// The monthly dump (ADR-0032, point 3): the ledger byte for byte, `positions.json`, the ECB history
+// The monthly dump (ADR-0032, point 3): the ledger byte for byte, `positions.json`, the exposure the
+// owner declares (`settings/exposure.json`, typed by hand: it cannot be rebuilt), the ECB history
 // in force **with its manifest** and `prices/` whole, into `backups/<YYYY-MM>/` of the month of
 // Madrid. It composes and decides nothing — what to do with each object is the domain's
 // (`dumpStep`, `dumpManifestStep`) — and **it sends nothing**: what fails is a finding in its
@@ -20,6 +21,7 @@ import {
   activeHistoryOf,
   backupFindings,
   backupRetainUntil,
+  DUMP_EXPOSURE,
   DUMP_LEDGER,
   DUMP_POSITIONS,
   type DumpObject,
@@ -30,6 +32,7 @@ import {
   positionsDocument,
   serializePositions,
 } from "@atlas/domain/jobs";
+import { EXPOSURE_KEY } from "@atlas/domain/portfolio";
 import { textOf } from "../ecb-history.js";
 import { ledgerOfBytes } from "../ledger.js";
 import { errorName } from "../log.js";
@@ -64,6 +67,7 @@ export const monthlyBackup: TaskRunner = async (context: TaskContext): Promise<T
     prices_skipped: 0,
     ecb: 0,
     positions: 0,
+    exposure: 0,
   };
 
   /** Puts `bytes` at `relative` in the dump, or leaves what is there: never over it. */
@@ -158,7 +162,17 @@ export const monthlyBackup: TaskRunner = async (context: TaskContext): Promise<T
       positionsMissing = true;
     }
 
-    // 3. The ECB history in force, then its manifest — only over the very file it names.
+    // 3. The exposure of the owner, as it is, if there is one: no object is not a failure. The
+    // job never judges it; the dump keeps the bytes that were there.
+    const exposure = await deps.objects.get(EXPOSURE_KEY);
+    if (exposure !== undefined) {
+      if ((await put(DUMP_EXPOSURE, exposure.body)).kind === "differs") {
+        return done({ differs: 1, positionsMissing });
+      }
+      counts.exposure = 1;
+    }
+
+    // 4. The ECB history in force, then its manifest — only over the very file it names.
     // None in force that matches its manifest: the dump goes without, and says so.
     let ecbInconsistent = false;
     let ecbMissing = false;
@@ -193,7 +207,7 @@ export const monthlyBackup: TaskRunner = async (context: TaskContext): Promise<T
       ecbMissing = true;
     }
 
-    // 4. prices/, every object of its first level with a plain name.
+    // 5. prices/, every object of its first level with a plain name.
     for (const listed of await deps.objects.list(PRICES_DIR)) {
       const name = listed.key.slice(PRICES_DIR.length);
       if (!dumpablePriceName(name)) {

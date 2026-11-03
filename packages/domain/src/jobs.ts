@@ -18,6 +18,7 @@ export {
   BACKUP_LOCK_DAYS,
   backupFindings,
   backupRetainUntil,
+  DUMP_EXPOSURE,
   DUMP_LEDGER,
   DUMP_POSITIONS,
   type DumpStep,
