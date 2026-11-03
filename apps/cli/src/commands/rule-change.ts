@@ -10,11 +10,8 @@
 // Nothing is recalculated: every figure keeps using the rate of the ledger
 // until the user writes the correction. The rules are the domain's.
 
-import { dirname } from "node:path";
-import { readLocalConfig } from "@atlas/adapters";
 import { type LedgerEvent, type Settings, todayInMadrid } from "@atlas/domain";
 import {
-  type EcbHistory,
   prepareRateCorrections,
   type RuleChangeLine,
   ruleChangeRates,
@@ -23,20 +20,14 @@ import {
 import { closedYearImpact } from "@atlas/domain/fiscal";
 import { assertKnownFlags, type Flags, stringFlag } from "../args.js";
 import { type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
+import { ecbOf } from "../ecb-history.js";
 import { closedYearLines } from "../output/closed-years.js";
 import { day } from "../output/ecb.js";
-import { historyOf } from "./rates.js";
 import { answer, aside, cancelled, confirm } from "./shared.js";
 
 /** The reason written into every reversal of the chain, unless the user gives one. */
 const CORRECTION_REASON =
   "Tipo del BCE de la fecha fiscal vigente, tras cambiar fiscal_date_rule (criterio 25)";
-
-const ecb = async (ctx: Context): Promise<{ history?: EcbHistory; staleDays: number }> => {
-  const { history } = await historyOf(ctx);
-  const { ecb_stale_currency_days } = await readLocalConfig(dirname(ctx.ledgerPath));
-  return { ...(history === undefined ? {} : { history }), staleDays: ecb_stale_currency_days };
-};
 
 const official = (line: { official?: { rate: string; date: string } }): string =>
   line.official === undefined
@@ -65,7 +56,7 @@ export const confirmRuleChangeRates = async (
   current: Settings,
   next: Settings,
 ): Promise<{ go: boolean; lines: number }> => {
-  const { history, staleDays } = await ecb(ctx);
+  const { history, staleDays } = await ecbOf(ctx);
   const impact = ruleChangeRates(history, events, current, next, staleDays);
   if (impact.lines.length === 0) {
     return { go: true, lines: 0 };
@@ -89,7 +80,7 @@ export const confirmRuleChangeRates = async (
 /** `atlas fx correct [--reason …]`: the chain, whole, and one write after a yes. */
 export const correctRates = async (ctx: Context, flags: Flags): Promise<number> => {
   assertKnownFlags(flags, ["reason", ...GLOBAL_FLAGS]);
-  const { history, staleDays } = await ecb(ctx);
+  const { history, staleDays } = await ecbOf(ctx);
   const reason = stringFlag(flags, "reason") ?? CORRECTION_REASON;
   const prepared = await prepareRateCorrections(ctx.deps, history, staleDays, reason);
   if (prepared.corrections.length === 0) {

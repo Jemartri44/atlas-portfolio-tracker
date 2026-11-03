@@ -48,7 +48,6 @@ export interface AttentionItem {
 const DESTINATIONS: Record<string, { label: string; to: string }> = {
   invalid_events: { label: "Ver la verificación", to: "/ajustes/verificacion" },
   integrity_finding: { label: "Ver la verificación", to: "/ajustes/verificacion" },
-  export_overdue: { label: "Exportar tus datos", to: "/ajustes" },
   // Prices and rates are fixed by recording a valuation.
   stale_price: { label: "Registrar valoración", to: "/registrar/valuation" },
   stale_fx_rate: { label: "Registrar valoración", to: "/registrar/valuation" },
@@ -88,15 +87,11 @@ const DESTINATIONS: Record<string, { label: string; to: string }> = {
 };
 
 /**
- * Importance, top to bottom. **Losing the data comes first**: a ledger that
- * lives only in the browser and has not been exported is one "clear site data"
- * away from being gone, and nothing else on the list survives that. Then a
- * degraded ledger (nothing can be recorded), the conduct rules of the plan that
+ * Importance, top to bottom. A degraded ledger (nothing can be recorded), the conduct rules of the plan that
  * are already breached, the fiscal cost already incurred, what is pending with
  * the broker, and what is missing in order to be able to compute at all.
  */
 const RANKS: readonly string[] = [
-  "export_overdue",
   "invalid_events",
   "integrity_finding",
   "bucket_stop_loss_reached",
@@ -135,8 +130,6 @@ const RANKS: readonly string[] = [
 ];
 
 const SEVERITIES: Record<string, AttentionSeverity> = {
-  // An error, not a warning: it is the one item that can cost everything.
-  export_overdue: "error",
   invalid_events: "error",
   integrity_finding: "error",
   bucket_stop_loss_reached: "error",
@@ -333,23 +326,6 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
       a.message.localeCompare(b.message),
   );
 };
-
-/**
- * The risk of losing the data: the first line of the
- * summary, always, and never again inside *Atención* — a notice said in its
- * place is not repeated in a list (docs/design/system.md §5.6). The ledger
- * lives only in the browser and has not been exported for more than a week,
- * or ever: one «clear site data» away from being gone.
- */
-export const dataLossItem = (days: number | "never"): AttentionItem =>
-  itemOf(
-    "export_overdue",
-    // The sentence of the mockup, short enough for one line on the monitor:
-    // what follows from it is said in Ajustes, where the export is.
-    days === "never"
-      ? "Tus datos viven en el navegador y nunca los has exportado."
-      : `Tus datos viven en el navegador y hace ${countOf(days, "día", "días")} que no los exportas.`,
-  );
 
 /** The start of what is said when the tax engine could not answer; the reason follows. */
 export const FAILED_TO_CALCULATE = "No se ha podido calcular lo que toca presentar:";

@@ -191,7 +191,9 @@ describe("FileLedgerStore: the folder lock", () => {
     `${JSON.stringify({ holder: "cli", token: "someone-else", since, pid: 1, host: "otra" })}\n`;
 
   it("loses no line when two writers append on the same etag at once (mutant 1: no lock)", async () => {
-    for (let round = 0; round < 50; round += 1) {
+    // The rounds run side by side (each in its own folder): 50 races, but the waits on the disk
+    // overlap instead of adding up, so the test does not depend on how loaded the machine is.
+    const round = async (): Promise<void> => {
       const { path } = await fresh(`${lineOf(account)}\n`);
       const { etag } = await new FileLedgerStore(path).load();
       const outcomes = await Promise.allSettled([
@@ -208,7 +210,8 @@ describe("FileLedgerStore: the folder lock", () => {
         }
       }
       expect((await new FileLedgerStore(path).load()).events).toHaveLength(2);
-    }
+    };
+    await Promise.all(Array.from({ length: 50 }, round));
   });
 
   it("does not write while another writer holds the lock, however old (mutants 1 and 2)", async () => {

@@ -13,18 +13,11 @@ import {
   type Warning,
 } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
-import { formatAge, formatDate, formatInstantDate, formatLongDate } from "../src/format/date.js";
+import { formatDate, formatInstantDate, formatLongDate } from "../src/format/date.js";
 import { eventLabel, FIELD_LABELS, fieldLabel, valueLabel } from "../src/format/labels.js";
 import { describeError } from "../src/format/messages/errors.js";
 import { describeWarning } from "../src/format/messages/warnings.js";
-import {
-  amountDisplay,
-  formatMoney,
-  formatQuantity,
-  formatUnitValue,
-  MASK,
-  NO_DATA,
-} from "../src/format/money.js";
+import { amountDisplay, formatMoney, formatQuantity, MASK, NO_DATA } from "../src/format/money.js";
 import {
   displayName,
   displayNames,
@@ -122,10 +115,6 @@ describe("the privacy gate", () => {
     expect(formatMoney(Money.parse("-10", "EUR"), { signed: true })).toBe("−10,00\u00a0€");
   });
 
-  it("formats a unit value with four decimals, which is what a NAV needs", () => {
-    expect(formatUnitValue(Money.parse("210.12345", "EUR"))).toBe("210,1235\u00a0€");
-  });
-
   it("formats a quantity trimming the trailing zeros, because fractions are real", () => {
     expect(formatQuantity(Quantity.parse("12"))).toBe("12");
     expect(formatQuantity(Quantity.parse("12.5"))).toBe("12,5");
@@ -219,16 +208,6 @@ describe("dates", () => {
     expect(formatInstantDate("2026-09-18T20:15:00.000Z")).toBe("18/09/2026");
     expect(formatInstantDate("no es una fecha")).toBe("no es una fecha");
     expect(formatInstantDate("2026-10-22T22:30:00.000Z")).toBe("23/10/2026");
-  });
-
-  it("says an age the way a person says it", () => {
-    expect(formatAge(0)).toBe("hoy");
-    expect(formatAge(1)).toBe("ayer");
-    expect(formatAge(9)).toBe("hace 9 días");
-    expect(formatAge(31)).toBe("hace un mes");
-    expect(formatAge(200)).toBe("hace 7 meses");
-    expect(formatAge(400)).toBe("hace más de un año");
-    expect(formatAge(900)).toBe("hace más de 2 años");
   });
 });
 

@@ -13,7 +13,6 @@ import { dirname } from "node:path";
 import {
   AlphaVantagePriceSource,
   EodhdPriceSource,
-  FileEcbHistoryStore,
   FilePriceStore,
   type Keys,
   readLocalConfig,
@@ -22,7 +21,7 @@ import {
   secretsPath,
 } from "@atlas/adapters";
 import { type AssetId, DomainError, type ExternalPrices, type LedgerState } from "@atlas/domain";
-import { type EcbHistory, readEcbHistory } from "@atlas/domain/ecb";
+import type { EcbHistory } from "@atlas/domain/ecb";
 import {
   ecbRatesOnly,
   externalPricesOf,
@@ -33,6 +32,7 @@ import {
   type UnreadableCloses,
 } from "@atlas/domain/quotes";
 import type { Context } from "../context.js";
+import { historyIn } from "../ecb-history.js";
 import { describeError } from "../output/messages.js";
 import { mismatchedNotes } from "../output/prices.js";
 
@@ -84,14 +84,14 @@ interface LoadedQuotes {
 }
 
 const historyOf = async (folder: string): Promise<{ history?: EcbHistory; note?: string }> => {
-  try {
-    const active = await new FileEcbHistoryStore(folder).active();
-    return active === undefined ? {} : { history: readEcbHistory(active.text, active.meta.source) };
-  } catch {
-    return {
-      note: "El histórico del BCE junto al libro no se ha podido leer: las cotizaciones que no están en euros se enseñan en su divisa y sin valor en euros.",
-    };
-  }
+  const { history, problem } = await historyIn(folder);
+  return problem === undefined
+    ? history === undefined
+      ? {}
+      : { history }
+    : {
+        note: "El histórico del BCE junto al libro no se ha podido leer: las cotizaciones que no están en euros se enseñan en su divisa y sin valor en euros.",
+      };
 };
 
 /** Says the problems of the automatic prices before a view, on the error channel (never in `--json`'s output). */

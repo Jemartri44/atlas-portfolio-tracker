@@ -11,7 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { FakeIdbFactory } from "../../../packages/adapters/test/fake-idb.js";
 import { reloadWebHistory } from "../src/ecb/history.js";
 import Verificacion from "../src/routes/ajustes/verificacion.jsx";
-import { settle, show, text, withGoldenLedger } from "./helpers/render.jsx";
+import { show, text, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -30,16 +30,6 @@ const section = (host: HTMLElement): string =>
       text(candidate.querySelector("h2")).includes("Tipos del BCE"),
     ),
   );
-
-const until = async (condition: () => boolean, ms = 3000): Promise<void> => {
-  const deadline = Date.now() + ms;
-  while (!condition()) {
-    if (Date.now() > deadline) {
-      throw new Error("no llegó a pasar");
-    }
-    await settle(5);
-  }
-};
 
 describe("the ECB rates in the verification", () => {
   it("says «sin contrastar» without a history, never «sin hallazgos»", async () => {
