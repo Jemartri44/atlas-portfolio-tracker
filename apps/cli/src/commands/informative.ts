@@ -1,219 +1,17 @@
-// atlas m720 <año> [--json] · atlas m721 <año> [--json]
+// atlas m720 <año> · atlas m721 <año> — the informative returns, as JSON.
 //
-// Two commands and not `atlas tax 720`, which the argument parser would read as
-// the tax year 720.
-//
-// The CLI only formats: what counts, what it is worth, whether it obliges and
-// why is decided in `packages/domain/src/informative/`.
+// Two commands and not `atlas tax 720`, which the argument parser would read as the tax year 720.
+// The web (Fiscal) is where they are read; the console keeps the report for checking a verdict
+// without it. What counts, what it is worth, whether it obliges and why is decided in
+// `packages/domain/src/informative/`.
 
 import { todayInMadrid } from "@atlas/domain";
-import type {
-  InformativeCategory,
-  InformativeItem,
-  InformativeReturn,
-  VerdictReason,
-} from "@atlas/domain/fiscal";
 import { informativeReturn } from "@atlas/domain/fiscal";
 import { assertKnownFlags, type Flags } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
-import { CRITERION_LABELS } from "../output/criteria.js";
-import { eur } from "../output/format.js";
-import { table } from "../output/table.js";
-import { describeWarning } from "../output/warnings.js";
-import { loadForQuery, renderQuery, reportYear } from "./shared.js";
+import { jsonText, loadForQuery, reportYear } from "./shared.js";
 
-const USAGE = "uso: atlas m720 <año> [--json] · atlas m721 <año> [--json]";
-
-/** What a category amounts to for the model: below the threshold, over it, or to be declared. */
-const VERDICT: Record<InformativeCategory["verdict"], string> = {
-  obliged: "OBLIGADO",
-  not_obliged: "no obligado",
-  // Not the same as "no obligado": nothing has been written down in this
-  // category, so there is nothing to be under the threshold.
-  nothing_recorded: "no hay nada registrado",
-  undetermined: "NO SE PUEDE DETERMINAR",
-  not_applicable: "sin veredicto",
-};
-
-const FLAG: Record<InformativeItem["flags"][number], string> = {
-  valuation_not_year_end: "la valoración no es del 31/12",
-  rate_not_year_end: "el tipo no es el del último día hábil",
-  price_missing: "falta la valoración a 31/12",
-};
-
-const CATEGORY: Record<string, string> = {
-  accounts: "Cuentas",
-  securities: "Valores",
-  crypto: "Criptomonedas",
-};
-
-const reasonText = (reason: VerdictReason): string => {
-  switch (reason.kind) {
-    case "threshold":
-      return `supera el umbral (${eur(reason.after_eur)})`;
-    case "first_time_category":
-      return `supera el umbral y esta categoría no se declaró en el ${String(reason.against_year)} (${eur(reason.after_eur)})`;
-    case "increase":
-      return `sube más del límite sobre el ${String(reason.against_year)}: ${eur(reason.before_eur)} → ${eur(reason.after_eur)}`;
-    case "increase_q4_average":
-      return `el saldo medio del cuarto trimestre sube más del límite sobre el ${String(reason.against_year)}: ${eur(reason.before_eur)} → ${eur(reason.after_eur)}`;
-    case "partial_extinction":
-      return `has transmitido (venta, permuta o traspaso) ${reason.asset_id ?? reason.account_id}, que se declaró en el ${String(reason.against_year)}`;
-    case "extinction":
-      return `se ha dejado de tener ${reason.asset_id ?? reason.account_id}, que se declaró en el ${String(reason.against_year)}`;
-    default:
-      return `aviso: ${eur(reason.after_eur)}, cerca del umbral`;
-  }
-};
-
-/**
- * How many days the average of the fourth quarter covers, **per currency**.
- *
- * The column used to print the days of the first balance and call it the
- * account's: an account with euros since January and dollars since November
- * has two different periods behind its average, and one of them was shown as
- * if it were both. One figure when they agree, one per currency when they do
- * not, in the same order as the balances beside it.
- */
-const daysText = (item: InformativeItem): string => {
-  const days = (item.balances ?? []).map((part) => part.days);
-  const distinct = [...new Set(days)];
-  if (days.length === 0) {
-    return "";
-  }
-  return distinct.length === 1 ? String(distinct[0]) : days.join(" · ");
-};
-
-const accountRows = (items: readonly InformativeItem[]): string[][] =>
-  items.map((item) => [
-    item.account_id,
-    (item.balances ?? [])
-      .map((part) => `${part.amount.amount.toString()} ${part.currency}`)
-      .join(" · "),
-    eur(item.value_eur),
-    eur(item.q4_average_eur),
-    daysText(item),
-    item.flags.map((flag) => FLAG[flag]).join("; "),
-  ]);
-
-const assetRows = (items: readonly InformativeItem[]): string[][] =>
-  items.map((item) => [
-    item.account_id,
-    item.asset_id ?? "",
-    item.quantity?.toString() ?? "",
-    item.unit_value === undefined ? "—" : `${item.unit_value} (${item.valuation_date ?? "?"})`,
-    item.fx_rate === undefined ? "—" : `${item.fx_rate} (${item.fx_rate_date ?? "?"})`,
-    eur(item.value_eur),
-    item.flags.map((flag) => FLAG[flag]).join("; "),
-  ]);
-
-const categoryText = (category: InformativeCategory, index: number): string => {
-  const heading = `\n${index}. ${CATEGORY[category.category] ?? category.category}`;
-  const body =
-    category.category === "accounts"
-      ? table(
-          ["cuenta", "saldos", "a 31/12 EUR", "medio 4T EUR", "días", "marcas"],
-          accountRows(category.items),
-        )
-      : table(
-          ["cuenta", "activo", "cantidad", "valoración", "tipo BCE", "valor EUR", "marcas"],
-          assetRows(category.items),
-        );
-  const total =
-    category.category === "accounts"
-      ? `Total a 31/12 ${eur(category.value_eur)} · medio del cuarto trimestre ${eur(category.q4_average_eur)}`
-      : `Total ${eur(category.value_eur)}`;
-  const lines = [heading, body, `${total} → ${VERDICT[category.verdict]}`];
-  for (const reason of category.reasons) {
-    lines.push(`  · ${reasonText(reason)}`);
-  }
-  if (category.missing.length > 0) {
-    lines.push(
-      `Falta para poder decidir: ${category.missing
-        .map(
-          (entry) =>
-            `${entry.account_id}${entry.asset_id === undefined ? "" : `/${entry.asset_id}`} (${FLAG[entry.flag]})`,
-        )
-        .join(", ")}. Registra las valoraciones a 31/12.`,
-    );
-  }
-  if (category.decided_with.length > 0) {
-    lines.push(
-      `Decidido con ${category.decided_with.length === 1 ? "un valor marcado" : "valores marcados"}: ${category.decided_with
-        .map(
-          (entry) =>
-            `${entry.account_id}${entry.asset_id === undefined ? "" : `/${entry.asset_id}`}`,
-        )
-        .join(", ")}. Sin él, el veredicto sería otro.`,
-    );
-  }
-  return lines.join("\n");
-};
-
-const PERIOD: Record<InformativeReturn["period"], string> = {
-  closed_year: "ejercicio cerrado",
-  current_year: "año en curso, estado a la fecha de consulta",
-  before_model: "el modelo no existía ese ejercicio",
-  not_resident: "sin obligación: no residente en España ese ejercicio",
-};
-
-const renderInformative = (report: InformativeReturn): string => {
-  const out: string[] = [
-    `MODELO ${report.model} de ${report.year} — núcleo y cubo agregados por contribuyente (constitución III).`,
-    `${PERIOD[report.period]}. Fecha de consulta: ${report.today}.`,
-    `Umbral ${eur(report.threshold_eur)} · vuelve a obligar por encima de +${eur(report.increase_eur)} · aviso desde ${eur(report.alert_eur)}.`,
-  ];
-  report.categories.forEach((category, index) => {
-    out.push(categoryText(category, index + 1));
-  });
-  if (report.excluded.length > 0) {
-    out.push(
-      `\nQuedan fuera por ser cuentas españolas: ${report.excluded.map((entry) => entry.account_id).join(", ")}.`,
-    );
-  }
-  if (report.previous !== undefined) {
-    out.push(
-      `\nÚltimo ${report.model} presentado: el de ${report.previous.tax_year}, el ${report.previous.filed_at}.`,
-      table(
-        ["categoría", "declarado", "declarado medio 4T", "hoy", "hoy medio 4T"],
-        report.previous.categories.map((entry) => [
-          CATEGORY[entry.category] ?? entry.category,
-          eur(entry.declared_eur),
-          eur(entry.declared_q4_average_eur),
-          eur(entry.computed_eur),
-          eur(entry.computed_q4_average_eur),
-        ]),
-      ),
-    );
-  }
-  if (report.filed !== undefined) {
-    out.push(
-      `\nEste ejercicio consta presentado el ${report.filed.filed_at} (justificante en el libro).`,
-      table(
-        ["categoría", "declarado", "declarado medio 4T", "hoy", "hoy medio 4T"],
-        report.filed.categories.map((entry) => [
-          CATEGORY[entry.category] ?? entry.category,
-          eur(entry.declared_eur),
-          eur(entry.declared_q4_average_eur),
-          eur(entry.computed_eur),
-          eur(entry.computed_q4_average_eur),
-        ]),
-      ),
-    );
-  }
-  // With their names: `6, 25` is an index of the code, not something a person
-  // reads beside a return. `atlas tax` has put the label beside the identifier
-  // since it existed; this printed the bare list.
-  out.push(
-    "\nCriterios de los que depende:",
-    table(
-      ["criterio", "qué dice"],
-      report.criteria.map((id) => [id, CRITERION_LABELS[id]]),
-    ),
-  );
-  out.push("\nAvisos", report.notes.map((note) => `- ${describeWarning(note)}`).join("\n"));
-  return out.join("\n");
-};
+const USAGE = "uso: atlas m720 <año> · atlas m721 <año>";
 
 /** `atlas m720 <año>` and `atlas m721 <año>`: the same command with its model fixed. */
 const informativeCommand =
@@ -222,9 +20,8 @@ const informativeCommand =
     assertKnownFlags(flags, [...GLOBAL_FLAGS]);
     const year = reportYear(ctx, positionals[1], USAGE, `el modelo ${model}`);
     const today = todayInMadrid(ctx.deps.clock);
-    const { events, state } = await loadForQuery(ctx);
-    const report = informativeReturn(events, model, year, { today });
-    renderQuery(ctx, state, report, renderInformative(report));
+    const { events } = await loadForQuery(ctx);
+    ctx.io.out(jsonText(informativeReturn(events, model, year, { today })));
     return 0;
   };
 

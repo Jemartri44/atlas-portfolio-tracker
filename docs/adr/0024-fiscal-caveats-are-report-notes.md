@@ -17,7 +17,7 @@ decían cosas distintas sobre la misma cifra, y los tres se cazaron mirando, no 
    web lo decía siempre; la consola solo cuando además faltaba el importe, así que una cifra parcial
    con número al lado se leía como el importe de la casilla —justo lo que el prompt prohíbe—. Las
    dos tenían el campo delante; una no lo leyó **en esa posición**.
-3. **El nombre de un criterio.** `CRITERION_LABELS` en la consola y `CRITERION_NAMES` en la web.
+3. **El nombre de un criterio.** `CRITERION_LABELS` en la consola (retirada con su presentación en texto, 2026-11-03) y `CRITERION_NAMES` en la web.
    `Record<CriterionId, string>` garantiza que ninguna se deje un criterio; **nada** garantiza que
    digan lo mismo.
 
