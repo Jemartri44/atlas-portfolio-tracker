@@ -159,7 +159,7 @@ export default function CarteraRoute(): JSX.Element {
                   return outcome.kind === "invalid" ? outcome.message : undefined;
                 })()}
               />
-              <ReturnsCard view={returns()} />
+              <ReturnsCard view={returns()} events={snapshot.events} to={date()} />
               <ExposureBlock weights={projection()} catalogue={catalogue()} names={names} />
               <RebalanceCard
                 state={dated()}

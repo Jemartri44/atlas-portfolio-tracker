@@ -4,6 +4,7 @@
 // (`coreXirr`, `classReturns`); a figure whose data is missing is not shown, the sentence says what
 // is missing. The percentages stay in sight with the privacy mode on; the amounts are masked.
 
+import type { LedgerEvent } from "@atlas/domain";
 import { For, type JSX, Show } from "solid-js";
 import {
   Amount,
@@ -16,6 +17,7 @@ import {
 } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import type { ClassReturnRowView, ReturnsView } from "../../view-models/core/returns.js";
+import { AfterTaxLines } from "./AfterTaxLines.jsx";
 
 const Gain = (props: { row: ClassReturnRowView }): JSX.Element =>
   props.row.gap === undefined ? (
@@ -94,7 +96,11 @@ const COLUMNS: readonly DataColumn<ClassReturnRowView>[] = [
   },
 ];
 
-export const ReturnsCard = (props: { view: ReturnsView }): JSX.Element => (
+export const ReturnsCard = (props: {
+  view: ReturnsView;
+  events: readonly LedgerEvent[];
+  to: string;
+}): JSX.Element => (
   <Section
     title="Rentabilidad"
     class="span-12 returns-card"
@@ -134,6 +140,7 @@ export const ReturnsCard = (props: { view: ReturnsView }): JSX.Element => (
             <Figure value={props.view.xirrPct} unit="percent" decimals={1} signed coloured />
           </Show>
         </StatLine>
+        <AfterTaxLines events={props.events} to={props.to} />
         <StatLine label="Rentabilidad anual real, descontando el IPC">
           <Show when={props.view.real?.xirrPct} fallback={<span class="nodata">sin cifra</span>}>
             <Figure value={props.view.real?.xirrPct} unit="percent" decimals={1} signed coloured />
