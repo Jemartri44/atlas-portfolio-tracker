@@ -17,14 +17,40 @@ import {
 import { formatDate } from "../../format/date.js";
 import type { ClassReturnRowView, ReturnsView } from "../../view-models/core/returns.js";
 
+const Gain = (props: { row: ClassReturnRowView }): JSX.Element =>
+  props.row.gap === undefined ? (
+    <Figure value={props.row.gainPct} unit="percent" decimals="auto" signed coloured />
+  ) : (
+    <span class="nodata">sin cifra</span>
+  );
+
 const COLUMNS: readonly DataColumn<ClassReturnRowView>[] = [
   { key: "class", header: "Tipo de activo", card: "title", cell: (row) => row.label },
   {
     key: "invested",
-    header: "Aportado",
+    header: "Comprado",
     numeric: true,
     amount: true,
+    card: "meta",
     cell: (row) => <Amount value={row.invested} missingReason="sin dato" />,
+    cardCell: (row) => (
+      <span>
+        comprado <Amount value={row.invested} missingReason="sin dato" />
+      </span>
+    ),
+  },
+  {
+    key: "returned",
+    header: "Recuperado",
+    numeric: true,
+    amount: true,
+    card: "meta",
+    cell: (row) => <Amount value={row.returned} missingReason="sin dato" />,
+    cardCell: (row) => (
+      <span>
+        recuperado <Amount value={row.returned} missingReason="sin dato" />
+      </span>
+    ),
   },
   {
     key: "value",
@@ -33,17 +59,23 @@ const COLUMNS: readonly DataColumn<ClassReturnRowView>[] = [
     amount: "lead",
     card: "sub",
     cell: (row) => <Amount value={row.value} missingReason="sin dato" />,
+    cardCell: (row) => (
+      <span>
+        vale <Amount value={row.value} missingReason="sin dato" />
+      </span>
+    ),
   },
   {
     key: "gain",
     header: "Ganado",
     numeric: true,
-    cell: (row) =>
-      row.gap === undefined ? (
-        <Figure value={row.gainPct} unit="percent" decimals="auto" signed coloured />
-      ) : (
-        <span class="nodata">sin cifra</span>
-      ),
+    card: "figureSub",
+    cell: (row) => <Gain row={row} />,
+    cardCell: (row) => (
+      <span>
+        ganado <Gain row={row} />
+      </span>
+    ),
   },
   {
     key: "xirr",
@@ -51,12 +83,6 @@ const COLUMNS: readonly DataColumn<ClassReturnRowView>[] = [
     numeric: true,
     card: "figure",
     cell: (row) =>
-      row.gap === undefined ? (
-        <Figure value={row.xirrPct} unit="percent" decimals={1} signed coloured />
-      ) : (
-        <span class="nodata">sin cifra</span>
-      ),
-    cardCell: (row) =>
       row.gap === undefined ? (
         <Figure value={row.xirrPct} unit="percent" decimals={1} signed coloured />
       ) : (
@@ -90,7 +116,12 @@ export const ReturnsCard = (props: { view: ReturnsView }): JSX.Element => (
         </StatLine>
         <StatLine label="Has ganado">
           <Amount value={props.view.gain} signed coloured missingReason="sin dato" />{" "}
-          <Figure value={props.view.gainPct} unit="percent" decimals="auto" signed coloured />
+          <Show
+            when={props.view.gainPct}
+            fallback={<span class="nodata">sin porcentaje: nada aportado en neto</span>}
+          >
+            <Figure value={props.view.gainPct} unit="percent" decimals="auto" signed coloured />
+          </Show>
         </StatLine>
         <StatLine label="Rentabilidad anual, ponderada por dinero">
           <Show
@@ -101,10 +132,17 @@ export const ReturnsCard = (props: { view: ReturnsView }): JSX.Element => (
           </Show>
         </StatLine>
         <StatLine label="Rentabilidad anual real, descontando el IPC">
-          <Show when={props.view.real?.xirrPct} fallback={<span class="nodata">sin dato</span>}>
+          <Show when={props.view.real?.xirrPct} fallback={<span class="nodata">sin cifra</span>}>
             <Figure value={props.view.real?.xirrPct} unit="percent" decimals={1} signed coloured />
           </Show>
         </StatLine>
+        <Show when={props.view.real?.gain}>
+          {(gain) => (
+            <StatLine label="Has ganado, descontando el IPC">
+              <Amount value={gain()} signed coloured missingReason="sin dato" />
+            </StatLine>
+          )}
+        </Show>
       </div>
       <Show when={props.view.real?.note}>{(note) => <p class="card-note">Real: {note()}.</p>}</Show>
     </Show>
