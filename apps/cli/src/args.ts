@@ -35,6 +35,7 @@ export const BOOLEAN_FLAGS: ReadonlySet<string> = new Set([
   // Of a command.
   "accept-currency",
   "all",
+  "allow-in-repository",
   "boxes",
   "closed",
   "deep",

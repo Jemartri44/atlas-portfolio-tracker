@@ -4,7 +4,7 @@ import { lstat, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { FileLedgerStore } from "@atlas/adapters";
 import { DomainError, encodeLine } from "@atlas/domain";
-import { assertKnownFlags, type Flags, stringFlag, UsageError } from "../args.js";
+import { assertKnownFlags, booleanFlag, type Flags, stringFlag, UsageError } from "../args.js";
 import { CommandFailure, type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { pathExists } from "../fs.js";
 import {
@@ -13,6 +13,7 @@ import {
   confirm,
   confirmOutsideRepository,
   degradedHeader,
+  IN_REPOSITORY_FLAG,
   loadForQuery,
   render,
 } from "./shared.js";
@@ -92,7 +93,7 @@ export const exportCommand = async (
   _positionals: string[],
   flags: Flags,
 ): Promise<number> => {
-  assertKnownFlags(flags, ["format", "out", ...GLOBAL_FLAGS]);
+  assertKnownFlags(flags, ["format", "out", IN_REPOSITORY_FLAG, ...GLOBAL_FLAGS]);
   const format = stringFlag(flags, "format") ?? "jsonl";
   const out = stringFlag(flags, "out");
   if (format !== "jsonl" && format !== "csv") {
@@ -140,7 +141,7 @@ export const exportCommand = async (
   if (exists && (await stat(out)).isDirectory()) {
     throw new DomainError("path_exists", `${out} is a directory`, { path: out });
   }
-  if (!(await confirmOutsideRepository(ctx, out))) {
+  if (!(await confirmOutsideRepository(ctx, out, booleanFlag(flags, IN_REPOSITORY_FLAG)))) {
     cancelled(ctx);
     return 0;
   }
