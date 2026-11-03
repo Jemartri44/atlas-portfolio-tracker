@@ -167,9 +167,6 @@ const INVOCATIONS: {
   },
   { command: "lock", argv: ["lock", "show"], readOnly: true, folderOnly: true },
   { command: "fx", argv: ["fx", "status"], readOnly: true, folderOnly: true },
-  // The drafts live in the folder, outside the ledger; the ledger is read only
-  // to say whether their rate is published, never to show its figures.
-  { command: "draft", argv: ["draft", "list"], readOnly: true, folderOnly: true },
   // The prices live in the folder, outside the ledger; the ledger is read only for the list of
   // assets whose last close is shown.
   { command: "prices", argv: ["prices", "symbols"], readOnly: true, folderOnly: true },

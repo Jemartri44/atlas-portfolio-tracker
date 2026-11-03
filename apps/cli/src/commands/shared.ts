@@ -18,7 +18,6 @@ import {
   type ProjectedLedger,
   previewEvent,
   Quantity,
-  type RecordOptions,
   type RecordResult,
   recordEvent,
   type SupportedEvent,
@@ -219,11 +218,6 @@ export const confirmAndRecord = async (
   draft: Record<string, unknown>,
   /** Lines printed between the preview and the question: what the user has to know *before* saying yes. */
   notes: readonly string[] = [],
-  /** How to write it; a plain record by default (a draft records and then removes itself). */
-  write: (options: RecordOptions) => Promise<RecordResult> = (options) =>
-    recordEvent(ctx.deps, asDraft(draft), options),
-  /** Extra fields of the `--json` object, read after the write (a draft adds whether it left drafts/). */
-  extra: () => Record<string, unknown> = () => ({}),
 ): Promise<RecordResult | undefined> => {
   preview(ctx, "Evento a registrar:", draft);
   for (const note of [
@@ -237,7 +231,9 @@ export const confirmAndRecord = async (
     cancelled(ctx);
     return undefined;
   }
-  const result = await write(
+  const result = await recordEvent(
+    ctx.deps,
+    asDraft(draft),
     ctx.acceptInvalid
       ? {
           confirmDuplicate: ctx.confirmDuplicate,
@@ -266,7 +262,6 @@ export const confirmAndRecord = async (
     warnings: result.warnings,
     newly_invalid: result.newlyInvalid,
     unfiled_past_years: result.unfiledPastYears,
-    ...extra(),
   });
   return result;
 };
