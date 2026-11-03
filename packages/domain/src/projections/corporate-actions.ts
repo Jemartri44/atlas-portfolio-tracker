@@ -84,7 +84,7 @@ const warnUncoveredHolders = (
       "capital_return_partial_accounts",
       event.id,
       `the capital_return names no cash for every account holding ${event.asset_id}`,
-      { asset_id: event.asset_id, uncovered },
+      { asset_id: event.asset_id, accounts: uncovered },
     );
   }
 };
