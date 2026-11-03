@@ -254,7 +254,7 @@ const LAZY_ONLY = [
   // and the devices are a lazy section of Ajustes.
   { path: "/packages/domain/src/access/", what: "las reglas del acceso" },
   { path: "/packages/domain/src/access.ts", what: "la puerta del acceso" },
-  { path: "/src/auth/", what: "la sesión y los dispositivos de la web" },
+  { path: "/src/auth/", what: "la sesión de la web" },
   { path: "/packages/domain/src/sync.ts", what: "la puerta de la sincronización" },
   { path: "/packages/domain/src/ports/remote-ledger.ts", what: "el puerto del remoto" },
   { path: "/packages/adapters/src/sync/", what: "la orquestación de la sincronización" },

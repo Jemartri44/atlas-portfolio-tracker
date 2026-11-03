@@ -1,7 +1,8 @@
 // atlas admin pull | compact | restore | prices push | secrets --env <e> (ADR-0026, Part A,
 // ADR-0032): operations of administration **over the copy of reference**, with the short-lived
 // credentials of the role `atlas-<env>-admin` (the standard chain of the SDK) — **never through
-// the API**, which only appends. The console has no access of its own to the API. Nothing of this is reachable from `apps/api` (architecture test).
+// the API**, which only appends; the console has no access of its own to the API (ADR-0037).
+// Nothing of this is reachable from `apps/api` (architecture test).
 
 import { adminClientsOf, environmentFlag, translateAwsFailure } from "../../admin/clients.js";
 import type { AdminClients } from "../../admin/environment.js";

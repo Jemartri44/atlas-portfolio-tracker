@@ -35,7 +35,7 @@ const storeOf = async (ctx: Context): Promise<PendingDraftStore> =>
   new FileDraftStore(dirname(ctx.ledgerPath));
 
 /** Where the drafts are, for the messages. */
-const placeOf = (_ctx: Context): string => "drafts/";
+const PLACE = "drafts/";
 
 /** One line that tells a draft apart: what, where and when. */
 const summaryOf = (draft: PendingDraft): string => {
@@ -89,7 +89,7 @@ export const saveAsDraft = async (
   await (await storeOf(ctx)).save(prepared.draft);
   aside(
     ctx,
-    `Guardado el borrador ${prepared.draft.id} en ${placeOf(ctx)}. No cuenta en ninguna cifra y no se registra solo: cuando el BCE publique el tipo, \`atlas fx update\` y \`atlas draft confirm ${prepared.draft.id}\`.`,
+    `Guardado el borrador ${prepared.draft.id} en ${PLACE}. No cuenta en ninguna cifra y no se registra solo: cuando el BCE publique el tipo, \`atlas fx update\` y \`atlas draft confirm ${prepared.draft.id}\`.`,
   );
   answer(ctx, { status: "draft_saved", draft_id: prepared.draft.id, draft: prepared.draft.event });
   return EXIT.ok;
@@ -102,7 +102,7 @@ const find = async (ctx: Context, id: string | undefined): Promise<PendingDraft>
   const found = (await (await storeOf(ctx)).list()).drafts.find((draft) => draft.id === id);
   if (found === undefined) {
     throw new CommandFailure(EXIT.domain, "draft_not_found", [
-      `Error: no hay ningún borrador ${id} en ${placeOf(ctx)}. Consulta \`atlas draft list\`.`,
+      `Error: no hay ningún borrador ${id} en ${PLACE}. Consulta \`atlas draft list\`.`,
     ]);
   }
   return found;
@@ -164,7 +164,7 @@ const confirmDraft = async (ctx: Context, id: string | undefined): Promise<numbe
     });
     aside(
       ctx,
-      `El borrador ${draft.id} ya estaba registrado (${recorded.join(", ")}): se quita de ${placeOf(ctx)} sin registrarlo otra vez.`,
+      `El borrador ${draft.id} ya estaba registrado (${recorded.join(", ")}): se quita de ${PLACE} sin registrarlo otra vez.`,
     );
     answer(ctx, { status: "already_recorded", draft_id: draft.id, event_ids: recorded });
     return EXIT.ok;
@@ -202,8 +202,8 @@ const confirmDraft = async (ctx: Context, id: string | undefined): Promise<numbe
     aside(
       ctx,
       removed
-        ? `Borrador ${draft.id} registrado y quitado de ${placeOf(ctx)}.`
-        : `Borrador ${draft.id} registrado, pero no se ha podido quitar de ${placeOf(ctx)}: \`atlas draft confirm ${draft.id}\` lo quitará sin registrarlo otra vez.`,
+        ? `Borrador ${draft.id} registrado y quitado de ${PLACE}.`
+        : `Borrador ${draft.id} registrado, pero no se ha podido quitar de ${PLACE}: \`atlas draft confirm ${draft.id}\` lo quitará sin registrarlo otra vez.`,
     );
   }
   return EXIT.ok;

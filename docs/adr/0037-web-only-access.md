@@ -36,7 +36,7 @@ La consola conserva la carpeta local (desarrollo y copias) y la administración 
 
 **Resolución de segundos y el mismo segundo.** `iat` y la marca van en segundos. Se rechaza la cookie **estrictamente anterior** a la marca: una sesión iniciada en el mismo segundo que el cierre vale. Así el dueño puede entrar de nuevo en el acto. El precio es que una sesión emitida en ese mismo segundo por otro sobrevive al cierre. Es una ventana de un segundo, y la cierra un segundo `logout-all` o quitar la cuenta de la lista ([runbook](../runbooks/stolen-google-account.md)).
 
-**Fallo cerrado.** Una marca que no se lee de forma estricta cierra todas las sesiones. Solo puede venir de una escritura que quería cerrarlas, y dejar pasar a todos desharía justo eso. Para salir, la administración borra o rehace el objeto. Un fallo transitorio de S3 al leerla es `503`, como el resto de fallos de dependencia, y nunca deja pasar.
+**Fallo cerrado.** Una marca que no se lee de forma estricta cierra todas las sesiones. Solo puede venir de una escritura que quería cerrarlas, y dejar pasar a todos desharía justo eso. Para salir, la administración lo rehace con una marca válida (su rol escribe en el bucket de datos, pero no borra ahí); el paso está en el [runbook](../runbooks/stolen-google-account.md). Un fallo transitorio de S3 al leerla es `503`, como el resto de fallos de dependencia, y nunca deja pasar.
 
 ## Consecuencias
 

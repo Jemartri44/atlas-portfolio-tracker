@@ -61,7 +61,14 @@ rm ~/.config/atlas/allow-list.antes.json ~/.config/atlas/allow-list.json
 
 Espera los 2 minutos de la caché de la lista y entra en la web con Google.
 
-**Si la marca de `logout-all` no se lee** (`access/sessions-valid-from.json` dañado), la API deja fuera a todos (`session_invalid`, `reason: "closed"`) hasta que la administración borra ese objeto del bucket de datos (`docs/api.md` §3).
+**Si la marca de `logout-all` no se lee** (`access/sessions-valid-from.json` dañado), la API deja fuera a todos (`session_invalid`, `reason: "closed"`) hasta que la administración lo rehace con una marca válida de ahora. Su rol puede escribir ese objeto, pero no borrarlo. Con la sesión del rol de administración del entorno abierta, y el bucket de datos que da `admin.json` (`data_bucket`):
+
+```sh
+printf '{"sessions_valid_from_format":1,"at":%s}' "$(date +%s)" \
+  | aws s3 cp - "s3://<data_bucket>/access/sessions-valid-from.json"
+```
+
+Las sesiones que hubiera siguen cerradas. La siguiente entrada con Google vale (`docs/api.md` §3).
 
 *Ensayado con los dobles* (`apps/cli/test/admin/stolen-account.test.ts`): los pasos en este orden, con tu sesión y la del intruso sobre la misma nube; y el cierre inmediato desde la web, antes de todo lo demás. *Sin probar*: contra AWS real (018) y el editor.
 
