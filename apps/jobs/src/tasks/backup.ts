@@ -19,6 +19,7 @@ import { JobsWriteConflict } from "@atlas/adapters/aws-jobs";
 import {
   activeHistoryOf,
   backupFindings,
+  backupRetainUntil,
   DUMP_LEDGER,
   DUMP_POSITIONS,
   type DumpObject,
@@ -76,15 +77,17 @@ export const monthlyBackup: TaskRunner = async (context: TaskContext): Promise<T
       earlier: earlier.get(key) ?? [],
     });
     switch (step) {
-      case "write":
+      case "write": {
         // Said before it is written: a run that dies after this write still left it said.
         await context.note([{ key, sha256: next }]);
-        if ((await deps.objects.putIfNoneMatch(key, bytes)) === "exists") {
+        const lock = { retainUntil: backupRetainUntil(deps.now()) };
+        if ((await deps.objects.putIfNoneMatch(key, bytes, lock)) === "exists") {
           throw new JobsWriteConflict();
         }
         counts.written += 1;
         objects.push({ key, sha256: next });
         return { kind: "in_dump", bytes };
+      }
       case "same":
         counts.same += 1;
         objects.push({ key, sha256: next });

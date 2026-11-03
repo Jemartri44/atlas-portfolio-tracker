@@ -7,6 +7,7 @@ Estado: **cerrada en E4** (cuenta, datos y borde, tareas y correo, más lo que c
 | Tipo de recurso | Parte | Entrega | Coste esperado | Qué lo haría crecer |
 |---|---|---|---|---|
 | `aws_s3_bucket` | cuenta (estado, artefactos), `dev`, `prod` (datos, SPA) | E1, E2 | céntimos al año con este tráfico | versiones no vigentes sin ciclo de vida; cargas multiparte a medias |
+| `aws_s3_bucket_object_lock_configuration` | el bucket de datos | bootstrap | 0 (Object Lock no se factura; las copias bloqueadas son KB al mes) | — |
 | `aws_s3_bucket_versioning` | las mismas | E1, E2 | incluido en el bucket | cada versión se cobra como un objeto |
 | `aws_s3_bucket_server_side_encryption_configuration` | las mismas | E1, E2 | 0 (SSE-S3) | una clave KMS en lugar de SSE-S3 (no entra, ADR-0034, fila 8) |
 | `aws_s3_bucket_public_access_block` | las mismas | E1, E2 | 0 | — |
@@ -23,8 +24,6 @@ Estado: **cerrada en E4** (cuenta, datos y borde, tareas y correo, más lo que c
 | `aws_iam_role_policy` | `dev`, `prod` | E1, E2, E3 | 0 | — |
 | `aws_iam_role_policy_attachment` | `dev`, `prod` | E1 | 0 | — |
 | `aws_cloudfront_origin_access_control` | `dev`, `prod` | E1 | 0 | — |
-| `aws_kms_key` | `prod`, solo con C2 | E1 | **1 $/mes** (ADR-0034, fila 8; las 20.000 peticiones gratuitas al mes son de la cuenta, fila 13) | la alarma pasa de 1 a 2 $ con esta clave |
-| `aws_kms_alias` | `prod`, solo con C2 | E1 | 0 | — |
 | `aws_lambda_function` | `dev`, `prod`: 6 por entorno (la API y las cinco tareas) | E2, E3 | nivel gratuito compartido de la cuenta | concurrencia provisionada y VPC (no entran) |
 | `aws_lambda_function_url` | `dev`, `prod` | E2 | 0 | — |
 | `aws_lambda_permission` | `dev`, `prod` | E2, E3 | 0 | — |
@@ -41,7 +40,7 @@ Estado: **cerrada en E4** (cuenta, datos y borde, tareas y correo, más lo que c
 
 ## Cierre (E4)
 
-E4 no añade ningún tipo de recurso de Terraform: la orden `atlas admin secrets` escribe parámetros `SecureString` estándar (sin cargo, ADR-0033 F1; las 20.000 peticiones gratuitas de KMS son de la cuenta), el guion del plan de tarifa plana suscribe un plan Free (0 $; cancelarlo devuelve la distribución al pago por uso) y los flujos de Actions no cuestan en un repositorio público. El bucket de artefactos y su caducidad (90 días) ya están en `aws_s3_bucket*` de E1. **Suma esperada: del orden de 0,01-0,05 $ al mes** (S3 y Lambda a céntimos, SES unos 10 correos al mes, todo lo demás a 0), **más 1 $ al mes solo si C2 adopta la clave KMS del cliente**. Fuente de cada fila: la columna «Coste esperado», con las páginas de precios consultadas en E2 y E3. El consumo real lo mide la 018 con Cost Explorer.
+E4 no añade ningún tipo de recurso de Terraform: la orden `atlas admin secrets` escribe parámetros `SecureString` estándar (sin cargo, ADR-0033 F1; las 20.000 peticiones gratuitas de KMS son de la cuenta), el guion del plan de tarifa plana suscribe un plan Free (0 $; cancelarlo devuelve la distribución al pago por uso) y los flujos de Actions no cuestan en un repositorio público. El bucket de artefactos y su caducidad (90 días) ya están en `aws_s3_bucket*` de E1. **Suma esperada: del orden de 0,01-0,05 $ al mes** (S3 y Lambda a céntimos, SES unos 10 correos al mes, todo lo demás a 0); sin clave KMS propia (ADR-0034, filas 7-8, decisión del dueño del 2026-11-03). Fuente de cada fila: la columna «Coste esperado», con las páginas de precios consultadas en E2 y E3. El consumo real lo mide la 018 con Cost Explorer.
 
 ## Cómo se comprueba
 
