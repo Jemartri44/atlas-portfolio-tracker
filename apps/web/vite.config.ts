@@ -145,13 +145,6 @@ const DEVELOPMENT_CSP = PRODUCTION_CSP.replace(
   .replace("style-src 'self'", "style-src 'self' 'unsafe-inline'")
   .replace("connect-src 'self'", "connect-src 'self' ws: wss:");
 
-/**
- * What the service worker keeps: **the shell of the application and nothing
- * else** (ADR-0035, §3). No runtime caching rule exists, so no response of
- * `/api/*` — the ledger above all — is ever stored by it, and navigations
- * under `/api/` (the sign-in and the return from Google) are never answered
- * with `index.html`. Exported for `test/pwa-cache.test.ts`.
- */
 /** The web manifest: what the installed application is called, looks like and offers. */
 export const MANIFEST: Exclude<VitePWAOptions["manifest"], false | undefined> = {
   name: "Atlas",
@@ -184,6 +177,13 @@ export const MANIFEST: Exclude<VitePWAOptions["manifest"], false | undefined> = 
   ],
 };
 
+/**
+ * What the service worker keeps: **the shell of the application and nothing
+ * else** (ADR-0035, §3). No runtime caching rule exists, so no response of
+ * `/api/*` — the ledger above all — is ever stored by it, and navigations
+ * under `/api/` (the sign-in and the return from Google) are never answered
+ * with `index.html`. Exported for `test/pwa-cache.test.ts`.
+ */
 export const WORKBOX_OPTIONS: NonNullable<VitePWAOptions["workbox"]> = {
   globPatterns: ["**/*.{js,css,html,svg,png,webmanifest,woff2}"],
   // The shell opens without a connection and says «Sin conexión» by itself.

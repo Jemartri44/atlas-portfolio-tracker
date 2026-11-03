@@ -13,28 +13,39 @@ const key = (value: string, extra: Partial<Parameters<typeof shortcutOf>[0]> = {
   ...extra,
 });
 
+const FREE = { dialogOpen: false, formOnScreen: false, letters: true };
+
 describe("the shortcuts", () => {
   it("open the box with «/» and go to the form of each letter, either case", () => {
-    expect(shortcutOf(key("/"), null, false)).toEqual({ kind: "search" });
-    expect(shortcutOf(key("c"), null, false)).toEqual({ kind: "go", to: "/registrar/buy" });
-    expect(shortcutOf(key("V"), null, false)).toEqual({ kind: "go", to: "/registrar/sell" });
-    expect(shortcutOf(key("p"), null, false)).toEqual({ kind: "go", to: "/registrar/valuation" });
-    expect(shortcutOf(key("x"), null, false)).toBeUndefined();
+    expect(shortcutOf(key("/"), null, FREE)).toEqual({ kind: "search" });
+    expect(shortcutOf(key("c"), null, FREE)).toEqual({ kind: "go", to: "/registrar/buy" });
+    expect(shortcutOf(key("V"), null, FREE)).toEqual({ kind: "go", to: "/registrar/sell" });
+    expect(shortcutOf(key("p"), null, FREE)).toEqual({ kind: "go", to: "/registrar/valuation" });
+    expect(shortcutOf(key("x"), null, FREE)).toBeUndefined();
   });
 
   it.each([
-    ["with Ctrl", key("c", { ctrlKey: true }), null, false],
-    ["with Cmd", key("c", { metaKey: true }), null, false],
-    ["with Alt", key("/", { altKey: true }), null, false],
-    ["while composing", key("c", { isComposing: true }), null, false],
-    ["already handled", key("c", { defaultPrevented: true }), null, false],
-    ["in a field", key("c"), { tagName: "INPUT" }, false],
-    ["in a text area", key("/"), { tagName: "TEXTAREA" }, false],
-    ["in a list", key("p"), { tagName: "SELECT" }, false],
-    ["in something editable", key("v"), { tagName: "DIV", isContentEditable: true }, false],
-    ["over a dialog", key("/"), null, true],
-  ])("stay out of the way %s", (_case, event, target, dialog) => {
-    expect(shortcutOf(event, target, dialog)).toBeUndefined();
+    ["with Ctrl", key("c", { ctrlKey: true }), null, FREE],
+    ["with Cmd", key("c", { metaKey: true }), null, FREE],
+    ["with Alt", key("/", { altKey: true }), null, FREE],
+    ["while composing", key("c", { isComposing: true }), null, FREE],
+    ["held down", key("/", { repeat: true }), null, FREE],
+    ["already handled", key("c", { defaultPrevented: true }), null, FREE],
+    ["in a field", key("c"), { tagName: "INPUT" }, FREE],
+    ["in a text area", key("/"), { tagName: "TEXTAREA" }, FREE],
+    ["in a list", key("p"), { tagName: "SELECT" }, FREE],
+    ["in something editable", key("v"), { tagName: "DIV", isContentEditable: true }, FREE],
+    ["over a dialog", key("/"), null, { ...FREE, dialogOpen: true }],
+  ])("stay out of the way %s", (_case, event, target, context) => {
+    expect(shortcutOf(event, target, context)).toBeUndefined();
+  });
+
+  it("leave a screen with a form alone, and act only while they are on; «/» still opens the box", () => {
+    expect(shortcutOf(key("c"), null, { ...FREE, formOnScreen: true })).toBeUndefined();
+    expect(shortcutOf(key("c"), null, { ...FREE, letters: false })).toBeUndefined();
+    expect(shortcutOf(key("/"), null, { ...FREE, formOnScreen: true, letters: false })).toEqual({
+      kind: "search",
+    });
   });
 });
 

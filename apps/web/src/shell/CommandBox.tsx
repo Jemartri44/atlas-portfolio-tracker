@@ -10,6 +10,7 @@ import { useNavigate } from "@solidjs/router";
 import { createSignal, createUniqueId, For, type JSX, onCleanup, Show } from "solid-js";
 import { Icon } from "../components/Icon.jsx";
 import { mediaQuery, TOP_BAR } from "./media.js";
+import { letterKeys } from "./preferences.js";
 import { type Command, commandsFor, shortcutOf } from "./shortcuts.js";
 
 /**
@@ -22,7 +23,6 @@ export const CommandBox = (): JSX.Element => {
   const wide = mediaQuery(TOP_BAR);
   const navigate = useNavigate();
   const id = createUniqueId();
-  const [open, setOpen] = createSignal(false);
   const [typed, setTyped] = createSignal("");
   const [active, setActive] = createSignal(0);
   let dialog: HTMLDialogElement | undefined;
@@ -33,12 +33,10 @@ export const CommandBox = (): JSX.Element => {
   const show = (): void => {
     setTyped("");
     setActive(0);
-    setOpen(true);
     dialog?.showModal();
     field?.focus();
   };
   const close = (): void => {
-    setOpen(false);
     dialog?.close();
   };
   const follow = (command: Command | undefined): void => {
@@ -53,7 +51,11 @@ export const CommandBox = (): JSX.Element => {
       return;
     }
     const target = event.target instanceof HTMLElement ? event.target : null;
-    const action = shortcutOf(event, target, document.querySelector("dialog[open]") !== null);
+    const action = shortcutOf(event, target, {
+      dialogOpen: document.querySelector("dialog[open]") !== null,
+      formOnScreen: document.querySelector("main form") !== null,
+      letters: letterKeys(),
+    });
     if (action === undefined) {
       return;
     }
@@ -68,6 +70,10 @@ export const CommandBox = (): JSX.Element => {
   onCleanup(() => document.removeEventListener("keydown", onKey));
 
   const onFieldKey = (event: KeyboardEvent): void => {
+    // Enter or an arrow while a character is being composed (an IME, a dead key) belongs to it.
+    if (event.isComposing || event.keyCode === 229) {
+      return;
+    }
     const count = shown().length;
     if (event.key === "ArrowDown") {
       event.preventDefault();
@@ -75,6 +81,9 @@ export const CommandBox = (): JSX.Element => {
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
       setActive((active() - 1 + count) % count);
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      setActive(event.key === "Home" ? 0 : count - 1);
     } else if (event.key === "Enter") {
       event.preventDefault();
       follow(shown()[active()]);
@@ -103,17 +112,15 @@ export const CommandBox = (): JSX.Element => {
           event.preventDefault();
           close();
         }}
-        onClose={() => setOpen(false)}
       >
         <div class="command-body">
           <input
             ref={field}
-            id={`cmd-${id}`}
             class="command-field"
             type="text"
             role="combobox"
             aria-label="Buscar o registrar"
-            aria-expanded={open()}
+            aria-expanded="true"
             aria-controls={`cmd-list-${id}`}
             aria-activedescendant={`cmd-${id}-${active()}`}
             aria-autocomplete="list"
@@ -147,10 +154,18 @@ export const CommandBox = (): JSX.Element => {
               )}
             </For>
           </div>
-          <p class="command-hint">
-            Flechas para elegir, Intro para ir, Esc para cerrar. Desde cualquier pantalla: C compra,
-            V venta, P valoración.
-          </p>
+          <div class="command-foot">
+            <p class="command-hint">
+              Flechas para elegir, Intro para ir, Esc para cerrar.
+              <Show when={letterKeys()}>
+                {" "}
+                Fuera de un formulario: C compra, V venta, P valoración.
+              </Show>
+            </p>
+            <button type="button" class="secondary" onClick={close}>
+              Cerrar
+            </button>
+          </div>
         </div>
       </dialog>
     </Show>

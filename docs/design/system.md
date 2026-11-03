@@ -160,10 +160,6 @@ Un `<header>` y dentro **un** `<nav>`, **antes que `<main>` en el DOM**. El orde
 - **Sin sesión o sin libro cargado** (la pantalla de entrada del §7.1) no se muestra la navegación: nada funciona sin datos. **Con un libro vacío sí**, porque los primeros pasos llevan a Registrar y a Ajustes (D8).
 - **Banda de datos con problemas**: franja de `--c-danger-soft` bajo la barra, permanente, con el texto y «Verificar».
 
-### 4.4 El teclado del ordenador
-
-Solo desde la barra superior (≥ 1200 px): un botón **«Buscar o registrar»** con su tecla `/` (en la barra compacta, el icono y la tecla) abre un diálogo con una caja de órdenes (un *combobox* ARIA: flechas, Intro y Esc). Ofrece registrar cada operación del día a día, ir a cada destino y, siempre al final, buscar lo escrito en los movimientos (`/movimientos?q=`). Desde cualquier pantalla, **C** compra, **V** venta y **P** valoración. Las teclas solo responden **solas**: con Ctrl, Cmd o Alt son del navegador o del sistema; dentro de un campo, una lista o algo editable son lo que se escribe; con un diálogo abierto, del diálogo. En el móvil no hay teclas: la aplicación instalada ofrece «Registrar compra» y «Registrar valoración» con una pulsación larga en su icono (`shortcuts` del manifiesto).
-
 ### 4.3 La rejilla
 
 Desde 1024 px, 12 columnas con espacio de 20 y clases `span-N`. Las tarjetas de una misma fila se estiran a la misma altura, y lo que cierra una tarjeta (sus desplegables o el enlace «Ver todos») se ancla abajo. La excepción es una tarjeta cuya vecina es mucho más alta (`.is-natural`, *Pesos* y *Aportación* en la Cartera): conserva su altura, porque estirada dejaba un campo en blanco en mitad de la corta.
@@ -175,6 +171,10 @@ Desde 1024 px, 12 columnas con espacio de 20 y clases `span-N`. Las tarjetas de 
 ## 5. Componentes
 
 La hoja visual de componentes estaba en el prototipo retirado; hoy son los estilos de `apps/web/src/styles/`.
+
+### 4.4 El teclado del ordenador
+
+Solo desde la barra superior (≥ 1200 px): un botón **«Buscar o registrar»** con su tecla `/` (en la barra compacta, el icono y la tecla) abre un diálogo con una caja de órdenes (un *combobox* ARIA: flechas, Intro y Esc). Ofrece registrar cada operación del día a día, ir a cada destino y, siempre al final, buscar lo escrito en los movimientos (`/movimientos?q=`). Desde una pantalla **sin formulario**, **C** compra, **V** venta y **P** valoración: en un formulario la letra no actúa, porque salir de él perdería lo escrito. Las teclas solo responden **solas** y una vez aunque se mantengan: con Ctrl, Cmd o Alt son del navegador o del sistema; dentro de un campo, una lista o algo editable, o mientras se compone un carácter, son lo que se escribe; con un diálogo abierto, del diálogo. Las letras **se pueden apagar** en Ajustes (WCAG 2.1.4: un lector de pantalla usa letras sueltas para moverse); «/» abre siempre la caja. La caja se cierra con Esc o con «Cerrar». En el móvil no hay teclas: la aplicación instalada ofrece «Registrar compra» y «Registrar valoración» con una pulsación larga en su icono (`shortcuts` del manifiesto).
 
 ### 5.1 Tarjeta (`.card`)
 

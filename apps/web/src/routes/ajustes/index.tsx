@@ -10,8 +10,16 @@ import { countOf } from "../../format/number.js";
 import { type CopyFormat, downloadCopy } from "../../ledger/copy.js";
 import { toAppError } from "../../ledger/errors.js";
 import { type AppError, store, today } from "../../ledger/state.js";
+import { mediaQuery, TOP_BAR } from "../../shell/media.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
-import { privacy, setPrivacy, setTheme, theme } from "../../shell/preferences.js";
+import {
+  letterKeys,
+  privacy,
+  setLetterKeys,
+  setPrivacy,
+  setTheme,
+  theme,
+} from "../../shell/preferences.js";
 import { EcbCard } from "./EcbCard.jsx";
 import { PricesCard } from "./PricesCard.jsx";
 import { SessionCard } from "./SessionCard.jsx";
@@ -52,6 +60,7 @@ const LinkRow = (props: {
 );
 
 export default function AjustesRoute(): JSX.Element {
+  const wide = mediaQuery(TOP_BAR);
   const [busy, setBusy] = createSignal(false);
   const [message, setMessage] = createSignal<string | undefined>(undefined);
   const [error, setError] = createSignal<AppError | undefined>(undefined);
@@ -140,6 +149,15 @@ export default function AjustesRoute(): JSX.Element {
               onChange={(checked) => setPrivacy(checked)}
               hint="Activado por defecto. Los porcentajes, los pesos y las fechas siguen visibles."
             />
+            <Show when={wide()}>
+              <Switch
+                id="letters-setting"
+                label="Atajos de una tecla: C compra, V venta, P valoración"
+                checked={letterKeys()}
+                onChange={(checked) => setLetterKeys(checked)}
+                hint="Solo en el ordenador y fuera de un formulario. Apágalos si usas un lector de pantalla o dictas por voz. «/» abre siempre «Buscar o registrar»."
+              />
+            </Show>
             <fieldset class="theme-choice">
               <legend>Tema</legend>
               <div class="segmented">

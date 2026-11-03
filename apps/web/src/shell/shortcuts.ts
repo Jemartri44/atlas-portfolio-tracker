@@ -3,7 +3,10 @@
 // without a browser:
 // - only a plain key: with Ctrl, Cmd or Alt it belongs to the browser or the system;
 // - never while typing: in a field, a list or anything editable the letter is a letter;
-// - never over a dialog, which owns the keyboard while it is open.
+// - never over a dialog, which owns the keyboard while it is open;
+// - a held key acts once;
+// - the letters, which a stray press can fire, only when they are turned on (Ajustes) and never on
+//   a screen with a form: leaving it would throw away what was written. «/» only opens a box.
 
 /** The letter of each form, and where it goes. */
 export const LETTERS: Readonly<Record<string, { to: string; label: string }>> = {
@@ -21,6 +24,16 @@ interface KeyLike {
   altKey: boolean;
   isComposing?: boolean;
   defaultPrevented: boolean;
+  repeat?: boolean;
+}
+
+/** Where the key was pressed: what the screen holds and what the person chose. */
+export interface KeyContext {
+  dialogOpen: boolean;
+  /** A form on the screen: a letter would leave it and lose what was typed. */
+  formOnScreen: boolean;
+  /** The one-letter shortcuts are on (Ajustes). */
+  letters: boolean;
 }
 
 interface TargetLike {
@@ -34,7 +47,7 @@ const EDITABLE = new Set(["INPUT", "TEXTAREA", "SELECT"]);
 export const shortcutOf = (
   event: KeyLike,
   target: TargetLike | null,
-  dialogOpen: boolean,
+  context: KeyContext,
 ): ShortcutAction | undefined => {
   if (
     event.defaultPrevented ||
@@ -42,13 +55,17 @@ export const shortcutOf = (
     event.metaKey ||
     event.altKey ||
     event.isComposing === true ||
-    dialogOpen ||
+    event.repeat === true ||
+    context.dialogOpen ||
     (target !== null && (EDITABLE.has(target.tagName ?? "") || target.isContentEditable === true))
   ) {
     return undefined;
   }
   if (event.key === "/") {
     return { kind: "search" };
+  }
+  if (!context.letters || context.formOnScreen) {
+    return undefined;
   }
   const letter = LETTERS[event.key.toLowerCase()];
   return letter === undefined ? undefined : { kind: "go", to: letter.to };
