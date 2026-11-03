@@ -23,6 +23,7 @@ import { fiscalLots } from "../projections/lots.js";
 import { type PhysicalPosition, physicalPositions } from "../projections/positions.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import type { FiscalLot, LedgerState, RealizedGain, Warning } from "../projections/state.js";
+import { splitCashKey } from "../projections/state.js";
 import type {
   AccountId,
   AssetId,
@@ -112,7 +113,7 @@ const balanceOf = (state: LedgerState, key: string, currency: Currency): Money =
 const cashChanges = (before: LedgerState, after: LedgerState): CashChange[] => {
   const changes: CashChange[] = [];
   for (const key of new Set([...before.cash.keys(), ...after.cash.keys()])) {
-    const [account_id, currency] = key.split("|") as [AccountId, Currency];
+    const [account_id, currency] = splitCashKey(key);
     const was = balanceOf(before, key, currency);
     const now = balanceOf(after, key, currency);
     if (!was.eq(now)) {

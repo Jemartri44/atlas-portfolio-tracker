@@ -176,6 +176,10 @@ export const describeWarning = (warning: Warning): string => {
       return `${PARTIAL_BOX[text(d.reason)] ?? warning.message} (casillas ${listOf(d.boxes)}).`;
     case "tax_box_rounding_differs":
       return `El formulario redondea cada valor y hace él mismo la resta: en ${listOf(d.boxes)} sale un céntimo distinto del que calcula el motor. Se enseñan los dos.`;
+    case "tax_box_section_doubtful":
+      return "Las acciones de mercados de fuera de la UE (NYSE, Nasdaq…) van a «otros elementos patrimoniales» con la clave 2, como dice la ayuda del Modelo 100; ninguna fuente leída extiende a la declaración la equivalencia de esos mercados, así que el apartado es dudoso.";
+    case "tax_box_other_inferred":
+      return "Las diferencias de cambio de la divisa (y un ETC o ETP configurado como ganancia) no tienen apartado propio en el impreso: por exclusión irían a «otros elementos patrimoniales», clave 4 («otros elementos patrimoniales no afectos a actividades económicas»). Es una inferencia, no está escrita en ninguna fuente; por eso no llevan casilla.";
     case "tax_box_repurchase_has_no_number":
       return "La parte de una pérdida que no es computable por recompra se marca en la ventana de captura de Renta WEB: no tiene casilla con número.";
     case "informative_current_year":
@@ -211,4 +215,75 @@ const PARTIAL_BOX: Record<string, string> = {
     "La deducción por doble imposición es la menor de dos límites y el motor solo conoce el primero: se da ese, nunca como importe de la casilla",
   ledger_withholdings_only:
     "Solo se cuentan las retenciones que constan en el libro, que no tienen por qué ser todas",
+};
+
+export interface WarningLine {
+  readonly code: string;
+  readonly text: string;
+  /** The events the line is about: the sale, for a group of purchases inside its window. */
+  readonly event_ids: readonly string[];
+}
+
+const datesOf = (warnings: readonly Warning[]): string[] =>
+  warnings.map((w) => text(w.details.buy_date)).sort();
+
+/**
+ * The warnings as lines of `atlas check`. Every purchase inside the window of a loss-making sale
+ * (or every earlier purchase still held when it is made) has its own warning, with the same text
+ * but for its date: a real ledger would print dozens per sale, so they are said once per sale.
+ * `--json` keeps each warning.
+ */
+export const warningLines = (warnings: readonly Warning[]): WarningLine[] => {
+  const groups = new Map<string, Warning[]>();
+  const lines: (WarningLine | string)[] = [];
+  for (const warning of warnings) {
+    if (
+      warning.code !== "wash_sale_window_repurchase" &&
+      warning.code !== "wash_sale_window_prior_buy"
+    ) {
+      lines.push({
+        code: warning.code,
+        text: describeWarning(warning),
+        event_ids: [warning.event_id],
+      });
+      continue;
+    }
+    const sale =
+      warning.code === "wash_sale_window_repurchase"
+        ? text(warning.details.sale_event_id)
+        : warning.event_id;
+    const key = `${warning.code}|${sale}`;
+    const group = groups.get(key);
+    if (group === undefined) {
+      groups.set(key, [warning]);
+      lines.push(key);
+    } else {
+      group.push(warning);
+    }
+  }
+  return lines.map((line) => {
+    if (typeof line !== "string") {
+      return line;
+    }
+    const [first, ...rest] = groups.get(line) as [Warning, ...Warning[]];
+    if (rest.length === 0) {
+      return { code: first.code, text: describeWarning(first), event_ids: [first.event_id] };
+    }
+    const d = first.details;
+    const all = [first, ...rest];
+    const dates = datesOf(all);
+    const [from, to] = [dates[0], dates[dates.length - 1]];
+    if (first.code === "wash_sale_window_repurchase") {
+      return {
+        code: first.code,
+        text: `${all.length} compras dentro de la ventana de recompra de la venta con pérdida de ${text(d.asset_id)} del ${text(d.sale_date)} (${text(d.loss_eur)} EUR; ${windowText(d.window)}, hasta el ${text(d.window_end)}), del ${from} al ${to}: puede hacer que esa pérdida no sea computable en ${text(d.tax_year)}. Cuánto difiere, lo dice \`atlas tax ${text(d.tax_year)}\` (business-rules.md §5.4).`,
+        event_ids: [text(d.sale_event_id)],
+      };
+    }
+    return {
+      code: first.code,
+      text: `Venta con pérdida de ${text(d.asset_id)} del ${text(d.sale_date)} (${text(d.loss_eur)} EUR) cuando siguen en cartera ${all.length} compras anteriores, del ${from} al ${to}, dentro de la ventana (${windowText(d.window)}): la pérdida puede no ser computable en ${text(d.tax_year)}. Cuánto, lo dice \`atlas tax ${text(d.tax_year)}\` (business-rules.md §5.4).`,
+      event_ids: [first.event_id],
+    };
+  });
 };

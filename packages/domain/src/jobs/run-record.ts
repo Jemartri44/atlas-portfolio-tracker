@@ -21,17 +21,10 @@
 // that **never** is an asset, a symbol, an ISIN, an account nor an amount.
 
 import { type CivilDate, isCivilDate } from "../dates/civil-date.js";
-import { SHA256_HEX } from "../guards.js";
+import { isInstant, SHA256_HEX } from "../guards.js";
 import type { IgnoredFrequency } from "../settings/job-frequencies.js";
 import { type Delivery, JOB_TASKS, type JobTask } from "./catalog.js";
-import {
-  CODE_SHAPE,
-  hasKeys,
-  isCount,
-  isInstantText,
-  isPlainObject,
-  strictJsonObject,
-} from "./strict.js";
+import { CODE_SHAPE, hasKeys, isCount, isPlainObject, strictJsonObject } from "./strict.js";
 
 export const RUN_FORMAT = 1;
 
@@ -166,10 +159,10 @@ export const parseRunRecord = (text: string, task: JobTask, period: string): Rea
     value.task === task &&
     value.period === period &&
     (RUN_STATES as readonly unknown[]).includes(value.state) &&
-    isInstantText(value.claimed_at) &&
+    isInstant(value.claimed_at) &&
     isCount(value.attempts) &&
     value.attempts >= 1 &&
-    (value.closed_at === undefined || isInstantText(value.closed_at)) &&
+    (value.closed_at === undefined || isInstant(value.closed_at)) &&
     (value.outcome === undefined || isOutcome(value.outcome)) &&
     (value.frequencies === undefined ||
       (isPlainObject(value.frequencies) &&

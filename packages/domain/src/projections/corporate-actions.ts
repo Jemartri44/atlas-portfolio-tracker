@@ -8,7 +8,9 @@ import { ProjectionError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
 import type { AccountId, AssetId, CorporateActionEvent } from "../schema/events.js";
 import { requireAsset } from "./catalogue.js";
+import type { CurrencyLots } from "./currency-lots.js";
 import {
+  checkCostAdjustmentRegime,
   checkEffectsAgainstKind,
   isLiquidation,
   type ResolvedEffect,
@@ -18,6 +20,7 @@ import { accountsHolding } from "./positions.js";
 import {
   applyCarveOut,
   applyConvert,
+  applyCostAdjustment,
   applyForcedSale,
   applyGrant,
   applyScale,
@@ -25,6 +28,23 @@ import {
   type Resolved,
 } from "./primitives.js";
 import type { AssetLots, FiscalLot, LedgerState } from "./state.js";
+
+/**
+ * Arts. 25.1.e and 33.3.a LIRPF are for shares: in a collective investment
+ * undertaking the premium is income whole and a return of contributions has
+ * its own limit (art. 94.1.c and d), which this does not model.
+ */
+const requireShareForCapitalReturn = (state: LedgerState, event: CorporateActionEvent): void => {
+  const asset = requireAsset(state, event.asset_id, event.id);
+  if (event.kind === "capital_return" && asset.asset_type !== "stock") {
+    throw new ProjectionError(
+      "capital_return_needs_stock",
+      event.id,
+      `a capital_return applies to shares, not to a ${asset.asset_type}`,
+      { asset_id: asset.asset_id, asset_type: asset.asset_type },
+    );
+  }
+};
 
 const resolveEffects = (event: CorporateActionEvent): ResolvedEffect[] =>
   event.effects.map((effect) => ({ ...effect, asset_id: effect.asset_id ?? event.asset_id }));
@@ -69,6 +89,9 @@ const applyEffect = (state: LedgerState, effect: ResolvedEffect, ctx: EffectCont
     case "grant":
       applyGrant(state, effect, ctx);
       return;
+    case "cost_adjustment":
+      applyCostAdjustment(state, effect, ctx);
+      return;
   }
 };
 
@@ -88,8 +111,15 @@ interface Snapshot {
    */
   acquisitions: Map<AssetId, number>;
   inKindIncome: number;
+  /** The excess of a `capital_return` is income; the list only grows. */
+  income: number;
   /** The lot journal only grows too. */
   lotJournal: number;
+  /** A forced sale in a foreign currency also opens currency lots and may impute a difference. */
+  currencyLots: Map<string, CurrencyLots>;
+  currencyLotCounts: Map<Ulid, number>;
+  currencyGains: number;
+  currencyJournal: number;
 }
 
 const cloneLot = (lot: FiscalLot): FiscalLot => ({ ...lot, consumptions: [...lot.consumptions] });
@@ -116,7 +146,20 @@ const snapshot = (state: LedgerState, assets: readonly AssetId[]): Snapshot => (
     assets.map((asset) => [asset, state.acquisitions.get(asset)?.length ?? 0] as const),
   ),
   inKindIncome: state.inKindIncome.length,
+  income: state.income.length,
   lotJournal: state.lotJournal.length,
+  currencyLots: new Map(
+    [...state.currencyLots].map(([currency, entry]) => [
+      currency,
+      {
+        open: entry.open.map((lot) => ({ ...lot })),
+        closed: entry.closed.map((lot) => ({ ...lot })),
+      },
+    ]),
+  ),
+  currencyLotCounts: new Map(state.currencyLotCounts),
+  currencyGains: state.currencyGains.length,
+  currencyJournal: state.currencyJournal.length,
 });
 
 const restore = (state: LedgerState, saved: Snapshot): void => {
@@ -140,7 +183,12 @@ const restore = (state: LedgerState, saved: Snapshot): void => {
     }
   }
   state.inKindIncome.length = saved.inKindIncome;
+  state.income.length = saved.income;
   state.lotJournal.length = saved.lotJournal;
+  state.currencyLots = saved.currencyLots;
+  state.currencyLotCounts = saved.currencyLotCounts;
+  state.currencyGains.length = saved.currencyGains;
+  state.currencyJournal.length = saved.currencyJournal;
 };
 
 export const applyCorporateAction = (
@@ -154,11 +202,14 @@ export const applyCorporateAction = (
     requireAsset(state, effect.asset_id, event.id);
   }
   checkEffectsAgainstKind(event.kind, effects, event.asset_id, event.id);
+  checkCostAdjustmentRegime(event.kind, effects, event.neutrality_regime, event.id);
+  requireShareForCapitalReturn(state, event);
   if (isLiquidation(event.kind)) {
     requireFullCoverage(state, effects[0] as Resolved<"forced_sale">, event.id);
   }
   const ctx: EffectContext = {
     eventId: event.id,
+    kind: event.kind,
     position,
     effectiveDate: event.effective_date,
     scaleOnly: effects.every((effect) => effect.op === "scale"),

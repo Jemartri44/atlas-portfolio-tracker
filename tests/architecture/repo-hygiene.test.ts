@@ -146,7 +146,6 @@ describe("architecture: no object literal is asserted into a type", () => {
     // on the list so that the sixth one has to be looked at.
     expect(offenders).toEqual([
       "apps/cli/src/commands/catalogue.ts",
-      "apps/cli/src/commands/rectify.ts",
       "apps/cli/src/commands/shared.ts",
       "apps/web/src/routes/registrar/corporate/form.tsx",
       "apps/web/src/view-models/forms/values.ts",

@@ -21,7 +21,7 @@
 
 En los ejemplos de abajo, `AWS_PROFILE=atlas-prod-admin` vale tal cual con IAM Identity Center. Con un usuario IAM, quítalo y ejecuta cada orden dentro de la subshell de arriba.
 
-Y `~/.config/atlas/admin.json`, que escribes tú y la aplicación nunca escribe (`specs/015-api-access/data-model.md` §9; `docs/data-schema.md` §1):
+Y `~/.config/atlas/admin.json`, que escribes tú y la aplicación nunca escribe (`docs/data-schema.md` §1):
 
 ```json
 { "admin_format": 1, "environments": { "prod": { "region": "eu-west-1", "data_bucket": "atlas-prod-data-<sufijo>", "ssm_prefix": "/atlas/prod/" } } }
@@ -47,7 +47,7 @@ Dice cuántos ha revocado y cuántos ya lo estaban.
 
 ## 2. Con la CLI de AWS (si la consola de Atlas no está disponible)
 
-Cada registro es **un** `SecureString` cuyo valor es un objeto JSON en una línea (`specs/015-api-access/data-model.md` §2). Revocarlo es **añadirle `"revoked_at"`** al final, con el instante en UTC, **sin milisegundos**, y sin tocar nada más:
+Cada registro es **un** `SecureString` cuyo valor es un objeto JSON en una línea (formato del registro: `specs/015-api-access/data-model.md` §2, retirada; en git, `git show 6ad6a4d3^:specs/015-api-access/data-model.md`). Revocarlo es **añadirle `"revoked_at"`** al final, con el instante en UTC, **sin milisegundos**, y sin tocar nada más:
 
 ```json
 {"token_record_format":1,"token_id":"…","secret_sha256":"…","sub":"…","email":"…","device_id":"…","device_name":"…","issued_at":"2026-10-01T10:00:00Z","expires_at":"2026-12-30T10:00:00Z","revoked_at":"2026-10-05T09:30:00Z"}

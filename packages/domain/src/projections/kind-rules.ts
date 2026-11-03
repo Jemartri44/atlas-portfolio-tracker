@@ -45,10 +45,15 @@ export const KIND_RULES: Record<CorporateActionKind, KindRule> = {
       [onEvent("convert")],
       [onEvent("forced_sale"), onEvent("convert")],
       [onEvent("convert"), onPrevious("forced_sale")],
+      [onEvent("convert"), onPrevious("cost_adjustment")],
     ],
   },
   spin_off: {
-    sequences: [[onEvent("carve_out")], [onEvent("carve_out"), onPrevious("forced_sale")]],
+    sequences: [
+      [onEvent("carve_out")],
+      [onEvent("carve_out"), onPrevious("forced_sale")],
+      [onEvent("carve_out"), onPrevious("cost_adjustment")],
+    ],
   },
   fund_merger: { sequences: [[onEvent("convert")]] },
   share_class_change: { sequences: [[onEvent("convert")]] },
@@ -57,7 +62,34 @@ export const KIND_RULES: Record<CorporateActionKind, KindRule> = {
   delisting: { sequences: [[]] },
   crypto_fork: { sequences: [[onAny("grant")]] },
   token_migration: { sequences: [[onEvent("convert")]] },
-  issuer_restructuring: { anyOf: ["convert", "forced_sale"] },
+  issuer_restructuring: { anyOf: ["convert", "forced_sale", "cost_adjustment"] },
+  capital_return: { sequences: [[onEvent("cost_adjustment")]] },
+};
+
+/**
+ * The cash of an exchange lowers the cost of what is received **only under the
+ * neutrality regime** (arts. 80.3 and 81.2 LIS); without it the exchange is a
+ * taxable swap and the cash is part of its proceeds. So a `cost_adjustment`
+ * outside `capital_return` needs `neutrality_regime: true`, said, not assumed.
+ */
+export const checkCostAdjustmentRegime = (
+  kind: CorporateActionKind,
+  effects: readonly ResolvedEffect[],
+  neutralityRegime: boolean | undefined,
+  eventId: string,
+): void => {
+  if (
+    kind !== "capital_return" &&
+    neutralityRegime !== true &&
+    effects.some((effect) => effect.op === "cost_adjustment")
+  ) {
+    throw new ProjectionError(
+      "cost_adjustment_requires_neutrality",
+      eventId,
+      `a cost_adjustment in a ${kind} needs neutrality_regime: true`,
+      { kind },
+    );
+  }
 };
 
 /** Asset a step leaves behind for the next one: the destination of a conversion, else its own. */

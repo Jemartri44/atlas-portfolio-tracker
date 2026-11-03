@@ -4,10 +4,11 @@
 // nobody checked: `reference_etf_id`.
 
 import { Quantity } from "../money/quantity.js";
-import type { AccountId, AssetId } from "../schema/events.js";
+import type { AssetId } from "../schema/events.js";
 import { sharedIsins } from "./isin.js";
 import { openQuantity } from "./lots.js";
 import type { LedgerState } from "./state.js";
+import { splitPositionKey } from "./state.js";
 
 export interface IntegrityFinding {
   severity: "error" | "warning";
@@ -27,7 +28,7 @@ export const integrity = (state: LedgerState): IntegrityFinding[] => {
   const findings: IntegrityFinding[] = [];
   const physicalByAsset = new Map<AssetId, Quantity>();
   for (const [key, quantity] of state.positions) {
-    const [, assetId] = key.split("|") as [AccountId, AssetId];
+    const [, assetId] = splitPositionKey(key);
     physicalByAsset.set(assetId, (physicalByAsset.get(assetId) ?? Quantity.ZERO).add(quantity));
     if (quantity.isNegative()) {
       findings.push({
