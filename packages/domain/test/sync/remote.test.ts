@@ -1,4 +1,4 @@
-// What the remote accepts, row by row of `docs/api.md` §5.2 and §5.5, over the
+// What the remote accepts, row by row of `docs/api.md` §5.2, over the
 // same use case the client re-applies with.
 
 import { describe, expect, it } from "vitest";
@@ -12,15 +12,12 @@ import { CURRENT_LEDGER_SCHEMA } from "../../src/schema/migrations/index.js";
 import { linesOfText } from "../../src/sync/lines.js";
 import {
   acceptAppend,
-  acceptInit,
-  initDuplicateIds,
   MAX_APPEND_UNITS,
-  MAX_LEDGER_BYTES,
   MAX_LINE_BYTES,
   parseAppendBody,
-  parseInitBody,
   type RemoteRules,
 } from "../../src/sync/remote.js";
+import { entriesOf, unitsOf } from "../../src/sync/units.js";
 import { fixtureLines, fixtureText } from "../fixtures-path.js";
 import {
   baseLedger,
@@ -31,10 +28,6 @@ import {
   reorderable,
   textOf,
 } from "./helpers.js";
-
-/** The ids a first device confirms for a whole file, as the client derives them. */
-const initIdsOf = (text: string): string[] =>
-  initDuplicateIds(linesOfText(text).map((line) => decodeLine(line, CURRENT_LEDGER_SCHEMA).event));
 
 const rules: RemoteRules = {
   schema: CURRENT_LEDGER_SCHEMA,
@@ -75,21 +68,6 @@ describe("a line whose text is not Unicode (review of PR #96, security B1)", () 
     }
     expect(parseAppendBody({ lines: [{ line: withText("\ud83d\ude00") }] })).toHaveLength(1);
   });
-
-  it("refuses an initialisation with one, with its line, and keeps a real pair", () => {
-    const { events } = baseLedger();
-    const good = linesOf(events);
-    for (const raw of lone) {
-      try {
-        acceptInit(`${good[0]}\n${withText(raw)}\n`, [], rules);
-        throw new Error("accepted");
-      } catch (error) {
-        expect(error).toBeInstanceOf(RemoteError);
-        expect((error as RemoteError).code).toBe("init_rejected");
-        expect((error as RemoteError).details).toEqual({ code: "lone_surrogate", line: 2 });
-      }
-    }
-  });
 });
 
 describe("a line with a key twice (review of PR #96, security N3)", () => {
@@ -119,16 +97,6 @@ describe("a line with a key twice (review of PR #96, security N3)", () => {
       line,
     ]) {
       expect(parseAppendBody({ lines: [{ line: text }] }), text).toHaveLength(1);
-    }
-  });
-
-  it("refuses an initialisation with one, with its line", () => {
-    try {
-      acceptInit(`${line}\n${twice[0]}\n`, [], rules);
-      throw new Error("accepted");
-    } catch (error) {
-      expect((error as RemoteError).code).toBe("init_rejected");
-      expect((error as RemoteError).details).toEqual({ code: "duplicate_key", line: 2 });
     }
   });
 
@@ -167,22 +135,6 @@ describe("the bodies of the routes, by their shape only", () => {
     );
     // Not JSON of a line at all is still a shape-valid body: judged per line.
     expect(parseAppendBody({ lines: [{ line: "{" }] })).toEqual([{ line: "{" }]);
-  });
-
-  it("reads an initialisation", () => {
-    expect(parseInitBody({ content: "x\n", confirm_duplicate_ids: ["a"] })).toEqual({
-      content: "x\n",
-      confirm_duplicate_ids: ["a"],
-    });
-    for (const bad of [
-      null,
-      { content: "x", confirm_duplicate_ids: [], extra: 1 },
-      { content: 1, confirm_duplicate_ids: [] },
-      { content: "x", confirm_duplicate_ids: "a" },
-      { content: "x", confirm_duplicate_ids: [1] },
-    ]) {
-      expect(bodyError(() => parseInitBody(bad))).toBe("init");
-    }
   });
 });
 
@@ -579,75 +531,6 @@ describe("acceptAppend: the table of §5.2, in its order", () => {
   });
 });
 
-describe("the initialisation of an empty remote (§5.5, V6, V17)", () => {
-  const { builder, events } = baseLedger();
-  const deposit = builder.deposit({ account_id: "acc_fund" }) as CashDepositEvent;
-  const again = builder.raw({
-    ...deposit,
-    id: builder.nextEnvelope("cash_deposit").id,
-  }) as CashDepositEvent;
-  const all = [...events, deposit, again];
-
-  const initError = (run: () => unknown): Record<string, unknown> => {
-    try {
-      run();
-    } catch (error) {
-      expect(error).toBeInstanceOf(RemoteError);
-      expect((error as RemoteError).code).toBe("init_rejected");
-      expect((error as RemoteError).status).toBe(422);
-      return { ...(error as RemoteError).details };
-    }
-    throw new Error("accepted");
-  };
-
-  it("derives the ids to confirm from the file: every event repeating an earlier fingerprint (D-Q16)", () => {
-    expect(initDuplicateIds(all)).toEqual([again.id]);
-  });
-
-  it("writes the whole bytes when everything holds", () => {
-    expect(acceptInit(textOf(all), [again.id], rules)).toEqual(linesOf(all));
-  });
-
-  it("refuses an unconfirmed duplicate, a clock ahead, an unreadable line and a line break", () => {
-    expect(initError(() => acceptInit(textOf(all), [], rules))).toEqual({
-      code: "duplicate_unconfirmed",
-      id: again.id,
-    });
-    const late = device(50);
-    late.recordedAt("2027-09-30");
-    const future = late.deposit({ account_id: "acc_fund" });
-    expect(initError(() => acceptInit(textOf([...events, future]), [], rules))).toMatchObject({
-      code: "recorded_at_in_future",
-      line: events.length + 1,
-    });
-    expect(initError(() => acceptInit(`${textOf(events)}{\n`, [], rules))).toMatchObject({
-      code: "line_unreadable",
-      line: events.length + 1,
-    });
-    expect(
-      initError(() => acceptInit(`${textOf(events).replace("\n", "\r\n")}`, [], rules)),
-    ).toEqual({
-      code: "raw_line_break",
-      line: 1,
-    });
-  });
-
-  it("refuses a ledger that does not project valid, or with a repeated id", () => {
-    const { builder: r, events: reordered } = reorderable();
-    const invalid = [...reordered, r.settings(byTradeDate)];
-    expect(initError(() => acceptInit(textOf(invalid), [], rules))).toMatchObject({
-      code: "domain_rejected",
-      domain_code: "insufficient_position",
-    });
-    expect(
-      initError(() => acceptInit(textOf([...events, events[0] as LedgerEvent]), [], rules)),
-    ).toMatchObject({
-      code: "domain_rejected",
-      domain_code: "duplicate_id",
-    });
-  });
-});
-
 describe("the size bounds of what the remote keeps", () => {
   const { events } = baseLedger();
   const remote = linesOf(events);
@@ -712,7 +595,6 @@ describe("the size bounds of what the remote keeps", () => {
     expect(bytes).toBeGreaterThan(16 * 1024); // the former bound
     expect(bytes).toBeLessThan(MAX_LINE_BYTES);
     expect(acceptAppend(linesOf(prefix), plain([filing]), rules)).toMatchObject({ accepted: 1 });
-    expect(() => acceptInit(textOf([...prefix, filing]), [], rules)).not.toThrow();
   });
 
   it("refuses a decimal of more than MAX_DECIMAL_DIGITS digits as an invalid line, at any depth", () => {
@@ -742,21 +624,34 @@ describe("the size bounds of what the remote keeps", () => {
     expect(acceptAppend(remote, plain([small, big]), rules).accepted).toBe(2);
   });
 
-  it("refuses the initialisation of a ledger over MAX_LEDGER_BYTES, before reading a line", () => {
-    const huge = `${"x".repeat(MAX_LEDGER_BYTES)}\n`;
-    expect(() => acceptInit(huge, [], rules)).toThrow(
-      expect.objectContaining({
-        code: "init_rejected",
-        details: expect.objectContaining({ code: "ledger_too_large", limit: MAX_LEDGER_BYTES }),
-      }),
-    );
-  });
-
   it("still takes the synthetic ledger and the hand-checked one, which the narrower schema must admit", () => {
     for (const name of ["synthetic-v1.jsonl", "tax-hand-v1.jsonl"]) {
-      const text = fixtureText(name);
+      const lines = linesOfText(fixtureText(name));
+      const events = lines.map((line) => decodeLine(line, CURRENT_LEDGER_SCHEMA).event);
       const later = { ...rules, now: new Date("2030-01-01T00:00:00Z") };
-      expect(acceptInit(text, initIdsOf(text), later)).toHaveLength(fixtureLines(name).length);
+      // Appended as the web appends: by units, in batches, each repeated fingerprint confirmed.
+      const seen = new Set<string>();
+      const repeats = new Set<number>();
+      events.forEach((event, index) => {
+        const fingerprint = (event as { fingerprint?: string }).fingerprint;
+        if (fingerprint !== undefined && seen.has(fingerprint)) {
+          repeats.add(index);
+        }
+        if (fingerprint !== undefined) {
+          seen.add(fingerprint);
+        }
+      });
+      const units = unitsOf(lines, events);
+      let remoteLines: string[] = [];
+      for (let start = 0; start < units.length; start += MAX_APPEND_UNITS) {
+        const entries = units
+          .slice(start, start + MAX_APPEND_UNITS)
+          .flatMap((unit) => entriesOf(unit, (index) => repeats.has(unit.start + index)));
+        const answer = acceptAppend(remoteLines, entries, later);
+        expect(answer.rejected, name).toBeUndefined();
+        remoteLines = [...remoteLines, ...answer.lines];
+      }
+      expect(remoteLines).toEqual(fixtureLines(name));
     }
   });
 });

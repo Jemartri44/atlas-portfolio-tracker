@@ -17,7 +17,7 @@ import {
 import { MAX_APPEND_UNITS, RemoteError } from "@atlas/domain/sync";
 import { describe, expect, it } from "vitest";
 import { account, deposit, futureLine, lineOf } from "../../../packages/adapters/test/fixtures.js";
-import { consoleLogin, SELF, setup } from "./harness.js";
+import { SELF, setup } from "./harness.js";
 
 const LEDGER = "ledger/ledger.jsonl";
 const sha = (text: string): string => createHash("sha256").update(text).digest("hex");
@@ -65,7 +65,7 @@ interface Net {
 
 const rig = async (lines: readonly string[] = [lineOf(account)]) => {
   const api = setup();
-  const console = await consoleLogin(api);
+  await api.signIn();
   api.s3.seed(LEDGER, textOf(lines));
   const net: Net = {};
   const sent: { method: string; url: string; init: RequestInit }[] = [];
@@ -81,12 +81,12 @@ const rig = async (lines: readonly string[] = [lineOf(account)]) => {
       }
       net.insteadAfterPosts = (net.insteadAfterPosts ?? 0) - 1;
     }
+    // The browser: the cookie of the jar, and its Origin on a write.
     const result = await api.call(init.method ?? "GET", url.replace(SELF, ""), {
-      headers: init.headers as Record<string, string>,
+      headers: { ...(init.headers as Record<string, string>), origin: SELF },
       ...(init.body === undefined
         ? {}
         : { body: new TextDecoder().decode(init.body as Uint8Array) }),
-      jar: false,
     });
     if (net.dropAfter) {
       throw new TypeError("connection reset");
@@ -103,7 +103,7 @@ const rig = async (lines: readonly string[] = [lineOf(account)]) => {
     answers.push(response);
     return response;
   }) as unknown as typeof globalThis.fetch;
-  const store = new ApiLedgerStore(httpRemote({ origin: SELF, fetch, token: console.token }));
+  const store = new ApiLedgerStore(httpRemote({ origin: SELF, fetch }));
   const stored = (): string => api.s3.text(LEDGER) ?? "";
   return { api, store, net, sent, answers, stored };
 };
@@ -354,11 +354,11 @@ describe("ApiLedgerStore: 412, rejection and what is deduced", () => {
   it("a 401 at the POST, with the store loaded, is not an unknown outcome and writes nothing", async () => {
     const { store, net, stored } = await rig();
     const { etag } = await store.load();
-    net.instead = shaped(401, "device_token_invalid");
+    net.instead = shaped(401, "session_invalid");
     const error = await failureOf(store.append([deposit], etag));
     expect(error).not.toBeInstanceOf(WriteOutcomeUnknownError);
     expect(error).toBeInstanceOf(RemoteError);
-    expect((error as RemoteError).code).toBe("device_token_invalid");
+    expect((error as RemoteError).code).toBe("session_invalid");
     expect((error as RemoteError).status).toBe(401);
     expect(stored()).toBe(textOf([lineOf(account)]));
   });
@@ -447,7 +447,7 @@ describe("ApiLedgerStore: more units than one request admits", () => {
   it("a refusal of another kind after the first request is a partial write, not 'nothing written'", async () => {
     const { store, net, stored } = await rig();
     const { etag } = await store.load();
-    net.instead = answerLater(401, "device_token_invalid");
+    net.instead = answerLater(401, "session_invalid");
     net.insteadAfterPosts = 1;
     const events = Array.from({ length: MAX_APPEND_UNITS + 2 }, (_, n) => numbered(n));
     const error = (await failureOf(store.append(events, etag))) as RemoteRejectedError;
@@ -504,18 +504,16 @@ describe("ApiLedgerStore: more units than one request admits", () => {
 
   it("the API refuses a request with more units than the bound, writing nothing", async () => {
     const { api, stored } = await rig();
-    const console = await consoleLogin(api);
     const lines = Array.from({ length: MAX_APPEND_UNITS + 1 }, (_, n) => ({
       line: lineOf(numbered(n)),
     }));
     const response = await api.call("POST", "/api/ledger/lines", {
       headers: {
-        "x-atlas-device-token": console.token,
+        origin: SELF,
         "content-type": "application/json",
         "if-match": `"${sha(stored())}"`,
       },
       body: JSON.stringify({ lines }),
-      jar: false,
     });
     expect(response.statusCode).toBe(413);
     expect(JSON.parse(response.body)).toEqual({

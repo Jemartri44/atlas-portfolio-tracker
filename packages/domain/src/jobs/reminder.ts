@@ -4,33 +4,22 @@
 // - the contribution of the month split **by class of the core**, from
 //   `contributionPlan`, with the note when a weight uses the reference-ETF
 //   approximation; or the code of why it could not be computed;
-// - the days since the last sign-in, **counting the console's** (ADR-0027,
-//   «Riesgo»; ADR-0033, «Consecuencias»): the latest of the date the API
-//   records for the web and the issue of every readable console token,
-//   revoked and expired ones included, since each issue was a pass through
-//   Google; and the warning before the six months after which Google may
-//   delete an unused OAuth client;
-// - how many console tokens are alive and how many were issued in the month
-//   just ended, without names; **an unreadable record is counted as such,
-//   never left out nor taken for alive**.
+// - the days since the last sign-in (ADR-0027, «Riesgo»): the date the API
+//   records for the web, and the warning before the six months after which
+//   Google may delete an unused OAuth client.
 
-import { type TokenRecord, tokenStatus } from "../access/token.js";
 import { addMonths, type CivilDate, daysBetween } from "../dates/civil-date.js";
-import { madridDateOf } from "../dates/madrid.js";
 import { Decimal, HUNDRED } from "../money/decimal.js";
 import { Money } from "../money/money.js";
 import type { ContributionPlan } from "../projections/contribution.js";
 import { ASSET_CLASSES, type AssetClass } from "../schema/events.js";
-import { previousPeriod } from "./periods.js";
 
 export interface ReminderInput {
   /** The period of the job, `YYYY-MM`. */
   readonly period: string;
   readonly today: CivilDate;
-  readonly nowMs: number;
   readonly plan: ContributionPlan | { readonly failure: string };
   readonly webSignIn: CivilDate | "unreadable" | undefined;
-  readonly tokens: readonly (TokenRecord | "unreadable")[] | "unavailable";
   readonly idleWarningDays: number;
 }
 
@@ -60,17 +49,10 @@ export interface SignInFacts {
   readonly webUnreadable: boolean;
 }
 
-export type TokenFacts =
-  | { readonly alive: number; readonly issued: number; readonly unreadable: number }
-  | "unavailable";
-
 export interface ReminderFacts {
   readonly period: string;
-  /** The month the issued tokens are counted in: the one just ended. */
-  readonly issuedMonth: string;
   readonly contribution: ContributionFacts;
   readonly signIn: SignInFacts;
-  readonly tokens: TokenFacts;
 }
 
 const contributionOf = (plan: ReminderInput["plan"]): ContributionFacts => {
@@ -98,43 +80,23 @@ const contributionOf = (plan: ReminderInput["plan"]): ContributionFacts => {
   };
 };
 
-const latest = (dates: readonly CivilDate[]): CivilDate | undefined =>
-  dates.length === 0 ? undefined : [...dates].sort().at(-1);
-
 export const reminderFacts = (input: ReminderInput): ReminderFacts => {
-  const issuedMonth = previousPeriod("monthly", input.today);
-  const readable =
-    input.tokens === "unavailable"
-      ? []
-      : input.tokens.filter((token): token is TokenRecord => token !== "unreadable");
-  const last = latest([
-    ...(input.webSignIn === undefined || input.webSignIn === "unreadable" ? [] : [input.webSignIn]),
-    ...readable.map((token) => madridDateOf(token.issued_at)),
-  ]);
+  const last =
+    input.webSignIn === undefined || input.webSignIn === "unreadable" ? undefined : input.webSignIn;
+  const webUnreadable = input.webSignIn === "unreadable";
   const days = last === undefined ? undefined : daysBetween(last, input.today);
   const since: SignInFacts =
     last === undefined || days === undefined
-      ? { webUnreadable: input.webSignIn === "unreadable" }
+      ? { webUnreadable }
       : {
           last,
           days,
           ...(days >= input.idleWarningDays ? { deadline: addMonths(last, 6) } : {}),
-          webUnreadable: input.webSignIn === "unreadable",
+          webUnreadable,
         };
   return {
     period: input.period,
-    issuedMonth,
     contribution: contributionOf(input.plan),
     signIn: since,
-    tokens:
-      input.tokens === "unavailable"
-        ? "unavailable"
-        : {
-            alive: readable.filter((token) => tokenStatus(token, input.nowMs) === "active").length,
-            issued: readable.filter(
-              (token) => madridDateOf(token.issued_at).slice(0, 7) === issuedMonth,
-            ).length,
-            unreadable: input.tokens.length - readable.length,
-          },
   };
 };

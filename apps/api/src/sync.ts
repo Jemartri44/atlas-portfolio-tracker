@@ -1,19 +1,13 @@
 // The routes of the sync and of the reference data (`docs/api.md` §5 and §6). They decide nothing:
-// what a line is worth is the domain's `acceptAppend` and `acceptInit`, what a name of the
+// what a line is worth is the domain's `acceptAppend`, what a name of the
 // reference data may be is `referenceKey`. The remote ledger is reached only through
 // `AppendOnlyLedger`: read and append, never rewrite, never delete.
 
-import {
-  type AppendOnlyLedger,
-  type DeviceStore,
-  decodeUtf8Strict,
-  type ReferenceReader,
-} from "@atlas/adapters/aws";
+import { type AppendOnlyLedger, decodeUtf8Strict, type ReferenceReader } from "@atlas/adapters/aws";
 import { ConflictError, CURRENT_LEDGER_SCHEMA, sha256Hex, utf8Encode } from "@atlas/domain";
 import {
   type ApiConfig,
   type ApiRefusal,
-  type DeviceType,
   ifNoneMatchHits,
   type ReferenceKind,
   referenceContentType,
@@ -27,11 +21,8 @@ import {
 import { unservableSymbols } from "@atlas/domain/quotes";
 import {
   acceptAppend,
-  acceptInit,
-  EMPTY_ETAG,
   linesOfText,
   parseAppendBody,
-  parseInitBody,
   RemoteError,
   type RemoteRules,
   textOfLines,
@@ -39,19 +30,11 @@ import {
 import { fail, type Outcome } from "./outcome.js";
 import { bytesCompressed, json, notModified } from "./respond.js";
 
-/** The device a checked credential speaks for: the cookie's or the token's, never the body's. */
-export interface SyncCredential {
-  readonly deviceId: string;
-  readonly type: DeviceType;
-  readonly tokenId?: string;
-}
-
 export interface SyncContext {
   readonly config: ApiConfig;
   readonly ledger: AppendOnlyLedger;
   /** The reference data, read only, its two prefixes and nothing else. */
   readonly reference: ReferenceReader;
-  readonly devices: DeviceStore;
   readonly now: () => Date;
 }
 
@@ -86,7 +69,7 @@ const isRefusal = (value: unknown): value is ApiRefusal =>
   typeof value === "object" && value !== null && "status" in value && "code" in value;
 
 export const syncRoutes = (context: SyncContext) => {
-  const { ledger, devices, reference, config } = context;
+  const { ledger, reference, config } = context;
 
   const rules = (): RemoteRules => ({
     schema: CURRENT_LEDGER_SCHEMA,
@@ -160,67 +143,6 @@ export const syncRoutes = (context: SyncContext) => {
     };
   };
 
-  /** `PUT /api/ledger` (§5.5): the whole bytes of the first device, on an empty remote only. */
-  const initialise = async (ifMatch: string | undefined, body: unknown): Promise<Outcome> => {
-    const asked = requestedEtag(ifMatch);
-    if ("absent" in asked) {
-      return fail(refusal("precondition_required"));
-    }
-    if (asked.etag !== EMPTY_ETAG) {
-      return fail(refusal("precondition_failed"));
-    }
-    const init = judged(() => parseInitBody(body));
-    if (isRefusal(init)) {
-      return fail(init);
-    }
-    // A remote that is not empty is refused by the write itself: appending on
-    // the etag of zero bytes is a ConflictError (412) unless it is empty.
-    const lines = judged(() => acceptInit(init.content, init.confirm_duplicate_ids, rules()));
-    if (isRefusal(lines)) {
-      return fail(lines);
-    }
-    if (utf8Of(lines) === undefined) {
-      return fail(refusal("init_rejected", { code: "not_utf8" }));
-    }
-    try {
-      const written = await ledger.appendLines(lines, EMPTY_ETAG);
-      return {
-        result: json(200, { etag: written.etag, lines: lines.length }),
-        code: "initialised",
-      };
-    } catch (error) {
-      if (error instanceof ConflictError) {
-        return fail(refusal("precondition_failed"));
-      }
-      throw error;
-    }
-  };
-
-  /** `GET /api/sync/devices` (§5.3, session only): every device, with its type and state. */
-  const listDevices = async (): Promise<Outcome> => {
-    const rows: Record<string, unknown>[] = [];
-    let unreadable = false;
-    for (const deviceId of await devices.ids()) {
-      const device = await devices.read(deviceId);
-      if (typeof device !== "object") {
-        unreadable = true;
-        rows.push({ device_id: deviceId, state: "unreadable" });
-        continue;
-      }
-      rows.push({
-        device_id: device.device_id,
-        type: device.type,
-        state: device.state,
-        ...(device.last_sync_at === undefined ? {} : { last_sync_at: device.last_sync_at }),
-        ...(device.published_at === undefined ? {} : { published_at: device.published_at }),
-      });
-    }
-    return {
-      result: json(200, { devices: rows }),
-      ...(unreadable ? { reason: "device_object_unreadable" } : {}),
-    };
-  };
-
   /** `GET /api/reference/index` (§6): the first level of each prefix. */
   const indexReference = async (): Promise<Outcome> => {
     const [ecb, prices] = await Promise.all([
@@ -276,8 +198,6 @@ export const syncRoutes = (context: SyncContext) => {
   return {
     readLedger,
     appendLines,
-    initialise,
-    listDevices,
     indexReference,
     readReference,
   };

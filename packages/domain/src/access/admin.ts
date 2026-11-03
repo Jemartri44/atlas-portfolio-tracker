@@ -1,49 +1,11 @@
-// The rules of the administration of the remote (ADR-0026, Part A, ADR-0032,
-// ADR-0033, point 8): what forgetting a device writes, how a candidate to
-// restore compares with the remote, and the local configuration of the
-// administration (`admin.json`). Pure: the console's orders apply them with the
-// role of administration, never through the API (architecture test).
+// The rules of the administration of the remote (ADR-0026, Part A, ADR-0032):
+// how a candidate to restore compares with the remote, and the local
+// configuration of the administration (`admin.json`). Pure: the console's orders
+// apply them with the role of administration, never through the API
+// (architecture test).
 
 import type { LedgerEvent } from "../schema/events.js";
-import type { Refusal } from "../sync/permission.js";
-import type { DeviceObject } from "./device.js";
 
-/** What the administration reads of each object under `sync/devices/`. */
-export type AdminDeviceRead =
-  | DeviceObject
-  | { readonly device_id: string; readonly unreadable: true };
-
-/**
- * Forgetting a device: refused for an object that is missing or
- * cannot be read; nothing to do for one already forgotten.
- */
-export const forgetRefusal = (
-  read: DeviceObject | "unreadable" | undefined,
-): Refusal | "already_forgotten" | undefined => {
-  if (read === undefined) {
-    return { code: "forget_device_missing", details: {} };
-  }
-  if (read === "unreadable") {
-    return { code: "forget_device_unreadable", details: {} };
-  }
-  if (read.state === "forgotten") {
-    return "already_forgotten";
-  }
-  return undefined;
-};
-
-/** The object of a device, forgotten: the same object, its state and the instant. */
-export const forgottenDevice = (device: DeviceObject, at: string): DeviceObject => ({
-  ...device,
-  state: "forgotten",
-  forgotten_at: at,
-});
-
-/**
- * How a candidate to restore compares with the remote, **by identifier**
- * (ADR-0032, step 3): a prefix of the remote loses its tail, said as such;
- * anything else, event by event, both ways.
- */
 export type RestoreComparison =
   | { readonly kind: "same" }
   | { readonly kind: "prefix"; readonly lost: readonly string[] }

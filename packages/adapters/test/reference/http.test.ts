@@ -16,7 +16,7 @@ const answer = (
   headers: Record<string, string> = {},
 ): Promise<Response> => Promise.resolve(new Response(body, { status, headers }));
 
-const client = (reply: (url: string, init?: RequestInit) => Promise<Response>, token?: string) => {
+const client = (reply: (url: string, init?: RequestInit) => Promise<Response>) => {
   const seen: Seen[] = [];
   const fetcher = ((url: string, init?: RequestInit) => {
     seen.push({ url, init });
@@ -27,7 +27,6 @@ const client = (reply: (url: string, init?: RequestInit) => Promise<Response>, t
     reference: httpReference({
       origin: "https://atlas.example",
       fetch: fetcher,
-      ...(token === undefined ? {} : { token }),
     }),
   };
 };
@@ -35,19 +34,11 @@ const client = (reply: (url: string, init?: RequestInit) => Promise<Response>, t
 const INDEX = { ecb: [], prices: [{ name: "ast_a.jsonl", version: "v1", size: 3 }] };
 
 describe("the client of the reference data (016, E3)", () => {
-  it("reads the index with the token, never following a redirect", async () => {
-    const { seen, reference } = client(() => answer(200, JSON.stringify(INDEX)), "tok");
+  it("reads the index with the cookie of the web, never following a redirect", async () => {
+    const { seen, reference } = client(() => answer(200, JSON.stringify(INDEX)));
     expect(await reference.index()).toEqual(INDEX);
     expect(seen[0]?.url).toBe("https://atlas.example/api/reference/index");
     expect(seen[0]?.init?.redirect).toBe("error");
-    expect(seen[0]?.init?.credentials).toBe("omit");
-    const headers = seen[0]?.init?.headers as Record<string, string>;
-    expect(headers["x-atlas-device-token"]).toBe("tok");
-  });
-
-  it("travels with the cookie of the web when there is no token", async () => {
-    const { seen, reference } = client(() => answer(200, JSON.stringify(INDEX)));
-    await reference.index();
     expect(seen[0]?.init?.credentials).toBe("same-origin");
     expect(seen[0]?.init?.headers).toEqual({});
   });
@@ -81,11 +72,11 @@ describe("the client of the reference data (016, E3)", () => {
       throw new Error("no failure");
     };
     const coded = await failing(
-      () => answer(401, JSON.stringify({ error: { code: "device_token_revoked", details: {} } })),
+      () => answer(401, JSON.stringify({ error: { code: "session_invalid", details: {} } })),
       "index",
     );
     expect(coded).toBeInstanceOf(RemoteError);
-    expect(coded.code).toBe("device_token_revoked");
+    expect(coded.code).toBe("session_invalid");
     expect((await failing(() => answer(500, "<html>"), "index")).code).toBe("transport_rejected");
     expect((await failing(() => answer(200, "{"), "index")).code).toBe("transport_rejected");
     expect((await failing(() => answer(200, "{}"), "index")).code).toBe("transport_rejected");

@@ -16,7 +16,6 @@ import { decodeLine } from "../schema/line.js";
 import type { LedgerSchema } from "../schema/migrations/index.js";
 import { duplicatesOf } from "../usecases/record-event.js";
 import { evaluateUnit } from "./evaluate.js";
-import { linesOfText } from "./lines.js";
 import { type ReapplyBase, reapplyUnits } from "./reapply.js";
 import { sealHolds } from "./seal.js";
 
@@ -144,22 +143,6 @@ const textRefusal = (line: string): "lone_surrogate" | "duplicate_key" | undefin
     return undefined;
   }
   return repeatsKey(line) ? "duplicate_key" : undefined;
-};
-
-/** The body of `PUT /api/ledger`. */
-export const parseInitBody = (
-  body: unknown,
-): { content: string; confirm_duplicate_ids: string[] } => {
-  if (
-    !isRecord(body) ||
-    Object.keys(body).some((key) => !["content", "confirm_duplicate_ids"].includes(key)) ||
-    typeof body.content !== "string" ||
-    !Array.isArray(body.confirm_duplicate_ids) ||
-    !body.confirm_duplicate_ids.every((id: unknown) => typeof id === "string")
-  ) {
-    throw bodyInvalid("init");
-  }
-  return body as unknown as { content: string; confirm_duplicate_ids: string[] };
 };
 
 interface Rejection {
@@ -446,82 +429,4 @@ export const acceptAppend = (
     };
   }
   return { accepted, lines };
-};
-
-/**
- * The ids a first device confirms when it initialises the remote: every event
- * whose fingerprint repeats that of an **earlier event in the file**, reversed
- * or not. Everything in the local ledger was accepted locally, so the client
- * derives them without asking again.
- */
-export const initDuplicateIds = (events: readonly LedgerEvent[]): string[] => {
-  const seen = new Set<string>();
-  const ids: string[] = [];
-  for (const event of events) {
-    const fingerprint = (event as { fingerprint?: string }).fingerprint;
-    if (fingerprint === undefined) {
-      continue;
-    }
-    if (seen.has(fingerprint)) {
-      ids.push(event.id);
-    }
-    seen.add(fingerprint);
-  }
-  return ids;
-};
-
-const initRejected = (code: string, details: Record<string, unknown>): RemoteError =>
-  new RemoteError("init_rejected", 422, { code, ...details });
-
-/**
- * Judges the initialisation of an **empty** remote with the whole bytes of a
- * ledger: it loads with the schema, projects valid,
- * no `recorded_at` beyond the clock, and every repeated fingerprint confirmed.
- * The declarations of pairs and chains do not apply: there is no queue to
- * split. Returns the lines to write; throws `init_rejected` otherwise.
- */
-export const acceptInit = (
-  content: string,
-  confirmDuplicateIds: readonly string[],
-  rules: RemoteRules,
-): string[] => {
-  const bytes = byteLength(content);
-  if (bytes > MAX_LEDGER_BYTES) {
-    throw initRejected("ledger_too_large", { limit: MAX_LEDGER_BYTES, bytes });
-  }
-  const lines = linesOfText(content);
-  const events: LedgerEvent[] = [];
-  for (const [index, line] of lines.entries()) {
-    if (/\r/.test(line)) {
-      throw initRejected("raw_line_break", { line: index + 1 });
-    }
-    const refused = textRefusal(line);
-    if (refused !== undefined) {
-      throw initRejected(refused, { line: index + 1 });
-    }
-    const read = readLine(line, rules);
-    if ("code" in read) {
-      throw initRejected(read.code, { ...read.details, line: index + 1 });
-    }
-    events.push(read.event);
-  }
-  let state: ReturnType<typeof projectLedger>;
-  try {
-    state = projectLedger(events, { collectErrors: true });
-  } catch (error) {
-    throw initRejected("domain_rejected", {
-      domain_code: asDomainError(error).code,
-      id: asDomainError(error).details.event_id,
-    });
-  }
-  const first = state.invalid[0];
-  if (first !== undefined) {
-    throw initRejected("domain_rejected", { domain_code: first.error.code, id: first.event.id });
-  }
-  const confirmed = new Set(confirmDuplicateIds);
-  const unconfirmed = initDuplicateIds(events).find((id) => !confirmed.has(id));
-  if (unconfirmed !== undefined) {
-    throw initRejected("duplicate_unconfirmed", { id: unconfirmed });
-  }
-  return lines;
 };

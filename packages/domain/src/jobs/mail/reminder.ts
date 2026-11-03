@@ -47,31 +47,17 @@ const signInLines = (facts: ReminderFacts): string[] => {
   return [
     signIn.last === undefined
       ? "  No consta ningún inicio de sesión."
-      : `  Último inicio de sesión: hace ${count(signIn.days as number)} días (${signIn.last}), en la web o en la consola.`,
+      : `  Último inicio de sesión en la web: hace ${count(signIn.days as number)} días (${signIn.last}).`,
     ...(signIn.deadline === undefined
       ? []
       : [
-          `  Aviso: si nadie inicia sesión antes del ${signIn.deadline}, Google puede borrar el cliente OAuth. Inicia sesión en la web o con «atlas remote login».`,
+          `  Aviso: si nadie inicia sesión antes del ${signIn.deadline}, Google puede borrar el cliente OAuth. Entra en la web para evitarlo.`,
         ]),
     ...(signIn.webUnreadable
       ? [
           "  La fecha del último inicio de sesión web no se ha podido leer (web_sign_in_unreadable).",
         ]
       : []),
-  ];
-};
-
-const tokenLines = (facts: ReminderFacts): string[] => {
-  const tokens = facts.tokens;
-  if (tokens === "unavailable") {
-    return ["  No se ha podido leer el registro de los tokens de la consola (tokens_unavailable)."];
-  }
-  return [
-    `  Tokens de consola vivos: ${count(tokens.alive)}. Emitidos en ${monthName(facts.issuedMonth)}: ${count(tokens.issued)}.`,
-    ...(tokens.unreadable === 0
-      ? []
-      : [`  Registros de tokens ilegibles: ${count(tokens.unreadable)}.`]),
-    "  Si no reconoces una emisión, tu cuenta de Google puede estar comprometida (docs/runbooks/stolen-google-account.md).",
   ];
 };
 
@@ -87,7 +73,6 @@ export const reminderMail = (
     "",
     "Acceso",
     ...signInLines(facts),
-    ...tokenLines(facts),
     "",
     "Copia fuera de AWS",
     `  Haz la copia a tu disco: ${BACKUP_ORDER}`,

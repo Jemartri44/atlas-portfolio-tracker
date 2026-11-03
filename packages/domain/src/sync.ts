@@ -1,7 +1,7 @@
 // What the API and its clients share about the remote ledger (ADR-0026,
 // ADR-0035), as a **separate entry point** of the domain, like `ecb.ts` and
-// `quotes.ts`: the rules the API applies to a line it appends (`acceptAppend`,
-// `acceptInit`), the units a correction travels in, the answers a client reads
+// `quotes.ts`: the rules the API applies to a line it appends (`acceptAppend`),
+// the units a correction travels in, the answers a client reads
 // and the port of the remote. There is no queue and no client-side sync any
 // more (ADR-0035). The barrel never re-exports any of it, and the architecture
 // test holds that.
@@ -20,7 +20,6 @@ export {
   etagOfHeader,
   parseAppendAnswer,
   parseErrorAnswer,
-  parseInitAnswer,
 } from "./sync/answers.js";
 export { syncArchiveName } from "./sync/archive.js";
 export {
@@ -29,17 +28,13 @@ export {
   type UnitCheck,
   type UnitFailure,
 } from "./sync/evaluate.js";
-export { initRefusal } from "./sync/init-refusal.js";
 export { EMPTY_ETAG, linesOfText, textOfLines } from "./sync/lines.js";
 export { type Refusal, RefusedError } from "./sync/permission.js";
 export {
   type AppendAcceptance,
   acceptAppend,
-  acceptInit,
-  initDuplicateIds,
   MAX_APPEND_UNITS,
   parseAppendBody,
-  parseInitBody,
   type RemoteRules,
 } from "./sync/remote.js";
 export { entriesOf, type QueueUnit, unitsOf } from "./sync/units.js";
