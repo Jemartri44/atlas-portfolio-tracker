@@ -97,6 +97,8 @@ export interface Jobs {
   readonly logs: string[];
   /** Every address a source asked for. */
   readonly fetched: string[];
+  /** The options each of those calls carried, in the same order. */
+  readonly fetchInits: ({ signal?: AbortSignal; redirect?: string } | undefined)[];
   readonly handler: JobsHandler;
   run(tasks: readonly string[], requestId?: string): Promise<void>;
   setNow(iso: string): void;
@@ -119,6 +121,7 @@ export const setupJobs = (
   const s3 = options.s3 ?? new TestOnlyFakeS3();
   const ssm = options.ssm ?? new TestOnlyFakeSsm();
   const fetched: string[] = [];
+  const fetchInits: ({ signal?: AbortSignal; redirect?: string } | undefined)[] = [];
   const ses = new TestOnlyFakeSes();
   const logs: string[] = [];
   let now = Date.parse(options.now ?? "2026-10-01T06:00:00Z");
@@ -132,8 +135,9 @@ export const setupJobs = (
     objects: () => s3,
     parameters: () => ssm,
     mail: () => ses,
-    fetch: (url: string) => {
+    fetch: (url: string, init?: { signal?: AbortSignal; redirect?: string }) => {
       fetched.push(url);
+      fetchInits.push(init);
       return options.fetch === undefined
         ? Promise.reject(new Error("no network in the tests"))
         : options.fetch(url);
@@ -150,6 +154,7 @@ export const setupJobs = (
     ses,
     logs,
     fetched,
+    fetchInits,
     handler,
     run: (tasks, requestId = "req-1") =>
       handler({ event_format: 1, tasks: [...tasks] }, { awsRequestId: requestId }),

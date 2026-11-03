@@ -75,6 +75,21 @@ describe("the ZIP in the browser", () => {
   });
 });
 
+describe("the ZIP of a size that is not the ECB's", () => {
+  it("refuses an entry that declares more than the bound, and one that lies about its size", async () => {
+    const content = Buffer.alloc(5000, "a");
+    const honest = zipOf("eurofxref-hist.csv", content);
+    expect(Buffer.from(await entryOfZip(honest, ".csv", 6000))).toEqual(content);
+    await expect(entryOfZip(honest, ".csv", 1000)).rejects.toThrow(/demasiado grande/);
+    // The directory says 10 bytes; the data inflates to 5000: the inflation stops at the bound.
+    const lying = new Uint8Array(honest);
+    const end = new DataView(lying.buffer, lying.byteOffset, lying.byteLength);
+    const central = 30 + "eurofxref-hist.csv".length + deflateRawSync(content).length;
+    end.setUint32(central + 24, 10, true);
+    await expect(entryOfZip(lying, ".csv", 1000)).rejects.toThrow(/demasiado grande/);
+  });
+});
+
 describe("importing the history by hand", () => {
   it("keeps the ZIP's history, and refuses one that changes a published rate", async () => {
     expect((await reloadWebHistory()).history).toBeUndefined();
