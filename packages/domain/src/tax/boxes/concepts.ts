@@ -307,8 +307,9 @@ export const MISSING_FIELDS: ReadonlySet<RowFieldId> = new Set(["nif"]);
  * is what says which of the two it is.
  *
  * The data dictionary of the Modelo 100 of 2025 (`diccionarioXSD_2025` and
- * `Renta2025.xsd`, read on 2026-11-03) types each box as positive only (`P102`)
- * or signed (`N102`); the signed ones are exactly the movable capital income.
+ * `Renta2025.xsd`) types each box as positive only (`P102`) or signed
+ * (`N102`): 0027, 0031, 0036, 0038, 0040 and 0041 are signed, and 0029, the
+ * dividends, is not (a dividend is never negative in the ledger anyway).
  *
  * It decides **which box**, and nothing else: the amount shown always carries
  * its own sign, with or without a table, because a year with no checked table
@@ -316,7 +317,6 @@ export const MISSING_FIELDS: ReadonlySet<RowFieldId> = new Set(["nif"]);
  */
 export const SIGNED_CONCEPTS: ReadonlySet<ConceptId> = new Set<ConceptId>([
   "rcm.interest",
-  "rcm.dividends",
   "rcm.transmission",
   "rcm.gross_total",
   "rcm.net",

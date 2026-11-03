@@ -15,9 +15,11 @@ import {
   type ConceptId,
   conceptName,
   SECTIONS,
+  SIGNED_CONCEPTS,
   transmissionSection,
 } from "../../src/tax/boxes/concepts.js";
 import type { BoxEntry, TaxBoxes } from "../../src/tax/boxes/report.js";
+import { BOXES_2025 } from "../../src/tax/boxes/years/2025.js";
 import { buy, HAND_SETTINGS, sell, taxBuilder, text } from "./helpers.js";
 
 const TODAY = "2035-01-01";
@@ -664,5 +666,15 @@ describe("the sign of a figure", () => {
     const boxes = taxBoxes(b.build(), 2025, { today: TODAY });
     expect(text(total(boxes, "rcm.transmission").amount_eur)).toBe("-50");
     expect(total(boxes, "rcm.transmission").box).toBe("0031");
+  });
+
+  // The data dictionary of the Modelo 100 of 2025 types these six boxes as
+  // signed (`N102`) and every other one as positive only (`P102`), 0029 included.
+  it("asks a sign in exactly the boxes the 2025 dictionary types as signed", () => {
+    const signed = [...SIGNED_CONCEPTS]
+      .map((concept) => BOXES_2025.concepts[concept]?.box)
+      .filter((box): box is string => box !== undefined)
+      .sort();
+    expect(signed).toEqual(["0027", "0031", "0036", "0038", "0040", "0041"]);
   });
 });
