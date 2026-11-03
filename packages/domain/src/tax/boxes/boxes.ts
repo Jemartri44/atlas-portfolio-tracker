@@ -17,7 +17,7 @@
 //     wrong figure that the user types into a real return.
 
 import type { Money } from "../../money/money.js";
-import { euRegulatedMarket } from "../../projections/markets.js";
+import { euRegulatedAdmission } from "../../projections/markets.js";
 import type { Asset, Warning } from "../../projections/state.js";
 import type { LedgerEvent } from "../../schema/events.js";
 import type { ChainCore, TaxOptions } from "../chain.js";
@@ -213,8 +213,9 @@ export const boxesOf = (report: TaxYearReport, chain: ChainCore): TaxBoxes => {
       ),
     );
   }
-  // A share whose market is missing or unknown stays among "acciones
-  // negociadas", which is wrong if it trades outside the EU.
+  // A share whose admission Atlas cannot tell (no market, an unknown one, or a
+  // mixed venue without an EU ISIN in euros) stays among "acciones
+  // negociadas", which is wrong if it is not admitted on an EU regulated market.
   const unknownMarket = [
     ...new Set(
       entries.flatMap((entry) =>
@@ -223,24 +224,23 @@ export const boxesOf = (report: TaxYearReport, chain: ChainCore): TaxBoxes => {
     ),
   ]
     .filter(
-      (assetId) =>
-        euRegulatedMarket((chain.state.assets.get(assetId) as Asset).market) === undefined,
+      (assetId) => euRegulatedAdmission(chain.state.assets.get(assetId) as Asset) === undefined,
     )
     .sort();
   if (unknownMarket.length > 0) {
     notes.push(
       note(
         "tax_box_market_unknown",
-        "some shares have no market written, or one Atlas does not know: they stay among 'acciones negociadas', which is wrong if they trade outside the EU",
+        "Atlas cannot tell whether some shares are admitted on an EU regulated market (no market, an unknown one, or Xetra, Frankfurt, Euronext or BME without an EU ISIN in euros): they stay among 'acciones negociadas', which is wrong if they are not",
         { assets: unknownMarket },
       ),
     );
   }
-  if (entries.some((entry) => entry.section === "other")) {
+  if (entries.some((entry) => entry.section === "other" && entry.row !== undefined)) {
     notes.push(
       note(
         "tax_box_other_inferred",
-        "an exchange difference of currency, or an ETC or ETP configured as a capital gain, has no section of its own: 'otros elementos patrimoniales' with key 4 is an inference by exclusion, not read in any source",
+        "an exchange difference of currency, or an ETC or ETP configured as a capital gain, has no section of its own: it goes to 'otros elementos patrimoniales' with key 4, which the help of 2025 gives to any other asset not in the sections before; the section is chosen by exclusion",
         { section: "other", key: "4" },
       ),
     );

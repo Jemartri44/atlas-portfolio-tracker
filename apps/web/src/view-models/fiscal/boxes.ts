@@ -22,9 +22,9 @@ export const BLOCK_TITLES: Record<BoxBlockId, string> = {
   etf: "Fondos y sociedades cotizados",
   listed_shares: "Acciones",
   rights: "Derechos de suscripción",
-  other_shares: "Acciones de fuera de la UE (otros elementos, dudoso)",
   crypto: "Monedas virtuales",
-  other: "Otros elementos, sin casilla (clave 4, inferencia)",
+  other:
+    "Otros elementos patrimoniales (clave 2: acciones no admitidas en la UE; clave 4: divisa y demás)",
   prior_years: "De ejercicios anteriores",
   offsetting: "Integración y compensación",
   base: "Base del ahorro",

@@ -151,7 +151,7 @@ const DEVELOPMENT_CSP = PRODUCTION_CSP.replace(
  * with `index.html`. Exported for `test/pwa-cache.test.ts`.
  */
 export const WORKBOX_OPTIONS: NonNullable<VitePWAOptions["workbox"]> = {
-  globPatterns: ["**/*.{js,css,html,svg,png,webmanifest}"],
+  globPatterns: ["**/*.{js,css,html,svg,png,webmanifest,woff2}"],
   // The shell opens without a connection and says «Sin conexión» by itself.
   navigateFallback: "index.html",
   // Except under /api/: the sign-in (`/api/auth/login`) and the return from Google are navigations
@@ -187,8 +187,8 @@ export default defineConfig(({ command }) => ({
         orientation: "portrait-primary",
         // The paper of the page for the splash, the top bar for the system bar:
         // the light theme, the one a manifest can name (tokens.css).
-        background_color: "#f3f2ee",
-        theme_color: "#ffffff",
+        background_color: "#f3f1ea",
+        theme_color: "#fffdf8",
         icons: [
           { src: "icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "icon-512.png", sizes: "512x512", type: "image/png" },
