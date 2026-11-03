@@ -12,7 +12,7 @@
 // **The base is valid**: the caller checks it before re-applying anything,
 // so everything the candidate breaks is the unit's doing.
 
-import type { DomainError } from "../errors.js";
+import { asDomainError, type DomainError } from "../errors.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import type { LedgerState } from "../projections/state.js";
 import type { LedgerEvent, SupportedEvent } from "../schema/events.js";
@@ -65,9 +65,9 @@ export const evaluateUnit = (
   } catch (error) {
     // Only `duplicate_id` is raised even while collecting errors (pass 0 of
     // the projection), and it is always about an id the unit brings, because
-    // the base alone projects. Anything else thrown here is a bug, and reading
-    // its details fails loudly rather than holding a line back for it.
-    const failure = error as DomainError;
+    // the base alone projects. Anything else thrown here is a bug, and it
+    // keeps propagating rather than holding a line back for it.
+    const failure = asDomainError(error);
     const id = failure.details.event_id;
     return {
       ok: false,
@@ -105,7 +105,7 @@ export const evaluateUnit = (
         projectLedger(base, { collectErrors: true }),
       );
     } catch (error) {
-      return { ok: false, failure: memberFailure(unit, index, (error as DomainError).code) };
+      return { ok: false, failure: memberFailure(unit, index, asDomainError(error).code) };
     }
   }
   return { ok: true, state: check.state };

@@ -164,7 +164,7 @@ describe("atlas rebalance: a sale at a loss", () => {
     const h = await ledger({ savings_tax_brackets: BRACKETS }, "50", earlierGain);
     expect(await h.exec(["rebalance", "--date", DATE])).toBe(0);
     expect(h.text()).toContain(
-      "   Reduce tu impuesto en ≈ 17.10 EUR: la pérdida de -90.00 EUR compensa ganancias de este año (estimación al precio de hoy; no es la liquidación).",
+      "   Reduce tu impuesto en ≈ 17.10 EUR: la pérdida de 90.00 EUR compensa ganancias de este año (estimación al precio de hoy; no es la liquidación).",
     );
     expect(h.text()).toContain("Lote FIFO de 2027-01-11: 1.8 uds, coste 180.00, ganancia -90.00.");
     h.reset();
@@ -182,7 +182,7 @@ describe("atlas rebalance: a sale at a loss", () => {
     );
     expect(await h.exec(["rebalance", "--date", DATE])).toBe(0);
     expect(h.text()).toContain(
-      "   Impuesto aproximado: 0.00 EUR sobre una pérdida de -125.00 EUR (estimación al precio de hoy; no es la liquidación).",
+      "   Impuesto aproximado: 0.00 EUR sobre una pérdida de 125.00 EUR (estimación al precio de hoy; no es la liquidación).",
     );
     expect(h.text()).toContain(
       "   Pérdida diferida por la regla de recompra: 50.00 EUR. No recompres este valor antes de 2027-08-30 o la pérdida seguirá sin ser deducible.",

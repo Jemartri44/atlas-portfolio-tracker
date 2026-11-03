@@ -4,7 +4,7 @@
 import { isCivilDate } from "../dates/civil-date.js";
 import { ValidationError } from "../errors.js";
 import { isRecord, type UnknownRecord } from "../guards.js";
-import { Decimal, isDecimalString } from "../money/decimal.js";
+import { Decimal, HUNDRED, isDecimalString } from "../money/decimal.js";
 import { ASSET_TYPES } from "../schema/events.js";
 import {
   FISCAL_DATE_RULES,
@@ -370,7 +370,7 @@ export const validateSettings = (raw: unknown): Settings => {
       }
       total = total.add(parsed);
     }
-    if (!total.eq(Decimal.parse("100"))) {
+    if (!total.eq(HUNDRED)) {
       return fail("target_weights must add up to 100", {
         field: "target_weights",
         total: total.toString(),

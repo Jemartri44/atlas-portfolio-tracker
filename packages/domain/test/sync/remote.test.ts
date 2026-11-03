@@ -675,8 +675,8 @@ describe("the size bounds of what the remote keeps", () => {
     );
     // Three bytes for one character and four for a pair: both under the bound in characters.
     for (const [unit, count] of [
-      ["€", 5600],
-      ["😀", 4200],
+      ["€", Math.floor(MAX_LINE_BYTES / 3) + 10],
+      ["😀", Math.floor(MAX_LINE_BYTES / 4) + 10],
     ] as const) {
       const wide = encodeLine(withNotes(device(705), 0)).replace(
         /"notes":"[^"]*"/,
@@ -685,6 +685,34 @@ describe("the size bounds of what the remote keeps", () => {
       expect(wide.length).toBeLessThan(MAX_LINE_BYTES);
       expect(acceptAppend(remote, [{ line: wide }], rules).rejected?.code).toBe("line_too_large");
     }
+  });
+
+  it("admits a 720 filing that declares 200 assets, which the append-only ledger could never shorten", () => {
+    const b = device(720);
+    b.account("acc_ibkr_main", { platform: "ibkr", country: "IE" });
+    const ids = Array.from(
+      { length: 200 },
+      (_, i) => `ast_${String(i).padStart(4, "0")}_world_etf`,
+    );
+    for (const id of ids) b.asset(id);
+    const prefix = [...events, ...b.build()];
+    const items = ids.map((asset_id) => ({
+      category: "securities" as const,
+      account_id: "acc_ibkr_main",
+      asset_id,
+      value_eur: "12345.67",
+    }));
+    const filing = b.filed({
+      tax_year: 2026,
+      model: "720",
+      declared: { items },
+      ledger_fingerprint: fingerprintOfEvents(prefix),
+    } as Parameters<typeof b.filed>[0]);
+    const bytes = new TextEncoder().encode(encodeLine(filing)).length;
+    expect(bytes).toBeGreaterThan(16 * 1024); // the former bound
+    expect(bytes).toBeLessThan(MAX_LINE_BYTES);
+    expect(acceptAppend(linesOf(prefix), plain([filing]), rules)).toMatchObject({ accepted: 1 });
+    expect(() => acceptInit(textOf([...prefix, filing]), [], rules)).not.toThrow();
   });
 
   it("refuses a decimal of more than MAX_DECIMAL_DIGITS digits as an invalid line, at any depth", () => {
