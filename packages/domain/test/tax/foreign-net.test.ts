@@ -1,6 +1,6 @@
 // The net foreign income of the double-taxation window, by hand: the gross
 // less its share of the deductible fees, split by the gross of dividends and
-// interest, and never below zero.
+// of the interest of securities, and never below zero.
 
 import { describe, expect, it } from "vitest";
 import { EUR, Money } from "../../src/money/money.js";
@@ -9,11 +9,19 @@ import type { TaxYearReport } from "../../src/tax/report.js";
 
 const eur = (amount: string): Money => Money.parse(amount, EUR);
 
-const report = (dividends: string[], interest: string[], fees: string[]): TaxYearReport =>
+const report = (
+  dividends: string[],
+  interest: string[],
+  fees: string[],
+  accountInterest: string[] = [],
+): TaxYearReport =>
   ({
     movable_capital: {
       dividends: dividends.map((gross) => ({ gross_eur_rounded: eur(gross) })),
-      interest: interest.map((gross) => ({ gross_eur_rounded: eur(gross) })),
+      interest: [
+        ...interest.map((gross) => ({ gross_eur_rounded: eur(gross), asset_id: "bond" })),
+        ...accountInterest.map((gross) => ({ gross_eur_rounded: eur(gross) })),
+      ],
       expenses: fees.map((fee) => ({ amount_eur_rounded: eur(fee) })),
     },
   }) as unknown as TaxYearReport;
@@ -32,5 +40,10 @@ describe("foreignNetOf", () => {
     expect(foreignNetOf(report(dividends, interest, fees))(eur(gross)).amount.toString()).toBe(
       Money.parse(net, EUR).amount.toString(),
     );
+  });
+
+  it("leaves the interest of an account out of the split: it bears no custody fees", () => {
+    const net = foreignNetOf(report(["100"], [], ["-20"], ["100"]))(eur("100"));
+    expect(net.amount.toString()).toBe("80");
   });
 });

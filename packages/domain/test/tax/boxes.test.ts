@@ -125,7 +125,7 @@ describe("a concept with no box in the year that does have a table", () => {
     // put it in movable capital income: that box is there, as the whole block
     // of page 5 always is, and it holds nothing.
     expect(boxes.entries.some((item) => item.box === "0031" && item.row !== undefined)).toBe(false);
-    expect(text(total(boxes, "rcm.transmission").amount_eur)).toBe("0");
+    expect(text(total(boxes, "rcm.transmission_total").amount_eur)).toBe("0");
     expect(codes(boxes)).toContain("tax_box_other_inferred");
   });
 });
@@ -235,7 +235,7 @@ describe("the two ways the savings base can cross categories", () => {
       (item) => item.box === "0031" && item.row?.event_id === sale.id,
     );
     expect(freed.map((item) => text(item.exact_eur))).toEqual(["-100"]);
-    expect(text(total(boxes, "rcm.transmission").amount_eur)).toBe("-100");
+    expect(text(total(boxes, "rcm.transmission_total").amount_eur)).toBe("-100");
     // And the sale itself is a gain of 50,00 in the section of the funds, with
     // nothing at all in the section of earlier years.
     expect(text(entry(boxes, "gp.iic.gain").amount_eur)).toBe("50");
@@ -286,7 +286,7 @@ describe("the same crossing, the other way round", () => {
         .filter((item) => item.box === "0031" && item.row?.event_id === sale.id)
         .map((item) => text(item.exact_eur)),
     ).toEqual(["50"]);
-    expect(text(total(boxes, "rcm.transmission").amount_eur)).toBe("50");
+    expect(text(total(boxes, "rcm.transmission_total").amount_eur)).toBe("50");
     // And the −100,00 freed goes where the loss was born.
     expect(text(entry(boxes, "gp.prior_years.loss").amount_eur)).toBe("100");
     expect(entry(boxes, "gp.prior_years.loss").box).toBe("0395");
@@ -664,8 +664,8 @@ describe("the sign of a figure", () => {
     buy(b, "etc_e", "2025-01-10", "10", "100");
     sell(b, "etc_e", "2025-06-01", "10", "95");
     const boxes = taxBoxes(b.build(), 2025, { today: TODAY });
-    expect(text(total(boxes, "rcm.transmission").amount_eur)).toBe("-50");
-    expect(total(boxes, "rcm.transmission").box).toBe("0031");
+    expect(text(total(boxes, "rcm.transmission_total").amount_eur)).toBe("-50");
+    expect(total(boxes, "rcm.transmission_total").box).toBe("0031");
   });
 
   // The data dictionary of the Modelo 100 of 2025 types these six boxes as
@@ -673,8 +673,7 @@ describe("the sign of a figure", () => {
   it("asks a sign in exactly the boxes the 2025 dictionary types as signed", () => {
     const signed = [...SIGNED_CONCEPTS]
       .map((concept) => BOXES_2025.concepts[concept]?.box)
-      .filter((box): box is string => box !== undefined)
-      .sort();
-    expect(signed).toEqual(["0027", "0031", "0036", "0038", "0040", "0041"]);
+      .filter((box): box is string => box !== undefined);
+    expect([...new Set(signed)].sort()).toEqual(["0027", "0031", "0036", "0038", "0040", "0041"]);
   });
 });

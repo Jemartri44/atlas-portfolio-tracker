@@ -5,9 +5,11 @@
 // reducidos del capital mobiliario obtenidos en el extranjero" (data
 // dictionary of the Modelo 100 of 2025). The law does not say how a fee shared
 // by every income is split; Atlas splits it in proportion to the gross of
-// dividends and interest, the only income the custody fees relate to. That is
-// Atlas's reading (criterion #16), and never below zero. The treaty limit is
-// another figure and stays on the gross (`doubleTaxation` in `notes.ts`).
+// dividends and of the interest of securities, the only income the custody
+// fees relate to: the interest of an account has no securities to keep, so it
+// bears none. That is Atlas's reading (criterion #16), and never below zero.
+// The treaty limit is another figure and stays on the gross (`doubleTaxation`
+// in `notes.ts`).
 
 import { positive, sum } from "../money/eur.js";
 import type { Money } from "../money/money.js";
@@ -18,7 +20,9 @@ export const foreignNetOf = (report: TaxYearReport): ((gross: Money) => Money) =
   const movable = report.movable_capital;
   const income = sum([
     ...movable.dividends.map((line) => line.gross_eur_rounded),
-    ...movable.interest.map((line) => line.gross_eur_rounded),
+    ...movable.interest
+      .filter((line) => line.asset_id !== undefined)
+      .map((line) => line.gross_eur_rounded),
   ]);
   // Negative: the fees reduce the income.
   const fees = sum(movable.expenses.map((line) => line.amount_eur_rounded));

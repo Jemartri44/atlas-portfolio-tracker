@@ -107,6 +107,13 @@ const otherElements = (
   ),
 });
 
+const transmissionBox = (): YearBoxMapping =>
+  page(
+    "0031",
+    "Rendimientos procedentes de la transmisión, amortización o reembolso de otros activos financieros (*) (Salvo que deban consignarse en la casilla [0034])",
+    5,
+  );
+
 const conceptTable = (): Partial<Record<ConceptId, YearBoxMapping>> => ({
   // --- Movable capital income, page 5 ---------------------------------------
   "rcm.interest": page(
@@ -119,11 +126,9 @@ const conceptTable = (): Partial<Record<ConceptId, YearBoxMapping>> => ({
     "Dividendos y demás rendimientos por la participación en fondos propios de entidades",
     5,
   ),
-  "rcm.transmission": page(
-    "0031",
-    "Rendimientos procedentes de la transmisión, amortización o reembolso de otros activos financieros (*) (Salvo que deban consignarse en la casilla [0034])",
-    5,
-  ),
+  "rcm.transmission": transmissionBox(),
+  // The same box: what the rows above add up to, never a further figure.
+  "rcm.transmission_total": transmissionBox(),
   "rcm.gross_total": page(
     "0036",
     "Total ingresos íntegros ([0027] + [0028] + [0029] + [0030] + [0031] + [0032] + [0033] + [0034] + [0035])",
