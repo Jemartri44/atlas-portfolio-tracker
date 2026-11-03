@@ -1,7 +1,7 @@
 /*
  * The bar of proportion (components/ShareBar.tsx): parts of one whole on a single bar, cut apart by
  * the colour of the surface, with the figure always written beside it (docs/design/system.md §5.2).
- * The colours are the series of tokens.css, which pass the contrast test; the thin variant is the
+ * The patrimony reads the series of tokens.css, which pass the contrast test; the exposure, steps of grey; the thin variant is the
  * line of a row.
  */
 .shares {
@@ -29,26 +29,28 @@
   fill: var(--c-series-cash);
 }
 
-/* The parts of the exposure, in order of weight; what does not fit in four goes to «rest». The bar and
-   the swatch of its legend read the same colour. */
+/* The parts of the exposure, in order of weight; what does not fit in four goes to «rest». They are
+   steps of grey, never a hue: in Cartera the hues already mean an asset class and the books, and a
+   currency must not look like either. The order and the figure in the legend tell them apart. The
+   bar and the swatch of its legend read the same colour. */
 .is-a {
-  --part: var(--c-series-core);
+  --part: var(--c-text);
 }
 
 .is-b {
-  --part: var(--c-series-bucket);
+  --part: var(--c-text-3);
 }
 
 .is-c {
-  --part: var(--c-series-cash);
+  --part: var(--c-border-control);
 }
 
 .is-d {
-  --part: var(--c-series-contrib);
+  --part: var(--c-border);
 }
 
 .is-rest {
-  --part: var(--c-border);
+  --part: var(--c-fill);
 }
 
 .share-seg.is-a,
