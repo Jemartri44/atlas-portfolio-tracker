@@ -383,7 +383,13 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
       asset(),
       { name: "date", label: "Fecha", kind: "date", required: true },
       { name: "quantity", label: "Cantidad", kind: "decimal", required: true },
-      { name: "unit_value", label: "Valor unitario", kind: "decimal", required: true },
+      {
+        name: "unit_value",
+        label: "Valor unitario",
+        kind: "decimal",
+        required: true,
+        hint: "A 31 de diciembre, para el Modelo 720: en un fondo, un ETF o un monetario, el valor liquidativo (no la cotización); en una acción o un ETC, la cotización de cierre.",
+      },
       currency(),
       ...fxRate(),
       {

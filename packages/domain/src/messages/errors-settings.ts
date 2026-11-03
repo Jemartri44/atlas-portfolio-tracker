@@ -158,4 +158,6 @@ export const ERRORS_SETTINGS: Record<string, Entry> = {
   },
   newly_invalid_events: (d, v) =>
     `Este cambio de configuración deja inválidos ${counted(v, v.count(d.affected), "evento ya registrado", "eventos ya registrados")}.`,
+  treaty_rate_for_spain: () =>
+    "España no tiene tipo de convenio: una retención española es un pago a cuenta (casilla 0597), no un impuesto extranjero. Quita ES de los tipos de convenio.",
 };
