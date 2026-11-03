@@ -66,6 +66,7 @@ export {
 } from "./projections/exposure-file.js";
 export {
   DEFAULT_INDEX_TABLES,
+  INDEX_PROFILES,
   type IndexProfile,
   type IndexTables,
   type KnownFund,

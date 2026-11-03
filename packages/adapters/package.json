@@ -38,6 +38,10 @@
       "types": "./dist/drafts/api-drafts.d.ts",
       "import": "./dist/drafts/api-drafts.js"
     },
+    "./exposure-http": {
+      "types": "./dist/exposure/api-exposure.d.ts",
+      "import": "./dist/exposure/api-exposure.js"
+    },
     "./sync-http": {
       "types": "./dist/sync/http-remote.d.ts",
       "import": "./dist/sync/http-remote.js"

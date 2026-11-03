@@ -160,6 +160,22 @@ describe("exposure", () => {
       expect(result.counts).toEqual({ owner: 0, default: 2, none: 1 });
       // An index key that is no profile (removed, mistyped) is no proposal either.
       expect(withDefaults({ ast_bonds: { index: "gone" } }).counts.none).toBe(1);
+      // …and it says which index was lost, so the screen can tell the owner.
+      const lost = withDefaults({ ast_bonds: { index: "gone" } }).currency.assets;
+      expect(lost.find((a) => a.asset_id === "ast_bonds")).toEqual({
+        asset_id: "ast_bonds",
+        state: "none",
+        lost_index: "gone",
+      });
+      // An own split with a lost index still counts as the owner's, and carries the mark.
+      const own = withDefaults({
+        ast_bonds: { index: "gone", currency: { EUR: "100" }, region: { europe: "100" } },
+      }).currency.assets;
+      expect(own.find((a) => a.asset_id === "ast_bonds")).toEqual({
+        asset_id: "ast_bonds",
+        state: "owner",
+        lost_index: "gone",
+      });
     });
 
     it("counts an asset as the owner's only when every dimension is", () => {

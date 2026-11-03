@@ -58,6 +58,8 @@ export interface ExposureAsset {
   asset_id: AssetId;
   state: ExposureState;
   index?: ExposureIndex;
+  /** The index the owner chose, which is no longer in the tables: no proposal, and the screen says so. */
+  lost_index?: string;
 }
 
 export interface ExposureDimension {
@@ -123,10 +125,13 @@ const dimensionOf = (
     }
     const own = exposures[row.asset_id]?.[dimension];
     const found = indexOf(row.asset_id, row.asset_class, exposures, catalogue, tables);
+    const chosen = exposures[row.asset_id]?.index;
+    const lost =
+      chosen !== undefined && tables.profiles[chosen] === undefined ? { lost_index: chosen } : {};
     const split = own ?? found?.profile[dimension];
     if (split === undefined) {
       missing.push(row.asset_id);
-      assets.push({ asset_id: row.asset_id, state: "none" });
+      assets.push({ asset_id: row.asset_id, state: "none", ...lost });
       continue;
     }
     if (own === undefined) {
@@ -136,6 +141,7 @@ const dimensionOf = (
     assets.push({
       asset_id: row.asset_id,
       state: own === undefined ? "default" : "owner",
+      ...lost,
       ...(own !== undefined || profile === undefined || found === undefined
         ? {}
         : {
