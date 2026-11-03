@@ -22,6 +22,13 @@ export interface ChartSeries {
    * bands of the holes go.
    */
   step?: boolean | undefined;
+  /**
+   * An area (docs/design/system.md §5.15): filled down to zero, or down to the series of that label,
+   * which it is stacked on. A light wash of its own colour; the line on top still says the value.
+   */
+  fill?: "zero" | { below: string } | undefined;
+  /** Left out of the legend: the stacked copy of a series the legend already names. */
+  legend?: false | undefined;
 }
 
 type SteppedFactory = (options: { align: 1 | -1 }) => uPlot.Series.PathBuilder;
@@ -49,6 +56,19 @@ export const hasIsolatedPoint = (values: readonly (number | null)[]): boolean =>
 
 const cssValue = (name: string): string =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888";
+
+/** A token colour as a wash: `#rrggbb` with an alpha, for the fill of an area. */
+export const washOf = (hex: string, alpha: number): string => {
+  const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (match === null) {
+    return hex;
+  }
+  const [r, g, b] = [match[1], match[2], match[3]].map((part) => Number.parseInt(part ?? "0", 16));
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+/** How strong the wash of an area is: enough to read as a surface, never as a block of colour. */
+const WASH = 0.16;
 
 /** The type of the axes: the family of the page, at the smallest step it reads. */
 const axisFont = (): string => `13px ${cssValue("--font-sans")}`;
@@ -104,6 +124,22 @@ export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options =
       ...(spec.sync === undefined ? {} : { sync: { key: spec.sync } }),
     },
     scales: { x: { time: true } },
+    // An area stacked on another fills only the room between the two lines.
+    bands: spec.series.flatMap((series, index) => {
+      const fill = series.fill;
+      if (fill === undefined || fill === "zero") {
+        return [];
+      }
+      const below = spec.series.findIndex((other) => other.label === fill.below);
+      return below < 0
+        ? []
+        : [
+            {
+              series: [index + 1, below + 1] as [number, number],
+              fill: washOf(cssValue(series.colour), WASH),
+            },
+          ];
+    }),
     hooks: { drawClear: [drawGaps(gapsOf(spec.x, spec.bands ?? spec.series))] },
     axes: [
       {
@@ -143,6 +179,7 @@ export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options =
         width: 2,
         cap: "round" as CanvasLineCap,
         spanGaps: false,
+        ...(series.fill === undefined ? {} : { fill: washOf(cssValue(series.colour), WASH) }),
         ...(series.step === true
           ? { paths: (uPlot.paths.stepped as SteppedFactory)({ align: 1 }) }
           : {}),

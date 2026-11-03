@@ -45,6 +45,13 @@ export interface SeriesCardProps {
    */
   stepped?: readonly number[] | undefined;
   panels?: readonly { series: readonly number[]; name?: string }[] | undefined;
+  /**
+   * Areas: the series filled down to zero, and one stacked on another — drawn as their sum, filled
+   * between the two lines and left out of the legend, which names it already. Its index, for a
+   * panel, is the one after the last label.
+   */
+  filled?: readonly number[] | undefined;
+  stacked?: { top: number; on: number } | undefined;
   /** What the values are: euros, or a percentage (axis and table without a mask). */
   unit?: "eur" | "pct" | undefined;
   /** Past half a range of holes, jump to the last stretch with data and say so. */
@@ -73,14 +80,37 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
   };
   const options = createMemo<RangeOption[]>(() => rangeCounts(props.x, props.values, props.asOf));
 
-  const series = (): ChartSeries[] =>
-    props.labels.map((label, index) => ({
+  const series = (): ChartSeries[] => {
+    const own: ChartSeries[] = props.labels.map((label, index) => ({
       label,
       values: indices().map((at) => props.values[index]?.[at] ?? null),
       colour: props.colours[index] ?? "--c-series-index",
       ...(props.dashes[index] === undefined ? {} : { dash: props.dashes[index] as number[] }),
       ...(props.stepped?.includes(index) === true ? { step: true } : {}),
+      ...(props.filled?.includes(index) === true ? { fill: "zero" as const } : {}),
     }));
+    const stack = props.stacked;
+    if (stack === undefined) {
+      return own;
+    }
+    const top = own[stack.top] as ChartSeries;
+    const on = own[stack.on] as ChartSeries;
+    // A sum needs both: where either is a hole, so is the stack.
+    const sum = top.values.map((value, at) => {
+      const base = on.values[at] ?? null;
+      return value === null || base === null ? null : value + base;
+    });
+    return [
+      ...own,
+      {
+        label: `${top.label} (sobre ${on.label.toLowerCase()})`,
+        values: sum,
+        colour: top.colour,
+        fill: { below: on.label },
+        legend: false,
+      },
+    ];
+  };
 
   const shown = (): number[] => indices().map((at) => props.x[at] as number);
   const buttons = (): JSX.Element => (
@@ -118,7 +148,7 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
                       x={shown()}
                       series={panel.series.map((index) => series()[index] as ChartSeries)}
                       bands={series()}
-                      label={`${props.title}: ${panel.name ?? "cartera principal con su efectivo y lo aportado"}`}
+                      label={`${props.title}: ${panel.name ?? "cartera principal con su efectivo, el cubo apilado encima y lo aportado"}`}
                       panel={at() === 0 ? "main" : at() === panels().length - 1 ? "end" : "strip"}
                       sync="evolution"
                       dates={at() === panels().length - 1}
@@ -129,7 +159,7 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
             )}
           </Show>
           <figcaption>
-            <ChartLegend series={series()} />
+            <ChartLegend series={series().filter((one) => one.legend !== false)} />
           </figcaption>
         </figure>
         <Show when={typeof hole() === "object"}>

@@ -1,8 +1,9 @@
 /*
  * The summary (docs/design/system.md §5.2 and §7.2): the one hero figure with
- * its proportion bar and its three books, the calm line of an empty attention
- * list, the first screenful by importance and the 8+4 of the monitor. The
- * first steps of an empty ledger are in `steps.css`.
+ * its proportion bar and its three books as tiles, the calm line of an empty
+ * attention list and the spans of each card from the grid's 12 columns. The
+ * first steps of an empty ledger are in `steps.css`; this month and the
+ * allocation, in `summary-cards.css`.
  *
  * LINE BUDGET: the one screen whose shape changes with the season and with the width; its rules
  * read together, and a sheet of its own for the placement would split the one card that moves from
@@ -80,15 +81,57 @@
 
 .part {
   align-items: center;
-  display: flex;
-  gap: var(--space-3);
-  justify-content: space-between;
+  column-gap: var(--space-3);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   min-height: var(--tap);
   padding-block: var(--space-2);
 }
 
 .part + .part {
   border-top: var(--border) solid var(--c-border);
+}
+
+/* What each book says besides its value: the core's month, the bucket against the index. */
+.part-metric {
+  color: var(--c-text-2);
+  font-size: var(--text-sm);
+  grid-column: 1 / -1;
+}
+
+/* On a phone the evolution carries the same shape, and the core's return is under the figure. */
+.part > .sparkline,
+.part.is-core > .part-metric {
+  display: none;
+}
+
+.part-metric {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-3);
+}
+
+/* The title of the figure, quiet and in small capitals, so the figure is what is read. */
+.eyebrow {
+  color: var(--c-text-3);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.06em;
+  margin-bottom: var(--space-2);
+  text-transform: uppercase;
+}
+
+.hero-deltas {
+  color: var(--c-text-2);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  gap: var(--space-1) var(--space-3);
+  margin: calc(-1 * var(--space-2)) 0 var(--space-4);
+}
+
+.hero-deltas .num {
+  font-weight: var(--fw-semibold);
 }
 
 .part-label {
@@ -119,7 +162,7 @@
   .hero {
     column-gap: var(--space-6);
     display: grid;
-    grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   }
 
   .hero > .pending,
@@ -135,21 +178,39 @@
     border-top: 0;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    margin-top: auto;
+  }
+
+  /* Piece 1 of direction B: each book a tile with its figure and its small line. */
+  .hero .parts {
+    gap: var(--space-3);
   }
 
   .part {
-    align-content: end;
-    align-items: start;
-    border-left: var(--border) solid var(--c-border);
+    align-content: start;
+    background-color: var(--c-canvas);
+    border-radius: var(--radius-md);
     display: grid;
     gap: var(--space-2);
-    justify-content: start;
-    padding: 0 var(--space-5);
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--space-4);
   }
 
   .part + .part {
     border-top: 0;
+  }
+
+  .part > .sparkline {
+    display: block;
+    margin-top: auto;
+  }
+
+  /* The core's return moves into its tile: said once. */
+  .part.is-core > .part-metric {
+    display: flex;
+  }
+
+  .hero-deltas {
+    display: none;
   }
 
   .part-label {
@@ -168,6 +229,7 @@
   }
 
   .part-fig {
+    font-family: var(--font-serif);
     font-size: var(--text-2xl);
     font-weight: var(--fw-semibold);
     letter-spacing: var(--tracking-tight);
@@ -240,33 +302,29 @@
   gap: var(--space-1);
 }
 
-/* ---- The monitor: the summary in 8+4 ------------------- */
+/* ---- From the grid's 12 columns: the rows of the summary ----------------- */
 
-/*
- * From the monitor's step the net worth takes 8 columns with the tax card at
- * its right, never alone in its row, and the evolution takes 8 with attention
- * and the recent movements stacked beside it, so the chart starts above the
- * fold at 2045×1141. The markup comes in that order already
- * (`view-models/summary-order.ts`), so nothing here reorders: the tax card
- * gives up its `order` and keeps its own height instead of the band's.
- */
-@media (min-width: 112.5rem) {
-  .grid > .summary-worth,
+/* The markup is already in the order read (`view-models/summary-order.ts`); this only spans. */
+@media (min-width: 64rem) {
   .grid > .summary-evolution {
     grid-column: span 8;
   }
 
-  .grid > .summary-fiscal,
+  .grid > .summary-month {
+    grid-column: span 4;
+  }
+
   .grid > .summary-attention,
   .grid > .summary-moves {
-    grid-column: span 4;
+    grid-column: span 7;
+  }
+
+  .grid > .summary-allocation,
+  .grid > .summary-fiscal {
+    grid-column: span 5;
   }
 
   .grid > .summary-fiscal {
     align-self: start;
-  }
-
-  .grid > .summary-evolution {
-    grid-row: span 2;
   }
 }

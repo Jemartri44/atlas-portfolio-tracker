@@ -242,9 +242,21 @@ Tres o cuatro cifras que van juntas: etiqueta a 13 px sobre la cifra a 18 px en 
 
 ### 5.15 Gráficas
 
-- **Evolución** (uPlot): líneas de 2 px con `spanGaps: false`; cada serie se distingue por **color y trazo**. Con la privacidad activa, el eje vertical no lleva cifras. **El hueco se dibuja**: donde a una serie le falta el dato, su línea se corta; donde **no hay ninguna** serie, una banda en `--c-chart-gap` con bordes discontinuos, pintada por un *hook* de dibujo, con «sin precios» solo si cabe entre los bordes. Debajo, **una línea** que lo explica («En 3 de 24 fechas falta algún precio…»), la lista de activos a los que les falta plegada y la tabla equivalente plegada. Un punto aislado se dibuja como marca. En el eje de fechas por meses, el año va entero («feb 2027»): «feb 27» se lee como un día.
-- **Reparto frente al objetivo**: dos barras apiladas de 12 px (actual y objetivo) sobre la misma escala, con cortes de 3 px y extremos redondeados; las filas de debajo llevan la muestra de cada tipo.
+- **Evolución** (uPlot, D17): **áreas**. La cartera principal con su efectivo, rellena; el cubo con su efectivo, **apilado encima** (el borde de arriba es el patrimonio); lo aportado a la cartera principal, escalón discontinuo que se lee contra el borde de la cartera, nunca contra la pila. Una franja aparte conserva el cubo a su escala, porque apilado sobre una cartera cuarenta veces mayor no se vería su forma. Líneas de 2 px con `spanGaps: false`; cada serie se distingue por **color y trazo**. Con la privacidad activa, el eje vertical no lleva cifras. **El hueco se dibuja**: donde a una serie le falta el dato, su línea se corta; donde **no hay ninguna** serie, una banda en `--c-chart-gap` con bordes discontinuos, pintada por un *hook* de dibujo, con «sin precios» solo si cabe entre los bordes. Debajo, **una línea** que lo explica («En 3 de 24 fechas falta algún precio…»), la lista de activos a los que les falta plegada y la tabla equivalente plegada. Un punto aislado se dibuja como marca. En el eje de fechas por meses, el año va entero («feb 2027»): «feb 27» se lee como un día.
+- **Reparto frente al objetivo**: en la Cartera, dos barras apiladas de 12 px (actual y objetivo) sobre la misma escala; en el Resumen, **barras de bala** (§5.21).
 - **Desviación frente al umbral** (D7): un indicador de 72×12 con la banda ±umbral, la marca del objetivo y un punto que se vuelve color de aviso fuera del umbral. Solo en la tabla de escritorio **activo por activo**: la regla del umbral es por activo, y el punto se colorea con el aviso que emite el dominio, nunca comparando cifras en la interfaz (decisión (c)).
+
+### 5.20 Baldosa con minigráfica (`.part`, `Sparkline`)
+
+Pieza 1 tomada de la dirección B. En escritorio, cada libro del patrimonio es una baldosa sobre el papel: su nombre con la clave de su serie, el porcentaje del total, la cifra en la serifa, su dato propio (la cartera principal, su variación de «este mes» y «12 meses»; el cubo, frente al índice; el efectivo, en cuántas cuentas) y la **minigráfica** del último año: SVG propio, sin ejes ni cifras (no delata nada con la privacidad puesta), cortada en los huecos y con un punto donde un valor queda solo. En el móvil son filas, sin minigráfica (la evolución, justo debajo, enseña lo mismo), y la variación de la cartera va bajo la cifra.
+
+### 5.21 Barra de bala (`Bullet`)
+
+El peso de una clase como barra de su color, el objetivo como una raya de tinta y la banda gris de ±umbral alrededor del objetivo. Cada clase en su propia escala (de 0 al doble del objetivo, o más si el peso lo pide), que se compara mejor que dos barras apiladas. Las cifras van al lado: la barra es la forma. SVG con atributos, sin estilos en línea (CSP).
+
+### 5.22 Lista de tareas del mes (`.tasks`)
+
+«Este mes»: una fila por tarea del plan (ingreso, cada activo, cubo) con un anillo vacío si falta o lleno con ✓ y su fecha si ya está registrada, lo propuesto y, hecha, lo registrado «de» lo propuesto. El pie lleva a registrar lo siguiente que falta. Sin plan, un bloque *pendiente* con el motivo y su arreglo.
 
 ### 5.16 Esqueleto de carga (`.skel`)
 
@@ -288,9 +300,9 @@ Marca y título «Entrar en Atlas»; una frase que dice que los datos están en 
 
 ### 7.2 Resumen
 
-- **Móvil**: título y fecha larga. Después, *Patrimonio total* (cifra, barra de proporción, tres partes con porcentaje e importe, y el desglose plegado); *Atención* (4 grupos y «Ver N avisos más»); *Últimos movimientos* (5 filas **cortadas por la fecha consultada**, con el pie «Ver todos los movimientos»); y *Evolución del patrimonio* (rango, gráfica, leyenda, línea del hueco y datos plegados).
-- **Escritorio**: la banda de patrimonio a lo ancho (12); debajo, *Atención* (7) y *Últimos movimientos* (5); y *Evolución* a lo ancho (12).
-- ***Declaración*** (4), la puerta a `/fiscal` (§7.8). Es la única tarjeta que **cambia de sitio**: va la **primera** en campaña de la Renta o cuando haya algo del 720 o del 721 que hacer, y la **última** el resto del año. En campaña lo dice con «Campaña de la Renta» al lado del título. Se carga **después** de la primera pintada, porque es la única que pregunta algo al motor fiscal y el motor no está en el arranque; mientras tanto ocupa su sitio con un esqueleto de dos líneas.
+- **Móvil**: título y fecha larga. Después, lo que cabe en la primera pantalla: *Patrimonio total* (cifra en la serifa, la variación de la cartera principal, barra de proporción, tres partes con porcentaje, importe y su dato, y el desglose plegado), *Este mes* (§5.22) y *Atención* (4 grupos y «Ver N avisos más»). Luego *Evolución del patrimonio* (rango, gráfica, leyenda, línea del hueco y datos plegados), *Reparto frente al objetivo* (§5.21) y *Últimos movimientos* (5 filas **cortadas por la fecha consultada**, con el pie «Ver todos los movimientos»).
+- **Escritorio** (desde 1024): la banda de patrimonio a lo ancho, con la cifra a la izquierda y las tres baldosas (§5.20); *Evolución* (8) con *Este mes* (4); *Atención* (7) con *Reparto* (5); *Últimos movimientos* (7) con la *Declaración* (5). La variación, el plan y el cubo frente al índice se calculan **después** de la primera pintada, como el motor fiscal.
+- ***Declaración*** (5), la puerta a `/fiscal` (§7.8). Es la única tarjeta que **cambia de sitio**: va la **primera** en campaña de la Renta o cuando haya algo del 720 o del 721 que hacer, y la **última** el resto del año. En campaña lo dice con «Campaña de la Renta» al lado del título. Se carga **después** de la primera pintada, porque es la única que pregunta algo al motor fiscal y el motor no está en el arranque; mientras tanto ocupa su sitio con un esqueleto de dos líneas.
 - **Parcial**: «◐ parcial» junto a la cifra, sin barra ni porcentajes, y un bloque *pendiente* con la acción de registrar valoraciones.
 - **Vacío**: los primeros pasos con su estado (cuenta, activo, pesos objetivo y primera compra), visibles hasta la primera compra (D4). En escritorio, cuatro tarjetas en fila.
 
@@ -359,6 +371,7 @@ Dirección A «Cuaderno vivo», elegida por el dueño el 2026-11-03 sobre la aud
 | D14 | Inter y Fraunces 600 alojadas; serifa en el título y la cifra protagonista | Recorte latino, OFL, sin nada de fuera |
 | D15 | Avisos con placa, botones y pestañas en píldora, hoja cálida | Los tokens de color, casi sin tocar |
 | D16 | La Declaración, destino de la barra en escritorio | Pieza tomada de la dirección B; en el móvil sigue desde su tarjeta |
+| D17 | Resumen: baldosas con minigráfica, evolución en áreas apiladas, «Este mes» y reparto en barras de bala | Las baldosas, de B; la variación de la cartera y el plan del mes, del dominio (`docs/business-rules.md`) |
 
 ---
 

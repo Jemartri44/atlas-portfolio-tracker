@@ -34,19 +34,7 @@ import { privacy } from "../../shell/preferences.js";
 import type { ContributionRowView, ContributionView } from "../../view-models/core/index.js";
 import { COLUMNS } from "./contribution-columns.jsx";
 import { PlatformSection } from "./PlatformsBlock.jsx";
-
-/**
- * What fixes each refusal, and where. The button used to be written by hand as
- * "Registrar una valoración", so it also appeared when what was missing were
- * the target weights, and sent the user to a form that could not help.
- */
-const REMEDIES: Record<string, { label: string; to: string }> = {
-  missing_manual_prices: { label: "Registrar una valoración", to: "/registrar/valuation" },
-  missing_target_weights: { label: "Fijar los pesos objetivo", to: "/ajustes/configuracion" },
-  no_target_weight_in_table: { label: "Revisar los pesos objetivo", to: "/ajustes/configuracion" },
-  missing_bucket_pct: { label: "Revisar la configuración", to: "/ajustes/configuracion" },
-  missing_amount: { label: "Fijar la aportación mensual", to: "/ajustes/configuracion" },
-};
+import { REMEDIES } from "./remedies.js";
 
 /** A refusal with a known remedy is a pending datum, never an error. */
 const Refusal = (props: { error: AppError }): JSX.Element => (

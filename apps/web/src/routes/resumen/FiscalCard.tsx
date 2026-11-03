@@ -54,7 +54,7 @@ export default function FiscalCard(props: {
     <Show
       when={props.season}
       fallback={
-        <section class="card span-4 summary-fiscal is-row" aria-label="Declaración">
+        <section class="card span-5 summary-fiscal is-row" aria-label="Declaración">
           <A href="/fiscal" class="fiscal-row">
             <Icon name="calendar" class="icon" />
             <span class="fiscal-row-text">
@@ -73,7 +73,7 @@ export default function FiscalCard(props: {
     >
       <Section
         title="Declaración"
-        class="span-4 summary-fiscal"
+        class="span-5 summary-fiscal"
         aside={<span class="scope">Campaña de la Renta</span>}
       >
         <Show
