@@ -11,7 +11,6 @@ import {
   CORPORATE_ACTION_KINDS,
   type CorporateActionKind,
   DomainError,
-  type Draft,
   type Effect,
   type EventPreview,
   type LedgerEvent,
@@ -40,7 +39,7 @@ import { unfiledYearsNote } from "../output/closed-years.js";
 import { previewData, renderPreview } from "../output/preview.js";
 import { keyValue } from "../output/table.js";
 import { parseAssignments } from "./catalogue.js";
-import { answer, aside, cancelled, closedYearNotes, confirm } from "./shared.js";
+import { answer, asDraft, aside, cancelled, closedYearNotes, confirm } from "./shared.js";
 
 // `--neutrality-regime` / `--no-neutrality-regime` are common to every kind
 // rather than listed per kind: the field is on the event, not on the `kind`,
@@ -357,7 +356,7 @@ export const corporateActionCommand = async (
     aside(ctx, "Aviso: ninguna cuenta queda con picos; no se genera forced_sale.");
   }
   const draft = composed.draft as unknown as Record<string, unknown>;
-  const preview = await previewEvent(ctx.deps, draft as unknown as Draft, {
+  const preview = await previewEvent(ctx.deps, asDraft(draft), {
     assets: affectedAssets(asset, composed.draft.effects),
   });
   // With --json the figures also travel in the answer, once the outcome is known.
@@ -368,14 +367,14 @@ export const corporateActionCommand = async (
   // A corporate action lands on a date of its own and rewrites lots: it moves a filed return as
   // surely as a sale does. This path does not go through `confirmAndRecord`, so it asks for the
   // warning itself.
-  for (const line of await closedYearNotes(ctx, draft)) {
+  for (const line of await closedYearNotes(ctx, () => previewEvent(ctx.deps, asDraft(draft)))) {
     aside(ctx, line);
   }
   if (!(await confirm(ctx, "¿Registrar? [s/N] "))) {
     cancelled(ctx, previewData(preview));
     return 0;
   }
-  const result = await recordEvent(ctx.deps, draft as never, {
+  const result = await recordEvent(ctx.deps, asDraft(draft), {
     confirmDuplicate: ctx.confirmDuplicate,
   });
   aside(ctx, `Registrado ${summarize(result.event)}.`);

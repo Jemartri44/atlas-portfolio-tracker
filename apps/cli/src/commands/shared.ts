@@ -168,14 +168,14 @@ export const confirm = async (ctx: Context, question: string): Promise<boolean> 
  */
 export const closedYearNotes = async (
   ctx: Context,
-  draft: Record<string, unknown>,
+  preview: () => Promise<{ candidates: readonly LedgerEvent[] }>,
 ): Promise<string[]> => {
   try {
     const { events } = await ctx.deps.store.load();
     if (!events.some((event) => event.type === "tax_return_filed")) {
       return [];
     }
-    const { candidates } = await previewEvent(ctx.deps, draft as unknown as Draft);
+    const { candidates } = await preview();
     return closedYearLines(
       closedYearImpact(
         { events },
@@ -190,6 +190,14 @@ export const closedYearNotes = async (
     throw error;
   }
 };
+
+/**
+ * The draft the commands build field by field, as the domain takes it. The domain validates every
+ * field when it previews or records, so this is the one place the console asserts the type.
+ */
+export const asDraft = <T extends SupportedEvent = SupportedEvent>(
+  draft: Record<string, unknown>,
+): Draft<T> => draft as unknown as Draft<T>;
 
 /**
  * The euros the broker moved beside the same movement at the ECB rate
@@ -213,12 +221,16 @@ export const confirmAndRecord = async (
   notes: readonly string[] = [],
   /** How to write it; a plain record by default (a draft records and then removes itself). */
   write: (options: RecordOptions) => Promise<RecordResult> = (options) =>
-    recordEvent(ctx.deps, draft as unknown as Draft, options),
+    recordEvent(ctx.deps, asDraft(draft), options),
   /** Extra fields of the `--json` object, read after the write (a draft adds whether it left drafts/). */
   extra: () => Record<string, unknown> = () => ({}),
 ): Promise<RecordResult | undefined> => {
   preview(ctx, "Evento a registrar:", draft);
-  for (const note of [...brokerNote(draft), ...notes, ...(await closedYearNotes(ctx, draft))]) {
+  for (const note of [
+    ...brokerNote(draft),
+    ...notes,
+    ...(await closedYearNotes(ctx, () => previewEvent(ctx.deps, asDraft(draft)))),
+  ]) {
     aside(ctx, note);
   }
   if (!(await confirm(ctx, "¿Registrar? [s/N] "))) {
@@ -289,6 +301,15 @@ export const assertExists = (
   if (kind === "asset" && !state.assets.has(id)) {
     throw new DomainError("unknown_asset", `asset ${id} does not exist`, { asset_id: id });
   }
+};
+
+/** The word at `index` of the command, or the usage line when it is missing. */
+export const requireId = (positionals: string[], index: number, usage: string): string => {
+  const id = positionals[index];
+  if (id === undefined) {
+    throw new UsageError(usage);
+  }
+  return id;
 };
 
 /** A year given as an argument: up to four digits without a leading zero, or `undefined` for anything else (`0`, `1e3`, a missing word). */
