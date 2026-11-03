@@ -42,9 +42,11 @@ export const computeCore = (
   settings?: Settings,
 ): Core | Invalid => {
   const chain = taxChain(events, year, options, settings);
-  if (isInvalid(chain)) {
-    return chain;
-  }
+  return isInvalid(chain) ? chain : coreOf(chain, year);
+};
+
+/** The lines of `year` over a chain read as of that year (`taxChain` or `chainAt`). */
+export const coreOf = (chain: ChainCore, year: number): Core => {
   const { state, ctx, walk, expenses } = chain;
 
   const outcomes = walk.outcomes.filter(

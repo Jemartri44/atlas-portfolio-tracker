@@ -477,3 +477,13 @@ export interface TaxYearReport {
   notes: Warning[];
   settings_diff?: SettingsDiff;
 }
+
+/**
+ * A tax year without what compares it with another reading: the stakes of the criteria, the
+ * difference with the previous settings, the filing comparison and the notes. What
+ * `savingsReadings` gives for many years at once; `TaxYearReport` is built on it.
+ */
+export type SavingsReading = Omit<
+  TaxYearReport,
+  "filing" | "doubtful" | "settled" | "notes" | "settings_diff"
+>;

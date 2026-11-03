@@ -26,7 +26,7 @@ import { Decimal, HUNDRED } from "../money/decimal.js";
 import { Money } from "../money/money.js";
 import type { TaxBracket } from "../settings/defaults.js";
 import type { CriterionId } from "./criteria.js";
-import type { TaxYearReport } from "./report.js";
+import type { SavingsReading } from "./report.js";
 import { type SavingsScale, SCALES_CHECKED_AT, savingsScaleOf } from "./savings-scale.js";
 
 export interface QuotaBracket {
@@ -200,7 +200,7 @@ const applyRates = (base: Money, rates: readonly Rate[]) => {
  * they differ from the scale of the law they replace it, and the result says so.
  */
 export const savingsQuota = (
-  report: TaxYearReport,
+  report: SavingsReading,
   brackets?: readonly TaxBracket[],
 ): SavingsQuota => {
   const year = report.year;
