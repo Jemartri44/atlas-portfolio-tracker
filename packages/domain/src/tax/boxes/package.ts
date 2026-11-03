@@ -12,7 +12,8 @@
 //     its literal label and the image of the BOE it was read in;
 //   - `lote`: one per lot a disposal consumed, joined to its `casilla` rows by
 //     `operacion`, with the acquisition at the root of its lineage and its ECB
-//     rate as recorded (ADR-0013);
+//     rate as recorded (ADR-0013); for an exchange difference, the lots of
+//     currency it consumed, in that currency (they have no root purchase);
 //   - `nota`: the warnings of the layout, which say what a figure is not.
 //
 // The words a person reads —the title of a block, why a box is partial, the
@@ -21,16 +22,17 @@
 // the file and the screen never word the same thing twice.
 //
 // The format is the one a Spanish spreadsheet opens without asking: `;` between
-// fields, a decimal comma, UTF-8 with a byte order mark and CRLF. A text that a
-// spreadsheet would run as a formula (`=`, `+`, `-`, `@` at the start: an asset
-// name is typed by the user) is prefixed with an apostrophe.
+// fields, a decimal comma, UTF-8 with a byte order mark and CRLF. Any field a
+// spreadsheet would run as a formula (`=`, `+`, `-`, `@`, a tab or a carriage
+// return at the start: names, ISINs and account ids are typed by the user) is
+// prefixed with an apostrophe; a number, negative or not, is left a number.
 
 import type { Money } from "../../money/money.js";
 import type { Warning } from "../../projections/state.js";
 import type { AssetId, LedgerEvent } from "../../schema/events.js";
 import type { TaxOptions } from "../chain.js";
 import type { Certainty } from "../criteria.js";
-import type { TaxYearReport, TransmissionLine } from "../report.js";
+import type { CurrencyLine, TaxYearReport, TransmissionLine } from "../report.js";
 import { taxYearWithChain } from "../year.js";
 import { boxesOf } from "./boxes.js";
 import { type BoxBlockId, blockOfConcept, conceptName } from "./concepts.js";
@@ -62,6 +64,7 @@ export const PACKAGE_COLUMNS = [
   "resultado_eur",
   "compra_origen",
   "fecha_compra_origen",
+  "cantidad_compra_origen",
   "importe_compra_origen",
   "divisa_compra_origen",
   "tipo_bce",
@@ -85,11 +88,17 @@ const amount = (money: Money | undefined): string =>
 /** A decimal that is not money (a quantity, a rate) keeps all its digits. */
 const decimal = (text: string): string => text.replace(".", ",");
 
-/** A user's text a spreadsheet would read as a formula is made inert. */
-const inert = (text: string): string => (/^[=+\-@]/.test(text) ? `'${text}` : text);
+/** A number as this file writes it: digits, a decimal comma, maybe a sign. */
+const NUMBER = /^-?\d+(,\d+)?$/;
 
-const field = (text: string): string =>
-  /[;"\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+/** A text a spreadsheet would read as a formula is made inert. */
+const inert = (text: string): string =>
+  !NUMBER.test(text) && /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+
+const field = (raw: string): string => {
+  const text = inert(raw);
+  return /[;"\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+};
 
 const csvLine = (row: Row): string =>
   PACKAGE_COLUMNS.map((column) => field(row[column] ?? "")).join(";");
@@ -121,11 +130,11 @@ const entryRow = (entry: BoxEntry, names: Names): Row => ({
   etiqueta: entry.label ?? "",
   ejercicio_origen: entry.origin_year === undefined ? "" : String(entry.origin_year),
   fecha: entry.row?.fiscal_date ?? "",
-  activo: entry.row === undefined ? "" : inert(names.name(entry.row.asset_id)),
+  activo: entry.row === undefined ? "" : names.name(entry.row.asset_id),
   isin: entry.row === undefined ? "" : names.isin(entry.row.asset_id),
   cuenta: entry.row?.account_id ?? "",
   importe_eur: amount(entry.amount_eur),
-  texto: entry.missing === true ? "no consta en el libro" : inert(entry.text ?? ""),
+  texto: entry.missing === true ? "no consta en el libro" : (entry.text ?? ""),
   certeza: entry.certainty === undefined ? "" : CERTAINTY[entry.certainty],
   parcial: entry.partial === undefined ? "" : names.partial(entry.partial),
   criterios: entry.criteria.join(" "),
@@ -137,7 +146,7 @@ const lotRows = (line: TransmissionLine, names: Names): Row[] =>
   line.lots.map((lot) => ({
     tipo: "lote",
     fecha: line.fiscal_date,
-    activo: inert(names.name(line.asset_id)),
+    activo: names.name(line.asset_id),
     isin: names.isin(line.asset_id),
     cuenta: line.account_id,
     criterios: line.criteria.join(" "),
@@ -150,20 +159,41 @@ const lotRows = (line: TransmissionLine, names: Names): Row[] =>
     resultado_eur: amount(lot.gain_eur),
     compra_origen: lot.root.event_id,
     fecha_compra_origen: lot.root.acquisition_date,
+    cantidad_compra_origen: decimal(lot.root.quantity.toString()),
     importe_compra_origen: decimal(lot.root.cost.amount.amount.toString()),
     divisa_compra_origen: lot.root.cost.amount.currency,
     tipo_bce: decimal(lot.root.cost.fx_rate),
     fecha_tipo_bce: lot.root.cost.fx_rate_date,
   }));
 
+const currencyLotRows = (line: CurrencyLine): Row[] =>
+  line.lots.map((lot) => ({
+    tipo: "lote",
+    fecha: line.fiscal_date,
+    activo: line.currency,
+    cuenta: line.account_id,
+    criterios: line.criteria.join(" "),
+    operacion: line.event_id,
+    lote: lot.lot_id,
+    fecha_adquisicion: lot.acquisition_date,
+    cantidad: decimal(lot.amount.amount.toString()),
+    coste_eur: amount(lot.cost_eur),
+  }));
+
+/**
+ * The first row. `ejercicio_origen` carries the year of the return and `fecha`
+ * the day of the query: the only row where they mean that.
+ */
 const headerRow = (boxes: TaxBoxes): Row => ({
   tipo: "ejercicio",
   ejercicio_origen: String(boxes.year),
   fecha: boxes.today,
-  texto:
-    boxes.source === undefined
-      ? "Sin casillas comprobadas para este ejercicio: los importes valen, los números de casilla no constan"
-      : `Casillas leídas en ${boxes.source.document} el ${boxes.source.checked_at}. Total fiscal: núcleo y cubo juntos`,
+  texto: `${
+    // The source is present exactly when the mapping is `checked`.
+    boxes.source !== undefined
+      ? `Casillas leídas en ${boxes.source.document} el ${boxes.source.checked_at}`
+      : "Sin casillas comprobadas para este ejercicio: los importes valen, los números de casilla no constan"
+  }. Total fiscal: núcleo y cubo juntos. Consulta del ${boxes.today}`,
 });
 
 /** The CSV of `boxes` and `report`, which must be of the same year and reading. */
@@ -173,10 +203,11 @@ export const packageCsv = (boxes: TaxBoxes, report: TaxYearReport, names: Names)
     headerRow(boxes),
     ...boxes.entries.map((entry) => entryRow(entry, names)),
     ...lines.flatMap((line) => lotRows(line, names)),
+    ...report.capital_gains.currency_lines.flatMap(currencyLotRows),
     ...boxes.notes.map((note) => ({
       tipo: "nota",
       concepto: note.code,
-      texto: inert(names.note(note)),
+      texto: names.note(note),
       operacion: note.event_id,
     })),
   ];
