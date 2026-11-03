@@ -12,6 +12,7 @@
 // as closed what had not been decided yet.
 
 import type { CivilDate } from "../dates/civil-date.js";
+import { daysBetween } from "../dates/civil-date.js";
 import { madridDateOf } from "../dates/madrid.js";
 import { ProjectionError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
@@ -19,7 +20,6 @@ import { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
 import type { AccountId, AssetId, ThesisClosedEvent, ThesisOpenedEvent } from "../schema/events.js";
 import { requireAccount, requireAsset } from "./catalogue.js";
-import { daysBetween } from "./pending.js";
 import { positionOf } from "./positions.js";
 import { addWarning, type LedgerState, type Thesis, type ThesisView } from "./state.js";
 

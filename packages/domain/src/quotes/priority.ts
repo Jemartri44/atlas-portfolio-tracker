@@ -14,6 +14,7 @@
 
 import { bucketAccountIds } from "../projections/bucket.js";
 import type { LedgerState } from "../projections/state.js";
+import { splitPositionKey } from "../projections/state.js";
 import type { AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 
@@ -29,7 +30,7 @@ export const downloadPlan = (state: LedgerState, settings: Settings): PlannedAss
   const bucket = bucketAccountIds(state);
   const held = { bucket: new Set<AssetId>(), core: new Set<AssetId>() };
   for (const [key, quantity] of state.positions) {
-    const [accountId, assetId] = key.split("|") as [string, AssetId];
+    const [accountId, assetId] = splitPositionKey(key);
     // Every account is of one book or the other (data-schema.md §6.1).
     if (quantity.isPositive()) {
       (bucket.has(accountId) ? held.bucket : held.core).add(assetId);

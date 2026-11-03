@@ -8,6 +8,7 @@ import { ProjectionError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
 import type { AccountId, AssetId, CorporateActionEvent } from "../schema/events.js";
 import { requireAsset } from "./catalogue.js";
+import type { CurrencyLots } from "./currency-lots.js";
 import {
   checkEffectsAgainstKind,
   isLiquidation,
@@ -90,6 +91,11 @@ interface Snapshot {
   inKindIncome: number;
   /** The lot journal only grows too. */
   lotJournal: number;
+  /** A forced sale in a foreign currency also opens currency lots and may impute a difference. */
+  currencyLots: Map<string, CurrencyLots>;
+  currencyLotCounts: Map<Ulid, number>;
+  currencyGains: number;
+  currencyJournal: number;
 }
 
 const cloneLot = (lot: FiscalLot): FiscalLot => ({ ...lot, consumptions: [...lot.consumptions] });
@@ -117,6 +123,18 @@ const snapshot = (state: LedgerState, assets: readonly AssetId[]): Snapshot => (
   ),
   inKindIncome: state.inKindIncome.length,
   lotJournal: state.lotJournal.length,
+  currencyLots: new Map(
+    [...state.currencyLots].map(([currency, entry]) => [
+      currency,
+      {
+        open: entry.open.map((lot) => ({ ...lot })),
+        closed: entry.closed.map((lot) => ({ ...lot })),
+      },
+    ]),
+  ),
+  currencyLotCounts: new Map(state.currencyLotCounts),
+  currencyGains: state.currencyGains.length,
+  currencyJournal: state.currencyJournal.length,
 });
 
 const restore = (state: LedgerState, saved: Snapshot): void => {
@@ -141,6 +159,10 @@ const restore = (state: LedgerState, saved: Snapshot): void => {
   }
   state.inKindIncome.length = saved.inKindIncome;
   state.lotJournal.length = saved.lotJournal;
+  state.currencyLots = saved.currencyLots;
+  state.currencyLotCounts = saved.currencyLotCounts;
+  state.currencyGains.length = saved.currencyGains;
+  state.currencyJournal.length = saved.currencyJournal;
 };
 
 export const applyCorporateAction = (
