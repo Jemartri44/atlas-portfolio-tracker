@@ -103,7 +103,9 @@ describe("a concept with no box in the year that does have a table", () => {
     expect(missing.details.concepts).toContain("annex.capital_gain.left:2021");
   });
 
-  it("leaves an ETC declared a capital gain with no box, because no text says where it goes", () => {
+  // Help of the Modelo 100 of 2025, key 4: «cualesquiera otros bienes o
+  // derechos no incluidos en los apartados anteriores».
+  it("sends an ETC declared a capital gain to 'otros elementos' with key 4", () => {
     const b = taxBuilder({
       ...HAND_SETTINGS,
       income_category: { ...HAND_SETTINGS.income_category, etc: "capital_gain" },
@@ -114,13 +116,15 @@ describe("a concept with no box in the year that does have a table", () => {
     expect(transmissionSection("etc", "capital_gain")).toBe("other");
     const gain = entry(boxes, "gp.other.gain");
     expect(text(gain.amount_eur)).toBe("200");
-    expect(gain.box).toBeUndefined();
+    expect(gain.box).toBe("1640");
+    expect(entry(boxes, "gp.other.key").text).toBe("4");
+    expect(text(entry(boxes, "gp.other.gains").amount_eur)).toBe("200");
     // And it never reaches box 0031, which is where it goes when the settings
     // put it in movable capital income: that box is there, as the whole block
     // of page 5 always is, and it holds nothing.
     expect(boxes.entries.some((item) => item.box === "0031" && item.row !== undefined)).toBe(false);
     expect(text(total(boxes, "rcm.transmission").amount_eur)).toBe("0");
-    expect(codes(boxes)).toContain("tax_box_missing");
+    expect(codes(boxes)).toContain("tax_box_other_inferred");
   });
 });
 
@@ -348,7 +352,7 @@ describe("the blocks the form is read in", () => {
       "etf",
       "listed_shares",
       "rights",
-      "other_shares",
+      "other",
       "crypto",
       "other",
       "prior_years",
