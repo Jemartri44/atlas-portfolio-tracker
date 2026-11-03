@@ -48,6 +48,7 @@ import {
 import { weightedAssets } from "../../view-models/weighted.js";
 import { liveLedger, RequireLedger } from "../guard.jsx";
 import { FormActions } from "../registrar/FormActions.jsx";
+import { ExposureCard } from "./ExposureCard.jsx";
 import { FiscalCard } from "./FiscalCard.jsx";
 import { useRuleChangeQuestion } from "./rule-change.js";
 import { IdentityCard, type SettingsDraft, ThresholdsCard, WeightsCard } from "./SettingsCards.jsx";
@@ -192,6 +193,7 @@ export default function ConfiguracionRoute(): JSX.Element {
               <ThresholdsCard draft={draft()} />
               <IdentityCard draft={draft()} assets={assetsOf(snapshot.state)} />
               <FiscalCard draft={draft()} />
+              <ExposureCard assets={assetsOf(snapshot.state)} />
 
               <div class="span-12 settings-foot">
                 <Notice severity="info" title="Lo que no se edita aquí">

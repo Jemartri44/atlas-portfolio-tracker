@@ -49,32 +49,6 @@
   letter-spacing: normal;
 }
 
-/* The three shares on one bar, cut apart by the colour of the surface. */
-.shares {
-  clip-path: inset(0 round var(--radius-sm));
-  display: block;
-  height: var(--bar-h);
-  margin-bottom: var(--space-4);
-  width: 100%;
-}
-
-.share-seg {
-  stroke: var(--c-surface);
-  stroke-width: 3;
-}
-
-.share-seg.is-core {
-  fill: var(--c-series-core);
-}
-
-.share-seg.is-bucket {
-  fill: var(--c-series-bucket);
-}
-
-.share-seg.is-cash {
-  fill: var(--c-series-cash);
-}
-
 .parts {
   border-top: var(--border) solid var(--c-border);
 }

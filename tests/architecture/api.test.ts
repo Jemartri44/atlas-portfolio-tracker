@@ -405,7 +405,7 @@ describe("api: the administration is out of reach of the API", () => {
     const violations = imported
       .filter(
         ({ specifier, name }) =>
-          /^@atlas\/adapters\/(sync-http|drafts-http|reference-http|identity|access)$/.test(
+          /^@atlas\/adapters\/(sync-http|drafts-http|exposure-http|reference-http|identity|access)$/.test(
             specifier,
           ) ||
           (specifier === "@atlas/adapters" && /^(ApiLedgerStore|httpRemote)$/.test(name)),

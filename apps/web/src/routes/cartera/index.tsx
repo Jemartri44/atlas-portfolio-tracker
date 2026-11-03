@@ -35,6 +35,7 @@ import { absorbedAssets } from "../../view-models/weighted.js";
 import { RequireLedger } from "../guard.jsx";
 import { ContributionCard } from "./ContributionCard.jsx";
 import { CostsCard } from "./CostsCard.jsx";
+import { ExposureBlock } from "./ExposureBlock.jsx";
 import { RebalanceCard } from "./RebalanceCard.jsx";
 import { WeightsCard } from "./WeightsCard.jsx";
 
@@ -53,6 +54,15 @@ export default function CarteraRoute(): JSX.Element {
 
         const projection = createMemo(() => coreWeights(dated(), date(), settings(), external()));
         const weights = createMemo(() => weightsView(projection(), names));
+        const catalogue = createMemo(
+          () =>
+            new Map(
+              assets(dated()).map((asset) => [
+                asset.asset_id,
+                asset.isin === undefined ? {} : { isin: asset.isin },
+              ]),
+            ),
+        );
         /** Unit prices fit for the informative whole units (see `unitPricesOf`). */
         const unitPrices = createMemo<UnitPrices>(() =>
           unitPricesOf(
@@ -139,6 +149,7 @@ export default function CarteraRoute(): JSX.Element {
                   return outcome.kind === "invalid" ? outcome.message : undefined;
                 })()}
               />
+              <ExposureBlock weights={projection()} catalogue={catalogue()} names={names} />
               <RebalanceCard
                 state={dated()}
                 events={snapshot.events}

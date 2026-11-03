@@ -35,3 +35,28 @@ describe("the outline of a field", () => {
     });
   });
 });
+
+describe("the parts of an exposure bar", () => {
+  it("reach 3:1 on a card in both themes and tell each from the next", () => {
+    const surfaces = valuesOf("--c-surface");
+    const steps = [1, 2, 3, 4].map((n) => valuesOf(`--c-share-${n}`));
+    steps.forEach((values) => {
+      expect(values.length).toBeGreaterThanOrEqual(2);
+    });
+    [0, 1].forEach((theme) => {
+      steps.forEach((values, at) => {
+        expect(
+          contrast(values[theme] as string, surfaces[theme] as string),
+          `step ${at + 1} on a card`,
+        ).toBeGreaterThanOrEqual(3);
+        const next = steps[at + 1];
+        if (next !== undefined) {
+          expect(
+            contrast(values[theme] as string, next[theme] as string),
+            `step ${at + 1} against ${at + 2}`,
+          ).toBeGreaterThanOrEqual(1.4);
+        }
+      });
+    });
+  });
+});

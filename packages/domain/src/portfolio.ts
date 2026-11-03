@@ -51,6 +51,7 @@ export {
   type ExposureState,
   type Exposures,
   exposure,
+  resolveAsset,
   type Split,
 } from "./projections/exposure.js";
 export {
@@ -66,6 +67,7 @@ export {
 } from "./projections/exposure-file.js";
 export {
   DEFAULT_INDEX_TABLES,
+  INDEX_PROFILES,
   type IndexProfile,
   type IndexTables,
   type KnownFund,

@@ -20,12 +20,12 @@ export const hex = async (bytes: Uint8Array): Promise<string> =>
 
 /**
  * One request: `redirect: "error"`, never from the HTTP cache, and the SHA-256
- * of the exact body on every POST
+ * of the exact body on every POST and PUT
  * (ADR-0027, fact 2). What did not arrive is `network_failed`.
  */
 export const apiFetch = async (
   options: ApiFetchOptions,
-  method: "GET" | "POST",
+  method: "GET" | "POST" | "PUT",
   path: string,
   body?: unknown,
   headers: Record<string, string> = {},
