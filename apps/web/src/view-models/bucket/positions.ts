@@ -9,7 +9,7 @@
 import {
   type BucketPosition,
   type BucketPositions,
-  Decimal,
+  HUNDRED,
   type Money,
   type Quantity,
   type Warning,
@@ -59,8 +59,6 @@ export interface BucketPositionsView {
   missing: string[];
   warnings: readonly Warning[];
 }
-
-const HUNDRED = Decimal.parse("100");
 
 /**
  * The share of the bucket, as a decimal string. It is only computed when the

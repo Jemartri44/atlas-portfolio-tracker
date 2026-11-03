@@ -1,5 +1,5 @@
 # The Lambda of the API: its role (exactly `contract/permissions.json`, role `api`,
-# from specs/015-api-access/plan.md section 10 and iam-permissions.md section 6), its
+# from specs/015-api-access/plan.md section 10 (retired; in git) and iam-permissions.md section 6), its
 # log group created before it, and its Function URL with AWS_IAM behind the OAC.
 # No `kms:` line: see `infra/bootstrap/env/statements-admin.tf` and questions.md, E2 b0.4.
 

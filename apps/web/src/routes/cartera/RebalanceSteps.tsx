@@ -29,7 +29,7 @@ const Tax = (props: { tax: SaleTaxView }): JSX.Element => (
                 {(saving) => (
                   <>
                     Reduce tu impuesto en ≈ <Amount value={saving()} />: la pérdida de{" "}
-                    <Amount value={tax().gain} /> compensa ganancias de este año.
+                    <Amount value={tax().gain.neg()} /> compensa ganancias de este año.
                   </>
                 )}
               </Show>
@@ -38,7 +38,8 @@ const Tax = (props: { tax: SaleTaxView }): JSX.Element => (
             {(amount) => (
               <>
                 Impuesto aproximado: <Amount value={amount()} /> sobre{" "}
-                {tax().isLoss ? "una pérdida" : "una ganancia"} de <Amount value={tax().gain} />.
+                {tax().isLoss ? "una pérdida" : "una ganancia"} de{" "}
+                <Amount value={tax().isLoss ? tax().gain.neg() : tax().gain} />.
               </>
             )}
           </Show>{" "}

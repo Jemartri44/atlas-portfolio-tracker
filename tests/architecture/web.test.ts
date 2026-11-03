@@ -102,7 +102,7 @@ describe("architecture: apps/web", () => {
 
   /** Each entry of a catalogue with its body, from its key to the next one. */
   const templatesOf = (source: string): Map<string, string> => {
-    const keys = [...source.matchAll(/^ {2}([a-z_0-9]+):\s*\(/gm)];
+    const keys = [...source.matchAll(/^ {2}([a-z_0-9]+):\s*[({]/gm)];
     const bodies = new Map<string, string>();
     keys.forEach((key, index) => {
       const start = key.index as number;
@@ -152,9 +152,12 @@ describe("architecture: apps/web", () => {
   };
 
   it("masks every amount and quantity a message says, and only those", () => {
-    const catalogues = ["errors.ts", "warnings.ts"].map((name) =>
-      join(webSrc, "format", "messages", name),
-    );
+    // The one catalogue of messages: both surfaces say these sentences, and the figures go through
+    // the voice, which is where the web applies its mask.
+    const dir = join(repoRoot, "packages", "domain", "src", "messages");
+    const catalogues = readdirSync(dir)
+      .filter((name) => /^(errors|warnings)-.*\.ts$/.test(name) || name === "remote-failures.ts")
+      .map((name) => join(dir, name));
     const bare: string[] = [];
     const overreach: string[] = [];
     let checked = 0;
@@ -167,8 +170,8 @@ describe("architecture: apps/web", () => {
               (SENSITIVE_DETAIL.test(read[1] as string) && NOT_A_FIGURE[where] === undefined) ||
               A_FIGURE_ANYWAY.has(where);
             const call = wrappingCall(printed, read.index as number);
-            // `f.titles` is `f.quantity` with its word, «título» or «títulos».
-            const wrapped = call === "f.money" || call === "f.quantity" || call === "f.titles";
+            // `v.titles` is `v.quantity` with its word, «título» or «títulos».
+            const wrapped = call === "v.money" || call === "v.quantity" || call === "v.titles";
             if (sensitive) {
               checked += 1;
               if (!wrapped) {

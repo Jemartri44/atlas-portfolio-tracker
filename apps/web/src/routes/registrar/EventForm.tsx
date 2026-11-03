@@ -81,7 +81,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   const [signedOut, setSignedOut] = createSignal(false);
   const rates = useFormRates({
     spec: props.spec,
-    state: props.state,
+    state: () => props.state,
     values,
     setValues,
     typed,
@@ -137,7 +137,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
 
   const onDraft = createDraftSaver(
     props.spec,
-    props.state,
+    () => props.state,
     values,
     rates.web,
     problems,

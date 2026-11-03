@@ -36,9 +36,15 @@ import { zero } from "../money/eur.js";
 import type { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
 import { Ratio } from "../money/ratio.js";
-import type { LedgerState, LotJournalEntry, RealizedGain } from "../projections/state.js";
+import {
+  type LedgerState,
+  type LotJournalEntry,
+  positionKey,
+  type RealizedGain,
+  splitPositionKey,
+} from "../projections/state.js";
 import { isSinglePurchaseWindow } from "../projections/wash-sale.js";
-import type { AssetId, AssetType } from "../schema/events.js";
+import type { AccountId, AssetId, AssetType } from "../schema/events.js";
 import {
   type IncomeCategory,
   incomeCategoryOf,
@@ -206,7 +212,9 @@ interface Pending {
   units: Quantity;
 }
 
-const keyOf = (eventId: string, assetId: string): string => `${eventId}|${assetId}`;
+// The pair (event, asset) is keyed like a position (account, asset): ids are escaped, never split bare.
+const keyOf = (eventId: string, assetId: string): string =>
+  positionKey(eventId as AccountId, assetId as AssetId);
 
 const minZero = (money: Money): Money => (money.isNegative() ? money : zero());
 
@@ -754,7 +762,7 @@ class Walker {
   pending(): PendingDeferral[] {
     const result: PendingDeferral[] = [];
     for (const [key, list] of this.pendingOf) {
-      const [eventId, assetId] = key.split("|") as [Ulid, AssetId];
+      const [eventId, assetId] = splitPositionKey(key) as unknown as [Ulid, AssetId];
       for (const entry of list) {
         if (!entry.amount.isZero()) {
           result.push({
