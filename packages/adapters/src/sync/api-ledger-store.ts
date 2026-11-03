@@ -9,8 +9,8 @@
 //   declarations of the request are **deduced** here, never passed in:
 //   `has_correction` and `chain_continues` from the shape of the batch (the
 //   same units the sync used, `unitsOf`/`entriesOf`) and `confirm_duplicate`
-//   for every line whose fingerprint repeats a live event, the rule of the
-//   initialisation (§5.5). It is correct because the use case already refused
+//   for every line whose fingerprint repeats a live event, the same rule
+//   as a direct append. It is correct because the use case already refused
 //   without confirmation and `If-Match` makes the API judge the same bytes.
 // - More units than `MAX_APPEND_UNITS` go in several requests, each with the
 //   etag the previous one answered; a unit is never split. A refusal in the

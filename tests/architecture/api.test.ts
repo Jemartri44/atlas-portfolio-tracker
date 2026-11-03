@@ -259,18 +259,17 @@ describe("api: AWS and Google only where they belong", () => {
   });
 });
 
-describe("api: the records of the tokens are never deleted nor labelled", () => {
+describe("api: the Lambdas only read SSM", () => {
   /**
-   * ADR-0033, point 9: a record is written to create it and to revoke it, and never deleted; a
-   * label or a delete is a way to bring a revoked token back. The narrow interface of SSM offers
-   * exactly five operations, and no source of the product names the others of the service.
+   * Every parameter is written by the script of secrets or by Terraform (ADR-0034): the narrow
+   * interface of SSM offers one read, and no source of the product names a delete or a label.
    */
-  it("offers get, getVersioned, putNew, overwrite and listByPath, and nothing else", () => {
+  it("offers get and nothing else", () => {
     const file = join(adaptersRoot, "src", "aws", "parameter-store.ts");
     const members = [...parse(file).code.matchAll(/^\s{2}([a-zA-Z]+)\(/gm)].map(
       (match) => match[1],
     );
-    expect(members).toEqual(["get", "putNew", "getVersioned", "overwrite", "listByPath"]);
+    expect(members).toEqual(["get"]);
     const offenders = productSources().filter((path) =>
       /DeleteParameters?|LabelParameterVersion|UnlabelParameterVersion|deleteParameter|labelParameter/.test(
         parse(path).code,
@@ -350,7 +349,7 @@ describe("api: the API only appends, and the domain judges every line", () => {
   });
 
   /**
-   * What a line is worth is `acceptAppend` and `acceptInit`, never a copy in the handler: no source
+   * What a line is worth is `acceptAppend`, never a copy in the handler: no source
    * of the API names a code of the table of `docs/api.md` §5.2.
    */
   it("reimplements no rule of acceptAppend: the codes of a line live in the domain", () => {
@@ -360,7 +359,6 @@ describe("api: the API only appends, and the domain judges every line", () => {
     expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
     const sync = readFileSync(join(apiRoot, "src", "sync.ts"), "utf8");
     expect(sync).toMatch(/acceptAppend\(/);
-    expect(sync).toMatch(/acceptInit\(/);
   });
 });
 
@@ -393,19 +391,12 @@ describe("api: the administration is out of reach of the API", () => {
   });
 
   /**
-   * The administration takes the role of administration from the standard chain of the SDK, **never
-   * the token of a device**: nothing it imports is the credentials of the console, the header of
-   * the token or the client of the API.
+   * The console has no access of its own to the API (P1 of 2026-11-03): it works on a local
+   * ledger, and on the cloud only with the role of administration. Nothing of it imports a client
+   * of the API, nor names a route or a token of one.
    */
-  it("uses no token of a device: it imports neither the credentials nor the client of the API", () => {
-    const roots = cliSources().filter((file) =>
-      /[/\\](admin[/\\][^/\\]+|commands[/\\](backup|backup-copies))\.ts$/.test(file),
-    );
-    // `src/admin/` (3) and `src/commands/admin/` (6: the dispatcher, devices, ledger, prices-push,
-    // secrets and the confirmation) join `backup` and `backup-copies`.
-    expect(roots.length).toBe(11);
-    // What they import, by name: never the credentials or the client of the
-    // console, and from the barrel of the adapters only the folder's own.
+  it("reaches the API from no source of the console", () => {
+    const roots = cliSources();
     const imported = roots.flatMap((file) =>
       parse(file).bindings.map((binding) => ({ file, ...binding })),
     );
@@ -413,14 +404,15 @@ describe("api: the administration is out of reach of the API", () => {
     const violations = imported
       .filter(
         ({ specifier, name }) =>
-          /(^|\/)remote\//.test(specifier) ||
-          /^@atlas\/adapters\/(sync-http|identity|access)$/.test(specifier) ||
-          (specifier === "@atlas/adapters" && !["FileLedgerStore"].includes(name)),
+          /^@atlas\/adapters\/(sync-http|drafts-http|reference-http|identity|access)$/.test(
+            specifier,
+          ) ||
+          (specifier === "@atlas/adapters" && /^(ApiLedgerStore|httpRemote)$/.test(name)),
       )
       .map(({ file, specifier, name }) => `${relative(repoRoot, file)}: ${name} from ${specifier}`);
     expect(violations).toEqual([]);
     const named = roots.filter((file) =>
-      /DEVICE_TOKEN_HEADER|x-atlas-device-token|credentials\.json/.test(parse(file).code),
+      /x-atlas-device-token|credentials\.json|["'`]\/api\//.test(parse(file).code),
     );
     expect(named.map((file) => relative(repoRoot, file))).toEqual([]);
   });

@@ -1,8 +1,8 @@
 # Uso de la CLI
 
-Guía de la consola `atlas`: la herramienta de mantenimiento (alta y corrección de datos, `check`, copias, exportación, nube y administración). La aplicación principal es la web; las vistas de cartera, cubo y patrimonio ya no están en la consola. Para arrancar el proyecto en local, véase el [`README`](../README.md); el contrato con la API en la nube está en [`api.md`](api.md).
+Guía de la consola `atlas`: la herramienta de mantenimiento (alta y corrección de datos, `check`, copias, exportación y administración de la nube). La aplicación principal es la web, y la consola **no tiene acceso propio a la API** (ADR-0037): trabaja sobre una carpeta local y llega a la nube solo con el rol de administración; las vistas de cartera, cubo y patrimonio ya no están en la consola. Para arrancar el proyecto en local, véase el [`README`](../README.md); el contrato de la API de la web está en [`api.md`](api.md).
 
-Tras `npm run build`, el ejecutable es `node apps/cli/dist/main.js` (o `npm run atlas --`). Todos los comandos aceptan `--ledger <ruta>` (por defecto `./ledger.jsonl`), `--yes` (omite la confirmación), `--confirm-duplicate` y `--json`. En `add` (también con `--draft`), `edit`, `delete`, `ca`, `settings set`, `fx correct`, `draft confirm` y `draft discard` (y los comandos que registran con la misma confirmación), `--json` deja en stdout un único objeto (`{"status": "recorded"|"cancelled"|"discarded"|"draft_saved"|"already_recorded"|"nothing_to_correct", …}`) y lo que se lee antes del sí, preguntas incluidas, va a stderr; un error (código de salida distinto de 0, como un tipo del BCE aún sin publicar) deja como único objeto `{"status": "error", "code": …, "exit_code": …, "message": …}` y la frase, como sin `--json`, también en stderr; una orden que ya imprimió su propio resultado (p. ej. `prices update` con una fuente caída) conserva ese objeto y no añade otro. `remote login|logout|status`, `lock break` y `export --out` responden también con un solo objeto. Las consultas sobre el libro (`positions`, `lots`, `settings show`, `thesis show`, `order list`, `transfer pending`) dejan `{"invalid_count": n, "data": …}`, donde `invalid_count` son las líneas que no se han podido leer (modo degradado); `tax`, `m720`, `m721`, `check` y los estados de `fx`, `prices`, `lock` y `draft` dejan directamente su propio objeto. Importes, cantidades y tipos salen siempre como cadenas. Ejemplo completo con datos inventados:
+Tras `npm run build`, el ejecutable es `node apps/cli/dist/main.js` (o `npm run atlas --`). Todos los comandos aceptan `--ledger <ruta>` (por defecto `./ledger.jsonl`), `--yes` (omite la confirmación), `--confirm-duplicate` y `--json`. En `add` (también con `--draft`), `edit`, `delete`, `ca`, `settings set`, `fx correct`, `draft confirm` y `draft discard` (y los comandos que registran con la misma confirmación), `--json` deja en stdout un único objeto (`{"status": "recorded"|"cancelled"|"discarded"|"draft_saved"|"already_recorded"|"nothing_to_correct", …}`) y lo que se lee antes del sí, preguntas incluidas, va a stderr; un error (código de salida distinto de 0, como un tipo del BCE aún sin publicar) deja como único objeto `{"status": "error", "code": …, "exit_code": …, "message": …}` y la frase, como sin `--json`, también en stderr; una orden que ya imprimió su propio resultado (p. ej. `prices update` con una fuente caída) conserva ese objeto y no añade otro. `lock break` y `export --out` responden también con un solo objeto. Las consultas sobre el libro (`positions`, `lots`, `settings show`, `thesis show`, `order list`, `transfer pending`) dejan `{"invalid_count": n, "data": …}`, donde `invalid_count` son las líneas que no se han podido leer (modo degradado); `tax`, `m720`, `m721`, `check` y los estados de `fx`, `prices`, `lock` y `draft` dejan directamente su propio objeto. Importes, cantidades y tipos salen siempre como cadenas. Ejemplo completo con datos inventados:
 
 ```bash
 alias atlas='node apps/cli/dist/main.js --ledger ./demo.jsonl'
@@ -70,8 +70,7 @@ mkdir -p ~/.config/atlas && printf '{"eodhd":"…"}\n' > ~/.config/atlas/secrets
 
 atlas prices symbols set ast_world --currency EUR --eodhd XX0000000001.EUFUND   # el símbolo y la divisa de la cotización, contrastada con la fuente
 atlas prices symbols set ast_tsco --eodhd TSCO.LSE --currency GBX   # Londres cotiza en peniques (GBX), no en libras: la divisa se declara
-atlas prices update      # los cierres de días anteriores a hoy, por prioridad (cubo, referencias, núcleo) y dentro del cupo; en una carpeta de nube, los baja de la nube (feature 016)
-atlas prices update --from-sources   # en una carpeta de nube, llama a las fuentes en vez de bajar de la nube: gasta el cupo que comparte con la nube (2 al día por defecto, ADR-0031)
+atlas prices update      # los cierres de días anteriores a hoy, por prioridad (cubo, referencias, núcleo) y dentro del cupo
 atlas prices status      # cada fuente con su cupo de hoy y sus fallos, y la antigüedad del último cierre de cada activo
 atlas prices purge ast_tsco   # borra los cierres guardados en una divisa que no es la que ahora declara; la próxima descarga vuelve a pedir esos días una vez, y los que la fuente no sirva quedan como hueco (lo dice «prices status»)
 ```
@@ -133,7 +132,7 @@ Dos cosas que el comando se niega a hacer:
 
 Y un aviso que llega antes: `atlas settings set` compara la base del ahorro de los ejercicios ya cerrados con la configuración en vigor y con la propuesta, y dice cuáles se mueven. Cambiar la ventana de recompra o la categoría de renta mueve una declaración pasada sin mover ni una ganancia realizada.
 
-## Tipos del BCE, borradores, cerrojo y nube
+## Tipos del BCE, borradores, cerrojo y administración de la nube
 
 Cuatro grupos de comandos que el ciclo normal no necesita a diario. La lista completa y vigente es `atlas --help` (`apps/cli/src/usage.ts`); aquí, una línea por comando.
 
@@ -141,7 +140,10 @@ Cuatro grupos de comandos que el ciclo normal no necesita a diario. La lista com
 - `atlas add … --draft` y `atlas draft list|confirm <id>|discard <id>`: guardan como borrador una operación cuyo tipo del BCE aún no se ha publicado; un borrador no cuenta en ninguna cifra hasta registrarlo.
 - `atlas rehearse --dump <fichero>`: ensayo de restauración en local. Decodifica el volcado (una copia de `atlas backup` o descargada), lo proyecta y lo compara con el libro cortado en los mismos eventos, con la misma función que la prueba trimestral (`restoreRehearsal`, ADR-0032). Solo lee y nunca toca la nube: compara con un libro local (`--ledger`), el de la carpeta o una copia bajada con `atlas backup`; sobre un libro sintético es un simulacro. Un volcado vacío o ilegible se rechaza. Sale con 1 y dice por código y recuento qué difiere.
 - `atlas lock show|break`: quién tiene el cerrojo de la carpeta del libro, y romperlo a petición.
-- `atlas remote login|logout|status|upload`: la carpeta «de nube» (`sync/remote.json`, sin `ledger.jsonl`). `login` abre el inicio de sesión con Google y guarda el token de este dispositivo; `logout` lo revoca y lo borra; `status` lista las sesiones y su caducidad; `upload --from <ledger.jsonl>` sube un libro entero a una nube vacía. Contrato en [`api.md`](api.md).
+- `atlas admin pull|compact|restore|prices push|secrets --env <entorno>`: la administración de la nube, **nunca por la API**, con credenciales cortas del rol de administración y MFA ([`runbooks/restore-the-ledger.md`](runbooks/restore-the-ledger.md), «Lo que necesitas»). Las que reescriben la nube se confirman escribiendo el nombre del entorno, nunca con `--yes`.
+  - `pull --to <dir>` baja el libro de la nube a `<dir>/ledger.jsonl` (`0600`; nunca encima de un fichero: `path_exists`), para consultarlo y pasar `atlas --ledger <dir>/ledger.jsonl check --deep`. Las correcciones se hacen en la web, o con `restore`.
+  - `restore --from <copia>` vuelve a una copia buena; **con la nube vacía es la subida inicial**, que escribe el libro tal cual.
+  - `compact` compacta el libro de la nube; `prices push` sube `prices/symbols.json` ([`runbooks/cloud-symbols-and-budgets.md`](runbooks/cloud-symbols-and-budgets.md)); `secrets` crea y rota los secretos ([`runbooks/atlas-admin-secrets.md`](runbooks/atlas-admin-secrets.md)).
 
 ## Copia de seguridad provisional (Fases 1-3)
 
@@ -149,7 +151,10 @@ Mientras el libro real viva en un fichero local, haz una copia verificada tras c
 
 ```bash
 atlas backup --to ~/personal/atlas/privado/backups
+atlas backup --to ~/personal/atlas/privado/backups --from-bucket --env prod   # el libro de la nube, documents/ e imports/, con el rol de administración
 ```
+
+Cada copia se escribe fechada, nunca encima de otra, `0400`, y se relee para verificarla (el libro, por SHA-256). Sin `--from-bucket`, copia el libro local de `--ledger` y su `documents/`.
 
 `.gitignore` ignora `ledger*.jsonl`, `demo*.jsonl` y `backups/` en todo el árbol como red de seguridad, pero la regla es no escribir datos reales dentro del repositorio.
 

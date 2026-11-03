@@ -1,10 +1,7 @@
 // The reference data over HTTP (`docs/api.md` §6): the
 // index of `reference/ecb/` and `prices/`, and one file at a time, with
-// `If-None-Match` on the version the device holds. **One client, the
-// credential injected**, like the remote ledger: the console with the device
-// token of its folder, the web with its cookie (same origin). Every request
-// with `redirect: "error"`, so a token never leaves its origin. No rule lives
-// here: what an index may be is the domain's (`parseReferenceIndex`).
+// `If-None-Match` on the version the device holds, with the cookie of the web
+// (same origin) and `redirect: "error"`. No rule lives here: what an index may be is the domain's (`parseReferenceIndex`).
 //
 // A subpath of its own (`@atlas/adapters/reference-http`), so that the web
 // loads it lazily, never on its boot path; and a folder of its own, outside
@@ -16,8 +13,6 @@ import { parseErrorAnswer, parseReferenceIndex, RemoteError } from "@atlas/domai
 interface HttpReferenceOptions {
   readonly origin: string;
   readonly fetch: typeof fetch;
-  /** The device token of the console; without it, the cookie of the web travels (same origin). */
-  readonly token?: string;
 }
 
 export type ReferenceKind = "ecb" | "prices";
@@ -56,12 +51,9 @@ export const httpReference = (options: HttpReferenceOptions) => {
     try {
       return await options.fetch(`${options.origin}${path}`, {
         method: "GET",
-        headers: {
-          ...headers,
-          ...(options.token === undefined ? {} : { "x-atlas-device-token": options.token }),
-        },
+        headers,
         redirect: "error",
-        credentials: options.token === undefined ? "same-origin" : "omit",
+        credentials: "same-origin",
       });
     } catch {
       throw new RemoteError("network_failed", undefined);

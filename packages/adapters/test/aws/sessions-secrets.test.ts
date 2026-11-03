@@ -1,51 +1,46 @@
-// The objects of the devices over S3 and the secrets of SSM with their cache.
+// The mark that closes every session, over S3, and the secrets of SSM with their cache.
 
 import {
   AccessSecrets,
+  closeSessionsBefore,
   DependencyUnavailable,
-  DeviceStore,
   parameterNames,
+  readSessionsValidFrom,
 } from "@atlas/adapters/aws";
-import { newDevice } from "@atlas/domain/access";
+import { SESSIONS_VALID_FROM_KEY } from "@atlas/domain/access";
 import { describe, expect, it } from "vitest";
 import { TestOnlyFakeS3 } from "./test-only-fake-s3.js";
 import { TestOnlyFakeSsm } from "./test-only-fake-ssm.js";
 
-const ID = "AAAAAAAAAAAAAAAAAAAAAA";
-
-describe("DeviceStore", () => {
-  it("creates an object never over another, and reads it back strictly", async () => {
+describe("the mark of logout-all", () => {
+  it("is written once, moves only forward, and reads back", async () => {
     const s3 = new TestOnlyFakeS3();
-    const store = new DeviceStore(s3);
-    const device = newDevice({ deviceId: ID, type: "web", createdAt: "2026-10-01T10:00:00Z" });
-    expect(await store.read(ID)).toBeUndefined();
-    expect(await store.create(device)).toBe("created");
-    expect(await store.create({ ...device, type: "console" })).toBe("exists");
-    expect(await store.read(ID)).toEqual(device);
-    expect(s3.keys()).toEqual([`sync/devices/${ID}.json`]);
+    expect(await readSessionsValidFrom(s3)).toBeUndefined();
+    await closeSessionsBefore(s3, 1_000);
+    expect(await readSessionsValidFrom(s3)).toBe(1_000);
+    await closeSessionsBefore(s3, 900);
+    expect(await readSessionsValidFrom(s3)).toBe(1_000);
+    await closeSessionsBefore(s3, 1_100);
+    expect(await readSessionsValidFrom(s3)).toBe(1_100);
+    expect(s3.keys()).toEqual([SESSIONS_VALID_FROM_KEY]);
   });
 
-  it("reads a damaged object as unreadable, and never builds a key from a bad id", async () => {
+  it("replaces an unreadable mark, and tries again when another write wins", async () => {
     const s3 = new TestOnlyFakeS3();
-    const store = new DeviceStore(s3);
-    s3.seed(`sync/devices/${ID}.json`, "{ not json");
-    expect(await store.read(ID)).toBe("unreadable");
-    await s3.putIfMatch(
-      `sync/devices/${ID}.json`,
-      Uint8Array.of(0xff, 0xfe),
-      (await s3.get(`sync/devices/${ID}.json`))?.etag as string,
-    );
-    expect(await store.read(ID)).toBe("unreadable");
-    await expect(store.read("../../ledger/ledger")).rejects.toMatchObject({
-      code: "device_id_invalid",
-    });
-    expect(s3.calls.some((call) => call.includes(".."))).toBe(false);
+    s3.seed(SESSIONS_VALID_FROM_KEY, "{ not json");
+    expect(await readSessionsValidFrom(s3)).toBe("unreadable");
+    s3.conflictNext();
+    await closeSessionsBefore(s3, 1_000);
+    expect(await readSessionsValidFrom(s3)).toBe(1_000);
   });
 
-  it("lets a failure of S3 through as what it is", async () => {
+  it("fails rather than leave the sessions open, and lets a failure of S3 through", async () => {
     const s3 = new TestOnlyFakeS3();
+    s3.beforePut = () => s3.conflictNext();
+    await expect(closeSessionsBefore(s3, 1_000)).rejects.toThrow("sessions mark contention");
+    s3.beforePut = undefined;
     s3.failNext();
-    await expect(new DeviceStore(s3).read(ID)).rejects.toBeInstanceOf(DependencyUnavailable);
+    await expect(readSessionsValidFrom(s3)).rejects.toBeInstanceOf(DependencyUnavailable);
   });
 });
 

@@ -10,8 +10,6 @@ export interface Outcome {
   readonly code?: string;
   readonly reason?: string;
   readonly dependency?: string;
-  /** The public id of a token (ADR-0033, point 10): the most a log may say of one. */
-  readonly tokenId?: string;
 }
 
 export const fail = (value: ApiRefusal): Outcome => ({

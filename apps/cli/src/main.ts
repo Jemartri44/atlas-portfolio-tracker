@@ -16,11 +16,9 @@ import type { AdminAccess } from "./admin/environment.js";
 import { booleanFlag, parseArgs, stringFlag, UsageError } from "./args.js";
 import { pendingDraftsNote } from "./commands/draft.js";
 import { type Context, EXIT, type Io, type PromptOptions } from "./context.js";
-import { CloudLedgerStore, type FolderMode, resolveFolderMode } from "./folder-mode.js";
 import { askWithoutEcho } from "./output/secret-prompt.js";
 import type { PriceEnvironment } from "./prices/load.js";
 import { assertArity, COMMANDS } from "./registry.js";
-import type { RemoteEnvironment } from "./remote/environment.js";
 import { reportError } from "./report.js";
 import { USAGE } from "./usage.js";
 
@@ -118,8 +116,6 @@ export interface RunOverrides {
   readonly fxSource?: (() => FxRateSource) | undefined;
   /** The sources of prices and the file of the keys. */
   readonly prices?: PriceEnvironment | undefined;
-  /** The network, the credentials and the browser of `atlas remote`. */
-  readonly remote?: RemoteEnvironment | undefined;
   /** The clients of the administration; tests never reach AWS. */
   readonly admin?: AdminAccess | undefined;
 }
@@ -128,7 +124,6 @@ export interface RunOverrides {
 interface Invocation {
   /** Where the reminder of pending drafts looks, once a command is going to run. */
   remindAt?: string;
-  cloud?: CloudLedgerStore;
 }
 
 /** `--json` anywhere before a `--`: known even when the arguments do not parse. */
@@ -161,7 +156,6 @@ export const run = async (
     code = await reportError(watched, error, {
       json: wantsJson(argv),
       wroteStdout: () => wroteStdout,
-      ...(invocation.cloud === undefined ? {} : { cloud: invocation.cloud }),
     });
   }
   // Said after every command, whatever it did, failures included: a draft
@@ -178,7 +172,7 @@ export const run = async (
 const dispatch = async (
   argv: readonly string[],
   io: Io,
-  { compose = composeDeps, fxSource, prices, remote, admin }: RunOverrides,
+  { compose = composeDeps, fxSource, prices, admin }: RunOverrides,
   invocation: Invocation,
 ): Promise<number> => {
   const { positionals, flags } = parseArgs(argv);
@@ -202,21 +196,10 @@ const dispatch = async (
   if (ledgerPath === "") {
     throw new UsageError("--ledger necesita una ruta (¿una variable de shell sin definir?)");
   }
-  // Cloud folder or local folder, before anything reads or writes the ledger
-  // (ADR-0035, §4): both at once is refused here.
-  const mode: FolderMode =
-    command.looksAtMode?.(positionals) === false
-      ? { kind: "local" }
-      : await resolveFolderMode(ledgerPath);
-  const base = compose(ledgerPath);
   const ctx: Context = {
-    deps:
-      mode.kind === "cloud"
-        ? { ...base, store: new CloudLedgerStore(() => ctx, mode.remote, base.store.schema) }
-        : base,
+    deps: compose(ledgerPath),
     io,
     ledgerPath,
-    mode,
     yes: booleanFlag(flags, "yes"),
     confirmDuplicate: booleanFlag(flags, "confirm-duplicate"),
     confirmFxRate: booleanFlag(flags, "confirm-fx-rate"),
@@ -224,15 +207,10 @@ const dispatch = async (
     json: booleanFlag(flags, "json"),
     ...(fxSource === undefined ? {} : { fxSource }),
     ...(prices === undefined ? {} : { prices }),
-    ...(remote === undefined ? {} : { remote }),
     ...(admin === undefined ? {} : { admin }),
   };
-  if (ctx.deps.store instanceof CloudLedgerStore) {
-    invocation.cloud = ctx.deps.store;
-  }
-  // The reminder reads the folder's own `drafts/`: a cloud folder has none (its drafts are in
-  // the cloud, `atlas draft list`), and the reminder would cost a request on every command.
-  if (name !== "draft" && mode.kind === "local") {
+  // The reminder reads the folder's own `drafts/`.
+  if (name !== "draft") {
     invocation.remindAt = ledgerPath;
   }
   await sweepTemporaries(io, ledgerPath);

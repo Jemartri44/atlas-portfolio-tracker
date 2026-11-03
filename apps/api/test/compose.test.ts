@@ -15,9 +15,6 @@ const ENV = {
   ATLAS_DATA_BUCKET: "atlas-dev-data",
   ATLAS_SESSION_TTL_SECONDS: "28800",
   ATLAS_LOGIN_TTL_SECONDS: "600",
-  ATLAS_CONSOLE_CODE_TTL_SECONDS: "300",
-  ATLAS_TOKEN_LIFETIME_DAYS: "90",
-  ATLAS_RECENT_ISSUE_DAYS: "7",
   ATLAS_CLOCK_TOLERANCE_SECONDS: "600",
   ATLAS_ALLOW_LIST_CACHE_SECONDS: "120",
   ATLAS_SECRETS_CACHE_SECONDS: "300",
@@ -87,12 +84,6 @@ describe("compose (the Lambda of production)", () => {
         get: async () => {
           throw denied;
         },
-        getVersioned: async () => {
-          throw denied;
-        },
-        putNew: async () => "created" as const,
-        overwrite: async () => 1,
-        listByPath: async () => [],
       }),
     };
     const thrown = await composeOrFail(ENV, failing).catch((error: unknown) => error);
@@ -115,7 +106,9 @@ describe("compose (the Lambda of production)", () => {
     for (const env of [
       { ...ENV, ATLAS_ENV: "staging" },
       { ...ENV, ATLAS_SOMETHING: "1" },
-      { ...ENV, ATLAS_TOKEN_LIFETIME_DAYS: "121" },
+      { ...ENV, ATLAS_SESSION_TTL_SECONDS: "86401" },
+      // A variable no longer read: an old deploy stops instead of running.
+      { ...ENV, ATLAS_TOKEN_LIFETIME_DAYS: "90" },
     ]) {
       await expect(compose(env, parts(SESSION_KEY).make)).rejects.toThrow();
     }

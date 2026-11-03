@@ -4,7 +4,6 @@
 
 export { sha256Bytes } from "../hash.js";
 export { decodeUtf8Strict, utf8TextOrUndefined } from "../utf8.js";
-export { DeviceStore } from "./device-store.js";
 export { type DraftObjects, draftObjects } from "./draft-objects.js";
 export { DependencyUnavailable } from "./errors.js";
 export type {
@@ -14,7 +13,7 @@ export type {
   ObjectStore,
   StoredObject,
 } from "./object-store.js";
-export type { ParameterEntry, ParameterStore } from "./parameter-store.js";
+export type { ParameterStore } from "./parameter-store.js";
 export {
   REFERENCE_PREFIXES,
   type ReferencePrefix,
@@ -30,5 +29,5 @@ export {
 } from "./s3-ledger.js";
 export { type SecretKind, type SecretStore, SecretTagsFailed } from "./secret-store.js";
 export { AccessSecrets, parameterNames, type SecretsOptions } from "./secrets.js";
-export { TokenRegistry } from "./token-registry.js";
+export { closeSessionsBefore, readSessionsValidFrom } from "./sessions-valid-from.js";
 export { readWebSignIn, recordWebSignIn, type WebSignInWrite } from "./web-sign-in.js";

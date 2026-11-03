@@ -16,7 +16,7 @@ import { REMOTE_FAILURE_CODES, RemoteError } from "../../src/ports/remote-ledger
 
 const SHA = "a".repeat(64);
 
-describe("requestedEtag: the If-Match of a write (§5.2 and §5.5)", () => {
+describe("requestedEtag: the If-Match of a write (§5.2)", () => {
   it("is absent without the header, and the quoted SHA-256 otherwise", () => {
     expect(requestedEtag(undefined)).toEqual({ absent: true });
     expect(requestedEtag(`"${SHA}"`)).toEqual({ etag: SHA });
@@ -164,8 +164,8 @@ describe("refusalOfRemote: a rule of the sync said no (§5 and §7)", () => {
       refusal("body_invalid", { reason: "line" }),
     );
     expect(
-      refusalOfRemote(new RemoteError("init_rejected", 422, { code: "raw_line_break", line: 2 })),
-    ).toEqual(refusal("init_rejected", { code: "raw_line_break", line: 2 }));
+      refusalOfRemote(new RemoteError("append_too_many_units", 413, { limit: 100, units: 101 })),
+    ).toEqual(refusal("append_too_many_units", { limit: 100, units: 101 }));
   });
 
   it("refuses to translate a code the API does not answer", () => {
@@ -175,12 +175,7 @@ describe("refusalOfRemote: a rule of the sync said no (§5 and §7)", () => {
   });
 
   it("keeps every code the routes of §5 can answer inside REMOTE_FAILURE_CODES", () => {
-    const answerable = Object.keys(API_ERRORS).filter(
-      (code) =>
-        !code.startsWith("console_") &&
-        !code.startsWith("reissue_") &&
-        !["pkce_mismatch", "reference_name_invalid"].includes(code),
-    );
+    const answerable = Object.keys(API_ERRORS).filter((code) => code !== "reference_name_invalid");
     for (const code of answerable) {
       expect(REMOTE_FAILURE_CODES as readonly string[], code).toContain(code);
     }

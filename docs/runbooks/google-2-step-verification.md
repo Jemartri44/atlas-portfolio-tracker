@@ -1,8 +1,8 @@
 # Verificación en dos pasos en tu cuenta personal de Google
 
-Atlas no tendrá usuario ni contraseña propios: **se entrará solo con tu cuenta personal de Google** (ADR-0027). La web y la API aceptan a quien Google diga que eres, si figura en la lista permitida, y el token de la consola solo se emite al final de un inicio de sesión con Google (ADR-0033). **Esa cuenta es la llave de todo tu libro.**
+Atlas no tendrá usuario ni contraseña propios: **se entrará solo con tu cuenta personal de Google** (ADR-0027). La web y la API aceptan a quien Google diga que eres, si figura en la lista permitida. **Esa cuenta es la llave de todo tu libro.**
 
-Y hoy Atlas **no puede comprobar** que esa cuenta tenga la verificación en dos pasos activada, ni impedir que Google recuerde un navegador (ADR-0027, «Lo que se pierde frente a Cognito»). La feature 015 comprobó (2026-09-25) si Google permite exigirla al emitir el token de la consola (ADR-0033, punto 2: `amr` con `mfa`): **no se puede exigir en la práctica**. Google solo entrega `amr` a una aplicación publicada y verificada por Google con una función en Beta activada, y aun así puede no venir; tampoco admite forzar que vuelvas a autenticarte. Atlas **no lo pide ni lo exige** (ADR-0033, nota del 2026-09-25 sobre `mfa`). Por eso tenerla activada es un **requisito tuyo**, previo al despliegue (`docs/decision-roadmap.md`, Ronda 8, «Plan por etapas», etapa 3). Esta guía te lleva por ella en unos 20 minutos.
+Y hoy Atlas **no puede comprobar** que esa cuenta tenga la verificación en dos pasos activada, ni impedir que Google recuerde un navegador (ADR-0027, «Lo que se pierde frente a Cognito»). La feature 015 comprobó (2026-09-25) si Google permite exigirla (`amr` con `mfa`): **no se puede exigir en la práctica**. Google solo entrega `amr` a una aplicación publicada y verificada por Google con una función en Beta activada, y aun así puede no venir; tampoco admite forzar que vuelvas a autenticarte. Atlas **no lo pide ni lo exige** (ADR-0033, nota del 2026-09-25 sobre `mfa`). Por eso tenerla activada es un **requisito tuyo**, previo al despliegue (`docs/decision-roadmap.md`, Ronda 8, «Plan por etapas», etapa 3). Esta guía te lleva por ella en unos 20 minutos.
 
 **Dos reglas:**
 
@@ -83,7 +83,7 @@ Hazlo ahora y repítelo de vez en cuando (por ejemplo, cuando llegue el correo m
 2. Repasa la lista. Es normal ver varias sesiones en el mismo dispositivo.
 3. En cualquiera que no reconozcas, o que ya no uses: púlsalo y **Cerrar sesión**. Si una no te cuadra, cambia además la contraseña.
 
-> **Con Atlas ya desplegado, cerrar la sesión en Google no cierra Atlas.** Atlas tiene su propia sesión, y quien haya entrado en tu cuenta de Google puede haber sacado un token de consola que vale hasta 90 días. Si sospechas que alguien ha usado tu cuenta, sigue el orden de ADR-0033 (nota del 2026-09-25 sobre la cuenta robada): **quitar tu cuenta de la lista permitida, recuperar la cuenta de Google, revocar todos los tokens de consola, rotar la clave de sesión de Atlas y esperar unos minutos, revisar lo que se añadió al libro mientras tanto y olvidar los dispositivos que no reconozcas, y solo después volver a ponerla en la lista**; si la repones antes, los tokens y las sesiones del intruso vuelven a valer. Mira también las emisiones recientes de tokens en la web de Atlas. El procedimiento paso a paso, con las órdenes exactas, está en [Recuperar una cuenta de Google robada](stolen-google-account.md).
+> **Con Atlas ya desplegado, cerrar la sesión en Google no cierra Atlas.** Atlas tiene su propia sesión, de hasta 24 horas. Si sospechas que alguien ha usado tu cuenta, cierra antes que nada todas las sesiones desde la web (Ajustes › Sesión) y sigue [Recuperar una cuenta de Google robada](stolen-google-account.md).
 
 **Aplicaciones y servicios de terceros:**
 
