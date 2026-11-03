@@ -59,7 +59,7 @@ export interface SaleEstimate {
 }
 
 /** Tax of a savings base under progressive brackets whose `up_to` are cumulative limits. */
-const taxOfBase = (base: Money, brackets: readonly TaxBracket[]): Money => {
+export const taxOfBase = (base: Money, brackets: readonly TaxBracket[]): Money => {
   let tax = Money.zero("EUR");
   let from = Money.zero("EUR");
   for (const bracket of brackets) {

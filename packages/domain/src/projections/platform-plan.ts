@@ -107,7 +107,7 @@ export const holdersOf = (
  * The account that holds the asset: the one with the largest position among the
  * active accounts of the core. Undefined when none holds it.
  */
-const accountHolding = (state: LedgerState, assetId: AssetId): AccountId | undefined =>
+export const accountHolding = (state: LedgerState, assetId: AssetId): AccountId | undefined =>
   holdersOf(state, assetId)[0]?.account_id;
 
 /**
