@@ -139,6 +139,19 @@ describe("the exposure (§6.2)", () => {
     expect(api.s3.text(KEY)).toBeUndefined();
   });
 
+  it("refuses a body that is not UTF-8 as every route does (415 body_not_json), and writes nothing", async () => {
+    const api = setup();
+    await signedIn(api);
+    const broken = await api.call("PUT", "/api/exposure", {
+      headers: { origin: SELF, "content-type": "application/json", "if-none-match": "*" },
+      body: Buffer.from([0x7b, 0xff, 0xfe, 0x7d]).toString("base64"),
+      base64: true,
+    });
+    expect(broken.statusCode).toBe(415);
+    expect(errorOf(broken)).toEqual({ code: "body_not_json", details: { reason: "encoding" } });
+    expect(api.s3.text(KEY)).toBeUndefined();
+  });
+
   it("is 413 above 64 KiB, before reading anything", async () => {
     const api = setup();
     await signedIn(api);

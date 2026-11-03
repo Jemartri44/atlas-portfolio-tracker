@@ -77,6 +77,7 @@ export const createHandler = (deps: HandlerDeps): Handler => {
           : exposure.write({
               ifMatch: request.headers.get("if-match"),
               ifNoneMatch: request.headers.get("if-none-match"),
+              // Never undefined here: a body that is not UTF-8 was refused above (415 body_not_json).
               text: request.bodyText as string,
               bytes: request.bodyBytes,
             });
