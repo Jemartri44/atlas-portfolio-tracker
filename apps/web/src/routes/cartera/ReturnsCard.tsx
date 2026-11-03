@@ -33,11 +33,12 @@ const COLUMNS: readonly DataColumn<ClassReturnRowView>[] = [
     amount: true,
     card: "meta",
     cell: (row) => <Amount value={row.invested} missingReason="sin dato" />,
-    cardCell: (row) => (
-      <span>
-        comprado <Amount value={row.invested} missingReason="sin dato" />
-      </span>
-    ),
+    cardCell: (row) =>
+      row.invested === undefined ? null : (
+        <span>
+          comprado <Amount value={row.invested} />
+        </span>
+      ),
   },
   {
     key: "returned",
@@ -46,11 +47,12 @@ const COLUMNS: readonly DataColumn<ClassReturnRowView>[] = [
     amount: true,
     card: "meta",
     cell: (row) => <Amount value={row.returned} missingReason="sin dato" />,
-    cardCell: (row) => (
-      <span>
-        recuperado <Amount value={row.returned} missingReason="sin dato" />
-      </span>
-    ),
+    cardCell: (row) =>
+      row.returned === undefined ? null : (
+        <span>
+          recuperado <Amount value={row.returned} />
+        </span>
+      ),
   },
   {
     key: "value",
@@ -59,11 +61,12 @@ const COLUMNS: readonly DataColumn<ClassReturnRowView>[] = [
     amount: "lead",
     card: "sub",
     cell: (row) => <Amount value={row.value} missingReason="sin dato" />,
-    cardCell: (row) => (
-      <span>
-        vale <Amount value={row.value} missingReason="sin dato" />
-      </span>
-    ),
+    cardCell: (row) =>
+      row.value === undefined ? null : (
+        <span>
+          vale <Amount value={row.value} />
+        </span>
+      ),
   },
   {
     key: "gain",
