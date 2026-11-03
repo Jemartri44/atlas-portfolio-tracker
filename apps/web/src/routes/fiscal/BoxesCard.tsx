@@ -7,7 +7,7 @@
 // card says plainly that it has no numbers for that year.
 
 import { For, type JSX, Show } from "solid-js";
-import { Amount, Disclosure, Notice, Section } from "../../components/index.js";
+import { Amount, Disclosure, Icon, Notice, Section } from "../../components/index.js";
 import type { BoxesView, BoxRowView } from "../../view-models/fiscal/index.js";
 
 const Value = (props: { row: BoxRowView }): JSX.Element => (
@@ -18,12 +18,50 @@ const Value = (props: { row: BoxRowView }): JSX.Element => (
   </Show>
 );
 
-export const BoxesCard = (props: { view: BoxesView }): JSX.Element => (
+/**
+ * The package of the year, to keep, attach or type from: the boxes, the lots
+ * behind each sale and where each figure comes from, as a CSV file; and the
+ * same card on paper, through the browser's own print, with every block open.
+ */
+const PackageActions = (props: { onDownload: () => void }): JSX.Element => {
+  let row: HTMLDivElement | undefined;
+  const print = (): void => {
+    const card = row?.closest(".card");
+    const blocks = [...(card?.querySelectorAll("details") ?? [])];
+    const closed = blocks.filter((block) => !block.open);
+    for (const block of closed) {
+      block.open = true;
+    }
+    // The print sheet keeps only the card marked as the one being printed (`styles/layout.css`).
+    card?.classList.add("is-printing");
+    window.print();
+    card?.classList.remove("is-printing");
+    for (const block of closed) {
+      block.open = false;
+    }
+  };
+  return (
+    <div class="button-row no-print" ref={row}>
+      <button type="button" class="secondary" onClick={() => props.onDownload()}>
+        <Icon name="export" class="icon-sm" />
+        Descargar el paquete (CSV)
+      </button>
+      <button type="button" class="secondary" onClick={print}>
+        Imprimir o guardar en PDF
+      </button>
+    </div>
+  );
+};
+
+export const BoxesCard = (props: { view: BoxesView; onDownload?: () => void }): JSX.Element => (
   <Section
     title="Tu declaración por casillas"
     class="span-12"
     aside={<span class="scope">Ejercicio {props.view.year}</span>}
   >
+    <Show when={props.onDownload}>
+      {(onDownload) => <PackageActions onDownload={onDownload()} />}
+    </Show>
     <Show
       when={props.view.checked}
       fallback={

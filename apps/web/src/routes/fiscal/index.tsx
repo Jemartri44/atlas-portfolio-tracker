@@ -3,19 +3,37 @@
 // a lazily loaded chunk: the tax engine never reaches the boot path. A computer reads the return of
 // the year first; a phone, the deadlines and the informative models, then the return.
 
-import { yearOf } from "@atlas/domain";
-import { informativeReturn, taxBoxes, taxYear } from "@atlas/domain/fiscal";
+import { settingsAt, yearOf } from "@atlas/domain";
+import {
+  informativeReturn,
+  rentaPackage,
+  repurchaseCalendar,
+  savingsQuota,
+  taxBoxes,
+  taxYear,
+} from "@atlas/domain/fiscal";
 import { A } from "@solidjs/router";
 import { createMemo, createResource, For, type JSX, Show } from "solid-js";
 import { EmptyState, Notice, Section } from "../../components/index.js";
+import { describeWarning } from "../../format/messages/warnings.js";
 import { nameIndex } from "../../format/names.js";
+import { download } from "../../ledger/copy.js";
 import { toAppError } from "../../ledger/errors.js";
 import { attempt } from "../../ledger/query.js";
 import { store, today } from "../../ledger/state.js";
+import { useQuotes } from "../../prices/use-quotes.jsx";
 import { GRID, mediaQuery } from "../../shell/media.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { privacy } from "../../shell/preferences.js";
-import { boxesView, informativeView, yearView } from "../../view-models/fiscal/index.js";
+import {
+  BLOCK_TITLES,
+  boxesView,
+  informativeView,
+  PARTIAL_TEXTS,
+  yearView,
+} from "../../view-models/fiscal/index.js";
+import { quotaView } from "../../view-models/fiscal/quota.js";
+import { repurchaseView } from "../../view-models/fiscal/sale.js";
 import { RequireLedger } from "../guard.jsx";
 import { BaseCard } from "./BaseCard.jsx";
 import { BoxesCard } from "./BoxesCard.jsx";
@@ -25,7 +43,10 @@ import { FilingCard } from "./FilingCard.jsx";
 import { InformativeCard } from "./InformativeCard.jsx";
 import { LossesCard } from "./LossesCard.jsx";
 import { PartFailed } from "./PartFailed.jsx";
+import { QuotaCard } from "./QuotaCard.jsx";
 import { RateNotes } from "./RateNotes.jsx";
+import { RepurchaseCard } from "./RepurchaseCard.jsx";
+import { SaleSimulatorCard } from "./SaleSimulatorCard.jsx";
 import { useYear, type YearChoice, YearPicker } from "./YearPicker.jsx";
 import { yearsOf } from "./years.js";
 
@@ -48,6 +69,8 @@ export default function FiscalRoute(): JSX.Element {
       {(snapshot) => {
         const names = nameIndex(snapshot.state);
         const wide = mediaQuery(GRID);
+        // Informative prices, only for the "what if I sell" estimate: no figure of the return uses them.
+        const prices = useQuotes(snapshot.state);
         const current = yearOf(today());
         const filings = [...snapshot.state.filings.values()];
         const choices = createMemo<YearChoice[]>(() =>
@@ -106,10 +129,19 @@ export default function FiscalRoute(): JSX.Element {
             ),
           })),
         );
+        /** The package of the year as a CSV, worded as the screen words it. */
+        const downloadPackage = (): void => {
+          const csv = rentaPackage(snapshot.events, year(), options(), {
+            block: (block) => BLOCK_TITLES[block],
+            partial: (reason) => PARTIAL_TEXTS[reason],
+            note: (note) => describeWarning(note, { names, privacy: false }),
+          });
+          download(csv, `atlas-renta-${year()}.csv`, "text/csv");
+        };
         const boxesCard = (): JSX.Element => {
           const result = boxes();
           return result.ok ? (
-            <BoxesCard view={result.value} />
+            <BoxesCard view={result.value} onDownload={downloadPackage} />
           ) : (
             <PartFailed title="Tu declaración por casillas" error={result.error} />
           );
@@ -117,6 +149,19 @@ export default function FiscalRoute(): JSX.Element {
         const view = createMemo(() => {
           const computed = report();
           return computed.ok ? yearView(computed.value, names) : undefined;
+        });
+        /**
+         * The estimated quota of the year, with the brackets the settings in
+         * force at its close carry, if any (criterion #27).
+         */
+        const quota = createMemo(() => {
+          const computed = report();
+          if (!computed.ok) {
+            return undefined;
+          }
+          const close = `${year()}-12-31` < today() ? `${year()}-12-31` : today();
+          const brackets = settingsAt(snapshot.state, close).settings.savings_tax_brackets;
+          return quotaView(savingsQuota(computed.value, brackets));
         });
         const failure = () => {
           const computed = report();
@@ -145,6 +190,7 @@ export default function FiscalRoute(): JSX.Element {
                 </Show>
                 <Show when={!year().empty}>
                   <BaseCard view={year()} />
+                  <Show when={quota()}>{(estimate) => <QuotaCard view={estimate()} />}</Show>
                   <DoubtfulCard stakes={year().doubtful} />
                   <SettledCard stakes={year().settled} />
                   <LossesCard
@@ -156,6 +202,13 @@ export default function FiscalRoute(): JSX.Element {
                   />
                   {boxesCard()}
                 </Show>
+                <SaleSimulatorCard
+                  state={snapshot.state}
+                  events={snapshot.events}
+                  date={today()}
+                  settings={settingsAt(snapshot.state, today()).settings}
+                  external={prices.external(snapshot.state)}
+                />
                 <FilingCard
                   year={picked.year()}
                   {...(filing() === undefined ? {} : { filing: filing() })}
@@ -229,6 +282,9 @@ export default function FiscalRoute(): JSX.Element {
             >
               <div class="grid">
                 <LedgerCalendar events={snapshot.events} today={today()} names={names} />
+                <RepurchaseCard
+                  view={repurchaseView(repurchaseCalendar(snapshot.events, today()), names)}
+                />
                 <RateNotes
                   notes={((computed) => (computed.ok ? computed.value.notes : []))(report())}
                   events={snapshot.events}

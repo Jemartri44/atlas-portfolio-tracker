@@ -582,3 +582,17 @@
     display: none;
   }
 }
+
+/* Paper: when a card asks to be printed, only that card goes on the sheet. */
+@media print {
+  body:has(.is-printing) :is(.topbar, .nav, .page-head, .no-print) {
+    display: none;
+  }
+  body:has(.is-printing) .grid > :not(.is-printing) {
+    display: none;
+  }
+  .is-printing {
+    box-shadow: none;
+    border: 0;
+  }
+}
