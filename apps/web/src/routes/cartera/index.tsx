@@ -14,6 +14,7 @@
 // of the title.
 
 import { assets, coreWeights, settingsAt } from "@atlas/domain";
+import { classReturns, coreXirr, spanishCpiPct } from "@atlas/domain/charts";
 import { contributionPlan, costSummary, platformPlan } from "@atlas/domain/portfolio";
 import { createMemo, createSignal, type JSX } from "solid-js";
 import { AsOfPicker, useAsOf } from "../../components/index.js";
@@ -30,6 +31,7 @@ import {
   type UnitPrices,
   weightsView,
 } from "../../view-models/core/index.js";
+import { returnsView } from "../../view-models/core/returns.js";
 import { unitPricesOf } from "../../view-models/core/whole-units.js";
 import { absorbedAssets } from "../../view-models/weighted.js";
 import { RequireLedger } from "../guard.jsx";
@@ -37,6 +39,8 @@ import { ContributionCard } from "./ContributionCard.jsx";
 import { CostsCard } from "./CostsCard.jsx";
 import { ExposureBlock } from "./ExposureBlock.jsx";
 import { RebalanceCard } from "./RebalanceCard.jsx";
+import { ReturnsCard } from "./ReturnsCard.jsx";
+import { TotalCostCard } from "./TotalCostCard.jsx";
 import { WeightsCard } from "./WeightsCard.jsx";
 
 export default function CarteraRoute(): JSX.Element {
@@ -95,11 +99,15 @@ export default function CarteraRoute(): JSX.Element {
         );
         /** Funds converted into another and holding nothing: not listed, not offered. */
         const absorbed = createMemo(() => absorbedAssets(dated(), snapshot.events, date()));
-        const costs = createMemo(() =>
-          costsView(
-            costSummary(dated(), snapshot.events, date(), settings(), date(), external()),
-            names,
-            absorbed(),
+        const summary = createMemo(() =>
+          costSummary(dated(), snapshot.events, date(), settings(), date(), external()),
+        );
+        const costs = createMemo(() => costsView(summary(), names, absorbed()));
+
+        const returns = createMemo(() =>
+          returnsView(
+            coreXirr(snapshot.events, date(), spanishCpiPct()),
+            classReturns(snapshot.events, date()),
           ),
         );
 
@@ -149,6 +157,7 @@ export default function CarteraRoute(): JSX.Element {
                   return outcome.kind === "invalid" ? outcome.message : undefined;
                 })()}
               />
+              <ReturnsCard view={returns()} />
               <ExposureBlock weights={projection()} catalogue={catalogue()} names={names} />
               <RebalanceCard
                 state={dated()}
@@ -159,6 +168,7 @@ export default function CarteraRoute(): JSX.Element {
                 names={names}
               />
               <CostsCard view={costs()} />
+              <TotalCostCard summary={summary()} settings={settings()} />
             </div>
           </>
         );
