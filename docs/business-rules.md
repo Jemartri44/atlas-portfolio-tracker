@@ -15,7 +15,7 @@ Reglas de dominio que la aplicación implementa. La especificación técnica (`s
 | `core` | **Cartera principal / núcleo** | Cuatro clases de activo: renta variable, renta fija, oro y cripto | MyInvestor (fondos), IBKR (ETC y ETP de oro y de bitcoin, ETF) | Desviación frente a pesos objetivo |
 | `bucket` | **Cubo especulativo** | Acciones al contado, operativa de días a semanas. Pequeña parte para especular, trastear y aprender | IBKR (cuenta separada) | Rendimiento frente al índice |
 
-Uso previsto (el dueño, 2026-11-04): bitcoin en el **núcleo** (`crypto`), como **ETP en IBKR** —un valor admitido: Modelo 720, recompra de dos meses— o como tenencia directa anotada a mano (permutas, Modelo 721, recompra de un año hacia delante); y las **acciones sueltas** en el **cubo**, en la cuenta separada de IBKR y con tesis. Atlas cubre ETP y tenencia directa, así que no hace falta decidirlo para empezar.
+Uso previsto (el dueño, 2026-11-04): bitcoin en el **núcleo** (`crypto`), como **ETP en IBKR** —un valor admitido: Modelo 720, recompra de dos meses— o como tenencia directa anotada a mano (permutas, Modelo 721, recompra de un año hacia delante); y las **acciones sueltas** en el **cubo**, en la cuenta separada de IBKR. Atlas cubre ETP y tenencia directa, así que no hace falta decidirlo para empezar.
 
 ### Clases de activo del núcleo (`asset_class`)
 
