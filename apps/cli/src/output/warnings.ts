@@ -176,6 +176,10 @@ export const describeWarning = (warning: Warning): string => {
       return `${PARTIAL_BOX[text(d.reason)] ?? warning.message} (casillas ${listOf(d.boxes)}).`;
     case "tax_box_rounding_differs":
       return `El formulario redondea cada valor y hace él mismo la resta: en ${listOf(d.boxes)} sale un céntimo distinto del que calcula el motor. Se enseñan los dos.`;
+    case "tax_box_section_doubtful":
+      return "Las acciones de mercados de fuera de la UE (NYSE, Nasdaq…) van a «otros elementos patrimoniales» con la clave 2, como dice la ayuda del Modelo 100; ninguna fuente leída extiende a la declaración la equivalencia de esos mercados, así que el apartado es dudoso.";
+    case "tax_box_other_inferred":
+      return "Las diferencias de cambio de la divisa (y un ETC o ETP configurado como ganancia) no tienen apartado propio en el impreso: por exclusión irían a «otros elementos patrimoniales», clave 4 («otros elementos patrimoniales no afectos a actividades económicas»). Es una inferencia, no está escrita en ninguna fuente; por eso no llevan casilla.";
     case "tax_box_repurchase_has_no_number":
       return "La parte de una pérdida que no es computable por recompra se marca en la ventana de captura de Renta WEB: no tiene casilla con número.";
     case "informative_current_year":

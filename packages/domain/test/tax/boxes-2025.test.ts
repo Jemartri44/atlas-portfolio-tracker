@@ -186,8 +186,8 @@ describe("the 2025 return by box, worked out by hand", () => {
     // which the subscription of 05/05 defers 20/40: imputable −20,00.
     expect(box(boxes, "0312", at("2025-03-03"))).toBe("360.00");
     expect(box(boxes, "0315", at("2025-03-03"))).toBe("400.00");
-    expect(box(boxes, "0321", at("2025-03-03"))).toBe("-40.00");
-    expect(box(boxes, "0322", at("2025-03-03"))).toBe("-20.00");
+    expect(box(boxes, "0321", at("2025-03-03"))).toBe("40.00");
+    expect(box(boxes, "0322", at("2025-03-03"))).toBe("20.00");
     // The NIF of the fund is not in the ledger and is not invented.
     expect(box(boxes, "0311", at("2025-03-03"))).toBe("falta");
     // 10/11: 60 at 11,00 against the 60 left of the lot of 2024. +60,00.
@@ -196,7 +196,7 @@ describe("the 2025 return by box, worked out by hand", () => {
     expect(box(boxes, "0316", at("2025-11-10"))).toBe("60.00");
     expect(box(boxes, "0320", at("2025-11-10"))).toBe("60.00");
     expect(box(boxes, "0324")).toBe("60.00");
-    expect(box(boxes, "0325")).toBe("-20.00");
+    expect(box(boxes, "0325")).toBe("20.00");
   });
 
   it("lays the ETF out in the section of its own that 2025 created", () => {
@@ -215,8 +215,8 @@ describe("the 2025 return by box, worked out by hand", () => {
   it("lays the shares out, the gain of one and the loss of the other", () => {
     expect(box(boxes, "0328", at("2025-06-02"))).toBe("450.00");
     expect(box(boxes, "0331", at("2025-06-02"))).toBe("500.00");
-    expect(box(boxes, "0337", at("2025-06-02"))).toBe("-50.00");
-    expect(box(boxes, "0338", at("2025-06-02"))).toBe("-50.00");
+    expect(box(boxes, "0337", at("2025-06-02"))).toBe("50.00");
+    expect(box(boxes, "0338", at("2025-06-02"))).toBe("50.00");
     // 03/02 is a **gain** of 100,00 on the form: what it released belongs to
     // the loss of 2024 and is declared there.
     expect(box(boxes, "0328", at("2025-02-03"))).toBe("950.00");
@@ -224,7 +224,7 @@ describe("the 2025 return by box, worked out by hand", () => {
     expect(box(boxes, "0332", at("2025-02-03"))).toBe("100.00");
     expect(box(boxes, "0336", at("2025-02-03"))).toBe("100.00");
     expect(box(boxes, "0339")).toBe("100.00");
-    expect(box(boxes, "0340")).toBe("-50.00");
+    expect(box(boxes, "0340")).toBe("50.00");
   });
 
   it("lays the virtual currency out", () => {
@@ -238,8 +238,8 @@ describe("the 2025 return by box, worked out by hand", () => {
   });
 
   it("takes the loss of 2024 released this year to the section of earlier years", () => {
-    expect(box(boxes, "0395")).toBe("-200.00");
-    expect(box(boxes, "0396")).toBe("-200.00");
+    expect(box(boxes, "0395")).toBe("200.00");
+    expect(box(boxes, "0396")).toBe("200.00");
     // It is named by the operation that produced it, in 2024, not by the one
     // that released it.
     expect(entryOf(boxes, "0395").row?.fiscal_date).toBe("2024-11-04");
@@ -248,17 +248,20 @@ describe("the 2025 return by box, worked out by hand", () => {
 
   it("adds the capital gains up to the balance the engine computes", () => {
     expect(box(boxes, "0422")).toBe("660.00");
-    expect(box(boxes, "0423")).toBe("-270.00");
+    expect(box(boxes, "0423")).toBe("270.00");
     expect(box(boxes, "0424")).toBe("390.00");
   });
 
+  // With a box, a figure the form asks as a magnitude is shown without its
+  // sign (an expense, a loss, what is pending); 0031 is the one box the form
+  // asks with a sign.
   it("puts the ETC in movable capital income, with its minus sign", () => {
     expect(box(boxes, "0027")).toBe("100.00");
     expect(box(boxes, "0029")).toBe("40.00");
     // Box 0031 is the one the form asks for with a sign.
     expect(box(boxes, "0031", at("2025-10-01"))).toBe("-50.00");
     expect(box(boxes, "0036")).toBe("90.00");
-    expect(box(boxes, "0037")).toBe("-10.00");
+    expect(box(boxes, "0037")).toBe("10.00");
     expect(box(boxes, "0038")).toBe("80.00");
     expect(box(boxes, "0040")).toBe("80.00");
     expect(box(boxes, "0041")).toBe("80.00");
@@ -269,8 +272,8 @@ describe("the 2025 return by box, worked out by hand", () => {
     expect(box(boxes, "0441")).toBe("300.00");
     expect(entryOf(boxes, "0441").origin_year).toBe(2023);
     // Annex C.3, the same origin year: what it had, what it applies, what is left.
-    expect(box(boxes, "1264")).toBe("-300.00");
-    expect(box(boxes, "1265")).toBe("-300.00");
+    expect(box(boxes, "1264")).toBe("300.00");
+    expect(box(boxes, "1265")).toBe("300.00");
     expect(box(boxes, "1266")).toBe("0.00");
   });
 
