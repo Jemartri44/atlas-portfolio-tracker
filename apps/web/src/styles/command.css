@@ -67,3 +67,10 @@
     display: none;
   }
 }
+
+.command-foot {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+}

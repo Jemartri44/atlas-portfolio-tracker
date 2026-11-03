@@ -106,7 +106,7 @@ describe("the order of Ajustes", () => {
     }
   });
 
-  it("keeps a paragraph clear of the row of buttons before it, as of the one after it", async () => {
+  it("keeps a paragraph clear of the row of buttons just before it", async () => {
     withStyles(390);
     try {
       const host = await show("/ajustes", Ajustes);
