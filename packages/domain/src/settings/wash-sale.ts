@@ -33,9 +33,9 @@ export type WashSaleAsset = Pick<AssetFields, "asset_type" | "isin" | "issuer_co
  * Euro MTF `EMTF`, Stuttgart) is not a regulated market (DGT V0422-09).
  */
 export const fundAdmitted = (asset: WashSaleAsset): boolean =>
-  /^ES/.test(asset.isin ?? "") ||
+  asset.isin?.startsWith("ES") ||
   asset.issuer_country === "ES" ||
-  euRegulatedAdmission({ market: asset.market, currency: "" }) === true;
+  euRegulatedAdmission({ ...asset, currency: "" }) === true;
 
 /**
  * The window in force for an asset (criterion #2): the settings, the legacy
