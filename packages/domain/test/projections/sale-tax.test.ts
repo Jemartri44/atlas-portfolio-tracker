@@ -112,6 +112,17 @@ describe("estimateSale", () => {
     expect(result.repurchase_until).toBeUndefined();
   });
 
+  it("takes the documented default window when nothing is pinned", () => {
+    // No settings in the ledger: a fund takes one year (criterion #2,
+    // `2:fund_1y`), so a loss sold on 31/12/2027 stays open until 31/12/2028.
+    const b = new LedgerBuilder();
+    b.account("acc_fund");
+    b.asset("ast_world");
+    b.buy({ account_id: "acc_fund", asset_id: "ast_world", value_date: "2022-02-01" });
+    const result = estimateSale(b.build(), [], DATE, sale("5", "80"), BRACKETS);
+    expect(result.repurchase_until).toBe("2028-12-31");
+  });
+
   it("keeps a repurchase date while part of the loss is not deferred", () => {
     // 2 units bought on 01/12/2027, inside the window before the sale: 2 of the
     // 5 sold are deferred (−40 of −100), the other −60 can still be.
