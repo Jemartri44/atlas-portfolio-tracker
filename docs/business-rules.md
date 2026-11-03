@@ -205,6 +205,8 @@ Antes: 28 % por encima de 300.000 € en 2023-2024, 26 % por encima de 200.000 �
 
 **Cuota estimada** (`savingsQuota`, criterio #27 de `fiscal-questions.md`): la escala sobre la base del ahorro, la deducción por doble imposición con sus dos límites y las retenciones del ahorro. Es una estimación: no conoce el resto de la Renta y supone que el mínimo personal y familiar se agota en la base general.
 
+**Rendimientos de fuera de la cartera** (`external_income`, criterio #28): los intereses de otro banco o los dividendos de tu empresa, apuntados a mano con su bruto y su retención en euros. Entran **solo en la estimación** (cuota y «¿Y si vendo?»): se integran y compensan con el capital mobiliario de la cartera (art. 49) y su retención se resta. No entran en las casillas ni en el paquete de la cartera, porque quien paga ya los comunica (modelos 193 y 196) y vienen en tus datos fiscales: la Declaración los enseña aparte para que los compruebes en Renta WEB. No mueven efectivo ni patrimonio.
+
 Los tramos se aplican a la **base liquidable del ahorro** del ejercicio: ganancias realizadas y rendimientos del capital mobiliario **tras compensar** (art. 49), no al patrimonio ni al importe retirado. La cuota estimada supone que el **mínimo personal y familiar se agota en la base general** (art. 56.2); si no, parte de él rebaja la base del ahorro y la cuota real es menor. Solo tributa la plusvalía, no el capital aportado.
 
 ### 5.2 Traspaso entre fondos — el caso crítico

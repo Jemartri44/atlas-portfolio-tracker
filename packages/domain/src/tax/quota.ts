@@ -88,6 +88,12 @@ export interface SavingsQuota {
    * part, an estimate: in the return they offset the whole quota.
    */
   savings_withholdings_eur: Money;
+  /**
+   * The gross of the savings income from outside the portfolio already inside
+   * `base_eur`, when the report was read with it; its withholdings are inside
+   * `savings_withholdings_eur`.
+   */
+  external_eur?: Money;
   /** `net quota − withholdings`: positive to pay, negative to be refunded, of this part. */
   result_eur?: Money;
   notes: QuotaNote[];
@@ -202,7 +208,11 @@ export const savingsQuota = (
   const notes: QuotaNote[] = [];
   // Never negative: what the compensation does not absorb becomes a pending loss (art. 49).
   const base = report.base_eur;
-  const withholdings = report.withholdings.total_eur;
+  const external = report.external_income;
+  const withholdings =
+    external === undefined
+      ? report.withholdings.total_eur
+      : report.withholdings.total_eur.add(external.withholding_eur);
   const fromLaw = scale === undefined ? undefined : lawRates(scale);
   if (brackets !== undefined && !isScale(brackets)) {
     notes.push("settings_brackets_invalid");
@@ -228,7 +238,12 @@ export const savingsQuota = (
         }),
     base_eur: base,
     savings_withholdings_eur: withholdings,
-    criteria: ["27"] as CriterionId[],
+    ...(external === undefined || external.lines.length === 0
+      ? {}
+      : { external_eur: external.gross_eur }),
+    criteria: (report.external_income === undefined || report.external_income.lines.length === 0
+      ? ["27"]
+      : ["27", "28"]) as CriterionId[],
   };
   if (rates === undefined) {
     return { ...common, scale_origin: "none", brackets: [], notes };
