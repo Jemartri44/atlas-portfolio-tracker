@@ -36,10 +36,9 @@ locals {
     ecb    = {}
     backup = {}
     prices = {
-      ATLAS_PRICE_SOURCES                    = join(",", var.price_sources)
-      ATLAS_PRICES_EODHD_DAILY_CALLS         = tostring(var.prices_eodhd_daily_calls)
-      ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS = tostring(var.prices_alpha_vantage_daily_calls)
-      ATLAS_PRICES_FAILURE_THRESHOLD         = tostring(var.prices_failure_threshold)
+      ATLAS_PRICE_SOURCES            = join(",", var.price_sources)
+      ATLAS_PRICES_EODHD_DAILY_CALLS = tostring(var.prices_eodhd_daily_calls)
+      ATLAS_PRICES_FAILURE_THRESHOLD = tostring(var.prices_failure_threshold)
     }
     mail = {
       ATLAS_MAIL_FROM               = var.mail_sender
@@ -78,7 +77,7 @@ locals {
       # One writer per object: IAM stops what the code no longer does (iam-permissions.md, section 2).
       { Sid = "DenyConfig", Effect = "Deny", Action = ["s3:PutObject"], Resource = ["${local.data_arn}/prices/symbols.json", "${local.data_arn}/prices/config.json"] },
       { Sid = "List", Effect = "Allow", Action = ["s3:ListBucket"], Resource = [local.data_arn], Condition = { StringLike = { "s3:prefix" = ["prices/*", "jobs/prices/*", "ledger/*"] } } },
-      { Sid = "Keys", Effect = "Allow", Action = ["ssm:GetParameter"], Resource = ["${local.ssm_base}/prices/eodhd-key", "${local.ssm_base}/prices/alpha-vantage-key"] },
+      { Sid = "Keys", Effect = "Allow", Action = ["ssm:GetParameter"], Resource = ["${local.ssm_base}/prices/eodhd-key"] },
       local.job_logs_statement["prices"],
     ]
 

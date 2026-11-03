@@ -34,7 +34,7 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0028](0028-aws-account-and-security-baseline.md) | Cuentas de AWS dedicadas, entornos y línea base de seguridad | Aceptada (2026-09-24); ADR-0034 la sustituye en parte |
 | [0029](0029-ecb-reference-rates.md) | Tipos del BCE: histórico oficial en local, días sin publicación y comprobación de integridad | Aceptada (2026-09-24); enmendada tres veces |
 | [0030](0030-broker-settled-eur.md) | Importe en euros liquidado por el bróker, como dato informativo | Aceptada (2026-09-24); enmendada el mismo día; acotada por ADR-0036 |
-| [0031](0031-daily-close-prices.md) | Precios de cierre diarios: puerto, almacén y política de fallo | Aceptada (2026-09-24); enmendada tres veces (2026-09-24/25) |
+| [0031](0031-daily-close-prices.md) | Precios de cierre diarios: puerto, almacén y política de fallo | Aceptada (2026-09-24); enmendada cuatro veces (la cuarta, 2026-11-03: una sola fuente, EODHD) |
 | [0032](0032-backups-and-restore.md) | Copias de seguridad y restauración del libro | Aceptada (2026-09-24); la capa 1 y el paso 6 los reemplaza ADR-0035 |
 | [0033](0033-console-device-token.md) | Acceso de la consola a la API: token de dispositivo emitido al final de un inicio de sesión que abre la propia consola | Aceptada (2026-09-25); completa ADR-0027 |
 | [0034](0034-shared-aws-account.md) | Despliegue en una cuenta de AWS compartida con otros proyectos | Aceptada (2026-09-25); sustituye en parte a ADR-0028 y ADR-0027 |

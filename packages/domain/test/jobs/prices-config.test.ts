@@ -11,9 +11,8 @@ const PRICES_ENV = {
   ATLAS_DATA_BUCKET: "atlas-prod-data-x1",
   ATLAS_JOBS: "prices_update",
   ATLAS_JOB_MAX_RUN_SECONDS: "900",
-  ATLAS_PRICE_SOURCES: "eodhd,alpha_vantage",
+  ATLAS_PRICE_SOURCES: "eodhd",
   ATLAS_PRICES_EODHD_DAILY_CALLS: "18",
-  ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS: "23",
   ATLAS_PRICES_FAILURE_THRESHOLD: "3",
 };
 
@@ -28,15 +27,12 @@ const reasonOf = (env: Record<string, string | undefined>): unknown => {
 };
 
 describe("the configuration of the prices function (M5, P14)", () => {
-  it("reads the order, the budgets and the threshold of the variables", () => {
+  it("reads the source, the budget and the threshold of the variables", () => {
     expect(parseJobsConfig(PRICES_ENV).prices).toEqual({
-      sources: ["eodhd", "alpha_vantage"],
-      dailyCalls: { eodhd: 18, alpha_vantage: 23 },
+      sources: ["eodhd"],
+      dailyCalls: { eodhd: 18 },
       failureThreshold: 3,
     });
-    expect(
-      parseJobsConfig({ ...PRICES_ENV, ATLAS_PRICE_SOURCES: "alpha_vantage" }).prices?.sources,
-    ).toEqual(["alpha_vantage"]);
   });
 
   it("takes the simulated source in dev, and refuses it in prod (mutant 17)", () => {
@@ -60,6 +56,10 @@ describe("the configuration of the prices function (M5, P14)", () => {
   it("refuses what it does not understand, and budgets above the plans", () => {
     const cases: [Record<string, string | undefined>, unknown][] = [
       [
+        { ...PRICES_ENV, ATLAS_PRICE_SOURCES: "alpha_vantage" },
+        { variable: "ATLAS_PRICE_SOURCES", reason: "unknown_source" },
+      ],
+      [
         { ...PRICES_ENV, ATLAS_PRICE_SOURCES: "eodhd,simulated" },
         { variable: "ATLAS_PRICE_SOURCES", reason: "unknown_source" },
       ],
@@ -78,10 +78,6 @@ describe("the configuration of the prices function (M5, P14)", () => {
       [
         { ...PRICES_ENV, ATLAS_PRICES_EODHD_DAILY_CALLS: "21" },
         { variable: "ATLAS_PRICES_EODHD_DAILY_CALLS", reason: "above_ceiling" },
-      ],
-      [
-        { ...PRICES_ENV, ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS: "26" },
-        { variable: "ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS", reason: "above_ceiling" },
       ],
       [
         { ...PRICES_ENV, ATLAS_PRICES_EODHD_DAILY_CALLS: "-1" },
@@ -107,35 +103,27 @@ describe("the configuration of the prices function (M5, P14)", () => {
     for (const [env, details] of cases) {
       expect(reasonOf(env)).toEqual(details);
     }
-    expect(
-      reasonOf({
-        ...PRICES_ENV,
-        ATLAS_PRICES_EODHD_DAILY_CALLS: "0",
-        ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS: "25",
-      }),
-    ).toBe("accepted");
+    expect(reasonOf({ ...PRICES_ENV, ATLAS_PRICES_EODHD_DAILY_CALLS: "0" })).toBe("accepted");
   });
 
-  it("gives parsePriceConfig the order, budgets and threshold, and the defaults by type", () => {
+  it("gives parsePriceConfig the budget and threshold, and the defaults by type", () => {
     const config = parsePriceConfig(
       cloudPriceConfigText(parseJobsConfig(PRICES_ENV).prices as never),
     );
     expect(config).toEqual({
       ...DEFAULT_PRICE_CONFIG,
-      source_order: ["eodhd", "alpha_vantage"],
-      daily_calls: { eodhd: 18, alpha_vantage: 23 },
+      daily_calls: { eodhd: 18 },
       failure_threshold: 3,
     });
     const simulated = parsePriceConfig(
       cloudPriceConfigText({
         sources: "simulated",
-        dailyCalls: { eodhd: 5, alpha_vantage: 7 },
+        dailyCalls: { eodhd: 5 },
         failureThreshold: 2,
       }),
     );
     expect(simulated).toMatchObject({
-      source_order: ["eodhd"],
-      daily_calls: { eodhd: 5, alpha_vantage: 0 },
+      daily_calls: { eodhd: 5 },
       failure_threshold: 2,
     });
   });

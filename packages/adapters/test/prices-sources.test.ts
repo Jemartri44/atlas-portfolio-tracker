@@ -1,13 +1,12 @@
 // The adapters of the sources of prices: each answer and each status of its source translated
 // to one of the six failures, one to one, with synthetic answers in the **real format**
-// (`tests/fixtures/eodhd/` and `tests/fixtures/alpha-vantage/`). No test touches the network:
+// (`tests/fixtures/eodhd/`). No test touches the network:
 // `fetch` is a double. And the sentinel key never comes out of anything.
 
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { AlphaVantagePriceSource } from "../src/prices/alpha-vantage.js";
 import { EodhdPriceSource } from "../src/prices/eodhd.js";
 import { ExactJsonUnsupported, JsonNumber, parseExactJson } from "../src/prices/exact-json.js";
 import { ask, MAX_ANSWER_BYTES } from "../src/prices/fetch.js";
@@ -242,109 +241,5 @@ describe("a currency of the source that is not a code (D-Q2)", () => {
       answering(200, '[{"Code":"SYNTH","Currency":"Unknown"}]').fetchUrl,
     );
     expect(await unknown.currencyOf("SYNTH.LSE")).toEqual({ ok: true, value: undefined });
-    const alpha = new AlphaVantagePriceSource(
-      KEY,
-      answering(200, '{"bestMatches":[{"1. symbol":"SYNTH.LON","8. currency":"GBp"}]}').fetchUrl,
-    );
-    expect(await alpha.currencyOf("SYNTH.LON")).toEqual({ ok: true, value: "GBp" });
-  });
-});
-
-describe("Alpha Vantage's pace", () => {
-  it("never calls twice within a second", async () => {
-    let clock = 10_000;
-    const waits: number[] = [];
-    const pace = {
-      now: () => clock,
-      sleep: async (ms: number) => {
-        waits.push(ms);
-        clock += ms;
-      },
-    };
-    const { urls, fetchUrl } = answering(200, fixture("alpha-vantage", "daily-synth.json"));
-    const source = new AlphaVantagePriceSource(KEY, fetchUrl, pace);
-    await source.dailyCloses("A", "2027-01-01", "2027-01-06");
-    clock += 300;
-    await source.currencyOf("A");
-    clock += 1500;
-    await source.dailyCloses("B", "2027-01-01", "2027-01-06");
-    expect(waits).toEqual([700]);
-    expect(urls).toHaveLength(3);
-  });
-});
-
-describe("Alpha Vantage", () => {
-  it("reads the closes of the window, oldest first, as their text", async () => {
-    const { urls, fetchUrl } = answering(200, fixture("alpha-vantage", "daily-synth.json"));
-    const result = await new AlphaVantagePriceSource(KEY, fetchUrl).dailyCloses(
-      "SYNTH.DEX",
-      "2027-01-05",
-      "2027-01-06",
-    );
-    expect(result).toEqual({
-      ok: true,
-      value: [
-        { date: "2027-01-05", close: "101.2500" },
-        { date: "2027-01-06", close: "102.0000" },
-      ],
-    });
-    expect(urls).toEqual([
-      `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=SYNTH.DEX&outputsize=compact&apikey=${KEY}`,
-    ]);
-  });
-
-  it("tells failure from success by the key of the body, all of them with HTTP 200 (D-Q4)", async () => {
-    const cases: [string, string][] = [
-      ["error-apikey.json", "blocked"],
-      ["error-call.json", "not_found"],
-      ["information-limit.json", "rate_limited"],
-      ["note-limit.json", "rate_limited"],
-      ["unexpected.json", "invalid_response"],
-      ["daily-bad-close.json", "invalid_response"],
-    ];
-    for (const [name, kind] of cases) {
-      const result = await new AlphaVantagePriceSource(
-        KEY,
-        answering(200, fixture("alpha-vantage", name)).fetchUrl,
-      ).dailyCloses("X", "2027-01-01", "2027-01-06");
-      expect(result, name).toEqual({ ok: false, kind });
-      keyless(result);
-    }
-    for (const [status, body, kind] of [
-      [200, "not json", "invalid_response"],
-      [200, "[]", "invalid_response"],
-      [429, "{}", "rate_limited"],
-      [502, "{}", "unavailable"],
-      [404, "{}", "invalid_response"],
-    ] as const) {
-      const result = await new AlphaVantagePriceSource(
-        KEY,
-        answering(status, body).fetchUrl,
-      ).dailyCloses("X", "2027-01-01", "2027-01-06");
-      expect(result, `${status} ${body}`).toEqual({ ok: false, kind });
-    }
-    expect(
-      await new AlphaVantagePriceSource(KEY, failing).dailyCloses("X", "2027-01-01", "2027-01-06"),
-    ).toEqual({
-      ok: false,
-      kind: "unavailable",
-    });
-  });
-
-  it("reads the currency of the exact symbol from the search", async () => {
-    const { urls, fetchUrl } = answering(200, fixture("alpha-vantage", "search-synth.json"));
-    const source = new AlphaVantagePriceSource(KEY, fetchUrl);
-    expect(await source.currencyOf("SYNTH.LON")).toEqual({ ok: true, value: "GBX" });
-    expect(urls[0]).toBe(
-      `https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=SYNTH.LON&apikey=${KEY}`,
-    );
-    expect(await source.currencyOf("NOPE")).toEqual({ ok: true, value: undefined });
-    const empty = new AlphaVantagePriceSource(KEY, answering(200, '{"bestMatches":{}}').fetchUrl);
-    expect(await empty.currencyOf("X")).toEqual({ ok: true, value: undefined });
-    const limited = new AlphaVantagePriceSource(
-      KEY,
-      answering(200, fixture("alpha-vantage", "information-limit.json")).fetchUrl,
-    );
-    expect(await limited.currencyOf("X")).toEqual({ ok: false, kind: "rate_limited" });
   });
 });

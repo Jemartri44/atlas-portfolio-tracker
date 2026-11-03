@@ -99,17 +99,16 @@ describe("the findings of the ECB", () => {
 });
 
 describe("the findings of the prices", () => {
-  it("says each failing source with its streak and threshold, from the status", () => {
+  it("says the failing source with its streak and threshold, from the status", () => {
     const status = {
       ...EMPTY_STATUS,
       sources: {
         eodhd: { consecutive_failures: 4, calls_at: [] },
-        alpha_vantage: { consecutive_failures: 1, calls_at: [] },
       },
     };
     expect(
       pricesFindings({
-        report: { ...REPORT, failing: ["alpha_vantage", "eodhd"] },
+        report: { ...REPORT, failing: ["eodhd"] },
         status,
         threshold: 3,
         theses: 0,
@@ -119,11 +118,6 @@ describe("the findings of the prices", () => {
         code: "source_failing",
         subject: "eodhd",
         counts: { consecutive_failures: 4, threshold: 3 },
-      },
-      {
-        code: "source_failing",
-        subject: "alpha_vantage",
-        counts: { consecutive_failures: 1, threshold: 3 },
       },
     ]);
     expect(
@@ -143,7 +137,7 @@ describe("the findings of the prices", () => {
   });
 
   it("counts the assets left unchecked by source, and the theses past their horizon", () => {
-    const asset = (id: string, unchecked?: readonly ("eodhd" | "alpha_vantage")[]) => ({
+    const asset = (id: string, unchecked?: readonly "eodhd"[]) => ({
       asset_id: id,
       group: "core" as const,
       outcome: "currency_unchecked" as const,
@@ -155,7 +149,7 @@ describe("the findings of the prices", () => {
       pricesFindings({
         report: {
           ...REPORT,
-          assets: [asset("a", ["eodhd"]), asset("b", ["eodhd", "alpha_vantage"]), asset("c")],
+          assets: [asset("a", ["eodhd"]), asset("b", ["eodhd"]), asset("c")],
         },
         status: EMPTY_STATUS,
         threshold: 3,
@@ -163,7 +157,6 @@ describe("the findings of the prices", () => {
       }),
     ).toEqual([
       { code: "currency_unchecked", subject: "eodhd", counts: { assets: 2 } },
-      { code: "currency_unchecked", subject: "alpha_vantage", counts: { assets: 1 } },
       { code: "thesis_horizon_exceeded", subject: "bucket", counts: { theses: 2 } },
     ]);
     expect(
@@ -206,15 +199,7 @@ describe("the findings of the prices", () => {
       Object.values(codes ?? {}),
     )) {
       for (const subject of subjects) {
-        expect([
-          "ecb",
-          "eodhd",
-          "alpha_vantage",
-          "bucket",
-          "prices",
-          "backup",
-          "integrity",
-        ]).toContain(subject);
+        expect(["ecb", "eodhd", "bucket", "prices", "backup", "integrity"]).toContain(subject);
       }
     }
   });

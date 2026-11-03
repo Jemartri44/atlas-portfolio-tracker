@@ -1,7 +1,7 @@
-// The currency of a quote is declared **per source**, not per asset: a London
-// share quotes in pounds at EODHD and in pence at Alpha Vantage, and one
-// currency for the asset made one of the two sources ask for a confirmation
-// forever, or stored the closes of the fallback a hundred times too high.
+// The currency of a quote is declared **per source** (a pair asset-source, never
+// the asset): a London share quotes in pounds at one source and in pence at
+// another, and the closes stored in a currency their source does not declare
+// are left out, said and purged, never converted by a guess.
 
 import { describe, expect, it } from "vitest";
 import { readEcbZipCsv } from "../../src/ecb/history.js";
@@ -30,42 +30,76 @@ import { closes, FakeSource, MemoryPriceStore } from "./fakes.js";
 const AT = "2027-01-01T00:00:00.000Z";
 const TODAY = "2027-01-06";
 
-/** A London share in the bucket: pounds at EODHD, pence at Alpha Vantage. */
+/** A London share in the bucket: pounds at EODHD. */
 const LONDON = {
   eodhd: "TSCO.LSE",
-  alpha_vantage: "TSCO.LON",
-  currencies: { eodhd: "GBP", alpha_vantage: "GBX" },
+  currencies: { eodhd: "GBP" },
 } as const;
 
 const newFile = (entry: object) =>
   JSON.stringify({ symbols_format: 2, assets: { ast_spec: { confirmed_at: AT, ...entry } } });
 
+const line = (date: string, close: string, currency: string) =>
+  `${JSON.stringify({ schema_version: 1, date, close, currency, source: "eodhd", fetched_at: "2027-01-06T06:00:00.000Z" })}\n`;
+
+const spotLedger = () => {
+  const b = new LedgerBuilder();
+  catalogue(b);
+  b.thesisOpened({ thesis_id: "th1" });
+  b.buy({
+    account_id: "acc_bucket",
+    asset_id: "ast_spec",
+    trade_date: "2027-01-04",
+    thesis_id: "th1",
+  });
+  return projectLedger(b.build(), { asOf: TODAY });
+};
+
+const run = (store: MemoryPriceStore, sources: UpdatePricesInput["sources"]) =>
+  updatePrices({
+    state: spotLedger(),
+    settings: DEFAULT_SETTINGS,
+    today: TODAY,
+    now: () => new Date("2027-01-06T08:00:00.000Z"),
+    store,
+    sources,
+  });
+
+/**
+ * A file whose closes of EODHD were stored with `currency` although the source
+ * says another: the declared currency is `currency` too, and it is `misstored`.
+ */
+const misstoredFile = (currency: string) =>
+  newFile({
+    eodhd: "TSCO.LSE",
+    currencies: { eodhd: currency },
+    currency_check: { eodhd: { found: currency, at: AT } },
+    misstored: { eodhd: currency },
+  });
+
 describe("the currency declared per source", () => {
   it("is read and written per source, and each source is contrasted with its own", () => {
     const file = parseSymbols(
-      newFile({
-        ...LONDON,
-        currency_check: {
-          eodhd: { found: "GBP", at: AT },
-          alpha_vantage: { found: "GBX", at: AT },
-        },
-      }),
+      newFile({ ...LONDON, currency_check: { eodhd: { found: "GBP", at: AT } } }),
     );
     const entry = file.assets.ast_spec;
-    expect(entry?.currencies).toEqual({ eodhd: "GBP", alpha_vantage: "GBX" });
+    expect(entry?.currencies).toEqual({ eodhd: "GBP" });
     expect(currencyAgrees(entry as never, "eodhd")).toBe(true);
-    expect(currencyAgrees(entry as never, "alpha_vantage")).toBe(true);
     expect(parseSymbols(serializeSymbols(file))).toEqual(file);
     expect(JSON.parse(serializeSymbols(file)).symbols_format).toBe(2);
   });
 
-  it("refuses a source without its currency, or a currency that is not a code", () => {
+  it("refuses a source without its currency, or a currency that is not a code, or a source that is gone", () => {
     for (const [text, field] of [
       [newFile({ eodhd: "X", currencies: {} }), "ast_spec.currencies.eodhd"],
       [newFile({ eodhd: "X", currencies: { eodhd: "gbp" } }), "ast_spec.currencies.eodhd"],
       [
         newFile({ eodhd: "X", currencies: { yahoo: "GBP", eodhd: "GBP" } }),
         "ast_spec.currencies.yahoo",
+      ],
+      [
+        newFile({ eodhd: "X", currencies: { alpha_vantage: "GBX", eodhd: "GBP" } }),
+        "ast_spec.currencies.alpha_vantage",
       ],
       [newFile({ eodhd: "X", currencies: [] }), "ast_spec.currencies"],
       [newFile({ eodhd: "X", currency: "GBP", currencies: { eodhd: "GBP" } }), "ast_spec.currency"],
@@ -74,12 +108,32 @@ describe("the currency declared per source", () => {
         "ast_spec.misstored.eodhd",
       ],
       [
+        newFile({ eodhd: "X", currencies: { eodhd: "GBP" }, misstored: { alpha_vantage: "GBP" } }),
+        "ast_spec.misstored.alpha_vantage",
+      ],
+      [
         newFile({
           eodhd: "X",
           currencies: { eodhd: "GBP" },
           refetch_days: { eodhd: ["2027-02-30"] },
         }),
         "ast_spec.refetch_days.eodhd",
+      ],
+      [
+        newFile({
+          eodhd: "X",
+          currencies: { eodhd: "GBP" },
+          refetch_days: { alpha_vantage: ["2027-01-04"] },
+        }),
+        "ast_spec.refetch_days.alpha_vantage",
+      ],
+      [
+        newFile({
+          eodhd: "X",
+          currencies: { eodhd: "GBP" },
+          unserved_days: { alpha_vantage: ["2027-01-04"] },
+        }),
+        "ast_spec.unserved_days.alpha_vantage",
       ],
     ] as const) {
       expect(() => parseSymbols(text), text).toThrow(
@@ -94,90 +148,39 @@ describe("the currency declared per source", () => {
     );
   });
 
-  it("asks for nothing when each source says the currency declared for it: the confirmation does not loop", () => {
-    const { entry, pending } = declareSymbols(
-      LONDON,
-      { eodhd: "GBP", alpha_vantage: "GBX" },
-      AT,
-      [],
-    );
+  it("asks for nothing when the source says the currency declared for it: the confirmation does not loop", () => {
+    const { entry, pending } = declareSymbols(LONDON, { eodhd: "GBP" }, AT, []);
     expect(pending).toEqual([]);
-    expect(entry.currencies).toEqual({ eodhd: "GBP", alpha_vantage: "GBX" });
-    // Declared in pence for both, EODHD disagrees — only EODHD.
-    const both = declareSymbols(
-      { ...LONDON, currencies: { eodhd: "GBX", alpha_vantage: "GBX" } },
-      { eodhd: "GBP", alpha_vantage: "GBX" },
+    expect(entry.currencies).toEqual({ eodhd: "GBP" });
+    // Declared in pence, EODHD says pounds.
+    const pence = declareSymbols(
+      { ...LONDON, currencies: { eodhd: "GBX" } },
+      { eodhd: "GBP" },
       AT,
       [],
     );
-    expect(both.pending).toEqual([{ source: "eodhd", declared: "GBX", found: "GBP" }]);
+    expect(pence.pending).toEqual([{ source: "eodhd", declared: "GBX", found: "GBP" }]);
     expect(() => declareSymbols({ eodhd: "X", currencies: {} }, {}, AT, [])).toThrow(
       expect.objectContaining({ code: "invalid_symbols_file" }),
     );
   });
 });
 
-describe("London with its two sources, end to end", () => {
-  const ledger = () => {
-    const b = new LedgerBuilder();
-    catalogue(b);
-    b.thesisOpened({ thesis_id: "th1" });
-    b.buy({
-      account_id: "acc_bucket",
-      asset_id: "ast_spec",
-      trade_date: "2027-01-04",
-      thesis_id: "th1",
-    });
-    return projectLedger(b.build(), { asOf: TODAY });
-  };
-
-  const run = (store: MemoryPriceStore, sources: UpdatePricesInput["sources"]) => {
-    let tick = Date.parse("2027-01-06T08:00:00.000Z");
-    return updatePrices({
-      state: ledger(),
-      settings: DEFAULT_SETTINGS,
-      today: TODAY,
-      now: () => {
-        tick += 1000;
-        return new Date(tick);
-      },
-      store,
-      sources,
-    });
-  };
-
-  it("declares, contrasts and downloads without asking once, and stores each close in the currency of its source", async () => {
+describe("London, end to end", () => {
+  it("declares, contrasts and downloads without asking twice, and stores each close in the declared currency", async () => {
     const store = new MemoryPriceStore();
     const eodhd = new FakeSource(
       "eodhd",
-      () => ({ ok: false, kind: "unavailable" }),
+      () => closes(["2027-01-05", "10"]),
       store,
       () => ({
         ok: true,
         value: "GBP",
       }),
     );
-    const alpha = new FakeSource(
-      "alpha_vantage",
-      () => closes(["2027-01-05", "1000"]),
-      store,
-      () => ({
-        ok: true,
-        value: "GBX",
-      }),
-    );
     const now = () => new Date("2027-01-06T07:00:00.000Z");
-    const check = await checkSymbols({
-      declaration: LONDON,
-      store,
-      sources: { eodhd, alpha_vantage: alpha },
-      now,
-    });
-    expect(check).toEqual({
-      ok: true,
-      checks: { eodhd: "GBP", alpha_vantage: "GBX" },
-      unchecked: [],
-    });
+    const check = await checkSymbols({ declaration: LONDON, store, sources: { eodhd }, now });
+    expect(check).toEqual({ ok: true, checks: { eodhd: "GBP" }, unchecked: [] });
     expect(
       await recordSymbols({
         assetId: "ast_spec",
@@ -188,125 +191,74 @@ describe("London with its two sources, end to end", () => {
         now,
       }),
     ).toEqual([]);
-    // The fallback answers: its close is kept in pence, never in pounds.
-    await run(store, { eodhd, alpha_vantage: alpha });
+    await run(store, { eodhd });
+    // Contrasted once, when declared; not again before downloading.
     expect(eodhd.currencyCalls).toEqual(["TSCO.LSE"]);
-    expect(readCloseFile("ast_spec", store.files.get("ast_spec.jsonl") ?? "")[0]).toMatchObject({
-      close: "1000",
-      currency: "GBX",
-      source: "alpha_vantage",
-    });
-    // The primary answers the day after with its close in pounds, which replaces it.
-    const primary = new FakeSource("eodhd", () => closes(["2027-01-05", "10"]), store);
-    store.files.set("ast_spec.jsonl", "");
-    await run(store, { eodhd: primary, alpha_vantage: alpha });
     expect(readCloseFile("ast_spec", store.files.get("ast_spec.jsonl") ?? "")[0]).toMatchObject({
       close: "10",
       currency: "GBP",
       source: "eodhd",
     });
-    expect(alpha.currencyCalls).toEqual(["TSCO.LON"]);
   });
 
-  it("gives the same value in euros for 10 GBP from EODHD and 1000 GBX from Alpha Vantage", () => {
+  it("gives the same value in euros for 10 GBP and 1000 GBX", () => {
     const history = readEcbZipCsv(["Date,USD,GBP,", "2027-01-05,1.2,0.8,"].join("\n"));
-    const line = (close: string, currency: string, source: "eodhd" | "alpha_vantage") => ({
-      schema_version: 1,
-      date: "2027-01-05",
-      close,
-      currency,
-      source,
-      fetched_at: "2027-01-06T06:00:00.000Z",
-    });
-    const state = ledger();
-    const inEur = (close: string, currency: string, source: "eodhd" | "alpha_vantage") =>
+    const state = spotLedger();
+    const inEur = (close: string, currency: string) =>
       priceAt(
         state,
         "ast_spec",
         TODAY,
         DEFAULT_SETTINGS,
         externalPricesOf(state, {
-          closes: new Map([["ast_spec", effectiveCloses([line(close, currency, source)])]]),
+          closes: new Map([
+            [
+              "ast_spec",
+              effectiveCloses(readCloseFile("ast_spec", line("2027-01-05", close, currency))),
+            ],
+          ]),
           history,
           staleDays: 30,
         }),
       )?.unit_value_eur?.amount.toString();
-    expect(inEur("10", "GBP", "eodhd")).toBe("12.5");
-    expect(inEur("1000", "GBX", "alpha_vantage")).toBe("12.5");
+    expect(inEur("10", "GBP")).toBe("12.5");
+    expect(inEur("1000", "GBX")).toBe("12.5");
   });
 });
 
-/**
- * A file whose closes of `source` were stored with the currency of the other
- * source's metadata: both sources declare `currency`, `source` is `misstored`.
- */
-const misstoredFile = (currency: string, source: "eodhd" | "alpha_vantage") =>
-  newFile({
-    eodhd: "TSCO.LSE",
-    alpha_vantage: "TSCO.LON",
-    currencies: { eodhd: currency, alpha_vantage: currency },
-    currency_check: {
-      [source === "eodhd" ? "alpha_vantage" : "eodhd"]: { found: currency, at: AT },
-    },
-    misstored: { [source]: currency },
-  });
-
 describe("closes stored in a currency their source does not declare", () => {
-  const line = (date: string, close: string, currency: string, source: "eodhd" | "alpha_vantage") =>
-    `${JSON.stringify({ schema_version: 1, date, close, currency, source, fetched_at: "2027-01-06T06:00:00.000Z" })}\n`;
   const symbols = parseSymbols(newFile(LONDON));
 
   it("are left out of everything in euros, and said: a hole, never a figure a hundred times wrong", () => {
     const { closes: read, mismatched } = readCloses(
-      new Map([
-        [
-          "ast_spec",
-          line("2027-01-04", "9", "GBP", "eodhd") +
-            line("2027-01-05", "1000", "GBP", "alpha_vantage"),
-        ],
-      ]),
+      new Map([["ast_spec", line("2027-01-04", "9", "GBP") + line("2027-01-05", "1000", "GBX")]]),
       symbols,
     );
     expect(read.get("ast_spec")?.map((c) => c.date)).toEqual(["2027-01-04"]);
     expect(mismatched).toEqual([
-      {
-        asset_id: "ast_spec",
-        source: "alpha_vantage",
-        declared: "GBX",
-        count: 1,
-        dates: ["2027-01-05"],
-      },
+      { asset_id: "ast_spec", source: "eodhd", declared: "GBP", count: 1, dates: ["2027-01-05"] },
     ]);
     // Without a declaration there is nothing to compare with: read as they are.
     expect(
-      readCloses(new Map([["ast_x", line("2027-01-05", "1", "GBP", "alpha_vantage")]]), symbols)
-        .closes.size,
+      readCloses(new Map([["ast_x", line("2027-01-05", "1", "GBX")]]), symbols).closes.size,
     ).toBe(1);
   });
 
-  it("are purged by an explicit command, of one asset and one source, and nothing else", async () => {
+  it("are purged by an explicit command, of one asset, and nothing else", async () => {
     const store = new MemoryPriceStore();
     store.files.set("symbols.json", newFile(LONDON));
-    const text =
-      line("2027-01-04", "9", "GBP", "eodhd") +
-      line("2027-01-04", "1000", "GBP", "alpha_vantage") +
-      line("2027-01-05", "1010", "GBX", "alpha_vantage");
-    store.files.set("ast_spec.jsonl", text);
+    const good = line("2027-01-04", "9", "GBP");
+    store.files.set("ast_spec.jsonl", good);
     expect(await purgeMismatched(store, "ast_spec", "eodhd")).toBe(0);
-    expect(store.files.get("ast_spec.jsonl")).toBe(text);
-    expect(await purgeMismatched(store, "ast_spec", "alpha_vantage")).toBe(1);
+    expect(store.files.get("ast_spec.jsonl")).toBe(good);
+    store.files.set("ast_spec.jsonl", good + line("2027-01-05", "1000", "GBX"));
+    expect(await purgeMismatched(store, "ast_spec", "eodhd")).toBe(1);
     expect(
-      readCloseFile("ast_spec", store.files.get("ast_spec.jsonl") ?? "").map((l) => [
-        l.source,
-        l.close,
-      ]),
-    ).toEqual([
-      ["eodhd", "9"],
-      ["alpha_vantage", "1010"],
-    ]);
+      readCloseFile("ast_spec", store.files.get("ast_spec.jsonl") ?? "").map((l) => l.close),
+    ).toEqual(["9"]);
     // An asset declared but with nothing downloaded yet: nothing to purge.
     store.files.delete("ast_spec.jsonl");
-    expect(await purgeMismatched(store, "ast_spec", "alpha_vantage")).toBe(0);
+    expect(await purgeMismatched(store, "ast_spec", "eodhd")).toBe(0);
     await expect(purgeMismatched(store, "ast_other", "eodhd")).rejects.toMatchObject({
       code: "symbols_not_declared",
     });
@@ -314,9 +266,6 @@ describe("closes stored in a currency their source does not declare", () => {
 });
 
 describe("the approximation with a reference ETF of London", () => {
-  const line = (date: string, close: string, currency: string, source: "eodhd" | "alpha_vantage") =>
-    `${JSON.stringify({ schema_version: 1, date, close, currency, source, fetched_at: "2027-01-06T06:00:00.000Z" })}\n`;
-
   it("normalises pounds and pence instead of refusing a change of currency", () => {
     const b = new LedgerBuilder();
     catalogue(b);
@@ -342,8 +291,7 @@ describe("the approximation with a reference ETF of London", () => {
     const etf = effectiveCloses(
       readCloseFile(
         "etf_london",
-        line("2027-01-04", "10", "GBP", "eodhd") +
-          line("2027-01-05", "1100", "GBX", "alpha_vantage"),
+        line("2027-01-04", "10", "GBP") + line("2027-01-05", "1100", "GBX"),
       ),
     );
     const result = approximationAt(
@@ -356,152 +304,85 @@ describe("the approximation with a reference ETF of London", () => {
   });
 });
 
-describe("the declared currency while a source is contrasted and downloaded", () => {
-  const ledger = () => {
-    const b = new LedgerBuilder();
-    catalogue(b);
-    b.thesisOpened({ thesis_id: "th1" });
-    b.buy({
-      account_id: "acc_bucket",
-      asset_id: "ast_spec",
-      trade_date: "2027-01-04",
-      thesis_id: "th1",
-    });
-    return projectLedger(b.build(), { asOf: TODAY });
-  };
-  const run = (store: MemoryPriceStore, sources: UpdatePricesInput["sources"]) =>
-    updatePrices({
-      state: ledger(),
-      settings: DEFAULT_SETTINGS,
-      today: TODAY,
-      now: () => new Date("2027-01-06T08:00:00.000Z"),
-      store,
-      sources,
-    });
-
+describe("the declared currency while the source is contrasted and downloaded", () => {
   it("a currency the user changes while its source is being contrasted is left as the user wrote it", async () => {
     const store = new MemoryPriceStore();
-    store.files.set(
-      "symbols.json",
-      newFile({ alpha_vantage: "TSCO.LON", currencies: { alpha_vantage: "GBP" } }),
-    );
-    const alpha = new FakeSource(
-      "alpha_vantage",
+    store.files.set("symbols.json", newFile({ eodhd: "TSCO.LSE", currencies: { eodhd: "GBP" } }));
+    const eodhd = new FakeSource(
+      "eodhd",
       () => closes(["2027-01-05", "1000"]),
       store,
       () => {
         // The user corrects the currency to pence meanwhile; same symbol.
         store.files.set(
           "symbols.json",
-          newFile({ alpha_vantage: "TSCO.LON", currencies: { alpha_vantage: "GBX" } }),
+          newFile({ eodhd: "TSCO.LSE", currencies: { eodhd: "GBX" } }),
         );
         return { ok: true, value: "GBX" };
       },
     );
-    await run(store, { alpha_vantage: alpha });
+    await run(store, { eodhd });
     const entry = parseSymbols(store.files.get("symbols.json")).assets.ast_spec;
-    expect(entry?.currencies).toEqual({ alpha_vantage: "GBX" });
+    expect(entry?.currencies).toEqual({ eodhd: "GBX" });
     expect(entry?.currency_check).toBeUndefined();
   });
 
   it("a close whose own currency is not the one declared for its source is never stored", async () => {
-    // A source of tomorrow that says the currency of each close.
     const store = new MemoryPriceStore();
-    store.files.set(
-      "symbols.json",
-      newFile({ ...LONDON, currency_check: { eodhd: { at: AT }, alpha_vantage: { at: AT } } }),
-    );
-    const eodhd = new FakeSource("eodhd", () => ({ ok: false, kind: "unavailable" }), store);
-    const alpha = new FakeSource(
-      "alpha_vantage",
-      () => ({
-        ok: true,
-        value: [{ date: "2027-01-05", close: "1000", currency: "GBP" }],
-      }),
-      store,
-    );
-    const report = await run(store, { eodhd, alpha_vantage: alpha });
+    store.files.set("symbols.json", newFile({ ...LONDON, currency_check: { eodhd: { at: AT } } }));
+    const says = (currency: string) =>
+      new FakeSource(
+        "eodhd",
+        () => ({ ok: true, value: [{ date: "2027-01-05", close: "1000", currency }] }),
+        store,
+      );
+    const report = await run(store, { eodhd: says("GBX") });
     expect(store.files.get("ast_spec.jsonl") ?? "").toBe("");
     expect(report.assets[0]?.failures).toContainEqual({
-      source: "alpha_vantage",
+      source: "eodhd",
       kind: "currency_mismatch",
     });
     // Its own currency right: stored.
-    const right = new FakeSource(
-      "alpha_vantage",
-      () => ({
-        ok: true,
-        value: [{ date: "2027-01-05", close: "1000", currency: "GBX" }],
-      }),
-      store,
-    );
-    await run(store, { eodhd, alpha_vantage: right });
+    await run(store, { eodhd: says("GBP") });
     expect(readCloseFile("ast_spec", store.files.get("ast_spec.jsonl") ?? "")[0]).toMatchObject({
-      currency: "GBX",
+      currency: "GBP",
     });
   });
 });
 
 describe("closes stored wrong (misstored) are left out and purged like any other", () => {
-  const line = (date: string, close: string, currency: string, source: "eodhd" | "alpha_vantage") =>
-    `${JSON.stringify({ schema_version: 1, date, close, currency, source, fetched_at: "2027-01-06T06:00:00.000Z" })}\n`;
-
-  it("Alpha Vantage closes stored as GBP: its pounds are pence, a hundred times too high, left out", () => {
-    const symbols = parseSymbols(misstoredFile("GBP", "alpha_vantage"));
+  it.each([
+    ["GBP", "1000", "its pence stored as pounds, a hundred times too high"],
+    ["GBX", "9", "its pounds stored as pence, a hundred times too low"],
+  ])("EODHD closes stored as %s (%s): %s, left out", (currency, close) => {
     const { closes: read, mismatched } = readCloses(
-      new Map([
-        [
-          "ast_spec",
-          line("2027-01-04", "9", "GBP", "eodhd") +
-            line("2027-01-05", "1000", "GBP", "alpha_vantage"),
-        ],
-      ]),
-      symbols,
+      new Map([["ast_spec", line("2027-01-05", close, currency)]]),
+      parseSymbols(misstoredFile(currency)),
     );
-    expect(read.get("ast_spec")?.map((c) => [c.date, c.close])).toEqual([["2027-01-04", "9"]]);
+    expect(read.get("ast_spec")).toEqual([]);
     expect(mismatched).toEqual([
       {
         asset_id: "ast_spec",
-        source: "alpha_vantage",
-        declared: "GBP",
-        misstored: "GBP",
+        source: "eodhd",
+        declared: currency,
+        misstored: currency,
         count: 1,
         dates: ["2027-01-05"],
       },
     ]);
   });
 
-  it("EODHD closes stored as GBX: its pence are pounds, a hundred times too low, left out", () => {
-    const symbols = parseSymbols(misstoredFile("GBX", "eodhd"));
-    const { closes: read, mismatched } = readCloses(
-      new Map([
-        [
-          "ast_spec",
-          line("2027-01-04", "900", "GBX", "alpha_vantage") +
-            line("2027-01-05", "9", "GBX", "eodhd"),
-        ],
-      ]),
-      symbols,
-    );
-    expect(read.get("ast_spec")?.map((c) => [c.date, c.close])).toEqual([["2027-01-04", "900"]]);
-    expect(mismatched.map((m) => [m.source, m.misstored, m.dates])).toEqual([
-      ["eodhd", "GBX", ["2027-01-05"]],
-    ]);
-  });
-
   it("stays known when the file is written again, and when the source is declared again", async () => {
-    const lines = new Map([["ast_spec", line("2027-01-05", "1000", "GBP", "alpha_vantage")]]);
-    const again = parseSymbols(
-      serializeSymbols(parseSymbols(misstoredFile("GBP", "alpha_vantage"))),
-    );
+    const lines = new Map([["ast_spec", line("2027-01-05", "1000", "GBP")]]);
+    const again = parseSymbols(serializeSymbols(parseSymbols(misstoredFile("GBP"))));
     expect(readCloses(lines, again).closes.get("ast_spec")).toEqual([]);
     const store = new MemoryPriceStore();
     store.files.set("symbols.json", serializeSymbols(again));
     await recordSymbols({
       assetId: "ast_spec",
-      declaration: { alpha_vantage: "TSCO.LON", currencies: { alpha_vantage: "GBP" } },
-      checks: { alpha_vantage: "GBX" },
-      accepted: ["alpha_vantage"],
+      declaration: { eodhd: "TSCO.LSE", currencies: { eodhd: "GBP" } },
+      checks: { eodhd: "GBX" },
+      accepted: ["eodhd"],
       store,
       now: () => new Date(AT),
     });
@@ -512,55 +393,30 @@ describe("closes stored wrong (misstored) are left out and purged like any other
 
   it("is purged like any other, and then nothing of that source is left out any more", async () => {
     const store = new MemoryPriceStore();
-    store.files.set("symbols.json", misstoredFile("GBP", "alpha_vantage"));
-    store.files.set(
-      "ast_spec.jsonl",
-      line("2027-01-04", "9", "GBP", "eodhd") + line("2027-01-05", "1000", "GBP", "alpha_vantage"),
-    );
-    expect(await purgeMismatched(store, "ast_spec", "alpha_vantage")).toBe(1);
+    store.files.set("symbols.json", misstoredFile("GBP"));
+    store.files.set("ast_spec.jsonl", line("2027-01-05", "1000", "GBP"));
+    expect(await purgeMismatched(store, "ast_spec", "eodhd")).toBe(1);
     const entry = parseSymbols(store.files.get("symbols.json")).assets.ast_spec;
     expect(entry?.misstored).toBeUndefined();
-    expect(entry?.refetch_days).toEqual({ alpha_vantage: ["2027-01-05"] });
+    expect(entry?.refetch_days).toEqual({ eodhd: ["2027-01-05"] });
   });
 });
 
 describe("a purge asks for its days again", () => {
-  const line = (date: string, close: string, currency: string, source: "eodhd" | "alpha_vantage") =>
-    `${JSON.stringify({ schema_version: 1, date, close, currency, source, fetched_at: "2027-01-06T06:00:00.000Z" })}\n`;
-
   it("the bad line of one day and the good one of a later day: the next download starts at the purged day", async () => {
     const store = new MemoryPriceStore();
-    store.files.set(
-      "symbols.json",
-      newFile({ ...LONDON, currency_check: { eodhd: { at: AT }, alpha_vantage: { at: AT } } }),
-    );
+    store.files.set("symbols.json", newFile({ ...LONDON, currency_check: { eodhd: { at: AT } } }));
     store.files.set(
       "ast_spec.jsonl",
-      line("2027-01-04", "1000", "GBP", "alpha_vantage") + line("2027-01-05", "10", "GBP", "eodhd"),
+      line("2027-01-04", "1000", "GBX") + line("2027-01-05", "10", "GBP"),
     );
-    expect(await purgeMismatched(store, "ast_spec", "alpha_vantage")).toBe(1);
+    expect(await purgeMismatched(store, "ast_spec", "eodhd")).toBe(1);
     const eodhd = new FakeSource(
       "eodhd",
       () => closes(["2027-01-04", "9.9"], ["2027-01-05", "10"]),
       store,
     );
-    const b = new LedgerBuilder();
-    catalogue(b);
-    b.thesisOpened({ thesis_id: "th1" });
-    b.buy({
-      account_id: "acc_bucket",
-      asset_id: "ast_spec",
-      trade_date: "2027-01-04",
-      thesis_id: "th1",
-    });
-    const report = await updatePrices({
-      state: projectLedger(b.build(), { asOf: TODAY }),
-      settings: DEFAULT_SETTINGS,
-      today: TODAY,
-      now: () => new Date("2027-01-06T08:00:00.000Z"),
-      store,
-      sources: { eodhd },
-    });
+    const report = await run(store, { eodhd });
     expect(eodhd.calls.map((c) => c.from)).toEqual(["2027-01-04"]);
     expect(report.assets[0]?.outcome).toBe("updated");
     expect(
@@ -579,68 +435,61 @@ describe("a purge asks for its days again", () => {
 });
 
 describe("what a declaration, a purge and a removal carry, keep and clear of the days owed", () => {
-  const line = (date: string, close: string, currency: string, source: "eodhd" | "alpha_vantage") =>
-    `${JSON.stringify({ schema_version: 1, date, close, currency, source, fetched_at: "2027-01-06T06:00:00.000Z" })}\n`;
-
-  it("a new declaration keeps every day owed, and the marks of the sources it declares", async () => {
+  it("a new declaration keeps every day owed, and the marks of the source it declares", async () => {
     const store = new MemoryPriceStore();
     store.files.set(
       "symbols.json",
       newFile({
         ...LONDON,
-        misstored: { alpha_vantage: "GBP" },
-        refetch_days: { eodhd: ["2027-01-04"], alpha_vantage: ["2027-01-05"] },
+        misstored: { eodhd: "GBX" },
+        refetch_days: { eodhd: ["2027-01-04"] },
         unserved_days: { eodhd: ["2027-01-03"] },
       }),
     );
     await recordSymbols({
       assetId: "ast_spec",
-      declaration: { alpha_vantage: "TSCO.LON", currencies: { alpha_vantage: "GBX" } },
+      declaration: LONDON,
       checks: {},
       accepted: [],
       store,
       now: () => new Date(AT),
     });
     const entry = parseSymbols(store.files.get("symbols.json")).assets.ast_spec;
-    expect(entry?.misstored).toEqual({ alpha_vantage: "GBP" });
-    expect(entry?.refetch_days).toEqual({ eodhd: ["2027-01-04"], alpha_vantage: ["2027-01-05"] });
+    expect(entry?.misstored).toEqual({ eodhd: "GBX" });
+    expect(entry?.refetch_days).toEqual({ eodhd: ["2027-01-04"] });
     expect(entry?.unserved_days).toEqual({ eodhd: ["2027-01-03"] });
   });
 
-  it("a purge keeps the other source's marks and adds its days to those already owed; with nothing left, only clears", async () => {
+  it("a purge adds its days to those already owed; with nothing left in the file, it only clears the mark", async () => {
     const store = new MemoryPriceStore();
-    store.files.set(
-      "symbols.json",
-      newFile({
-        ...LONDON,
-        misstored: { alpha_vantage: "GBP", eodhd: "GBX" },
-        refetch_days: { alpha_vantage: ["2027-01-01"] },
-      }),
-    );
-    store.files.set("ast_spec.jsonl", line("2027-01-05", "1000", "GBP", "alpha_vantage"));
-    expect(await purgeMismatched(store, "ast_spec", "alpha_vantage")).toBe(1);
+    const declared = (misstored: object) =>
+      newFile({ ...LONDON, misstored, refetch_days: { eodhd: ["2027-01-01"] } });
+    store.files.set("symbols.json", declared({ eodhd: "GBX" }));
+    store.files.set("ast_spec.jsonl", line("2027-01-05", "1000", "GBX"));
+    expect(await purgeMismatched(store, "ast_spec", "eodhd")).toBe(1);
     let entry = parseSymbols(store.files.get("symbols.json")).assets.ast_spec;
-    expect(entry?.misstored).toEqual({ eodhd: "GBX" });
-    expect(entry?.refetch_days).toEqual({ alpha_vantage: ["2027-01-01", "2027-01-05"] });
+    expect(entry?.misstored).toBeUndefined();
+    expect(entry?.refetch_days).toEqual({ eodhd: ["2027-01-01", "2027-01-05"] });
     // Its mark, with nothing of it left in the file: cleared, nothing owed.
+    store.files.set("symbols.json", declared({ eodhd: "GBX" }));
     expect(await purgeMismatched(store, "ast_spec", "eodhd")).toBe(0);
     entry = parseSymbols(store.files.get("symbols.json")).assets.ast_spec;
     expect(entry?.misstored).toBeUndefined();
-    expect(entry?.refetch_days).toEqual({ alpha_vantage: ["2027-01-01", "2027-01-05"] });
+    expect(entry?.refetch_days).toEqual({ eodhd: ["2027-01-01"] });
   });
 
   it("clears only what it asked: a purge made meanwhile stays owed, and a removal is left as it is", async () => {
-    const run = async (meanwhile: (store: MemoryPriceStore) => void) => {
+    const meanwhileRun = async (meanwhile: (store: MemoryPriceStore) => void) => {
       const store = new MemoryPriceStore();
       store.files.set(
         "symbols.json",
         newFile({
           ...LONDON,
-          currency_check: { eodhd: { at: AT }, alpha_vantage: { at: AT } },
-          refetch_days: { alpha_vantage: ["2027-01-04"] },
+          currency_check: { eodhd: { at: AT } },
+          refetch_days: { eodhd: ["2027-01-04"] },
         }),
       );
-      store.files.set("ast_spec.jsonl", line("2027-01-05", "10", "GBP", "eodhd"));
+      store.files.set("ast_spec.jsonl", line("2027-01-05", "10", "GBP"));
       const eodhd = new FakeSource(
         "eodhd",
         () => {
@@ -649,39 +498,23 @@ describe("what a declaration, a purge and a removal carry, keep and clear of the
         },
         store,
       );
-      const b = new LedgerBuilder();
-      catalogue(b);
-      b.thesisOpened({ thesis_id: "th1" });
-      b.buy({
-        account_id: "acc_bucket",
-        asset_id: "ast_spec",
-        trade_date: "2027-01-04",
-        thesis_id: "th1",
-      });
-      await updatePrices({
-        state: projectLedger(b.build(), { asOf: TODAY }),
-        settings: DEFAULT_SETTINGS,
-        today: TODAY,
-        now: () => new Date("2027-01-06T08:00:00.000Z"),
-        store,
-        sources: { eodhd },
-      });
+      await run(store, { eodhd });
       return parseSymbols(store.files.get("symbols.json")).assets.ast_spec;
     };
-    const purged = await run((store) => {
+    const setOwed = (days: string[]) => (store: MemoryPriceStore) => {
       const file = JSON.parse(store.files.get("symbols.json") as string);
-      file.assets.ast_spec.refetch_days = { alpha_vantage: ["2027-01-04"], eodhd: ["2027-01-02"] };
+      file.assets.ast_spec.refetch_days = { eodhd: days };
       store.files.set("symbols.json", JSON.stringify(file));
+    };
+    // Another day purged meanwhile: the one asked is cleared, the new one stays owed.
+    expect((await meanwhileRun(setOwed(["2027-01-04", "2027-01-02"])))?.refetch_days).toEqual({
+      eodhd: ["2027-01-02"],
     });
-    expect(purged?.refetch_days).toEqual({ eodhd: ["2027-01-02"] });
-    // The same source purged again meanwhile, from an earlier day: still owed.
-    const again = await run((store) => {
-      const file = JSON.parse(store.files.get("symbols.json") as string);
-      file.assets.ast_spec.refetch_days = { alpha_vantage: ["2027-01-01"] };
-      store.files.set("symbols.json", JSON.stringify(file));
+    // The same day purged again meanwhile, from an earlier one: still owed.
+    expect((await meanwhileRun(setOwed(["2027-01-01"])))?.refetch_days).toEqual({
+      eodhd: ["2027-01-01"],
     });
-    expect(again?.refetch_days).toEqual({ alpha_vantage: ["2027-01-01"] });
-    const removed = await run((store) => {
+    const removed = await meanwhileRun((store) => {
       store.files.set("symbols.json", JSON.stringify({ symbols_format: 2, assets: {} }));
     });
     expect(removed).toBeUndefined();
@@ -690,11 +523,8 @@ describe("what a declaration, a purge and a removal carry, keep and clear of the
 
 describe("a mark of closes stored wrong leaves only through a purge", () => {
   const pending = () =>
-    newFile({
-      ...LONDON,
-      currency_check: { eodhd: { at: AT }, alpha_vantage: { at: AT } },
-      misstored: { alpha_vantage: "GBP" },
-    });
+    newFile({ ...LONDON, currency_check: { eodhd: { at: AT } }, misstored: { eodhd: "GBX" } });
+  const without = { currencies: {} };
 
   it("refuses to declare the asset again without the source with closes stored wrong", async () => {
     const store = new MemoryPriceStore();
@@ -702,7 +532,7 @@ describe("a mark of closes stored wrong leaves only through a purge", () => {
     await expect(
       recordSymbols({
         assetId: "ast_spec",
-        declaration: { eodhd: "TSCO.LSE", currencies: { eodhd: "GBP" } },
+        declaration: without,
         checks: {},
         accepted: [],
         store,
@@ -710,18 +540,15 @@ describe("a mark of closes stored wrong leaves only through a purge", () => {
       }),
     ).rejects.toMatchObject({
       code: "symbols_misstored_pending",
-      details: { asset_id: "ast_spec", source: "alpha_vantage" },
+      details: { asset_id: "ast_spec", source: "eodhd" },
     });
     expect(store.files.get("symbols.json")).toBe(pending());
     // Said before any call is spent, too.
-    await expect(
-      assertNothingMisstored(store, "ast_spec", {
-        eodhd: "TSCO.LSE",
-        currencies: { eodhd: "GBP" },
-      }),
-    ).rejects.toMatchObject({ code: "symbols_misstored_pending" });
+    await expect(assertNothingMisstored(store, "ast_spec", without)).rejects.toMatchObject({
+      code: "symbols_misstored_pending",
+    });
     await assertNothingMisstored(store, "ast_spec", LONDON);
-    await assertNothingMisstored(store, "ast_other", LONDON);
+    await assertNothingMisstored(store, "ast_other", without);
   });
 
   it("refuses to remove the asset while it has them", async () => {
@@ -729,72 +556,46 @@ describe("a mark of closes stored wrong leaves only through a purge", () => {
     store.files.set("symbols.json", pending());
     await expect(removeSymbols(store, "ast_spec")).rejects.toMatchObject({
       code: "symbols_misstored_pending",
-      details: { asset_id: "ast_spec", source: "alpha_vantage" },
+      details: { asset_id: "ast_spec", source: "eodhd" },
     });
     await expect(assertNothingMisstored(store, "ast_spec")).rejects.toMatchObject({
       code: "symbols_misstored_pending",
     });
     expect(store.files.get("symbols.json")).toBe(pending());
     // Once purged, both are allowed.
-    await purgeMismatched(store, "ast_spec", "alpha_vantage");
+    await purgeMismatched(store, "ast_spec", "eodhd");
     expect(await removeSymbols(store, "ast_spec")).toBe(true);
   });
 });
 
 describe("days asked once that the source does not serve stay a hole that is said", () => {
-  const line = (date: string, close: string, currency: string, source: "eodhd" | "alpha_vantage") =>
-    `${JSON.stringify({ schema_version: 1, date, close, currency, source, fetched_at: "2027-01-06T06:00:00.000Z" })}\n`;
-
   it("are asked once, then left as a hole that is said, until a close fills them", async () => {
     const store = new MemoryPriceStore();
-    store.files.set(
-      "symbols.json",
-      newFile({ ...LONDON, currency_check: { eodhd: { at: AT }, alpha_vantage: { at: AT } } }),
-    );
+    store.files.set("symbols.json", newFile({ ...LONDON, currency_check: { eodhd: { at: AT } } }));
     store.files.set(
       "ast_spec.jsonl",
-      line("2027-01-04", "1000", "GBP", "alpha_vantage") + line("2027-01-05", "10", "GBP", "eodhd"),
+      line("2027-01-04", "1000", "GBX") + line("2027-01-05", "10", "GBP"),
     );
-    await purgeMismatched(store, "ast_spec", "alpha_vantage");
+    await purgeMismatched(store, "ast_spec", "eodhd");
     // The source has no close of that day.
     const eodhd = new FakeSource("eodhd", () => closes(["2027-01-05", "10"]), store);
-    const b = new LedgerBuilder();
-    catalogue(b);
-    b.thesisOpened({ thesis_id: "th1" });
-    b.buy({
-      account_id: "acc_bucket",
-      asset_id: "ast_spec",
-      trade_date: "2027-01-04",
-      thesis_id: "th1",
-    });
-    const run = () =>
-      updatePrices({
-        state: projectLedger(b.build(), { asOf: TODAY }),
-        settings: DEFAULT_SETTINGS,
-        today: TODAY,
-        now: () => new Date("2027-01-06T08:00:00.000Z"),
-        store,
-        sources: { eodhd },
-      });
-    await run();
+    await run(store, { eodhd });
     const entry = parseSymbols(store.files.get("symbols.json")).assets.ast_spec;
     expect(entry?.refetch_days).toBeUndefined();
-    expect(entry?.unserved_days).toEqual({ alpha_vantage: ["2027-01-04"] });
+    expect(entry?.unserved_days).toEqual({ eodhd: ["2027-01-04"] });
     const read = () =>
       readCloses(
         new Map([["ast_spec", store.files.get("ast_spec.jsonl") ?? ""]]),
         parseSymbols(store.files.get("symbols.json")),
       ).unserved;
-    expect(read()).toEqual([
-      { asset_id: "ast_spec", source: "alpha_vantage", dates: ["2027-01-04"] },
-    ]);
+    expect(read()).toEqual([{ asset_id: "ast_spec", source: "eodhd", dates: ["2027-01-04"] }]);
     // Asked once: not chased on the next run.
-    await run();
+    await run(store, { eodhd });
     expect(eodhd.calls).toHaveLength(1);
     // A close of that day that arrives some other way fills the hole.
     store.files.set(
       "ast_spec.jsonl",
-      `${store.files.get("ast_spec.jsonl")}${line("2027-01-04", "9.9", "GBP", "eodhd")}`,
+      `${store.files.get("ast_spec.jsonl")}${line("2027-01-04", "9.9", "GBP")}`,
     );
     expect(read()).toEqual([]);
   });
