@@ -127,9 +127,9 @@ export const monthPlan = (
       continue;
     }
     const eur = fxOf(event).toEur(basisOf(event));
-    // A core purchase of an asset the plan sends nothing to is not a task of the month.
-    const row =
-      book === "bucket" ? bucket : book === "core" ? byAsset.get(event.asset_id) : undefined;
+    // A live operation always has its account, and a book is `core` or `bucket`. A core purchase of
+    // an asset the plan sends nothing to is not a task of the month.
+    const row = book === "bucket" ? bucket : byAsset.get(event.asset_id);
     if (row !== undefined) {
       record(row, day, eur);
     }
