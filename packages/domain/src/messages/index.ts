@@ -25,6 +25,20 @@ export { fxMissingReason, windowText, year } from "./words.js";
 
 export type Kind = "error" | "warning";
 
+/** The files of the catalogue, by name: a code must live in one of them only. */
+export const AREAS: Readonly<Record<string, Readonly<Record<string, Entry>>>> = {
+  CATALOGUE_ERRORS,
+  ERRORS_CORPORATE,
+  ERRORS_OPERATIONS,
+  ERRORS_SETTINGS,
+  ERRORS_LEDGER,
+  ERRORS_REMOTE,
+  CONSOLE_ONLY,
+  WARNINGS_WEIGHTS,
+  WARNINGS_OPERATIONS,
+  WARNINGS_TAX,
+};
+
 /** The errors of the domain, the API and the adapters, by code. */
 export const ERRORS: Readonly<Record<string, Entry>> = {
   ...CATALOGUE_ERRORS,

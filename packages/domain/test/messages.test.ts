@@ -70,7 +70,7 @@ describe("the catalogue of messages", () => {
           const said = render(entry, scenario(), plain(surface), "domain message");
           expect(said, `${code} on ${surface}`).toEqual(expect.any(String));
           expect(said.trim(), `${code} on ${surface}`).not.toBe("");
-          expect(said, `${code} on ${surface}`).not.toContain("undefined");
+          expect(said, `${code} on ${surface}`).not.toMatch(/undefined|NaN|null/);
         }
       }
     }

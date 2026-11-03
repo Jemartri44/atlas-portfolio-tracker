@@ -5,6 +5,7 @@
 export { CONSOLE_ONLY } from "./messages/console-only.js";
 export { RAW_LINE_BREAK_FIX } from "./messages/errors-remote.js";
 export {
+  AREAS,
   type Details,
   type Entry,
   ERRORS,

@@ -38,21 +38,6 @@ export const ERRORS_OPERATIONS: Record<string, Entry> = {
   invalid_amount: (d, v) => `El importe debe ser mayor que cero (recibido: ${v.money(d.value)}).`,
   invalid_quantity: (d, v) =>
     `La cantidad debe ser mayor que cero (recibido: ${v.titles(d.value)}).`,
-  broker_settled_eur_in_eur: {
-    say: () =>
-      "Lo liquidado por el bróker en euros solo se indica en una operación en otra divisa: en euros repetiría el importe.",
-    cli: () => "(--broker-settled-eur)",
-  },
-  broker_settled_eur_negative: {
-    say: () =>
-      "Lo liquidado por el bróker en euros nunca es negativo: el sentido lo da el tipo de movimiento. Indica lo que movió el bróker, sin signo.",
-    cli: () => "(--broker-settled-eur)",
-  },
-  broker_settled_eur_zero: {
-    say: () =>
-      "Lo liquidado por el bróker en euros no puede ser cero en una compra, una venta o una comisión. Si el extracto no da la cifra, déjalo vacío: sin él, la cifra queda como desconocida.",
-    cli: () => "(--broker-settled-eur)",
-  },
   unknown_order: {
     say: () => "La orden elegida no existe en esa fecha.",
     cli: (d, v) => `Orden: ${v.text(d.order_id)}.`,

@@ -151,8 +151,6 @@ export const ERRORS_LEDGER: Record<string, Entry> = {
       `Fichero prices/symbols.json, formato ${v.text(d.format)}: esta consola no lo lee ni lo escribe. Actualiza la aplicación.`,
   },
   // Said by the console only.
-  invalid_cloud_pull: (d, v) =>
-    `prices/_cloud.json, lo que la carpeta guarda de su última descarga de la nube, no se entiende (${v.text(d.field)}): bórralo y vuelve a ejecutar «atlas prices update», que lo rehace sin tocar ningún cierre.`,
   json_key_repeated: {
     say: () =>
       "Un fichero de precios importado repite un dato y dice dos cosas a la vez: no se usa.",
@@ -257,7 +255,7 @@ export const ERRORS_LEDGER: Record<string, Entry> = {
   // --- Ledger state ---
   ledger_has_invalid_events: {
     say: (d, v) =>
-      `Tus datos ya tenían ${counted(v, Number(d.invalid_count ?? 0), "movimiento inválido", "movimientos inválidos")} antes de esta operación, y sobre unos datos así solo se puede escribir un cambio de configuración. El primero es ${v.kind(d.offending_type)}: ${v.evidence(d.offending_error)}.`,
+      `Tus datos ya tenían ${counted(v, Number(d.invalid_count) || 0, "movimiento inválido", "movimientos inválidos")} antes de esta operación, y sobre unos datos así solo se puede escribir un cambio de configuración. El primero es ${v.kind(d.offending_type)}: ${v.evidence(d.offending_error)}.`,
     web: () => "Arréglalo en Ajustes → Verificación.",
     cli: (d, v) =>
       `Es el evento ${v.text(d.offending_id)}. Ejecuta \`atlas check\` y rectifícalo antes (ADR-0015).`,
@@ -341,8 +339,8 @@ export const ERRORS_LEDGER: Record<string, Entry> = {
   missing_field: (d, v) => `Falta ${v.field(d.field)} en ${v.kind(d.type)}.`,
   invalid_field: { say: invalidFieldSay, cli: invalidFieldCli },
   invalid_decimal: {
-    say: (d, v) =>
-      `Valor numérico no válido: ${v.text(d.value)}. Se escribe con coma decimal, por ejemplo 123,45.`,
+    say: (d, v) => `Valor numérico no válido: ${v.text(d.value)}.`,
+    web: () => "Se escribe con coma decimal, por ejemplo 123,45.",
     cli: () => "Las cadenas decimales se escriben como 123.45.",
   },
   invalid_date: {

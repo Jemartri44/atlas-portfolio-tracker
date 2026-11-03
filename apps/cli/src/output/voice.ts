@@ -13,7 +13,7 @@ export const CLI_VOICE: Voice = {
   one: text,
   many: list,
   thesis: text,
-  money: (value) => `${text(value)} €`,
+  money: (value) => `${text(value)} EUR`,
   quantity: text,
   titles: (value) => `${text(value)} ${/^\+?1(\.0*)?$/.test(text(value)) ? "título" : "títulos"}`,
   evidence: text,

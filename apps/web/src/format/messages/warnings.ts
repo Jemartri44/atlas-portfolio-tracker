@@ -1,11 +1,6 @@
-// Projection warnings in Spanish, with the remedy of the web. Same contract as
-// the errors: keyed by `code`, unknown codes fall back to the domain message,
-// and the drift test keeps this catalogue level with the CLI's.
-//
-// LINE BUDGET: it is a **catalogue**, one entry per warning code the domain can
-// raise, and the exhaustiveness test demands that every one of them be here.
-// Splitting it by subject would only move the same entries to another file and
-// make "is this code translated?" a question with several places to look.
+// Projection warnings in the web's voice: the sentences are the one catalogue of messages
+// (`@atlas/domain/messages`); what stays here is what only the web does (the grouped sentences of
+// the summary).
 
 import type { Warning } from "@atlas/domain";
 import {

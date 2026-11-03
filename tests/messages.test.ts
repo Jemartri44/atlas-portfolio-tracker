@@ -11,7 +11,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ERRORS, FINDINGS, REMOTE_FAILURES, WARNINGS } from "@atlas/domain/messages";
+import { AREAS, ERRORS, FINDINGS, REMOTE_FAILURES, WARNINGS } from "@atlas/domain/messages";
 import { describe, expect, it } from "vitest";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -217,6 +217,31 @@ describe("the catalogue of messages is exhaustive", () => {
     const entries = Object.keys(FINDINGS);
     expect([...codes].filter((code) => !entries.includes(code)).sort()).toEqual([]);
     expect(entries.filter((code) => !codes.has(code)).sort()).toEqual([]);
+  });
+
+  it("gives the console the facts of every finding of the ECB check, and no code twice", () => {
+    const source = readFileSync(join(domainSrc, "ecb", "check.ts"), "utf8");
+    const codes = new Set(
+      [
+        ...source.matchAll(/(?:warning|error)\(\s*"([a-z_0-9]+)"/g),
+        ...source.matchAll(/code:\s*"([a-z_0-9]+)"/g),
+      ].map((match) => match[1] as string),
+    );
+    expect(codes.size).toBeGreaterThanOrEqual(7);
+    expect([...codes].filter((code) => FINDINGS[code]?.facts === undefined).join(" ")).toBe("");
+    // Two files of the catalogue must not say the same code: the later would win in silence.
+    const seen = new Map<string, string>();
+    const twice: string[] = [];
+    for (const [name, table] of Object.entries(AREAS)) {
+      for (const code of Object.keys(table)) {
+        const key = `${name.startsWith("WARNINGS") ? "w" : "e"}:${code}`;
+        if (seen.has(key)) {
+          twice.push(`${code} (${seen.get(key)}, ${name})`);
+        }
+        seen.set(key, name);
+      }
+    }
+    expect(twice.join(" ")).toBe("");
   });
 
   it("says every failure of the remote, and nothing else", () => {

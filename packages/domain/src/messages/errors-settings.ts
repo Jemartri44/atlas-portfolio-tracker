@@ -126,7 +126,7 @@ export const ERRORS_SETTINGS: Record<string, Entry> = {
   },
   tax_ledger_invalid: {
     say: (d, v) =>
-      `Tus datos tienen ${counted(v, Number(d.count), "movimiento inválido", "movimientos inválidos")}: un cálculo fiscal sobre ellos sería aproximado.`,
+      `Tus datos tienen ${counted(v, Number(d.count) || 0, "movimiento inválido", "movimientos inválidos")}: un cálculo fiscal sobre ellos sería aproximado.`,
     web: () => "Repáralo antes en Ajustes → Verificación.",
     cli: (d, v) => {
       const invalid = Array.isArray(d.invalid) ? (d.invalid as Record<string, unknown>[]) : [];

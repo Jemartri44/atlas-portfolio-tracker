@@ -44,6 +44,10 @@ export const ERRORS_CORPORATE: Record<string, Entry> = {
     say: (d, v) => `La cuenta ${v.one(d.account_id)} aparece dos veces en el mismo efecto.`,
     cli: () => "(per_account)",
   },
-  invalid_ratio: (d, v) =>
-    `Proporción no válida: ${v.num(d.value)}. Escribe un número positivo (1,5) o una fracción de títulos nuevos entre antiguos (4/3).`,
+  invalid_ratio: {
+    say: (d, v) =>
+      `Proporción no válida: ${v.num(d.value)}. Escribe un número positivo o una fracción de títulos nuevos entre antiguos.`,
+    web: () => "Por ejemplo 1,5 o 4/3.",
+    cli: () => "Por ejemplo 1.5, 0.25 o 4/3.",
+  },
 };

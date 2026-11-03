@@ -48,11 +48,9 @@ export const describeCalendar = (disagreements: readonly CalendarDisagreement[])
       ];
 
 /**
- * The findings of the ECB check, in Spanish: a
- * catalogue **limited to the codes of the ECB** — translating every finding of
- * the console is another feature —, and the drift test of the messages
- * demands an entry here for each code the domain can raise. Each with the
- * facts the domain gave, and what to do.
+ * The findings of the ECB check, in Spanish, from the one catalogue: each with the facts the domain
+ * gave and what to do. The console translates only these findings; the rest print the domain's
+ * English (a known gap).
  */
 const DATE_DETAILS = ["rate_date", "reference", "official_date", "last", "latest", "date"];
 
