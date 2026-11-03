@@ -11,7 +11,14 @@ import type { CivilDate } from "../dates/civil-date.js";
 import { type Decimal, HUNDRED } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
-import type { AccountId, AssetId, BuyEvent, LedgerEvent, SellEvent } from "../schema/events.js";
+import type {
+  AccountId,
+  AssetId,
+  Book,
+  BuyEvent,
+  LedgerEvent,
+  SellEvent,
+} from "../schema/events.js";
 import { feeEurOf } from "./costs.js";
 import { businessDateOf, liveOperations } from "./project-ledger.js";
 import { type Account, cashKey, type LedgerState, splitPositionKey } from "./state.js";
@@ -78,19 +85,23 @@ export interface PlatformPlan {
 
 type Trade = BuyEvent | SellEvent;
 
-/** The active accounts of the core book, by id. */
-const openAccounts = (state: LedgerState): AccountId[] =>
+/** The active accounts of a book, by id. */
+const openAccounts = (state: LedgerState, book: Book): AccountId[] =>
   [...state.accounts.values()]
-    .filter((account) => account.book === "core" && account.active)
+    .filter((account) => account.book === book && account.active)
     .map((account) => account.account_id)
     .sort();
 
-/** The active core accounts that hold the asset, largest position first and, on a tie, by id. */
+/**
+ * The active accounts of `book` (the core unless said) that hold the asset,
+ * largest position first and, on a tie, by id.
+ */
 export const holdersOf = (
   state: LedgerState,
   assetId: AssetId,
+  book: Book = "core",
 ): { account_id: AccountId; quantity: Quantity }[] => {
-  const open = new Set(openAccounts(state));
+  const open = new Set(openAccounts(state, book));
   const holders: { account_id: AccountId; quantity: Quantity }[] = [];
   for (const [key, quantity] of state.positions) {
     const [account, asset] = splitPositionKey(key);
@@ -208,7 +219,7 @@ export const platformPlan = (
   orders: readonly Order[],
   choose: ReadonlyMap<AssetId, AccountId> = new Map(),
 ): PlatformPlan => {
-  const open = openAccounts(state);
+  const open = openAccounts(state, "core");
   const byAccount = new Map<AccountId, PlatformLine[]>();
   const unassigned: UnassignedOrder[] = [];
   for (const order of orders) {

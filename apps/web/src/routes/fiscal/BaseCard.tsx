@@ -15,6 +15,7 @@ import {
   Disclosure,
   Section,
   StatLine,
+  Tag,
   TotalLine,
 } from "../../components/index.js";
 import type { FiscalRow, YearView } from "../../view-models/fiscal/index.js";
@@ -36,7 +37,22 @@ const ROW_COLUMNS: DataColumn<FiscalRow>[] = [
     header: "Computable",
     numeric: true,
     card: "figure",
-    cell: (row) => <Amount value={row.amount_eur} coloured />,
+    cell: (row) => (
+      <>
+        <Amount value={row.amount_eur} coloured />
+        <Show when={row.provisional_until}>
+          {(until) => (
+            <Tag
+              tone="caution"
+              icon="clock"
+              title={`Su ventana de recompra sigue abierta: una compra hasta el ${until()} aplazaría esta pérdida.`}
+            >
+              provisional hasta el {until()}
+            </Tag>
+          )}
+        </Show>
+      </>
+    ),
   },
 ];
 

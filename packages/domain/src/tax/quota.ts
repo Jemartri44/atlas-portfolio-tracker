@@ -190,8 +190,8 @@ const applyRates = (base: Money, rates: readonly Rate[]) => {
 
 /**
  * The estimated quota of the savings base of `report`. `brackets` are the
- * `savings_tax_brackets` of the settings in force, when the user set them: they
- * replace the scale of the law and the result says so.
+ * `savings_tax_brackets` of the settings in force, when the user set them: when
+ * they differ from the scale of the law they replace it, and the result says so.
  */
 export const savingsQuota = (
   report: TaxYearReport,
@@ -207,8 +207,11 @@ export const savingsQuota = (
   if (brackets !== undefined && !isScale(brackets)) {
     notes.push("settings_brackets_invalid");
   }
+  // Brackets of the settings that say what the law says are the law: they
+  // replace nothing, and the result keeps the halves and the date of the check.
+  const typed = brackets === undefined || !isScale(brackets) ? undefined : settingsRates(brackets);
   const fromSettings =
-    brackets === undefined || !isScale(brackets) ? undefined : settingsRates(brackets);
+    typed !== undefined && fromLaw !== undefined && sameRates(typed, fromLaw) ? undefined : typed;
   const rates = fromSettings ?? fromLaw;
   const common = {
     year,
@@ -230,7 +233,7 @@ export const savingsQuota = (
   if (rates === undefined) {
     return { ...common, scale_origin: "none", brackets: [], notes };
   }
-  if (fromSettings !== undefined && (fromLaw === undefined || !sameRates(fromSettings, fromLaw))) {
+  if (fromSettings !== undefined) {
     notes.push("settings_differ_from_law");
   }
   if (fromSettings === undefined && year > Number(SCALES_CHECKED_AT.slice(0, 4))) {
