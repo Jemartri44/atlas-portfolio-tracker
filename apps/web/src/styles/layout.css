@@ -68,6 +68,37 @@
   display: none;
 }
 
+/*
+ * The mark is two images from public/ (the light and the dark symbol): their cuts are painted in
+ * the surface of their mode, so only one shows. Same rule as tokens.css: the system scheme unless
+ * the theme is forced in Settings.
+ */
+.mark {
+  flex: none;
+}
+
+.mark-dark {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .mark-light {
+    display: none;
+  }
+
+  :root:not([data-theme="light"]) .mark-dark {
+    display: inline;
+  }
+}
+
+:root[data-theme="dark"] .mark-light {
+  display: none;
+}
+
+:root[data-theme="dark"] .mark-dark {
+  display: inline;
+}
+
 .status {
   align-items: center;
   display: flex;
@@ -321,7 +352,6 @@
 }
 
 .gate .mark {
-  color: var(--c-accent);
   height: 2.5rem;
   width: 2.5rem;
 }
@@ -466,7 +496,6 @@
   }
 
   .brand .mark {
-    color: var(--c-accent);
     height: var(--icon-lg);
     width: var(--icon-lg);
   }
