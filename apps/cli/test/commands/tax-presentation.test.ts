@@ -66,7 +66,7 @@ describe("atlas tax over the golden ledger, 2027", () => {
       "3. Regla de recompra",
     );
     expect(section).toMatch(
-      /Dividendos:[\s\S]*2027-04-15\s+01N94FZW78EQA3J41K0795WXF9\s+ast_alpha\s+2 USD/,
+      /Dividendos y devoluciones de prima o aportaciones \(exceso\):[\s\S]*2027-04-15\s+01N94FZW78EQA3J41K0795WXF9\s+ast_alpha\s+2 USD/,
     );
     expect(section).toContain("Transmisiones (art. 25.2):");
     expect(section).toMatch(
