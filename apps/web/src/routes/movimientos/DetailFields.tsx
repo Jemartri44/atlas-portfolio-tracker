@@ -167,8 +167,7 @@ export const SaleResult = (props: { view: SaleResultView | undefined }): JSX.Ele
           antiguos.
           <Show when={view().rounded}>
             {" "}
-            Se redondea al céntimo una vez por operación, como se declara
-            {view().total === undefined ? ": puede diferir en un céntimo de la resta." : "."}
+            Se redondea al céntimo una vez por operación, como se declara.
           </Show>
         </p>
       </>

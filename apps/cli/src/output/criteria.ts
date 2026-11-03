@@ -33,7 +33,7 @@ export const CRITERION_LABELS: Record<CriterionId, string> = {
     "recompra de divisa: la pérdida se difiere si se vuelve a adquirir en el año siguiente",
   "4:auto_conversion": "conversión hecha por el bróker, a los euros que liquidó",
   "5": "tipo del BCE del último día publicado",
-  "6": "redondeo half-up una vez por operación",
+  "6": "redondeo half-up una vez por operación: transmisión redondeada menos adquisición redondeada",
   "7": "reparto del coste en una escisión y régimen de neutralidad",
   "8": "fork o airdrop a coste cero",
   "9": "pérdida por liquidación de la sociedad",

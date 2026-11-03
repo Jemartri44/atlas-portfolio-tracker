@@ -45,7 +45,7 @@ export const CRITERION_NAMES: Record<CriterionId, string> = {
     "La pérdida de divisa se difiere si se vuelve a adquirir esa divisa en el año siguiente",
   "4:auto_conversion": "Lo que convirtió el bróker se valora con los euros que liquidó",
   "5": "Se usa el tipo del Banco Central Europeo del último día publicado",
-  "6": "Cada operación se redondea al céntimo una sola vez, hacia arriba en el empate",
+  "6": "Cada operación es su transmisión menos su adquisición, las dos redondeadas al céntimo",
   "7": "Reparto del coste en una escisión y régimen de neutralidad",
   "8": "Una bifurcación o un reparto gratuito entran a coste cero",
   "9": "Pérdida por la liquidación de la sociedad",
