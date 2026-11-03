@@ -55,10 +55,23 @@ describe("the default window of a fund: two months, wherever it is domiciled", (
     expect(irish?.criteria).toContain("2:fund_unlisted_2m");
   });
 
-  it("still shows the figure of a year in the doubtful section, as an aggressive reading", () => {
+  it("computes the loss of the Spanish fund under its own criterion", () => {
+    const spanish = report.capital_gains.lines.find((entry) => entry.asset_id === "fund_es");
+    expect(text(spanish?.own_eur)).toBe("-400");
+    expect(spanish?.criteria).toContain("2:fund_admitted_2m");
+  });
+
+  it.each(["2:fund_unlisted_2m", "2:fund_admitted_2m"])(
+    "still shows the figure of a year in the doubtful section for %s",
+    (criterion) => {
+      const stake = report.doubtful.find((entry) => entry.criterion === criterion);
+      expect(text(stake?.pending_difference_eur)).toBe("400");
+      expect(text(stake?.deferred_difference_eur)).toBe("-400");
+    },
+  );
+
+  it("calls the unlisted fund an aggressive reading", () => {
     const stake = report.doubtful.find((entry) => entry.criterion === "2:fund_unlisted_2m");
-    expect(text(stake?.pending_difference_eur)).toBe("400");
-    expect(text(stake?.deferred_difference_eur)).toBe("-400");
     expect(stake?.direction).toBe("aggressive");
   });
 
