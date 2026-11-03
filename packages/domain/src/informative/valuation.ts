@@ -102,7 +102,10 @@ export const valueAt = (
     flags.push("rate_not_year_end");
   }
   return {
-    value_eur: Money.of(price.unit_value_eur.amount.mul(quantity.value), EUR).roundToCents(),
+    value_eur: Money.of(
+      price.unit_value.mul(quantity.value).div(price.fx_rate),
+      EUR,
+    ).roundToCents(),
     valuation_date: price.date,
     unit_value: price.unit_value.toString(),
     fx_rate: price.fx_rate.toString(),

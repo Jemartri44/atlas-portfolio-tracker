@@ -19,6 +19,8 @@ import {
 export type CredentialsProblem =
   | "credentials_inside_ledger"
   | "credentials_too_open"
+  | "credentials_not_yours"
+  | "credentials_folder_open"
   | "credentials_unreadable"
   | "sync_remote_unreadable";
 
@@ -95,14 +97,21 @@ export const updateCredentials = async (
 
 /** The credentials, or none when there is no file. A file open to others is not used. */
 export const readCredentials = async (path: string): Promise<CredentialsFile> => {
-  let stat: Awaited<ReturnType<typeof fs.stat>>;
+  let stat: Awaited<ReturnType<typeof fs.lstat>>;
   try {
-    stat = await fs.stat(path);
+    // `lstat`, not `stat`: a link is never followed to whatever it points at.
+    stat = await fs.lstat(path);
   } catch (error) {
     if ((error as { code?: string }).code === "ENOENT") {
       return EMPTY_CREDENTIALS;
     }
     throw new CredentialsError("credentials_unreadable", path);
+  }
+  if (!stat.isFile()) {
+    throw new CredentialsError("credentials_unreadable", path);
+  }
+  if (process.getuid !== undefined && stat.uid !== process.getuid()) {
+    throw new CredentialsError("credentials_not_yours", path);
   }
   if ((stat.mode & 0o777) !== 0o600) {
     throw new CredentialsError("credentials_too_open", path);

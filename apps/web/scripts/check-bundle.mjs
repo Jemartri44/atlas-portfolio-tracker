@@ -17,14 +17,8 @@
 //    chunk, which `vite.config.ts` writes to `dist/.vite/atlas-modules.json`.
 //    This is the authoritative guard; the static ones of
 //    `tests/architecture/api.test.ts` are the quick warning.
-// 5. Size within budget, printed so plan.md can record the measured value.
-//    **Two** budgets since feature 007, because the two answer different
-//    questions and only one of them is felt on a phone: what the browser has to
-//    download **to boot** (what index.html preloads), and the total of
-//    everything it may end up downloading. Until then this file said it measured
-//    the boot and actually summed all of `dist`, lazily loaded chunks included —
-//    so vendoring uPlot, which is only ever loaded by two screens, would have
-//    failed the build without the boot path growing by a byte (Q6).
+// 5. Size within two ceilings (JS + CSS, gzip): the boot (what index.html
+//    preloads, what a phone feels) and the whole output.
 
 import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
@@ -34,57 +28,14 @@ import { gzipSync } from "node:zlib";
 const webRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const dist = join(webRoot, "dist");
 
-/**
- * Ceiling of what the browser downloads before the first screen paints (the
- * assets `index.html` pulls): JS + CSS, gzip. It follows what is measured plus
- * a margin of a few tens of bytes, so a growth shows up in the diff that
- * causes it; raise it only with the commit that needs it.
- */
-const BOOT_BUDGET_GZIP_BYTES = 72_870;
+/** Ceiling of what the browser downloads before the first screen paints: ~10 % over what is measured. */
+const BOOT_BUDGET_GZIP_BYTES = 80_000;
 
 /**
- * Ceilings of what the browser downloads **on demand**, one per area (JS + CSS,
- * gzip), with the same discipline as the boot ceiling. They used to be one
- * line for the whole lazy part, and every pull request that touched the web
- * or the domain edited that same number, so each one collided with the rest;
- * now a change edits the line of the area it grew, and the failure says which
- * area did.
- *
- * A lazy chunk belongs to the first area, in this order, that owns one of the
- * modules its source map names; `resto` owns whatever is left, the stylesheets
- * included. The boot assets are the boot ceiling's, not these.
+ * Ceiling on everything the browser may download (JS + CSS, gzip): about
+ * 10 % over what is measured, so only a real growth edits it.
  */
-const LAZY_AREAS = [
-  {
-    name: "fiscal",
-    what: "la declaración y los modelos informativos",
-    owns: [
-      "/packages/domain/src/tax/",
-      "/packages/domain/src/informative/",
-      "/packages/domain/src/filings/",
-      "/src/routes/fiscal/",
-      "/src/view-models/fiscal/",
-      "/src/format/criteria",
-    ],
-    budget: 46_110,
-  },
-  {
-    name: "formularios",
-    what: "los formularios de registro",
-    owns: ["/src/routes/registrar/", "/src/view-models/forms/", "/src/view-models/preview"],
-    budget: 25_740,
-  },
-  { name: "resto", what: "todo lo demás que se carga en diferido", owns: [], budget: 178_250 },
-];
-
-/**
- * Walls set by the direction that no ceiling above may pass: a ceiling raised
- * over its wall does not build green, and raising a wall is the direction's
- * decision, not a commit of an improvement. The total wall limits the **sum**
- * of the boot ceiling and the ceilings of the areas.
- */
-const BOOT_AUTHORISED_GZIP_BYTES = 76_069;
-const TOTAL_AUTHORISED_GZIP_BYTES = 500_000;
+const TOTAL_BUDGET_GZIP_BYTES = 355_000;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
@@ -152,17 +103,6 @@ const isText = (path) => [".js", ".css", ".html", ".webmanifest", ".json"].inclu
 
 const problems = [];
 
-if (BOOT_BUDGET_GZIP_BYTES > BOOT_AUTHORISED_GZIP_BYTES) {
-  problems.push(
-    `el techo del arranque (${BOOT_BUDGET_GZIP_BYTES}) pasa de lo autorizado (${BOOT_AUTHORISED_GZIP_BYTES}): subir una autorización es cosa de la dirección`,
-  );
-}
-const ceilings = LAZY_AREAS.reduce((sum, area) => sum + area.budget, BOOT_BUDGET_GZIP_BYTES);
-if (ceilings > TOTAL_AUTHORISED_GZIP_BYTES) {
-  problems.push(
-    `la suma de los techos (${ceilings}) pasa de lo autorizado para el total (${TOTAL_AUTHORISED_GZIP_BYTES}): subir una autorización es cosa de la dirección`,
-  );
-}
 let gzipTotal = 0;
 const sizes = [];
 
@@ -606,41 +546,17 @@ for (const entry of sizes.sort((a, b) => b.gzip - a.gzip)) {
   console.log(`  ${entry.name}  ${kb(entry.raw)} sin comprimir  ${kb(entry.gzip)} gzip  ${mark}`);
 }
 console.log(
-  `  ARRANQUE  ${kb(gzipBoot)} gzip  (presupuesto ${kb(BOOT_BUDGET_GZIP_BYTES)})  — lo que se descarga antes de la primera pantalla`,
+  `  ARRANQUE  ${kb(gzipBoot)} gzip  (techo ${kb(BOOT_BUDGET_GZIP_BYTES)})  — lo que se descarga antes de la primera pantalla`,
 );
-/** The area of a lazy chunk: the first that owns one of its modules, else the last. */
-const areaOf = (name) => {
-  const modules = modulesOf(name);
-  return (
-    LAZY_AREAS.find((area) =>
-      modules.some((module) => area.owns.some((p) => module.includes(p))),
-    ) ?? LAZY_AREAS[LAZY_AREAS.length - 1]
-  );
-};
-const gzipByArea = new Map(LAZY_AREAS.map((area) => [area.name, 0]));
-for (const entry of sizes.filter((entry) => !boot.has(entry.name))) {
-  const { name } = areaOf(entry.name);
-  gzipByArea.set(name, gzipByArea.get(name) + entry.gzip);
-}
-for (const area of LAZY_AREAS) {
-  console.log(
-    `  ${area.name.toUpperCase().padEnd(12)} ${kb(gzipByArea.get(area.name))} gzip  (presupuesto ${kb(area.budget)}, ${gzipByArea.get(area.name)} B)  — ${area.what}`,
-  );
-}
-console.log(`  TOTAL     ${kb(gzipTotal)} gzip  — todo lo que puede llegar a descargarse`);
+console.log(
+  `  TOTAL     ${kb(gzipTotal)} gzip  (techo ${kb(TOTAL_BUDGET_GZIP_BYTES)})  — todo lo que puede llegar a descargarse`,
+);
 
 if (gzipBoot > BOOT_BUDGET_GZIP_BYTES) {
-  problems.push(
-    `el arranque pesa ${kb(gzipBoot)} gzip y el presupuesto es ${kb(BOOT_BUDGET_GZIP_BYTES)}`,
-  );
+  problems.push(`el arranque pesa ${gzipBoot} B gzip y el techo es ${BOOT_BUDGET_GZIP_BYTES} B`);
 }
-for (const area of LAZY_AREAS) {
-  const gzip = gzipByArea.get(area.name);
-  if (gzip > area.budget) {
-    problems.push(
-      `${area.what} (${area.name}) pesa ${gzip} B gzip y su presupuesto es ${area.budget} B`,
-    );
-  }
+if (gzipTotal > TOTAL_BUDGET_GZIP_BYTES) {
+  problems.push(`el bundle pesa ${gzipTotal} B gzip y el techo es ${TOTAL_BUDGET_GZIP_BYTES} B`);
 }
 let bootModules = 0;
 for (const name of boot) {

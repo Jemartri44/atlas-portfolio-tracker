@@ -380,11 +380,27 @@ export interface LedgerState {
   usage: { accounts: Set<AccountId>; assets: Set<AssetId> };
 }
 
+// The key of a position or a balance is `<account>|<other>`. Nothing restricts an id, so
+// the two parts are escaped (`%` and `|`) and the first `|` is always the separator: the
+// ids that have neither character, which is all of them in practice, produce the same keys.
+const escaped = (part: string): string => part.replaceAll("%", "%25").replaceAll("|", "%7C");
+const unescaped = (part: string): string => part.replaceAll("%7C", "|").replaceAll("%25", "%");
+const splitKey = (key: string): [string, string] => {
+  const at = key.indexOf("|");
+  return [unescaped(key.slice(0, at)), unescaped(key.slice(at + 1))];
+};
+
 export const positionKey = (accountId: AccountId, assetId: AssetId): string =>
-  `${accountId}|${assetId}`;
+  `${escaped(accountId)}|${escaped(assetId)}`;
 
 export const cashKey = (accountId: AccountId, currency: string): string =>
-  `${accountId}|${currency}`;
+  `${escaped(accountId)}|${escaped(currency)}`;
+
+export const splitPositionKey = (key: string): [AccountId, AssetId] =>
+  splitKey(key) as [AccountId, AssetId];
+
+export const splitCashKey = (key: string): [AccountId, string] =>
+  splitKey(key) as [AccountId, string];
 
 export const createEmptyState = (fiscalSettings: Settings): LedgerState => ({
   accounts: new Map(),

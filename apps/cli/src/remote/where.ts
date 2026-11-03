@@ -12,6 +12,7 @@ import {
 import type { Context } from "../context.js";
 import {
   assertApart,
+  CredentialsError,
   credentialsPath,
   folderOpenToOthers,
   readCredentials,
@@ -34,9 +35,7 @@ export const where = async (ctx: Context, env: RemoteEnvironment): Promise<Where
   const path = credentialsPath(env.env, env.home);
   await assertApart(path, folder);
   if (await folderOpenToOthers(path)) {
-    ctx.io.err(
-      `Aviso: la carpeta de credentials.json (${dirname(path)}) está abierta a otros usuarios. El fichero sigue siendo solo tuyo, pero ciérrala con chmod 700.`,
-    );
+    throw new CredentialsError("credentials_folder_open", dirname(path));
   }
   return {
     folder,
