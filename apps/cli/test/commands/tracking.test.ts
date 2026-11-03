@@ -159,7 +159,7 @@ describe("atlas transfer", () => {
       ]),
     ).toBe(0);
     h.reset();
-    expect(await h.exec(["transfers", "pending"])).toBe(0);
+    expect(await h.exec(["transfer", "pending"])).toBe(0);
     expect(h.text()).toMatch(/redeemed\s+3/);
     expect(
       await h.exec([

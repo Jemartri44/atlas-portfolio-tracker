@@ -329,6 +329,8 @@ describe("a cloud folder reads and writes the cloud's ledger", () => {
       expect(await c.exec([...BUY, "--draft", "--yes"])).toBe(EXIT.ok);
       const id = /borrador ([0-9A-Z]{26})/.exec(c.out.join("\n"))?.[1] as string;
       expect(c.api.s3.keys()).toContain(`drafts/${id}.json`);
+      // The folder has no `drafts/`: the message does not send the person to look for one.
+      expect(c.out.join("\n")).toContain("en los borradores de la nube");
       await history(c, true);
       c.out.length = 0;
       return { c, id };
@@ -536,21 +538,6 @@ describe("the initial upload", () => {
     );
     expect(said(c)).toContain("upload_needs_cloud_folder");
     expect(c.api.s3.text(LEDGER_KEY)).toBeUndefined();
-  });
-});
-
-describe("atlas sync is retired: no path syncs a local ledger with the cloud", () => {
-  it("says so, whatever follows, and writes nothing in the folder", async () => {
-    const c = await setupConsole();
-    await mkdir(join(c.ledger, "x"), { recursive: true });
-    const before = await folderTree(c.ledger);
-    for (const argv of [["sync"], ["sync", "init", "--origin", SELF], ["sync", "join"]]) {
-      c.err.length = 0;
-      expect(await c.exec(argv)).toBe(EXIT.usage);
-      expect(said(c)).toContain("se ha retirado");
-    }
-    expect(await folderTree(c.ledger)).toEqual(before);
-    expect(c.seen).toEqual([]);
   });
 });
 
