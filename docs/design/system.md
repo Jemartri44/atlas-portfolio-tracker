@@ -133,7 +133,6 @@ Rejilla de 4 px: `--space-0` 2 · `-1` 4 · `-2` 8 · `-3` 12 · `-4` 16 · `-5`
 
 `--tap` 44: objetivo táctil mínimo, y alto de botones, campos, desplegables y filas de menú. Iconos de 16, 20 y 24 px. Gráfica de 184 px de alto en el móvil y 240 en escritorio. Ancho máximo de lectura (`--reading-max`) de 40 rem para formularios y prosa. Movimiento: solo el giro del chevrón de un desplegable (120 ms), anulado con «reducir movimiento».
 
-
 ### 3.7 La marca
 
 El globo en su cuna: un globo cuyos gajos recuerdan el reparto de la cartera, sostenido por una cuna. Sin degradados ni sombras; todos sus colores son tokens de 3.1 (`palette.test.ts` solo lee `tokens.css`, no mira `public/`).
