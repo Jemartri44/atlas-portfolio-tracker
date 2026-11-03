@@ -15,6 +15,7 @@ comandos:
   filed <renta|720|721> <año> [--set <clave>=<importe>]… [--receipt …] [--filed-at …]
   export --format jsonl|csv [--out <ruta>]
   synth --out <ruta> [--seed <n>]   backup --to <directorio> [--from-bucket --env <entorno>]
+  rehearse --dump <fichero>   ensayo de restauración: el volcado frente al libro, en local
   compact [--yes] [--accept-unverified <id>]…   la renuncia a comprobar la huella de esa presentación queda registrada
   lock show|break                el cerrojo de la carpeta del libro: quién lo tiene, y romperlo a petición
   fx update|status               el histórico oficial del BCE junto al libro: descargarlo y ver cuál está en vigor
