@@ -2,13 +2,9 @@
 // whatever is missing.
 
 import { describe, expect, it } from "vitest";
-import {
-  emptyCostInputs,
-  emptyProjectionInputs,
-  missingSentence,
-  readCost,
-  readProjection,
-} from "../src/view-models/core/long-run.js";
+import { missingSentence } from "../src/view-models/core/long-run.js";
+import { emptyProjectionInputs, readProjection } from "../src/view-models/core/projection.js";
+import { emptyCostInputs, readCost } from "../src/view-models/core/total-cost.js";
 
 describe("readProjection", () => {
   it("reads a Spanish keyboard and names an unnamed scenario", () => {

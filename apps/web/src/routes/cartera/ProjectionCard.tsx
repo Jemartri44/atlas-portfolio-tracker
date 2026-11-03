@@ -16,7 +16,7 @@ import {
   projectionView,
   readProjection,
   type ScenarioView,
-} from "../../view-models/core/long-run.js";
+} from "../../view-models/core/projection.js";
 
 const goalText = (goal: ScenarioView["goal"]): string => {
   if (goal === "now") {

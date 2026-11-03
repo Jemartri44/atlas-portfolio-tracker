@@ -12,7 +12,7 @@ import {
   emptyCostInputs,
   readCost,
   totalCostView,
-} from "../../view-models/core/long-run.js";
+} from "../../view-models/core/total-cost.js";
 
 export const TotalCostCard = (props: { summary: CostSummary; settings: Settings }): JSX.Element => {
   const [inputs, setInputs] = createSignal<CostInputs>(emptyCostInputs());
