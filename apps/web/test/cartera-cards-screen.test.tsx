@@ -109,6 +109,9 @@ describe("the projection", () => {
     await settle(30);
     const card = text(host.querySelector(".projection-card"));
     expect(card).toContain("Dentro de 20 años");
+    // Year by year, in the table that goes with the chart.
+    expect(card).toContain("Ver los datos de la gráfica");
+    expect(card).toContain("31/12/2028");
     expect(card).not.toContain("Falta la rentabilidad de");
   });
 
@@ -132,12 +135,27 @@ describe("the projection", () => {
     for (const input of host.querySelectorAll("input[id^='pj-0-']")) {
       type(host, input.id, "5");
     }
+    type(host, "pj-goal", "300000");
     await settle(30);
     const card = text(host.querySelector(".projection-card"));
     expect(card).toContain("Dentro de 20 años");
     expect(card).toContain("Rentabilidad mezclada con tus pesos objetivo");
     expect(card).not.toMatch(/\d,\d{2}\s*€/);
+    // The goal is an amount too: masked in the result, where the sentence says when it is reached.
+    expect(card).not.toContain("300.000");
+    expect(card).toContain("Objetivo");
     setPrivacy(false);
+  });
+
+  it("shows the goal as an amount next to when it is reached, with the privacy mode off", async () => {
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => host.querySelector("#pj-years") !== null, "the card");
+    for (const input of host.querySelectorAll("input[id^='pj-0-']")) {
+      type(host, input.id, "5");
+    }
+    type(host, "pj-goal", "300000");
+    await settle(30);
+    expect(text(host.querySelector(".projection-card"))).toContain("300.000,00");
   });
 
   it("says a goal that is not above zero, and removes a scenario", async () => {

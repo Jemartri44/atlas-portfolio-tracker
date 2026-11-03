@@ -48,10 +48,11 @@ export interface MissingNote {
   from: readonly string[];
 }
 
-const numberOrNull = (value: { amount: { toString: () => string } } | undefined): number | null =>
-  value === undefined ? null : Number.parseFloat(value.amount.toString());
+export const numberOrNull = (
+  value: { amount: { toString: () => string } } | undefined,
+): number | null => (value === undefined ? null : Number.parseFloat(value.amount.toString()));
 
-const stringOrUndefined = (
+export const stringOrUndefined = (
   value: { amount: { toString: () => string } } | undefined,
 ): string | undefined => (value === undefined ? undefined : value.amount.toString());
 

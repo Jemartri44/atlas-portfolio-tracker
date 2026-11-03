@@ -2,6 +2,7 @@
 
 export {
   addDays,
+  addYears,
   assertCivilDate,
   type CivilDate,
   compareCivilDates,
