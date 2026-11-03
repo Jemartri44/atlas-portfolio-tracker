@@ -15,7 +15,7 @@ import { yearOf } from "@atlas/domain";
 import { informativeReturn, taxBoxes, taxYear } from "@atlas/domain/fiscal";
 import { A } from "@solidjs/router";
 import { createMemo, createResource, For, type JSX, Show } from "solid-js";
-import { Disclosure, EmptyState, Notice, Section } from "../../components/index.js";
+import { EmptyState, Notice, Section } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
 import { toAppError } from "../../ledger/errors.js";
 import { attempt } from "../../ledger/query.js";
@@ -245,19 +245,11 @@ export default function FiscalRoute(): JSX.Element {
                   names={names}
                   privacy={privacy()}
                 />
-                <Show when={wide()}>
+                {/* A phone puts the deadlines first, then the informative models, then the
+                    return of the year, all in sight; a computer keeps the return first. */}
+                <Show when={wide()} fallback={[models(), renta()]}>
                   {renta()}
                   {models()}
-                </Show>
-                <Show when={!wide()}>
-                  {/* A phone: the state of the models and the deadlines first; the return of the
-                      year, folded, is prepared at the computer beside the form of the AEAT. */}
-                  {models()}
-                  <div class="span-12">
-                    <Disclosure label="La Renta del ejercicio · mejor en el ordenador">
-                      <div class="grid">{renta()}</div>
-                    </Disclosure>
-                  </div>
                 </Show>
               </div>
             </Show>
