@@ -98,7 +98,7 @@ npm ci && npm run build
 echo "salida $?"
 ```
 
-**Cuenta como «sí»:** la última línea es `salida 0`. Es el mismo paso 3 de [la prueba de la 013](013-daily-close-prices-live-test.md).
+**Cuenta como «sí»:** la última línea es `salida 0`.
 
 ### El libro de prueba
 
@@ -166,9 +166,9 @@ rm -rf ~/atlas-prueba-claves
 
 Solo la carpeta de prueba. La clave se queda en `~/.config/atlas/secrets.json`.
 
-## 4. El paso siguiente: la prueba real de la 013
+## 4. El paso siguiente
 
-Con la clave en su sitio, sigue [`013-daily-close-prices-live-test.md`](013-daily-close-prices-live-test.md) **desde su paso 3** (sus pasos 1 y 2 son esta guía). Son dos partes en dos días distintos, porque las dos gastan el cupo de EODHD, y la feature de precios solo se da por verificada con ella.
+Con la clave en su sitio, lo que falta por comprobar con ella (qué cubre el plan gratuito: ETP de bitcoin, índices, `EUFUND`) está en [`first-deploy-checks.md`](../first-deploy-checks.md), «Precios de EODHD con tu clave». Gasta el mismo cupo diario que la tarea de la nube, así que se hace un día en que ella no corra.
 
 ## Más adelante (nube)
 

@@ -36,7 +36,7 @@ atlas export --format csv --out ledger.csv
 
 ## El ciclo mensual (Fase 2)
 
-Los precios se registran a mano como `valuation`, y desde la feature 013 la consola puede además descargar cierres diarios de EODHD (más abajo, «Precios de cierre diarios»). Para enseñar un valor gana el dato más reciente que tenga valor en euros, y la aplicación siempre muestra de cuándo es y de dónde viene. Ninguna cifra de la Renta los mira; la única ruta fiscal que lee un precio es la valoración a 31/12 de los Modelos 720 y 721, y solo la registrada a mano. El ciclo sigue sobre el libro del ejemplo anterior.
+Los precios se registran a mano como `valuation`, y la consola puede además descargar cierres diarios de EODHD a una carpeta local (más abajo, «Precios de cierre diarios»). Para enseñar un valor gana el dato más reciente que tenga valor en euros, y la aplicación siempre muestra de cuándo es y de dónde viene. Ninguna cifra de la Renta los mira; la única ruta fiscal que lee un precio es la valoración a 31/12 de los Modelos 720 y 721, y solo la registrada a mano. El ciclo sigue sobre el libro del ejemplo anterior.
 
 ```bash
 # 0. Una vez: el resto del núcleo, los pesos objetivo por activo (suman 100) y qué parte de la aportación va al cubo
@@ -60,9 +60,9 @@ atlas add buy --account acc_fund --asset ast_bonds --order <order_id> \
 
 El reparto de la aportación, el rebalanceo y el simulador de traspasos viven en la web (Cartera): proponen y nunca escriben, porque la aplicación no ejecuta órdenes ni elige valores del cubo.
 
-## Precios de cierre diarios (feature 013)
+## Precios de cierre diarios
 
-La consola descarga los cierres diarios de los activos **de su libro** desde EODHD, una API gratuita con clave, y los guarda junto al libro en `prices/`, nunca en el libro. Son **informativos**: ninguna cifra de la Renta ni del Modelo 720 los lee. Sin claves, todo funciona igual con las valoraciones manuales. La web no los descarga de la fuente: los lee de la nube (`/api/reference/prices`) con su sesión, en memoria, sin guardar nada en el dispositivo; la tarea diaria de la nube es quien los descarga. Junto a los precios se sirve `prices/symbols.json`: sin él, la web no puede comprobar la divisa de los cierres, y lo avisa.
+Son **informativos**: ninguna cifra de la Renta ni del Modelo 720 los lee, y sin claves todo funciona igual con las valoraciones manuales. En la nube los descarga cada día la tarea de precios y la web los lee de ahí con su sesión, en memoria (`/api/reference/prices`, [`api.md`](api.md) §6). La consola descarga **de su libro** a `prices/` junto al fichero, para trabajar en local; no los sube ni los baja de la nube. Junto a los cierres se sirve `prices/symbols.json`: sin él, la web no puede comprobar la divisa de los cierres, y lo avisa. Cómo sacar la clave de EODHD y guardarla: [`runbooks/price-api-keys.md`](runbooks/price-api-keys.md).
 
 ```bash
 # Las claves van fuera de la carpeta del libro, solo legibles por ti; la aplicación nunca las escribe
@@ -75,7 +75,7 @@ atlas prices status      # cada fuente con su cupo de hoy y sus fallos, y la ant
 atlas prices purge ast_tsco   # borra los cierres guardados en una divisa que no es la que ahora declara; la próxima descarga vuelve a pedir esos días una vez, y los que la fuente no sirva quedan como hueco (lo dice «prices status»)
 ```
 
-En la nube, los cierres los descarga cada día la tarea de precios con la correspondencia de `prices/symbols.json` **del bucket**, que solo sube `atlas admin prices push --env <entorno>` (con el rol de administración; procedimiento en [`docs/runbooks/cloud-symbols-and-budgets.md`](runbooks/cloud-symbols-and-budgets.md)).
+La tarea de la nube usa la correspondencia de `prices/symbols.json` **del bucket**, que solo sube `atlas admin prices push --env <entorno>` (con el rol de administración; procedimiento en [`docs/runbooks/cloud-symbols-and-budgets.md`](runbooks/cloud-symbols-and-budgets.md)).
 
 Para enseñar un valor gana el precio más reciente **que tenga valor en euros**, y con la misma fecha el manual. Si hay una cotización más nueva sin valor en euros, se enseña a su lado.
 
@@ -145,9 +145,9 @@ Cuatro grupos de comandos que el ciclo normal no necesita a diario. La lista com
   - `restore --from <copia>` vuelve a una copia buena; **con la nube vacía es la subida inicial**, que escribe el libro tal cual.
   - `compact` compacta el libro de la nube; `prices push` sube `prices/symbols.json` ([`runbooks/cloud-symbols-and-budgets.md`](runbooks/cloud-symbols-and-budgets.md)); `secrets` crea y rota los secretos ([`runbooks/atlas-admin-secrets.md`](runbooks/atlas-admin-secrets.md)).
 
-## Copia de seguridad provisional (Fases 1-3)
+## Copias de seguridad
 
-Mientras el libro real viva en un fichero local, haz una copia verificada tras cada sesión de registro y **siempre fuera del repositorio** (el repo es público):
+La nube tiene su propia copia mensual (ADR-0032) y el botón «Descargar copia» de la web. Con la consola, haz una copia verificada tras cada sesión de registro sobre un libro local, y **siempre fuera del repositorio** (el repo es público):
 
 ```bash
 atlas backup --to ~/personal/atlas/privado/backups

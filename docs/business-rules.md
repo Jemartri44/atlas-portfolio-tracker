@@ -15,6 +15,8 @@ Reglas de dominio que la aplicación implementa. La especificación técnica (`s
 | `core` | **Cartera principal / núcleo** | Cuatro clases de activo: renta variable, renta fija, oro y cripto | MyInvestor (fondos), IBKR (ETC/ETP) | Desviación frente a pesos objetivo |
 | `bucket` | **Cubo especulativo** | Acciones al contado, operativa de días a semanas. Pequeña parte para especular, trastear y aprender | IBKR (cuenta separada) | Rendimiento frente al índice |
 
+Uso previsto: ver `specification.md` §3. Para el bitcoin, un ETP tributa por defecto como rendimiento del capital mobiliario (criterio #24 de `fiscal-questions.md`) y la tenencia directa va por permutas y Modelo 721; Atlas cubre las dos vías.
+
 ### Clases de activo del núcleo (`asset_class`)
 
 | Clase | Nombre | Vehículo habitual | Traspasable |
@@ -227,7 +229,7 @@ Los fondos de inversión españoles y los UCITS comercializados en España admit
 
 **Modelarlo como venta seguida de compra rompe la fiscalidad de forma silenciosa durante años.** Es el error más caro posible en este sistema.
 
-Los ETFs, ETCs y ETPs (oro, cripto y todo el cubo) **no** admiten traspaso: cada venta es hecho imponible (art. 94.1.a LIRPF: el diferimiento es solo para fondos de inversión). El motor lo hace cumplir: un `transfer` o `transfer_requested` entre activos distintos solo se **escribe** (registro, corrección o unidad que recibe el servidor) si ambos son `fund` o `money_market` y están marcados `transferable` (en otro caso se rechaza con `not_transferable`). Al **reproducir** un libro que ya lo contenía no se bloquea la carga: sale el aviso `transfer_not_between_funds` en la atención, con el texto de registrarlo como venta y compra. Un catálogo con `transferable: true` en otro tipo de activo también carga, con el aviso `transferable_not_fund`.
+Los ETFs, ETCs y ETPs (oro, cripto y las acciones del cubo) **no** admiten traspaso: cada venta es hecho imponible (art. 94.1.a LIRPF: el diferimiento es solo para fondos de inversión). El motor lo hace cumplir: un `transfer` o `transfer_requested` entre activos distintos solo se **escribe** (registro, corrección o unidad que recibe el servidor) si ambos son `fund` o `money_market` y están marcados `transferable` (en otro caso se rechaza con `not_transferable`). Al **reproducir** un libro que ya lo contenía no se bloquea la carga: sale el aviso `transfer_not_between_funds` en la atención, con el texto de registrarlo como venta y compra. Un catálogo con `transferable: true` en otro tipo de activo también carga, con el aviso `transferable_not_fund`.
 
 `transferable` lo marca el usuario y el motor no puede comprobarlo: un fondo extranjero solo admite traspaso si es una IIC armonizada de la UE inscrita en la CNMV y comprada a través de una comercializadora inscrita (art. 94.2.a), y una SICAV si tiene más de 500 accionistas y no se tiene más del 5 % (art. 94.1.a.2.º). `atlas asset add` y `asset update` lo recuerdan al marcar traspasable un fondo: entero si no consta como español (ISIN o país emisor `ES`), y solo la condición de la SICAV si consta, porque el catálogo no distingue una SICAV de un fondo.
 
