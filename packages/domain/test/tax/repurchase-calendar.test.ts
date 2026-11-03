@@ -239,13 +239,12 @@ describe("planRepurchaseWarnings", () => {
     // fund_f would defer it; fund_g has no sale and nothing goes to fund_h.
     const events = lossOn("2026-09-15").build();
     const warnings = planRepurchaseWarnings(
-      events,
+      repurchaseCalendar(events, "2026-10-01"),
       plan([
         ["fund_f", "300"],
         ["fund_g", "300"],
         ["fund_h", "0"],
       ]),
-      "2026-10-01",
     );
     expect(
       warnings.map((entry) => [
@@ -259,7 +258,9 @@ describe("planRepurchaseWarnings", () => {
 
   it("says nothing once the window is closed, or when the plan does not buy the asset", () => {
     const events = lossOn("2026-09-15").build();
-    expect(planRepurchaseWarnings(events, plan([["fund_f", "300"]]), "2026-11-16")).toEqual([]);
-    expect(planRepurchaseWarnings(events, plan([["fund_f", "0"]]), "2026-10-01")).toEqual([]);
+    const open = repurchaseCalendar(events, "2026-10-01");
+    const closed = repurchaseCalendar(events, "2026-11-16");
+    expect(planRepurchaseWarnings(closed, plan([["fund_f", "300"]]))).toEqual([]);
+    expect(planRepurchaseWarnings(open, plan([["fund_f", "0"]]))).toEqual([]);
   });
 });

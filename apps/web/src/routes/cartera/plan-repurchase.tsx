@@ -5,7 +5,7 @@
 
 import type { LedgerEvent } from "@atlas/domain";
 import type { PlanRepurchaseWarning } from "@atlas/domain/fiscal";
-import { createResource, For, type JSX } from "solid-js";
+import { createMemo, createResource, For, type JSX } from "solid-js";
 import { Amount, Notice } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import type { ContributionView } from "../../view-models/core/index.js";
@@ -19,29 +19,33 @@ interface Source {
   date: string;
 }
 
-/** The warnings of each asset of the plan; none while they load or if they cannot be read. */
+/**
+ * The warnings of each asset of the plan; none while they load or if they
+ * cannot be read. The calendar runs the tax engine, so it is read once per
+ * ledger and date: a new amount only filters it again.
+ */
 export const usePlanRepurchase = (source: () => Source): Repurchase => {
-  const [warnings] = createResource(
-    () => {
-      const { events, view, date } = source();
-      return view === undefined ? false : { events, view, date };
-    },
-    async ({ events, view, date }) => {
-      const { planRepurchaseWarnings } = await import("@atlas/domain/fiscal");
-      const rows = view.rows.map((row) => ({
-        asset_id: row.assetId,
-        allocation_eur: row.allocation,
-      }));
-      return planRepurchaseWarnings(events, { rows }, date);
+  const [calendar] = createResource(
+    () => ({ events: source().events, date: source().date }),
+    async ({ events, date }) => {
+      const fiscal = await import("@atlas/domain/fiscal");
+      return { fiscal, calendar: fiscal.repurchaseCalendar(events, date) };
     },
   );
-  return (assetId) => {
+  const warnings = createMemo((): PlanRepurchaseWarning[] => {
+    const view = source().view;
     // A ledger the tax engine refuses must not take the plan down with it.
-    if (warnings.error !== undefined) {
+    const read = calendar.error === undefined ? calendar() : undefined;
+    if (view === undefined || read === undefined) {
       return [];
     }
-    return (warnings() ?? []).filter((entry) => entry.asset_id === assetId);
-  };
+    const rows = view.rows.map((row) => ({
+      asset_id: row.assetId,
+      allocation_eur: row.allocation,
+    }));
+    return read.fiscal.planRepurchaseWarnings(read.calendar, { rows });
+  });
+  return (assetId) => warnings().filter((entry) => entry.asset_id === assetId);
 };
 
 /** The line beside a purchase of the plan: what it would defer, never an order. */

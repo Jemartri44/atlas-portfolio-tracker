@@ -10,8 +10,8 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
 import type { Money } from "../money/money.js";
-import type { AssetId, LedgerEvent } from "../schema/events.js";
-import { repurchaseCalendar } from "./repurchase-calendar.js";
+import type { AssetId } from "../schema/events.js";
+import type { RepurchaseCalendar } from "./repurchase-calendar.js";
 
 export interface PlanRepurchaseWarning {
   asset_id: AssetId;
@@ -27,24 +27,22 @@ export interface PlanRepurchaseWarning {
 }
 
 /**
- * The warnings of a plan on `today`: one per purchase of the plan and
- * loss-making sale of the same asset whose window is still open. A plan with
- * nothing to buy, or a ledger with no such sale, has none.
+ * The warnings of a plan: one per purchase of the plan and loss-making sale of
+ * the same asset whose window is still open on the day of the calendar
+ * (`repurchaseCalendar(events, today)`). The calendar is the costly part and
+ * does not depend on the plan, so the caller computes it once and a new amount
+ * only filters again. A plan with nothing to buy, or no open window, has none.
  */
 export const planRepurchaseWarnings = (
-  events: readonly LedgerEvent[],
+  calendar: RepurchaseCalendar,
   // The rows of a `ContributionPlan`, typed here so that no price reaches the tax engine.
   plan: { rows: readonly { asset_id: AssetId; allocation_eur: Money }[] },
-  today: CivilDate,
 ): PlanRepurchaseWarning[] => {
   const buying = new Set(
     plan.rows.filter((row) => row.allocation_eur.amount.isPositive()).map((row) => row.asset_id),
   );
-  if (buying.size === 0) {
-    return [];
-  }
-  return repurchaseCalendar(events, today)
-    .blocks.filter((block) => buying.has(block.asset_id))
+  return calendar.blocks
+    .filter((block) => buying.has(block.asset_id))
     .flatMap((block) =>
       block.sales.map((sale) => ({
         asset_id: block.asset_id,
