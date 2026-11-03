@@ -20,6 +20,7 @@ import { createSignal, type JSX, Show } from "solid-js";
 import { MASK } from "../format/privacy.js";
 import { privacy } from "../shell/preferences.js";
 import { Icon } from "./Icon.jsx";
+import { keypadComma, noDot } from "./number-keys.js";
 
 export interface Option {
   value: string;
@@ -83,38 +84,6 @@ interface TextFieldProps extends BaseProps {
    */
   unit?: string | undefined;
 }
-
-/**
- * The dot is never part of a number typed here (`format/input.ts`). It is stopped at `beforeinput`,
- * which phone keyboards do report (their `keydown` is often an anonymous 229); the dot of the
- * numeric keypad writes the comma in a decimal field and nothing in an integer one. A pasted dot is
- * not touched: the parser refuses the whole text, because dropping the dot would turn `0.500`
- * into `500`.
- */
-const noDot = (event: InputEvent): void => {
-  if (event.inputType === "insertText" && (event.data ?? "").includes(".")) {
-    event.preventDefault();
-  }
-};
-
-const keypadComma =
-  (kind: "decimal" | "integer") =>
-  (event: KeyboardEvent & { currentTarget: HTMLInputElement }): void => {
-    if (event.code !== "NumpadDecimal" || event.ctrlKey || event.metaKey || event.altKey) {
-      return;
-    }
-    event.preventDefault();
-    if (kind === "decimal") {
-      const input = event.currentTarget;
-      input.setRangeText(
-        ",",
-        input.selectionStart ?? input.value.length,
-        input.selectionEnd ?? input.value.length,
-        "end",
-      );
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-  };
 
 export const Field = (props: TextFieldProps): JSX.Element => {
   const [focused, setFocused] = createSignal(false);

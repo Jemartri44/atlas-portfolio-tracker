@@ -83,12 +83,8 @@ export default function ConfiguracionRoute(): JSX.Element {
           resolution().origin === "default"
             ? "la de partida, porque todavía no has registrado ningún cambio"
             : `la del ${inSentence(eventReferences(snapshot.events)(resolution().origin))}`;
-        const values = (): Record<string, string> =>
-          weightValues(
-            current(),
-            coreAssets().map((asset) => asset.asset_id),
-            weights(),
-          );
+        const ids = (): string[] => coreAssets().map((asset) => asset.asset_id);
+        const values = (): Record<string, string> => weightValues(current(), ids(), weights());
 
         const draft = (): SettingsDraft => ({
           current: current(),
@@ -105,18 +101,12 @@ export default function ConfiguracionRoute(): JSX.Element {
           setWeights(undefined);
         };
 
-        // The whole of a save, not only the write: the checks before it wait on the network, and
-        // a second press in that time would write against an etag the first one is about to move.
+        // The whole save, not only the write: its checks await the network.
         const [busy, setBusy] = createSignal(false);
         const save = async (acceptInvalid = false): Promise<void> => {
-          if (busy()) {
-            return;
-          }
-          setBusy(true);
-          try {
-            await saveOnce(acceptInvalid);
-          } finally {
-            setBusy(false);
+          if (!busy()) {
+            setBusy(true);
+            await saveOnce(acceptInvalid).finally(() => setBusy(false));
           }
         };
 
@@ -127,8 +117,7 @@ export default function ConfiguracionRoute(): JSX.Element {
           try {
             next = candidateSettings(current(), patch(), weights());
           } catch (failure) {
-            // `toAppError` and not `failure.message`: the domain speaks English
-            // by contract and each interface translates.
+            // `toAppError`: the domain speaks English by contract; each interface translates.
             setError(toAppError(failure));
             return;
           }
