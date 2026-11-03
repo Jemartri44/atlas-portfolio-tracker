@@ -72,7 +72,7 @@ La venta de 1.000 € de A consume FIFO el lote más antiguo (compra 02/2022, co
 Es lo que se enseña antes de decidir, y se calcula con el **motor fiscal tal como esté** (la investigación fiscal en curso puede cambiar criterios; esto no los toca ni los duplica):
 
 - Se proyecta una **copia del libro en memoria** con la venta hipotética añadida al final y se compara el ejercicio con y sin ella. Así salen solos el FIFO entre cuentas, las compensaciones, la regla de recompra y el diferimiento. Nada se escribe: la copia se descarta.
-- El motor da la **base del ahorro**, no la cuota. Los tramos (`savings_tax_brackets`, ya en `Settings` y hoy solo validados y mostrados) se aplican a esa base en las dos versiones y el impuesto de la venta es la **diferencia**: marginal, porque los tramos son progresivos.
+- El motor da la **base del ahorro**, no la cuota. Los tramos (`savings_tax_brackets`, ya en `Settings` y hoy solo validados y mostrados) se aplican a esa base en las dos versiones y el impuesto de la venta es la **diferencia**: marginal, porque los tramos son progresivos. *(Sustituido el 2026-11-03: el impuesto es la diferencia de la cuota estimada con la escala de la ley del año, `savingsQuota`; ver `docs/business-rules.md` §5.1.)*
 - Se valora al precio informativo vigente. Es una estimación que se rotula como tal («estimación; no es la liquidación»), nunca se guarda ni alimenta ninguna salida fiscal: la regla de que ningún cálculo fiscal depende de precios sigue intacta, porque el libro real no se toca.
 - El importe se redondea una sola vez, al mostrarlo.
 
@@ -105,7 +105,7 @@ El reparto del mes es la prioridad 4 de la constitución, así que el dominio ma
 
 - Invariantes del reparto: suma exacta al importe del núcleo, nada negativo, déficits iguales entre los activos financiados, un activo por encima no recibe, el dinero suficiente lleva a todos al objetivo, el residuo de céntimos no cambia el orden.
 - Casos límite: dos activos con el mismo déficit, un solo activo con déficit, aportación mínima de un céntimo, objetivo cero, activo sin posición, activo en dos cuentas.
-- Rebalanceo: el disparador, el orden traspasos → ventas, el límite por lo que las compras absorben, conservación del dinero entre venta y compra, el cubo ausente, la venta con pérdida con y sin recompra en ventana, comisión desconocida, el impuesto marginal contra los tramos (también con ganancias ya realizadas ese año), y que la copia en memoria no modifica el libro.
+- Rebalanceo: el disparador, el orden traspasos → ventas, el límite por lo que las compras absorben, conservación del dinero entre venta y compra, el cubo ausente, la venta con pérdida con y sin recompra en ventana, comisión desconocida, el impuesto marginal contra la escala del año (desde el 2026-11-03) (también con ganancias ya realizadas ese año), y que la copia en memoria no modifica el libro.
 - Contrato: la web y la consola enseñan las mismas cifras que el dominio y no recalculan nada.
 
 ## Lo que cambió al construir

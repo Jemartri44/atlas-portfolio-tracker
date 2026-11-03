@@ -69,6 +69,8 @@ describe("estimateSale", () => {
     // above give one rate and round the total once: 63.33.
     const result = estimateSale(fund().build(), [], DATE, sale("6.66666667", "150"), undefined);
     expect(result.quota_after.scale_origin).toBe("law");
+    expect(result.quota_before.quota_eur?.centsText()).toBe("0.00");
+    expect(result.quota_after.quota_eur?.centsText()).toBe("63.34");
     expect(eur(result.tax_eur)).toBe("63.34");
     expect(result.repurchase_until).toBeUndefined();
   });
@@ -96,6 +98,48 @@ describe("estimateSale", () => {
     expect(result.deferral_window_end).toBe("2028-02-29");
     // The 5 units bought on 01/12 defer the whole loss: buying more defers nothing more.
     expect(result.repurchase_until).toBeUndefined();
+  });
+
+  it("keeps a repurchase date while part of the loss is not deferred", () => {
+    // 2 units bought on 01/12/2027, inside the window before the sale: 2 of the
+    // 5 sold are deferred (−40 of −100), the other −60 can still be.
+    const b = fund();
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "2",
+      unit_price: "100",
+      value_date: "2027-12-01",
+    });
+    const result = estimateSale(b.build(), [], DATE, sale("5", "80"), BRACKETS);
+    expect(eur(result.deferred_eur)).toBe("40");
+    expect(result.repurchase_until).toBe("2028-02-29");
+  });
+
+  it("keeps a repurchase date for a sale with a gain that releases a loss", () => {
+    // 10 at 100 sold at 80 on 01/10/2027 (−200), bought back at 80 on 15/10:
+    // the 200 ride on the new lot. Selling it at 110 on 31/12 gains +300 and
+    // releases the −200 (#21), which a purchase until 29/02/2028 defers again.
+    const b = new LedgerBuilder();
+    b.account("acc_fund");
+    b.asset("ast_world");
+    b.buy({ account_id: "acc_fund", asset_id: "ast_world", value_date: "2027-01-11" });
+    b.sell({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "10",
+      unit_price: "80",
+      value_date: "2027-10-01",
+    });
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      unit_price: "80",
+      value_date: "2027-10-15",
+    });
+    const result = estimateSale(b.build(), [], DATE, sale("10", "110"), BRACKETS);
+    expect(eur(result.gain_eur)).toBe("300");
+    expect(result.repurchase_until).toBe("2028-02-29");
   });
 
   it("counts the sales already planned as done when it prices the next one", () => {

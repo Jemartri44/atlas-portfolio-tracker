@@ -18,7 +18,7 @@ import type { CivilDate } from "../dates/civil-date.js";
 import { yearOf } from "../dates/civil-date.js";
 import { systemUlid } from "../ids/ulid.js";
 import type { Decimal } from "../money/decimal.js";
-import type { Money } from "../money/money.js";
+import { Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
 import { CURRENT_SCHEMA_VERSION } from "../schema/envelope.js";
 import type { AccountId, AssetId, LedgerEvent, SellEvent } from "../schema/events.js";
@@ -123,8 +123,11 @@ export const estimateSale = (
   const added = report.base_eur.sub(without.base_eur);
   const quotaBefore = savingsQuota(without, brackets);
   const quotaAfter = savingsQuota(report, brackets);
-  // What the rule would still defer with a repurchase: the own loss minus what is deferred already.
-  const open = own.own_eur.isNegative() && own.deferred_eur.cmp(own.own_eur) > 0;
+  // What the rule would still defer with a repurchase: what it looks at —the
+  // own loss, never a gain, plus the losses the sale releases (#21)— minus what
+  // is deferred already.
+  const ownLoss = own.own_eur.isNegative() ? own.own_eur : Money.zero("EUR");
+  const open = ownLoss.add(own.released_eur).sub(own.deferred_eur).isNegative();
   return {
     gain_eur: own.own_eur,
     cost_eur: own.cost_eur,
