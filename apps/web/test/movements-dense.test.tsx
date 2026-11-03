@@ -119,8 +119,10 @@ describe("the recent movements of the summary", () => {
     today("2029-01-20");
     const host = await show("/", Resumen);
     await until(() => host.querySelector(".summary-moves") !== null, "los últimos movimientos");
-    const items = [...(host.querySelector(".summary-moves .rows")?.children ?? [])];
+    // Five entries, under the heading of their day.
+    const items = [...host.querySelectorAll(".summary-moves .day > .rows > li")];
     expect(items).toHaveLength(5);
+    expect(text(host.querySelector(".summary-moves .day-title"))).toBe("31 de diciembre de 2028");
     const first = text(items[0]);
     expect(first).toMatch(/^\s*\d+ valoraciones · 31\/12\/2028/);
     // A date read earlier cuts what is later: the gathered day is not there.

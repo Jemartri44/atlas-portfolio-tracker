@@ -171,20 +171,23 @@ export const FormFields = (props: FormFieldsProps): JSX.Element => {
       return (
         <>
           <Show when={chips().length > 1}>
-            <div class="picks full" role="group" aria-label={`${field.label}: los más a mano`}>
-              <For each={chips()}>
-                {(option) => (
+            <fieldset class="picks full">
+              <legend class="sr-only">{`${field.label}: los más a mano`}</legend>
+              {/* Keyed by value, not by option: the options are new objects on every change, and a
+                  button made again would drop the focus of the keyboard. */}
+              <For each={chips().map((option) => option.value)}>
+                {(id) => (
                   <button
                     type="button"
                     class="pick secondary"
-                    aria-pressed={value() === option.value}
-                    onClick={() => set(field.name, option.value)}
+                    aria-pressed={value() === id}
+                    onClick={() => set(field.name, id)}
                   >
-                    {option.label}
+                    {chips().find((option) => option.value === id)?.label}
                   </button>
                 )}
               </For>
-            </div>
+            </fieldset>
           </Show>
           <SelectField
             {...common}
