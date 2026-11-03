@@ -25,6 +25,8 @@ export {
   type ClassReturnGap,
   type ClassReturns,
   classReturns,
+  type UnsupportedEvent,
+  type UnsupportedReason,
 } from "./charts/class-return.js";
 export {
   type ContributedPoint,
