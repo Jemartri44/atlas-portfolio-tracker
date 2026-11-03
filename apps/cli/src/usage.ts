@@ -7,16 +7,12 @@ comandos:
   add buy|sell|swap|transfer|dividend|interest|fx|cash-in|cash-out|fee|valuation
   order place|cancel|note|list [--all] [--date]     transfer request|update|pending [--date]
   ca split|reverse-split|merger|spin-off|fund-merger|share-class-change|fund-liquidation|capital-return|delisting|raw
-  thesis open|close <id>|show <id>|list [--closed] [--date]   add buy|sell … --thesis <id>
+  thesis open|close <id>|show <id> [--date]   add buy|sell … --thesis <id>
   edit <id> --reason …           delete <id> --reason …
   positions [--date]  lots [activo]  cash  gains <año>  income <año>  valuations [--date]  check [--deep]
   tax <año> [--lots] [--boxes]   base del ahorro: total fiscal de núcleo y cubo, no la cuota
   m720 <año>   m721 <año>        bienes en el extranjero a 31/12 y si hay que presentar
   filed <renta|720|721> <año> [--set <clave>=<importe>]… [--receipt …] [--filed-at …]
-  weights [--date]   contribute [--amount <eur>] [--date]   costs [--date]
-  rebalance [--amount <eur>] [--date]   propone traspasos y, si hace falta, ventas con su impuesto aproximado; no escribe
-  networth [--date]   bucket [--date]
-  transfer simulate --from-asset <id> --to-asset <id> (--quantity <n> | --all) [--date]
   export --format jsonl|csv [--out <ruta>]
   synth --out <ruta> [--seed <n>]   backup --to <directorio> [--from-bucket --env <entorno>]
   compact [--yes] [--accept-unverified <id>]…   la renuncia a comprobar la huella de esa presentación queda registrada

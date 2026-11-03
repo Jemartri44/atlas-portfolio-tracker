@@ -1,8 +1,8 @@
 # Uso de la CLI
 
-Guía de la consola `atlas`. Para arrancar el proyecto en local, véase el [`README`](../README.md); el contrato con la API en la nube está en [`api.md`](api.md).
+Guía de la consola `atlas`: la herramienta de mantenimiento (alta y corrección de datos, `check`, copias, exportación, nube y administración). La aplicación principal es la web; las vistas de cartera, cubo y patrimonio ya no están en la consola. Para arrancar el proyecto en local, véase el [`README`](../README.md); el contrato con la API en la nube está en [`api.md`](api.md).
 
-Tras `npm run build`, el ejecutable es `node apps/cli/dist/main.js` (o `npm run atlas --`). Todos los comandos aceptan `--ledger <ruta>` (por defecto `./ledger.jsonl`), `--yes` (omite la confirmación), `--confirm-duplicate` y `--json`. En `add` (también con `--draft`), `edit`, `delete`, `ca`, `settings set`, `fx correct`, `draft confirm` y `draft discard` (y los comandos que registran con la misma confirmación), `--json` deja en stdout un único objeto (`{"status": "recorded"|"cancelled"|"discarded"|"draft_saved"|"already_recorded"|"nothing_to_correct", …}`) y lo que se lee antes del sí, preguntas incluidas, va a stderr; un error (código de salida distinto de 0, como un tipo del BCE aún sin publicar) deja como único objeto `{"status": "error", "code": …, "exit_code": …, "message": …}` y la frase, como sin `--json`, también en stderr; una orden que ya imprimió su propio resultado (p. ej. `prices update` con una fuente caída) conserva ese objeto y no añade otro. `remote login|logout|status`, `lock break` y `export --out` responden también con un solo objeto. Las consultas sobre el libro (`positions`, `lots`, `cash`, `gains`, `income`, `weights`, `contribute`, `costs`, `bucket`, `networth`, `valuations`, `m720`, `m721`, `settings show`, `thesis`, `order list`, `transfer pending`) dejan `{"invalid_count": n, "data": …}`, donde `invalid_count` son las líneas que no se han podido leer (modo degradado); `tax`, `check` y los estados de `fx`, `prices`, `lock` y `draft` dejan directamente su propio objeto. Importes, cantidades y tipos salen siempre como cadenas. Ejemplo completo con datos inventados:
+Tras `npm run build`, el ejecutable es `node apps/cli/dist/main.js` (o `npm run atlas --`). Todos los comandos aceptan `--ledger <ruta>` (por defecto `./ledger.jsonl`), `--yes` (omite la confirmación), `--confirm-duplicate` y `--json`. En `add` (también con `--draft`), `edit`, `delete`, `ca`, `settings set`, `fx correct`, `draft confirm` y `draft discard` (y los comandos que registran con la misma confirmación), `--json` deja en stdout un único objeto (`{"status": "recorded"|"cancelled"|"discarded"|"draft_saved"|"already_recorded"|"nothing_to_correct", …}`) y lo que se lee antes del sí, preguntas incluidas, va a stderr; un error (código de salida distinto de 0, como un tipo del BCE aún sin publicar) deja como único objeto `{"status": "error", "code": …, "exit_code": …, "message": …}` y la frase, como sin `--json`, también en stderr; una orden que ya imprimió su propio resultado (p. ej. `prices update` con una fuente caída) conserva ese objeto y no añade otro. `remote login|logout|status`, `lock break` y `export --out` responden también con un solo objeto. Las consultas sobre el libro (`positions`, `lots`, `cash`, `gains`, `income`, `valuations`, `m720`, `m721`, `settings show`, `thesis show`, `order list`, `transfer pending`) dejan `{"invalid_count": n, "data": …}`, donde `invalid_count` son las líneas que no se han podido leer (modo degradado); `tax`, `check` y los estados de `fx`, `prices`, `lock` y `draft` dejan directamente su propio objeto. Importes, cantidades y tipos salen siempre como cadenas. Ejemplo completo con datos inventados:
 
 ```bash
 alias atlas='node apps/cli/dist/main.js --ledger ./demo.jsonl'
@@ -23,12 +23,6 @@ atlas cash               # efectivo por cuenta y divisa
 atlas gains 2027         # ganancias realizadas del ejercicio (por operación: transmisión redondeada menos adquisición redondeada)
 atlas income 2027        # dividendos e intereses
 atlas tax 2028           # la base imponible del ahorro del ejercicio, por apartados
-atlas weights --date 2027-12-31   # pesos, objetivos y desviaciones del núcleo
-atlas contribute --amount 1000    # reparto de la aportación del mes, por activo y por plataforma (propone; no escribe)
-atlas rebalance [--amount 500]    # traspasos y, si hace falta, ventas con su impuesto aproximado (propone; no escribe)
-atlas costs                       # comisiones, TER y coste anual, núcleo y cubo por separado
-atlas bucket --date 2028-12-31    # el cubo: posiciones, tesis frente al índice, estadísticas y avisos
-atlas networth --date 2028-12-31  # patrimonio total, siempre desglosado (núcleo + cubo + efectivo)
 atlas thesis show th_delta        # la ficha de una tesis: hipótesis, plazo, operaciones y resultado
 atlas check              # integridad del libro (proyección)
 atlas check --deep       # además, líneas crudas: ids duplicados, huellas manipuladas o ilegibles, líneas no canónicas o antiguas
@@ -56,14 +50,10 @@ atlas settings set --target-weights ast_world=60,ast_bonds=40 --bucket-pct-of-co
 atlas add valuation --account acc_fund --asset ast_world --date 2027-12-31 \
   --quantity 10.123456 --unit-value 105.20 --currency EUR --fx-rate 1 --fx-rate-date 2027-12-31 --yes
 
-# 2. Mira cómo está repartida la cartera y qué se ha desviado del plan
-atlas weights --date 2027-12-31
-
-# 3. Calcula el reparto de la aportación del mes: el cubo aparte, el resto a lo más rezagado
+# 2. En la web (Cartera) mira los pesos y calcula el reparto de la aportación del mes
 #    (aquí, 100 EUR al cubo, 786 a ast_bonds y 114 a ast_world)
-atlas contribute --amount 1000 --date 2027-12-31
 
-# 4. Da las órdenes A MANO en la plataforma y regístralas
+# 3. Da las órdenes A MANO en la plataforma y regístralas
 atlas order place --account acc_fund --asset ast_bonds --side buy --amount 786 \
   --requested-date 2028-01-03 --yes
 atlas add buy --account acc_fund --asset ast_bonds --order <order_id> \
@@ -71,9 +61,7 @@ atlas add buy --account acc_fund --asset ast_bonds --order <order_id> \
   --currency EUR --fx-rate 1 --fx-rate-date 2028-01-03 --fee 0 --yes
 ```
 
-`atlas contribute` **propone y nunca escribe**: la aplicación no ejecuta órdenes ni elige valores del cubo. Si falta el precio de un activo con posición, se niega a repartir y dice cuál falta, en vez de repartir sobre un total incompleto.
-
-Antes de traspasar entre fondos, `atlas transfer simulate --from-asset ast_world --to-asset ast_bonds --quantity 10 --date 2028-01-31` enseña los pesos antes y después y recuerda que un traspaso no es hecho imponible. Necesita el precio de **los dos** fondos a esa fecha (paso 1 del mes siguiente); sin `--date`, usa la de hoy.
+El reparto de la aportación, el rebalanceo y el simulador de traspasos viven en la web (Cartera): proponen y nunca escriben, porque la aplicación no ejecuta órdenes ni elige valores del cubo.
 
 ## Precios de cierre diarios (feature 013)
 
@@ -95,8 +83,6 @@ En la nube, los cierres los descarga cada día la tarea de precios con la corres
 
 Para enseñar un valor gana el precio más reciente **que tenga valor en euros**, y con la misma fecha el manual. Si hay una cotización más nueva sin valor en euros, se enseña a su lado.
 
-**Cambio en `--json`**: en `weights` y `bucket`, el precio de cada fila pasa a ser un objeto `price` con `unit_value`, `currency`, `fx_rate`, `fx_rate_date`, `fx_missing`, `unit_value_eur`, `price_date`, `price_age_days`, `price_stale`, `origin`, `source`, `approximate` y `newer_quote`. Hasta la feature 012 eran campos sueltos de la fila (`unit_value`, `currency`, `fx_rate`, `price_date`, `price_age_days`, `price_stale`).
-
 ## El cubo especulativo (Fase 3)
 
 El cubo es el libro donde se aprende: cada tesis se escribe **antes** de comprar (regla 15) y se mide contra la alternativa aburrida, el índice de referencia (regla 16). El índice es un activo más del catálogo, y sus precios salen de las mismas `valuation` que todo lo demás.
@@ -115,14 +101,11 @@ atlas add buy --account acc_bucket --asset ast_delta --thesis th_delta \
   --trade-date 2027-12-20 --value-date 2027-12-22 --quantity 25 --unit-price 18.20 \
   --currency EUR --fx-rate 1 --fx-rate-date 2027-12-20 --fee 1 --yes
 
-# 3. El cubo entero en un comando
-atlas bucket --date 2028-12-31
+# 3. La ficha de la tesis (el cubo entero está en la web)
 atlas thesis show th_delta --date 2028-12-31
 ```
 
-`atlas bucket` enseña las posiciones abiertas con su P&L latente, sus días abierta y **la condición de invalidación a la vista**; las tesis con su resultado frente al índice; las estadísticas de la operativa —tasa de acierto, esperanza, máxima caída y, destacadas, las **comisiones sobre el capital operado** (regla 14)—; y los avisos de las reglas de control (17 y 18). Todo avisa y nada bloquea: el libro nunca rechaza un hecho que ya ocurrió.
-
-`atlas networth` es la única vista que suma los dos libros, y lo hace **siempre desglosada**: núcleo, cubo y efectivo por cuenta y divisa, con el tipo de cambio aplicado y de cuándo es. Si falta un precio o un tipo, el total sale marcado como parcial y dice qué falta.
+El cubo entero (posiciones con su condición de invalidación a la vista, tesis frente al índice, estadísticas, comisiones sobre el capital operado y avisos de las reglas 17 y 18) y el patrimonio total, siempre desglosado, se ven en la web (Cubo y Resumen). Todo avisa y nada bloquea: el libro nunca rechaza un hecho que ya ocurrió.
 
 Y al registrar una compra o una venta con pérdida, la aplicación avisa si cae dentro de la **ventana de recompra** (por defecto dos meses para cotizados y fondos, monetarios incluidos, y un año para la cripto, contados de fecha a fecha y configurables por tipo de activo): es el error fiscal más común en operativa activa. Avisa en las dos direcciones y **antes** de confirmar, y el motor fiscal **calcula el diferimiento**: la pérdida queda asociada a los lotes recomprados, viaja con ellos si se traspasan o se canjean, y se libera cuando se transmiten.
 
@@ -221,7 +204,6 @@ atlas thesis open --id th_spec_1 --account acc_bucket --asset ast_spec --hypothe
 atlas add buy --account acc_bucket --asset ast_spec --trade-date 2027-07-01 --value-date 2027-07-03 --quantity 10 --unit-price 50 --fee 1 --currency USD --fx-rate 1.1 --fx-rate-date 2027-07-01 --thesis th_spec_1 --yes
 atlas add sell --account acc_bucket --asset ast_spec --trade-date 2027-09-01 --value-date 2027-09-03 --quantity 10 --unit-price 60 --fee 1 --currency USD --fx-rate 1.1 --fx-rate-date 2027-09-01 --thesis th_spec_1 --yes
 atlas thesis close th_spec_1 --notes "Cumplida" --yes
-atlas thesis list --closed     # invertido, resultado, comisiones, posición viva y días abierta
 atlas valuations --date 2027-12-31   # última foto de valoración por cuenta y activo (Modelo 720)
 ```
 
