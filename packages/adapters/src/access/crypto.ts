@@ -1,7 +1,7 @@
 // The cryptographic primitives of the API, with `node:crypto`
 // and nothing else: HKDF subkeys per purpose, HMAC-SHA256 signatures compared
 // in constant time, PKCE S256 and RS256 over a JWK. **The rules** — which
-// purpose, which `typ`, in which order — are the domain's (`@atlas/domain/access`);
+// purpose, which `typ`, in which order — are `@atlas/access`;
 // this file only computes. Node only: the web never reaches it.
 
 import {
@@ -13,7 +13,7 @@ import {
   timingSafeEqual,
   verify,
 } from "node:crypto";
-import { SIGNING, type SigningPurpose, splitSigned } from "@atlas/domain/access";
+import { SIGNING, type SigningPurpose, splitSigned } from "@atlas/access";
 
 export const base64url = (bytes: Uint8Array): string => Buffer.from(bytes).toString("base64url");
 

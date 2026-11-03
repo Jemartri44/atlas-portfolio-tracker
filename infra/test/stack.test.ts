@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseApiConfig } from "@atlas/domain/access";
+import { parseApiConfig } from "@atlas/api";
 import { describe, expect, it } from "vitest";
 import { costTypes } from "./lib/cost.js";
 import { UNTAGGABLE } from "./lib/exempt.js";

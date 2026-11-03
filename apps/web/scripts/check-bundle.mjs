@@ -248,12 +248,10 @@ const LAZY_ONLY = [
     path: "/packages/domain/src/projections/sale-tax.ts",
     what: "el impuesto aproximado de una venta",
   },
-  // Feature 015: **nothing of the access on the boot path**, from its first
-  // commit. The rules of the access are the API's and never the web's (the
-  // architecture test keeps the web from reaching them at all); the session
-  // and the devices are a lazy section of Ajustes.
-  { path: "/packages/domain/src/access/", what: "las reglas del acceso" },
-  { path: "/packages/domain/src/access.ts", what: "la puerta del acceso" },
+  // **Nothing of the access on the boot path.** The rules of the access are the API's and never
+  // the web's (`@atlas/access`; the architecture test keeps the web from reaching it at all); the
+  // session is a lazy section of Ajustes.
+  { path: "/packages/access/", what: "las reglas del acceso" },
   { path: "/src/auth/", what: "la sesión de la web" },
   { path: "/packages/domain/src/sync.ts", what: "la puerta de la sincronización" },
   { path: "/packages/domain/src/ports/remote-ledger.ts", what: "el puerto del remoto" },

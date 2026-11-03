@@ -3,7 +3,7 @@
 // in, in this very request** — never the e-mail —, escaped, and it goes to no URL and to no log
 // (ADR-0027). Plain HTML: prose in Spanish, as the interfaces.
 
-import type { LoginPageError } from "@atlas/domain/access";
+import type { LoginPageError } from "./access/codes.js";
 
 export const PAGE_CSP =
   "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";

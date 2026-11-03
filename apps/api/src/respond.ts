@@ -4,7 +4,8 @@
 
 import { gzipSync } from "node:zlib";
 import { decodeUtf8Strict } from "@atlas/adapters/aws";
-import { type ApiRefusal, LOGIN_COOKIE, SESSION_COOKIE } from "@atlas/domain/access";
+import type { ApiRefusal } from "./access/codes.js";
+import { LOGIN_COOKIE, SESSION_COOKIE } from "./access/cookies.js";
 import type { FunctionUrlResult } from "./event.js";
 
 const base = { "cache-control": "no-store", "x-content-type-options": "nosniff" };

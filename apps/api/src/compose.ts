@@ -9,7 +9,7 @@ import { randomBytes } from "node:crypto";
 import { Signer } from "@atlas/adapters/access";
 import { type ObjectStore, type ParameterStore, parameterNames } from "@atlas/adapters/aws";
 import { GoogleIdentity } from "@atlas/adapters/identity";
-import { parseApiConfig } from "@atlas/domain/access";
+import { parseApiConfig } from "./access/config.js";
 import { createHandler, type Handler } from "./handler.js";
 import { logLine } from "./log.js";
 

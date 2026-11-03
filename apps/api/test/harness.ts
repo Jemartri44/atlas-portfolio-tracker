@@ -4,13 +4,13 @@
 import { randomBytes } from "node:crypto";
 import { base64url } from "@atlas/adapters/access";
 import { parameterNames } from "@atlas/adapters/aws";
-import { type ApiConfig, parseApiConfig } from "@atlas/domain/access";
 import { TestOnlyFakeS3 } from "../../../packages/adapters/test/aws/test-only-fake-s3.js";
 import { TestOnlyFakeSsm } from "../../../packages/adapters/test/aws/test-only-fake-ssm.js";
 import {
   type FakeAccount,
   TestOnlyFakeGoogle,
 } from "../../../packages/adapters/test/identity/test-only-fake-google.js";
+import { type ApiConfig, parseApiConfig } from "../src/access/config.js";
 import type { FunctionUrlEvent, FunctionUrlResult } from "../src/event.js";
 import { createHandler, type HandlerDeps } from "../src/handler.js";
 

@@ -5,6 +5,7 @@ import { readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  accessRoot,
   adaptersRoot,
   apiRoot,
   chainText,
@@ -33,9 +34,9 @@ describe("api: the API is a workspace of its own", () => {
     expect(statSync(join(apiRoot, "src", "handler.ts"), { throwIfNoEntry: false })?.isFile()).toBe(
       true,
     );
-    expect(
-      statSync(join(domainRoot, "src", "access.ts"), { throwIfNoEntry: false })?.isFile(),
-    ).toBe(true);
+    expect(statSync(join(accessRoot, "src", "index.ts"), { throwIfNoEntry: false })?.isFile()).toBe(
+      true,
+    );
   });
 
   it("depends at runtime only on workspaces, and builds with esbuild pinned", () => {
@@ -247,10 +248,10 @@ describe("api: AWS and Google only where they belong", () => {
             (specifier) => specifier.startsWith("@aws-sdk/") || specifier.startsWith("node:"),
           ) ||
           /[/\\]adapters[/\\]src[/\\](aws|identity|access)[/\\]/.test(file) ||
-          /[/\\]domain[/\\]src[/\\]access(\.ts|[/\\])/.test(file) ||
+          /[/\\]packages[/\\]access[/\\]/.test(file) ||
           // The administration: its rules, its adapter (under `aws/`, above) and its orders, which
           // live in the console.
-          /[/\\]domain[/\\]src[/\\]admin\.ts$/.test(file) ||
+          /[/\\]domain[/\\]src[/\\]admin(\.ts|[/\\])/.test(file) ||
           /[/\\]apps[/\\]cli[/\\]/.test(file)
         );
       })
@@ -366,7 +367,7 @@ describe("api: the administration is out of reach of the API", () => {
   const cliSources = (): string[] => listSources(cliSrc);
   const isAdministration = (file: string): boolean =>
     /[/\\]adapters[/\\]src[/\\]aws[/\\]sdk-admin\.ts$/.test(file) ||
-    /[/\\]domain[/\\]src[/\\](admin\.ts|access[/\\]admin\.ts)$/.test(file) ||
+    /[/\\]domain[/\\]src[/\\]admin(\.ts|[/\\])/.test(file) ||
     /[/\\]apps[/\\]cli[/\\]/.test(file);
 
   /**
