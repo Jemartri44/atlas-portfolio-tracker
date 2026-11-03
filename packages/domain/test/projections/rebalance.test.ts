@@ -46,6 +46,11 @@ const settings = (extra: { [K in keyof Settings]?: Settings[K] | undefined } = {
  */
 const core = (a = "6600", b = "2900", g = "500", pastSale = true): LedgerBuilder => {
   const x = new LedgerBuilder();
+  // Two months for a fund, written down: the window dates below must not ride the default.
+  x.settings({
+    ...DEFAULT_SETTINGS,
+    wash_sale_window: { ...DEFAULT_SETTINGS.wash_sale_window, fund: "2m" },
+  });
   catalogue(x);
   const price = (value: string, units: number) => (Number(value) / units).toString();
   x.buy({

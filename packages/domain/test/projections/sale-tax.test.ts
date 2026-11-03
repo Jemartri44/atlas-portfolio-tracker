@@ -4,10 +4,22 @@ import { Decimal } from "../../src/money/decimal.js";
 import { Money } from "../../src/money/money.js";
 import { Quantity } from "../../src/money/quantity.js";
 import { estimateSale, type HypotheticalSale } from "../../src/projections/sale-tax.js";
-import type { TaxBracket } from "../../src/settings/defaults.js";
+import { DEFAULT_SETTINGS, type TaxBracket } from "../../src/settings/defaults.js";
 import { LedgerBuilder } from "../ledger-builder.js";
 
 const DATE = "2027-12-31";
+/**
+ * Two months for a fund, written down: the dates of the windows below are a
+ * hand calculation and must not move when the documented default does.
+ */
+const pinned = (b: LedgerBuilder): LedgerBuilder => {
+  b.settings({
+    ...DEFAULT_SETTINGS,
+    wash_sale_window: { ...DEFAULT_SETTINGS.wash_sale_window, fund: "2m" },
+  });
+  return b;
+};
+
 const BRACKETS: TaxBracket[] = [
   { up_to: "6000", rate_pct: "19" },
   { up_to: "50000", rate_pct: "21" },
@@ -16,7 +28,7 @@ const BRACKETS: TaxBracket[] = [
 
 /** Two lots of a fund in one account: 20 units bought at 100 in 2022 and 16 more at 100 in 2023. */
 const fund = (): LedgerBuilder => {
-  const b = new LedgerBuilder();
+  const b = pinned(new LedgerBuilder());
   b.account("acc_fund");
   b.asset("ast_world");
   b.buy({
@@ -120,7 +132,7 @@ describe("estimateSale", () => {
     // 10 at 100 sold at 80 on 01/10/2027 (−200), bought back at 80 on 15/10:
     // the 200 ride on the new lot. Selling it at 110 on 31/12 gains +300 and
     // releases the −200 (#21), which a purchase until 29/02/2028 defers again.
-    const b = new LedgerBuilder();
+    const b = pinned(new LedgerBuilder());
     b.account("acc_fund");
     b.asset("ast_world");
     b.buy({ account_id: "acc_fund", asset_id: "ast_world", value_date: "2027-01-11" });
