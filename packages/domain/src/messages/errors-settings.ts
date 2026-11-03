@@ -58,7 +58,7 @@ export const ERRORS_SETTINGS: Record<string, Entry> = {
   },
   invalid_horizon: {
     say: (d, v) =>
-      `El horizonte de la proyección tiene que ser un número entero de años, entre 0 y ${v.text(d.max)}.`,
+      `El horizonte de la proyección tiene que ser un número entero de años, entre 0 y ${v.num(d.max)}.`,
   },
   missing_manual_prices: {
     say: (d, v) =>
