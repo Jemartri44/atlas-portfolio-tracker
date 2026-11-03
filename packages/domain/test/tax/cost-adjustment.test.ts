@@ -195,6 +195,7 @@ describe("a return of share premium or contributions (H2)", () => {
     ["outside the EU", "XNYS", "not_eu"],
     ["with no market written", undefined, "market_missing"],
     ["with a market Atlas does not know", "XXXX", "market_unknown"],
+    ["with a blank market", " ", "market_missing"],
   ])("is refused on a share %s (art. 25.1.e)", (_name, market, reason) => {
     const b = taxBuilder(HAND_SETTINGS);
     b.asset("stock_u", {
@@ -254,5 +255,9 @@ describe("a return of share premium or contributions (H2)", () => {
     const state = projectLedger(b.build(), { collectErrors: true });
     expect(state.invalid.map((entry) => entry.error.code)).toEqual(["insufficient_position"]);
     expect(state.income).toEqual([]);
+    // acc_a was not named, but the refused event leaves no warning behind.
+    expect(state.warnings.map((entry) => entry.code)).not.toContain(
+      "capital_return_partial_accounts",
+    );
   });
 });

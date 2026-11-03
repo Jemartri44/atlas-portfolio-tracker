@@ -52,8 +52,8 @@ const requireEuShareForCapitalReturn = (state: LedgerState, event: CorporateActi
   }
   const eu = euRegulatedMarket(asset.market);
   if (eu !== true) {
-    const reason =
-      eu === false ? "not_eu" : asset.market === undefined ? "market_missing" : "market_unknown";
+    const written = (asset.market ?? "").trim() !== "";
+    const reason = eu === false ? "not_eu" : written ? "market_unknown" : "market_missing";
     throw new ProjectionError(
       "capital_return_needs_eu_listed",
       event.id,
@@ -72,11 +72,9 @@ const warnUncoveredHolders = (
   if (event.kind !== "capital_return") {
     return;
   }
-  const listed = new Set(
-    effects.flatMap((effect) =>
-      effect.op === "cost_adjustment" ? effect.per_account.map((entry) => entry.account_id) : [],
-    ),
-  );
+  // The kind's row admits a single cost_adjustment.
+  const [effect] = effects as [Resolved<"cost_adjustment">];
+  const listed = new Set(effect.per_account.map((entry) => entry.account_id));
   const missing = accountsHolding(state, event.asset_id).filter((account) => !listed.has(account));
   if (missing.length > 0) {
     addWarning(
