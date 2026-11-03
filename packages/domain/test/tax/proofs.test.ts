@@ -120,8 +120,26 @@ const withMorePrices = (events: readonly LedgerEvent[]): LedgerEvent[] => [
     ),
 ];
 
+/**
+ * A whole report of the same ledger is computed once per year for the whole file: the proofs below
+ * compare the same baseline with different variants, and recomputing it each time is what made the
+ * file slow under load.
+ */
+const reports = new WeakMap<readonly LedgerEvent[], Map<number, ReturnType<typeof taxYear>>>();
+const reportOf = (events: readonly LedgerEvent[], year: number): ReturnType<typeof taxYear> => {
+  const byYear = reports.get(events) ?? new Map<number, ReturnType<typeof taxYear>>();
+  reports.set(events, byYear);
+  const known = byYear.get(year);
+  if (known !== undefined) {
+    return known;
+  }
+  const report = taxYear(events, year, { today: TODAY });
+  byYear.set(year, report);
+  return report;
+};
+
 const json = (events: readonly LedgerEvent[], year: number): string =>
-  JSON.stringify(taxReportJson(taxYear(events, year, { today: TODAY })));
+  JSON.stringify(taxReportJson(reportOf(events, year)));
 
 /**
  * The same for the layout by box. It is a layer over the report and reads no
@@ -132,34 +150,25 @@ const json = (events: readonly LedgerEvent[], year: number): string =>
 const boxesJson = (events: readonly LedgerEvent[], year: number): string =>
   JSON.stringify(taxBoxesJson(taxBoxes(events, year, { today: TODAY })));
 
-const synthetic = (): LedgerEvent[] =>
-  fixtureLines("synthetic-v1.jsonl").map((line) => decodeLine(line).event);
+let syntheticEvents: LedgerEvent[] | undefined;
+/** The synthetic ledger, decoded once; no test changes it. */
+const synthetic = (): LedgerEvent[] => {
+  syntheticEvents ??= fixtureLines("synthetic-v1.jsonl").map((line) => decodeLine(line).event);
+  return syntheticEvents;
+};
 
 const YEARS = [2026, 2027, 2028, 2029];
 
-/**
- * Sixteen whole reports of the synthetic ledger: about five seconds under
- * coverage on a loaded machine, the default budget of Vitest. It timed out
- * once in the full suite with nothing wrong in it, so it gets a budget of its
- * own: six times what it measures, enough for the load and still a warning if
- * it ever becomes much slower.
- */
-const SYNTHETIC_BUDGET_MS = 30_000;
-
 describe("proof 1: no figure of the return depends on a price", () => {
-  it(
-    "deletes every price of the synthetic ledger and every report is identical",
-    () => {
-      const events = synthetic();
-      const stripped = withoutPrices(events);
-      expect(stripped.length).toBeLessThan(events.length);
-      for (const year of YEARS) {
-        expect(json(stripped, year)).toBe(json(events, year));
-        expect(boxesJson(stripped, year)).toBe(boxesJson(events, year));
-      }
-    },
-    SYNTHETIC_BUDGET_MS,
-  );
+  it("deletes every price of the synthetic ledger and every report is identical", () => {
+    const events = synthetic();
+    const stripped = withoutPrices(events);
+    expect(stripped.length).toBeLessThan(events.length);
+    for (const year of YEARS) {
+      expect(json(stripped, year)).toBe(json(events, year));
+      expect(boxesJson(stripped, year)).toBe(boxesJson(events, year));
+    }
+  });
 
   it("deletes every price of the hand-computed exercise and every report is identical", () => {
     const { events } = exerciseLedger();
@@ -387,7 +396,7 @@ describe("proof 1 bis: the return reads no price, with the 720 inside", () => {
 
   /** The three figures of the comparison, without the decomposition of their difference. */
   const figuresOf = (events: readonly LedgerEvent[], year: number): string => {
-    const filing = taxReportJson(taxYear(events, year, { today: TODAY })).filing as {
+    const filing = taxReportJson(reportOf(events, year)).filing as {
       figures: Record<string, unknown>[];
     };
     return JSON.stringify(filing.figures.map(({ causes: _causes, ...rest }) => rest));
@@ -398,7 +407,7 @@ describe("proof 1 bis: the return reads no price, with the 720 inside", () => {
     const stripped = withoutInformativeFilings(withoutPrices(events));
     expect(events.length - stripped.length).toBe(4);
     for (const year of [2027, 2028]) {
-      const before = taxReportJson(taxYear(events, year, { today: TODAY }));
+      const before = taxReportJson(reportOf(events, year));
       const after = taxReportJson(taxYear(stripped, year, { today: TODAY }));
       expect(withoutFileFacts(after)).toBe(withoutFileFacts(before));
       expect(boxesJson(stripped, year)).toBe(boxesJson(events, year));
@@ -445,7 +454,7 @@ describe("proof 2: the defaults change nothing that already existed", () => {
     const events = synthetic();
     const state = projectLedger(events);
     for (const year of YEARS) {
-      const report = taxYear(events, year, { today: TODAY });
+      const report = reportOf(events, year);
       // Since criterion #24 the two sections are both possible, so the proof
       // is on the two together: every disposal is in one of them, once, with
       // the result the projection computed. Only an ETC or an ETP can be in
@@ -482,8 +491,8 @@ describe("proof 2: the defaults change nothing that already existed", () => {
         : event,
     );
     for (const year of YEARS) {
-      const before = taxReportJson(taxYear(events, year, { today: TODAY }));
-      const after = taxReportJson(taxYear(explicit, year, { today: TODAY }));
+      const before = taxReportJson(reportOf(events, year));
+      const after = taxReportJson(reportOf(explicit, year));
       // Only the list of settings taken from the code can differ: that is the point of writing them.
       const strip = (report: Record<string, unknown>) => ({
         ...report,
@@ -501,7 +510,7 @@ describe("proof 3: the report of the synthetic ledger is frozen", () => {
   it("reproduces tests/fixtures/ledger/synthetic-v1.tax.json", () => {
     const events = synthetic();
     const reports = Object.fromEntries(
-      YEARS.map((year) => [String(year), taxReportJson(taxYear(events, year, { today: TODAY }))]),
+      YEARS.map((year) => [String(year), taxReportJson(reportOf(events, year))]),
     );
     expect(`${JSON.stringify(reports, null, 2)}\n`).toBe(fixtureText("synthetic-v1.tax.json"));
   });
