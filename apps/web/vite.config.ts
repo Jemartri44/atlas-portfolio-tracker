@@ -189,6 +189,11 @@ export default defineConfig(({ command }) => ({
         // the light theme, the one a manifest can name (tokens.css).
         background_color: "#f3f1ea",
         theme_color: "#fffdf8",
+        // A long press on the icon of the installed application (docs/design/system.md §4.4).
+        shortcuts: [
+          { name: "Registrar compra", short_name: "Compra", url: "/registrar/buy" },
+          { name: "Registrar valoración", short_name: "Valoración", url: "/registrar/valuation" },
+        ],
         icons: [
           { src: "icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "icon-512.png", sizes: "512x512", type: "image/png" },

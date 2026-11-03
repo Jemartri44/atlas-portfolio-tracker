@@ -160,6 +160,10 @@ Un `<header>` y dentro **un** `<nav>`, **antes que `<main>` en el DOM**. El orde
 - **Sin sesión o sin libro cargado** (la pantalla de entrada del §7.1) no se muestra la navegación: nada funciona sin datos. **Con un libro vacío sí**, porque los primeros pasos llevan a Registrar y a Ajustes (D8).
 - **Banda de datos con problemas**: franja de `--c-danger-soft` bajo la barra, permanente, con el texto y «Verificar».
 
+### 4.4 El teclado del ordenador
+
+Solo desde la barra superior (≥ 1200 px): un botón **«Buscar o registrar»** con su tecla `/` (en la barra compacta, el icono y la tecla) abre un diálogo con una caja de órdenes (un *combobox* ARIA: flechas, Intro y Esc). Ofrece registrar cada operación del día a día, ir a cada destino y, siempre al final, buscar lo escrito en los movimientos (`/movimientos?q=`). Desde cualquier pantalla, **C** compra, **V** venta y **P** valoración. Las teclas solo responden **solas**: con Ctrl, Cmd o Alt son del navegador o del sistema; dentro de un campo, una lista o algo editable son lo que se escribe; con un diálogo abierto, del diálogo. En el móvil no hay teclas: la aplicación instalada ofrece «Registrar compra» y «Registrar valoración» con una pulsación larga en su icono (`shortcuts` del manifiesto).
+
 ### 4.3 La rejilla
 
 Desde 1024 px, 12 columnas con espacio de 20 y clases `span-N`. Las tarjetas de una misma fila se estiran a la misma altura, y lo que cierra una tarjeta (sus desplegables o el enlace «Ver todos») se ancla abajo. La excepción es una tarjeta cuya vecina es mucho más alta (`.is-natural`, *Pesos* y *Aportación* en la Cartera): conserva su altura, porque estirada dejaba un campo en blanco en mitad de la corta.
@@ -372,6 +376,7 @@ Dirección A «Cuaderno vivo», elegida por el dueño el 2026-11-03 sobre la aud
 | D14 | Inter y Fraunces 600 alojadas; serifa en el título y la cifra protagonista | Recorte latino, OFL, sin nada de fuera |
 | D15 | Avisos con placa, botones y pestañas en píldora, hoja cálida | Los tokens de color, casi sin tocar |
 | D16 | La Declaración, destino de la barra en escritorio | Pieza tomada de la dirección B; en el móvil sigue desde su tarjeta |
+| D18 | Atajos: «Buscar o registrar» con `/`, C, V y P en el ordenador y accesos del icono instalado | Decidido por el dueño el 2026-11-03 sobre el informe visual §4 |
 | D17 | Resumen: baldosas con minigráfica, evolución en áreas apiladas, «Este mes» y reparto en barras de bala | Las baldosas, de B; la variación de la cartera y el plan del mes, del dominio (`docs/business-rules.md`) |
 
 ---

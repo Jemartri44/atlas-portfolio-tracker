@@ -62,6 +62,7 @@ const SHAPES = {
     '<path d="M9 3.5h6"/><path d="M10 3.5v6L5 18.2a1.8 1.8 0 0 0 1.6 2.8h10.8a1.8 1.8 0 0 0 1.6-2.8L14 9.5v-6"/>',
   corporate: '<path d="M4 20.5V9l8-5 8 5v11.5"/><path d="M9 20.5v-6h6v6"/><path d="M3 20.5h18"/>',
   order: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12h4"/>',
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
   declaration:
     '<path d="M6.5 3.5h7.5l4 4v13h-11.5z"/><path d="M14 3.5v4h4M9.5 12.5h5.5M9.5 16h5.5"/>',
   catalogue: '<rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
