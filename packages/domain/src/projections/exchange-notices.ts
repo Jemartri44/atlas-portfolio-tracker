@@ -1,8 +1,12 @@
 import type { AssetFields, AssetId, CorporateActionEvent } from "../schema/events.js";
 import { isEuCountry } from "./markets.js";
 
-/** Fixed fine per operation for not filing the communication (art. 89.1 LIS). */
-const PARTNER_FINE_EUR = "10000";
+/**
+ * Fixed fine per operation for not filing the communication (art. 89.1 LIS).
+ * Already written out: it is the law's figure, not the user's, so neither the
+ * privacy mask nor the raw figures of the console apply to it.
+ */
+export const PARTNER_FINE = "10.000 €";
 
 /** The operations the neutrality regime of the LIS speaks about, when they hand over other securities. */
 export const isCompanyExchange = (event: CorporateActionEvent): boolean =>
@@ -19,6 +23,7 @@ export interface ExchangeNotice {
     | "exchange_acquirer_outside_eu"
     | "exchange_partner_communication"
     | "exchange_cash_cap"
+    | "exchange_domicile_unknown"
     | "convert_fund_to_listed_fund";
   details: Record<string, unknown>;
 }
@@ -44,7 +49,10 @@ const received = (event: CorporateActionEvent): AssetId[] =>
 /**
  * What an operation that keeps date and cost has to be told about requisites
  * Atlas cannot decide on its own. Only ever notices: the regime is the user's
- * reading (`neutrality_regime`), and without a known domicile nothing is said.
+ * reading (`neutrality_regime`). When the user applies the regime and Atlas
+ * does not know where an issuer sits, it says so instead of keeping quiet: that
+ * is where the communication may be owed. With nothing stated, the exchange is
+ * already among the doubtful criteria.
  *
  * - Art. 80.1.b LIS: in an exchange of securities the acquirer has to be
  *   Spanish or within Directive 2009/133/EC. A merger looks at the shareholder
@@ -87,6 +95,12 @@ export const exchangeNotices = (
       });
     }
   }
+  const unknown = [event.asset_id, ...new Set(received(event))].filter(
+    (assetId) => domicileOf(assets.get(assetId)) === undefined,
+  );
+  if (event.neutrality_regime === true && unknown.length > 0) {
+    notices.push({ code: "exchange_domicile_unknown", details: { assets: unknown } });
+  }
   // One communication per operation, however many securities it hands over.
   const foreign = targets.find(({ to }) => to !== "ES");
   if (from !== undefined && from !== "ES" && foreign !== undefined) {
@@ -95,7 +109,6 @@ export const exchangeNotices = (
       details: {
         from_asset_id: event.asset_id,
         to_asset_id: foreign.assetId,
-        fine_eur: PARTNER_FINE_EUR,
       },
     });
   }

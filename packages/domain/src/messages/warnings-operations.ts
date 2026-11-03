@@ -1,5 +1,6 @@
 // Warnings about operations, the wash-sale window and swaps.
 
+import { PARTNER_FINE } from "../projections/exchange-notices.js";
 import { neutralityDenied } from "./errors-corporate.js";
 import type { Entry, Voice } from "./voice.js";
 import { windowText, year } from "./words.js";
@@ -37,8 +38,13 @@ export const WARNINGS_OPERATIONS: Record<string, Entry> = {
   },
   exchange_partner_communication: {
     say: (d, v) =>
-      `Ni ${v.one(d.from_asset_id)} ni ${v.one(d.to_asset_id)} son de una entidad española: si aplicas la neutralidad, tienes que comunicarlo tú a Hacienda en el plazo de tu declaración. No hacerlo es una multa fija de ${v.money(d.fine_eur)} por operación.`,
+      `Ni ${v.one(d.from_asset_id)} ni ${v.one(d.to_asset_id)} son de una entidad española: si aplicas la neutralidad, tienes que comunicarlo tú a Hacienda en el plazo de tu declaración. No hacerlo es una multa fija de ${PARTNER_FINE} por operación.`,
     cli: () => "(art. 89.1 LIS y art. 48.2 RIS)",
+  },
+  exchange_domicile_unknown: {
+    say: (d, v) =>
+      `Atlas no sabe dónde está el emisor de ${v.many(d.assets)}, y de eso dependen el régimen de neutralidad y una comunicación a Hacienda que, si te toca a ti y no la presentas, tiene multa. Compruébalo e indica el ISIN o el país del emisor.`,
+    cli: () => "(arts. 80.1.b y 89.1 LIS)",
   },
   exchange_cash_cap: {
     say: () =>

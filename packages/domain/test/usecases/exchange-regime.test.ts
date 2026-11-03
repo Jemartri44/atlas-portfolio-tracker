@@ -128,6 +128,31 @@ describe("what an exchange that keeps date and cost is told", () => {
     ).toEqual(["exchange_partner_communication"]);
   });
 
+  it.each([
+    ["the origin", asset("stock"), de, ["old"]],
+    ["the destination", de, asset("stock"), ["new"]],
+    ["neither", asset("stock"), asset("stock"), ["old", "new"]],
+  ])(
+    "says it does not know the domicile of %s when the regime is applied",
+    (_name, from, to, unknown) => {
+      const notices = exchangeNotices(
+        new Map([
+          ["old", from],
+          ["new", to],
+        ]),
+        { ...draft(true) } as CorporateActionEvent,
+      );
+      expect(notices).toContainEqual({
+        code: "exchange_domicile_unknown",
+        details: { assets: unknown },
+      });
+    },
+  );
+
+  it("leaves an exchange that states nothing to the doubtful criteria", () => {
+    expect(noticesOf(asset("stock"), asset("stock"))).toEqual([]);
+  });
+
   it("says nothing once the regime is denied: that is the refusal's job", () => {
     expect(noticesOf(es, us, { neutrality_regime: false })).toEqual([]);
   });
