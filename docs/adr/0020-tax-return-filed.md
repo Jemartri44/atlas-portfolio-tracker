@@ -1,6 +1,6 @@
 # ADR-0020 — El libro deja constancia de lo declarado: `tax_return_filed`
 
-**Estado:** Aceptada (2026-09-18). Cierra la Ronda 9 en su parte estructural y desbloquea la Fase 5. Nace del hallazgo 2 del *challenge* 3. Enmendada el 2026-09-18 (pendientes por categoría) y el 2026-09-19 (lista de bienes declarados, dos saldos de las cuentas del 720 y aviso cuando se mueve una cifra declarada).
+**Estado:** Aceptada (2026-09-18); enmendada el 2026-09-18 y el 2026-09-19.
 
 ## Contexto
 
@@ -59,3 +59,7 @@ Y cambia el comportamiento de la proyección en un punto:
 - Se vuelve más fácil: contestar "¿qué cambió desde que declaré?" y sostener el arrastre de pérdidas a lo largo de los cuatro ejercicios.
 - Se vuelve más difícil: hay un paso manual nuevo —registrar lo presentado— que el usuario tiene que hacer una vez al año. Es inevitable: la aplicación no tiene forma de saber qué se envió a la Agencia Tributaria, y fingir que sí lo sabe sería peor.
 - **Aceptado a sabiendas:** si el usuario no registra su declaración, el sistema se queda como está hoy, sin avisos y sin la regla de los 20.000 €. Los avisos lo recuerdan; nada lo obliga.
+
+## Notas de estado
+
+Aceptada (2026-09-18). Cierra la Ronda 9 en su parte estructural y desbloquea la Fase 5. Nace del hallazgo 2 del *challenge* 3. Enmendada el 2026-09-18 (pendientes por categoría) y el 2026-09-19 (lista de bienes declarados, dos saldos de las cuentas del 720 y aviso cuando se mueve una cifra declarada).
