@@ -115,7 +115,8 @@ export const toDraft = (
 };
 
 /**
- * A record built from what a person typed, handed to the domain as a draft.
+ * A record built from what a person typed, handed to the domain as a draft (and, with
+ * `asDraftRecord`, the way back).
  *
  * **The one place** the application makes that assertion. It is not a promise
  * that the object is well formed — nothing here checks a single field — it is
@@ -126,8 +127,12 @@ export const toDraft = (
  * editing, which is how `presentar.tsx` ended up silencing the compiler on
  * the only event the web writes without a typed form behind it.
  */
-export const asEventDraft = (draft: Record<string, unknown>): Draft<SupportedEvent> =>
+export const asEventDraft = (draft: object): Draft<SupportedEvent> =>
   draft as unknown as Draft<SupportedEvent>;
+
+/** The reverse boundary: a draft of the form, as the plain record the drafts store keeps. */
+export const asDraftRecord = (draft: object): Record<string, unknown> =>
+  draft as Record<string, unknown>;
 
 /**
  * Values of an existing event, to correct it: the draft it came from, as text

@@ -24,6 +24,7 @@ import {
 } from "../../../view-models/forms/corporate.js";
 import type { FieldSpec, FormValues } from "../../../view-models/forms/index.js";
 import { inputErrors, missingRequired, missingSentence } from "../../../view-models/forms/index.js";
+import { asEventDraft } from "../../../view-models/forms/values.js";
 import { liveLedger, RequireLedger } from "../../guard.jsx";
 import { DuplicateDialog } from "../DuplicateDialog.jsx";
 import { FormActions } from "../FormActions.jsx";
@@ -111,8 +112,8 @@ export default function CorporateFormRoute(): JSX.Element {
           }
           try {
             const [shown, reached] = await Promise.all([
-              previewDraft(built.draft as never),
-              closedYearsOfDraft(built.draft as never),
+              previewDraft(asEventDraft(built.draft)),
+              closedYearsOfDraft(asEventDraft(built.draft)),
             ]);
             setClosed(reached);
             setPreview(shown);
@@ -129,7 +130,7 @@ export default function CorporateFormRoute(): JSX.Element {
           setProblem(undefined);
           setDuplicate(undefined);
           setSignedOut(false);
-          const result = await recordDraft(built.draft as never, {
+          const result = await recordDraft(asEventDraft(built.draft), {
             confirmDuplicate: warned.confirms(built.draft, confirmDuplicate),
           });
           if (result.ok) {

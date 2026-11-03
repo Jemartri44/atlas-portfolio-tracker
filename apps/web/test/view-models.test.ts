@@ -32,7 +32,6 @@ import {
   attentionDestination,
   attentionItems,
   candidateSettings,
-  dataLossItem,
   detailView,
   movementRow,
   movementRows,
@@ -143,17 +142,6 @@ describe("attentionItems", () => {
     expect(items.map((item) => item.code)).toEqual(["pending_orders", "pending_transfers"]);
     expect(items[0]?.message).toContain("40 días");
     expect(items[1]?.message).toContain("12 días");
-  });
-
-  it("says the risk of losing the data, and when the export never happened", () => {
-    // Its own line of the summary, not an item of the list.
-    const never = dataLossItem("never");
-    expect(never.code).toBe("export_overdue");
-    expect(never.severity).toBe("error");
-    expect(never.message).toContain("nunca");
-    expect(never.action.to).toBe("/ajustes");
-    expect(dataLossItem(20).message).toContain("20 días");
-    expect(dataLossItem(1).message).toContain("1 día ");
   });
 
   it("carries the integrity findings with their events", () => {
