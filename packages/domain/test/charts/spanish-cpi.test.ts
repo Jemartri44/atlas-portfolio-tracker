@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { coreXirr, SPANISH_CPI, spanishCpiPct } from "../../src/charts.js";
+import { coreXirr, cpiSourceOf, SPANISH_CPI, spanishCpiPct } from "../../src/charts.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 
 describe("the Spanish CPI table", () => {
@@ -10,7 +10,7 @@ describe("the Spanish CPI table", () => {
     expect(years).toEqual(Array.from({ length: years.length }, (_, i) => 2002 + i));
     for (const [year, row] of Object.entries(SPANISH_CPI)) {
       expect(row.pct).toMatch(/^-?\d+\.\d$/);
-      expect(row.source).toBe(
+      expect(cpiSourceOf(year)).toBe(
         `https://servicios.ine.es/wstempus/js/ES/DATOS_SERIE/${Number(year) >= 2022 ? "IPC251856" : "IPC206448"}?date=${year}1201:${year}1201`,
       );
       expect(row.checked).toMatch(/^\d{4}-\d{2}-\d{2}$/);

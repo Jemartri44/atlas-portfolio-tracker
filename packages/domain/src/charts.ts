@@ -45,5 +45,5 @@ export {
   type RealReturn,
 } from "./charts/core-xirr.js";
 export { type BucketGauges, bucketGauges } from "./charts/gauges.js";
-export { type CpiYear, SPANISH_CPI, spanishCpiPct } from "./charts/spanish-cpi.js";
+export { type CpiYear, cpiSourceOf, SPANISH_CPI, spanishCpiPct } from "./charts/spanish-cpi.js";
 export { type ThesisPct, thesisVsIndexPct } from "./charts/theses.js";
