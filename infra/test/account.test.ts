@@ -256,8 +256,8 @@ describe("the budget atlas-cost (row 9)", () => {
     ]);
   });
 
-  it("goes to 2 USD with the customer key, and warns at 100 % real and forecasted", () => {
-    expect(budget({ use_customer_managed_key: true }).limit_amount).toBe("2");
+  it("stays at 1 USD, and warns at 100 % real and forecasted", () => {
+    expect(budget().limit_amount).toBe("1");
     const found = (budget().notification as Record<string, unknown>[]).map((n) => [
       n.notification_type,
       n.threshold,

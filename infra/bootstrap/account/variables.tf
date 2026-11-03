@@ -39,12 +39,6 @@ variable "admin_principal_arn" {
   }
 }
 
-variable "use_customer_managed_key" {
-  description = "C2. When true the cost budget rises from 1 to 2 USD (the key costs 1 USD a month). It must match the variable of the same name in the prod environment part."
-  type        = bool
-  default     = false
-}
-
 variable "budget_alert_email" {
   description = "Where the atlas-cost budget writes. Sensitive: it is an address."
   type        = string
