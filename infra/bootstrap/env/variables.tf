@@ -71,17 +71,6 @@ variable "admin_trust_mode" {
   }
 }
 
-variable "use_customer_managed_key" {
-  description = "C2. A customer managed KMS key for the SecureStrings of prod. Only valid in prod; the account part has the same variable, which raises the budget to 2 USD."
-  type        = bool
-  default     = false
-
-  validation {
-    condition     = !var.use_customer_managed_key || var.env == "prod"
-    error_message = "use_customer_managed_key is only valid for env = prod."
-  }
-}
-
 variable "mail_sender" {
   description = "Atlas's own SES sender: the boundary lets the mail role send from it. Not sensitive (ADR-0034, row 1)."
   type        = string

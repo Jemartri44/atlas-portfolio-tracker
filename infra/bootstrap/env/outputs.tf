@@ -29,11 +29,6 @@ output "oac_api_id" {
   value       = aws_cloudfront_origin_access_control.api.id
 }
 
-output "kms_key_arn" {
-  description = "ARN of the customer managed key (C2), or null."
-  value       = one(aws_kms_key.ssm[*].arn)
-}
-
 output "certificate_arn" {
   description = "ARN of the certificate of the distribution (us-east-1); the stack waits for its validation."
   value       = aws_acm_certificate.edge.arn

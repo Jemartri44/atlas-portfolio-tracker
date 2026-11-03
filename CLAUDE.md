@@ -8,6 +8,8 @@ Personal investment portfolio manager, single user, 20+ year horizon. It records
 
 **It never executes orders.** Every trade is placed manually on the platform and recorded here.
 
+**The web is the main surface.** The `atlas` console (`apps/cli`) is the maintenance tool: data entry and correction, `check`, backups and restore, export, `remote`, `admin`, `synth`, and a few JSON reports (`positions`, `lots`, `tax`, `m720`, `m721`, …) so that Claude can diagnose a ledger without the web. New views and simulations go in the web, not in the console (`docs/cli.md`).
+
 User: Spanish tax resident. Planned integrations: MyInvestor (fund statements) and Interactive Brokers (Flex Query). Cash is recorded by hand.
 
 ## Documents
@@ -64,7 +66,7 @@ Target weights apply **across the whole core**. The bucket is a *budget* (a fixe
 | Infrastructure | Terraform |
 | Domain | Own subdomain (value lives in `terraform.tfvars`, outside the repo), CNAME to CloudFront, ACM certificate in us-east-1 |
 
-**Cost constraint:** minimum cost with a budget alarm (ADR-0028), not "always-free indefinitely" — the cloud layer costs an estimated ≈ $0.01-0.05/month, covered by AWS credits while they last and paid afterwards; a single Budgets alarm, `atlas-cost`, fires at $1 ($2 if the SSM customer-managed key of ADR-0034 is adopted), measured on the cost before credits **and filtered by the `project=atlas` cost-allocation tag** (ADR-0034) (an alarm that stays silent while credits last protects nothing). Before introducing a new service, verify its cost stays minimal at this scale.
+**Cost constraint:** minimum cost with a budget alarm (ADR-0028), not "always-free indefinitely" — the cloud layer costs an estimated ≈ $0.01-0.05/month, covered by AWS credits while they last and paid afterwards; a single Budgets alarm, `atlas-cost`, fires at $1, measured on the cost before credits **and filtered by the `project=atlas` cost-allocation tag** (ADR-0034) (an alarm that stays silent while credits last protects nothing). Before introducing a new service, verify its cost stays minimal at this scale.
 
 ## Code architecture (ADR-0007)
 
@@ -73,7 +75,7 @@ Monorepo with npm workspaces, **hexagonal architecture** with a pure functional 
 ```
 packages/domain    pure core: types, money, events, projections, FIFO, tax, use cases, PORTS (interfaces). No I/O, no runtime npm deps.
 packages/adapters  port implementations: S3/file/memory LedgerStore, price sources, ECB FxRateSource, SES Notifier. AWS SDK lives only here.
-apps/cli           Phase-1 interface over a local file or S3.
+apps/cli           Maintenance console over a local file or S3 (the web is the main surface).
 apps/api           Lambda Function URL behind CloudFront (/api/*): verifies the Google token at sign-in, issues its own session, composes domain + adapters.
 apps/web           Vite SPA; uses domain to project/simulate the ledger it reads from the API.
 apps/jobs          Scheduled Lambdas run by EventBridge Scheduler (ECB, prices, email, backups, integrity); compose domain + adapters. Nothing imports apps/jobs.

@@ -494,29 +494,21 @@
     max-width: none;
   }
 
-  /* The four destinations sit on one shared track: the group. */
-  .nav-list > li:not(.nav-action-item) {
-    background-color: var(--c-fill);
-    padding-block: var(--space-1);
-  }
-
-  .nav-list > li:first-child {
-    border-radius: var(--radius-md) 0 0 var(--radius-md);
-    padding-left: var(--space-1);
-  }
-
-  .nav-list > li:nth-child(4) {
-    border-radius: 0 var(--radius-md) var(--radius-md) 0;
-    padding-right: var(--space-1);
+  .nav-list {
+    gap: var(--space-1);
   }
 
   .nav-link {
-    border-radius: calc(var(--radius-md) - var(--space-0));
+    border-radius: var(--radius-pill);
     flex-direction: row;
     font-size: var(--text-md);
     gap: var(--space-2);
     min-height: var(--tap);
     padding-inline: var(--space-4);
+  }
+
+  .nav-link:hover {
+    background-color: var(--c-fill);
   }
 
   .nav-link .indicator {
@@ -530,14 +522,13 @@
   }
 
   .nav-link[aria-current="page"] {
-    background-color: var(--c-raised);
-    box-shadow: var(--shadow-2);
-    font-weight: var(--fw-medium);
+    background-color: var(--c-accent-soft);
+    color: var(--c-accent-soft-text);
   }
 
   .nav-link[aria-current="page"] .indicator {
     background: none;
-    color: var(--c-accent);
+    color: inherit;
   }
 
   .nav-action-item {
@@ -546,7 +537,7 @@
 
   .nav-action {
     background-color: var(--c-accent);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-pill);
     color: var(--c-on-accent);
     flex-direction: row;
     font-size: var(--text-md);

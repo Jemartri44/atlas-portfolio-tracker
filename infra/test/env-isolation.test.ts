@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { crossEnvironment, outputsSensitive, policiesOf, principalStars } from "./lib/guardians.js";
-import { type Context, decide, type Statement } from "./lib/iam.js";
-import { changes, only, type Plan } from "./lib/plan.js";
+import { type Context, decide } from "./lib/iam.js";
+import type { Plan } from "./lib/plan.js";
 import { ACCOUNT, ADMIN, renderEnv, SENDER, SUFFIX } from "./lib/renders.js";
 import { boundaryOf, effective, roleStatements } from "./lib/roles.js";
 
@@ -20,7 +20,6 @@ const plans: Record<string, Plan> = {
     return renderEnv("prod");
   },
 };
-const prodKey = (): Plan => renderEnv("prod", { use_customer_managed_key: true });
 
 const otherOf = (env: Env): Env => (env === "dev" ? "prod" : "dev");
 
@@ -470,6 +469,20 @@ describe.each(ENVS)(
       },
     );
 
+    it("neither the deploy nor the plan role can delete a copy, shorten its lock or bypass it", () => {
+      const copy = `${a.data}/backups/2026-10/ledger.jsonl`;
+      for (const role of ["deploy", "plan"] as const) {
+        for (const action of [
+          "s3:DeleteObject",
+          "s3:DeleteObjectVersion",
+          "s3:BypassGovernanceRetention",
+          "s3:PutObjectRetention",
+        ]) {
+          expect(verdict(env, role, action, copy), `${role} ${action}`).not.toBe("allow");
+        }
+      }
+    });
+
     it("deploy cannot change the configuration of the data bucket: versioning, lifecycle and policy are the bootstrap's", () => {
       for (const action of [
         "s3:PutBucketPolicy",
@@ -479,6 +492,7 @@ describe.each(ENVS)(
         "s3:PutEncryptionConfiguration",
         "s3:PutBucketPublicAccessBlock",
         "s3:DeleteBucket",
+        "s3:PutBucketObjectLockConfiguration",
       ]) {
         expect(verdict(env, "deploy", action, a.data), action).not.toBe("allow");
         expect(verdict(env, "plan", action, a.data), `plan ${action}`).not.toBe("allow");
@@ -593,74 +607,6 @@ describe.each(ENVS)(
     });
   },
 );
-
-describe("the customer managed key of prod (C2), only when asked for", () => {
-  const statements = (): Statement[] =>
-    (
-      JSON.parse(String(only(prodKey(), "aws_kms_key").change.after?.policy)) as {
-        Statement: Statement[];
-      }
-    ).Statement;
-
-  it("does not exist by default, and rotates when it does", () => {
-    expect(
-      changes(plans.prod as Plan).filter((change) => change.type.startsWith("aws_kms")),
-    ).toEqual([]);
-    expect(only(prodKey(), "aws_kms_key").change.after?.enable_key_rotation).toBe(true);
-    expect(only(prodKey(), "aws_kms_alias").change.after?.name).toBe("alias/atlas-prod-ssm");
-  });
-
-  it("names the administration principal as a real principal, always, so the key is never unmanageable", () => {
-    const admin = statements().filter((entry) => entry.Sid === "AdministrationPrincipal");
-    expect(admin).toHaveLength(1);
-    expect(admin[0]?.Principal).toEqual({ AWS: ADMIN });
-    expect(admin[0]?.Effect).toBe("Allow");
-  });
-
-  it("names every other principal with Principal * and ArnLike on aws:PrincipalArn, never a role ARN", () => {
-    const others = statements().filter((entry) => entry.Sid !== "AdministrationPrincipal");
-    expect(others.map((entry) => entry.Sid).sort()).toEqual([
-      "AdminRoleEncryptDecrypt",
-      "ApiDecrypt",
-      "ApiTokensEncrypt",
-      "JobsDecrypt",
-    ]);
-    for (const entry of others) {
-      expect(entry.Principal, entry.Sid).toBe("*");
-      expect(Object.keys(entry.Condition ?? {}), entry.Sid).toContain("ArnLike");
-      expect(JSON.stringify(entry.Condition), entry.Sid).toContain("aws:PrincipalArn");
-    }
-  });
-
-  it("gives each role what row 8 and the contract say: the API, a context; the tasks, only Decrypt", () => {
-    const byPrincipal = (arn: string, action: string, context: Context = {}): string =>
-      decide(statements(), { action, principalArn: arn, context });
-    const role = (name: string): string => `arn:aws:iam::${ACCOUNT}:role/atlas-prod-${name}`;
-    const parameter = `arn:aws:ssm:eu-west-1:${ACCOUNT}:parameter/atlas/prod/device-tokens/*`;
-    const tokens: Context = {
-      "kms:EncryptionContext:PARAMETER_ARN": parameter.replace("*", "abc"),
-    };
-    expect(byPrincipal(role("api"), "kms:Decrypt", tokens)).toBe("allow");
-    expect(byPrincipal(role("api"), "kms:Encrypt", tokens)).toBe("allow");
-    const auth = {
-      "kms:EncryptionContext:PARAMETER_ARN": `arn:aws:ssm:eu-west-1:${ACCOUNT}:parameter/atlas/prod/auth/x`,
-    };
-    // The API reads /auth/* with this key: Decrypt is not limited by path, only Encrypt is.
-    expect(byPrincipal(role("api"), "kms:Decrypt", auth)).toBe("allow");
-    expect(byPrincipal(role("api"), "kms:Encrypt", auth)).toBe("implicit-deny");
-    for (const job of ["job-ecb", "job-prices", "job-mail", "job-backup", "job-integrity"]) {
-      expect(byPrincipal(role(job), "kms:Decrypt"), job).toBe("allow");
-      expect(byPrincipal(role(job), "kms:Encrypt"), `${job} encrypt`).toBe("implicit-deny");
-    }
-    for (const stranger of ["deploy", "plan", "worker"]) {
-      expect(byPrincipal(role(stranger), "kms:Decrypt", tokens), stranger).toBe("implicit-deny");
-    }
-    expect(byPrincipal(role("admin"), "kms:Decrypt")).toBe("allow");
-    expect(byPrincipal(`arn:aws:iam::${ACCOUNT}:role/atlas-dev-api`, "kms:Decrypt", tokens)).toBe(
-      "implicit-deny",
-    );
-  });
-});
 
 describe.each(ENVS)(
   "the boundary of %s: nobody writes IAM on the bootstrap (rows 4 and 5)",

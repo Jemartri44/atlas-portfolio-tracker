@@ -1,6 +1,6 @@
-// atlas tax <año>: a console that only formats what the domain computed. The figures it prints are
-// checked against hand-worked literals in tax-figures.test.ts; here, that every section is there,
-// that nothing is lost in --json, and that the refusals speak Spanish.
+// atlas tax <año>: the console only prints, as JSON, what the domain computed (the figures and the
+// text of the report are the domain's and the web's); here, that the report is complete, that the
+// boxes come out too, and that the refusals speak Spanish.
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -18,84 +18,15 @@ const goldenLines = (): string[] =>
 const golden = () => harness({ lines: goldenLines(), instant: "2029-03-01T10:00:00.000Z" });
 
 describe("atlas tax", () => {
-  it("prints every section of the report, labelled as the fiscal total and as the base", async () => {
+  it("prints the whole report as JSON, decimals as strings, labelled as the fiscal total", async () => {
     const h = golden();
     expect(await h.exec(["tax", "2027"])).toBe(0);
-    const text = h.text();
-    expect(text).toContain("TOTAL FISCAL 2027 — núcleo y cubo agregados por contribuyente");
-    expect(text).toContain("Esto es la BASE del ahorro, no la cuota");
-    for (const heading of [
-      "1. Ganancias y pérdidas patrimoniales",
-      "2. Rendimientos del capital mobiliario",
-      "3. Regla de recompra",
-      "4. Compensación (art. 49 LIRPF)",
-      "5. Saldos negativos pendientes",
-      "BASE IMPONIBLE DEL AHORRO 2027",
-      "6. Lo declarado en este ejercicio",
-      "7. Retenciones a cuenta",
-      "8. Doble imposición internacional",
-      "9. Criterios dudosos",
-      "10. Criterios firmes",
-      "11. Lo que este motor no calcula",
-      "Leyenda de criterios",
-    ]) {
-      expect(text).toContain(heading);
-    }
-    // The fund loss of 2027 bought again every month: deferred whole.
-    expect(text).toMatch(/01MBP2GS80T8F1MS8PT0M7FK2R\s+ast_world\s+2027-01-06\s+-90\.82/);
-    expect(text).toContain("núcleo");
-    expect(text).toContain("cubo");
-    expect(text).not.toContain("PROVISIONAL");
-  });
-
-  it("prints the settled criteria in a section of their own, zeros included", async () => {
-    const h = golden();
-    expect(await h.exec(["tax", "2027"])).toBe(0);
-    const text = h.text();
-    const part = (n: number): string =>
-      text.slice(text.indexOf(`\n${n}. `), text.indexOf(`\n${n + 1}. `));
-    // #18 is high certainty since 2026-09-23, so it left the doubtful section.
-    // What it would move read the other way —nothing here— has to be visible
-    // somewhere, and that somewhere is section 9.
-    expect(part(9)).not.toContain("18 solo cuenta la recompra");
-    expect(part(10)).toContain("18 solo cuenta la recompra");
-    expect(part(10)).toContain("base 0.00");
-    expect(part(10)).toContain("La lectura de estos no está en duda");
-  });
-
-  /**
-   * "Checked and it moves nothing" is information, and it is the same argument that split the
-   * settled criteria from the doubtful ones instead of filtering them. A year where no settled
-   * criterion moves anything has to **say so**, in both interfaces; what it printed was the
-   * headings of a table with no rows under them.
-   */
-  it("says that no settled criterion moves anything, instead of empty headings", async () => {
-    const h = golden();
-    // 2028 of the golden ledger: figures, and no settled criterion that moves.
-    expect(await h.exec(["tax", "2028"])).toBe(0);
-    const text = h.text();
-    const part = text.slice(text.indexOf("\n10. "), text.indexOf("\n11. "));
-    expect(part).toContain("10. Criterios firmes");
-    expect(part).toContain("Ninguno");
-    // The orphan headings of the table, with nothing under them.
-    expect(part).not.toContain("riesgo documentado");
-  });
-
-  it("opens every transmission into its lots and their lineage with --lots", async () => {
-    const h = golden();
-    expect(await h.exec(["tax", "2027", "--lots"])).toBe(0);
-    expect(h.text()).toContain("Lotes consumidos y su linaje");
-    expect(h.text()).toContain(" ← ");
-  });
-
-  it("emits the whole report with --json, decimals as strings", async () => {
-    const h = golden();
-    expect(await h.exec(["tax", "2027", "--json"])).toBe(0);
     const json = JSON.parse(h.text()) as {
       year: number;
       scope: string;
       base_eur: string;
       doubtful: { criterion: string }[];
+      settled: { base_difference_eur: string }[];
       notes: { code: string }[];
     };
     expect(json.year).toBe(2027);
@@ -103,28 +34,50 @@ describe("atlas tax", () => {
     expect(typeof json.base_eur).toBe("string");
     expect(json.doubtful.map((d) => d.criterion)).toContain("2:listed");
     expect(json.notes.map((n) => n.code)).toContain("tax_quota_not_computed");
+    // A settled criterion that moves nothing is still there, with its zero.
+    expect(json.settled.map((c) => c.base_difference_eur)).toContain("0");
+    for (const section of [
+      "capital_gains",
+      "movable_capital",
+      "wash_sale",
+      "compensation",
+      "withholdings",
+      "double_taxation",
+      "settings_diff",
+    ]) {
+      expect(json).toHaveProperty(section);
+    }
   });
 
-  it("takes --json in front of the command too, as the usage line puts it", async () => {
-    // It used to read `tax` as the value of --json: «comando desconocido: 2027».
+  it("says that no settled criterion moves anything with an empty list, not with empty headings", async () => {
+    const h = golden();
+    expect(await h.exec(["tax", "2028"])).toBe(0);
+    expect(JSON.parse(h.text()).settled).toEqual([]);
+  });
+
+  it("takes --json, before or after the command, and prints the same", async () => {
+    const plain = golden();
+    expect(await plain.exec(["tax", "2027"])).toBe(0);
     const before = golden();
     expect(await before.exec(["--json", "tax", "2027"])).toBe(0);
     const after = golden();
     expect(await after.exec(["tax", "2027", "--json"])).toBe(0);
-    expect(JSON.parse(before.text())).toEqual(JSON.parse(after.text()));
+    expect(JSON.parse(before.text())).toEqual(JSON.parse(plain.text()));
+    expect(JSON.parse(after.text())).toEqual(JSON.parse(plain.text()));
   });
 
-  it("marks what is provisional when the window is still open", async () => {
-    const h = harness({ lines: goldenLines(), instant: "2027-12-15T10:00:00.000Z" });
-    expect(await h.exec(["tax", "2027"])).toBe(0);
-    expect(h.text()).toContain("(provisional)");
-    expect(h.text()).toContain("es provisional");
-  });
-
-  it("shows the difference with the previous settings", async () => {
+  it("prints the layout by box with --boxes", async () => {
     const h = golden();
-    expect(await h.exec(["tax", "2028"])).toBe(0);
-    expect(h.text()).toContain("12. Diferencias con la configuración anterior");
+    expect(await h.exec(["tax", "2027", "--boxes"])).toBe(0);
+    expect(JSON.parse(h.text())).toMatchObject({ year: 2027 });
+  });
+
+  it("no longer takes --lots: the lots of each transmission are in the report", async () => {
+    const h = golden();
+    expect(await h.exec(["tax", "2027", "--lots"])).toBe(EXIT.usage);
+    const report = golden();
+    expect(await report.exec(["tax", "2027"])).toBe(0);
+    expect(JSON.stringify(JSON.parse(report.text()).capital_gains)).toContain("lots");
   });
 
   it("refuses a year before the regime, and a word that is not a year", async () => {

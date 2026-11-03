@@ -20,20 +20,7 @@ run "c2_default_budget_is_one_dollar" {
 
   assert {
     condition     = aws_budgets_budget.atlas_cost.limit_amount == "1"
-    error_message = "the budget must be 1 USD without the customer key"
-  }
-}
-
-run "c2_customer_key_budget_is_two_dollars" {
-  command = plan
-
-  variables {
-    use_customer_managed_key = true
-  }
-
-  assert {
-    condition     = aws_budgets_budget.atlas_cost.limit_amount == "2"
-    error_message = "the budget must be 2 USD with the customer key"
+    error_message = "the budget is 1 USD"
   }
 }
 
