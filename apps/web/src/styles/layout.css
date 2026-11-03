@@ -299,17 +299,19 @@
   background: var(--c-surface);
   border: var(--border) solid var(--c-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
   display: grid;
   gap: var(--space-3);
   justify-items: center;
   margin: var(--space-9) auto 0;
-  max-width: 24rem;
-  padding: var(--space-6) var(--space-5);
+  max-width: 26rem;
+  padding: var(--space-7) var(--space-6);
   text-align: center;
 }
 
+/* The name in the serif of the figures (direction A), the first thing the application says. */
 .gate h1 {
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
   margin: 0;
 }
 
@@ -319,8 +321,13 @@
 
 .gate .mark {
   color: var(--c-accent);
-  height: 2rem;
-  width: 2rem;
+  height: 2.5rem;
+  width: 2.5rem;
+}
+
+.gate button {
+  margin-top: var(--space-2);
+  min-width: 14rem;
 }
 
 .page-head {
