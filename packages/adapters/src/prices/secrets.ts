@@ -1,6 +1,6 @@
 // The keys of the sources of prices (ADR-0031, second amendment): `~/.config/atlas/secrets.json`,
 // or `$XDG_CONFIG_HOME/atlas/secrets.json`, **outside the folder of the ledger**, with permissions
-// `600`. Only the console reads it; the web never does, and it enters no backup, export or sync.
+// `600` in a folder `700` of the user's own. Only the console reads it; the web never does, and it enters no backup, export or sync.
 // **The application never writes it**: the user does.
 //
 // Every way a key could leak through here is closed:
@@ -18,6 +18,7 @@ export type SecretsErrorCode =
   | "secrets_unknown_key"
   | "secrets_invalid_value"
   | "secrets_too_open"
+  | "secrets_not_yours"
   | "secrets_inside_ledger_folder";
 
 /**
@@ -79,25 +80,39 @@ export const readSecrets = async (path: string, ledgerFolder: string): Promise<K
   if (inside(config, ledger) || inside(ledger, config)) {
     throw new SecretsError("secrets_inside_ledger_folder", path);
   }
-  let stat: Awaited<ReturnType<typeof fs.stat>>;
+  // One descriptor for the three questions and the read: what is checked is what is read, with no
+  // window between a `stat` of the path and the `readFile` of it.
+  let handle: Awaited<ReturnType<typeof fs.open>>;
   try {
-    stat = await fs.stat(path);
+    handle = await fs.open(path, "r");
   } catch (error) {
     if ((error as { code?: string }).code === "ENOENT") {
       return {};
     }
     throw new SecretsError("secrets_unreadable", path);
   }
-  // POSIX only: Windows has no such bits, and the console says so apart.
-  if (process.platform !== "win32" && (stat.mode & 0o077) !== 0) {
-    throw new SecretsError("secrets_too_open", path);
-  }
   let raw: unknown;
   try {
-    raw = JSON.parse(await fs.readFile(path, "utf8"));
-  } catch {
+    // POSIX only: Windows has no such bits, and the console says so apart.
+    if (process.platform !== "win32") {
+      const stat = await handle.stat();
+      if (stat.uid !== process.getuid?.()) {
+        throw new SecretsError("secrets_not_yours", path);
+      }
+      const folder = await fs.stat(dirname(path));
+      if ((stat.mode & 0o077) !== 0 || (folder.mode & 0o077) !== 0) {
+        throw new SecretsError("secrets_too_open", path);
+      }
+    }
+    raw = JSON.parse(await handle.readFile("utf8"));
+  } catch (error) {
+    if (error instanceof SecretsError) {
+      throw error;
+    }
     // Neither the text nor the SyntaxError, which quotes it.
     throw new SecretsError("secrets_unreadable", path);
+  } finally {
+    await handle.close();
   }
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
     throw new SecretsError("secrets_unreadable", path);
