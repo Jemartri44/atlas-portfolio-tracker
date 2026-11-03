@@ -12,7 +12,7 @@ import Cartera from "../src/routes/cartera/index.jsx";
 import { setPrivacy } from "../src/shell/preferences.js";
 import { type Api, apiAt, sameOrigin, signedIn } from "./cloud/api-support.js";
 import { goldenText } from "./helpers/golden.js";
-import { show, text, until, withGoldenLedger } from "./helpers/render.jsx";
+import { settle, show, text, type, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -65,6 +65,35 @@ describe("the return of the core", () => {
     const card = text(host.querySelector(".returns-card"));
     expect(card).toMatch(/Has aportado\s*[•·]{4}/);
     expect(card).toMatch(/−?\d+,\d+\s*%/);
+    setPrivacy(false);
+  });
+});
+
+describe("the total cost", () => {
+  it("shows no figure without a gross return, and the costs once it is typed", async () => {
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => host.querySelector("#tc-gross") !== null, "the card");
+    expect(text(host.querySelector(".total-cost"))).toContain(
+      "Escribe la rentabilidad bruta anual",
+    );
+    type(host, "tc-gross", "5");
+    await settle(30);
+    const card = text(host.querySelector(".total-cost"));
+    expect(card).toContain("Coste total en el horizonte");
+    expect(card).toContain("Se lleva el TER");
+    type(host, "tc-gross", "5,x");
+    await settle(30);
+    expect(text(host.querySelector(".total-cost"))).not.toContain("Coste total en el horizonte");
+  });
+  it("masks the amounts with the privacy mode on", async () => {
+    setPrivacy(true);
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => host.querySelector("#tc-gross") !== null, "the card");
+    type(host, "tc-gross", "5");
+    await settle(30);
+    const card = text(host.querySelector(".total-cost"));
+    expect(card).toContain("Coste total en el horizonte");
+    expect(card).not.toMatch(/\d,\d{2}\s*€/);
     setPrivacy(false);
   });
 });
