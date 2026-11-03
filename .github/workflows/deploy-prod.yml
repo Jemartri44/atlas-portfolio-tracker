@@ -3,7 +3,8 @@ name: Deploy prod
 # Feature 017, E4 (prompt 017, section 5, flow 3). PREPARED AND INERT until the 018: needs the
 # repository variable ATLAS_DEPLOY_ENABLED = true. Only from `main`, only through the
 # environment `prod` (required approval; its branch rule, main only, is configured in GitHub
-# by the procedure of the 018). It does NOT build: it takes the set dev wrote for the same
+# by the procedure of the 018). Every secret it reads is ATLAS_PROD_* and belongs to that
+# environment, never to the repository (a test reads this file for it). It does NOT build: it takes the set dev wrote for the same
 # source tree and checks its SHA-256 before it applies anything.
 on:
   push:
@@ -42,7 +43,7 @@ jobs:
       - name: Promote the artifact of dev
         run: infra/scripts/ci/promote.sh "$RUNNER_TEMP/artifact" "$TREE"
         env:
-          ARTIFACT_BUCKET: ${{ secrets.ATLAS_ARTIFACT_BUCKET }}
+          ARTIFACT_BUCKET: ${{ secrets.ATLAS_PROD_ARTIFACT_BUCKET }}
       - name: Verify that the workflow of dev signed the set
         run: infra/scripts/ci/verify-attestation.sh "$RUNNER_TEMP/artifact" "$TREE"
         env:

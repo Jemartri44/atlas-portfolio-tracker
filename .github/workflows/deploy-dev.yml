@@ -29,7 +29,8 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
+      # No install script runs in the job whose output is promoted to prod (security audit 03/11).
+      - run: npm ci --ignore-scripts
       - run: npm run build
       - name: Package the set that is promoted
         run: infra/scripts/ci/package.sh "$RUNNER_TEMP/artifact"

@@ -5,7 +5,6 @@ export {
   type AttentionSeverity,
   attentionDestination,
   attentionItems,
-  dataLossItem,
   type FiscalAnswer,
   fiscalSlot,
 } from "./attention.js";

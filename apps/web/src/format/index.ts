@@ -2,7 +2,7 @@
 // it is the privacy gate and only `components/Amount.tsx` may import it
 // (tests/architecture/ enforces it).
 
-export { daysSince, formatAge, formatDate, formatInstantDate, formatLongDate } from "./date.js";
+export { formatDate, formatInstantDate, formatLongDate } from "./date.js";
 export {
   EVENT_LABELS,
   eventLabel,

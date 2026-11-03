@@ -21,7 +21,7 @@ import {
   Tag,
   TotalLine,
 } from "../../components/index.js";
-import { formatPercent, meaningfulDecimals } from "../../format/number.js";
+import { pct } from "../../format/number.js";
 import type { ControlsView, GaugesView } from "../../view-models/bucket/index.js";
 import type { NetWorthView } from "../../view-models/index.js";
 import { Meter } from "./Meters.jsx";
@@ -33,9 +33,6 @@ interface BucketLimits {
 }
 
 const UNSET = "Todavía no tiene umbral: fíjalo en Ajustes → Configuración.";
-
-const pct = (value: string): string =>
-  formatPercent(value, { decimals: meaningfulDecimals(value) });
 
 const Rule = (props: { title: string; ask: string; limit: string | undefined }): JSX.Element => (
   <>

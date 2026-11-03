@@ -144,3 +144,7 @@ export const signOf = (value: string): "positive" | "negative" | "zero" => {
   }
   return /^\+?0(\.0*)?$/.test(value) ? "zero" : "positive";
 };
+
+/** A percentage with the decimals that say something: «80 %», «6,5 %». */
+export const pct = (value: string, signed = false): string =>
+  formatPercent(value, { decimals: meaningfulDecimals(value), ...(signed ? { signed } : {}) });
