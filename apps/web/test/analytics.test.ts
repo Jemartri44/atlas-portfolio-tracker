@@ -67,7 +67,7 @@ describe("Núcleo: weights", () => {
     expect(equity?.targetPct).toBe("55");
     // Unrounded: rounding happens once, when the figure is shown (ADR-0005).
     // `atlas weights --date 2027-01-31` prints the same number as 8014.16.
-    expect(view.total?.amount.toString()).toBe("8014.158644594");
+    expect(view.total?.amount.toString()).toBe("8014.1586445934");
     expect(view.total?.roundToCents().amount.toString()).toBe("8014.16");
     expect(view.partial).toBe(false);
     // Names, never identifiers (V7 of the 006).

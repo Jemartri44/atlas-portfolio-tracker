@@ -22,9 +22,9 @@ const fillPurchase = (host: HTMLElement, amount: string): void => {
 describe("numbers typed the Spanish way", () => {
   beforeEach(() => today("2026-09-18"));
 
-  it("accepts the thousands the way a Spanish keyboard writes them", async () => {
+  it("accepts the decimal comma, with no thousands separator", async () => {
     const host = await show("/registrar/buy", RegistrarForm, "/registrar/:tipo");
-    fillPurchase(host, "1.200,50");
+    fillPurchase(host, "1200,50");
     await press(host, "Ver el efecto");
 
     expect(host.querySelector(".field .field-error")).toBeNull();

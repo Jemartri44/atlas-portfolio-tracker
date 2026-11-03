@@ -22,6 +22,7 @@ import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 const EVENT = "01ARYZ6S41TSV4RRFFQ69G5FCA";
 const ctx: EffectContext = {
   eventId: EVENT,
+  kind: "merger",
   position: 99,
   effectiveDate: "2027-03-01",
   scaleOnly: false,

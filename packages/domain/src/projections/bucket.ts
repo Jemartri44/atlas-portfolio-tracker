@@ -21,6 +21,7 @@ import {
   warnWithoutEur,
 } from "./prices.js";
 import type { FiscalLot, LedgerState, Thesis, Warning } from "./state.js";
+import { splitPositionKey } from "./state.js";
 import { openThesisOn } from "./theses.js";
 
 export interface BucketPosition {
@@ -171,7 +172,7 @@ export const bucketPositions = (
   let cost = Money.zero(EUR);
 
   for (const [key, quantity] of state.positions) {
-    const [accountId, assetId] = key.split("|") as [AccountId, AssetId];
+    const [accountId, assetId] = splitPositionKey(key);
     if (!accounts.has(accountId) || !quantity.isPositive()) {
       continue;
     }

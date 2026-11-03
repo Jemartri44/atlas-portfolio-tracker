@@ -20,6 +20,7 @@ import {
   warnWithoutEur,
 } from "./prices.js";
 import type { LedgerState, Warning } from "./state.js";
+import { splitPositionKey } from "./state.js";
 
 /** Satellites (business rule 6b): 0 % or at least the minimum, never in between. */
 const SATELLITE_CLASSES: readonly AssetClass[] = ["gold", "crypto"];
@@ -97,7 +98,7 @@ export const coreQuantityOf = (
 ): Quantity => {
   let total = Quantity.ZERO;
   for (const [key, quantity] of state.positions) {
-    const [accountId, keyAsset] = key.split("|");
+    const [accountId, keyAsset] = splitPositionKey(key);
     if (keyAsset === assetId && core.has(accountId as string)) {
       total = total.add(quantity);
     }

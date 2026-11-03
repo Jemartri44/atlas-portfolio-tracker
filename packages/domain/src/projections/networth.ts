@@ -24,6 +24,7 @@ import type { Settings } from "../settings/settings.js";
 import { type BucketPosition, bucketPositions, warn } from "./bucket.js";
 import type { ExternalPrices } from "./prices.js";
 import type { LedgerState, Warning } from "./state.js";
+import { splitCashKey } from "./state.js";
 import { type ClassSubtotal, coreWeights } from "./weights.js";
 
 export interface NetWorthAssetRow {
@@ -122,7 +123,7 @@ const cashBlockOf = (
     if (balance.isZero()) {
       continue;
     }
-    const [account_id, currency] = key.split("|") as [AccountId, Currency];
+    const [account_id, currency] = splitCashKey(key);
     if (currency === EUR) {
       rows.push({ account_id, currency, balance, value_eur: balance });
       total = total.add(balance);

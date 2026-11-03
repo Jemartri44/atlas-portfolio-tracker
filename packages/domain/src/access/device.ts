@@ -5,8 +5,8 @@
 // forgotten" by absence would be recognition by resemblance.
 
 import { ValidationError } from "../errors.js";
-import { isRecord } from "../guards.js";
-import { isId22, isInstant } from "./ids.js";
+import { isInstant, isRecord } from "../guards.js";
+import { isId22 } from "./ids.js";
 
 export const DEVICE_FORMAT = 1;
 

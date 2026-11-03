@@ -9,7 +9,7 @@ import { render } from "solid-js/web";
 import { afterEach, describe, expect, it } from "vitest";
 import { Parts } from "../src/components/Parts.jsx";
 import { setPrivacy } from "../src/shell/preferences.js";
-import type { Part } from "../src/view-models/structured.js";
+import { effectSentences, type Part } from "../src/view-models/structured.js";
 
 const disposers: (() => void)[] = [];
 afterEach(() => {
@@ -49,5 +49,29 @@ describe("a number of securities in a message", () => {
     expect(figuresOf(false).titles("3")).toBe("3 títulos");
     expect(figuresOf(false).titles("1.5")).toBe("1,5 títulos");
     expect(figuresOf(true).titles("1")).toMatch(/^•+ títulos$/);
+  });
+});
+
+describe("the effect of a return of capital", () => {
+  it("says what each account received and that the cost goes down, not a sale", () => {
+    const host = document.createElement("div");
+    const [parts] = effectSentences(
+      [
+        {
+          op: "cost_adjustment",
+          per_account: [{ account_id: "acc_a", amount: "60" }],
+          currency: "EUR",
+          fx_rate: "1",
+          fx_rate_date: "2027-06-01",
+        },
+      ],
+      "ast_s",
+      { acc_a: "Cuenta A", ast_s: "Acción S" },
+    );
+    disposers.push(render(() => <Parts parts={parts as Part[]} />, host));
+    const text = (host.textContent ?? "").replace(/\s/g, " ");
+    expect(text).toContain("Cuenta A");
+    expect(text).toContain("rebajan el coste de los lotes de Acción S, sin vender nada");
+    expect(text).not.toContain("no sabe describir");
   });
 });

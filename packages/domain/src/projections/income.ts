@@ -5,11 +5,11 @@ import type { Ulid } from "../ids/ulid.js";
 import type { FxRate } from "../money/fx-rate.js";
 import type { Money } from "../money/money.js";
 import type { AccountId, AssetId } from "../schema/events.js";
-import type { InvestmentIncome, LedgerState } from "./state.js";
+import type { IncomeKind, InvestmentIncome, LedgerState } from "./state.js";
 
 export interface IncomeInput {
   event_id: Ulid;
-  kind: "dividend" | "interest";
+  kind: IncomeKind;
   account_id: AccountId;
   asset_id?: AssetId;
   value_date: string;

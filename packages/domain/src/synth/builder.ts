@@ -14,7 +14,7 @@ import type { Clock } from "../ports/clock.js";
 import type { RandomSource } from "../ports/random.js";
 import { positionOf } from "../projections/positions.js";
 import { projectLedger } from "../projections/project-ledger.js";
-import { cashKey, type LedgerState } from "../projections/state.js";
+import { cashKey, type LedgerState, splitPositionKey } from "../projections/state.js";
 import type { AccountId, AssetId, Draft, LedgerEvent, SupportedEvent } from "../schema/events.js";
 import { completeDraft } from "../usecases/record-event.js";
 import { SyntheticClock } from "./clock.js";
@@ -145,7 +145,7 @@ export class ScenarioBuilder {
     const parsed = Ratio.parse(ratio);
     const result: Pico[] = [];
     for (const [key, quantity] of this.state().positions) {
-      const [account_id, asset] = key.split("|") as [AccountId, AssetId];
+      const [account_id, asset] = splitPositionKey(key);
       if (asset !== assetId || !quantity.isPositive()) {
         continue;
       }
