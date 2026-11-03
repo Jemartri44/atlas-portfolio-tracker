@@ -7,10 +7,13 @@ export {
   type Entry,
   ERRORS,
   type Kind,
+  REMOTE_FAILURES,
   render,
   type Say,
   type Surface,
   say,
   type Voice,
   WARNINGS,
+  windowText,
+  year,
 } from "./messages/index.js";
