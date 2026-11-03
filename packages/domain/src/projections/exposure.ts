@@ -2,7 +2,8 @@
 // currency an asset trades in, not the one its value moves with (a world ETF in euros is mostly
 // dollars), so the owner declares the exposure per asset: percentages that add up to 100.
 //
-// - **Core only**: the bucket never takes part (constitution III).
+// - **Core only**: the bucket never takes part (constitution III). Positions only: the cash of
+//   the core is not in `coreWeights`, so it is not here either.
 // - The exposure is a parameter. Where it is stored is not this module's business.
 // - **No data, not a guess**: if an asset with value declares no exposure for a dimension, that
 //   dimension has no breakdown and lists the assets. The one exception is the currency of gold and
