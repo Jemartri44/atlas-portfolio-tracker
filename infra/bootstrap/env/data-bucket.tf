@@ -32,6 +32,18 @@ resource "aws_s3_bucket_versioning" "data" {
   }
 }
 
+# Object Lock for the copies of `backups/` (ADR-0032, decision of 2026-11-03). Enabled here and
+# not with `object_lock_enabled` on `aws_s3_bucket`, which would replace the bucket: S3 turns it
+# on in an existing versioned bucket. **It cannot be turned off again, and versioning can no
+# longer be suspended** (ADR-0032). No default retention: it would lock every version of the
+# ledger. Each copy carries its own lock, in GOVERNANCE mode, which the policy below demands.
+resource "aws_s3_bucket_object_lock_configuration" "data" {
+  bucket              = local.data_bucket
+  object_lock_enabled = "Enabled"
+
+  depends_on = [aws_s3_bucket_versioning.data]
+}
+
 resource "aws_s3_bucket_server_side_encryption_configuration" "data" {
   bucket = local.data_bucket
   rule {
@@ -81,6 +93,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "data" {
 }
 
 locals {
+  # The floor of the lock of a copy, in days (ADR-0032). The backup task asks for one more
+  # (`BACKUP_LOCK_DAYS`, domain), so rounding of the remaining days never rejects a copy.
+  backup_lock_days = 365
+
   # The roles that may touch objects: the API, the five tasks and administration.
   data_object_roles = concat([local.role_arn.api, local.role_arn.admin], local.job_role_arns)
   # Deploy and plan read the configuration of the bucket and list it, nothing else.
@@ -136,6 +152,51 @@ locals {
         Action    = "s3:PutObject"
         Resource  = "${local.s3_data}/backups/*"
         Condition = { Null = { "s3:if-none-match" = "true" }, Bool = { "s3:ObjectCreationOperation" = "true" } }
+      },
+      {
+        # A copy is born locked: no PutObject on `backups/` without the mode, whether the header is
+        # missing (`Null`) or says another mode (a negated operator also matches a missing key).
+        Sid       = "BackupsOnlyLocked"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:PutObject"
+        Resource  = "${local.s3_data}/backups/*"
+        Condition = { StringNotEquals = { "s3:object-lock-mode" = "GOVERNANCE" } }
+      },
+      {
+        Sid       = "BackupsOnlyLockedMissingMode"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:PutObject"
+        Resource  = "${local.s3_data}/backups/*"
+        Condition = { Null = { "s3:object-lock-mode" = "true" } }
+      },
+      {
+        Sid       = "BackupsLockAtLeastTheRetention"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:PutObject"
+        Resource  = "${local.s3_data}/backups/*"
+        Condition = { NumericLessThan = { "s3:object-lock-remaining-retention-days" = local.backup_lock_days } }
+      },
+      {
+        # Only the principal that applies this part may skip a governance lock (and it is also
+        # outside the roles the first statement lets touch objects: skipping it takes a
+        # deliberate change of this policy first).
+        Sid       = "DenyBypassOfTheLockExceptTheBootstrap"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = ["s3:BypassGovernanceRetention"]
+        Resource  = "${local.s3_data}/*"
+        Condition = { ArnNotLike = { "aws:PrincipalArn" = local.data_config_principals } }
+      },
+      {
+        Sid       = "DenyLockConfigurationExceptTheBootstrap"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = ["s3:PutBucketObjectLockConfiguration"]
+        Resource  = local.s3_data
+        Condition = { ArnNotLike = { "aws:PrincipalArn" = local.data_config_principals } }
       },
       {
         # Drafts of the cloud (E6 of ADR-0035): created once, never overwritten; same form as backups.

@@ -64,7 +64,7 @@ Target weights apply **across the whole core**. The bucket is a *budget* (a fixe
 | Infrastructure | Terraform |
 | Domain | Own subdomain (value lives in `terraform.tfvars`, outside the repo), CNAME to CloudFront, ACM certificate in us-east-1 |
 
-**Cost constraint:** minimum cost with a budget alarm (ADR-0028), not "always-free indefinitely" — the cloud layer costs an estimated ≈ $0.01-0.05/month, covered by AWS credits while they last and paid afterwards; a single Budgets alarm, `atlas-cost`, fires at $1 ($2 if the SSM customer-managed key of ADR-0034 is adopted), measured on the cost before credits **and filtered by the `project=atlas` cost-allocation tag** (ADR-0034) (an alarm that stays silent while credits last protects nothing). Before introducing a new service, verify its cost stays minimal at this scale.
+**Cost constraint:** minimum cost with a budget alarm (ADR-0028), not "always-free indefinitely" — the cloud layer costs an estimated ≈ $0.01-0.05/month, covered by AWS credits while they last and paid afterwards; a single Budgets alarm, `atlas-cost`, fires at $1, measured on the cost before credits **and filtered by the `project=atlas` cost-allocation tag** (ADR-0034) (an alarm that stays silent while credits last protects nothing). Before introducing a new service, verify its cost stays minimal at this scale.
 
 ## Code architecture (ADR-0007)
 

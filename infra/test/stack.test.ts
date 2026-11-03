@@ -210,6 +210,60 @@ describe.each(ENVS)("the data bucket of %s", (env) => {
     });
   });
 
+  it("turns Object Lock on in the existing bucket without replacing it, with no default retention", () => {
+    const plan = renderEnv(env);
+    const lock = ofType(plan, "aws_s3_bucket_object_lock_configuration");
+    expect(lock).toHaveLength(1);
+    expect(lock[0]?.change.after).toMatchObject({ bucket, object_lock_enabled: "Enabled" });
+    // No `rule`: a default retention would lock every version of the ledger.
+    expect(lock[0]?.change.after?.rule ?? []).toEqual([]);
+    // Not through the bucket itself: `object_lock_enabled` there forces a new bucket.
+    expect(attrs(plan, "aws_s3_bucket", "this").object_lock_enabled).not.toBe(true);
+  });
+
+  it("refuses a copy in backups/ that is not locked in governance mode for at least 365 days", () => {
+    const statements = policyOf(renderEnv(env));
+    const resource = `arn:aws:s3:::${bucket}/backups/*`;
+    expect(statements.find((s) => s.Sid === "BackupsOnlyLocked")).toMatchObject({
+      Effect: "Deny",
+      Principal: "*",
+      Action: "s3:PutObject",
+      Resource: resource,
+      Condition: { StringNotEquals: { "s3:object-lock-mode": "GOVERNANCE" } },
+    });
+    expect(statements.find((s) => s.Sid === "BackupsOnlyLockedMissingMode")).toMatchObject({
+      Effect: "Deny",
+      Action: "s3:PutObject",
+      Resource: resource,
+      Condition: { Null: { "s3:object-lock-mode": "true" } },
+    });
+    expect(statements.find((s) => s.Sid === "BackupsLockAtLeastTheRetention")).toMatchObject({
+      Effect: "Deny",
+      Action: "s3:PutObject",
+      Resource: resource,
+      Condition: { NumericLessThan: { "s3:object-lock-remaining-retention-days": 365 } },
+    });
+  });
+
+  it("lets only the principal that applies the bootstrap skip a lock or change the lock configuration", () => {
+    const statements = policyOf(renderEnv(env));
+    const bypass = statements.find((s) => s.Sid === "DenyBypassOfTheLockExceptTheBootstrap");
+    expect(bypass).toMatchObject({
+      Effect: "Deny",
+      Principal: "*",
+      Action: ["s3:BypassGovernanceRetention"],
+      Resource: `arn:aws:s3:::${bucket}/*`,
+    });
+    expect(principals(bypass)).toEqual([ADMIN]);
+    const config = statements.find((s) => s.Sid === "DenyLockConfigurationExceptTheBootstrap");
+    expect(config).toMatchObject({
+      Effect: "Deny",
+      Action: ["s3:PutBucketObjectLockConfiguration"],
+      Resource: `arn:aws:s3:::${bucket}`,
+    });
+    expect(principals(config)).toEqual([ADMIN]);
+  });
+
   it("denies drafts/ without If-None-Match, so a draft object is created once and never overwritten", () => {
     expect(policyOf(renderEnv(env)).find((s) => s.Sid === "DraftsOnlyIfAbsent")).toMatchObject({
       Effect: "Deny",

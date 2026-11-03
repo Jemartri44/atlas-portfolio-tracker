@@ -114,6 +114,19 @@ describe("SdkObjectStore", () => {
     ).rejects.toMatchObject({ name: "NoSuchBucket" });
   });
 
+  it("locks a new object in governance mode only when asked to", async () => {
+    const retainUntil = new Date("2027-01-01T00:00:00Z");
+    const { client, sent } = s3Client(() => undefined);
+    await new SdkObjectStore(client, "b").putIfNoneMatch("k", new Uint8Array([1]), { retainUntil });
+    await new SdkObjectStore(client, "b").putIfNoneMatch("k", new Uint8Array([1]));
+    expect((sent[0] as PutObjectCommand).input).toMatchObject({
+      IfNoneMatch: "*",
+      ObjectLockMode: "GOVERNANCE",
+      ObjectLockRetainUntilDate: retainUntil,
+    });
+    expect((sent[1] as PutObjectCommand).input).not.toHaveProperty("ObjectLockMode");
+  });
+
   it("creates with If-None-Match: *, and reads a 412 or a 409 as exists", async () => {
     for (const [status, expected] of [
       [undefined, "created"],
