@@ -231,8 +231,8 @@ describe("rebalancePlan", () => {
   });
 
   it("shows the window of the documented default when the ledger pins none", () => {
-    // The same loss with the settings back to their defaults: a fund takes one
-    // year (`2:fund_1y`), so the deferral runs until 31/12/2028.
+    // The same loss with the settings back to their defaults: a fund takes two
+    // months, so the deferral runs until 29/02/2028.
     const b = core("3520", "2900", "500");
     b.settings(DEFAULT_SETTINGS);
     b.buy({
@@ -244,7 +244,7 @@ describe("rebalancePlan", () => {
     });
     const plan = run(b, { target_weights: { ast_world: "30", ast_bonds: "30", ast_gold: "40" } });
     const sale = plan.steps.find((step) => step.kind === "sale") as SaleStep;
-    expect(sale.tax.available && sale.tax.deferral_window_end).toBe("2028-12-31");
+    expect(sale.tax.available && sale.tax.deferral_window_end).toBe("2028-02-29");
   });
 
   it("refuses without a threshold, without target weights or with a missing price", () => {

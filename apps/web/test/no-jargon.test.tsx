@@ -253,7 +253,7 @@ describe("the screens", () => {
     expect(shown).toContain("la del cambio de configuración del 07/03/2028");
     expect(optionsOf(host, "wsw-fund")).toEqual([
       // By domicile for a fund by default (criterion #2, since 2026-11-03).
-      "Por defecto (según domicilio)",
+      "Por defecto (2 meses)",
       "Según domicilio: español o en mercado regulado 2 meses, resto 1 año",
       "2 meses",
       "1 año",

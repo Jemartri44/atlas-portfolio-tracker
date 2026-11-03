@@ -41,6 +41,10 @@ La frase de la ayuda del Modelo 100 de 2025 que se citaba en la nota anterior no
 
 La nota anterior acertaba con los fondos extranjeros y no con los españoles: la cláusula del art. 4.9 que leía como restricción la ha leído la DGT a favor de la letra f) en **V2067-06** y **V0011-00**, vinculantes y no modificadas. **`DEFAULT_WASH_SALE_WINDOW.fund` y `.money_market` pasan a `"by_domicile"`**: un fondo español (ISIN `ES` o `issuer_country` `ES`), o con su clase en un mercado regulado de la UE escrito en `market`, lleva dos meses (`2:fund_admitted_2m`); uno extranjero sin cotización o sin ISIN ni país, un año (`2:fund_1y`), ya no por prudencia sino por los cinco pasos de la segunda investigación (certeza media-alta). Un valor escrito en la configuración sigue mandando. Detalle en `docs/fiscal-questions.md` #2 y `docs/business-rules.md` §5.4.
 
+## Nota del 2026-11-03 por la noche (decisión del dueño): dos meses para todo fondo
+
+**`DEFAULT_WASH_SALE_WINDOW.fund` y `.money_market` pasan de `"by_domicile"` a `"2m"`**, españoles o extranjeros. Es una decisión del dueño: la lectura es agresiva y un fondo extranjero sin cotización no tiene consulta que la ampare (`fiscal-questions.md` #2). `"by_domicile"` y sus constantes no cambian, y un libro que lo tenga guardado calcula lo mismo.
+
 ---
 
 ## Nota del 2026-09-24 (Ronda 8, ADR-0029): la forma canónica de «tal cual se publica»
