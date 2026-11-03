@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  apiRoot,
   chainText,
   domainRoot,
   listSources,
@@ -9,6 +10,7 @@ import {
   specifiersOf as parsedSpecifiersOf,
   productSources,
   reach,
+  webReach,
 } from "../support/source-graph.js";
 import { repoRoot } from "./support.js";
 
@@ -137,5 +139,68 @@ describe("jobs: two rules of the January and mail tasks", () => {
     expect(readers.map((file) => relative(repoRoot, file))).toEqual([
       "apps/jobs/src/tasks/mail.ts",
     ]);
+  });
+});
+
+describe("jobs: mail and keys out of the API and the web, and the clock injected", () => {
+  const sep = String.raw`[/\\]`;
+  const adapters = (...names: string[]): string =>
+    `${sep}adapters${sep}src${sep}${names.join(sep)}`;
+  /** What sends mail and the port that says what a mail is; what reads the keys of the price sources. */
+  const MAIL_AND_KEYS = new RegExp(
+    `${adapters("aws")}${sep}(sdk-ses|mail|price-keys)\\.ts$|${adapters("prices")}${sep}(eodhd|alpha-vantage|secrets)\\.ts$|${sep}domain${sep}src${sep}ports${sep}notifier\\.ts$`,
+  );
+  const reachedBy = (reached: Map<string, string[]>): string[] =>
+    [...reached]
+      .filter(([file]) => file.startsWith("<") || MAIL_AND_KEYS.test(file))
+      .map(([, chain]) => chainText(chain));
+
+  it("keeps the mail and the keys of the sources out of the API and the web", () => {
+    const api = reach([join(apiRoot, "src", "lambda.ts"), ...listSources(join(apiRoot, "src"))]);
+    expect(api.size).toBeGreaterThan(1);
+    expect(reachedBy(api)).toEqual([]);
+    expect(reachedBy(webReach())).toEqual([]);
+    const sesv2 = productSources().filter(
+      (file) =>
+        parsedSource(file).specifiers.some((specifier) =>
+          specifier.startsWith("@aws-sdk/client-sesv2"),
+        ) && !/[/\\]adapters[/\\]src[/\\]aws[/\\]sdk-ses\.ts$/.test(file),
+    );
+    expect(sesv2.map((file) => relative(repoRoot, file))).toEqual([]);
+  });
+
+  /**
+   * The «today» decides fiscal deadlines, so the domain and the jobs never read the real time: the
+   * clock adapter does, and the compositions inject it. `globalThis.Date`, `Reflect.construct(Date`
+   * and taking `Date` apart reach the same clock.
+   */
+  const REAL_TIME =
+    /\bnew\s+(?:globalThis\s*\.\s*)?Date\s*\(\s*\)|\bDate\s*\.\s*now\b|\bglobalThis\s*\.\s*Date\b|\bReflect\s*\.\s*construct\s*\(\s*(?:globalThis\s*\.\s*)?Date\b|=\s*Date\s*[;,)]|\}\s*=\s*Date\b/;
+
+  it("reads the real time neither in the domain nor in the jobs", () => {
+    const files = [
+      ...listSources(join(domainRoot, "src")),
+      ...listSources(join(repoRoot, "apps", "jobs", "src")),
+    ];
+    expect(files.length).toBeGreaterThan(100);
+    const offenders = files.filter((file) => REAL_TIME.test(parsedSource(file).code));
+    expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
+  });
+
+  it("catches every way of reaching the clock it names", () => {
+    for (const code of [
+      "const at = new Date();",
+      "const at = new globalThis.Date();",
+      "const ms = Date.now();",
+      "const D = globalThis.Date;",
+      "const at = Reflect.construct(Date, []);",
+      "const { now } = Date;",
+      "const Clock = Date;",
+    ]) {
+      expect(REAL_TIME.test(code), code).toBe(true);
+    }
+    for (const code of ["new Date(now)", "Date.parse(text)", "Date.UTC(2026, 0, 1)"]) {
+      expect(REAL_TIME.test(code), code).toBe(false);
+    }
   });
 });
