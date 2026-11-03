@@ -42,8 +42,8 @@ describe("the step of the monitor", () => {
     expect(before).toEqual([
       "0.9375rem",
       "1.0625rem",
-      "1.625rem",
-      "2.75rem",
+      "2.125rem",
+      "3.75rem",
       "2rem",
       "1.25rem",
       "105rem",
@@ -52,8 +52,8 @@ describe("the step of the monitor", () => {
     expect(after).toEqual([
       "1rem",
       "1.1875rem",
-      "1.75rem",
-      "3rem",
+      "2.25rem",
+      "4rem",
       "2.5rem",
       "1.5rem",
       "115rem",
