@@ -4,6 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 import { NOTICE_CODES, noticeMail } from "../../src/jobs/mail/notice.js";
+import { wholeBody } from "./mail-text.js";
 
 const FACTS = { since: "2026-10-02", period: "2026-10", outcome: "task_error" };
 
@@ -36,11 +37,12 @@ describe("the mail of a streak", () => {
     ).toEqual(
       expect.objectContaining({
         subject: "[Atlas] Aviso: tarea monthly_backup",
-        body: expect.stringContaining(
+        body: wholeBody(
           [
             "Ha fallado el volcado mensual en octubre de 2026 (código task_error), desde el 02/10/2026.",
             "Se volverá a intentar en su próxima ejecución. Si el aviso se repite, mira el registro de la tarea en jobs/.",
-          ].join("\n"),
+          ],
+          "https://a.example",
         ),
       }),
     );
@@ -99,11 +101,12 @@ describe("the mail of a streak", () => {
     ).toEqual(
       expect.objectContaining({
         subject: "[Atlas] Aviso: registro de prices_update",
-        body: expect.stringContaining(
+        body: wholeBody(
           [
             "El registro de prices_update (la descarga de los precios de cierre) del 02/10/2026 no se puede leer (código job_record_unreadable), desde el 02/10/2026.",
             "La tarea no lo toma por libre; hay que mirarlo en jobs/ y repararlo.",
-          ].join("\n"),
+          ],
+          "https://a.example",
         ),
       }),
     );
@@ -259,11 +262,12 @@ describe("an update of the ECB cut and undone (review of PR #109, round 2, R2-N1
     ).toEqual(
       expect.objectContaining({
         subject: "[Atlas] Aviso: historico del BCE deshecho",
-        body: expect.stringContaining(
+        body: wholeBody(
           [
             "Una actualización del histórico del BCE se cortó a medias y se ha deshecho, desde el 02/10/2026: el fichero en vigor no cuadraba con su manifiesto y vuelve a ser el anterior.",
             "La descarga del día se ha vuelto a hacer después. Si se repite, mira reference/ecb/ con el procedimiento del histórico del BCE.",
-          ].join("\n"),
+          ],
+          "https://a.example",
         ),
       }),
     );
@@ -272,7 +276,7 @@ describe("an update of the ECB cut and undone (review of PR #109, round 2, R2-N1
 
 describe("the warnings of the dump and of the integrity (016, E4)", () => {
   const ORIGIN = "https://a.example";
-  const body = (lines: string[]) => expect.stringContaining(lines.join("\n"));
+  const body = (lines: string[]) => wholeBody(lines, ORIGIN);
 
   it("says a dump that found other bytes, and one that could not keep the ECB with its manifest", () => {
     expect(
@@ -446,5 +450,34 @@ describe("the warnings of the dump and of the integrity (016, E4)", () => {
         ORIGIN,
       )?.body,
     ).toContain("Ha fallado el volcado mensual en octubre de 2026 (código ledger_absent)");
+  });
+});
+
+describe("the title of each warning", () => {
+  it.each([
+    ["task_failed", "monthly_backup", "Ha fallado el volcado mensual"],
+    ["record_unreadable", "ecb_update", "Un registro de tarea no se lee"],
+    ["source_failing", "eodhd", "EODHD falla"],
+    ["currency_unchecked", "eodhd", "Correspondencias sin contrastar"],
+    ["thesis_horizon_exceeded", "bucket", "Tesis del cubo fuera de plazo"],
+    ["prices_file_unreadable", "prices", "Ficheros de precios ilegibles"],
+    ["ecb_update_rejected", "ecb", "Descarga del BCE rechazada"],
+    ["ecb_update_undone", "ecb", "Actualización del BCE deshecha"],
+    ["ecb_history_backfilled", "ecb", "Histórico del BCE con días rellenados"],
+    ["ecb_calendar_mismatch", "ecb", "Calendario del BCE descuadrado"],
+    ["ecb_history_damaged", "ecb", "Histórico del BCE dañado"],
+    ["ecb_history_rebuilt", "ecb", "Histórico del BCE reconstruido"],
+    ["ecb_rebuilt_unverified", "ecb", "Histórico del BCE sin comparar"],
+    ["backup_object_differs", "backup", "Volcado con objetos distintos"],
+    ["backup_ecb_inconsistent", "backup", "Volcado sin manifiesto del BCE"],
+    ["backup_positions_missing", "backup", "Volcado sin posiciones"],
+    ["backup_ecb_missing", "backup", "Volcado sin histórico del BCE"],
+    ["integrity_errors", "integrity", "Errores de integridad"],
+    ["restore_rehearsal_differs", "integrity", "El ensayo de restauración no cuadra"],
+    ["ledger_size_above_threshold", "integrity", "El libro crece de la cuenta"],
+  ])("%s", (code, subject, title) => {
+    const mail = noticeMail({ code, subject }, { since: "2026-10-01" }, "https://a.example");
+    expect(mail?.body.split("\n")[0]).toBe(title.toLocaleUpperCase("es"));
+    expect(mail?.html).toContain(`>${title}</h1>`);
   });
 });
