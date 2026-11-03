@@ -84,11 +84,11 @@ export const addMonths = (date: CivilDate, months: number): CivilDate => {
 /** Whole calendar years, with 29-02 clamped to 28-02 in a non-leap year. */
 export const addYears = (date: CivilDate, years: number): CivilDate => addMonths(date, years * 12);
 
+/** ISO day of the week: 1 Monday … 7 Sunday. */
+export const isoWeekday = (date: CivilDate): number => ((((epochDayOf(date) + 3) % 7) + 7) % 7) + 1; // 1970-01-01 was a Thursday
+
 /** Saturday or Sunday: the ECB publishes no reference rate (data-schema.md §4). */
-export const isWeekend = (date: CivilDate): boolean => {
-  const weekday = (((epochDayOf(date) + 4) % 7) + 7) % 7; // 1970-01-01 was a Thursday
-  return weekday === 0 || weekday === 6;
-};
+export const isWeekend = (date: CivilDate): boolean => isoWeekday(date) >= 6;
 
 /**
  * Last working day on or before `date`, rolling back **weekends only**.
