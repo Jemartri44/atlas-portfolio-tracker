@@ -1,5 +1,6 @@
 <!--
 Sync Impact Report
+- Version change: 2.0.0 → 2.1.0 (2026-11-03): VII, domain coverage 100% only in money/projections/tax/informative/dates and ~90% elsewhere; MINOR, a guideline materially narrowed. Previous report (1.6.2 → 2.0.0) follows.
 - Version change: 1.6.2 → 2.0.0
 - Modified principles: VI (the bullet "Cero servicios de pago de terceros en el camino crítico" is redefined: daily use now depends on AWS, with minimum cost and a budget alarm, and on Google sign-in; survival does not depend on them. ADR-0035, accepted 2026-10-06). V gains a clarification (the ledger is never shown offline; a visible failure, not a silence), without changing its rules.
 - Modified sections: none
@@ -93,7 +94,7 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 - Prioridad por daño si fallan: motor FIFO y transformaciones de lotes, conversión de divisa por fecha valor, regla de los dos meses, reparto de la aportación mensual, parsers de extractos.
 - Casos límite obligatorios: varios lotes con la misma fecha, fracciones, contrasplit con liquidación en efectivo **en dos cuentas**, recompra en el límite de la ventana, traspaso parcial, anulación de una compra ya vendida (rechazo), venta el 30/12 con liquidación el 02/01, pérdida en fondo seguida de aportación mensual dentro del año, pérdida diferida cuyos lotes se traspasan o canjean antes de liberarse (el diferimiento viaja con los lotes descendientes).
 - Los parsers tienen tests de contrato contra ficheros de ejemplo anonimizados versionados en el repositorio.
-- `packages/domain` mantiene **cobertura del 100% de líneas y ramas**, bloqueante en CI. Fuera del dominio no hay umbral numérico: mandan los tests de contrato e integración.
+- `packages/domain` mantiene **100% de líneas y ramas donde un fallo mueve dinero o impuestos** (`money/`, `projections/`, `tax/`, `informative/` y `dates/`) y **~90%** en el resto, bloqueante en CI. Fuera del dominio no hay umbral numérico: mandan los tests de contrato e integración. *Por qué:* el 100% global empujaba a escribir tests de relleno (textos de mensajes, ramas inalcanzables) que se rompen al cambiar una frase y no protegen cifras.
 - Ninguna funcionalidad del motor fiscal se da por terminada sin sus tests.
 
 *Razón:* un error silencioso en la fiscalidad no se detecta hasta años después y no tiene vuelta atrás.
@@ -122,4 +123,4 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 - Versionado semántico: MAJOR para eliminar o redefinir principios, MINOR para añadir principios o secciones o ampliar materialmente una guía, PATCH para aclaraciones y redacción.
 - Toda revisión de spec, plan o PR DEBE comprobar el cumplimiento de los principios I–VII. Cualquier complejidad que los contradiga debe justificarse por escrito o rechazarse.
 
-**Version**: 2.0.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-10-06
+**Version**: 2.1.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-11-03

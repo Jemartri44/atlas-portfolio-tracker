@@ -58,11 +58,13 @@ describe("the coverage of the domain is measured on its own", () => {
     expect(scripts["test:infra"]).toBe("vitest run --project infra --pool=forks --maxWorkers=1");
   });
 
-  it("keeps the threshold of 100 % and the coverage of the domain alone in the configuration", () => {
+  it("keeps 100 % on the folders that compute figures, 90 % elsewhere, on the domain alone", () => {
     const config = readFileSync(join(repoRoot, "vitest.config.ts"), "utf8");
     expect(config).toMatch(/include:\s*\["packages\/domain\/src\/\*\*"\]/);
+    expect(config).toMatch(/lines:\s*90,\s*branches:\s*90,\s*functions:\s*90,\s*statements:\s*90,/);
+    expect(config).toMatch(/\["money",\s*"projections",\s*"tax",\s*"informative",\s*"dates"\]/);
     expect(config).toMatch(
-      /thresholds:\s*\{\s*lines:\s*100,\s*branches:\s*100,\s*functions:\s*100,\s*statements:\s*100,?\s*\}/,
+      /\{\s*lines:\s*100,\s*branches:\s*100,\s*functions:\s*100,\s*statements:\s*100\s*\}/,
     );
   });
 });

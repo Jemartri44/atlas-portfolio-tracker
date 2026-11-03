@@ -57,7 +57,6 @@ describe("domain errors", () => {
     expect(unknown.code).toBe("write_outcome_unknown");
     expect(unknown.ids).toEqual(["01A", "01B"]);
     expect(unknown.details).toEqual({ count: 2 });
-    expect(new CompactRejectedError("invalid_events", { affected: [] }).message).toMatch(/rectify/);
     expect(new CompactRejectedError("projection_changed", { keys: ["lots"] }).details).toEqual({
       keys: ["lots"],
     });
