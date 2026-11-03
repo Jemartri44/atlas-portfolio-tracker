@@ -20,7 +20,7 @@ describe("architecture: @atlas/access imports only @atlas/domain", () => {
     expect(manifest.peerDependencies).toBeUndefined();
   });
 
-  it("imports its own modules and @atlas/domain, and nothing else: no Node, no SDK, no app", () => {
+  it("imports its own modules and the barrel of @atlas/domain, and nothing else: no door of the domain, no Node, no SDK, no app", () => {
     const sources = listSources(accessSrc);
     expect(sources.length).toBeGreaterThan(3);
     const violations = sources.flatMap((file) =>
@@ -29,7 +29,7 @@ describe("architecture: @atlas/access imports only @atlas/domain", () => {
           if (specifier.startsWith("./") || specifier.startsWith("../")) {
             return relative(accessSrc, resolve(dirname(file), specifier)).startsWith("..");
           }
-          return !/^@atlas\/domain(\/[a-z-]+)?$/.test(specifier);
+          return specifier !== "@atlas/domain";
         })
         .map((specifier) => `${relative(repoRoot, file)} -> ${specifier}`),
     );
