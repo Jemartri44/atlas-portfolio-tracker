@@ -36,10 +36,14 @@ describe("the patrimony of the summary", () => {
     today("2027-01-10");
     setPrivacy(true);
     const host = await show("/", Resumen);
-    const parts = text(hero(host)?.querySelector(".parts"));
-    expect(parts).toContain("48 %");
-    expect(parts).toContain("••••");
-    expect(parts.replace(/\d+ %/g, "")).not.toMatch(/\d/);
+    // The figures of each book: its share and its value. The line under them says percentages
+    // and how many accounts, never an amount.
+    const figures = [...(hero(host)?.querySelectorAll(".part-figs") ?? [])].map(text).join(" ");
+    expect(figures).toContain("48 %");
+    expect(figures).toContain("••••");
+    expect(figures.replace(/\d+ %/g, "")).not.toMatch(/\d/);
+    const metrics = [...(hero(host)?.querySelectorAll(".part-metric") ?? [])].map(text).join(" ");
+    expect(metrics.replace(/[+−-]?\d+(,\d+)? %|en \d+ cuentas?|12 meses/g, "")).not.toMatch(/\d/);
   });
 
   it("draws no bar and no percentage on a partial total", async () => {

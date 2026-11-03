@@ -46,7 +46,12 @@ import type {
   FiledAnchor,
   PendingLoss,
 } from "./report.js";
-import { type PendingDeferral, type WashSaleResult, walkWashSales } from "./wash-sale.js";
+import {
+  type DeferralOrder,
+  type PendingDeferral,
+  type WashSaleResult,
+  walkWashSales,
+} from "./wash-sale.js";
 
 /** The regime of compensation the engine implements is the one in force since 2018. */
 export const FIRST_SUPPORTED_YEAR = 2018;
@@ -61,6 +66,12 @@ export interface TaxOptions {
    * ledger, always. It only notes which lines depend on a rate with a finding.
    */
   rateFindings?: readonly { event_id: string; code: string }[];
+  /**
+   * Which repurchased units carry a deferred loss (criterion #19b): the
+   * closest to the sale, always, except when the other reading is measured,
+   * which runs the chain with the oldest first. Never a setting.
+   */
+  deferralOrder?: DeferralOrder;
 }
 
 const zeroBalances = (): YearBalances => ({ capital_gain: zero(), movable_capital: zero() });
@@ -254,7 +265,7 @@ export const taxChain = (
   );
   const types = new Map<Ulid, string>([...byId].map(([id, event]) => [id, event.type]));
   const entryYear = yearOfEntry(state, byId);
-  const walk = walkWashSales(state, options.today, types, entryYear);
+  const walk = walkWashSales(state, options.today, types, entryYear, options.deferralOrder);
   const currencyWalk = walkCurrencyWashSales(state, options.today);
   const lots = new Map<string, FiscalLot>();
   for (const entry of state.lots.values()) {
