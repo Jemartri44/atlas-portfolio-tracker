@@ -69,7 +69,7 @@ describe("atlas export", () => {
       const { h, ledger } = await setup(true);
       const dir = dirname(ledger);
       await mkdir(join(dir, "sync"));
-      const guarded = [join(dir, "credentials.json"), join(dir, "sync", "state.json")];
+      const guarded = [join(dir, "notes.json"), join(dir, "sync", "state.json")];
       for (const file of guarded) {
         await writeFile(file, "KEEP\n");
       }
@@ -80,7 +80,7 @@ describe("atlas export", () => {
       for (const target of [
         ...guarded,
         join(dir, "alias.csv"),
-        join(dir, "sync", "..", "credentials.json"),
+        join(dir, "sync", "..", "notes.json"),
       ]) {
         h.reset();
         expect(await h.exec(["--yes", "export", "--format", "csv", "--out", target])).toBe(1);

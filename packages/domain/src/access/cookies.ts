@@ -1,10 +1,8 @@
-// Which credential a request brings (`docs/api.md` §2): **exactly one**. The
-// cookie of the session and the device token together are refused **without
-// looking at either** (`credentials_ambiguous`): judged by presence alone.
+// Which credential a request brings (`docs/api.md` §2): the cookie of the
+// session, once, or nothing. The web is the only client of the API.
 
 export const SESSION_COOKIE = "__Host-atlas_session";
 export const LOGIN_COOKIE = "__Host-atlas_login";
-export const DEVICE_TOKEN_HEADER = "x-atlas-device-token";
 
 /** `a=b; c=d` as pairs, in order; a piece without `=` is dropped (it names no cookie). */
 export const parseCookieHeader = (header: string): [string, string][] =>
@@ -19,11 +17,9 @@ export const parseCookieHeader = (header: string): [string, string][] =>
 
 export type Presented =
   | { readonly kind: "none" }
-  | { readonly kind: "ambiguous" }
   | { readonly kind: "session"; readonly value: string }
   /** The session cookie twice: never "the first one". */
-  | { readonly kind: "session_repeated" }
-  | { readonly kind: "token"; readonly value: string };
+  | { readonly kind: "session_repeated" };
 
 /** Every value of a cookie by name, in order (a name may come twice). */
 export const cookieValues = (
@@ -31,17 +27,8 @@ export const cookieValues = (
   name: string,
 ): string[] => cookies.filter(([key]) => key === name).map(([, value]) => value);
 
-export const presentedCredential = (
-  cookies: readonly (readonly [string, string])[],
-  deviceToken: string | undefined,
-): Presented => {
+export const presentedCredential = (cookies: readonly (readonly [string, string])[]): Presented => {
   const sessions = cookieValues(cookies, SESSION_COOKIE);
-  if (sessions.length > 0 && deviceToken !== undefined) {
-    return { kind: "ambiguous" };
-  }
-  if (deviceToken !== undefined) {
-    return { kind: "token", value: deviceToken };
-  }
   if (sessions.length === 0) {
     return { kind: "none" };
   }

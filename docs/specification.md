@@ -337,12 +337,11 @@ Frontend estático en S3 y backend en Lambda, con Terraform para toda la infraes
 
 ### 9.2 Componentes
 
-**Atlas es siempre en la nube (ADR-0035).** El libro de S3 (`ledger/ledger.jsonl`) es la única fuente de verdad: la web y la consola escriben directamente contra la API con `If-Match`, sin cola local y sin libro en el dispositivo; la API es el único escritor y solo añade ([`api.md`](api.md) §5.8). Una carpeta de la consola es **de nube** (`sync/remote.json`, sin `ledger.jsonl`) o **local** (`ledger.jsonl`, sin identidad remota); con las dos cosas se niega (`folder_mode_ambiguous`). Sin conexión la consola sale con el código 8, con la sesión caducada con el 10 (`atlas remote login`).
+**Atlas es siempre en la nube (ADR-0035).** El libro de S3 (`ledger/ledger.jsonl`) es la única fuente de verdad: la web escribe directamente contra la API con `If-Match`, sin cola local y sin libro en el dispositivo; la API es el único escritor y solo añade ([`api.md`](api.md) §5.8). **La consola no tiene acceso propio a la API** (ADR-0037): trabaja sobre una carpeta local (`ledger.jsonl`) y llega a la nube solo como administración, con el rol de AWS y MFA (`atlas admin pull|compact|restore`, [`cli.md`](cli.md)).
 
 ```
-Navegador (PC / móvil)      Consola (`atlas`; token de dispositivo
-    │                           │  en cabecera propia, ADR-0033)
-    ├───────────────────────────┘
+Navegador (PC / móvil)      Consola (`atlas`): solo administración,
+    │                        con el rol de AWS y MFA, directa a S3 (ADR-0037)
     └── CloudFront  <dominio de la app>   [plan Free de tarifa plana + WAF]
            │
            ├── /*      ──── S3 (SPA estática, privada vía OAC)
@@ -350,13 +349,13 @@ Navegador (PC / móvil)      Consola (`atlas`; token de dispositivo
            └── /api/*  ──── Lambda Function URL ─── Lambda (API) ─── S3 (datos: libro mayor
                             (AuthType=AWS_IAM; OAC firma                JSONL versionado, precios,
                              la petición; la Lambda verifica            histórico del BCE,
-                             la sesión propia, el token de              documentos; nunca origen
-                             la consola o el ID token de Google)        de CloudFront)
+                             la sesión propia o el ID token             documentos; nunca origen
+                             de Google)                                 de CloudFront)
 
 EventBridge Scheduler ─── Lambdas programadas (cinco, un solo artefacto) ─── SES (solo la función de correo)
                                 │
                                 └── SSM Parameter Store (secretos, lista permitida, claves de precios,
-                                    destinatario del correo, registro de los tokens de consola)
+                                    destinatario del correo)
 ```
 
 Decisiones deliberadas para minimizar coste y servicios, cada una en su ADR:
@@ -386,7 +385,7 @@ Construidas (feature 016) y sin desplegar todavía: la infraestructura es de la 
 | `job-prices` (07:00) | Precios de cierre: EODHD; nunca escribe `prices/symbols.json` (ADR-0031). Cada llamada, 15 s de tope, sin seguir redirecciones (la clave va en la dirección) y leyendo como mucho 8 MiB | `prices`: `daily`, `weekly` | Solo con un hallazgo (fuente caída, correspondencias sin contrastar, horizonte de una tesis vencido) |
 | `job-backup` (03:15) | Volcado mensual a `backups/<YYYY-MM>/` (ADR-0032) | `backup`: `monthly` (fijo) | Solo si falla o queda incompleto |
 | `job-integrity` (04:15) | Errores de `atlas check --deep`, ensayo de restauración en memoria y tamaño del libro (ADR-0032) | `integrity`: `quarterly`, `monthly` | Solo con errores |
-| `job-mail` (08:00) | Recordatorio mensual: reparto de la aportación (sin importes salvo que se active, ADR-0028), días desde el último inicio de sesión y tokens de consola vivos | `reminder`: `monthly` (fijo) | **Siempre, al menos una vez** |
+| `job-mail` (08:00) | Recordatorio mensual: reparto de la aportación (sin importes salvo que se active, ADR-0028), días desde el último inicio de sesión en la web | `reminder`: `monthly` (fijo) | **Siempre, al menos una vez** |
 | `job-mail` | Revisión de desviaciones de los pesos del núcleo por clase y reglas 17 y 18 del cubo | `review`: `weekly`, `monthly` | Solo si se pasa un umbral, como mucho una vez por periodo |
 | `job-mail` | Datos de la Renta y modelos 720 y 721 (enero) | `tax_return` y `informative_thresholds`: `yearly` (fijos) | Una vez, sin cifras ni base |
 | *(bloqueadas, Ronda 6)* | Importación diaria de IBKR y conciliación semanal | `reconciliation`: reservada | — |
@@ -408,12 +407,12 @@ Requisitos transversales:
 
 ## 10. Seguridad
 
-Son datos financieros personales completos: nivel de exigencia alto. Las decisiones están en ADR-0026, ADR-0027, ADR-0028, ADR-0033 y ADR-0034; el contrato de acceso, en [`api.md`](api.md) §2-§4.
+Son datos financieros personales completos: nivel de exigencia alto. Las decisiones están en ADR-0026, ADR-0027, ADR-0028, ADR-0034 y ADR-0037; el contrato de acceso, en [`api.md`](api.md) §2 y §3.
 
 - **Nunca se almacenan credenciales de brókers.** Los secretos van en SSM como `SecureString`, nunca en el frontend ni en el repositorio (§11.8).
 - **S3 privado**, servido solo vía CloudFront con Origin Access Control; el bucket de datos nunca es origen de CloudFront.
 - **Acceso solo con Google**, verificado en la propia Lambda con PKCE y `state`, lista permitida de `{sub, email}` en SSM y sesión propia en una cookie `__Host-` firmada (ADR-0027).
-- **La consola usa un token de dispositivo propio**, emitido solo al final de un inicio de sesión con Google que abre la propia consola, nunca desde la web; caduca a los 90 días y se revoca uno a uno (ADR-0033).
+- **La consola no tiene acceso propio a la API**: solo administración, con credenciales cortas de AWS y MFA. Desde Ajustes se pueden **cerrar a la vez las sesiones de todos los dispositivos** (ADR-0037).
 - IAM de mínimo privilegio, un rol por Lambda; cifrado en reposo y TLS en tránsito.
 - Sin analítica de terceros, CDN externos ni fuentes remotas; CSP restrictiva que solo permite el propio origen.
 - Validación siempre en el backend: el frontend es comodidad, no control de seguridad.
@@ -438,7 +437,7 @@ Todo lo técnico en inglés (código, comentarios, commits, ramas, ficheros, inf
 
 - Git flow con comandos básicos (`main`, `develop`, `feature/*`, `fix/*`, `release/*`, `hotfix/*`), fusiones con `--no-ff`; commits atómicos, Conventional Commits en inglés y sin coautoría de herramientas de IA.
 - Pull requests obligatorias hacia `develop` y `main`, sin push directo: `main` tiene protección de rama en GitHub (PR con una aprobación, sin comprobaciones obligatorias); `develop` no está protegida y el «sin push directo» es disciplina (`CLAUDE.md`).
-- Hooks versionados en `.githooks/` (`core.hooksPath`): `commit-msg` valida el formato y `pre-commit` ejecuta `gitleaks` (reglas por defecto más las de `.gitleaks.toml`, entre ellas la del token de dispositivo, ADR-0033) y `biome check` sobre los ficheros preparados. Si falta la herramienta, el hook avisa y no bloquea; la CI sigue ejecutando `npm run lint`.
+- Hooks versionados en `.githooks/` (`core.hooksPath`): `commit-msg` valida el formato y `pre-commit` ejecuta `gitleaks` (reglas por defecto más las de `.gitleaks.toml`, entre ellas la del antiguo token de dispositivo de ADR-0033) y `biome check` sobre los ficheros preparados. Si falta la herramienta, el hook avisa y no bloquea; la CI sigue ejecutando `npm run lint`.
 - Plantilla de PR con la lista de la constitución en `.github/pull_request_template.md`.
 
 ### 11.3 Entornos
@@ -459,7 +458,7 @@ GitHub Actions: lint y formato (Biome, ADR-0008), tipos, tests, `npm audit`, `te
 
 ### 11.7 Logging por capas
 
-Niveles `ERROR` (requiere intervención), `WARN` (degradación), `INFO` (eventos de negocio) y `DEBUG` (desactivado en producción), en JSON con `request_id`. **Nunca se registran importes, posiciones ni identificadores de cuenta**, ni tokens, correos o `sub` de Google (ADR-0027, ADR-0028, ADR-0033). Retención de 30 días en producción y 7 en `dev`.
+Niveles `ERROR` (requiere intervención), `WARN` (degradación), `INFO` (eventos de negocio) y `DEBUG` (desactivado en producción), en JSON con `request_id`. **Nunca se registran importes, posiciones ni identificadores de cuenta**, ni tokens, correos o `sub` de Google (ADR-0027, ADR-0028). Retención de 30 días en producción y 7 en `dev`.
 
 ### 11.8 Gestión de secretos
 
@@ -469,7 +468,6 @@ Todo en SSM Parameter Store estándar como `SecureString`; los valores nunca pas
 - Secreto del cliente OAuth de Google y clave de firma de la sesión, uno por entorno (ADR-0027).
 - Claves de las fuentes de precios: en local, `~/.config/atlas/secrets.json` (`600`, fuera del repositorio y del libro); en la nube, SSM (ADR-0031).
 - Lista permitida de `{sub, email}` y destinatario del correo (que sale de `terraform.tfvars`) y el interruptor de importes del correo, en SSM (ADR-0028, ADR-0034).
-- Tokens de dispositivo de la consola: un `SecureString` por token bajo `/atlas/<entorno>/device-tokens/`, solo el hash, fuera del bucket de datos (ADR-0033).
 - Sin secretos en variables de entorno de la Lambda; `.gitignore` estricto y escaneo de secretos.
 
 ### 11.9 Documentación
@@ -493,7 +491,7 @@ Requisitos que no son técnicos pero deciden si el sistema sigue vivo en 2046:
 
 ## 13. Fases
 
-**Estado a 2026-10-24:** entregadas las fases 1, 2, 3 y 5, la aplicación web y la consola, ambas contra la nube (ADR-0035). La Fase 4 y la infraestructura están en código y probadas con dobles, **sin desplegar** (018 y 019).
+**Estado a 2026-10-24:** entregadas las fases 1, 2, 3 y 5, la aplicación web contra la nube (ADR-0035) y la consola, local y de administración (ADR-0037). La Fase 4 y la infraestructura están en código y probadas con dobles, **sin desplegar** (018 y 019).
 
 **Fase 0 — Validación (antes de escribir nada)**
 1. **Pasar la cuenta AWS al Paid Plan** y configurar alerta de presupuesto en 1$.

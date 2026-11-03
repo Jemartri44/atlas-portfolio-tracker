@@ -79,10 +79,10 @@ No habrá cuentas miembro dedicadas: Atlas se despliega en una cuenta de AWS que
 
 Decidida por la dirección el 2026-09-27 tras la revisión de seguridad de la PR #98 (N1; `specs/015-api-access/questions.md (en el historial de git)` §35). El paso 4 pide una «confirmación explícita, con esa lista delante», y un `--yes` no la cumple: se escribe antes de ver la lista, y basta recuperar la orden del historial del shell para devolver la nube a una copia antigua sin ninguna pregunta. Por eso:
 
-- `atlas admin restore`, `atlas admin compact` y `atlas admin forget-device` **se niegan con `--yes`**;
+- `atlas admin restore`, `atlas admin compact` y `atlas admin forget-device` **se niegan con `--yes`** (la tercera se retiró con [ADR-0037](0037-web-only-access.md));
 - se confirman **escribiendo el nombre del entorno** (`prod`), con lo que está en juego delante. Un «sí» no vale, y cualquier otra respuesta no toca nada;
 - sin una terminal a la que preguntar, se detienen sin escribir nada;
-- la confirmación de olvidar un dispositivo enseña además su tipo, su nombre y su última sincronización, para no olvidar el que no es.
+- la confirmación de olvidar un dispositivo enseñaba además su tipo, su nombre y su última sincronización (sin objetos de dispositivo desde [ADR-0037](0037-web-only-access.md)).
 
 El paso 5 lee además la copia como UTF-8 estricto: un byte que no lo es se niega (`restore_candidate_invalid`, `not_utf8`), en vez de escribirse como otros bytes que los de la copia.
 
@@ -106,6 +106,10 @@ Con [ADR-0035](0035-cloud-ledger-single-source.md), sin cola ni réplicas en los
 - **Se conserva:** `compact` y la restauración como operaciones de administración sobre el remoto (pasos 1 a 5), y la prueba anual de restauración. Si la nube desaparece, la consola trabaja en local sobre la última copia y después se usa `atlas admin restore`.
 
 Lo que ADR-0035 retira del código se retira en sus entregas E1 a E5; hasta entonces, el código sigue como está.
+
+## Nota del 2026-11-03 (ADR-0037)
+
+[ADR-0037](0037-web-only-access.md): la subida inicial a una nube vacía es `atlas admin restore`, y `atlas backup --from-bucket` copia también el libro de la nube (fechado, `0400`, verificado por SHA-256). Procedimiento: [`docs/runbooks/restore-the-ledger.md`](../runbooks/restore-the-ledger.md).
 
 ## Notas de estado
 

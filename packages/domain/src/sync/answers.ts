@@ -48,16 +48,6 @@ export const parseAppendAnswer = (value: unknown): AppendResult | undefined => {
     : { etag: value.etag, lines: value.lines, accepted: value.accepted, rejected };
 };
 
-/** The `200` of `PUT /api/ledger`. */
-export const parseInitAnswer = (value: unknown): { etag: string; lines: number } | undefined =>
-  isRecord(value) &&
-  onlyKeys(value, ["etag", "lines"]) &&
-  typeof value.etag === "string" &&
-  SHA256_HEX.test(value.etag) &&
-  isCount(value.lines)
-    ? { etag: value.etag, lines: value.lines }
-    : undefined;
-
 /** The SHA-256 an `ETag` quotes, strong or weak (CloudFront weakens it when it compresses). */
 export const etagOfHeader = (header: string | null): string | undefined => {
   const quoted = /^(?:W\/)?"([0-9a-f]{64})"$/.exec(header ?? "");

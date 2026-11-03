@@ -53,17 +53,6 @@ describe("GoogleIdentity", () => {
       code_challenge: "cc",
       code_challenge_method: "S256",
     });
-    const prompted = new URL(
-      google.authorizationUrl({
-        clientId: "c",
-        redirectUri: "r",
-        state: "s",
-        nonce: "n",
-        codeChallenge: "cc",
-        prompt: "select_account",
-      }),
-    );
-    expect(prompted.searchParams.get("prompt")).toBe("select_account");
   });
 
   it("exchanges the code directly with Google, with the verifier, and returns the ID token", async () => {

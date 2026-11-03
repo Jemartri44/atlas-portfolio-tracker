@@ -1,9 +1,9 @@
-// The routes of the drafts in the cloud (`docs/api.md` §6.1) over the double of S3, with both
-// credentials. Every object is created once and nothing is overwritten or deleted.
+// The routes of the drafts in the cloud (`docs/api.md` §6.1) over the double of S3, with the
+// session of the web. Every object is created once and nothing is overwritten or deleted.
 
 import { endObjectText, MAX_PENDING_DRAFTS } from "@atlas/domain/ecb";
 import { describe, expect, it } from "vitest";
-import { consoleLogin, errorOf, SELF, setup } from "./harness.js";
+import { errorOf, SELF, setup } from "./harness.js";
 
 type Api = ReturnType<typeof setup>;
 const A = "01J0000000000000000000000A";
@@ -21,13 +21,9 @@ interface As {
   headers: Record<string, string>;
   jar: boolean;
 }
-const credentials = async (api: Api): Promise<{ token: As; session: As }> => {
-  const console = await consoleLogin(api);
+const signedIn = async (api: Api): Promise<As> => {
   await api.signIn();
-  return {
-    token: { headers: { "x-atlas-device-token": console.token }, jar: false },
-    session: { headers: { origin: SELF }, jar: true },
-  };
+  return { headers: { origin: SELF }, jar: true };
 };
 const post = (api: Api, as: As, path: string, body: unknown) =>
   api.call("POST", path, {
@@ -41,43 +37,41 @@ const listed = async (api: Api, as: As) =>
   JSON.parse((await get(api, as)).body) as { drafts: { id: string }[]; unreadable: string[] };
 
 describe("the drafts in the cloud (§6.1)", () => {
-  it("saves a draft once, lists it to both credentials and says a second save exists", async () => {
+  it("saves a draft once, lists it and says a second save exists", async () => {
     const api = setup();
-    const { token, session } = await credentials(api);
-    const saved = await post(api, token, "/api/drafts", { draft: draft() });
+    const session = await signedIn(api);
+    const saved = await post(api, session, "/api/drafts", { draft: draft() });
     expect(saved.statusCode).toBe(201);
     expect(JSON.parse(saved.body)).toEqual({ id: A });
     expect(api.s3.keys()).toContain(`drafts/${A}.json`);
     const again = await post(api, session, "/api/drafts", { draft: draft() });
     expect(again.statusCode).toBe(409);
     expect(errorOf(again).code).toBe("draft_exists");
-    for (const as of [token, session]) {
-      expect((await listed(api, as)).drafts).toEqual([draft()]);
-    }
-    expect((await get(api, token)).headers["cache-control"]).toBe("no-store");
+    expect((await listed(api, session)).drafts).toEqual([draft()]);
+    expect((await get(api, session)).headers["cache-control"]).toBe("no-store");
   });
 
   it("lists oldest first and carries the stamp as pending_event_id", async () => {
     const api = setup();
-    const { token } = await credentials(api);
-    await post(api, token, "/api/drafts", { draft: draft(B) });
-    await post(api, token, "/api/drafts", { draft: draft(A) });
-    await post(api, token, `/api/drafts/${B}/stamp`, { pending_event_id: E1 });
-    const { drafts } = await listed(api, token);
+    const session = await signedIn(api);
+    await post(api, session, "/api/drafts", { draft: draft(B) });
+    await post(api, session, "/api/drafts", { draft: draft(A) });
+    await post(api, session, `/api/drafts/${B}/stamp`, { pending_event_id: E1 });
+    const { drafts } = await listed(api, session);
     expect(drafts.map((entry) => entry.id)).toEqual([A, B]);
     expect(drafts[1]).toMatchObject({ pending_event_id: E1 });
   });
 
   it("refuses a malformed, oversized or stamped-at-creation draft before writing", async () => {
     const api = setup();
-    const { token } = await credentials(api);
-    const bad = await post(api, token, "/api/drafts", {
+    const session = await signedIn(api);
+    const bad = await post(api, session, "/api/drafts", {
       draft: { ...draft(), pending_event_id: E1 },
     });
     expect(errorOf(bad)).toEqual({ code: "body_invalid", details: { reason: "unknown_field" } });
     const big = draft();
     big.event = { type: "buy", note: "x".repeat(70_000) } as never;
-    const tooBig = await post(api, token, "/api/drafts", { draft: big });
+    const tooBig = await post(api, session, "/api/drafts", { draft: big });
     expect(tooBig.statusCode).toBe(413);
     expect(errorOf(tooBig).details).toEqual({ limit: 65_536 });
     expect(api.s3.keys().filter((key) => key.startsWith("drafts/"))).toEqual([]);
@@ -85,12 +79,14 @@ describe("the drafts in the cloud (§6.1)", () => {
 
   it("refuses a draft past MAX_PENDING_DRAFTS pending, counts only the pending, and still answers a repeat", async () => {
     const api = setup();
-    const { token } = await credentials(api);
+    const session = await signedIn(api);
     const id = (n: number) => `01J00000000000000000${String(n).padStart(6, "0")}`;
     for (let n = 1; n <= MAX_PENDING_DRAFTS; n += 1) {
-      expect((await post(api, token, "/api/drafts", { draft: draft(id(n)) })).statusCode).toBe(201);
+      expect((await post(api, session, "/api/drafts", { draft: draft(id(n)) })).statusCode).toBe(
+        201,
+      );
     }
-    const over = await post(api, token, "/api/drafts", { draft: draft(id(999)) });
+    const over = await post(api, session, "/api/drafts", { draft: draft(id(999)) });
     expect(over.statusCode).toBe(409);
     expect(errorOf(over)).toEqual({
       code: "too_many_drafts",
@@ -98,19 +94,21 @@ describe("the drafts in the cloud (§6.1)", () => {
     });
     expect(api.s3.keys()).not.toContain(`drafts/${id(999)}.json`);
     // A retry of one already saved is still `draft_exists`: the client relies on it.
-    const again = await post(api, token, "/api/drafts", { draft: draft(id(1)) });
+    const again = await post(api, session, "/api/drafts", { draft: draft(id(1)) });
     expect(errorOf(again).code).toBe("draft_exists");
     // Closing one makes room: the closed do not count.
-    await post(api, token, `/api/drafts/${id(1)}/end`, { outcome: "discarded" });
-    expect((await post(api, token, "/api/drafts", { draft: draft(id(999)) })).statusCode).toBe(201);
-    expect((await listed(api, token)).drafts).toHaveLength(MAX_PENDING_DRAFTS);
+    await post(api, session, `/api/drafts/${id(1)}/end`, { outcome: "discarded" });
+    expect((await post(api, session, "/api/drafts", { draft: draft(id(999)) })).statusCode).toBe(
+      201,
+    );
+    expect((await listed(api, session)).drafts).toHaveLength(MAX_PENDING_DRAFTS);
   });
 
   it("stamps once, repeats the same stamp and refuses another", async () => {
     const api = setup();
-    const { token, session } = await credentials(api);
-    await post(api, token, "/api/drafts", { draft: draft() });
-    const first = await post(api, token, `/api/drafts/${A}/stamp`, { pending_event_id: E1 });
+    const session = await signedIn(api);
+    await post(api, session, "/api/drafts", { draft: draft() });
+    const first = await post(api, session, `/api/drafts/${A}/stamp`, { pending_event_id: E1 });
     expect(JSON.parse(first.body)).toMatchObject({ pending_event_id: E1, created: true });
     const same = await post(api, session, `/api/drafts/${A}/stamp`, { pending_event_id: E1 });
     expect(JSON.parse(same.body)).toMatchObject({ created: false });
@@ -118,43 +116,43 @@ describe("the drafts in the cloud (§6.1)", () => {
     expect(other.statusCode).toBe(409);
     expect(errorOf(other)).toEqual({ code: "draft_changed", details: { now: "stamped" } });
     expect(
-      errorOf(await post(api, token, `/api/drafts/${B}/stamp`, { pending_event_id: E1 })),
+      errorOf(await post(api, session, `/api/drafts/${B}/stamp`, { pending_event_id: E1 })),
     ).toEqual({ code: "not_found", details: { reason: "draft_missing" } });
     expect(
-      errorOf(await post(api, token, "/api/drafts/nope/stamp", { pending_event_id: E1 })).details,
+      errorOf(await post(api, session, "/api/drafts/nope/stamp", { pending_event_id: E1 })).details,
     ).toEqual({ reason: "draft_id" });
   });
 
   it("closes once: the first end wins and the same end is idempotent", async () => {
     const api = setup();
-    const { token } = await credentials(api);
-    await post(api, token, "/api/drafts", { draft: draft() });
-    const unstamped = await post(api, token, `/api/drafts/${A}/end`, {
+    const session = await signedIn(api);
+    await post(api, session, "/api/drafts", { draft: draft() });
+    const unstamped = await post(api, session, `/api/drafts/${A}/end`, {
       outcome: "confirmed",
       event_id: E1,
     });
     expect(errorOf(unstamped).details).toEqual({ reason: "not_stamped" });
-    await post(api, token, `/api/drafts/${A}/stamp`, { pending_event_id: E1 });
-    const wrong = await post(api, token, `/api/drafts/${A}/end`, {
+    await post(api, session, `/api/drafts/${A}/stamp`, { pending_event_id: E1 });
+    const wrong = await post(api, session, `/api/drafts/${A}/end`, {
       outcome: "confirmed",
       event_id: E2,
     });
     expect(errorOf(wrong)).toEqual({ code: "draft_changed", details: { now: "stamped" } });
-    const done = await post(api, token, `/api/drafts/${A}/end`, {
+    const done = await post(api, session, `/api/drafts/${A}/end`, {
       outcome: "confirmed",
       event_id: E1,
     });
     expect(JSON.parse(done.body)).toMatchObject({ outcome: "confirmed", created: true });
-    const repeat = await post(api, token, `/api/drafts/${A}/end`, {
+    const repeat = await post(api, session, `/api/drafts/${A}/end`, {
       outcome: "confirmed",
       event_id: E1,
     });
     expect(JSON.parse(repeat.body)).toMatchObject({ created: false });
-    const other = await post(api, token, `/api/drafts/${A}/end`, { outcome: "discarded" });
+    const other = await post(api, session, `/api/drafts/${A}/end`, { outcome: "discarded" });
     expect(errorOf(other)).toEqual({ code: "draft_changed", details: { now: "gone" } });
     // Closed: no longer listed, never stamped again, and the objects are still there.
-    expect((await listed(api, token)).drafts).toEqual([]);
-    const late = await post(api, token, `/api/drafts/${A}/stamp`, { pending_event_id: E1 });
+    expect((await listed(api, session)).drafts).toEqual([]);
+    const late = await post(api, session, `/api/drafts/${A}/stamp`, { pending_event_id: E1 });
     expect(errorOf(late).details).toEqual({ now: "gone" });
     expect(api.s3.keys().filter((key) => key.startsWith("drafts/"))).toEqual([
       `drafts/${A}.end.json`,
@@ -178,27 +176,27 @@ describe("the drafts in the cloud (§6.1)", () => {
 
   it("never stamps a draft that another client closes while stamping (the race)", async () => {
     const api = setup();
-    const { token } = await credentials(api);
-    await post(api, token, "/api/drafts", { draft: draft() });
+    const session = await signedIn(api);
+    await post(api, session, "/api/drafts", { draft: draft() });
     racing(api, ".stamp.json", endObjectText(A, { outcome: "discarded" }, new Date()));
-    const stamped = await post(api, token, `/api/drafts/${A}/stamp`, { pending_event_id: E1 });
+    const stamped = await post(api, session, `/api/drafts/${A}/stamp`, { pending_event_id: E1 });
     expect(stamped.statusCode).toBe(409);
     expect(errorOf(stamped)).toEqual({ code: "draft_changed", details: { now: "gone" } });
   });
 
   it("answers what the other end says when two clients close at once (the race)", async () => {
     const api = setup();
-    const { token } = await credentials(api);
-    await post(api, token, "/api/drafts", { draft: draft() });
+    const session = await signedIn(api);
+    await post(api, session, "/api/drafts", { draft: draft() });
     racing(api, ".end.json", endObjectText(A, { outcome: "discarded" }, new Date()));
-    const lost = await post(api, token, `/api/drafts/${A}/end`, { outcome: "discarded" });
+    const lost = await post(api, session, `/api/drafts/${A}/end`, { outcome: "discarded" });
     expect(JSON.parse(lost.body)).toMatchObject({ outcome: "discarded", created: false });
     const api2 = setup();
-    const { token: token2 } = await credentials(api2);
-    await post(api2, token2, "/api/drafts", { draft: draft() });
-    await post(api2, token2, `/api/drafts/${A}/stamp`, { pending_event_id: E1 });
+    const other2 = await signedIn(api2);
+    await post(api2, other2, "/api/drafts", { draft: draft() });
+    await post(api2, other2, `/api/drafts/${A}/stamp`, { pending_event_id: E1 });
     racing(api2, ".end.json", endObjectText(A, { outcome: "discarded" }, new Date()));
-    const other = await post(api2, token2, `/api/drafts/${A}/end`, {
+    const other = await post(api2, other2, `/api/drafts/${A}/end`, {
       outcome: "confirmed",
       event_id: E1,
     });
@@ -207,7 +205,7 @@ describe("the drafts in the cloud (§6.1)", () => {
 
   it("discards without a stamp, and answers a missing draft with 404", async () => {
     const api = setup();
-    const { session } = await credentials(api);
+    const session = await signedIn(api);
     await post(api, session, "/api/drafts", { draft: draft() });
     const gone = await post(api, session, `/api/drafts/${A}/end`, { outcome: "discarded" });
     expect(JSON.parse(gone.body)).toMatchObject({ outcome: "discarded", created: true });
@@ -221,11 +219,11 @@ describe("the drafts in the cloud (§6.1)", () => {
 
   it("names, and never deletes, what is not a readable draft", async () => {
     const api = setup();
-    const { token } = await credentials(api);
+    const session = await signedIn(api);
     api.s3.seed(`drafts/${A}.json`, "{ not json");
     api.s3.seed(`drafts/${B}.stamp.json`, "{}");
     api.s3.seed("drafts/stranger.txt", "x");
-    expect(await listed(api, token)).toEqual({
+    expect(await listed(api, session)).toEqual({
       drafts: [],
       unreadable: [`${A}.json`, `${B}.stamp.json`, "stranger.txt"].sort(),
     });
@@ -233,7 +231,7 @@ describe("the drafts in the cloud (§6.1)", () => {
 
   it("asks for a credential, checks Origin on a write with the cookie and logs only codes", async () => {
     const api = setup();
-    const { session } = await credentials(api);
+    const session = await signedIn(api);
     expect(errorOf(await api.call("GET", "/api/drafts", { jar: false })).code).toBe(
       "unauthenticated",
     );

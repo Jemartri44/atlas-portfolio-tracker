@@ -1,6 +1,8 @@
-// atlas admin compact | restore: rewriting the ledger of the cloud (ADR-0026, Part A; ADR-0032).
+// atlas admin pull | compact | restore: the ledger of the cloud, brought down to a folder or
+// rewritten (ADR-0026, Part A; ADR-0032).
 
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { S3LedgerBlob } from "@atlas/adapters/aws";
 import { BlobLedgerStore } from "@atlas/adapters/blob";
 import {
@@ -26,6 +28,43 @@ import { aside, render } from "../shared.js";
 import { confirmEnvironment } from "./confirm.js";
 
 const LEDGER_KEY = "ledger/ledger.jsonl";
+
+/**
+ * `atlas admin pull --to <dir>`: the ledger of the cloud as it is, in `<dir>/ledger.jsonl`, to look
+ * at it and run `check --deep` with the console. **Never over a file**: a folder with a ledger
+ * already is refused. Corrections are made in the web, or with `restore`.
+ */
+export const pullOrder = async (
+  ctx: Context,
+  clients: AdminClients,
+  environment: string,
+  flags: Flags,
+): Promise<number> => {
+  const directory = requireFlag(flags, "to");
+  const destination = join(directory, "ledger.jsonl");
+  const stored = await clients.objects.get(LEDGER_KEY);
+  if (stored === undefined) {
+    throw new DomainError("ledger_missing", "there is no ledger in the bucket", {
+      path: LEDGER_KEY,
+    });
+  }
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+  try {
+    await writeFile(destination, stored.body, { flag: "wx", mode: 0o600 });
+  } catch (error) {
+    if ((error as { code?: unknown }).code === "EEXIST") {
+      throw new DomainError("path_exists", `${destination} already exists`, { path: destination });
+    }
+    throw error;
+  }
+  const lines = linesOfText(Buffer.from(stored.body).toString("utf8")).length;
+  render(
+    ctx,
+    { status: "pulled", path: destination, lines },
+    `Libro de la nube de ${environment} en ${destination} (${lines} líneas). Es una copia: lo que cambies en ella no llega a la nube. Compruébalo con «atlas --ledger ${destination} check --deep».`,
+  );
+  return EXIT.ok;
+};
 
 /** The remote ledger as a store: the bytes of S3, archiving before every rewrite. */
 const remoteStore = (ctx: Context, clients: AdminClients): LedgerStore =>
@@ -73,7 +112,7 @@ export const compactOrder = async (
     ctx,
     result,
     result.status === "compacted"
-      ? `Compactada la nube: ${result.linesBefore} → ${result.linesAfter} líneas. El original está en archive/${result.archiveName}. Quien tenga Atlas abierto lo notará en su siguiente escritura: la web recarga el libro y pide confirmar otra vez, y la consola pide repetir la orden.`
+      ? `Compactada la nube: ${result.linesBefore} → ${result.linesAfter} líneas. El original está en archive/${result.archiveName}. Quien tenga Atlas abierto lo notará en su siguiente escritura: la web recarga el libro y pide confirmar otra vez.`
       : "Nada que compactar en la nube.",
   );
   return EXIT.ok;
@@ -190,7 +229,7 @@ export const restoreOrder = async (
   render(
     ctx,
     { status: "restored", comparison, archive },
-    "6. Quien tenga Atlas abierto lo notará en su siguiente escritura: la web recarga el libro restaurado y pide confirmar otra vez, y la consola pide repetir la orden.",
+    "6. Quien tenga Atlas abierto lo notará en su siguiente escritura: la web recarga el libro restaurado y pide confirmar otra vez.",
   );
   return EXIT.ok;
 };

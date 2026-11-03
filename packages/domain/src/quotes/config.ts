@@ -128,26 +128,9 @@ export const MAX_REFETCH_RECENT_DAYS = 31;
 const isDayCount = (value: unknown): value is number =>
   wholeNumber(value, 0) && value <= MAX_REFETCH_RECENT_DAYS;
 
-/**
- * The calls a day a console **shares with the cloud** by default: the leftover
- * of the free plan (20) after the 18 of the cloud. A console of
- * a synced folder spends these unless its `config.json` says otherwise; two
- * stores that never see each other can only keep inside the plan by splitting
- * it.
- */
-export const SHARED_WITH_CLOUD_DAILY_CALLS: Readonly<Record<QuoteSource, number>> = {
-  eodhd: 2,
-};
-
 /** Parses the text of `prices/config.json`; `undefined` (no file) is the defaults. */
-export const parsePriceConfig = (
-  text: string | undefined,
-  options: { readonly sharedWithCloud?: boolean } = {},
-): PriceConfig => {
-  const base =
-    options.sharedWithCloud === true
-      ? { ...DEFAULT_PRICE_CONFIG, daily_calls: SHARED_WITH_CLOUD_DAILY_CALLS }
-      : DEFAULT_PRICE_CONFIG;
+export const parsePriceConfig = (text: string | undefined): PriceConfig => {
+  const base = DEFAULT_PRICE_CONFIG;
   if (text === undefined) {
     return base;
   }

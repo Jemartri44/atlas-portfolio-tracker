@@ -29,17 +29,18 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0023](0023-own-base-stylesheet.md) | Base de estilos propia en lugar de Pico CSS | Aceptada (2026-09-19); sustituye la parte de Pico de ADR-0017 |
 | [0024](0024-fiscal-caveats-are-report-notes.md) | Una salvedad fiscal es una nota del informe, no una decisión de la interfaz | Aceptada |
 | [0025](0025-recorded-fingerprint-waiver.md) | La salida de compact ante una huella no verificable queda registrada en el libro | Aceptada (2026-09-23); enmendada el mismo día |
-| [0026](0026-cloud-sync-layer.md) | La nube como capa sobre lo local: sincronización del libro entre dispositivos | Aceptada (2026-09-24); la Parte B (la cola) la reemplaza ADR-0035; las Partes A y C siguen |
-| [0027](0027-google-sign-in-verified-by-lambda.md) | Acceso solo con Google, verificado en nuestra Lambda; sin Cognito | Aceptada (2026-09-24); enmendada; sustituye a Cognito |
+| [0026](0026-cloud-sync-layer.md) | La nube como capa sobre lo local: sincronización del libro entre dispositivos | Aceptada (2026-09-24); la Parte B (la cola) la reemplaza ADR-0035; las Partes A y C siguen; nota del 2026-11-03 (ADR-0037) |
+| [0027](0027-google-sign-in-verified-by-lambda.md) | Acceso solo con Google, verificado en nuestra Lambda; sin Cognito | Aceptada (2026-09-24); enmendada (la última, 2026-11-03, por ADR-0037); sustituye a Cognito |
 | [0028](0028-aws-account-and-security-baseline.md) | Cuentas de AWS dedicadas, entornos y línea base de seguridad | Aceptada (2026-09-24); ADR-0034 la sustituye en parte |
 | [0029](0029-ecb-reference-rates.md) | Tipos del BCE: histórico oficial en local, días sin publicación y comprobación de integridad | Aceptada (2026-09-24); enmendada tres veces |
 | [0030](0030-broker-settled-eur.md) | Importe en euros liquidado por el bróker, como dato informativo | Aceptada (2026-09-24); enmendada el mismo día; acotada por ADR-0036 |
 | [0031](0031-daily-close-prices.md) | Precios de cierre diarios: puerto, almacén y política de fallo | Aceptada (2026-09-24); enmendada cuatro veces (la cuarta, 2026-11-03: una sola fuente, EODHD) |
 | [0032](0032-backups-and-restore.md) | Copias de seguridad y restauración del libro | Aceptada (2026-09-24); la capa 1 y el paso 6 los reemplaza ADR-0035 |
-| [0033](0033-console-device-token.md) | Acceso de la consola a la API: token de dispositivo emitido al final de un inicio de sesión que abre la propia consola | Aceptada (2026-09-25); completa ADR-0027 |
+| [0033](0033-console-device-token.md) | Acceso de la consola a la API: token de dispositivo emitido al final de un inicio de sesión que abre la propia consola | Reemplazada por ADR-0037 (2026-11-03) |
 | [0034](0034-shared-aws-account.md) | Despliegue en una cuenta de AWS compartida con otros proyectos | Aceptada (2026-09-25); sustituye en parte a ADR-0028 y ADR-0027 |
-| [0035](0035-cloud-ledger-single-source.md) | Atlas siempre en la nube: el libro de S3 como única fuente de verdad, sin cola local | Aceptada (2026-10-06); enmienda en parte ADR-0019 y ADR-0026 |
+| [0035](0035-cloud-ledger-single-source.md) | Atlas siempre en la nube: el libro de S3 como única fuente de verdad, sin cola local | Aceptada (2026-10-06); enmienda en parte ADR-0019 y ADR-0026; la consola como cliente de la API la retira ADR-0037 |
 | [0036](0036-currency-first-gains-and-currency-lots.md) | Ganancias en divisa primero en la divisa, y lotes de divisa | Aceptada (2026-10-27); enmienda ADR-0030 |
+| [0037](0037-web-only-access.md) | La consola no tiene acceso propio a la API; cerrar todas las sesiones desde la web | Aceptada (2026-11-03); reemplaza a ADR-0033 y enmienda ADR-0027 y ADR-0035 |
 
 **Estados:** Propuesta → Aceptada → (Reemplazada por NNNN | Retirada).
 

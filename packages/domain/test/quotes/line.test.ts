@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  assetOfPriceFile,
   type CloseLine,
   closeOn,
   closeOnOrBefore,
@@ -174,5 +175,15 @@ describe("what a download appends", () => {
       at,
     );
     expect(added).toHaveLength(1);
+  });
+});
+
+describe("the asset of a file of closes", () => {
+  it("is taken only by the round trip of its name", () => {
+    expect(assetOfPriceFile("ast_a.jsonl")).toBe("ast_a");
+    expect(assetOfPriceFile("a%2Fb.jsonl")).toBe("a/b");
+    for (const name of ["symbols.json", ".jsonl", "%E0.jsonl", "a/b.jsonl", "x.csv"]) {
+      expect(assetOfPriceFile(name), name).toBeUndefined();
+    }
   });
 });

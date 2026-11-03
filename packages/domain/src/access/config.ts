@@ -7,14 +7,7 @@
 import { ValidationError } from "../errors.js";
 
 /**
- * The ceiling of a console token's life, **fixed in the code** (ADR-0033,
- * point 7): a safety cap, not a setting. The configured lifetime can never go
- * above it, and changing the configuration never lengthens an issued token.
- */
-export const TOKEN_CEILING_DAYS = 120;
-
-/**
- * The ceilings of the other durations and caches, **fixed in the code** too: a typo of zeros in
+ * The ceilings of the durations and caches, **fixed in the code**: a typo of zeros in
  * Terraform must stop the Lambda, not issue sessions of years or keep a withdrawn entry of the
  * allow list alive for days in every warm instance. ADR-0027 asks for a short session and a cache
  * of a few minutes; these are the outer limits, not the settings (`docs/api.md` §9).
@@ -22,15 +15,11 @@ export const TOKEN_CEILING_DAYS = 120;
 export const API_CONFIG_CEILINGS = {
   ATLAS_SESSION_TTL_SECONDS: 24 * 3600,
   ATLAS_LOGIN_TTL_SECONDS: 30 * 60,
-  ATLAS_CONSOLE_CODE_TTL_SECONDS: 15 * 60,
   ATLAS_ALLOW_LIST_CACHE_SECONDS: 3600,
   ATLAS_SECRETS_CACHE_SECONDS: 3600,
-  // The tolerance of the clock on the
-  // `recorded_at` of an appended line (`docs/api.md` §5.2) and the window of
-  // «recent» issues in the list of tokens have a ceiling too. An hour and
-  // ninety days are outer limits; the settings are ten minutes and seven days.
+  // The tolerance of the clock on the `recorded_at` of an appended line
+  // (`docs/api.md` §5.2): an hour is the outer limit; the setting is ten minutes.
   ATLAS_CLOCK_TOLERANCE_SECONDS: 3600,
-  ATLAS_RECENT_ISSUE_DAYS: 90,
 } as const;
 
 const CEILING_OF: Readonly<Record<string, number>> = API_CONFIG_CEILINGS;
@@ -44,9 +33,6 @@ export interface ApiConfig {
   readonly dataBucket: string;
   readonly sessionTtlSeconds: number;
   readonly loginTtlSeconds: number;
-  readonly consoleCodeTtlSeconds: number;
-  readonly tokenLifetimeDays: number;
-  readonly recentIssueDays: number;
   readonly clockToleranceSeconds: number;
   readonly allowListCacheSeconds: number;
   readonly secretsCacheSeconds: number;
@@ -55,9 +41,6 @@ export interface ApiConfig {
 const NUMBERS = {
   ATLAS_SESSION_TTL_SECONDS: "sessionTtlSeconds",
   ATLAS_LOGIN_TTL_SECONDS: "loginTtlSeconds",
-  ATLAS_CONSOLE_CODE_TTL_SECONDS: "consoleCodeTtlSeconds",
-  ATLAS_TOKEN_LIFETIME_DAYS: "tokenLifetimeDays",
-  ATLAS_RECENT_ISSUE_DAYS: "recentIssueDays",
   ATLAS_CLOCK_TOLERANCE_SECONDS: "clockToleranceSeconds",
   ATLAS_ALLOW_LIST_CACHE_SECONDS: "allowListCacheSeconds",
   ATLAS_SECRETS_CACHE_SECONDS: "secretsCacheSeconds",
@@ -116,10 +99,6 @@ export const parseApiConfig = (env: Readonly<Record<string, string | undefined>>
     }
     return value;
   };
-  const tokenLifetimeDays = number("ATLAS_TOKEN_LIFETIME_DAYS");
-  if (tokenLifetimeDays > TOKEN_CEILING_DAYS) {
-    throw invalid("ATLAS_TOKEN_LIFETIME_DAYS", "above_ceiling");
-  }
   return {
     env: environment,
     ssmPrefix: `/atlas/${environment}/`,
@@ -127,9 +106,6 @@ export const parseApiConfig = (env: Readonly<Record<string, string | undefined>>
     dataBucket,
     sessionTtlSeconds: number("ATLAS_SESSION_TTL_SECONDS"),
     loginTtlSeconds: number("ATLAS_LOGIN_TTL_SECONDS"),
-    consoleCodeTtlSeconds: number("ATLAS_CONSOLE_CODE_TTL_SECONDS"),
-    tokenLifetimeDays,
-    recentIssueDays: number("ATLAS_RECENT_ISSUE_DAYS"),
     clockToleranceSeconds: number("ATLAS_CLOCK_TOLERANCE_SECONDS"),
     allowListCacheSeconds: number("ATLAS_ALLOW_LIST_CACHE_SECONDS"),
     secretsCacheSeconds: number("ATLAS_SECRETS_CACHE_SECONDS"),

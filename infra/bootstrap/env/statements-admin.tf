@@ -26,12 +26,6 @@ locals {
       resources = [local.s3_data]
     },
     {
-      sid       = "Tokens"
-      effect    = "Allow"
-      actions   = ["ssm:GetParametersByPath", "ssm:PutParameter"]
-      resources = ["${local.ssm_base}/device-tokens", "${local.ssm_base}/device-tokens/*"]
-    },
-    {
       # Accepted by the direction for 017 (iam-permissions.md section 8): the two
       # deletions of the ECB history procedure, and nothing else.
       sid       = "EcbDelete"

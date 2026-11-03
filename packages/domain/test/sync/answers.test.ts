@@ -6,12 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { LINE_REJECTION_CODES, REMOTE_FAILURE_CODES } from "../../src/ports/remote-ledger.js";
 import { parseReferenceIndex } from "../../src/remote/answers.js";
-import {
-  etagOfHeader,
-  parseAppendAnswer,
-  parseErrorAnswer,
-  parseInitAnswer,
-} from "../../src/sync/answers.js";
+import { etagOfHeader, parseAppendAnswer, parseErrorAnswer } from "../../src/sync/answers.js";
 
 const SHA = "c".repeat(64);
 
@@ -101,27 +96,13 @@ describe("parseAppendAnswer (§5.2)", () => {
   });
 });
 
-describe("parseInitAnswer (§5.5)", () => {
-  it("reads the answer and nothing else", () => {
-    expect(parseInitAnswer({ etag: SHA, lines: 4 })).toEqual({ etag: SHA, lines: 4 });
-    for (const value of [
-      { etag: SHA },
-      { etag: SHA, lines: 4, more: 1 },
-      { etag: "x", lines: 4 },
-      [],
-    ]) {
-      expect(parseInitAnswer(value)).toBeUndefined();
-    }
-  });
-});
-
 describe("parseErrorAnswer (§7)", () => {
   it("reads an error of the closed list, with its details", () => {
     expect(
-      parseErrorAnswer({ error: { code: "device_forgotten", details: { reason: "missing" } } }),
+      parseErrorAnswer({ error: { code: "session_invalid", details: { reason: "closed" } } }),
     ).toEqual({
-      code: "device_forgotten",
-      details: { reason: "missing" },
+      code: "session_invalid",
+      details: { reason: "closed" },
     });
   });
 

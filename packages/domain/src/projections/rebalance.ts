@@ -101,8 +101,8 @@ export interface SaleOrder {
 export type SaleTax =
   | {
       available: true;
-      /** Absent when the brackets are not configured. */
-      tax_eur?: Money;
+      /** Estimated with the scale of the year (criterion #27). */
+      tax_eur: Money;
       gain_eur: Money;
       cost_eur: Money;
       lots: TransmissionLot[];
@@ -600,17 +600,14 @@ const saleStep = (
     asset_id: assetId,
     amount_eur: leg.amount,
     orders,
-    tax:
-      failed !== undefined
-        ? { available: false, code: failed.code }
-        : taxOf(done, settings.savings_tax_brackets !== undefined),
+    tax: failed !== undefined ? { available: false, code: failed.code } : taxOf(done),
     buys: { rows: [], unassigned: [] },
   };
 };
 
 const sumOf = (values: readonly Money[]): Money => values.reduce((sum, v) => sum.add(v), ZERO);
 
-const taxOf = (estimates: readonly SaleEstimate[], priced: boolean): SaleTax => {
+const taxOf = (estimates: readonly SaleEstimate[]): SaleTax => {
   const windowEnd = estimates
     .map((estimate) => estimate.deferral_window_end)
     .filter((end): end is CivilDate => end !== undefined)
@@ -618,7 +615,7 @@ const taxOf = (estimates: readonly SaleEstimate[], priced: boolean): SaleTax => 
     .pop();
   return {
     available: true,
-    ...(priced ? { tax_eur: sumOf(estimates.map((estimate) => estimate.tax_eur as Money)) } : {}),
+    tax_eur: sumOf(estimates.map((estimate) => estimate.tax_eur)),
     gain_eur: sumOf(estimates.map((estimate) => estimate.gain_eur)),
     cost_eur: sumOf(estimates.map((estimate) => estimate.cost_eur)),
     lots: estimates.flatMap((estimate) => estimate.lots),

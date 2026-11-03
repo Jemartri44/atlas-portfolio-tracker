@@ -51,26 +51,18 @@ export interface AppendResult {
  */
 export const REMOTE_FAILURE_CODES = [
   "unauthenticated",
-  "credentials_ambiguous",
   "session_invalid",
-  "device_token_invalid",
-  "device_token_revoked",
-  "device_token_expired",
   "not_allowed",
-  "forbidden_for_credential",
   "origin_rejected",
   "body_invalid",
   "body_not_json",
   "precondition_required",
   "precondition_failed",
-  "init_rejected",
   "append_too_many_units",
   "not_found",
   "internal",
-  // (docs/api.md §2 and §7): the device of the credential is
-  // missing, of another type or forgotten; a transient failure of SSM or S3
-  // that may be retried; a body over the bound of the Lambda. None holds a line.
-  "device_forgotten",
+  // (docs/api.md §2 and §7): a transient failure of SSM or S3 that may be
+  // retried; a body over the bound of the Lambda. None holds a line.
   "remote_unavailable",
   "body_too_large",
   // (docs/api.md §6.1): the drafts in the cloud. A draft that already exists,
@@ -126,10 +118,4 @@ export interface RemoteLedger {
   read(): Promise<RemoteSnapshot>;
   /** Appends on `ifMatch`, the etag of the remote the client downloaded. */
   append(entries: readonly AppendEntry[], ifMatch: string): Promise<AppendResult>;
-  /** Initialises an **empty** remote with the whole bytes of a ledger (`docs/api.md` §5.5). */
-  init(
-    content: string,
-    confirmDuplicateIds: readonly string[],
-    ifMatch: string,
-  ): Promise<{ etag: string; lines: number }>;
 }

@@ -186,7 +186,7 @@ const REDACTIONS: Readonly<Record<string, Redaction>> = {
       subject: "[Atlas] Aviso: ficheros de precios ilegibles",
       lines: [
         `${countOf(facts, "files")} ficheros de cierres de la nube no se leen y la nube no los toca, desde el ${facts.since}: esos activos se quedan sin precio automático.`,
-        "Mira cuáles con «atlas prices status» en la consola.",
+        "Mira cuáles en la carpeta prices/ del bucket, con el rol de administración (runbook «La correspondencia de símbolos y los presupuestos de la nube»).",
       ],
     }),
   },

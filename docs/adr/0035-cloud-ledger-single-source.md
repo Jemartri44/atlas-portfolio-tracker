@@ -1,6 +1,6 @@
 # ADR-0035 — Atlas siempre en la nube: el libro de S3 como única fuente de verdad, sin cola local
 
-**Estado:** Aceptada (2026-10-06); enmienda en parte ADR-0019 y ADR-0026.
+**Estado:** Aceptada (2026-10-06); enmienda en parte ADR-0019 y ADR-0026. La consola como cliente de la API la retira [ADR-0037](0037-web-only-access.md) (2026-11-03): ver la enmienda al final.
 
 ## Resumen en llano
 
@@ -9,7 +9,7 @@
 - **Sin conexión**, la aplicación se abre pero solo dice «Sin conexión», con un botón para reintentar. No enseña cifras ni deja registrar. Si la conexión se corta con la aplicación abierta, oculta los datos al momento. Cuando vuelve, carga el libro otra vez.
 - **Si registras desde dos sitios a la vez**, el segundo ve «El libro ha cambiado; revisa y confirma otra vez». Nada se mezcla sin que lo veas.
 - **Si se corta la red justo al guardar**, la aplicación lo comprueba al volver y te dice si la operación se guardó o no. Nunca la guarda dos veces.
-- **La consola (`atlas`)** también trabaja contra la nube, con el token que ya tiene. Sin conexión no hace nada. `atlas backup` sigue haciendo copias en tu disco. Y si algún día la nube desaparece, la consola puede abrir una de esas copias y trabajar sobre ella en tu ordenador.
+- *(Historia: desde [ADR-0037](0037-web-only-access.md) la consola no es cliente de la API.)* **La consola (`atlas`)** también trabaja contra la nube, con el token que ya tiene. Sin conexión no hace nada. `atlas backup` sigue haciendo copias en tu disco. Y si algún día la nube desaparece, la consola puede abrir una de esas copias y trabajar sobre ella en tu ordenador.
 - **Copias:** el botón «Descargar copia» de la web y `atlas backup` son, desde ahora, **las únicas copias fuera de AWS**: los dispositivos ya no guardan una réplica. El correo mensual lo recuerda.
 - **Hasta que la nube esté desplegada** (features 018 y 019), la web actual sigue como está.
 
@@ -64,8 +64,8 @@ Se elige la **opción 2**.
 
 - **El dominio puro compartido** (ADR-0001, ADR-0007). La web y la consola descargan el libro entero y lo proyectan, simulan y calculan en el cliente. La API valida con el mismo código. El motivo de ADR-0001 de «consultar sin conexión» deja de valer, pero su decisión no cambia: tiene sus otros motivos.
 - **La API como único escritor, que solo añade y valida cada línea** (ADR-0026, Parte A; `docs/api.md` §5.2). Sigue todo: el rechazo por línea, la pareja y la cadena como una sola unidad, el sello de una presentación, la tolerancia del reloj, `waiver_not_appendable` y la confirmación de una huella repetida.
-- **Las rutas del libro:** `GET /api/ledger`, `POST /api/ledger/lines` y `PUT /api/ledger`. Esta última, solo para **la subida inicial a una nube vacía** y para la restauración (ADR-0032): no es una sincronización.
-- **Las rutas de referencia** (§6), **el acceso** (ADR-0027, ADR-0033) y **los objetos de dispositivo como identidad**: sirven para olvidar un navegador o una consola y para listar los tokens.
+- *(La subida por la API, retirada por [ADR-0037](0037-web-only-access.md): hoy es `atlas admin restore`.)* **Las rutas del libro:** `GET /api/ledger`, `POST /api/ledger/lines` y `PUT /api/ledger`. Esta última, solo para **la subida inicial a una nube vacía** y para la restauración (ADR-0032): no es una sincronización.
+- *(Los objetos de dispositivo y el token, retirados por [ADR-0037](0037-web-only-access.md).)* **Las rutas de referencia** (§6), **el acceso** (ADR-0027, ADR-0033) y **los objetos de dispositivo como identidad**: sirven para olvidar un navegador o una consola y para listar los tokens.
 - **Las operaciones de líneas crudas del puerto `LedgerStore`**: las usan la API, la inicialización y la restauración.
 - **`compact` y la restauración**, como operaciones de administración sobre el remoto (ADR-0032, pasos 1 a 5). El paso 6, que hacía que cada dispositivo detectara la reescritura, queda sin objeto: el siguiente `412` recarga el libro.
 - **La Parte C de ADR-0026**: una sola corrección viva por raíz. Es una regla del dominio.
@@ -113,6 +113,8 @@ Se elige la **opción 2**.
 
 ### 4. La consola
 
+> **Historia (2026-11-03).** Esta sección la retira [ADR-0037](0037-web-only-access.md): la consola ya no tiene carpetas de nube, token ni subida por la API. Queda la carpeta local y la administración con AWS y MFA. Ver la enmienda al final.
+
 - **Una carpeta es de nube o es local, nunca las dos.**
   - **De nube:** tiene el fichero de identidad de hoy (`sync/remote.json`, con `origin` y `device_id`; el plan puede moverlo de sitio si lo justifica) y **no tiene `ledger.jsonl`**. Toda orden que lee o escribe el libro usa `ApiLedgerStore` con el token de dispositivo (ADR-0033). Sin conexión, la orden falla, dice que no ha leído ni registrado nada y sale con un código propio. Con el token caducado, remite a `atlas remote login`.
   - **Local:** tiene `ledger.jsonl` y no tiene identidad remota. Sirve para cuatro cosas:
@@ -153,7 +155,7 @@ Se elige la **opción 2**.
 
 - La superficie no crece: la API ya existe con estas rutas.
 - **Gana el móvil perdido.** Un teléfono robado sin sesión viva ya no guarda el libro. Con una sesión viva (24 h como mucho), da lectura y escritura, como hoy.
-- **Pierde la consola.** El token robado daba antes escritura y seguir leyendo; la lectura ya la daba la réplica de al lado. Ahora el token es lo único que da acceso, así que la revocación (ADR-0033, punto 8) pesa más. No cambia ninguna regla.
+- *(Historia: sin token desde [ADR-0037](0037-web-only-access.md).)* **Pierde la consola.** El token robado daba antes escritura y seguir leyendo; la lectura ya la daba la réplica de al lado. Ahora el token es lo único que da acceso, así que la revocación (ADR-0033, punto 8) pesa más. No cambia ninguna regla.
 
 **Privacidad.** CloudWatch sigue sin importes, líneas, posiciones, cuentas, tokens, correos ni `sub`. Los `details` de un rechazo pueden llevar cifras: van solo al cliente y **nunca a un registro**, como ya dice `docs/api.md` §5.2. Los códigos nuevos entran en la lista de lo que se puede registrar.
 
@@ -244,6 +246,10 @@ Va **antes de la 018**, para que el protocolo de la cola no llegue nunca a una n
   - `specs/012-ecb-reference-rates` (retirada; en git), por la lectura del BCE desde la carpeta en la web.
 - **`docs/decision-roadmap.md`:** las pruebas de la 018 y la 019 y el orden de las entregas.
 
+## Enmienda del 2026-11-03 (ADR-0037)
+
+[ADR-0037](0037-web-only-access.md) decide que **la consola no es cliente de la API**. Pasan a ser historia: la consola como cliente directo con `ApiLedgerStore` y su token (Resumen, §1 y §6), las carpetas de nube, `folder_mode_ambiguous` y sus códigos de salida 8, 9 y 10 (§4 y E3), la subida inicial por la API (§1 y §4), y las copias de referencia de la carpeta de nube (pregunta 5). La subida inicial es ahora `atlas admin restore` sobre una nube vacía; `atlas backup --from-bucket` baja el libro de la nube con el rol de administración. Lo demás de esta ADR sigue: el libro de S3 como única fuente de verdad y la web con escritura directa y `If-Match`.
+
 ## Preguntas abiertas
 
 ## Resueltas
@@ -251,7 +257,7 @@ Va **antes de la 018**, para que el protocolo de la cola no llegue nunca a una n
 Respuestas de la persona (2026-10-06, transmitidas por la coordinadora de DESBASTE).
 
 1. **Borradores (ADR-0029).** Hoy viven en el dispositivo (`drafts/` en la carpeta y el almacén `drafts` de IndexedDB), lo que choca con «nada en el dispositivo para registrarlo después». **Resuelta:** (a) **en la nube**, por la API, como objetos que nunca se borran (el rol de la API no tiene permiso de borrado) y se marcan confirmados o descartados; y (b) **sin borradores en los clientes de nube mientras no esté la entrega E6**. Descartada la opción de dejarlos en el dispositivo como excepción.
-2. **¿Dónde está hoy el libro real?** **Resuelta:** no existe todavía ningún libro real, ni en los navegadores ni en la consola. Por eso se ha retirado de esta ADR cualquier migración desde el navegador (§3 y plan de entregas, E2b incluida). `PUT /api/ledger` queda solo para la subida inicial y la restauración.
+2. **¿Dónde está hoy el libro real?** **Resuelta:** no existe todavía ningún libro real, ni en los navegadores ni en la consola. Por eso se ha retirado de esta ADR cualquier migración desde el navegador (§3 y plan de entregas, E2b incluida). `PUT /api/ledger` queda solo para la subida inicial y la restauración. *(Retirada el 2026-11-03 por [ADR-0037](0037-web-only-access.md): la subida inicial es `atlas admin restore`.)*
 3. **Versión de la enmienda constitucional.** **Resuelta:** **2.0.0**. El texto propuesto sigue en §6 y se aplica en E0 con `/speckit-constitution`, no con esta ADR.
 4. **La copia pública del BCE en la web.** **Resuelta:** se conserva en IndexedDB.
 5. **Las copias de referencia de la consola en modo de nube** (`reference/ecb/` y `prices/`). **Resuelta:** se conservan, como ya hace la 016.
