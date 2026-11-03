@@ -21,6 +21,12 @@ export {
   type NoPercentageReason,
 } from "./charts/bucket-pct.js";
 export {
+  type ClassReturn,
+  type ClassReturnGap,
+  type ClassReturns,
+  classReturns,
+} from "./charts/class-return.js";
+export {
   type ContributedPoint,
   type ContributedSeries,
   contributedSeries,
