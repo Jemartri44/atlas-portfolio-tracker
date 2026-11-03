@@ -14,7 +14,6 @@ import {
   cloudLinesToAppend,
   encodeCloseLine,
   parseCloudPull,
-  parsePriceConfig,
   parseSymbols,
   readCloseFile,
   serializeCloudPull,
@@ -117,7 +116,6 @@ export const pullFromCloud = async (
   const today = todayInMadrid(ctx.deps.clock);
   // 2. Compare and write, under the lock.
   const files = await store.transact(async (tx) => {
-    const config = parsePriceConfig(await tx.config(), { sharedWithCloud: true });
     // The currency the folder declares for each source is the only one taken.
     const symbols = parseSymbols(await tx.symbols());
     const versions: Record<string, string> = { ...held };
@@ -152,7 +150,7 @@ export const pullFromCloud = async (
       const entry = Object.hasOwn(symbols.assets, file.asset_id)
         ? symbols.assets[file.asset_id]
         : undefined;
-      const merge = cloudLinesToAppend(localLines, cloudLines, config.source_order, {
+      const merge = cloudLinesToAppend(localLines, cloudLines, {
         today,
         ...(entry === undefined ? {} : { declared: entry.currencies }),
       });

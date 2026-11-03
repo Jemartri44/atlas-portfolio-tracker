@@ -10,17 +10,12 @@ import {
   readCloses,
 } from "../../src/quotes/line.js";
 
-const line = (
-  date: string,
-  close: string,
-  source: "eodhd" | "alpha_vantage" = "eodhd",
-  currency = "EUR",
-): CloseLine => ({
+const line = (date: string, close: string, currency = "EUR"): CloseLine => ({
   schema_version: 1,
   date,
   close,
   currency,
-  source,
+  source: "eodhd",
   fetched_at: "2027-01-05T06:00:00.000Z",
 });
 
@@ -60,6 +55,8 @@ describe("a line of prices/<asset_id>.jsonl", () => {
       [good.replace('"EUR"', '"eur"'), "currency"],
       [good.replace('"EUR"', "1"), "currency"],
       [good.replace('"eodhd"', '"coingecko"'), "source"],
+      // The second source of the two-source days is no longer understood.
+      [good.replace('"eodhd"', '"alpha_vantage"'), "source"],
       [good.replace("2027-01-05T06:00:00.000Z", "yesterday"), "fetched_at"],
       [good.replace('"2027-01-05T06:00:00.000Z"', "5"), "fetched_at"],
     ];
@@ -103,7 +100,7 @@ describe("the close in force of each date (D-Q10)", () => {
   it("is the last line of the date, which says what it replaced", () => {
     const closes = effectiveCloses([
       line("2027-01-05", "10"),
-      line("2027-01-04", "9", "alpha_vantage"),
+      line("2027-01-04", "9"),
       line("2027-01-04", "9.10"),
       line("2027-01-05", "10.0"),
     ]);
@@ -111,8 +108,8 @@ describe("the close in force of each date (D-Q10)", () => {
       ["2027-01-04", "9.10", "eodhd"],
       ["2027-01-05", "10.0", "eodhd"],
     ]);
-    expect(closes[0]?.replaced).toEqual({ close: "9", source: "alpha_vantage" });
-    // The same number from the same source is not a replacement.
+    expect(closes[0]?.replaced).toEqual({ close: "9", source: "eodhd" });
+    // The same number is not a replacement.
     expect(closes[1]?.replaced).toBeUndefined();
   });
 
@@ -128,7 +125,6 @@ describe("the close in force of each date (D-Q10)", () => {
 });
 
 describe("what a download appends", () => {
-  const order = ["eodhd", "alpha_vantage"] as const;
   const at = "2027-01-06T06:00:00.000Z";
 
   it("appends a new date and nothing for the same number of the same source (101.50 is 101.5)", () => {
@@ -140,7 +136,6 @@ describe("what a download appends", () => {
         { date: "2027-01-05", close: "102", currency: "EUR" },
       ],
       "eodhd",
-      order,
       at,
     );
     expect(added).toEqual([{ ...line("2027-01-05", "102"), fetched_at: at }]);
@@ -151,7 +146,6 @@ describe("what a download appends", () => {
       [line("2027-01-04", "101.5")],
       [{ date: "2027-01-04", close: "101.6", currency: "EUR" }],
       "eodhd",
-      order,
       at,
     );
     expect(added).toHaveLength(1);
@@ -164,42 +158,9 @@ describe("what a download appends", () => {
         [line("2027-01-04", "5")],
         [{ date: "2027-01-04", close: "5", currency: "USD" }],
         "eodhd",
-        order,
         at,
       ),
     ).toHaveLength(1);
-  });
-
-  it("lets the primary replace the fallback, never the other way round, and averages nothing (P7)", () => {
-    const fallback = [line("2027-01-04", "100", "alpha_vantage")];
-    const primary = linesToAppend(
-      fallback,
-      [{ date: "2027-01-04", close: "100.2", currency: "EUR" }],
-      "eodhd",
-      order,
-      at,
-    );
-    expect(primary.map((l) => [l.source, l.close])).toEqual([["eodhd", "100.2"]]);
-    expect(effectiveCloses([...fallback, ...primary])[0]?.close).toBe("100.2");
-    const late = linesToAppend(
-      [line("2027-01-04", "100.2")],
-      [{ date: "2027-01-04", close: "100", currency: "EUR" }],
-      "alpha_vantage",
-      order,
-      at,
-    );
-    expect(late).toEqual([]);
-  });
-
-  it("ranks a source missing from the configured order after every one in it", () => {
-    const added = linesToAppend(
-      [line("2027-01-04", "100", "alpha_vantage")],
-      [{ date: "2027-01-04", close: "99", currency: "EUR" }],
-      "eodhd",
-      ["alpha_vantage"],
-      at,
-    );
-    expect(added).toEqual([]);
   });
 
   it("does not append the same date twice from one answer", () => {
@@ -210,7 +171,6 @@ describe("what a download appends", () => {
         { date: "2027-01-04", close: "1.0", currency: "EUR" },
       ],
       "eodhd",
-      order,
       at,
     );
     expect(added).toHaveLength(1);

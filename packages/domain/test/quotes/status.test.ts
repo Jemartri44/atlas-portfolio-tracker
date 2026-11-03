@@ -27,6 +27,7 @@ describe("prices/_status.json", () => {
       '{"status_format":1,"sources":[],"assets":{}}',
       '{"status_format":1,"sources":{},"assets":[]}',
       '{"status_format":1,"sources":{"yahoo":{"consecutive_failures":0,"calls_at":[]}},"assets":{}}',
+      '{"status_format":1,"sources":{"alpha_vantage":{"consecutive_failures":0,"calls_at":[]}},"assets":{}}',
       '{"status_format":1,"sources":{"eodhd":1},"assets":{}}',
       '{"status_format":1,"sources":{"eodhd":{"consecutive_failures":"0","calls_at":[]}},"assets":{}}',
       '{"status_format":1,"sources":{"eodhd":{"consecutive_failures":0,"calls_at":{}}},"assets":{}}',
@@ -52,14 +53,6 @@ describe("the budget of calls (D-Q3)", () => {
     expect(reserveCall(status, "eodhd", 2, at("2027-01-06T00:00:01Z"))).toBeDefined();
   });
 
-  it("counts Alpha Vantage over a rolling window of 24 hours, whatever its reset", () => {
-    const status =
-      reserveCall(EMPTY_STATUS, "alpha_vantage", 1, at("2027-01-05T23:30:00Z")) ?? EMPTY_STATUS;
-    expect(reserveCall(status, "alpha_vantage", 1, at("2027-01-06T00:30:00Z"))).toBeUndefined();
-    expect(spentAt(status, "alpha_vantage", at("2027-01-06T23:29:59Z"))).toBe(1);
-    expect(reserveCall(status, "alpha_vantage", 1, at("2027-01-06T23:30:00Z"))).toBeDefined();
-  });
-
   it("drops calls older than two days when it reserves", () => {
     const old = reserveCall(EMPTY_STATUS, "eodhd", 5, at("2027-01-01T10:00:00Z")) ?? EMPTY_STATUS;
     const next = reserveCall(old, "eodhd", 5, at("2027-01-05T10:00:00Z"));
@@ -75,14 +68,13 @@ describe("the failures of a source", () => {
       { source: "eodhd", at: t, ok: false, kind: "not_found" },
       { source: "eodhd", at: t, ok: false, kind: "blocked" },
       { source: "eodhd", at: t, ok: false, kind: "budget_exhausted" },
-      { source: "alpha_vantage", at: t, ok: false, kind: "rate_limited" },
     ]);
     expect(status.sources.eodhd).toMatchObject({
       consecutive_failures: 2,
       last_failure: { kind: "budget_exhausted", at: t },
     });
     expect(failingSources(status, 2)).toEqual(["eodhd"]);
-    expect(failingSources(status, 1)).toEqual(["eodhd", "alpha_vantage"]);
+    expect(failingSources(status, 3)).toEqual([]);
     status = applyOutcomes(status, [{ source: "eodhd", at: t, ok: true }]);
     expect(status.sources.eodhd).toMatchObject({ consecutive_failures: 0, last_success: t });
     expect(failingSources(status, 2)).toEqual([]);

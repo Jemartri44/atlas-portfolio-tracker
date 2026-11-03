@@ -148,7 +148,7 @@ describe("jobs: mail and keys out of the API and the web, and the clock injected
     `${sep}adapters${sep}src${sep}${names.join(sep)}`;
   /** What sends mail and the port that says what a mail is; what reads the keys of the price sources. */
   const MAIL_AND_KEYS = new RegExp(
-    `${adapters("aws")}${sep}(sdk-ses|mail|price-keys)\\.ts$|${adapters("prices")}${sep}(eodhd|alpha-vantage|secrets)\\.ts$|${sep}domain${sep}src${sep}ports${sep}notifier\\.ts$`,
+    `${adapters("aws")}${sep}(sdk-ses|mail|price-keys)\\.ts$|${adapters("prices")}${sep}(eodhd|secrets)\\.ts$|${sep}domain${sep}src${sep}ports${sep}notifier\\.ts$`,
   );
   const reachedBy = (reached: Map<string, string[]>): string[] =>
     [...reached]

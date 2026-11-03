@@ -41,7 +41,7 @@ export class SecretsError extends Error {
 
 export type Keys = Partial<Record<QuoteSource, string>>;
 
-const KEYS: readonly string[] = ["eodhd", "alpha_vantage"];
+const KEYS: readonly string[] = ["eodhd"];
 
 /** Where the keys live, by the rules of XDG. */
 export const secretsPath = (env: NodeJS.ProcessEnv, home: string): string =>

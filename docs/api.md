@@ -452,7 +452,7 @@ Las cinco funciones de `apps/jobs` (`docs/specification.md` §9.5) siguen las mi
 |---|---|---|---|
 | `/atlas/<entorno>/mail/recipient` | `String` | Terraform, desde `terraform.tfvars`, que escribe también la condición `ses:Recipients` (ADR-0034, fila 12); nunca a mano | solo el adaptador de SES, en cada envío |
 | `/atlas/<entorno>/mail/amounts` | `String` | Terraform, `off` por defecto (ADR-0028, fila 18) | solo la función de correo: **solo `on` enciende los importes**; cualquier otra cosa, o nada, los deja apagados |
-| `/atlas/<entorno>/prices/eodhd-key`, `…/prices/alpha-vantage-key` | `SecureString` | el guion de secretos; **`dev` no las lleva** (ADR-0034, fila 2) | solo la función de precios, en cada ejecución |
+| `/atlas/<entorno>/prices/eodhd-key` | `SecureString` | el guion de secretos; **`dev` no la lleva** (ADR-0034, fila 2) | solo la función de precios, en cada ejecución |
 
 Cambiar el destinatario o el interruptor: [`docs/runbooks/mail-recipient-and-amounts.md`](runbooks/mail-recipient-and-amounts.md).
 
@@ -462,5 +462,5 @@ Cambiar el destinatario o el interruptor: [`docs/runbooks/mail-recipient-and-amo
 | `ATLAS_JOBS` | todas | las tareas de la función, **de una sola familia** y sin repetir |
 | `ATLAS_JOB_MAX_RUN_SECONDS` | todas | de 1 a 900, el mismo valor que el `timeout` de la Lambda: un registro reclamado hace menos no se retoma |
 | `ATLAS_MAIL_FROM`, `ATLAS_ORIGIN`, `ATLAS_OAUTH_IDLE_WARNING_DAYS` | correo | el remitente verificado; el origen, lo único que un correo enlaza; los días sin iniciar sesión a partir de los que avisa (150, de 1 a 179) |
-| `ATLAS_PRICE_SOURCES`, `ATLAS_PRICES_EODHD_DAILY_CALLS`, `ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS`, `ATLAS_PRICES_FAILURE_THRESHOLD` | precios | el orden de la cascada (`eodhd,alpha_vantage`; `simulated` solo en `dev`); los presupuestos de la nube, 18 (como mucho 20) y 23 (como mucho 25); el umbral de fallos seguidos, 3 (de 1 a 30) (ADR-0031, nota del 2026-09-28; [`docs/runbooks/cloud-symbols-and-budgets.md`](runbooks/cloud-symbols-and-budgets.md)) |
+| `ATLAS_PRICE_SOURCES`, `ATLAS_PRICES_EODHD_DAILY_CALLS`, `ATLAS_PRICES_FAILURE_THRESHOLD` | precios | la fuente (`eodhd`; `simulated` solo en `dev`); el presupuesto de la nube, 18 (como mucho 20); el umbral de fallos seguidos, 3 (de 1 a 30) (ADR-0031, nota del 2026-09-28; [`docs/runbooks/cloud-symbols-and-budgets.md`](runbooks/cloud-symbols-and-budgets.md)) |
 | `ATLAS_LEDGER_SIZE_WARNING_BYTES` | integridad | 1.048.576, de 1.024 a 104.857.600: avisa el libro **por encima**, nunca en el umbral (ADR-0028, nota del 2026-09-28) |
