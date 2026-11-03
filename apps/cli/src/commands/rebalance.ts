@@ -34,7 +34,7 @@ const taxText = (tax: SaleTax): string[] => {
         ? `   Reduce tu impuesto en ≈ ${eur(tax.tax_eur.neg())} EUR: la pérdida de ${eur(tax.gain_eur.neg())} EUR compensa ganancias de este año (estimación al precio de hoy; no es la liquidación).`
         : `   Impuesto aproximado: ${eur(tax.tax_eur)} EUR sobre una ${
             tax.gain_eur.isNegative() ? "pérdida" : "ganancia"
-          } de ${eur(tax.gain_eur)} EUR (estimación al precio de hoy; no es la liquidación).`,
+          } de ${eur(tax.gain_eur.isNegative() ? tax.gain_eur.neg() : tax.gain_eur)} EUR (estimación al precio de hoy; no es la liquidación).`,
     ...tax.lots.map(
       (lot) =>
         `   Lote FIFO de ${lot.acquisition_date}: ${lot.quantity.toString()} uds, coste ${eur(lot.cost_eur)}, ganancia ${eur(lot.gain_eur)}.`,

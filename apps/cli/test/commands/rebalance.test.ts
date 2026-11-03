@@ -182,7 +182,7 @@ describe("atlas rebalance: a sale at a loss", () => {
     );
     expect(await h.exec(["rebalance", "--date", DATE])).toBe(0);
     expect(h.text()).toContain(
-      "   Impuesto aproximado: 0.00 EUR sobre una pérdida de -125.00 EUR (estimación al precio de hoy; no es la liquidación).",
+      "   Impuesto aproximado: 0.00 EUR sobre una pérdida de 125.00 EUR (estimación al precio de hoy; no es la liquidación).",
     );
     expect(h.text()).toContain(
       "   Pérdida diferida por la regla de recompra: 50.00 EUR. No recompres este valor antes de 2027-08-30 o la pérdida seguirá sin ser deducible.",
