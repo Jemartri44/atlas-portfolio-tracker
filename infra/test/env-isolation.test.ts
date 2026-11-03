@@ -355,6 +355,26 @@ describe.each(ENVS)(
       ).toBe("allow");
     });
 
+    it("changes its own CloudFront functions, which carry no tag, and never those of the other environment", () => {
+      const boundary = boundaryOf(plans[env] as Plan);
+      const none = { "aws:RequestedRegion": "us-east-1" };
+      for (const action of [
+        "cloudfront:UpdateFunction",
+        "cloudfront:DeleteFunction",
+        "cloudfront:PublishFunction",
+      ]) {
+        expect(verdict(env, "deploy", action, own.cfFunction, {}), action).toBe("allow");
+        expect(
+          verdict(env, "deploy", action, foreign.cfFunction, {}),
+          `${action} foreign`,
+        ).not.toBe("allow");
+        expect(
+          decide(boundary, { action, resource: own.cfFunction, context: none }),
+          `${action} boundary`,
+        ).toBe("allow");
+      }
+    });
+
     it("creates only roles `atlas-<env>-*` and only with its boundary, and cannot remove it or change it", () => {
       const boundary = `arn:aws:iam::${ACCOUNT}:policy/atlas-${env}-boundary`;
       for (const action of ["iam:CreateRole", "iam:PutRolePolicy", "iam:UpdateAssumeRolePolicy"]) {

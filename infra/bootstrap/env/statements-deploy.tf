@@ -164,15 +164,20 @@ locals {
       actions = [
         "cloudfront:CreateInvalidation",
         "cloudfront:DeleteDistribution",
-        "cloudfront:DeleteFunction",
-        "cloudfront:PublishFunction",
         "cloudfront:TagResource",
         "cloudfront:UntagResource",
         "cloudfront:UpdateDistribution",
-        "cloudfront:UpdateFunction",
       ]
-      resources = [local.cf_distribution, local.cf_function]
+      resources = [local.cf_distribution]
       condition = local.tag_env_equals
+    },
+    {
+      # The provider cannot tag a CloudFront function (`aws_cloudfront_function` has no
+      # `tags`), so the name `atlas-<env>-*` is its only scope.
+      sid       = "CloudFrontFunctionChange"
+      effect    = "Allow"
+      actions   = ["cloudfront:DeleteFunction", "cloudfront:PublishFunction", "cloudfront:UpdateFunction"]
+      resources = [local.cf_function]
     },
     {
       sid       = "WafCreate"
