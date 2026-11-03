@@ -41,6 +41,13 @@ export type OptionSource =
   | "assetClasses"
   | "sides";
 
+/** The field whose change copies each derived default. */
+export const DERIVE_TRIGGER = {
+  assetCurrency: "asset_id",
+  fromAssetCurrency: "from_asset_id",
+  accountCurrency: "account_id",
+} as const;
+
 export interface FieldSpec {
   /** Field of the event, exactly as it goes into the ledger. */
   name: string;
@@ -63,7 +70,7 @@ export interface FieldSpec {
   /** Shown only when another field has (or has not) a value. */
   visibleWhen?: { field: string; equals?: string; notEquals?: string };
   /** Copy the default from the chosen asset or account. */
-  derive?: "assetCurrency" | "fromAssetCurrency" | "accountCurrency";
+  derive?: keyof typeof DERIVE_TRIGGER;
   /** Occupies the full width of the grid. */
   full?: boolean;
   /**

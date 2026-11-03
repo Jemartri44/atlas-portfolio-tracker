@@ -43,6 +43,31 @@ describe("the swap form", () => {
   });
 });
 
+describe("the currency of a swap", () => {
+  it("follows what is handed over, not what is received", async () => {
+    const host = await show("/registrar/permuta", RegistrarForm, "/registrar/:tipo");
+    const currency = (): string => (host.querySelector("#f-currency") as HTMLSelectElement).value;
+    choose(host, "f-account_id", "acc_bucket");
+    choose(host, "f-from_asset_id", "ast_gamma");
+    await settle();
+    expect(currency()).toBe("USD");
+    choose(host, "f-to_asset_id", "ast_delta");
+    await settle();
+    expect(currency()).toBe("USD");
+  });
+});
+
+describe("the theses a swap offers", () => {
+  it("are the ones about what it receives", async () => {
+    const host = await show("/registrar/permuta", RegistrarForm, "/registrar/:tipo");
+    choose(host, "f-account_id", "acc_bucket");
+    choose(host, "f-to_asset_id", "ast_gamma");
+    await settle();
+    const offered = [...(host.querySelector("#f-thesis_id") as HTMLSelectElement).options];
+    expect(offered.map((option) => option.value)).toEqual(["", "th_gamma"]);
+  });
+});
+
 describe("the neutrality regime of a merger", () => {
   const values = { asset_id: "a", effective_date: "2027-03-01", source_document: "x", ratio: "1" };
 

@@ -17,6 +17,7 @@ import { today } from "../../ledger/state.js";
 import { selectOptions, withoutStale } from "../../view-models/forms/choices.js";
 import type { FieldSpec, FormValues } from "../../view-models/forms/index.js";
 import { isVisible } from "../../view-models/forms/index.js";
+import { DERIVE_TRIGGER } from "../../view-models/forms/specs.js";
 import { fieldUnit } from "../../view-models/forms/units.js";
 import { derivedCurrency } from "../../view-models/options.js";
 
@@ -58,12 +59,7 @@ export const withDerived = (
     if (field.derive === undefined) {
       continue;
     }
-    const trigger = {
-      assetCurrency: "asset_id",
-      fromAssetCurrency: "from_asset_id",
-      accountCurrency: "account_id",
-    }[field.derive];
-    if (name !== trigger) {
+    if (name !== DERIVE_TRIGGER[field.derive]) {
       continue;
     }
     const derived = derivedCurrency(state, field.derive, next);

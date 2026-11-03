@@ -58,12 +58,12 @@ const destination = (): FieldSpec => ({
  * Whether the operation takes the neutrality regime, in three states: said, denied or left out.
  * Denied is refused on writing, with what to do instead, so the preview says it before anything.
  */
-const regime = (): FieldSpec => ({
+const regime = (without: string): FieldSpec => ({
   name: "neutrality_regime",
   label: "Régimen de neutralidad",
   kind: "select",
   values: ["true", "false"],
-  hint: "Si la operación conserva fecha y coste. Sin régimen es una transmisión sujeta. Si no lo sabes, déjalo vacío y saldrá entre los criterios en duda.",
+  hint: `Si la operación conserva fecha y coste. ${without} Si no lo sabes, déjalo vacío y saldrá entre los criterios en duda.`,
 });
 
 /**
@@ -146,7 +146,7 @@ export const CORPORATE_FORMS: readonly CorporateForm[] = [
     fields: [
       destination(),
       ratio("Títulos nuevos por antiguo."),
-      regime(),
+      regime("Sin régimen es una transmisión sujeta y se registra como permuta."),
       ...cash("Precio del pico por título", "Si el canje liquidó picos en efectivo."),
     ],
     effect:
@@ -167,7 +167,7 @@ export const CORPORATE_FORMS: readonly CorporateForm[] = [
         required: true,
         hint: "Entre 0 y 1. Lo dice la nota del emisor; no te lo inventes.",
       },
-      regime(),
+      regime("Sin régimen aún no se puede registrar."),
       ...cash("Precio del pico por título", "Si la escisión liquidó picos en efectivo."),
     ],
     effect:

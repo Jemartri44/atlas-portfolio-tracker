@@ -31,6 +31,7 @@ describe("choosing what to record", () => {
     expect(tiles.map((tile) => tile.getAttribute("href"))).toEqual([
       "/registrar/buy",
       "/registrar/sell",
+      "/registrar/permuta",
       "/registrar/cash-in",
       "/registrar/cash-out",
       "/registrar/dividend",

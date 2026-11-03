@@ -211,7 +211,8 @@ export const optionsFor = (
         context.state,
         context.date,
         context.values.account_id,
-        context.values.asset_id,
+        // A swap has no `asset_id`: its thesis is about what it receives.
+        context.values.asset_id ?? context.values.to_asset_id,
       );
     case "books":
       return [
