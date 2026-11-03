@@ -523,13 +523,17 @@ export const applyCostAdjustment = (
 
   for (const { lot, lowered } of plan) {
     const remaining = lot.cost_eur.sub(lowered);
-    // `cost` and `funding_eur` split like `cost_eur` (as in a carve-out).
-    const factor = lot.cost_eur.isZero() ? Decimal.ZERO : remaining.amount.div(lot.cost_eur.amount);
+    // `cost` and `funding_eur` split like `cost_eur` (as in a carve-out). A lot
+    // left with some cost had some before, so the division is never by zero.
+    if (remaining.isZero()) {
+      lot.cost = Money.zero(lot.cost.currency);
+      lot.funding_eur = Money.zero(lot.funding_eur.currency);
+    } else {
+      const factor = remaining.amount.div(lot.cost_eur.amount);
+      lot.cost = lot.cost.mul(factor);
+      lot.funding_eur = lot.funding_eur.mul(factor);
+    }
     lot.cost_eur = remaining;
-    lot.cost = remaining.isZero() ? Money.zero(lot.cost.currency) : lot.cost.mul(factor);
-    lot.funding_eur = remaining.isZero()
-      ? Money.zero(lot.funding_eur.currency)
-      : lot.funding_eur.mul(factor);
     state.lotJournal.push({
       kind: "adjust",
       lot_id: lot.id,
