@@ -1,12 +1,12 @@
 // The download of the day (ADR-0031, «Puerto», «Política de fallo»,
 // «Presupuesto»): a use case of the domain that receives the ports (ADR-0007).
 //
-// Primary → fallback → last value known with its age → manual entry. The order
-// of the sources comes from `prices/config.json`, never from the code. A
-// `blocked` or a `rate_limited` is not retried in the same run, not even for
-// another symbol; a `not_found` or an `unavailable` of the primary does go to
-// the fallback. What does not fit in the budget of the day keeps its last value
-// with its age, and the report says how many stayed out.
+// One source (EODHD) → last value known with its age → manual entry (the
+// `valuation` of the ledger, which wins on its date). A `blocked` or a
+// `rate_limited` is not retried in the same run, not even for another symbol;
+// a `not_found` or an `unavailable` leaves only that asset with its last value.
+// What does not fit in the budget of the day keeps its last value with its
+// age, and the report says how many stayed out.
 //
 // Three rules the previous feature learnt the hard way:
 //
@@ -207,24 +207,23 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
     sharedWithCloud: input.sharedWithCloud === true,
   });
   const symbols = parseSymbols(await store.symbols());
-  const available = config.source_order.filter(
-    (source) => input.sources[source] !== undefined && config.daily_calls[source] > 0,
+  const source = QUOTE_SOURCES.find(
+    (name) => input.sources[name] !== undefined && config.daily_calls[name] > 0,
   );
-  if (available.length === 0) {
+  if (source === undefined) {
     return { no_sources: true, assets: [], remaining: {}, failing: [] };
   }
-  for (const source of available) {
-    input.sources[source]?.ready?.();
-  }
+  const port = input.sources[source] as PriceSource;
+  port.ready?.();
 
   const outcomes: CallOutcome[] = [];
   const downloads: Download[] = [];
   const failuresOf = new Map<AssetId, AssetFailure | undefined>();
   const reports: AssetReport[] = [];
-  /** Sources out of this run, with the failure that retired them. */
-  const retired = new Map<QuoteSource, SourceFailureKind>();
+  /** The failure that took the source out of this run, if any. */
+  let retired: SourceFailureKind | undefined;
 
-  const reserve = (source: QuoteSource): Promise<boolean> =>
+  const reserve = (): Promise<boolean> =>
     store.transact(async (tx) => {
       const next = reserveCall(
         parseStatus(await tx.status()),
@@ -239,16 +238,15 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       return true;
     });
 
-  /** Contrasts the declared currency with the metadata of `source`, and records it. */
+  /** Contrasts the declared currency with the metadata of the source, and records it. */
   const contrast = async (
     assetId: AssetId,
     entry: SymbolEntry,
-    source: QuoteSource,
   ): Promise<{ entry: SymbolEntry; kind?: QuoteFailureKind }> => {
-    if (!(await reserve(source))) {
+    if (!(await reserve())) {
       return { entry, kind: "budget_exhausted" };
     }
-    const result = await (input.sources[source] as PriceSource)
+    const result = await port
       .currencyOf(entry[source] as string)
       .catch(() => ({ ok: false, kind: "unavailable" }) as const);
     const at = input.now().toISOString();
@@ -256,7 +254,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       outcomes.push({ source, at, ok: false, kind: result.kind });
       failuresOf.set(assetId, { kind: result.kind, source, at });
       if (RETIRES_SOURCE.includes(result.kind)) {
-        retired.set(source, result.kind);
+        retired = result.kind;
       }
       return { entry, kind: result.kind };
     }
@@ -304,17 +302,21 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
 
   for (const { asset_id, group } of downloadPlan(input.state, input.settings)) {
     const declared: SymbolEntry | undefined = symbols.assets[asset_id];
-    const candidates = available.filter((source) => declared?.[source] !== undefined);
-    if (declared === undefined || candidates.length === 0) {
+    if (declared?.[source] === undefined) {
       reports.push({ asset_id, group, outcome: "no_symbol", added: 0, failures: [] });
       continue;
     }
     let entry: SymbolEntry = declared;
     const failures: { source: QuoteSource; kind: QuoteFailureKind }[] = [];
-    const usable = candidates.filter((source) => {
-      if (currencyAgrees(entry, source)) {
-        return true;
-      }
+    const report = (outcome: AssetOutcome, extra: Partial<AssetReport> = {}): void => {
+      reports.push({ asset_id, group, outcome, added: 0, failures, ...extra });
+    };
+    const failAs = (kind: QuoteFailureKind): void => {
+      failures.push({ source, kind });
+      report(outcomeOf(failures));
+    };
+    const agrees = currencyAgrees(entry, source);
+    if (!agrees) {
       failures.push({ source, kind: "currency_mismatch" });
       failuresOf.set(asset_id, {
         kind: "currency_mismatch",
@@ -323,40 +325,24 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
         declared: entry.currencies[source] as string,
         found: entry.currency_check?.[source]?.found as string,
       });
-      return false;
-    });
+    }
     const last = lastDateOf(await store.closes(asset_id), asset_id);
     if (last instanceof DomainError) {
-      reports.push({
-        asset_id,
-        group,
-        outcome: "unreadable",
-        added: 0,
-        failures,
-        error: last.code,
-      });
+      report("unreadable", { error: last.code });
       continue;
     }
-    const unchecked = readOnly
-      ? usable.filter((source) => entry.currency_check?.[source] === undefined)
-      : [];
-    const downloadable = usable.filter((source) => !unchecked.includes(source));
-    const uncheckedPart = unchecked.length === 0 ? {} : { unchecked };
-    if (downloadable.length === 0) {
-      reports.push({
-        asset_id,
-        group,
-        outcome: unchecked.length === 0 ? "currency_mismatch" : "currency_unchecked",
-        added: 0,
-        failures,
-        ...uncheckedPart,
-      });
+    if (!agrees) {
+      report("currency_mismatch");
+      continue;
+    }
+    // Read only, a source never contrasted is left out: the cloud never contrasts.
+    if (readOnly && entry.currency_check?.[source] === undefined) {
+      report("currency_unchecked", { unchecked: [source] });
       continue;
     }
     // The days a purge promised to ask for again: the download starts at the
-    // first of them, whichever source answers, and not after the last close,
-    // which may be of another source. Read only, they are the console's to
-    // chase.
+    // first of them, not after the last close. Read only, they are the
+    // console's to chase.
     const refetch = readOnly ? undefined : entry.refetch_days;
     const owed = Object.values(refetch ?? {})
       .flat()
@@ -368,14 +354,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       last !== undefined &&
       last >= lastMarketDayBefore(today, config.market_days[type])
     ) {
-      reports.push({
-        asset_id,
-        group,
-        outcome: "up_to_date",
-        added: 0,
-        failures,
-        ...uncheckedPart,
-      });
+      report("up_to_date");
       continue;
     }
     // The N calendar days ending on the last close stored are asked again
@@ -391,92 +370,66 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
     // the afternoon, a source gives a price of mid-session, and stored as the
     // close of today it would stay one for good. Only days before today.
     const to = addDays(today, -1);
-    let answered: QuoteSource | undefined;
-    for (const source of downloadable) {
-      const retiredBy = retired.get(source);
-      if (retiredBy !== undefined) {
-        failures.push({ source, kind: retiredBy });
+    if (retired !== undefined) {
+      failAs(retired);
+      continue;
+    }
+    // A correspondence declared without contrasting it with the source (no
+    // key or no budget then) is contrasted **before its first download**: a
+    // price is never downloaded for a currency nobody checked (the case GBX
+    // against GBP).
+    if (entry.currency_check?.[source] === undefined) {
+      const checked = await contrast(asset_id, entry);
+      entry = checked.entry;
+      if (checked.kind !== undefined) {
+        failAs(checked.kind);
         continue;
       }
-      // A correspondence declared without contrasting it with this source (no
-      // key or no budget then) is contrasted **before its first download**: a
-      // price is never downloaded for a currency nobody checked (the case GBX
-      // against GBP).
-      if (entry.currency_check?.[source] === undefined) {
-        const checked = await contrast(asset_id, entry, source);
-        entry = checked.entry;
-        if (checked.kind !== undefined) {
-          failures.push({ source, kind: checked.kind });
-          continue;
-        }
+    }
+    if (!(await reserve())) {
+      failAs("budget_exhausted");
+      continue;
+    }
+    const result = await port
+      .dailyCloses(entry[source] as string, from, to)
+      .catch(() => ({ ok: false, kind: "unavailable" }) as const);
+    const at = input.now().toISOString();
+    if (!result.ok) {
+      outcomes.push({ source, at, ok: false, kind: result.kind });
+      failuresOf.set(asset_id, { kind: result.kind, source, at });
+      if (RETIRES_SOURCE.includes(result.kind)) {
+        retired = result.kind;
       }
-      if (!(await reserve(source))) {
-        failures.push({ source, kind: "budget_exhausted" });
-        continue;
-      }
-      const symbol = entry[source] as string;
-      const result = await (input.sources[source] as PriceSource)
-        .dailyCloses(symbol, from, to)
-        .catch(() => ({ ok: false, kind: "unavailable" }) as const);
-      const at = input.now().toISOString();
-      if (!result.ok) {
-        outcomes.push({ source, at, ok: false, kind: result.kind });
-        failures.push({ source, kind: result.kind });
-        failuresOf.set(asset_id, { kind: result.kind, source, at });
-        if (RETIRES_SOURCE.includes(result.kind)) {
-          retired.set(source, result.kind);
-        }
-        continue;
-      }
-      outcomes.push({ source, at, ok: true });
-      const found = result.value.find(
-        (close) => close.currency !== undefined && close.currency !== entry.currencies[source],
-      );
-      if (found !== undefined) {
-        // The source said the currency and it is not the declared one: never
-        // stored, never assumed, recorded with its own literal.
-        failures.push({ source, kind: "currency_mismatch" });
-        failuresOf.set(asset_id, {
-          kind: "currency_mismatch",
-          source,
-          at,
-          declared: entry.currencies[source] as string,
-          found: found.currency as string,
-        });
-        continue;
-      }
-      downloads.push({
-        asset_id,
-        ...(refetch === undefined ? {} : { refetched: refetch }),
+      failAs(result.kind);
+      continue;
+    }
+    outcomes.push({ source, at, ok: true });
+    const found = result.value.find(
+      (close) => close.currency !== undefined && close.currency !== entry.currencies[source],
+    );
+    if (found !== undefined) {
+      // The source said the currency and it is not the declared one: never
+      // stored, never assumed, recorded with its own literal.
+      failuresOf.set(asset_id, {
+        kind: "currency_mismatch",
         source,
-        // The currency **of the source that brought it**, never of another.
-        currency: entry.currencies[source] as string,
-        closes: result.value.filter((close) => close.date >= from && close.date <= to),
+        at,
+        declared: entry.currencies[source] as string,
+        found: found.currency as string,
       });
-      failuresOf.set(asset_id, undefined);
-      answered = source;
-      break;
+      failAs("currency_mismatch");
+      continue;
     }
-    if (answered === undefined) {
-      reports.push({
-        asset_id,
-        group,
-        outcome: outcomeOf(failures),
-        added: 0,
-        failures,
-        ...uncheckedPart,
-      });
-    } else {
-      reports.push({
-        asset_id,
-        group,
-        outcome: "updated",
-        source: answered,
-        added: 0,
-        failures,
-        ...uncheckedPart,
-      });
-    }
+    downloads.push({
+      asset_id,
+      ...(refetch === undefined ? {} : { refetched: refetch }),
+      source,
+      // The currency **of the source that brought it**, never of another.
+      currency: entry.currencies[source] as string,
+      closes: result.value.filter((close) => close.date >= from && close.date <= to),
+    });
+    failuresOf.set(asset_id, undefined);
+    report("updated", { source });
   }
 
   const added = new Map<AssetId, number | string>();
@@ -496,7 +449,6 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
         existing,
         download.closes.map((close) => ({ ...close, currency: download.currency })),
         download.source,
-        config.source_order,
         fetchedAt,
       );
       if (lines.length > 0) {
@@ -522,9 +474,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
 
   const now = input.now();
   const remaining: Partial<Record<QuoteSource, number>> = {};
-  for (const source of available) {
-    remaining[source] = Math.max(0, config.daily_calls[source] - spentAt(status, source, now));
-  }
+  remaining[source] = Math.max(0, config.daily_calls[source] - spentAt(status, source, now));
   return {
     no_sources: false,
     assets: reports.map((report) => {

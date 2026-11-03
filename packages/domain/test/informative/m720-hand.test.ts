@@ -181,6 +181,13 @@ describe("the Modelo 720 of 2027, worked out by hand", () => {
     expect(report.notes.map((n) => n.code)).toContain("informative_domestic_accounts_left_out");
   });
 
+  // Art. 42 ter.2 RGAT: an IIC is declared at its net asset value. The ETF abroad
+  // is named; the shares, the ETC and the ETP are not IIC.
+  it("says that the ETF goes at its net asset value, and names only it", () => {
+    const found = report.notes.filter((n) => n.code === "informative_iic_net_asset_value");
+    expect(found.map((n) => n.details)).toEqual([{ assets: ["etf_us"] }]);
+  });
+
   it("gives each account its balance at 31/12 and its average of the fourth quarter", () => {
     // acc_ib: 12.000,00 € and 5.500,00 $ at 1,10 = 17.000,00. On average,
     // 46 days at 10.000, 45 at 14.000 and one at 12.000, plus 61 days at

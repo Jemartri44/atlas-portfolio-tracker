@@ -196,6 +196,8 @@ export const WARNINGS_TAX: Record<string, Entry> = {
   },
   informative_crypto_custody_unknown: () =>
     "Se cuenta todo lo que hay en cuentas extranjeras; si alguna es de autocustodia, no entraría. Tus datos no distinguen las dos cosas.",
+  informative_iic_net_asset_value: (d, v) =>
+    `Los fondos, ETF y monetarios (${v.many(d.assets)}) se declaran por su valor liquidativo a 31 de diciembre (artículo 42 ter.2 del reglamento de gestión tributaria), no por su cotización: anota como valoración de ese día el liquidativo que publica la gestora.`,
   informative_criteria_not_numbered: {
     say: () =>
       "El método del saldo medio del trimestre y la clasificación de ETF, ETC y ETP se apoyan en criterios todavía sin numerar.",

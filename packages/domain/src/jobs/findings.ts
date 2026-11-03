@@ -33,8 +33,8 @@ export const PRODUCER_FINDINGS: ProducerFindings = {
     ecb_rebuilt_unverified: ["ecb"],
   },
   prices_update: {
-    source_failing: ["eodhd", "alpha_vantage"],
-    currency_unchecked: ["eodhd", "alpha_vantage"],
+    source_failing: ["eodhd"],
+    currency_unchecked: ["eodhd"],
     thesis_horizon_exceeded: ["bucket"],
     prices_file_unreadable: ["prices"],
   },
@@ -98,7 +98,7 @@ const resultFindings = (result: EcbUpdateResult | EcbRebuildResult): Finding[] =
   ];
 };
 
-const SOURCES = ["eodhd", "alpha_vantage"] as const;
+const SOURCES = ["eodhd"] as const;
 
 /** What a download of the closes leaves; `theses` is how many open theses passed their horizon. */
 export const pricesFindings = (input: {

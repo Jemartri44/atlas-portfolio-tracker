@@ -11,6 +11,10 @@
 // more than a guess: the abbreviated version of a label is how box 0031 loses
 // the clause that tells you when the figure belongs in 0034 instead.
 //
+// The numbers are also in the data dictionary of the form, a text source, whose
+// labels are shorter than these:
+// `https://sede.agenciatributaria.gob.es/static_files/Sede/Disenyo_registro/DR_100_199/diccionarioXSD_2025.properties`.
+//
 // The certainty of every entry is `high` for the same reason: seen in the
 // official form of this very year. Anything that was not seen there is simply
 // not in this table, and the layout says so rather than filling it in:

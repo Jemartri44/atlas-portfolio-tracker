@@ -69,4 +69,9 @@ export const ERRORS_OPERATIONS: Record<string, Entry> = {
     say: () => "La solicitud de traspaso elegida se refiere a otras cuentas o a otros fondos.",
     cli: (d, v) => `Solicitud: ${v.text(d.request_id)}.`,
   },
+  spanish_withholding_as_origin: {
+    say: () =>
+      "Un dividendo pagado en España no lleva «Retención en origen»: la retención española va en «Retención en España» (casilla 0597), que se descuenta de la cuota y se devuelve si sobra. Como retención extranjera iría a la doble imposición, que no se devuelve.",
+    cli: () => "Pásala a `--withholding-spain` y deja `--withholding-origin 0`.",
+  },
 };

@@ -442,12 +442,12 @@ describe.each(ENVS)("the functions, logs and invoke configuration of %s", (env) 
       }
     ).prices;
     if (env === "prod") {
-      expect(prices?.sources).toEqual(["eodhd", "alpha_vantage"]);
+      expect(prices?.sources).toEqual(["eodhd"]);
       expect(JSON.stringify(variablesOf(task("prices")))).not.toContain("simulated");
     } else {
       expect(prices?.sources).toBe("simulated");
     }
-    expect(prices?.dailyCalls).toEqual({ eodhd: 18, alpha_vantage: 23 });
+    expect(prices?.dailyCalls).toEqual({ eodhd: 18 });
     expect(prices?.failureThreshold).toBe(3);
   });
 
@@ -472,7 +472,7 @@ describe.each(ENVS)("the functions, logs and invoke configuration of %s", (env) 
 describe("the prices function of production refuses the simulated source", () => {
   it("a production plan with it does not even validate", () => {
     expect(() => renderStack("prod", { prices_sources: ["simulated"] })).toThrow(
-      /prices_sources is eodhd and\/or alpha_vantage, without repeats/,
+      /prices_sources is \["eodhd"\]/,
     );
   });
 });

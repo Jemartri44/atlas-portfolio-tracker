@@ -80,6 +80,10 @@ const RESULTS: Record<string, { count: number; what: string }> = {
     what: "the result, latent and against the index, of a thesis, and its % over what was invested",
   },
   "routes/fiscal/BaseCard.tsx": { count: 4, what: "the savings base and its gains and losses" },
+  "routes/resumen/NetWorthBlock.tsx": {
+    count: 2,
+    what: "the return of the core over a period and the bucket against the index",
+  },
   "routes/fiscal/FilingCard.tsx": {
     count: 3,
     what: "a filed result, today's and where the difference comes from",
