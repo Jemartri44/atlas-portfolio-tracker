@@ -50,7 +50,7 @@ Copia esto en una terminal, **entero, de la `{` a la `}`** (las llaves hacen que
 
 ```bash
 {
-mkdir -p ~/.config/atlas
+mkdir -p -m 700 ~/.config/atlas   # la carpeta también ha de ser solo tuya (700)
 read -rsp 'Clave de EODHD: ' KE; echo
 ( umask 077; printf '{"eodhd":"%s"}\n' "$KE" > ~/.config/atlas/secrets.json )
 unset KE

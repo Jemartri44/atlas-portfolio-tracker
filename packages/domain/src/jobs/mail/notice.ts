@@ -210,6 +210,16 @@ const REDACTIONS: Readonly<Record<string, Redaction>> = {
       ],
     }),
   },
+  ecb_history_backfilled: {
+    subjects: ["ecb"],
+    write: (_ecb, facts) => ({
+      subject: "[Atlas] Aviso: historico del BCE con dias rellenados",
+      lines: [
+        `La descarga del histórico del BCE ${ofPeriod(facts)} trae ${countOf(facts, "rates")} tipos de días ya conocidos que el anterior no tenía, desde el ${facts.since}.`,
+        "Se ha activado: no cambia ningún tipo ya publicado ni lo ya registrado, pero sí el tipo que se propone para operaciones nuevas en esos días. Revisa la descarga si no lo esperabas.",
+      ],
+    }),
+  },
   ecb_calendar_mismatch: {
     subjects: ["ecb"],
     write: (_ecb, facts) => ({

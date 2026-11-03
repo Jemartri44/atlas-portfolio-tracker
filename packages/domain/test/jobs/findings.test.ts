@@ -24,7 +24,7 @@ describe("the findings of the ECB", () => {
     const stored = { source: "zip", sha256: "a".repeat(64) } as never;
     expect(
       ecbFindings(
-        { kind: "accepted", stored, newDays: 1, latest: "2026-10-02", calendar: [] },
+        { kind: "accepted", stored, newDays: 1, latest: "2026-10-02", backfilled: 0, calendar: [] },
         { undone: true },
       ),
     ).toEqual([{ code: "ecb_update_undone", subject: "ecb" }]);
@@ -47,7 +47,14 @@ describe("the findings of the ECB", () => {
       ecbFindings({ kind: "rejected", kept: stored, active: stored, conflicts: [], total: 3 }),
     ).toEqual([{ code: "ecb_update_rejected", subject: "ecb", counts: { conflicts: 3 } }]);
     expect(
-      ecbFindings({ kind: "accepted", stored, newDays: 1, latest: "2026-10-02", calendar: [] }),
+      ecbFindings({
+        kind: "accepted",
+        stored,
+        newDays: 1,
+        latest: "2026-10-02",
+        backfilled: 0,
+        calendar: [],
+      }),
     ).toEqual([]);
     expect(
       ecbFindings({
@@ -55,12 +62,29 @@ describe("the findings of the ECB", () => {
         stored,
         newDays: 1,
         latest: "2026-10-02",
+        backfilled: 0,
         calendar: [
           { date: "2026-10-01", kind: "working_day_without_publication" },
           { date: "2026-12-25", kind: "closing_day_with_publication" },
         ],
       }),
     ).toEqual([{ code: "ecb_calendar_mismatch", subject: "ecb", counts: { days: 2 } }]);
+  });
+
+  it("says an accepted update that filled in past days, before the calendar", () => {
+    expect(
+      ecbFindings({
+        kind: "accepted",
+        stored,
+        newDays: 1,
+        latest: "2026-10-02",
+        backfilled: 3,
+        calendar: [{ date: "2026-10-01", kind: "working_day_without_publication" }],
+      }),
+    ).toEqual([
+      { code: "ecb_history_backfilled", subject: "ecb", counts: { rates: 3 } },
+      { code: "ecb_calendar_mismatch", subject: "ecb", counts: { days: 1 } },
+    ]);
   });
 
   it("says a rebuild of a damaged history with its days, and the damage when there was no ZIP", () => {
