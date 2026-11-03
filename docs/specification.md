@@ -194,6 +194,7 @@ Funcionalidad común a las cuatro clases de activo:
 - **Aviso de desviación** si algún activo supera el umbral (regla 3).
 - Histórico de aportaciones y evolución del valor, total y por clase.
 - TER medio ponderado del núcleo y coste anual estimado en euros. El promedio cuenta solo los activos con TER declarado y dice cuánto valor de la cartera valorada queda fuera, en vez de contarlo como TER 0.
+- Coste total a 20 años (`totalCost`): TER, comisiones y fricción fiscal de venta proyectados en euros sobre el núcleo, con supuestos editables (rentabilidad bruta, horizonte, comisión, tipo de salida). Usa la aportación y el porcentaje del cubo de los ajustes. Sin precio de algún activo del núcleo no da cifra; lo que falta (aportación, comisión, tipo) se dice, no se inventa.
 - Coste acumulado en comisiones por activo, en euros y como porcentaje de lo invertido; la comisión de una permuta (`swap`) se imputa al activo recibido.
 
 #### 6.1.1 Renta variable y renta fija (fondos)

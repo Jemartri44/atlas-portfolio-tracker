@@ -49,3 +49,10 @@ export {
   platformPlan,
   type UnassignedOrder,
 } from "./projections/platform-plan.js";
+export {
+  DEFAULT_COST_YEARS,
+  type TotalCost,
+  type TotalCostAssumptions,
+  type TotalCostGap,
+  totalCost,
+} from "./projections/total-cost.js";
