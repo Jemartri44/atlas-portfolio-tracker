@@ -16,7 +16,16 @@ import PendingWrite from "../../src/shell/PendingWrite.jsx";
 import { SessionNotice } from "../../src/shell/SessionNotice.jsx";
 import { goldenLines, goldenText } from "../helpers/golden.js";
 import { MemoryBlob } from "../helpers/memory-blob.js";
-import { choose, press, settle, show, text, type, withGoldenLedger } from "../helpers/render.jsx";
+import {
+  choose,
+  press,
+  settle,
+  show,
+  text,
+  type,
+  until,
+  withGoldenLedger,
+} from "../helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -68,13 +77,12 @@ describe("a form whose write finds the ledger changed (412)", () => {
         (button) => button.textContent?.trim() === "Registrar",
       ) as HTMLButtonElement;
     confirm().click();
-    await settle(80);
-    expect(text(host)).toContain("Tus datos han cambiado");
+    await until(() => text(host).includes("Tus datos han cambiado"), "the conflict notice");
     expect((host.querySelector("#f-amount") as HTMLInputElement).value).toBe("100");
     expect(store.snapshot()?.events).toHaveLength(start + 1);
     // The effect is there again, on the new ledger, and the second yes writes.
     confirm().click();
-    await settle(80);
+    await until(() => store.snapshot()?.events.length === start + 2, "the second write");
     expect(store.snapshot()?.events).toHaveLength(start + 2);
   });
 });
@@ -208,16 +216,13 @@ describe("the notice of a write whose answer was lost", () => {
     expect(text(host)).toContain("No sabemos si se guardó");
     expect(text(host)).not.toContain("Enviar otra vez");
     pending("written");
-    await settle(10);
-    expect(text(host)).toContain("Ya está registrada");
+    await until(() => text(host).includes("Ya está registrada"), "the written notice");
     const retry = vi.fn(async () => ({ kind: "done", id: "x" }) as const);
     pending("not_written", retry);
-    await settle(10);
-    expect(text(host)).toContain("no se duplicará");
+    await until(() => text(host).includes("no se duplicará"), "the not-written notice");
     await press(host, "Enviar otra vez");
     expect(retry).toHaveBeenCalledTimes(1);
     pending("changed");
-    await settle(10);
-    expect(text(host)).toContain("Tus datos han cambiado");
+    await until(() => text(host).includes("Tus datos han cambiado"), "the changed notice");
   });
 });

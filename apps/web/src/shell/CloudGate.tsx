@@ -9,6 +9,7 @@
 import { createSignal, type JSX, Match, Show, Switch } from "solid-js";
 import { SIGN_IN_HREF } from "../auth/session.js";
 import { Notice } from "../components/Notice.jsx";
+import { startCloud } from "../ledger/start.js";
 import type { SignedOutReason } from "../ledger/state.js";
 import { store } from "../ledger/state.js";
 
@@ -21,9 +22,12 @@ const SENTENCES: Readonly<Record<SignedOutReason, string>> = {
     "Se ha cerrado la sesión en todos tus dispositivos. Si fuiste tú, entra de nuevo con Google.",
 };
 
+const CHUNK_FAILED =
+  "No se ha podido cargar la aplicación (puede que haya una versión nueva). No se ha leído ni cambiado nada: reintenta, o recarga la página si sigue igual.";
+
 /** Reads the session and the ledger again, from the start. */
 const retry = (): void => {
-  void import("../ledger/cloud.js").then((cloud) => cloud.bootCloud());
+  void startCloud();
 };
 
 const Retry = (): JSX.Element => (
@@ -46,6 +50,10 @@ const unresolved = (): boolean => {
 
 export default function CloudGate(): JSX.Element {
   const phase = () => store.load();
+  const chunkFailed = (): boolean => {
+    const current = phase();
+    return current.phase === "cloud_failed" && current.error.code === "chunk_failed";
+  };
   const [warned, setWarned] = createSignal(false);
   const enter = (): void => {
     if (unresolved() && !warned()) {
@@ -86,7 +94,7 @@ export default function CloudGate(): JSX.Element {
       </Match>
       <Match when={phase().phase === "cloud_failed"}>
         <Notice severity="danger" title="No se han podido leer tus datos" action={<Retry />}>
-          {(phase() as { error: { message: string } }).error.message}
+          {chunkFailed() ? CHUNK_FAILED : (phase() as { error: { message: string } }).error.message}
         </Notice>
       </Match>
     </Switch>

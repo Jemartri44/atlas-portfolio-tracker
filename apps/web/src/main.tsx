@@ -6,6 +6,7 @@
 import { createEffect } from "solid-js";
 import { render } from "solid-js/web";
 import { App } from "./App.jsx";
+import { startCloud } from "./ledger/start.js";
 import { applyTheme } from "./shell/theme.js";
 import "./styles/index.css";
 import { theme } from "./shell/preferences.js";
@@ -22,8 +23,5 @@ if (root !== null) {
 
   // The product (ADR-0035): session, then the ledger of the cloud; lazy, so the
   // boot carries only this `import()`. Nothing is read from the device.
-  void import("./ledger/cloud.js").then((cloud) => {
-    cloud.watchConnection();
-    return cloud.bootCloud();
-  });
+  void startCloud();
 }

@@ -120,3 +120,44 @@ describe("the exchange differences of the year", () => {
     expect(rows.map((row) => row.operation)).toEqual(["Divisa USD · 01/12/2028"]);
   });
 });
+
+describe("the movable capital rows", () => {
+  const dividend = (event_id: string, fiscal_date: string) => ({
+    event_id,
+    kind: "dividend",
+    asset_id: "stk_us",
+    account_id: "acc_us",
+    fiscal_date,
+    gross_eur_rounded: eur("10"),
+    criteria: [],
+  });
+
+  it("are ordered by their date, not by the dd/mm/yyyy text", () => {
+    const view = yearView(
+      {
+        ...report,
+        movable_capital: {
+          ...report.movable_capital,
+          dividends: [
+            dividend("march", "2028-03-05"),
+            dividend("march-too", "2028-03-05"),
+            dividend("next-year", "2029-01-02"),
+            dividend("january", "2028-01-20"),
+          ],
+        },
+      } as unknown as TaxYearReport,
+      NO_NAMES,
+    );
+    const rows = view.groups
+      .flatMap((group) => group.rows)
+      .filter((row) => row.kind === "Dividendo");
+    expect(rows.map((row) => row.date)).toEqual([
+      "20/01/2028",
+      "05/03/2028",
+      "05/03/2028",
+      "02/01/2029",
+    ]);
+    // A tie keeps the order of the report.
+    expect(rows.map((row) => row.key).slice(1, 3)).toEqual(["march", "march-too"]);
+  });
+});

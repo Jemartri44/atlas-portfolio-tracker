@@ -50,10 +50,10 @@ export const RebalanceCard = (props: RebalanceCardProps): JSX.Element => {
     return value.kind === "invalid" ? value.message : undefined;
   };
 
-  // A proposal belongs to the date it was computed at.
+  // A proposal belongs to the date and to the ledger, settings and prices it was computed from.
   createEffect(
     on(
-      () => props.date,
+      () => [props.date, props.state, props.events, props.settings, props.external],
       () => setOutcome(undefined),
       { defer: true },
     ),
@@ -65,21 +65,24 @@ export const RebalanceCard = (props: RebalanceCardProps): JSX.Element => {
       return;
     }
     setBusy(true);
-    const { rebalancePlan } = await import("@atlas/domain/rebalance");
-    setOutcome(
-      attempt(() =>
-        rebalanceView(
-          rebalancePlan(props.state, props.events, {
-            date: props.date,
-            settings: props.settings,
-            ...(money.kind === "amount" ? { amount: money.value } : {}),
-            ...(props.external === undefined ? {} : { external: props.external }),
-          }),
-          props.names,
+    try {
+      const { rebalancePlan } = await import("@atlas/domain/rebalance");
+      setOutcome(
+        attempt(() =>
+          rebalanceView(
+            rebalancePlan(props.state, props.events, {
+              date: props.date,
+              settings: props.settings,
+              ...(money.kind === "amount" ? { amount: money.value } : {}),
+              ...(props.external === undefined ? {} : { external: props.external }),
+            }),
+            props.names,
+          ),
         ),
-      ),
-    );
-    setBusy(false);
+      );
+    } finally {
+      setBusy(false);
+    }
   };
 
   const failure = () => {

@@ -87,6 +87,35 @@ const changedUnderneath = async (deps: UseCaseDeps): Promise<boolean> => {
   return etag !== snapshot.etag;
 };
 
+/**
+ * The deps for a **preview**: the ledger the screen already holds, not one more download per
+ * keystroke (`ApiLedgerStore.load` is a whole `GET /api/ledger`). A preview writes nothing, and
+ * the write itself compares the etag and appends with `If-Match`, so a stale preview can mislead
+ * for a moment but never write.
+ */
+const previewDeps = (): UseCaseDeps => {
+  const deps = requireDeps();
+  const snapshot = store.snapshot();
+  if (snapshot === undefined) {
+    return deps;
+  }
+  const { events, lines, etag } = snapshot;
+  const refuse = (): never => {
+    throw new Error("a preview never writes");
+  };
+  return {
+    ...deps,
+    store: {
+      schema: deps.store.schema,
+      load: async () => ({ events, lines, etag }),
+      append: refuse,
+      replace: refuse,
+      appendLines: refuse,
+      replaceLines: refuse,
+    },
+  };
+};
+
 /** The ids of a write, chosen now: the ledger is looked for them if the answer is lost. */
 const reserve = (count: number): string[] => {
   const ids = createUlidGenerator(requireDeps());
@@ -231,7 +260,7 @@ export const runWrite = async <T>(
 export const previewDraft = async <E extends SupportedEvent>(
   draft: Draft<E>,
   options: PreviewOptions = {},
-): Promise<EventPreview<E>> => previewEvent(requireDeps(), draft, options);
+): Promise<EventPreview<E>> => previewEvent(previewDeps(), draft, options);
 
 /**
  * The preview of a correction: the original reversed and the corrected event
@@ -241,7 +270,7 @@ export const previewCorrectionDraft = async <E extends SupportedEvent>(
   id: string,
   draft: Draft<E>,
   reason: string,
-): Promise<EventPreview<E>> => previewCorrection(requireDeps(), id, draft, reason);
+): Promise<EventPreview<E>> => previewCorrection(previewDeps(), id, draft, reason);
 
 export const recordDraft = async <E extends SupportedEvent>(
   draft: Draft<E>,
@@ -293,7 +322,7 @@ const impactOf = async (
   candidates: (deps: UseCaseDeps, events: readonly LedgerEvent[]) => Promise<Reading>,
 ): Promise<readonly ClosedYearImpact[]> => {
   try {
-    const deps = requireDeps();
+    const deps = previewDeps();
     const { events } = await deps.store.load();
     if (!events.some((event) => event.type === "tax_return_filed")) {
       return [];
