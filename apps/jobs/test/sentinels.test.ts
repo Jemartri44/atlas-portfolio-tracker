@@ -185,7 +185,6 @@ describe("the log of the jobs (G7, R15)", () => {
         ATLAS_JOBS: "prices_update",
         ATLAS_PRICE_SOURCES: "eodhd",
         ATLAS_PRICES_EODHD_DAILY_CALLS: "18",
-        ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS: "0",
         ATLAS_PRICES_FAILURE_THRESHOLD: "3",
       },
     ];

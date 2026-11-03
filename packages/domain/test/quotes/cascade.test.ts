@@ -46,21 +46,19 @@ const ledger = () => {
 };
 
 const ALL = {
-  ast_spec: { currency: "USD", eodhd: "SPEC.US", alpha_vantage: "SPEC" },
+  ast_spec: { currency: "USD", eodhd: "SPEC.US" },
   ast_index: { currency: "EUR", eodhd: "INDEX.INDX" },
-  ast_wetf: { currency: "EUR", eodhd: "WETF.XETRA", alpha_vantage: "WETF.DEX" },
+  ast_wetf: { currency: "EUR", eodhd: "WETF.XETRA" },
   ast_world: { currency: "EUR", eodhd: "LU0000000001.EUFUND" },
   ast_bonds: { currency: "EUR", eodhd: "BOND.AS" },
 };
 
 const setup = (
   answer: ConstructorParameters<typeof FakeSource>[1] = () => closes(["2027-01-05", "10"]),
-  fallback: ConstructorParameters<typeof FakeSource>[1] = () => closes(["2027-01-05", "10"]),
 ) => {
   const store = new MemoryPriceStore();
   store.files.set("symbols.json", symbolsFile(ALL));
   const eodhd = new FakeSource("eodhd", answer, store);
-  const alpha = new FakeSource("alpha_vantage", fallback, store);
   let tick = Date.parse("2027-01-06T08:00:00.000Z");
   const input: UpdatePricesInput = {
     state: ledger(),
@@ -71,9 +69,9 @@ const setup = (
       return new Date(tick);
     },
     store,
-    sources: { eodhd, alpha_vantage: alpha },
+    sources: { eodhd },
   };
-  return { store, eodhd, alpha, input };
+  return { store, eodhd, input };
 };
 
 describe("the priority of the day (ADR-0031, fixed)", () => {
@@ -129,7 +127,7 @@ describe("updatePrices", () => {
   });
 
   it("downloads in the order of priority, writes the lines, and never calls with the lock held", async () => {
-    const { store, eodhd, alpha, input } = setup();
+    const { store, eodhd, input } = setup();
     const report = await updatePrices(input);
     expect(eodhd.calls.map((c) => c.symbol)).toEqual([
       "SPEC.US",
@@ -139,7 +137,6 @@ describe("updatePrices", () => {
       "LU0000000001.EUFUND",
     ]);
     expect(eodhd.calls.every((c) => !c.locked)).toBe(true);
-    expect(alpha.calls).toEqual([]);
     // A year back the first time; the declared currency on every line.
     expect(eodhd.calls[0]).toMatchObject({ from: "2026-01-06", to: "2027-01-05" });
     expect(readCloseFile("ast_spec", store.files.get("ast_spec.jsonl") ?? "")).toEqual([
@@ -159,7 +156,7 @@ describe("updatePrices", () => {
       ["ast_bonds", "updated", "eodhd", 1],
       ["ast_world", "updated", "eodhd", 1],
     ]);
-    expect(report.remaining).toEqual({ eodhd: 15, alpha_vantage: 25 });
+    expect(report.remaining).toEqual({ eodhd: 15 });
     expect(parseStatus(store.files.get("_status.json")).sources.eodhd).toMatchObject({
       consecutive_failures: 0,
       last_success: expect.any(String),
@@ -187,35 +184,33 @@ describe("updatePrices", () => {
     expect(report.assets[0]).toMatchObject({ outcome: "unchanged", added: 0 });
   });
 
-  it("goes to the fallback after unavailable or not_found, and says which source failed", async () => {
-    const { eodhd, alpha, input } = setup((symbol) =>
-      symbol === "SPEC.US" ? { ok: false, kind: "unavailable" } : { ok: false, kind: "not_found" },
+  it("leaves out only the asset of an unavailable or not_found, and goes on with the rest", async () => {
+    const { eodhd, input } = setup((symbol) =>
+      symbol === "SPEC.US"
+        ? { ok: false, kind: "unavailable" }
+        : symbol === "INDEX.INDX"
+          ? { ok: false, kind: "not_found" }
+          : closes(["2027-01-05", "10"]),
     );
     const report = await updatePrices(input);
-    expect(alpha.calls.map((c) => c.symbol)).toEqual(["SPEC", "WETF.DEX"]);
-    expect(report.assets[0]).toMatchObject({
-      outcome: "updated",
-      source: "alpha_vantage",
-      failures: [{ source: "eodhd", kind: "unavailable" }],
-    });
-    // Without a fallback symbol, a not_found is a failure of the asset.
-    expect(report.assets[1]).toMatchObject({
-      outcome: "failed",
-      failures: [{ source: "eodhd", kind: "not_found" }],
-    });
+    expect(report.assets.map((a) => [a.asset_id, a.outcome, a.failures[0]?.kind])).toEqual([
+      ["ast_spec", "failed", "unavailable"],
+      ["ast_index", "failed", "not_found"],
+      ["ast_wetf", "updated", undefined],
+      ["ast_bonds", "updated", undefined],
+      ["ast_world", "updated", undefined],
+    ]);
     expect(eodhd.calls).toHaveLength(5);
   });
 
   it("never retries a blocked or rate-limited source in the same run, not even for another symbol", async () => {
     for (const kind of ["blocked", "rate_limited"] as const) {
-      const { store, eodhd, alpha, input } = setup(() => ({ ok: false, kind }));
+      const { store, eodhd, input } = setup(() => ({ ok: false, kind }));
       const report = await updatePrices(input);
       expect(eodhd.calls).toHaveLength(1);
-      expect(alpha.calls.map((c) => c.symbol)).toEqual(["SPEC", "WETF.DEX"]);
-      expect(report.assets[1]).toMatchObject({
-        outcome: "failed",
-        failures: [{ source: "eodhd", kind }],
-      });
+      expect(report.assets.map((a) => [a.outcome, a.failures])).toEqual(
+        Array(5).fill(["failed", [{ source: "eodhd", kind }]]),
+      );
       // It is one consecutive failure, not five.
       expect(parseStatus(store.files.get("_status.json")).sources.eodhd?.consecutive_failures).toBe(
         1,
@@ -232,25 +227,24 @@ describe("updatePrices", () => {
   });
 
   it("keeps the last value of what does not fit in the budget, and says how many stayed out", async () => {
-    const { store, eodhd, alpha, input } = setup();
-    store.files.set("config.json", '{"daily_calls":{"eodhd":2,"alpha_vantage":1}}');
+    const { store, eodhd, input } = setup();
+    store.files.set("config.json", '{"daily_calls":{"eodhd":2}}');
     const report = await updatePrices(input);
     expect(eodhd.calls.map((c) => c.symbol)).toEqual(["SPEC.US", "INDEX.INDX"]);
-    expect(alpha.calls.map((c) => c.symbol)).toEqual(["WETF.DEX"]);
     expect(report.assets.map((a) => a.outcome)).toEqual([
       "updated",
       "updated",
-      "updated",
+      "out_of_budget",
       "out_of_budget",
       "out_of_budget",
     ]);
     expect(report.assets[3]?.failures).toEqual([{ source: "eodhd", kind: "budget_exhausted" }]);
-    expect(report.remaining).toEqual({ eodhd: 0, alpha_vantage: 0 });
+    expect(report.remaining).toEqual({ eodhd: 0 });
   });
 
   it("never spends more than the budget with two consoles at once", async () => {
     const { store, eodhd, input } = setup();
-    store.files.set("config.json", '{"daily_calls":{"eodhd":3,"alpha_vantage":0}}');
+    store.files.set("config.json", '{"daily_calls":{"eodhd":3}}');
     const second = new FakeSource("eodhd", () => closes(["2027-01-05", "10"]), store);
     // The two runs interleave call by call; the lock is per reservation.
     await Promise.all([
@@ -262,40 +256,23 @@ describe("updatePrices", () => {
   });
 
   it("never downloads a symbol whose currency disagrees, and records it with its own literal", async () => {
-    const { store, eodhd, alpha, input } = setup();
+    const { store, eodhd, input } = setup();
     store.files.set(
       "symbols.json",
       symbolsFile({
         ast_spec: {
           currency: "USD",
           eodhd: "SPEC.US",
-          alpha_vantage: "SPEC",
           currency_check: { eodhd: { found: "EUR", at: "x" } },
         },
       }),
     );
     const report = await updatePrices(input);
     expect(eodhd.calls).toEqual([]);
-    expect(alpha.calls.map((c) => c.symbol)).toEqual(["SPEC"]);
     expect(report.assets[0]).toMatchObject({
-      outcome: "updated",
-      source: "alpha_vantage",
+      outcome: "currency_mismatch",
       failures: [{ source: "eodhd", kind: "currency_mismatch" }],
     });
-    // With both sources disagreeing, nothing is called for it.
-    store.files.set(
-      "symbols.json",
-      symbolsFile({
-        ast_spec: {
-          currency: "USD",
-          eodhd: "SPEC.US",
-          currency_check: { eodhd: { found: "EUR", at: "x" } },
-        },
-      }),
-    );
-    store.files.delete("ast_spec.jsonl");
-    const alone = await updatePrices(input);
-    expect(alone.assets[0]).toMatchObject({ outcome: "currency_mismatch" });
     expect(
       parseStatus(store.files.get("_status.json")).assets.ast_spec?.last_failure,
     ).toMatchObject({
@@ -306,33 +283,25 @@ describe("updatePrices", () => {
   });
 
   it("does not store a close whose currency the source gave and disagrees, and does not count it as a failure of the source", async () => {
-    const { store, input } = setup(
-      (symbol) =>
-        symbol === "SPEC.US"
-          ? { ok: true, value: [{ date: "2027-01-05", close: "10", currency: "EUR" }] }
-          : closes(["2027-01-05", "10"]),
-      () => ({ ok: true, value: [{ date: "2027-01-05", close: "10", currency: "GBP" }] }),
+    const { store, input } = setup((symbol) =>
+      symbol === "SPEC.US"
+        ? { ok: true, value: [{ date: "2027-01-05", close: "10", currency: "EUR" }] }
+        : closes(["2027-01-05", "10"]),
     );
     const report = await updatePrices(input);
     expect(report.assets[0]).toMatchObject({
       outcome: "currency_mismatch",
-      failures: [
-        { source: "eodhd", kind: "currency_mismatch" },
-        { source: "alpha_vantage", kind: "currency_mismatch" },
-      ],
+      failures: [{ source: "eodhd", kind: "currency_mismatch" }],
     });
     expect(store.files.has("ast_spec.jsonl")).toBe(false);
     const status = parseStatus(store.files.get("_status.json"));
     expect(status.sources.eodhd?.consecutive_failures).toBe(0);
-    expect(status.assets.ast_spec?.last_failure).toMatchObject({ found: "GBP", declared: "USD" });
+    expect(status.assets.ast_spec?.last_failure).toMatchObject({ found: "EUR", declared: "USD" });
   });
 
   it("says an asset has no symbol, and spends nothing on it", async () => {
     const { store, eodhd, input } = setup();
-    store.files.set(
-      "symbols.json",
-      symbolsFile({ ast_spec: { currency: "USD", alpha_vantage: "SPEC" } }),
-    );
+    store.files.set("symbols.json", symbolsFile({ ast_spec: { currency: "USD" } }));
     const report = await updatePrices({
       ...input,
       sources: { eodhd: input.sources.eodhd as FakeSource },
@@ -405,14 +374,10 @@ describe("updatePrices", () => {
     expect(kept.map((line) => line.date)).toEqual(["2027-01-01", "2027-01-05"]);
   });
 
-  it("clears the last failure of an asset once a source answers for it", async () => {
+  it("clears the last failure of an asset once the source answers for it", async () => {
     let fail = true;
-    const { store, input } = setup(
-      () => (fail ? { ok: false, kind: "unavailable" } : closes(["2027-01-05", "10"])),
-      () => ({
-        ok: false,
-        kind: "unavailable",
-      }),
+    const { store, input } = setup(() =>
+      fail ? { ok: false, kind: "unavailable" } : closes(["2027-01-05", "10"]),
     );
     await updatePrices(input);
     expect(parseStatus(store.files.get("_status.json")).assets.ast_spec?.last_failure.kind).toBe(
@@ -425,7 +390,7 @@ describe("updatePrices", () => {
 
   it("only appends: the bytes already there are never rewritten", async () => {
     const { store, input } = setup(() => closes(["2027-01-05", "10"]));
-    const first = `${encodeCloseLine({ schema_version: 1, date: "2027-01-04", close: "9.50", currency: "USD", source: "alpha_vantage", fetched_at: "2027-01-05T00:00:00.000Z" })}\n`;
+    const first = `${encodeCloseLine({ schema_version: 1, date: "2027-01-04", close: "9.50", currency: "USD", source: "eodhd", fetched_at: "2027-01-05T00:00:00.000Z" })}\n`;
     store.files.set("ast_spec.jsonl", first);
     await updatePrices(input);
     const after = store.files.get("ast_spec.jsonl") ?? "";
@@ -460,7 +425,7 @@ describe("updatePrices", () => {
   });
 
   it("contrasts a correspondence nobody contrasted before its first download, and records it", async () => {
-    const { store, eodhd, input } = setup();
+    const { store, input } = setup();
     const unchecked = { currency: "USD", eodhd: "SPEC.US", currency_check: {} };
     store.files.set("symbols.json", symbolsFile({ ast_spec: unchecked }));
     const says = (currency: string | undefined) =>
@@ -500,7 +465,6 @@ describe("updatePrices", () => {
     await updatePrices({ ...input, sources: { eodhd: again } });
     expect(again.currencyCalls).toEqual([]);
     expect(again.calls).toEqual([]);
-    void eodhd;
   });
 
   it("does not download when the contrast fails, and does not overwrite a declaration changed meanwhile", async () => {
@@ -534,65 +498,62 @@ describe("updatePrices", () => {
       kind: "unavailable",
     });
     // Out of budget before the contrast: nothing asked, not even the contrast.
-    store.files.set("config.json", '{"daily_calls":{"eodhd":0,"alpha_vantage":1}}');
+    store.files.set("config.json", '{"daily_calls":{"eodhd":1}}');
     store.files.set(
       "_status.json",
       JSON.stringify({
         status_format: 1,
         sources: {
-          alpha_vantage: { consecutive_failures: 0, calls_at: ["2027-01-06T07:59:00.000Z"] },
+          eodhd: { consecutive_failures: 0, calls_at: ["2027-01-06T07:59:00.000Z"] },
         },
         assets: {},
       }),
     );
     store.files.set(
       "symbols.json",
-      symbolsFile({ ast_spec: { currency: "USD", alpha_vantage: "SPEC", currency_check: {} } }),
+      symbolsFile({ ast_spec: { currency: "USD", eodhd: "SPEC.US", currency_check: {} } }),
     );
-    const alpha = new FakeSource(
-      "alpha_vantage",
+    const spent = new FakeSource(
+      "eodhd",
       () => closes(["2027-01-05", "10"]),
       store,
       () => ({ ok: true, value: "USD" }),
     );
-    const budget = await updatePrices({ ...input, sources: { alpha_vantage: alpha } });
-    expect(alpha.calls).toEqual([]);
-    expect(alpha.currencyCalls).toEqual([]);
+    const budget = await updatePrices({ ...input, sources: { eodhd: spent } });
+    expect(spent.calls).toEqual([]);
+    expect(spent.currencyCalls).toEqual([]);
     expect(budget.assets[0]).toMatchObject({ outcome: "out_of_budget" });
     store.files.delete("_status.json");
     // Changed by the user between the reading and the contrast: left as it is.
     store.files.delete("config.json");
     const changing = new FakeSource(
-      "alpha_vantage",
+      "eodhd",
       () => closes(["2027-01-05", "10"]),
       store,
       () => {
         store.files.set(
           "symbols.json",
-          symbolsFile({ ast_spec: { currency: "EUR", alpha_vantage: "OTHER" } }),
+          symbolsFile({ ast_spec: { currency: "EUR", eodhd: "OTHER" } }),
         );
         return { ok: true, value: "USD" };
       },
     );
     store.files.set(
       "symbols.json",
-      symbolsFile({ ast_spec: { currency: "USD", alpha_vantage: "SPEC", currency_check: {} } }),
+      symbolsFile({ ast_spec: { currency: "USD", eodhd: "SPEC.US", currency_check: {} } }),
     );
-    await updatePrices({ ...input, sources: { alpha_vantage: changing } });
+    await updatePrices({ ...input, sources: { eodhd: changing } });
     expect(parseSymbols(store.files.get("symbols.json")).assets.ast_spec).toMatchObject({
-      currencies: { alpha_vantage: "EUR" },
-      alpha_vantage: "OTHER",
+      currencies: { eodhd: "EUR" },
+      eodhd: "OTHER",
     });
   });
 
-  it("reports the sources over the threshold of consecutive failures", async () => {
-    const { store, input } = setup(
-      () => ({ ok: false, kind: "unavailable" }),
-      () => ({ ok: false, kind: "invalid_response" }),
-    );
+  it("reports the source over the threshold of consecutive failures", async () => {
+    const { store, input } = setup(() => ({ ok: false, kind: "unavailable" }));
     store.files.set("config.json", '{"failure_threshold":2}');
     const report = await updatePrices(input);
-    expect(report.failing).toEqual(["eodhd", "alpha_vantage"]);
+    expect(report.failing).toEqual(["eodhd"]);
   });
 });
 
@@ -751,32 +712,6 @@ describe("updatePrices with the correspondence read only (016, Q1)", () => {
     });
     expect(store.files.get("symbols.json")).toBe(before);
     expect(parseStatus(store.files.get("_status.json")).assets.ast_spec).toBeUndefined();
-  });
-
-  it("downloads from a contrasted source and leaves an unchecked one out", async () => {
-    const { store, eodhd, alpha, input } = setup(
-      () => ({ ok: false, kind: "unavailable" }),
-      () => closes(["2027-01-05", "10"]),
-    );
-    store.files.set(
-      "symbols.json",
-      symbolsFile({
-        ast_spec: {
-          currency: "USD",
-          eodhd: "SPEC.US",
-          alpha_vantage: "SPEC",
-          currency_check: { alpha_vantage: { at: "2027-01-01T00:00:00.000Z" } },
-        },
-      }),
-    );
-    const report = await updatePrices({ ...input, symbols: "read_only" });
-    expect(eodhd.calls).toEqual([]);
-    expect(alpha.calls.length).toBe(1);
-    expect(report.assets.find((asset) => asset.asset_id === "ast_spec")).toMatchObject({
-      outcome: "updated",
-      source: "alpha_vantage",
-      unchecked: ["eodhd"],
-    });
   });
 
   it("never chases the days a local purge asked for again, and never rewrites symbols.json", async () => {

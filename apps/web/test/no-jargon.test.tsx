@@ -252,8 +252,8 @@ describe("the screens", () => {
     // force on the **wall clock**: a literal that would have flipped by itself in March 2028.
     expect(shown).toContain("la del cambio de configuración del 07/03/2028");
     expect(optionsOf(host, "wsw-fund")).toEqual([
-      // Two months for a fund since the correction of criterion #2 (2026-09-22).
-      "Por defecto (2 meses)",
+      // A year for a fund by default (criterion #2, `2:fund_1y`, since 2026-11-03).
+      "Por defecto (1 año)",
       "2 meses",
       "1 año",
       "Un número de días",

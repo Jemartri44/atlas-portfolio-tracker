@@ -20,8 +20,8 @@ comandos:
   fx update|status               el histórico oficial del BCE junto al libro: descargarlo y ver cuál está en vigor
   prices update|status           los cierres diarios junto al libro (prices/): descargarlos y ver cada fuente y su cupo
   prices update --from-sources   en una carpeta de nube, llamar a las fuentes en vez de bajar de la nube (gasta el cupo compartido)
-  prices purge <activo> --source S  quita los cierres guardados en una divisa que su fuente no declara; sus días se vuelven a pedir una vez
-  prices symbols [set|remove] <activo> [--eodhd S] [--alpha-vantage S] --currency C [--eodhd-currency C] [--alpha-vantage-currency C] [--accept-currency]
+  prices purge <activo>          quita los cierres guardados en una divisa que su fuente no declara; sus días se vuelven a pedir una vez
+  prices symbols [set|remove] <activo> --eodhd S --currency C [--accept-currency]
   fx correct [--reason …]        corrige los tipos que no son los de su fecha fiscal (tras cambiar fiscal_date_rule)
   add … --draft                  guarda como borrador una operación cuyo tipo del BCE aún no se ha publicado
   draft list|confirm <id>|discard <id>   los borradores: no cuentan en ninguna cifra hasta registrarlos

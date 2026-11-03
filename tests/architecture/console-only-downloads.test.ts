@@ -58,7 +58,7 @@ describe("architecture: the ECB and the prices are downloaded by the console onl
     expect(reachable.some((file) => file.endsWith(join("browser", "prices.ts")))).toBe(true);
     const webReachable = [...listTsFiles(domainSrc), ...listSourceFiles(webSrc), ...reachable];
     const hosts =
-      /["'`][^"'`\n]*(?:ecb\.europa\.eu|eodhd\.com|eodhistoricaldata\.com|alphavantage\.co|api\.coingecko\.com|openfigi\.com)/;
+      /["'`][^"'`\n]*(?:ecb\.europa\.eu|eodhd\.com|eodhistoricaldata\.com|api\.coingecko\.com|openfigi\.com)/;
     const violations = webReachable
       // Inside a string, with or without its scheme. Comments are not stripped
       // first: a line comment starts with the `//` of every `https://`, and
@@ -69,9 +69,6 @@ describe("architecture: the ECB and the prices are downloaded by the console onl
     // And the places they do live are where the test above does not look.
     expect(readFileSync(join(adaptersSrc, "ecb", "source.ts"), "utf8")).toContain("ecb.europa.eu");
     expect(readFileSync(join(adaptersSrc, "prices", "eodhd.ts"), "utf8")).toContain("eodhd.com");
-    expect(readFileSync(join(adaptersSrc, "prices", "alpha-vantage.ts"), "utf8")).toContain(
-      "alphavantage.co",
-    );
     expect(reachable.some((file) => file.includes(join("src", "prices")))).toBe(false);
   });
 
