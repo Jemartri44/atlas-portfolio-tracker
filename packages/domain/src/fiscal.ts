@@ -96,6 +96,10 @@ export {
 } from "./tax/criteria.js";
 export { taxBoxesJson, taxReportJson } from "./tax/json.js";
 export {
+  type PlanRepurchaseWarning,
+  planRepurchaseWarnings,
+} from "./tax/plan-repurchase.js";
+export {
   type QuotaBracket,
   type QuotaNote,
   type SavingsQuota,

@@ -163,9 +163,12 @@ describe("the projection", () => {
     const host = await show(`/cartera?fecha=${DATE}`, Cartera);
     await until(() => host.querySelector("#pj-years") !== null, "the card");
     type(host, "pj-goal", "0");
-    await settle(30);
-    expect(text(host.querySelector(".projection-card"))).toContain(
-      "El objetivo tiene que ser mayor que cero.",
+    await until(
+      () =>
+        text(host.querySelector(".projection-card")).includes(
+          "El objetivo tiene que ser mayor que cero.",
+        ),
+      "the message of a goal that is not above zero",
     );
     await press(host, "Añadir un escenario");
     expect(host.querySelectorAll("[id^='pj-name-']").length).toBe(2);

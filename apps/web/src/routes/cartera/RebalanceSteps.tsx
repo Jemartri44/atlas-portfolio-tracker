@@ -68,9 +68,9 @@ const Tax = (props: { tax: SaleTaxView }): JSX.Element => (
         </ul>
         <Show when={tax().deferred}>
           {(deferred) => (
-            <Notice severity="caution" title="Parte de la pérdida no sería deducible">
-              La regla de recompra difiere <Amount value={deferred().amount} />. No recompres este
-              valor antes del {deferred().until} o la pérdida seguirá sin ser deducible.
+            <Notice severity="caution" title="Parte de la pérdida se aplazaría">
+              La regla de recompra aplaza <Amount value={deferred().amount} />. Si recompras este
+              valor hasta el {deferred().until}, esa pérdida se aplaza hasta que lo vendas.
             </Notice>
           )}
         </Show>
