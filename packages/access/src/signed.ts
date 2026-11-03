@@ -7,7 +7,7 @@
 // No cookie carries the e-mail: only the `sub` and
 // what is indispensable. That is why signing without encrypting is enough.
 
-import { isRecord } from "../guards.js";
+import { isRecord } from "@atlas/domain";
 import { isId22, isId43 } from "./ids.js";
 
 export const SIGNING = {

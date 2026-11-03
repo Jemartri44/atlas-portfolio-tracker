@@ -38,7 +38,6 @@ export const BOOLEAN_FLAGS: ReadonlySet<string> = new Set([
   "boxes",
   "closed",
   "deep",
-  "draft",
   "history",
   "inactive",
   // `atlas backup`.

@@ -122,7 +122,12 @@ const checkEffects = (raw: UnknownRecord): void => {
     const op = effect.op as EffectOp;
     checkFields(effect, EFFECT_RULES[op], raw.type, path);
     checkFxPairs({ ...effect, type: raw.type }, FX_EFFECT_PAIRS[op] ?? [], path);
-    checkFxDates({ ...effect, type: raw.type }, FX_EFFECT_DATES[op] ?? [], path);
+    checkFxDates(
+      { ...effect, type: raw.type },
+      FX_EFFECT_DATES[op] ?? [],
+      FX_EFFECT_PAIRS[op] ?? [],
+      path,
+    );
     if (op === "grant") {
       checkGrantIncome(effect, raw.type, path);
     }
@@ -249,7 +254,19 @@ const checkFxPairs = (
   }
 };
 
-const checkFxDates = (raw: UnknownRecord, fields: readonly string[], path = ""): void => {
+/**
+ * In euros there is no ECB rate to look up (it is "1"), so the date of a
+ * line or effect whose every currency is the euro may fall on a weekend.
+ */
+const checkFxDates = (
+  raw: UnknownRecord,
+  fields: readonly string[],
+  pairs: readonly (readonly [string, string])[],
+  path = "",
+): void => {
+  if (pairs.length > 0 && pairs.every(([currencyField]) => raw[currencyField] === "EUR")) {
+    return;
+  }
   for (const field of fields) {
     const value = raw[field];
     if (isCivilDate(value) && isWeekend(value)) {
@@ -670,7 +687,7 @@ export const validateShape = (
   }
   checkFields(raw, RULES[type], type);
   checkFxPairs(raw, FX_PAIRS[type] ?? []);
-  checkFxDates(raw, FX_DATE_FIELDS[type] ?? []);
+  checkFxDates(raw, FX_DATE_FIELDS[type] ?? [], FX_PAIRS[type] ?? []);
   CONSISTENCY[type]?.(raw);
   return raw as unknown as LedgerEvent;
 };

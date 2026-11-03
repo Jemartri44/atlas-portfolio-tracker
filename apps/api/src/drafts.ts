@@ -5,7 +5,6 @@
 
 import { type DraftObjects, utf8TextOrUndefined } from "@atlas/adapters/aws";
 import { isUlid, utf8Encode } from "@atlas/domain";
-import { refusal } from "@atlas/domain/access";
 import {
   composeDraft,
   type DraftEnd,
@@ -22,6 +21,7 @@ import {
   readStampObject,
   stampObjectText,
 } from "@atlas/domain/ecb";
+import { refusal } from "./access/codes.js";
 import { fail, type Outcome } from "./outcome.js";
 import { json } from "./respond.js";
 

@@ -27,20 +27,45 @@ export interface GrowthPoint {
 const MONTHS = 12;
 const TWELVE = Decimal.parse("12");
 
-export const grow = (input: GrowthInput): GrowthPoint[] => {
+/** One month of growth, the same for every consumer so they cannot diverge. */
+const stepOf = (input: GrowthInput): ((value: Decimal) => Decimal) => {
   const rate = input.annualReturnPct.div(HUNDRED).div(TWELVE);
   const invested = input.monthly.mul(
     Decimal.ONE.sub((input.entryFeePct ?? Decimal.ZERO).div(HUNDRED)),
   );
+  return (value) => value.add(value.mul(rate)).add(invested);
+};
+
+export const grow = (input: GrowthInput): GrowthPoint[] => {
+  const step = stepOf(input);
   let value = input.start;
   let contributed = input.start;
   const points: GrowthPoint[] = [{ year: 0, value, contributed }];
   for (let month = 1; month <= input.years * MONTHS; month += 1) {
-    value = value.add(value.mul(rate)).add(invested);
+    value = step(value);
     contributed = contributed.add(input.monthly);
     if (month % MONTHS === 0) {
       points.push({ year: month / MONTHS, value, contributed });
     }
   }
   return points;
+};
+
+/**
+ * The first month (1-based) at which the pot reaches `goal` within `years`, or undefined if it
+ * does not. Already there today is month 0.
+ */
+export const monthsToReach = (input: GrowthInput, goal: Decimal): number | undefined => {
+  const step = stepOf(input);
+  let value = input.start;
+  if (!value.lt(goal)) {
+    return 0;
+  }
+  for (let month = 1; month <= input.years * MONTHS; month += 1) {
+    value = step(value);
+    if (!value.lt(goal)) {
+      return month;
+    }
+  }
+  return undefined;
 };

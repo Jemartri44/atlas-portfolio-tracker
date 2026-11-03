@@ -10,7 +10,7 @@ Un fichero por decisión, numerado y nunca reescrito: una decisión que cambia s
 | [0004](0004-cash-scope.md) | Efectivo: saldos derivados por cuenta, colchón fuera de alcance | Aceptada |
 | [0005](0005-money-representation.md) | Representación de dinero y cantidades (`big.js` vendorizada, redondeo tardío) | Aceptada |
 | [0006](0006-ledger-file-schema.md) | Esquema del libro en S3 (un registro de eventos, versión por línea, BCE íntegro) | Aceptada |
-| [0007](0007-code-structure.md) | Monorepo npm workspaces, arquitectura hexagonal, CLI primero | Aceptada |
+| [0007](0007-code-structure.md) | Monorepo npm workspaces, arquitectura hexagonal, CLI primero | Aceptada; enmendada el 2026-11-03 (`@atlas/access` sale del dominio) |
 | [0008](0008-lint-and-format.md) | Lint y formato: Biome | Aceptada (2026-08-30); la revisión prevista quedó sin objeto (la web usa Solid, ADR-0017) |
 | [0009](0009-fifo-scope.md) | FIFO por activo entre cuentas; sin activos compartidos entre libros | Aceptada (2026-08-30); criterio de Atlas; enmendada el 2026-09-24 |
 | [0010](0010-transfer-model.md) | Traspaso: hecho contable atómico + eventos de seguimiento | Aceptada |

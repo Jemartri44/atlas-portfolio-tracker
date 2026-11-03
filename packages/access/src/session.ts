@@ -7,7 +7,7 @@
 // is refused; one issued in the same second or later is not, so the sign-in
 // that follows the closing is good at once.
 
-import { repeatsKey } from "../schema/json-keys.js";
+import { repeatsKey } from "@atlas/domain";
 import { instantOf } from "./ids.js";
 import type { SessionPayload } from "./signed.js";
 

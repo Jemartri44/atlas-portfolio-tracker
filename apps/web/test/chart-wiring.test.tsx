@@ -6,7 +6,7 @@
 
 import { render } from "solid-js/web";
 import { afterEach, describe, expect, it } from "vitest";
-import { Allocation } from "../src/components/chart/Allocation.jsx";
+import { Bullet, bulletScale } from "../src/components/Bullet.jsx";
 import {
   Chart,
   type ChartSeries,
@@ -286,55 +286,38 @@ describe("the range buttons", () => {
   });
 });
 
-describe("the allocation bar", () => {
-  const segments = [
-    { key: "equity", label: "Renta variable", actualPct: "20", targetPct: "55" },
-    { key: "fixed_income", label: "Renta fija", actualPct: "80", targetPct: "45" },
-  ];
-
+describe("the bullet bar of a class", () => {
   /**
-   * The mutation that deleted the target bar outright — half of the comparison —
-   * and nobody noticed. The card exists to compare two things; if one of them
-   * can vanish silently, the card is decoration.
+   * The bar exists to compare the weight with the target: if either can vanish silently, the card
+   * is decoration. The band of the threshold goes around the target.
    */
-  it("draws both bars: what there is and what the plan says", () => {
-    const host = mount(() => <Allocation segments={segments} />);
-    const titles = [...host.querySelectorAll("rect title")].map((t) => t.textContent ?? "");
-
-    expect(titles.filter((t) => t.startsWith("Actual:"))).toHaveLength(2);
-    expect(titles.filter((t) => t.startsWith("Objetivo:"))).toHaveLength(2);
+  it("draws the weight, the target and the band around it", () => {
+    const host = mount(() => <Bullet value={60} target={55} threshold={5} assetClass="equity" />);
+    expect(host.querySelector(".bullet-bar")?.getAttribute("width")).not.toBe("0.00%");
+    const target = Number.parseFloat(host.querySelector(".bullet-target")?.getAttribute("x") ?? "");
+    const band = host.querySelector(".bullet-band");
+    const from = Number.parseFloat(band?.getAttribute("x") ?? "");
+    const width = Number.parseFloat(band?.getAttribute("width") ?? "");
+    expect(from).toBeLessThan(target);
+    expect(from + width).toBeGreaterThan(target);
   });
 
-  it("scales each segment to its share, not to its raw number", () => {
-    const host = mount(() => <Allocation segments={segments} />);
-    const widths = [...host.querySelectorAll("rect")].map((r) => r.getAttribute("width"));
-
-    expect(widths.slice(0, 2)).toEqual(["20%", "80%"]);
-    expect(widths.slice(2)).toEqual(["55%", "45%"]);
+  it("draws no weight when it is not known, and still the target", () => {
+    const host = mount(() => <Bullet target={30} assetClass="fixed_income" />);
+    expect(host.querySelector(".bullet-bar")).toBeNull();
+    expect(host.querySelector(".bullet-target")).not.toBeNull();
   });
 
-  it("stacks them: each one starts where the previous ended", () => {
-    const host = mount(() => <Allocation segments={segments} />);
-    const xs = [...host.querySelectorAll("rect")].map((r) => r.getAttribute("x"));
-
-    expect(xs.slice(0, 2)).toEqual(["0%", "20%"]);
-    expect(xs.slice(2)).toEqual(["0%", "55%"]);
+  it("keeps a weight far above its target inside the bar", () => {
+    expect(bulletScale({ value: 90, target: 10, assetClass: "crypto" })).toBeGreaterThan(90);
   });
 
-  /** A partial core has no current weights: the top bar says so instead of lying. */
-  it("draws only the target, never an empty rail, when there is no current weight", () => {
-    const host = mount(() => (
-      <Allocation segments={[{ key: "equity", label: "Renta variable", targetPct: "100" }]} />
-    ));
-    const titles = [...host.querySelectorAll("rect title")].map((t) => t.textContent ?? "");
-    const labels = [...host.querySelectorAll(".alloc-label")].map((l) => l.textContent);
-
-    expect(labels).toEqual(["Objetivo"]);
-    expect(titles.filter((t) => t.startsWith("Actual:"))).toHaveLength(0);
-  });
-
-  it("carries percentages only, so the privacy mode has nothing to hide", () => {
-    const host = mount(() => <Allocation segments={segments} />);
-    expect(host.textContent).not.toContain("EUR");
+  it("puts the weight where its scale says, and never a figure of money", () => {
+    const host = mount(() => <Bullet value={60} target={55} threshold={5} assetClass="equity" />);
+    const scale = bulletScale({ value: 60, target: 55, threshold: 5, assetClass: "equity" });
+    expect(
+      Number.parseFloat(host.querySelector(".bullet-bar")?.getAttribute("width") ?? ""),
+    ).toBeCloseTo((60 / scale) * 100, 1);
+    expect(host.textContent ?? "").not.toMatch(/€|EUR/);
   });
 });

@@ -24,6 +24,9 @@
       "path": "../../packages/domain"
     },
     {
+      "path": "../../packages/access"
+    },
+    {
       "path": "../../packages/adapters"
     }
   ]

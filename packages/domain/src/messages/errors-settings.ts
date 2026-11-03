@@ -27,6 +27,10 @@ export const ERRORS_SETTINGS: Record<string, Entry> = {
     say: (d, v) =>
       `La exposición ${d.dimension === "region" ? "por región" : "por divisa"} de ${v.one(d.asset_id)} tiene que sumar 100 y no llevar porcentajes negativos.`,
   },
+  invalid_inflation: {
+    say: (d, v) =>
+      `La variación de precios de ${v.text(d.year)} está fuera de rango: tiene que estar entre −99 % y 1000 %.`,
+  },
   invalid_horizon: {
     say: () => "El horizonte de la proyección tiene que ser un número entero de años, 0 o más.",
   },

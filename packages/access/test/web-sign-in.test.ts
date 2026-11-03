@@ -6,7 +6,7 @@ import {
   parseWebSignIn,
   serializeWebSignIn,
   WEB_SIGN_IN_KEY,
-} from "../../src/access/web-sign-in.js";
+} from "../src/web-sign-in.js";
 
 describe("the last web sign-in (R16)", () => {
   it("is one object with the date and its format, and nothing else", () => {

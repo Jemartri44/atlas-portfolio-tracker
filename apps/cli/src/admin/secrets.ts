@@ -3,9 +3,9 @@
 // `mail/amounts`**: those are Terraform's (ADR-0034, row 12). The pure part: names, kinds, how each
 // value is checked. Nothing here reads or prints a value.
 
+import { parseAllowList } from "@atlas/access";
 import type { SecretKind } from "@atlas/adapters/aws";
 import { DomainError } from "@atlas/domain";
-import { parseAllowList } from "@atlas/domain/access";
 
 type SecretSource = "typed" | "allow-list" | "generated";
 

@@ -23,6 +23,7 @@ import { ValidationError } from "../errors.js";
 import { Decimal, HUNDRED } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
 import type { Settings } from "../settings/settings.js";
+import { coreMonthlyOf } from "./core-monthly.js";
 import type { CostSummary } from "./costs.js";
 import { grow } from "./growth.js";
 
@@ -77,18 +78,8 @@ export const totalCost = (
   }
   const missing: TotalCost["missing"] = [];
 
-  const contribution =
-    settings.monthly_contribution_eur === undefined
-      ? undefined
-      : Decimal.parse(settings.monthly_contribution_eur);
-  if (contribution === undefined) {
-    missing.push("monthly_contribution");
-  }
-  if (settings.bucket_pct_of_contribution === undefined) {
-    missing.push("bucket_pct");
-  }
-  const bucketPct = Decimal.parse(settings.bucket_pct_of_contribution ?? "0");
-  const monthly = (contribution ?? Decimal.ZERO).mul(HUNDRED.sub(bucketPct)).div(HUNDRED);
+  const { monthly, missing: absent } = coreMonthlyOf(settings);
+  missing.push(...absent);
 
   const base = {
     years: assumptions.years,

@@ -11,6 +11,7 @@ import { parseSync } from "vite";
 export const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const domainRoot = join(repoRoot, "packages", "domain");
 export const adaptersRoot = join(repoRoot, "packages", "adapters");
+export const accessRoot = join(repoRoot, "packages", "access");
 export const apiRoot = join(repoRoot, "apps", "api");
 export const webSrc = join(repoRoot, "apps", "web", "src");
 export const cliSrc = join(repoRoot, "apps", "cli", "src");
@@ -30,6 +31,7 @@ export const listSources = (dir: string): string[] =>
 /** Every source of the product: what ships, never a test. */
 export const productSources = (): string[] => [
   ...listSources(join(domainRoot, "src")),
+  ...listSources(join(accessRoot, "src")),
   ...listSources(join(adaptersRoot, "src")),
   ...listSources(join(apiRoot, "src")),
   ...listSources(join(jobsRoot, "src")),
@@ -238,6 +240,7 @@ export const exportsOf = (root: string): Map<string, string> => {
 export const packages = (): Map<string, Map<string, string>> =>
   new Map([
     ["@atlas/domain", exportsOf(domainRoot)],
+    ["@atlas/access", exportsOf(accessRoot)],
     ["@atlas/adapters", exportsOf(adaptersRoot)],
   ]);
 

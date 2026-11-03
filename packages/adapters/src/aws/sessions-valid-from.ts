@@ -1,4 +1,4 @@
-// The mark that closes every session at once (`@atlas/domain/access`, `session.ts`), in the
+// The mark that closes every session at once (`@atlas/access`, `session.ts`), in the
 // bucket: read on every request with a cookie, written by `POST /api/auth/logout-all` with the
 // clock of the API. **It only moves forward**, conditionally as every write of the bucket: a mark
 // already at or past `seconds` is left as it is.
@@ -7,7 +7,7 @@ import {
   parseSessionsValidFrom,
   SESSIONS_VALID_FROM_KEY,
   serializeSessionsValidFrom,
-} from "@atlas/domain/access";
+} from "@atlas/access";
 import { utf8TextOrUndefined } from "../utf8.js";
 import type { ObjectStore } from "./object-store.js";
 

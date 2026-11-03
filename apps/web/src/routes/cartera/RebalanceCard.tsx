@@ -11,10 +11,11 @@
 
 import type { ExternalPrices, LedgerEvent, LedgerState, Settings } from "@atlas/domain";
 import { createEffect, createMemo, createSignal, type JSX, on, Show } from "solid-js";
-import { ErrorView, Field, Pending, Section, Tag } from "../../components/index.js";
+import { Disclosure, ErrorView, Field, Pending, Section, Tag } from "../../components/index.js";
 import type { NameIndex } from "../../format/names.js";
 import { attempt } from "../../ledger/query.js";
 import type { AppError } from "../../ledger/state.js";
+import { GRID, mediaQuery } from "../../shell/media.js";
 import { type RebalanceView, rebalanceView, typedAmount } from "../../view-models/core/index.js";
 import { Result } from "./RebalanceResult.jsx";
 
@@ -39,6 +40,7 @@ interface RebalanceCardProps {
 }
 
 export const RebalanceCard = (props: RebalanceCardProps): JSX.Element => {
+  const wide = mediaQuery(GRID);
   const [amountText, setAmountText] = createSignal("");
   const [outcome, setOutcome] = createSignal<
     { ok: true; value: RebalanceView } | { ok: false; error: AppError } | undefined
@@ -91,8 +93,8 @@ export const RebalanceCard = (props: RebalanceCardProps): JSX.Element => {
     return value?.ok === true ? value.value : undefined;
   };
 
-  return (
-    <Section title="Rebalancear" class="span-12" aside={<Tag tone="accent">Propuesta</Tag>}>
+  const body = (): JSX.Element => (
+    <>
       <p class="card-note">
         Propone cómo acercarte a los pesos objetivo: primero con dinero nuevo, después con traspasos
         entre fondos (sin impuestos) y, solo si hace falta, con ventas, enseñándote antes el
@@ -123,6 +125,20 @@ export const RebalanceCard = (props: RebalanceCardProps): JSX.Element => {
         )}
       </Show>
       <Show when={view()}>{(result) => <Result view={result()} names={props.names} />}</Show>
+    </>
+  );
+
+  return (
+    <Section title="Rebalancear" class="span-12" aside={<Tag tone="accent">Propuesta</Tag>}>
+      {/* On a phone it waits folded: it is a yearly decision, better taken at the computer. */}
+      <Show
+        when={wide()}
+        fallback={
+          <Disclosure label="Calcular un rebalanceo · mejor en el ordenador">{body()}</Disclosure>
+        }
+      >
+        {body()}
+      </Show>
     </Section>
   );
 };

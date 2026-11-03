@@ -1,7 +1,7 @@
 // The pure rules of the administration of the remote.
 
 import { describe, expect, it } from "vitest";
-import { compareForRestore, parseAdminConfig } from "../../src/access/admin.js";
+import { compareForRestore, parseAdminConfig } from "../../src/admin/restore.js";
 import { SAMPLES } from "../samples.js";
 
 describe("compareForRestore", () => {
