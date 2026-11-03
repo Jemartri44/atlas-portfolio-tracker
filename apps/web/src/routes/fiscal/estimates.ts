@@ -38,7 +38,8 @@ export const quotaOf = (
   const end = `${report.year}-12-31`;
   const close = end < options.today ? end : options.today;
   const brackets = settingsAt(state, close).settings.savings_tax_brackets;
-  const outside = state.externalIncome.some((entry) => entry.year === report.year);
+  // An earlier year counts too: what it offset changes what it carries forward.
+  const outside = state.externalIncome.some((entry) => entry.year <= report.year);
   const read = outside ? taxYear(events, report.year, { ...options, external: true }) : report;
   const external = externalIncomeView(read);
   return {

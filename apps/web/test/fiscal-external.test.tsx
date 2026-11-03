@@ -8,9 +8,10 @@ import { type LedgerEvent, projectLedger } from "@atlas/domain";
 import { taxYear } from "@atlas/domain/fiscal";
 import { describe, expect, it } from "vitest";
 import { quotaOf } from "../src/routes/fiscal/estimates.js";
+import Fiscal from "../src/routes/fiscal/index.jsx";
 import { EstimateCards } from "../src/routes/fiscal/QuotaCard.jsx";
-import { goldenEvents } from "./helpers/golden.js";
-import { show, text, withGoldenLedger } from "./helpers/render.jsx";
+import { goldenEvents, goldenText } from "./helpers/golden.js";
+import { openLedger, show, text, today, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -58,5 +59,23 @@ describe("income from outside the portfolio", () => {
     const host = await show("/", () => <EstimateCards estimate={estimate} />);
     expect(text(host)).not.toContain("Rendimientos de fuera de la cartera");
     expect(text(host)).not.toContain("De esa base");
+  });
+
+  it("still estimates a year in which only income from outside the portfolio happened", async () => {
+    // The golden ledger has nothing in 2030; one interest from a bank that year.
+    const interest = {
+      ...dividend,
+      kind: "interest",
+      value_date: "2030-03-02",
+      payer: "Banco Ejemplo",
+    };
+    await openLedger(`${goldenText()}${JSON.stringify(interest)}\n`);
+    today("2031-02-01");
+    const host = await show("/fiscal?ejercicio=2030", Fiscal, "/fiscal");
+    const shown = text(host);
+    expect(shown).toContain("No hay nada que declarar en este ejercicio");
+    expect(shown).toContain("Rendimientos de fuera de la cartera");
+    expect(shown).toContain("Banco Ejemplo");
+    expect(shown).toContain("Cuota estimada del ahorro");
   });
 });
