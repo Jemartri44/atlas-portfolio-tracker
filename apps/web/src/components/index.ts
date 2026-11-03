@@ -9,6 +9,7 @@ export { ErrorView } from "./ErrorView.jsx";
 export { Field, type Option, SelectField, Switch } from "./Field.jsx";
 export { Figure } from "./Figure.jsx";
 export { Fold } from "./Fold.jsx";
+export { FoldSection } from "./FoldSection.jsx";
 export { Icon, type IconName } from "./Icon.jsx";
 export { Notice, type NoticeItem, NoticeLink, NoticeList, type Severity } from "./Notice.jsx";
 export { Parts } from "./Parts.jsx";
