@@ -271,6 +271,8 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     "El método del saldo medio del trimestre y la clasificación de ETF, ETC y ETP se apoyan en criterios todavía sin numerar.",
   tax_box_section_doubtful: () =>
     "Las acciones de mercados de fuera de la UE (NYSE, Nasdaq…) van a «otros elementos patrimoniales» con la clave 2, como dice la ayuda del Modelo 100; ninguna fuente leída extiende a la declaración la equivalencia de esos mercados, así que el apartado es dudoso.",
+  tax_box_market_unknown: (d, n) =>
+    `Estas acciones no tienen mercado anotado o Atlas no lo conoce (${n.many(d.assets)}): se dejan en «acciones negociadas», pero si cotizan fuera de la UE van a «otros elementos patrimoniales» (clave 2). Anota el mercado.`,
   tax_box_other_inferred: () =>
     "Las diferencias de cambio de la divisa (y un ETC o ETP configurado como ganancia) no tienen apartado propio en el impreso: por exclusión irían a «otros elementos patrimoniales», clave 4 («otros elementos patrimoniales no afectos a actividades económicas»). Es una inferencia, no está escrita en ninguna fuente; por eso no llevan casilla.",
   tax_box_repurchase_has_no_number: () =>

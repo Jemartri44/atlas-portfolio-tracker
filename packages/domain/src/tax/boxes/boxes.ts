@@ -17,7 +17,7 @@
 //     wrong figure that the user types into a real return.
 
 import type { Money } from "../../money/money.js";
-import type { Warning } from "../../projections/state.js";
+import type { Asset, Warning } from "../../projections/state.js";
 import type { LedgerEvent } from "../../schema/events.js";
 import type { ChainCore, TaxOptions } from "../chain.js";
 import type { TaxYearReport } from "../report.js";
@@ -25,6 +25,7 @@ import { note } from "../shared.js";
 import { taxYearWithChain } from "../year.js";
 import { type ConceptId, SIGNED_CONCEPTS } from "./concepts.js";
 import { type Draft, draftEntries } from "./draft.js";
+import { euRegulatedMarket } from "./markets.js";
 import type { BoxEntry, BoxMapping, PartialReason, TaxBoxes } from "./report.js";
 import { boxesOfYear, type YearBoxes, type YearBoxMapping } from "./years/index.js";
 
@@ -209,6 +210,29 @@ export const boxesOf = (report: TaxYearReport, chain: ChainCore): TaxBoxes => {
         "tax_box_section_doubtful",
         "shares outside the EU regulated markets go to 'otros elementos patrimoniales' with key 2, as the help of the form says; no source extends to the form the equivalence of those markets, so the section is doubtful",
         { section: "other_shares", key: "2" },
+      ),
+    );
+  }
+  // A share whose market is missing or unknown stays among "acciones
+  // negociadas", which is wrong if it trades outside the EU.
+  const unknownMarket = [
+    ...new Set(
+      entries.flatMap((entry) =>
+        entry.section === "listed_shares" && entry.row !== undefined ? [entry.row.asset_id] : [],
+      ),
+    ),
+  ]
+    .filter(
+      (assetId) =>
+        euRegulatedMarket((chain.state.assets.get(assetId) as Asset).market) === undefined,
+    )
+    .sort();
+  if (unknownMarket.length > 0) {
+    notes.push(
+      note(
+        "tax_box_market_unknown",
+        "some shares have no market written, or one Atlas does not know: they stay among 'acciones negociadas', which is wrong if they trade outside the EU",
+        { assets: unknownMarket },
       ),
     );
   }
