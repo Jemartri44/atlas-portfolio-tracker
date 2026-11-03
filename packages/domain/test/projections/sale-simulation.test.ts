@@ -105,6 +105,41 @@ describe("simulateSale", () => {
     expect(simulation.tax_eur.centsText()).toBe("19.00");
   });
 
+  it("prices an order that rounds to 0,00 € without a fee share instead of failing", () => {
+    // acc_b keeps 0.001 units after a sale that cost 1 € of commission: at 3 €
+    // the order is 0.003 €, 0,00 € in cents, and a share of 1 € over it is undefined.
+    const b = new LedgerBuilder();
+    b.account("acc_a");
+    b.account("acc_b");
+    b.asset("ast_world");
+    b.buy({ account_id: "acc_a", asset_id: "ast_world", quantity: "6", value_date: "2026-01-12" });
+    b.buy({
+      account_id: "acc_b",
+      asset_id: "ast_world",
+      quantity: "1.001",
+      value_date: "2026-01-13",
+    });
+    b.sell({
+      account_id: "acc_b",
+      asset_id: "ast_world",
+      quantity: "1",
+      fee: "1",
+      value_date: "2026-06-10",
+    });
+    b.valuation({
+      account_id: "acc_a",
+      asset_id: "ast_world",
+      date: "2027-12-01",
+      quantity: "6",
+      unit_value: "3",
+    });
+    const simulation = run(b);
+    const tiny = simulation.orders.find((order) => order.account_id === "acc_b");
+    expect(tiny?.amount_eur.centsText()).toBe("0.00");
+    expect(tiny?.fee?.fee_eur.centsText()).toBe("1.00");
+    expect(tiny?.fee_pct).toBeUndefined();
+  });
+
   it("never writes: the ledger it was given is the same afterwards", () => {
     const events = twoAccounts("120").build();
     const before = JSON.stringify(events);
