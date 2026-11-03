@@ -1,7 +1,6 @@
 /*
  * Charts (docs/design/system.md §5.15): the lines of uPlot and their frame,
- * the legend of line keys, the note that explains a hole, and the two
- * allocation bars. Series colours come from the validated data palette of
+ * the legend of line keys and the note that explains a hole. Series colours come from the validated data palette of
  * `tokens.css`; the text around them is always ink, never the series colour.
  */
 
@@ -111,53 +110,4 @@
   height: 0.875rem;
   margin-top: var(--space-0);
   width: 0.875rem;
-}
-
-/* ---- Allocation: actual against target on the same scale ---------------- */
-
-.alloc {
-  display: grid;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
-}
-
-.alloc-row {
-  align-items: center;
-  display: grid;
-  gap: var(--space-3);
-  grid-template-columns: var(--label-col) minmax(0, 1fr);
-}
-
-.alloc-label {
-  color: var(--c-text-2);
-  font-size: var(--text-sm);
-}
-
-/* The ends are rounded by a clip: a border radius does not clip an SVG root. */
-.alloc-bar {
-  clip-path: inset(0 round var(--radius-sm));
-  height: var(--bar-h);
-  width: 100%;
-}
-
-/* Segments are cut apart by the colour of the surface, never by a border. */
-.alloc-seg {
-  stroke: var(--c-surface);
-  stroke-width: 3;
-}
-
-.alloc-seg.is-equity {
-  fill: var(--c-class-equity);
-}
-
-.alloc-seg.is-fixed_income {
-  fill: var(--c-class-fixed-income);
-}
-
-.alloc-seg.is-gold {
-  fill: var(--c-class-gold);
-}
-
-.alloc-seg.is-crypto {
-  fill: var(--c-class-crypto);
 }

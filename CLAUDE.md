@@ -74,6 +74,7 @@ Monorepo with npm workspaces, **hexagonal architecture** with a pure functional 
 
 ```
 packages/domain    pure core: types, money, events, projections, FIFO, tax, use cases, PORTS (interfaces). No I/O, no runtime npm deps.
+packages/access    pure rules of the access to the API: allow list, signed payloads, ID token checks, the sessions mark. Imports only domain.
 packages/adapters  port implementations: S3/file/memory LedgerStore, price sources, ECB FxRateSource, SES Notifier. AWS SDK lives only here.
 apps/cli           Maintenance console over a local file; reaches S3 only as administration (the web is the main surface).
 apps/api           Lambda Function URL behind CloudFront (/api/*): verifies the Google token at sign-in, issues its own session, composes domain + adapters.
@@ -82,7 +83,7 @@ apps/jobs          Scheduled Lambdas run by EventBridge Scheduler (ECB, prices, 
 infra/             Terraform.
 ```
 
-Dependency rule: `domain` imports nothing; `adapters` imports `domain`; apps import both (enforced by an architecture test). Ports: `LedgerStore`, `PriceSource`, `FxRateSource`, `Notifier`, `Clock`, `RandomSource`; `StatementSource` and `DocumentStore` are planned (importers) and do not exist yet. New integrations (banks, broker APIs) are new adapters, never domain changes. Use cases live in `domain/usecases` and receive ports as parameters.
+Dependency rule: `domain` imports nothing; `access` imports only `domain`; `adapters` imports `domain` and `access`; apps import them; neither `domain` nor the web reaches `access` (enforced by architecture tests). Ports: `LedgerStore`, `PriceSource`, `FxRateSource`, `Notifier`, `Clock`, `RandomSource`; `StatementSource` and `DocumentStore` are planned (importers) and do not exist yet. New integrations (banks, broker APIs) are new adapters, never domain changes. Use cases live in `domain/usecases` and receive ports as parameters.
 
 Messages: the domain speaks English; one catalogue `code → sentence` for errors, warnings, findings and remote failures lives in `packages/domain/src/messages/` behind `@atlas/domain/messages` (off the web boot path). Each surface hands it its `Voice` (`apps/cli/src/output/voice.ts`, `apps/web/src/format/messages/voice.ts`: names, figures, dates, privacy mask) and an entry may carry a remedy per surface. A new code needs one entry; `tests/messages.test.ts` fails until it has one, and no entry formats a figure itself.
 
@@ -94,8 +95,8 @@ The user directs the project with a high-level assistant that writes decision ro
 2. **Decisions are already taken.** Do not re-open an accepted ADR, change the data schema, or pick a different library "because it is better". If the docs are ambiguous, contradictory, or block you: **stop, write the questions in `specs/NNN-<name>/questions.md`, and report** — do not guess on anything fiscal or structural.
 3. **Follow Spec Kit**: `/speckit-specify` → `/speckit-clarify` (if needed) → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`, artefacts in `specs/NNN-<name>/` (Spanish prose, English identifiers). Show `spec.md` and `plan.md` to the user before writing code.
 4. **Branch** `feature/NNN-<name>` from `develop`; enable hooks with `git config core.hooksPath .githooks`; Conventional Commits in English, one subject line, atomic; open a PR to `develop` using the template; never push to `develop` or `main`.
-5. **Package names**: `@atlas/domain`, `@atlas/adapters`, `@atlas/cli`, `@atlas/api`, `@atlas/web`, `@atlas/jobs`. Node 22+ (`.nvmrc`), ESM, strict `tsconfig` (ADR-0007). Dependencies only from `docs/dependencies.md`.
-6. **Definition of done**: tests green (`npm run test`; the full battery is `npm run test:all`, which adds `test:infra` — run it on the last commit under `flock -o ~/.cache/desbaste-gradle.lock`, the lock shared by the machine so only one heavy battery runs at a time, and always for changes under `infra/`), `packages/domain` at 100% line and branch coverage in `money/`, `projections/`, `tax/`, `informative/` and `dates/` (where a bug moves money or tax) and ~90% elsewhere (constitution VII), Biome clean, architecture test green (`domain` imports nothing), docs updated where behaviour changed, PR checklist honestly filled.
+5. **Package names**: `@atlas/domain`, `@atlas/access`, `@atlas/adapters`, `@atlas/cli`, `@atlas/api`, `@atlas/web`, `@atlas/jobs`. Node 22+ (`.nvmrc`), ESM, strict `tsconfig` (ADR-0007). Dependencies only from `docs/dependencies.md`.
+6. **Definition of done**: tests green (`npm run test`; the full battery is `npm run test:all`, which adds `test:infra` — run it on the last commit under `flock -o ~/.cache/desbaste-gradle.lock`, the lock shared by the machine so only one heavy battery runs at a time, and always for changes under `infra/`), `packages/domain` at 100% line and branch coverage in `money/`, `projections/`, `tax/`, `informative/` and `dates/` (where a bug moves money or tax) and ~90% elsewhere (constitution VII), `packages/access` and `apps/api/src/access` at 100% (security), Biome clean, architecture test green (`domain` imports nothing), docs updated where behaviour changed, PR checklist honestly filled.
 7. **Fixtures** live in `tests/fixtures/<source>/` and are **synthetic**: real file format, fake values (invented ISINs, account ids like `U0000000`, round amounts). Real statements never enter the repo.
 8. **ADRs**: an implementer may propose one (status `Propuesta`, via `/adr`) but never accept it; the user decides.
 

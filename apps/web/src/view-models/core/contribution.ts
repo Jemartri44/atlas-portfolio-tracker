@@ -17,6 +17,8 @@ export interface ContributionRowView {
   assetId: string;
   name: string;
   assetClass: string;
+  /** `equity`, `fixed_income`, `gold` or `crypto`: the colour of its bar. */
+  classKey: string;
   targetPct: string;
   value: Money;
   target: Money;
@@ -113,6 +115,7 @@ export const contributionView = (
     assetId: row.asset_id,
     name: displayName(names, row.asset_id),
     assetClass: valueLabel(row.asset_class),
+    classKey: row.asset_class,
     targetPct: row.target_pct.toString(),
     value: row.value_eur,
     target: row.target_eur,

@@ -46,7 +46,7 @@ describe("the package of the scheduled jobs", () => {
     expect(
       ours.filter(
         (input) =>
-          !/^(apps\/jobs\/src|packages\/(domain|adapters)\/src|packages\/domain\/vendor)\//.test(
+          !/^(apps\/jobs\/src|packages\/(domain|access|adapters)\/src|packages\/domain\/vendor)\//.test(
             input,
           ),
       ),

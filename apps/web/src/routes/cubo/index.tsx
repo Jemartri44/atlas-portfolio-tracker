@@ -6,7 +6,7 @@
 // total net worth (rule 18), which is a budget control and is always shown with
 // the breakdown beside it.
 //
-// The stop-loss warning goes at the very top, as `atlas bucket` does: it is the
+// The stop-loss warning goes at the very top: it is the
 // rule the plan wants hardest to ignore. It warns; it never blocks.
 //
 // Composition (docs/design/system.md §7.6): the bucket against the index, the

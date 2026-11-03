@@ -4,7 +4,7 @@
 // the header and the claims; **the accepted issuers are given by the identity
 // adapter**, which is the only place allowed to name Google.
 
-import { isRecord } from "../guards.js";
+import { isRecord } from "@atlas/domain";
 import { isSubject } from "./signed.js";
 
 export type IdTokenFailure =

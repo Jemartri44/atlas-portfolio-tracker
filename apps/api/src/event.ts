@@ -3,7 +3,7 @@
 // decoded from base64 when it says so.
 
 import { decodeUtf8Strict } from "@atlas/adapters/aws";
-import { parseCookieHeader } from "@atlas/domain/access";
+import { parseCookieHeader } from "./access/cookies.js";
 
 export interface FunctionUrlEvent {
   readonly version?: string;

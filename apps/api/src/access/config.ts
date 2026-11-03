@@ -4,7 +4,7 @@
 // variable — a key, a secret — stops the Lambda from starting instead of being
 // read or ignored.
 
-import { ValidationError } from "../errors.js";
+import { ValidationError } from "@atlas/domain";
 
 /**
  * The ceilings of the durations and caches, **fixed in the code**: a typo of zeros in

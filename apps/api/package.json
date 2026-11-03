@@ -18,6 +18,7 @@
     "dist"
   ],
   "dependencies": {
+    "@atlas/access": "0.1.0",
     "@atlas/adapters": "0.1.0",
     "@atlas/domain": "0.1.0"
   },

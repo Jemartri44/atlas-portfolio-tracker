@@ -1,10 +1,11 @@
 // The handler of the Function URL (`docs/api.md`). It **composes
 // and decides nothing**: which route admits which credential, how a signed
 // payload is read, what an ID token must say, who is allowed and when every
-// session was closed are `@atlas/domain/access`; the signatures and the reads are the
+// session was closed are `@atlas/access`; the signatures and the reads are the
 // adapters'. It never redirects a data route, never writes anything on a
 // failure, and logs only codes (`log.ts`).
 
+import { sessionView } from "@atlas/access";
 import {
   appendOnlyLedger,
   closeSessionsBefore,
@@ -13,17 +14,10 @@ import {
   exposureObject,
   referenceReader,
 } from "@atlas/adapters/aws";
-import {
-  admit,
-  bodyTooLarge,
-  expectEmptyObject,
-  findRoute,
-  matchRoute,
-  presentedCredential,
-  readJsonBody,
-  refusal,
-  sessionView,
-} from "@atlas/domain/access";
+import { bodyTooLarge, expectEmptyObject, readJsonBody } from "./access/body.js";
+import { refusal } from "./access/codes.js";
+import { presentedCredential } from "./access/cookies.js";
+import { admit, findRoute, matchRoute } from "./access/routes.js";
 import { createContext, type HandlerDeps } from "./context.js";
 import { draftRoutes } from "./drafts.js";
 import { type FunctionUrlEvent, type FunctionUrlResult, normalise, type Request } from "./event.js";

@@ -76,7 +76,7 @@
   font-weight: var(--fw-semibold);
 }
 
-.alloc + .pending {
+.bullets + .pending {
   margin-bottom: var(--space-2);
 }
 
@@ -236,4 +236,9 @@
   .costs-side > .block-title:first-child {
     margin-top: 0;
   }
+}
+
+/* The calculation in sight on a computer: five columns in a card of five, a tighter gutter. */
+.split-calc .table :is(th, td):not(:first-child, :last-child) {
+  padding-inline: var(--space-2);
 }

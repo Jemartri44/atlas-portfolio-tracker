@@ -1,0 +1,17 @@
+{
+  "name": "@atlas/access",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The rules of the access to the API: allow list, signed payloads, ID token checks, the sessions mark. Pure, over @atlas/domain only; never reached by the domain or the web.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@atlas/domain": "0.1.0"
+  }
+}

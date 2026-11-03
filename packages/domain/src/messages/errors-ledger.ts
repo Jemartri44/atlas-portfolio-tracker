@@ -232,26 +232,18 @@ export const ERRORS_LEDGER: Record<string, Entry> = {
   draft_not_needed: {
     say: () => "Ningún tipo de esta operación está esperando al BCE: regístrala como siempre.",
     web: () => "No hace falta borrador.",
-    cli: () => "Sin --draft.",
   },
   draft_changed: {
     say: (d) =>
       d.now === "gone"
-        ? "Ese borrador ya no está pendiente: se ha confirmado o descartado en otro dispositivo, en otra pestaña, en la consola o desde otra orden. No se ha registrado nada."
+        ? "Ese borrador ya no está pendiente: se ha confirmado o descartado en otro dispositivo o en otra pestaña. No se ha registrado nada."
         : "Ese borrador se está confirmando en otro sitio (ya lleva el id de su registro): no se ha registrado nada.",
     web: (d) =>
       d.now === "gone"
         ? "Mira tus movimientos y tus borradores."
         : "Mira tus borradores dentro de un momento.",
-    cli: (d) =>
-      d.now === "gone"
-        ? "Ya no está en drafts/: consulta `atlas draft list` y el libro."
-        : "Espera y consulta `atlas draft list`.",
   },
-  draft_unreadable: {
-    say: () => "Un borrador no tiene el formato esperado: no se ha tocado.",
-    cli: () => "Está en drafts/: revísalo a mano; puede ser la única copia de una operación.",
-  },
+  draft_unreadable: () => "Un borrador no tiene el formato esperado: no se ha tocado.",
   // --- Ledger state ---
   ledger_has_invalid_events: {
     say: (d, v) =>

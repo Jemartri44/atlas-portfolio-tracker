@@ -15,7 +15,6 @@
 
 import type { LedgerState, Settings } from "@atlas/domain";
 import { For, type JSX, Show } from "solid-js";
-import { Allocation, type AllocationSegment } from "../../components/chart/index.js";
 import {
   Amount,
   type DataColumn,
@@ -37,6 +36,7 @@ import { type NameIndex, NO_NAMES } from "../../format/names.js";
 import { formatDecimalString } from "../../format/number.js";
 import { privacy } from "../../shell/preferences.js";
 import type { WeightRow, WeightsView } from "../../view-models/core/index.js";
+import { ClassBullets } from "./ClassBullets.jsx";
 import { ClassRows, ClassTable } from "./Classes.jsx";
 import { Gauge } from "./Gauge.jsx";
 import { TransferSimulator } from "./TransferSimulator.jsx";
@@ -125,32 +125,51 @@ interface WeightsCardProps {
   absorbed: ReadonlySet<string>;
   /** The catalogue's names, for the notes of the automatic prices. */
   names?: NameIndex;
+  /** The weighted TER of the priced core, from the costs (`costSummary`); absent without one. */
+  weightedTer?: string | undefined;
 }
 
 export const WeightsCard = (props: WeightsCardProps): JSX.Element => {
-  const segments = (): AllocationSegment[] =>
-    props.view.classes.map((row) => ({
-      key: row.assetClass,
-      label: row.label,
-      actualPct: row.weightPct,
-      targetPct: row.targetPct,
-    }));
-
   return (
-    <Section
-      title="Pesos frente al objetivo"
-      class="span-7 is-natural"
-      aside={
-        <Show when={props.threshold}>
-          {(threshold) => <span>umbral ±{formatDecimalString(threshold())} pp</span>}
-        </Show>
-      }
-    >
+    <Section title="Pesos frente al objetivo" class="span-7 is-natural">
       <Show
         when={props.view.classes.length > 0}
         fallback={<p class="meta">Todavía no hay nada en la cartera principal.</p>}
       >
-        <Allocation segments={segments()} />
+        <dl class="kpis is-lead">
+          <div class="kpi">
+            <dt>Cartera principal</dt>
+            <dd class="kpi-lead">
+              <Amount value={props.view.total} decimals={0} missingReason="sin precio" />
+              <Show when={props.view.partial}>
+                <Tag icon="half" title={`Faltan: ${props.view.missing.join(", ")}`}>
+                  parcial
+                </Tag>
+              </Show>
+            </dd>
+          </div>
+          <Show when={props.threshold}>
+            {(threshold) => (
+              <div class="kpi">
+                <dt>Umbral</dt>
+                <dd class="kpi-lead">±{formatDecimalString(threshold())} pp</dd>
+              </div>
+            )}
+          </Show>
+          <Show when={props.weightedTer}>
+            {(ter) => (
+              <div class="kpi">
+                <dt>TER medio</dt>
+                <dd class="kpi-lead">
+                  <Figure value={ter()} unit="percent" decimals={2} />
+                </dd>
+              </div>
+            )}
+          </Show>
+        </dl>
+        <Show when={!props.view.partial}>
+          <ClassBullets view={props.view} threshold={props.threshold} />
+        </Show>
 
         <For each={props.view.priceNotes}>
           {(warning) => (

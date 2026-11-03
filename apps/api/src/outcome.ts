@@ -1,7 +1,7 @@
 // What a route answered, with the code and reason its log line carries —
 // never anything else (`log.ts`).
 
-import type { ApiRefusal } from "@atlas/domain/access";
+import type { ApiRefusal } from "./access/codes.js";
 import type { FunctionUrlResult } from "./event.js";
 import { refused } from "./respond.js";
 

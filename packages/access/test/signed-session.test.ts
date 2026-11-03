@@ -1,13 +1,14 @@
 // The signed payloads and what the SPA learns of its session.
 
+import { isInstant } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
-import { instantOf, isId22, isId43 } from "../../src/access/ids.js";
+import { instantOf, isId22, isId43 } from "../src/ids.js";
 import {
   closedByMark,
   parseSessionsValidFrom,
   serializeSessionsValidFrom,
   sessionView,
-} from "../../src/access/session.js";
+} from "../src/session.js";
 import {
   isSubject,
   loginPayload,
@@ -16,8 +17,7 @@ import {
   SIGNING,
   sessionPayload,
   splitSigned,
-} from "../../src/access/signed.js";
-import { isInstant } from "../../src/guards.js";
+} from "../src/signed.js";
 
 const ID22 = "AAAAAAAAAAAAAAAAAAAAAA";
 const ID43 = "C".repeat(43);

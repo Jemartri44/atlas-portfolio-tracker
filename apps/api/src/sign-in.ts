@@ -1,22 +1,21 @@
 // The sign-in with Google (`docs/api.md` §3): the web's start and return. Which ID token is good
-// and who is allowed are `@atlas/domain/access`; this only walks the steps.
+// and who is allowed are `@atlas/access`; this only walks the steps.
 
 import type { JsonWebKey } from "node:crypto";
-import { pkceChallenge, verifyRs256 } from "@atlas/adapters/access";
-import { recordWebSignIn } from "@atlas/adapters/aws";
-import { IdentityUnavailable } from "@atlas/adapters/identity";
-import { madridDateOf } from "@atlas/domain";
 import {
   checkIdTokenClaims,
   checkIdTokenHeader,
-  cookieValues,
   isAllowed,
-  LOGIN_COOKIE,
   loginPayload,
   readLoginPayload,
   sessionPayload,
   splitJwt,
-} from "@atlas/domain/access";
+} from "@atlas/access";
+import { pkceChallenge, verifyRs256 } from "@atlas/adapters/access";
+import { recordWebSignIn } from "@atlas/adapters/aws";
+import { IdentityUnavailable } from "@atlas/adapters/identity";
+import { madridDateOf } from "@atlas/domain";
+import { cookieValues, LOGIN_COOKIE } from "./access/cookies.js";
 import type { ApiContext } from "./context.js";
 import type { Request } from "./event.js";
 import type { Outcome } from "./outcome.js";

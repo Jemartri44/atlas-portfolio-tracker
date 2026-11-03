@@ -8,7 +8,7 @@
 // under it and is masked. Over a partial total the domain gives no share, and
 // the card says why instead.
 //
-// Commissions over traded capital lead the strip, as in `atlas bucket`: with a
+// Commissions over traded capital lead the strip: with a
 // small account and fixed fees, that ratio decides the result before the
 // judgement does (rule 14). The rest of the panel is one tap away.
 

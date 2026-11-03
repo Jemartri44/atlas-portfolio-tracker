@@ -5,19 +5,6 @@
 
 import { type AppendOnlyLedger, decodeUtf8Strict, type ReferenceReader } from "@atlas/adapters/aws";
 import { ConflictError, CURRENT_LEDGER_SCHEMA, sha256Hex, utf8Encode } from "@atlas/domain";
-import {
-  type ApiConfig,
-  type ApiRefusal,
-  ifNoneMatchHits,
-  type ReferenceKind,
-  referenceContentType,
-  referenceIndex,
-  referenceKey,
-  refusal,
-  refusalOfRemote,
-  requestedEtag,
-  versionOf,
-} from "@atlas/domain/access";
 import { unservableSymbols } from "@atlas/domain/quotes";
 import {
   acceptAppend,
@@ -27,6 +14,18 @@ import {
   type RemoteRules,
   textOfLines,
 } from "@atlas/domain/sync";
+import { type ApiRefusal, refusal } from "./access/codes.js";
+import type { ApiConfig } from "./access/config.js";
+import {
+  ifNoneMatchHits,
+  type ReferenceKind,
+  referenceContentType,
+  referenceIndex,
+  referenceKey,
+  refusalOfRemote,
+  requestedEtag,
+  versionOf,
+} from "./access/sync-routes.js";
 import { fail, type Outcome } from "./outcome.js";
 import { bytesCompressed, json, notModified } from "./respond.js";
 

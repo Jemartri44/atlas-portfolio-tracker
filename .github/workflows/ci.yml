@@ -22,10 +22,13 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      # The domain's 100 % in a pass of its own, then every other project with
-      # no threshold of the domain (feature 015, E5, questions.md §34).
+      # Each measured area in a pass of its own (the domain, the rules of the access and the
+      # access of the API), then every other project with no threshold (feature 015, E5,
+      # questions.md §34).
       - run: npm run test:coverage:domain
-      # When the coverage of the domain fails, keep what it measured: a branch
+      - run: npm run test:coverage:access
+      - run: npm run test:coverage:api-access
+      # When a pass of coverage fails, keep what it measured: a branch
       # that goes uncovered only now and then (review of PR #90, CI-1) is
       # isolated from this file, not by guessing.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
