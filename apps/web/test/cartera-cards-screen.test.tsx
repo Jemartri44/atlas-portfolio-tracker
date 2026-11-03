@@ -12,7 +12,7 @@ import Cartera from "../src/routes/cartera/index.jsx";
 import { setPrivacy } from "../src/shell/preferences.js";
 import { type Api, apiAt, sameOrigin, signedIn } from "./cloud/api-support.js";
 import { goldenText } from "./helpers/golden.js";
-import { show, text, until, withGoldenLedger } from "./helpers/render.jsx";
+import { press, settle, show, text, type, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -81,5 +81,91 @@ describe("the return of the core", () => {
     expect(card).toMatch(/Has aportado\s*[•·]{4}/);
     expect(card).toMatch(/−?\d+,\d+\s*%/);
     setPrivacy(false);
+  });
+});
+
+describe("the total cost", () => {
+  it("shows no figure without a gross return, and the costs once it is typed", async () => {
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => host.querySelector("#tc-gross") !== null, "the card");
+    expect(text(host.querySelector(".total-cost"))).toContain(
+      "Escribe la rentabilidad bruta anual",
+    );
+    type(host, "tc-gross", "5");
+    await settle(30);
+    const card = text(host.querySelector(".total-cost"));
+    expect(card).toContain("Coste total en el horizonte");
+    expect(card).toContain("Se lleva el TER");
+    type(host, "tc-gross", "5,x");
+    await settle(30);
+    expect(text(host.querySelector(".total-cost"))).not.toContain("Coste total en el horizonte");
+  });
+  it("masks the amounts with the privacy mode on", async () => {
+    setPrivacy(true);
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => host.querySelector("#tc-gross") !== null, "the card");
+    type(host, "tc-gross", "5");
+    await settle(30);
+    const card = text(host.querySelector(".total-cost"));
+    expect(card).toContain("Coste total en el horizonte");
+    expect(card).not.toMatch(/\d,\d{2}\s*€/);
+    setPrivacy(false);
+  });
+});
+
+describe("the projection", () => {
+  it("asks for the returns instead of inventing them, then projects once they are typed", async () => {
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => host.querySelector("#pj-years") !== null, "the card");
+    expect(text(host.querySelector(".projection-card"))).toContain("Falta la rentabilidad de");
+    for (const input of host.querySelectorAll("input[id^='pj-0-']")) {
+      type(host, input.id, "5");
+    }
+    await settle(30);
+    const card = text(host.querySelector(".projection-card"));
+    expect(card).toContain("Dentro de 20 años");
+    expect(card).not.toContain("Falta la rentabilidad de");
+  });
+
+  it("keeps up to three scenarios and says what a wrong figure is", async () => {
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => host.querySelector("#pj-years") !== null, "the card");
+    await press(host, "Añadir un escenario");
+    await press(host, "Añadir un escenario");
+    expect(host.querySelectorAll("[id^='pj-name-']").length).toBe(3);
+    expect(
+      [...host.querySelectorAll("button")].some((b) => b.textContent === "Añadir un escenario"),
+    ).toBe(false);
+    type(host, "pj-years", "veinte");
+    await settle(30);
+    expect(text(host.querySelector(".projection-card"))).toMatch(/entero|número|válid/i);
+  });
+  it("masks the amounts with the privacy mode on and leaves the blended return in sight", async () => {
+    setPrivacy(true);
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => host.querySelector("#pj-years") !== null, "the card");
+    for (const input of host.querySelectorAll("input[id^='pj-0-']")) {
+      type(host, input.id, "5");
+    }
+    await settle(30);
+    const card = text(host.querySelector(".projection-card"));
+    expect(card).toContain("Dentro de 20 años");
+    expect(card).toContain("Rentabilidad mezclada con tus pesos objetivo");
+    expect(card).not.toMatch(/\d,\d{2}\s*€/);
+    setPrivacy(false);
+  });
+
+  it("says a goal that is not above zero, and removes a scenario", async () => {
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => host.querySelector("#pj-years") !== null, "the card");
+    type(host, "pj-goal", "0");
+    await settle(30);
+    expect(text(host.querySelector(".projection-card"))).toContain(
+      "El objetivo tiene que ser mayor que cero.",
+    );
+    await press(host, "Añadir un escenario");
+    expect(host.querySelectorAll("[id^='pj-name-']").length).toBe(2);
+    await press(host, "Quitar este escenario");
+    expect(host.querySelectorAll("[id^='pj-name-']").length).toBe(1);
   });
 });
