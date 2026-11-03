@@ -172,6 +172,10 @@ Desde 1024 px, 12 columnas con espacio de 20 y clases `span-N`. Las tarjetas de 
 
 La hoja visual de componentes estaba en el prototipo retirado; hoy son los estilos de `apps/web/src/styles/`.
 
+### 4.4 El teclado del ordenador
+
+Solo desde la barra superior (≥ 1200 px): un botón **«Buscar o registrar»** con su tecla `/` (en la barra compacta, el icono y la tecla) abre un diálogo con una caja de órdenes (un *combobox* ARIA: flechas, Intro y Esc). Ofrece registrar cada operación del día a día, ir a cada destino y, siempre al final, buscar lo escrito en los movimientos (`/movimientos?q=`). Desde una pantalla **sin formulario**, **C** compra, **V** venta y **P** valoración: en un formulario la letra no actúa, porque salir de él perdería lo escrito. Las teclas solo responden **solas** y una vez aunque se mantengan: con Ctrl, Cmd o Alt son del navegador o del sistema; dentro de un campo, una lista o algo editable, o mientras se compone un carácter, son lo que se escribe; con un diálogo abierto, del diálogo. Las letras **se pueden apagar** en Ajustes (WCAG 2.1.4: un lector de pantalla usa letras sueltas para moverse); «/» abre siempre la caja. La caja se cierra con Esc o con «Cerrar». En el móvil no hay teclas: la aplicación instalada ofrece «Registrar compra» y «Registrar valoración» con una pulsación larga en su icono (`shortcuts` del manifiesto).
+
 ### 5.1 Tarjeta (`.card`)
 
 Hoja cálida (`--c-surface`), borde de 1 px, radio 14, sombra mínima. Cabecera (`.card-head`): `h2` a la izquierda y, a la derecha, un dato de contexto (`--text-sm`, `--c-text-3`) o una etiqueta. **Sin franja gris.** Pie (`.card-foot`): fila de 44 px de borde a borde con un enlace, pulsable entera.
@@ -375,6 +379,7 @@ Dirección A «Cuaderno vivo», elegida por el dueño el 2026-11-03 sobre la aud
 | D15 | Avisos con placa, botones y pestañas en píldora, hoja cálida | Los tokens de color, casi sin tocar |
 | D16 | La Declaración, destino de la barra en escritorio | Pieza tomada de la dirección B; en el móvil sigue desde su tarjeta |
 | D17 | Resumen: baldosas con minigráfica, evolución en áreas apiladas, «Este mes» y reparto en barras de bala | Las baldosas, de B; la variación de la cartera y el plan del mes, del dominio (`docs/business-rules.md`) |
+| D18 | Atajos: «Buscar o registrar» con `/`, C, V y P en el ordenador y accesos del icono instalado | Decidido por el dueño el 2026-11-03 sobre el informe visual §4 |
 
 ---
 

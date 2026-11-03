@@ -1,0 +1,70 @@
+/*
+ * «Buscar o registrar» (docs/design/system.md §4.4, CommandBox.tsx): the button of the top bar
+ * and the box of commands in its dialog. Only on a computer.
+ */
+
+.command-button {
+  gap: var(--space-2);
+  margin-right: var(--space-2);
+}
+
+.command-button kbd,
+.command-option kbd {
+  border: var(--border) solid var(--c-border-control);
+  border-radius: var(--radius-sm);
+  color: var(--c-text-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  padding: 0 var(--space-1);
+}
+
+.command-dialog {
+  max-width: min(36rem, calc(100vw - 2 * var(--gutter)));
+  width: 100%;
+}
+
+.command-body {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.command-list {
+  display: grid;
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+.command-option {
+  align-items: center;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  min-height: var(--tap);
+  padding-inline: var(--space-3);
+}
+
+.command-option[aria-selected="true"] {
+  background-color: var(--c-accent-soft);
+  color: var(--c-accent-soft-text);
+}
+
+.command-hint {
+  color: var(--c-text-3);
+  font-size: var(--text-xs);
+}
+
+/* Compact top bar: the icon and its key, the words go. */
+@media (min-width: 75rem) and (max-width: 89.99rem) {
+  .command-label {
+    display: none;
+  }
+}
+
+.command-foot {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+}
