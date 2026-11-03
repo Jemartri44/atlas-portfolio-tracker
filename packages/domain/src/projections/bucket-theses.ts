@@ -5,6 +5,7 @@
 // (`@atlas/domain/portfolio`).
 
 import type { CivilDate } from "../dates/civil-date.js";
+import type { Decimal } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
 import type { AssetId } from "../schema/events.js";
@@ -78,20 +79,23 @@ const benchmarkEquivalentOf = (
       ? (lastFiscalDateOf(thesis.sells) ?? (thesis.closed_at as CivilDate))
       : date;
   const endPrice = priceAt(state, benchmarkId, end, settings, external);
-  const endEur = endPrice?.unit_value_eur;
-  if (endEur === undefined) {
+  if (endPrice?.unit_value_eur === undefined) {
     gaps.push({ reason: "no_price", asset_id: benchmarkId, date: end });
     return undefined;
   }
   let equivalent = Money.zero(EUR);
   for (const leg of thesis.buys) {
     const price = priceAt(state, benchmarkId, leg.fiscal_date, settings, external);
-    const eur = price?.unit_value_eur;
-    if (eur === undefined) {
+    if (price?.unit_value_eur === undefined) {
       gaps.push({ reason: "no_price", asset_id: benchmarkId, date: leg.fiscal_date });
       return undefined;
     }
-    equivalent = equivalent.add(leg.amount_eur.mul(endEur.amount.div(eur.amount)));
+    // The units of the index the same euros bought, valued at the end, with
+    // one division, as `positionValueOf` does: never through unit values in
+    // euros rounded first, whose ratio loses cents when the price is tiny.
+    const numerator = leg.amount_eur.amount.mul(price.fx_rate as Decimal).mul(endPrice.unit_value);
+    const denominator = price.unit_value.mul(endPrice.fx_rate as Decimal);
+    equivalent = equivalent.add(Money.of(numerator.div(denominator), EUR));
   }
   return equivalent;
 };

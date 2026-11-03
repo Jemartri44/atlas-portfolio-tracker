@@ -77,6 +77,29 @@ describe("bucketTheses: the result against the index (business rule 16)", () => 
     expect(closed?.missing_benchmark).toEqual([]);
   });
 
+  // An index quoted at 0,00000123 USD (1,1 USD/EUR) and then 0,00000246 USD
+  // (1,3): the 100 € would be worth 100 × 2 × 1,1 / 1,3 = 169,2307692308.
+  // Through unit values in euros rounded first, the ratio said 169,2273…:
+  // two cents short on every thousand euros.
+  it("values the index with one division, whatever the size of its price", () => {
+    const b = scenario({ sell: true });
+    for (const [date, unit_value, fx_rate] of [
+      ["2027-01-01", "0.00000123", "1.1"],
+      ["2027-07-01", "0.00000246", "1.3"],
+    ] as const) {
+      b.valuation({
+        account_id: "acc_fund",
+        asset_id: "ast_world",
+        date,
+        unit_value,
+        currency: "USD",
+        fx_rate,
+      });
+    }
+    const closed = view(b);
+    expect(closed?.benchmark_equivalent_eur?.amount.toString()).toBe("169.2307692308");
+  });
+
   it("is exactly zero when the asset and the index return the same", () => {
     // The thesis makes 30 on 100; the index goes from 100 to 130: a tie.
     const tie = view(scenario({ indexStart: "100", indexEnd: "130", sell: true }));
