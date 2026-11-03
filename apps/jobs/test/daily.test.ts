@@ -87,6 +87,19 @@ const pricesJobs = (
 
 const recordOf = (s3: TestOnlyFakeS3, key: string) => JSON.parse(s3.text(key) as string);
 
+describe("every call to a source (audit of 03/11, finding 11)", () => {
+  it("refuses redirects, with a timeout: the key of a price source travels in the address", async () => {
+    const { jobs } = pricesJobs();
+    await jobs.run(["prices_update"]);
+    expect(jobs.fetched.length).toBeGreaterThan(0);
+    expect(jobs.fetchInits).toHaveLength(jobs.fetched.length);
+    for (const init of jobs.fetchInits) {
+      expect(init?.redirect).toBe("error");
+      expect(init?.signal).toBeInstanceOf(AbortSignal);
+    }
+  });
+});
+
 describe("the daily task of the ECB (R31; ADR-0029)", () => {
   it("downloads the history, the API when the ZIP fails, and makes it the one in force, sending nothing", async () => {
     const csv = await readFile(join(fixtures, "api-exr.csv"), "utf8");

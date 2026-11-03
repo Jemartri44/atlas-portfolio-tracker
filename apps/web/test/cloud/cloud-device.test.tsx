@@ -9,6 +9,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { importedPrices, saveImportedPrices } from "@atlas/adapters/prices";
 import { IMPORTED_HISTORY_KEY, saveImportedHistory } from "@atlas/adapters/reference";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { FakeIdbFactory } from "../../../../packages/adapters/test/fake-idb.js";
@@ -16,6 +17,7 @@ import { reloadWebHistory } from "../../src/ecb/history.js";
 import { bootCloud } from "../../src/ledger/cloud.js";
 import { store } from "../../src/ledger/state.js";
 import Ajustes from "../../src/routes/ajustes/index.jsx";
+import { SessionCard } from "../../src/routes/ajustes/SessionCard.jsx";
 import Movimientos from "../../src/routes/movimientos/index.jsx";
 import Borradores from "../../src/routes/registrar/borradores.jsx";
 import RegistrarForm from "../../src/routes/registrar/form.jsx";
@@ -216,6 +218,29 @@ describe("what stays on the device after a session of the cloud", () => {
     expect(onDevice().entries).toEqual([]);
     // Reading the public prices opens the database, but no store of the ledger holds anything (checked above).
     expect(cachesOpened).toEqual([]);
+  });
+
+  it("forgets the prices imported by hand when the session is closed, and only then", async () => {
+    const request = await session();
+    await bootCloud(request);
+    await until(() => store.load().phase === "ready", "the ledger");
+    await saveImportedPrices({
+      files: { ast_gold: '{"date":"2026-10-01","close":"100"}\n' },
+      imported_at: "2026-10-01T10:00:00.000Z",
+    });
+    const host = await show("/ajustes", () => <SessionCard request={request} />);
+    // A close that fails leaves them: the session may still be open.
+    const refused = (async () => new Response("{}", { status: 500 })) as typeof fetch;
+    document.body.innerHTML = "";
+    const failing = await show("/ajustes", () => <SessionCard request={refused} />);
+    await press(failing, "Cerrar sesión");
+    expect(await importedPrices()).toBeDefined();
+    document.body.innerHTML = "";
+    const again = await show("/ajustes", () => <SessionCard request={request} />);
+    expect(host).toBeDefined();
+    await press(again, "Cerrar sesión");
+    await until(() => store.load().phase !== "ready", "the session closed");
+    expect(await importedPrices()).toBeUndefined();
   });
 
   it("control: the walker would see a ledger, a remembered source or a cache entry", async () => {

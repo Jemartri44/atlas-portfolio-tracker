@@ -41,15 +41,46 @@ export const crc32 = (bytes: Uint8Array): number => {
 export const isZip = (bytes: Uint8Array): boolean =>
   bytes.length >= 4 && new DataView(bytes.buffer, bytes.byteOffset, 4).getUint32(0, true) === LOCAL;
 
-const inflate = async (data: Uint8Array): Promise<Uint8Array> => {
-  const stream = new Blob([new Uint8Array(data)])
+/** The most an entry may inflate to: the same bound as the server's (`MAX_ENTRY_BYTES`, adapters). */
+export const MAX_ENTRY_BYTES = 64 * 1024 * 1024;
+
+const tooBig = (): ZipUnreadable => new ZipUnreadable("el contenido del ZIP es demasiado grande");
+
+/** Inflates up to `limit` bytes: what the directory declares is not trusted, the stream is counted. */
+const inflate = async (data: Uint8Array, limit: number): Promise<Uint8Array> => {
+  const reader = new Blob([new Uint8Array(data)])
     .stream()
-    .pipeThrough(new DecompressionStream("deflate-raw"));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
+    .pipeThrough(new DecompressionStream("deflate-raw"))
+    .getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    total += value.length;
+    if (total > limit) {
+      await reader.cancel();
+      throw tooBig();
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let at = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, at);
+    at += chunk.length;
+  }
+  return bytes;
 };
 
 /** The bytes of the first entry whose name ends in `suffix`. */
-export const entryOfZip = async (zip: Uint8Array, suffix: string): Promise<Uint8Array> => {
+export const entryOfZip = async (
+  zip: Uint8Array,
+  suffix: string,
+  limit: number = MAX_ENTRY_BYTES,
+): Promise<Uint8Array> => {
   const view = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
   let end = zip.length - 22;
   while (end >= 0 && view.getUint32(end, true) !== EOCD) {
@@ -83,7 +114,10 @@ export const entryOfZip = async (zip: Uint8Array, suffix: string): Promise<Uint8
     if (data.length !== compressed || (method !== 0 && method !== 8)) {
       throw new ZipUnreadable("el ZIP está cortado o usa una compresión desconocida");
     }
-    const bytes = method === 0 ? data : await inflate(data);
+    if (size > limit) {
+      throw tooBig();
+    }
+    const bytes = method === 0 ? data : await inflate(data, limit);
     if (bytes.length !== size || crc32(bytes) !== crc) {
       throw new ZipUnreadable("el contenido del ZIP no cuadra con su comprobación");
     }

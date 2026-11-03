@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import { AlphaVantagePriceSource } from "../src/prices/alpha-vantage.js";
 import { EodhdPriceSource } from "../src/prices/eodhd.js";
 import { ExactJsonUnsupported, JsonNumber, parseExactJson } from "../src/prices/exact-json.js";
+import { ask, MAX_ANSWER_BYTES } from "../src/prices/fetch.js";
 
 const KEY = "TEST-KEY-013";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../../tests/fixtures");
@@ -67,6 +68,44 @@ describe("EODHD where a number cannot be read by its text (D-Q1)", () => {
     );
     expect(urls).toHaveLength(1);
     expect(() => new EodhdPriceSource(KEY, fetchUrl).ready()).not.toThrow();
+  });
+});
+
+describe("what a source may answer, in bytes (audit of 03/11, finding 11)", () => {
+  const streamOf = (chunks: number, size: number, headers: Record<string, string> = {}) =>
+    new Response(
+      new ReadableStream({
+        pull(controller) {
+          if (chunks === 0) {
+            controller.close();
+            return;
+          }
+          chunks -= 1;
+          controller.enqueue(new Uint8Array(size).fill(97));
+        },
+      }),
+      { status: 200, headers },
+    );
+
+  it("reads an answer up to the bound and gives up on one that goes past it, even with no length", async () => {
+    const small = await ask(async () => new Response("[]"), "u");
+    expect(small).toEqual({ status: 200, text: "[]" });
+    const atBound = await ask(async () => streamOf(4, MAX_ANSWER_BYTES / 4), "u");
+    expect(atBound?.text.length).toBe(MAX_ANSWER_BYTES);
+    const over = await ask(async () => streamOf(5, MAX_ANSWER_BYTES / 4), "u");
+    expect(over).toBeUndefined();
+    const declared = await ask(
+      async () => streamOf(1, 10, { "content-length": String(MAX_ANSWER_BYTES + 1) }),
+      "u",
+    );
+    expect(declared).toBeUndefined();
+  });
+
+  it("keeps a source that answers too much as unavailable, never as a price", async () => {
+    const result = await new EodhdPriceSource(KEY, async () =>
+      streamOf(5, MAX_ANSWER_BYTES / 4),
+    ).dailyCloses("X", "2027-01-06", "2027-01-06");
+    expect(result).toEqual({ ok: false, kind: "unavailable" });
   });
 });
 
