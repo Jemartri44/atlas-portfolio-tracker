@@ -2,14 +2,9 @@
 // month, New Year's Eve.
 
 import { describe, expect, it } from "vitest";
+import { isoWeekday } from "../../src/dates/civil-date.js";
 import { madridDateOf } from "../../src/dates/madrid.js";
-import {
-  inWindow,
-  isoWeekday,
-  lastDayOfWindow,
-  periodOf,
-  previousPeriod,
-} from "../../src/jobs/periods.js";
+import { inWindow, lastDayOfWindow, periodOf, previousPeriod } from "../../src/jobs/periods.js";
 import type { JobFrequency } from "../../src/settings/job-frequencies.js";
 
 const at = (iso: string) => madridDateOf(new Date(iso));

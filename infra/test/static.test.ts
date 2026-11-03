@@ -14,8 +14,8 @@ const tracked = (...paths: string[]): string[] =>
     .split("\n")
     .filter((file) => file !== "");
 
-describe("no personal data in a versioned file of infra/ or of the spec", () => {
-  const files = tracked("infra", "specs/017-infrastructure-as-code").filter(
+describe("no personal data in a versioned file of infra/", () => {
+  const files = tracked("infra").filter(
     (file) => !/\.(hcl|json|png)$/.test(file) || file.endsWith("permissions.json"),
   );
 

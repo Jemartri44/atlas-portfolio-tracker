@@ -40,7 +40,7 @@
 // income in the year, 700 and 2,100 of pending losses and 500 of pending
 // negative income; base 200) is a test of this file, as it is.
 
-import { Decimal } from "../money/decimal.js";
+import { type Decimal, HUNDRED } from "../money/decimal.js";
 import { positive } from "../money/eur.js";
 import { EUR, Money } from "../money/money.js";
 import { sortCriteria } from "./criteria.js";
@@ -71,8 +71,6 @@ const OTHER: Record<BalanceCategory, BalanceCategory> = {
 // this module whole: a call at module level is kept by default, and with it
 // the whole catalogue of criteria.
 const CRITERIA = /* @__PURE__ */ sortCriteria(["10", "22"]);
-
-const HUNDRED = /* @__PURE__ */ Decimal.parse("100");
 
 /** Compensates one year: `pending` is what the previous years left, oldest or not. */
 export const compensate = (

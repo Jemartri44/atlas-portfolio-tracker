@@ -56,8 +56,9 @@ const shown = (
   concept: ConceptId,
   exact: Money,
   mapping: BoxMapping | undefined,
+  rounded?: Money,
 ): { box?: string; label?: string; amount: Money } => {
-  const amount = exact.roundToCents();
+  const amount = rounded ?? exact.roundToCents();
   if (mapping === undefined) {
     return { amount };
   }
@@ -79,8 +80,6 @@ interface Collected {
   missingValues: Set<string>;
   /** Boxes the engine cannot compute in full, by the reason why. */
   partial: Map<PartialReason, Set<string>>;
-  /** Rows where the form's own subtraction differs from the engine's result. */
-  rounding: string[];
 }
 
 const entryOf = (draft: Draft, table: YearBoxes | undefined, found: Collected): BoxEntry => {
@@ -88,7 +87,7 @@ const entryOf = (draft: Draft, table: YearBoxes | undefined, found: Collected): 
   const place =
     draft.exact === undefined
       ? { box: mapping?.box, label: mapping?.label, amount: undefined }
-      : shown(draft.concept, draft.exact, mapping);
+      : shown(draft.concept, draft.exact, mapping, draft.rounded);
   if (table !== undefined && mapping === undefined) {
     found.missingBoxes.add(
       draft.origin_year === undefined ? draft.concept : `${draft.concept}:${draft.origin_year}`,
@@ -100,9 +99,6 @@ const entryOf = (draft: Draft, table: YearBoxes | undefined, found: Collected): 
   }
   if (draft.partial !== undefined) {
     found.partial.set(draft.partial, (found.partial.get(draft.partial) ?? new Set()).add(where));
-  }
-  if (draft.form !== undefined) {
-    found.rounding.push(where);
   }
   return {
     concept: draft.concept,
@@ -124,14 +120,6 @@ const entryOf = (draft: Draft, table: YearBoxes | undefined, found: Collected): 
         }),
     ...(place.amount === undefined ? {} : { amount_eur: place.amount }),
     ...(draft.exact === undefined ? {} : { exact_eur: draft.exact }),
-    ...(draft.form === undefined
-      ? {}
-      : {
-          form_eur:
-            mapping === undefined || SIGNED_CONCEPTS.has(draft.concept)
-              ? draft.form
-              : abs(draft.form),
-        }),
     ...(draft.text === undefined ? {} : { text: draft.text }),
     ...(draft.missing === true ? { missing: true } : {}),
     ...(draft.partial === undefined ? {} : { partial: draft.partial }),
@@ -195,15 +183,6 @@ const notesOf = (year: number, table: YearBoxes | undefined, found: Collected): 
       }),
     );
   }
-  if (found.rounding.length > 0) {
-    notes.push(
-      note(
-        "tax_box_rounding_differs",
-        "the form subtracts the two rounded values itself and gets a cent more or less than the engine",
-        { boxes: [...new Set(found.rounding)].sort() },
-      ),
-    );
-  }
   return notes;
 };
 
@@ -214,7 +193,6 @@ export const boxesOf = (report: TaxYearReport, chain: ChainCore): TaxBoxes => {
     missingBoxes: new Set(),
     missingValues: new Set(),
     partial: new Map(),
-    rounding: [],
   };
   const entries = draftEntries(report, chain).map((draft) => entryOf(draft, table, found));
   const notes = [

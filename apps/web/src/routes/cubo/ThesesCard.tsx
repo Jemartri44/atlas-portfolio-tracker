@@ -21,8 +21,6 @@ import { countOf } from "../../format/number.js";
 import type { ThesesView, ThesisRow } from "../../view-models/bucket/index.js";
 import { Dumbbells } from "./Dumbbells.jsx";
 
-const HIDDEN = "Importes ocultos";
-
 const COLUMNS: readonly DataColumn<ThesisRow>[] = [
   {
     key: "asset",
@@ -137,19 +135,13 @@ export const ThesesCard = (props: {
                 columns={COLUMNS}
                 rows={props.view.rows}
                 size="lg"
-                maskedMerge={HIDDEN}
+                maskedMerge
               />
             </>
           }
         >
           <Dumbbells rows={open()} label="Tesis abiertas frente al índice, en puntos" />
-          <DataTable
-            label="Tesis abiertas"
-            columns={COLUMNS}
-            rows={open()}
-            size="lg"
-            maskedMerge={HIDDEN}
-          />
+          <DataTable label="Tesis abiertas" columns={COLUMNS} rows={open()} size="lg" maskedMerge />
           <Disclosure label={countOf(closed().length, "tesis cerrada", "tesis cerradas")}>
             <Dumbbells rows={closed()} label="Tesis cerradas frente al índice, en puntos" />
             <DataTable
@@ -157,7 +149,7 @@ export const ThesesCard = (props: {
               columns={COLUMNS}
               rows={closed()}
               size="lg"
-              maskedMerge={HIDDEN}
+              maskedMerge
             />
           </Disclosure>
         </Show>

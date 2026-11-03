@@ -92,9 +92,25 @@ const historyOf = (
   const series = new Map<string, CurrencySeries>();
   for (const [currency, list] of byCurrency) {
     list.sort((left, right) => compareCivilDates(left.date, right.date));
+    // A day twice is read once if it says the same number, and refused if it says two: which of
+    // them is the published one is not for this reading to choose.
+    const unique = list.filter((entry, index) => {
+      const before = list[index - 1];
+      if (before === undefined || before.date !== entry.date) {
+        return true;
+      }
+      if (!sameRate(before.rate, entry.rate)) {
+        throw new ValidationError(
+          "ecb_history_unreadable",
+          `${currency} has two different rates for ${entry.date}`,
+          { currency, date: entry.date },
+        );
+      }
+      return false;
+    });
     series.set(currency, {
-      dates: list.map((entry) => entry.date),
-      rates: list.map((entry) => entry.rate),
+      dates: unique.map((entry) => entry.date),
+      rates: unique.map((entry) => entry.rate),
     });
   }
   const days = [...new Set(publications)].sort(compareCivilDates);

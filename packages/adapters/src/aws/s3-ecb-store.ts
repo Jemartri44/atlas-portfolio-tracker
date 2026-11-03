@@ -44,7 +44,7 @@ import {
 } from "@atlas/domain/jobs";
 import { EcbHistoryDamaged, type EcbManifest, fileOfSource } from "../ecb/history-store.js";
 import { sha256Bytes } from "../hash.js";
-import { decodeUtf8Strict } from "../utf8.js";
+import { utf8TextOrUndefined } from "../utf8.js";
 import type { ObjectStore, StoredObject } from "./object-store.js";
 
 const DIR = "reference/ecb/";
@@ -53,13 +53,7 @@ const MANIFEST = `${DIR}manifest.json`;
 const FILES = [fileOfSource("zip"), fileOfSource("api")];
 
 /** Strict UTF-8, or nothing: bytes that are not text are not a manifest. */
-const textOf = (bytes: Uint8Array): string => {
-  try {
-    return decodeUtf8Strict(bytes, true);
-  } catch {
-    return "";
-  }
-};
+const textOf = (bytes: Uint8Array): string => utf8TextOrUndefined(bytes, true) ?? "";
 
 /** A conditional write of `reference/ecb/` that did not happen: another run wrote first. */
 export class EcbStoreConflict extends Error {

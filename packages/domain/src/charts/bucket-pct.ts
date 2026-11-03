@@ -18,7 +18,7 @@
 // the screen must not paint them as one nor say «pending prices» about them.
 
 import type { CivilDate } from "../dates/civil-date.js";
-import { Decimal } from "../money/decimal.js";
+import { type Decimal, HUNDRED } from "../money/decimal.js";
 import { Money } from "../money/money.js";
 import { bucketAccountIds } from "../projections/bucket.js";
 import { depositsOf } from "../projections/bucket-stats.js";
@@ -27,8 +27,6 @@ import { businessDateOf, liveOperations, projectLedger } from "../projections/pr
 import type { SeriesOptions } from "../projections/series.js";
 import type { LedgerEvent } from "../schema/events.js";
 import { bucketIndexSeries } from "./bucket-index.js";
-
-const HUNDRED = Decimal.parse("100");
 
 /** Why a point has no percentage when it is not a missing price. */
 export type NoPercentageReason = "no_investments" | "no_contributions";

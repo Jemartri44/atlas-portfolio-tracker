@@ -41,6 +41,7 @@ export const API_ERRORS = {
   // The drafts in the cloud (`docs/api.md` §6.1 and §7).
   draft_exists: 409,
   draft_changed: 409,
+  too_many_drafts: 409,
 } as const;
 
 export type ApiErrorCode = keyof typeof API_ERRORS;

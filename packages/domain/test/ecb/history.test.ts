@@ -83,6 +83,18 @@ describe("the ZIP's CSV", () => {
   });
 });
 
+describe("a rate twice for the same day and currency", () => {
+  it("refuses it when the values differ, and takes it once when they are the same number", () => {
+    const zip = "Date,USD,\n2026-01-02,1.1,\n2026-01-02,1.2,\n";
+    expect(code(() => readEcbZipCsv(zip))).toBe("ecb_history_unreadable");
+    const api = (second: string) =>
+      `KEY,FREQ,CURRENCY,TIME_PERIOD,OBS_VALUE\nA,D,USD,2026-01-02,1.1\nA,D,USD,2026-01-02,${second}\n`;
+    expect(code(() => readEcbApiCsv(api("1.2")))).toBe("ecb_history_unreadable");
+    expect(rateOn(readEcbApiCsv(api("1.10")), "USD", "2026-01-02")).toBe("1.1");
+    expect(readEcbApiCsv(api("1.10")).series.get("USD")?.dates).toEqual(["2026-01-02"]);
+  });
+});
+
 describe("the API's CSV", () => {
   it("reads the rows with a value and takes a row without one for a closing day", () => {
     const history = readEcbApiCsv(ecbFixture("api-exr.csv"));

@@ -8,7 +8,7 @@
 // must never learn what a price is (constitution II).
 
 import { type CivilDate, daysBetween } from "../dates/civil-date.js";
-import { Decimal } from "../money/decimal.js";
+import { type Decimal, HUNDRED } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
 import type { AccountId, AssetId } from "../schema/events.js";
@@ -23,8 +23,6 @@ import {
 import type { FiscalLot, LedgerState, Thesis, Warning } from "./state.js";
 import { splitPositionKey } from "./state.js";
 import { openThesisOn } from "./theses.js";
-
-const HUNDRED = Decimal.parse("100");
 
 export interface BucketPosition {
   account_id: AccountId;

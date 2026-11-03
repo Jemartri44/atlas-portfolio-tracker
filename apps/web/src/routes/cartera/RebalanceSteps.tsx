@@ -90,7 +90,7 @@ export const Step = (props: { step: StepView }): JSX.Element => (
       {(step) => (
         <>
           <p class="card-note">
-            Dinero nuevo para el núcleo: <Amount value={step().amount} />, repartido como en la
+            Dinero nuevo para la cartera: <Amount value={step().amount} />, repartido como en la
             aportación del mes.
           </p>
           <PlatformsBlock view={step().platforms} />

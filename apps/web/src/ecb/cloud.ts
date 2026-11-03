@@ -13,7 +13,7 @@
 // The CSP does not change: it is our own origin.
 
 import { httpReference } from "@atlas/adapters/reference-http";
-import { DomainError, sha256Hex } from "@atlas/domain";
+import { DomainError, madridDateOf, sha256Hex } from "@atlas/domain";
 import type { EcbSource } from "@atlas/domain/ecb";
 
 export type CloudOutcome =
@@ -72,7 +72,7 @@ export const downloadCloudHistory = async (
     const text = ecb.asciiText(file.bytes);
     const next = ecb.readEcbHistory(text, active.source);
     const previous = held === undefined ? undefined : ecb.readEcbHistory(held.text, held.source);
-    const check = ecb.checkHistoryUpdate(previous, next);
+    const check = ecb.checkHistoryUpdate(previous, next, madridDateOf(now()));
     if (check.kind === "rejected") {
       return { kind: "rejected", total: check.total };
     }

@@ -86,13 +86,6 @@ export const BoxesCard = (props: { view: BoxesView }): JSX.Element => (
                     <Show when={row.partial}>
                       {(partial) => <span class="box-partial">Ojo: {partial()}</span>}
                     </Show>
-                    <Show when={row.form_eur}>
-                      {(form) => (
-                        <span class="box-partial">
-                          El formulario sumará <Amount value={form()} /> a partir de lo que teclees.
-                        </span>
-                      )}
-                    </Show>
                   </span>
                   <span class="box-figs">
                     <Show when={row.box}>{(box) => <span class="box-number">{box()}</span>}</Show>

@@ -11,7 +11,7 @@
 // labels ("suma de las casillas [0320]"), and the rows by origin of the loss,
 // which are a **reordering** of what the engine already computed.
 
-import { positive, sum, zero } from "../../money/eur.js";
+import { legsRounded, positive, sum, zero } from "../../money/eur.js";
 import type { Money } from "../../money/money.js";
 import type { CurrencyGain } from "../../projections/currency-lots.js";
 import type { LedgerState } from "../../projections/state.js";
@@ -41,6 +41,9 @@ import {
 import type { BoxRow, PartialReason } from "./report.js";
 import { deferredByOrigin, gainIndexOf, gainOf } from "./rows.js";
 
+/** What a loss keeps after its deferral, which never turns it into a gain. */
+const negativeOrZero = (amount: Money): Money => (amount.isNegative() ? amount : zero());
+
 /** One figure, with everything the layout knows about it except its box. */
 export interface Draft {
   concept: ConceptId;
@@ -49,8 +52,12 @@ export interface Draft {
   origin_year?: number;
   /** The engine's figure, exact and **with its sign**. */
   exact?: Money;
-  /** What the form will compute from the two values above it, when it differs by a cent. */
-  form?: Money;
+  /**
+   * The figure the box shows when it is not `exact` rounded once: the result
+   * of a row as the form computes it, transmission and acquisition rounded
+   * first (criterion #6).
+   */
+  rounded?: Money;
   text?: string;
   missing?: boolean;
   partial?: PartialReason;
@@ -169,10 +176,12 @@ const disposalRows = (
         ? { gain: own, gain_net: own, gain_imputable: own }
         : { loss: own, loss_imputable: own.sub(deferred) }),
     };
-    const rounding = line.proceeds.eur
-      .roundToCents()
-      .sub(line.cost_eur.roundToCents())
-      .sub(own.roundToCents());
+    const legs = legsRounded(line.proceeds.eur, line.cost_eur);
+    // Never above zero: a deferral cannot turn a loss into a gain (`computableRounded`).
+    const imputable = negativeOrZero(legs.sub(deferred.roundToCents()));
+    const rounded: Partial<Record<RowFieldId, Money>> = gain
+      ? { gain: legs, gain_net: legs, gain_imputable: legs }
+      : { loss: legs, loss_imputable: imputable };
     for (const field of SECTION_FIELDS[section]) {
       const amount = value[field];
       if (
@@ -195,23 +204,15 @@ const disposalRows = (
             : field === "key"
               ? { text: OTHER_ELEMENT_KEYS[section] as string }
               : { exact: amount as Money }),
-        // The form subtracts the two rounded values itself, and the engine
-        // rounds the result once (#6): they can differ by a cent, and the one
-        // the user will see on screen is the form's.
-        ...((field === "gain" || field === "loss") && !rounding.isZero()
-          ? { form: own.roundToCents().add(rounding) }
-          : {}),
+        ...(rounded[field] === undefined ? {} : { rounded: rounded[field] }),
       });
     }
     const current = totals.get(section) ?? { gains: zero(), losses: zero() };
     totals.set(
       section,
       gain
-        ? { ...current, gains: current.gains.add(own.roundToCents()) }
-        : {
-            ...current,
-            losses: current.losses.add(own.sub(deferred).roundToCents()),
-          },
+        ? { ...current, gains: current.gains.add(legs) }
+        : { ...current, losses: current.losses.add(imputable) },
     );
   }
   // An exchange difference is the transmission of "otros elementos
@@ -243,6 +244,11 @@ const disposalRows = (
           : field === "key"
             ? { text: OTHER_ELEMENT_KEYS.other as string }
             : { exact: amount as Money }),
+        ...(field === "gain" || field === "loss"
+          ? { rounded: line.gain_eur_rounded }
+          : field === "loss_imputable"
+            ? { rounded: negativeOrZero(line.gain_eur_rounded.sub(deferred.roundToCents())) }
+            : {}),
       });
     }
     const current = totals.get("other") ?? { gains: zero(), losses: zero() };
@@ -250,7 +256,12 @@ const disposalRows = (
       "other",
       gain
         ? { ...current, gains: current.gains.add(line.gain_eur_rounded) }
-        : { ...current, losses: current.losses.add(line.gain_eur.sub(deferred).roundToCents()) },
+        : {
+            ...current,
+            losses: current.losses.add(
+              negativeOrZero(line.gain_eur_rounded.sub(deferred.roundToCents())),
+            ),
+          },
     );
   }
   return { drafts, totals };

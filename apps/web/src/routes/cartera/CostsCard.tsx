@@ -82,7 +82,7 @@ export const CostsCard = (props: { view: CostsView }): JSX.Element => (
             label="Costes de la cartera principal"
             columns={CORE_COLUMNS}
             rows={props.view.core.rows}
-            maskedMerge="Importes ocultos"
+            maskedMerge
           />
           <TotalLine
             label={

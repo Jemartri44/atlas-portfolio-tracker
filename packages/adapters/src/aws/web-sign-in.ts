@@ -9,16 +9,10 @@ import {
   serializeWebSignIn,
   WEB_SIGN_IN_KEY,
 } from "@atlas/domain/access";
-import { decodeUtf8Strict } from "../utf8.js";
+import { utf8TextOrUndefined } from "../utf8.js";
 import type { ObjectStore } from "./object-store.js";
 
-const decoded = (bytes: Uint8Array): string | undefined => {
-  try {
-    return decodeUtf8Strict(bytes, true);
-  } catch {
-    return undefined;
-  }
-};
+const decoded = (bytes: Uint8Array): string | undefined => utf8TextOrUndefined(bytes, true);
 
 export const readWebSignIn = async (
   objects: ObjectStore,

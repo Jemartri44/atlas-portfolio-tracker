@@ -56,7 +56,7 @@ const lastDay = (context: TaskContext): boolean =>
 /** Tried again tomorrow: nothing sent. */
 const retry = (code: string): TaskResult => ({ state: "failed", outcome: { code } });
 
-export const taxReturnReady: TaskRunner = inScope(async (context): Promise<TaskResult> => {
+const taxReturnReady: TaskRunner = inScope(async (context): Promise<TaskResult> => {
   const year = yearOf(context);
   const cannot = (code: string): Promise<TaskResult> =>
     sendOnce(context, taxReturnMail({ ok: false, year, code }, originOf(context)));
@@ -104,7 +104,7 @@ export const taxReturnReady: TaskRunner = inScope(async (context): Promise<TaskR
   );
 });
 
-export const informativeThresholds: TaskRunner = inScope(async (context): Promise<TaskResult> => {
+const informativeThresholds: TaskRunner = inScope(async (context): Promise<TaskResult> => {
   const year = yearOf(context);
   const ledger = await context.ledger();
   let facts: Parameters<typeof informativeMail>[0];

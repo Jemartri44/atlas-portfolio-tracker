@@ -8,7 +8,7 @@
 - **El correo `[Atlas] Aviso: historico del BCE sin comparar`.** Se reconstruyó sin nada con qué compararlo y quieres comprobar esa versión.
 - **Sabes que una generación en vigor está mal**, por ejemplo porque `atlas check --deep` da `fx_rate_mismatch` en operaciones que cuadraban antes.
 
-**Qué es.** Una operación de **administración**, con las credenciales de vida corta y MFA del rol `atlas-<entorno>-admin` (ADR-0034, fila 16). Los permisos que usa, uno por paso, están en [`specs/016-scheduled-jobs/contracts/iam-permissions.md`](../../specs/016-scheduled-jobs/contracts/iam-permissions.md) §8. **Nunca pasa por la API**, que solo lee `reference/ecb/`. **Nada se borra para siempre**: el bucket está versionado, y cada paso de abajo crea una versión nueva o una marca de borrado, nunca destruye una anterior.
+**Qué es.** Una operación de **administración**, con las credenciales de vida corta y MFA del rol `atlas-<entorno>-admin` (ADR-0034, fila 16). Los permisos que usa, uno por paso, están en [`infra/test/contract/iam-permissions.md`](../../infra/test/contract/iam-permissions.md) §8. **Nunca pasa por la API**, que solo lee `reference/ecb/`. **Nada se borra para siempre**: el bucket está versionado, y cada paso de abajo crea una versión nueva o una marca de borrado, nunca destruye una anterior.
 
 **Una generación** son tres objetos que van juntos:
 

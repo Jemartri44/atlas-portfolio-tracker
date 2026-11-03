@@ -13,7 +13,7 @@ import {
   importedHistory,
   saveImportedHistory,
 } from "@atlas/adapters/reference";
-import { DomainError } from "@atlas/domain";
+import { DomainError, madridDateOf } from "@atlas/domain";
 import {
   asciiText,
   checkHistoryUpdate,
@@ -106,7 +106,7 @@ export const importHistoryFile = async (
   const next = readEcbHistory(text, source);
   const stored = await importedHistory();
   const previous = stored === undefined ? undefined : readEcbHistory(stored.text, stored.source);
-  const check = checkHistoryUpdate(previous, next);
+  const check = checkHistoryUpdate(previous, next, madridDateOf(new Date()));
   if (check.kind === "rejected") {
     return { kind: "rejected", total: check.total, conflicts: check.conflicts };
   }

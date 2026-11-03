@@ -1,6 +1,6 @@
 # Aplicar el *bootstrap* por partes y activar la CI de `infra/`
 
-Feature 017, E4. **Ninguno de estos pasos se ejecuta en la 017**; los hace la persona en la 018, con el visto bueno y `specs/017-infrastructure-as-code/cost.md` delante.
+Feature 017, E4. **Ninguno de estos pasos se ejecuta en la 017**; los hace la persona en la 018, con el visto bueno y `infra/test/contract/cost.md` delante.
 
 ## Aplicar el *bootstrap* (ADR-0034, filas 5 y 20)
 

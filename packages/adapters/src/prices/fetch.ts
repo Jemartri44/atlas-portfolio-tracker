@@ -15,11 +15,44 @@ export interface Answer {
   readonly text: string;
 }
 
-/** The status and the body, or `undefined` when the request never got an answer. */
+/**
+ * The most a source may answer, in bytes. The widest real answer, twenty years of closes of one
+ * listing, is under 2 MB; a source that sends more is not one of these.
+ */
+export const MAX_ANSWER_BYTES = 8 * 1024 * 1024;
+
+/** The body as text, or `undefined` when it goes past `MAX_ANSWER_BYTES`: read until then, never more. */
+const readCapped = async (response: Response): Promise<string | undefined> => {
+  const declared = Number(response.headers.get("content-length"));
+  if (declared > MAX_ANSWER_BYTES || response.body === null) {
+    await response.body?.cancel();
+    return declared > MAX_ANSWER_BYTES ? undefined : "";
+  }
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    total += value.length;
+    if (total > MAX_ANSWER_BYTES) {
+      await reader.cancel();
+      return undefined;
+    }
+    chunks.push(value);
+  }
+  const text = new TextDecoder();
+  return `${chunks.map((chunk) => text.decode(chunk, { stream: true })).join("")}${text.decode()}`;
+};
+
+/** The status and the body, or `undefined` when the request never got an answer or it was too big. */
 export const ask = async (fetchUrl: Fetch, url: string): Promise<Answer | undefined> => {
   try {
     const response = await fetchUrl(url);
-    return { status: response.status, text: await response.text() };
+    const text = await readCapped(response);
+    return text === undefined ? undefined : { status: response.status, text };
   } catch {
     // Deliberately unread: its message may carry the address, and the key in it.
     return undefined;

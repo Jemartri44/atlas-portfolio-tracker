@@ -28,16 +28,31 @@ describe("the contribution card per platform", () => {
     const platforms = [...(aportacion?.querySelectorAll("[data-testid=platform]") ?? [])];
     expect(platforms.length).toBeGreaterThan(0);
     for (const platform of platforms) {
+      // The account and its platform by name; the identifiers of the ledger stay out of sight.
+      expect(text(platform.querySelector("h4"))).not.toMatch(/\bacc_|\bibkr\b|\bmyinvestor\b/);
+      expect(text(platform.querySelector("h4"))).toMatch(/ · (Interactive Brokers|MyInvestor)/);
       expect(text(platform.querySelector("[data-testid=deposit]"))).toMatch(/€/);
       // A commission is the owner's own or it is unknown: never a made-up figure.
       for (const fee of platform.querySelectorAll("[data-testid=fee]")) {
         expect(text(fee)).toMatch(/comisión (desconocida|.*€)/);
+        // The figure and its percentage travel in one element, never split across lines.
+        if (/%/.test(text(fee))) {
+          expect([...fee.children].some((part) => /comisión.*€.*\(.*%\)/.test(text(part)))).toBe(
+            true,
+          );
+        }
       }
     }
   });
 });
 
 describe("the rebalance card", () => {
+  it("says the new money is for the portfolio, not for the nucleus", async () => {
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    expect(text(card(host, "Rebalancear"))).toContain("Dinero nuevo para la cartera");
+    expect(text(host)).not.toMatch(/núcleo/i);
+  });
+
   it("is a proposal that waits for the button and writes nothing", async () => {
     const host = await show(`/cartera?fecha=${DATE}`, Cartera);
     const rebalance = card(host, "Rebalancear");

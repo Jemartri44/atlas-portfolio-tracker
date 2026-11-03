@@ -94,8 +94,9 @@ const openLotSource = (events: readonly LedgerEvent[]): string[] =>
 describe("the lot of a correction keeps the place of its original", () => {
   it("a rate correction moves the gain by the rate, not by swapping lots (the reviewer's case)", async () => {
     const { events, cheap, dear, sale } = ledger();
-    // 600 / 1.1 − 200 / 1.1169 = 366.39
-    expect(gainOf(events, sale.id)).toBe("366.39");
+    // 600 / 1.1 = 545,4545… → 545,45 and 200 / 1.1169 = 179,0670… → 179,07:
+    // 545,45 − 179,07 = 366,38, the two legs rounded as the form does (#6).
+    expect(gainOf(events, sale.id)).toBe("366.38");
     const store = new TestStore(events);
     const deps = testDeps(store);
     const corrected = await correctEvent(

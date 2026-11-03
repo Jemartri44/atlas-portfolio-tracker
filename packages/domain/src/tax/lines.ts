@@ -10,6 +10,7 @@
 import { type CivilDate, compareCivilDates } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
 import { Decimal } from "../money/decimal.js";
+import { computableRounded } from "../money/eur.js";
 import { FxRate } from "../money/fx-rate.js";
 import { EUR, Money } from "../money/money.js";
 import { type CurrencyGain, type CurrencyLot, currencyLots } from "../projections/currency-lots.js";
@@ -475,7 +476,7 @@ export const transmissionLine = (ctx: LineContext, outcome: WashSaleOutcome): Tr
     deferred_eur: outcome.deferred_eur,
     ...(outcome.deferral === undefined ? {} : { deferral: deferralLine(ctx, outcome.deferral) }),
     computable_eur: outcome.computable_eur,
-    computable_eur_rounded: outcome.computable_eur.roundToCents(),
+    computable_eur_rounded: computableRounded(gain, outcome.computable_eur),
     ...(outcome.provisional_until === undefined
       ? {}
       : { provisional_until: outcome.provisional_until }),
@@ -528,7 +529,7 @@ export const currencyLine = (ctx: LineContext, gain: CurrencyGain): CurrencyLine
     released_eur: outcome.released_eur,
     deferred_eur: outcome.deferred_eur,
     computable_eur: outcome.computable_eur,
-    computable_eur_rounded: outcome.computable_eur.roundToCents(),
+    computable_eur_rounded: computableRounded(gain, outcome.computable_eur),
     reacquired: outcome.reacquired.map((entry) => ({
       event_id: entry.event_id,
       fiscal_date: entry.fiscal_date,

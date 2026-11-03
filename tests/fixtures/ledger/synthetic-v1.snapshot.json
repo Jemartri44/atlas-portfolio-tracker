@@ -424,7 +424,6 @@
     "model_720_alert_threshold_eur": "45000",
     "model_721_alert_threshold_eur": "45000",
     "monthly_contribution_eur": "600",
-    "notification_email": "atlas@example.invalid",
     "satellite_min_weight_pct": "2",
     "savings_tax_brackets": [
       {
@@ -606,7 +605,7 @@
       "fiscal_date": "2027-10-08",
       "fx_method": "currency_first",
       "gain_eur": "3.6040280857",
-      "gain_eur_rounded": "3.6",
+      "gain_eur_rounded": "3.61",
       "proceeds_eur": "11.405210643",
       "quantity": "0.5",
       "year": 2027
@@ -693,7 +692,7 @@
       "fiscal_date": "2028-01-09",
       "fx_method": "currency_first",
       "gain_eur": "-93.808287058",
-      "gain_eur_rounded": "-93.81",
+      "gain_eur_rounded": "-93.8",
       "proceeds_eur": "213.9262512581",
       "quantity": "4",
       "year": 2028
@@ -2782,7 +2781,6 @@
         "model_720_alert_threshold_eur": "45000",
         "model_721_alert_threshold_eur": "45000",
         "monthly_contribution_eur": "600",
-        "notification_email": "atlas@example.invalid",
         "satellite_min_weight_pct": "2",
         "savings_tax_brackets": [
           {
@@ -2853,7 +2851,6 @@
         "model_720_alert_threshold_eur": "45000",
         "model_721_alert_threshold_eur": "45000",
         "monthly_contribution_eur": "600",
-        "notification_email": "atlas@example.invalid",
         "satellite_min_weight_pct": "2",
         "savings_tax_brackets": [
           {
@@ -2924,7 +2921,6 @@
         "model_720_alert_threshold_eur": "45000",
         "model_721_alert_threshold_eur": "45000",
         "monthly_contribution_eur": "600",
-        "notification_email": "atlas@example.invalid",
         "satellite_min_weight_pct": "2",
         "savings_tax_brackets": [
           {

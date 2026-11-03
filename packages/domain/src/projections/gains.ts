@@ -12,6 +12,7 @@
 
 import { yearOf } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
+import { legsRounded } from "../money/eur.js";
 import type { FxRate } from "../money/fx-rate.js";
 import { EUR, Money } from "../money/money.js";
 import type { Quantity } from "../money/quantity.js";
@@ -150,7 +151,7 @@ const recordInvested = (
       proceeds_eur: valued,
       cost_eur: funding,
       gain_eur: gain,
-      gain_eur_rounded: gain.roundToCents(),
+      gain_eur_rounded: legsRounded(valued, funding),
       by_lot: [],
     });
     total = total.add(gain);
@@ -204,7 +205,7 @@ export const recordGain = (state: LedgerState, input: GainInput): RecordedGain =
     proceeds_eur: input.proceeds_eur,
     cost_eur: costEur,
     gain_eur: gainEur,
-    gain_eur_rounded: gainEur.roundToCents(),
+    gain_eur_rounded: legsRounded(input.proceeds_eur, costEur),
     by_lot: byLot,
     ...(fxMethod === undefined ? {} : { fx_method: fxMethod }),
   };

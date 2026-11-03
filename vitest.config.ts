@@ -139,11 +139,18 @@ export default defineConfig({
       // `json` writes coverage/coverage-final.json, which the CI keeps when the
       // coverage fails (review of PR #90, CI-1).
       reporter: ["text", "html", "json"],
+      // 100 % where a wrong figure costs money or tax; ~90 % in the rest (constitution VII).
       thresholds: {
-        lines: 100,
-        branches: 100,
-        functions: 100,
-        statements: 100,
+        lines: 90,
+        branches: 90,
+        functions: 90,
+        statements: 90,
+        ...Object.fromEntries(
+          ["money", "projections", "tax", "informative", "dates"].map((area) => [
+            `packages/domain/src/${area}/**`,
+            { lines: 100, branches: 100, functions: 100, statements: 100 },
+          ]),
+        ),
       },
     },
   },

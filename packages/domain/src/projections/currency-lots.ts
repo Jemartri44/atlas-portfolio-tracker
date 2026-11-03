@@ -12,6 +12,7 @@
 
 import { type CivilDate, yearOf } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
+import { legsRounded } from "../money/eur.js";
 import { EUR, Money } from "../money/money.js";
 import type { AccountId } from "../schema/events.js";
 import type { LedgerState } from "./state.js";
@@ -212,7 +213,7 @@ const record = (
     proceeds_eur: proceedsEur,
     cost_eur: costEur,
     gain_eur: gain,
-    gain_eur_rounded: gain.roundToCents(),
+    gain_eur_rounded: legsRounded(proceedsEur, costEur),
     by_lot: slices,
   });
 };

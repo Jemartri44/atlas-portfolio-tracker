@@ -57,9 +57,7 @@ const amountText = (entry: BoxEntry): string => {
     return entry.partial === undefined ? "" : "no se calcula entero";
   }
   const amount = eur(entry.amount_eur);
-  const withForm =
-    entry.form_eur === undefined ? amount : `${amount} (el formulario dará ${eur(entry.form_eur)})`;
-  return entry.partial === undefined ? withForm : `${withForm} — no se calcula entero`;
+  return entry.partial === undefined ? amount : `${amount} — no se calcula entero`;
 };
 
 /** Which operation a per-row field belongs to, by asset and date, never by an identifier. */

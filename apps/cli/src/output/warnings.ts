@@ -174,8 +174,6 @@ export const describeWarning = (warning: Warning): string => {
       return `Falta en tus datos lo que piden estas casillas: ${listOf(d.boxes)}. El libro no guarda el NIF de un tercero y aquí no se inventa ninguno.`;
     case "tax_box_partial":
       return `${PARTIAL_BOX[text(d.reason)] ?? warning.message} (casillas ${listOf(d.boxes)}).`;
-    case "tax_box_rounding_differs":
-      return `El formulario redondea cada valor y hace él mismo la resta: en ${listOf(d.boxes)} sale un céntimo distinto del que calcula el motor. Se enseñan los dos.`;
     case "tax_box_section_doubtful":
       return "Las acciones de mercados de fuera de la UE (NYSE, Nasdaq…) van a «otros elementos patrimoniales» con la clave 2, como dice la ayuda del Modelo 100; ninguna fuente leída extiende a la declaración la equivalencia de esos mercados, así que el apartado es dudoso.";
     case "tax_box_other_inferred":

@@ -52,7 +52,7 @@ describe("recording what was filed", () => {
     const base = host.querySelector("#f-base") as HTMLInputElement;
     expect(base).not.toBeNull();
     // The savings base of 2027 of the golden ledger, in Spanish.
-    expect(base.value).toBe("184,89");
+    expect(base.value).toBe("184,90");
     expect(text(host)).toContain("Base del ahorro");
     expect(text(host)).toContain("lo que se guarda es lo tuyo");
   });
@@ -64,7 +64,7 @@ describe("recording what was filed", () => {
     expect(base.value).not.toContain("174");
     base.dispatchEvent(new Event("focus", { bubbles: true }));
     await settle();
-    expect(base.value).toBe("184,89");
+    expect(base.value).toBe("184,90");
     type(host, "f-base", "200,00");
     await settle();
     base.dispatchEvent(new Event("blur", { bubbles: true }));
@@ -109,7 +109,7 @@ describe("recording what was filed", () => {
     expect(event.filed_at).toBe("2028-06-12");
     expect((event.declared as { savings_base_eur: string }).savings_base_eur).toBe("200.00");
     // And what it computed that day travels with it, untouched.
-    expect((event.computed as { savings_base_eur: string }).savings_base_eur).toBe("184.89");
+    expect((event.computed as { savings_base_eur: string }).savings_base_eur).toBe("184.90");
   });
 
   it("says it is a supplementary return when one is already recorded", async () => {
@@ -192,7 +192,7 @@ describe("recording what was filed after another device wrote (412)", () => {
   it("recomputes the figures on the new ledger and writes those, not the old ones", async () => {
     const host = await openForm();
     const base = host.querySelector("#f-base") as HTMLInputElement;
-    expect(base.value).toBe("184,89");
+    expect(base.value).toBe("184,90");
     type(host, "f-receipt", "100-2027-ABCDEFGHIJKL");
     type(host, "f-filed-at", "2028-06-12");
     // Another device records a dividend of 2027 while this form is open.
@@ -212,12 +212,12 @@ describe("recording what was filed after another device wrote (412)", () => {
     await press(host, "Registrar lo presentado");
     await settle(80);
     const fresh = (host.querySelector("#f-base") as HTMLInputElement).value;
-    expect(fresh).not.toBe("184,89");
+    expect(fresh).not.toBe("184,90");
     await press(host, "Registrar lo presentado");
     await settle(80);
     const event = lastEvent();
     expect(event.type).toBe("tax_return_filed");
-    expect((event.computed as { savings_base_eur: string }).savings_base_eur).not.toBe("184.89");
+    expect((event.computed as { savings_base_eur: string }).savings_base_eur).not.toBe("184.90");
   });
 });
 

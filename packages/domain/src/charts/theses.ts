@@ -7,11 +7,9 @@
 // missing — so a thesis without a comparison has no percentage either, and a
 // thesis with nothing invested has none: a share of nothing is not zero.
 
-import { Decimal } from "../money/decimal.js";
+import { type Decimal, HUNDRED } from "../money/decimal.js";
 import type { Money } from "../money/money.js";
 import type { BucketThesisView } from "../projections/bucket-theses.js";
-
-const HUNDRED = Decimal.parse("100");
 
 export interface ThesisPct {
   /** `(result + latent) / invested`, in percent: what the thesis did. */
