@@ -94,13 +94,13 @@
   stroke-dasharray: 1 4;
 }
 
-.sparkline path,
-.sparkline circle {
+.sparkline path {
   stroke: currentColor;
 }
 
-.sparkline circle {
-  fill: currentColor;
+.sparkline path.dot {
+  stroke-dasharray: none;
+  stroke-width: 4;
 }
 
 /* ---- A bullet bar (Bullet.tsx): weight, target and the band ------------- */

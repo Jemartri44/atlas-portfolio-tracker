@@ -31,7 +31,7 @@ export interface BookFigures {
   bucketVsIndexPct?: string | undefined;
   /** Investment accounts with a balance on the date. */
   cashAccounts: number;
-  /** The last year of each book with the cash of its accounts, for its small line. */
+  /** The last year of each tile's own value (the figure it shows), for its small line. */
   spark: Record<BlockKey, readonly (number | null)[]>;
 }
 

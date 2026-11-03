@@ -327,4 +327,9 @@
   .grid > .summary-fiscal {
     align-self: start;
   }
+
+  /* In the season the tax card goes first, and across: never alone with seven empty columns. */
+  .grid > .summary-fiscal:first-child {
+    grid-column: 1 / -1;
+  }
 }

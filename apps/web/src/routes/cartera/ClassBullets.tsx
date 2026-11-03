@@ -22,6 +22,11 @@ export const ClassBullets = (props: {
           <span class="bullet-name">
             <span class={`swatch is-${row.assetClass}`} aria-hidden="true" />
             {row.label}
+            <Show when={row.belowMinimum}>
+              <Tag tone="caution" icon="caution">
+                bajo el mínimo
+              </Tag>
+            </Show>
             <Show when={row.offTargetCount > 0}>
               <Tag tone="caution" icon="caution">
                 fuera de umbral

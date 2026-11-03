@@ -27,8 +27,6 @@ export interface ChartSeries {
    * which it is stacked on. A light wash of its own colour; the line on top still says the value.
    */
   fill?: "zero" | { below: string } | undefined;
-  /** Left out of the legend: the stacked copy of a series the legend already names. */
-  legend?: false | undefined;
 }
 
 type SteppedFactory = (options: { align: 1 | -1 }) => uPlot.Series.PathBuilder;
@@ -179,7 +177,8 @@ export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options =
         width: 2,
         cap: "round" as CanvasLineCap,
         spanGaps: false,
-        ...(series.fill === undefined ? {} : { fill: washOf(cssValue(series.colour), WASH) }),
+        // Down to zero only for an area of its own: a stacked one fills the band between two lines.
+        ...(series.fill === "zero" ? { fill: washOf(cssValue(series.colour), WASH) } : {}),
         ...(series.step === true
           ? { paths: (uPlot.paths.stepped as SteppedFactory)({ align: 1 }) }
           : {}),
