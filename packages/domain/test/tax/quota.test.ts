@@ -285,11 +285,16 @@ describe("savingsQuota", () => {
     expect(quota.double_taxation && cents(quota.double_taxation.deduction_eur)).toBe("0.00");
   });
 
-  it("takes no foreign income when the fees exceed the dividends and interest", () => {
-    // A US dividend of 100 (15 withheld), a custody fee of 200 (#23, as the
-    // engine reads it) and an ETC sold with a gain of 500 as movable capital:
-    // balance −100 + 500 = 400, base 400, quota 76.00. Dividends net of fees
-    // are negative, so nothing of the base is foreign income and nothing is deducted.
+  it.each([
+    // Fee 200: balance −100 + 500 = 400, quota 400 × 19 % = 76.00.
+    ["200", "400.00", "76.00"],
+    // Fee 100, exactly the dividend: balance 0 + 500 = 500, quota 95.00.
+    ["100", "500.00", "95.00"],
+  ])("takes no foreign income when a fee of %s takes all the dividends", (fee, base, quotaEur) => {
+    // A US dividend of 100 (15 withheld), a custody fee (#23, as the engine
+    // reads it) and an ETC sold with a gain of 500 as movable capital. The
+    // dividends net of fees are not positive, so nothing of the base is
+    // foreign income and nothing is deducted.
     const b = taxBuilder({
       ...HAND_SETTINGS,
       income_category: { ...HAND_SETTINGS.income_category, etc: "movable_capital" },
@@ -312,10 +317,10 @@ describe("savingsQuota", () => {
       withholding_origin: "15",
       source_country: "US",
     });
-    b.fee({ account_id: "acc_b", value_date: "2025-06-30", amount: "200", fee_kind: "custody" });
+    b.fee({ account_id: "acc_b", value_date: "2025-06-30", amount: fee, fee_kind: "custody" });
     const quota = savingsQuota(reportOf(b.build(), 2025));
-    expect(cents(quota.base_eur)).toBe("400.00");
-    expect(cents(quota.quota_eur)).toBe("76.00");
+    expect(cents(quota.base_eur)).toBe(base);
+    expect(cents(quota.quota_eur)).toBe(quotaEur);
     expect(quota.double_taxation && cents(quota.double_taxation.deduction_eur)).toBe("0.00");
   });
 });

@@ -163,7 +163,7 @@ const applyRates = (base: Money, rates: readonly Rate[]) => {
     // `from` never exceeds the base: the loop stops at the bracket the base reaches.
     const part = top.sub(from);
     // A base exactly on a limit reaches the next bracket with nothing in it.
-    if (!part.isZero())
+    if (!part.isZero()) {
       brackets.push({
         from_eur: from,
         ...(limit === undefined ? {} : { up_to_eur: limit }),
@@ -173,6 +173,7 @@ const applyRates = (base: Money, rates: readonly Rate[]) => {
         base_eur: part,
         quota_eur: pct(part, rate.rate),
       });
+    }
     if (rate.state !== undefined && rate.regional !== undefined) {
       state = state.add(pct(part, rate.state));
       regional = regional.add(pct(part, rate.regional));
@@ -275,7 +276,7 @@ export const savingsQuota = (
       .map((line) => line.computable_eur_rounded)
       .filter((amount) => !amount.isNegative())
       .reduce((sum, amount) => sum.add(amount), zero);
-    const foreign = netIncome.isNegative()
+    const foreign = !netIncome.isPositive()
       ? zero
       : report.compensation.movable_capital_final_eur
           .mul(gross.mul(netIncome.amount).div(income.amount).amount)
