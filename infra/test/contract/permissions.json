@@ -924,13 +924,27 @@
           "contract": "C16-6"
         },
         {
+          "sid": "Exposure",
+          "effect": "Allow",
+          "actions": ["s3:GetObject", "s3:PutObject"],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}/settings/exposure.json"],
+          "contract": "EXP-1"
+        },
+        {
           "sid": "List",
           "effect": "Allow",
           "actions": ["s3:ListBucket"],
           "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}"],
           "condition": {
             "StringLike": {
-              "s3:prefix": ["ledger/*", "reference/ecb/*", "prices/*", "access/*", "drafts/*"]
+              "s3:prefix": [
+                "ledger/*",
+                "reference/ecb/*",
+                "prices/*",
+                "access/*",
+                "drafts/*",
+                "settings/*"
+              ]
             }
           },
           "contract": "C15; P12-B5"
@@ -1216,9 +1230,10 @@
             "arn:aws:s3:::atlas-{env}-data-{suffix}/reference/ecb/manifest.json",
             "arn:aws:s3:::atlas-{env}-data-{suffix}/reference/ecb/eurofxref-hist.csv",
             "arn:aws:s3:::atlas-{env}-data-{suffix}/reference/ecb/api-exr.csv",
-            "arn:aws:s3:::atlas-{env}-data-{suffix}/prices/*"
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/prices/*",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/settings/exposure.json"
           ],
-          "contract": "C16-n4"
+          "contract": "C16-n4; EXP-1"
         },
         {
           "sid": "ReadWrite",
@@ -1244,7 +1259,14 @@
           "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}"],
           "condition": {
             "StringLike": {
-              "s3:prefix": ["prices/*", "reference/ecb/*", "backups/*", "jobs/backup/*", "ledger/*"]
+              "s3:prefix": [
+                "prices/*",
+                "reference/ecb/*",
+                "backups/*",
+                "jobs/backup/*",
+                "ledger/*",
+                "settings/*"
+              ]
             }
           },
           "contract": "C16-n4"

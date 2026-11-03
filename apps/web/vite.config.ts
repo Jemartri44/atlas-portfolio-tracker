@@ -6,9 +6,10 @@
 // 2. `@atlas/*` resolve to **source**, like vitest.config.ts already does, so a
 //    change in the domain shows up without rebuilding dist and Rolldown shakes
 //    the tree over the sources.
-// 3. The adapters barrel is never imported: it pulls `node:fs` through
-//    FileLedgerStore. Only the subpaths are aliased, and both the architecture
-//    test and scripts/check-bundle.mjs verify it on the real output.
+// 3. Every door is aliased, read off the `exports` of its package; which ones
+//    the web may import is not this list's business. The adapters barrel, the
+//    doors of the server and anything that pulls `node:` are refused by the
+//    architecture test and by scripts/check-bundle.mjs on the real output.
 
 import { existsSync, realpathSync } from "node:fs";
 import { isAbsolute, relative } from "node:path";
@@ -16,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 import { VitePWA, type VitePWAOptions } from "vite-plugin-pwa";
 import solid from "vite-plugin-solid";
+import { workspaceAliases } from "../../scripts/workspace-aliases.mjs";
 
 const repo = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
 const repoRoot = realpathSync(repo("../../"));
@@ -205,32 +207,9 @@ export default defineConfig(({ command }) => ({
     }),
   ],
   resolve: {
-    alias: {
-      // The subpaths first: aliases match by prefix, so the barrel would
-      // otherwise swallow `@atlas/domain/fiscal`.
-      "@atlas/domain/ecb": repo("../../packages/domain/src/ecb.ts"),
-      "@atlas/domain/fiscal": repo("../../packages/domain/src/fiscal.ts"),
-      "@atlas/domain/tools": repo("../../packages/domain/src/tools.ts"),
-      "@atlas/domain/charts": repo("../../packages/domain/src/charts.ts"),
-      "@atlas/domain/messages": repo("../../packages/domain/src/messages.ts"),
-      "@atlas/domain/portfolio": repo("../../packages/domain/src/portfolio.ts"),
-      "@atlas/domain/rebalance": repo("../../packages/domain/src/rebalance.ts"),
-      "@atlas/domain/quotes": repo("../../packages/domain/src/quotes.ts"),
-      "@atlas/domain/sync": repo("../../packages/domain/src/sync.ts"),
-      "@atlas/domain/remote-answers": repo("../../packages/domain/src/remote-answers.ts"),
-      "@atlas/domain": repo("../../packages/domain/src/index.ts"),
-      "@atlas/adapters/api-store": repo("../../packages/adapters/src/sync/api-ledger-store.ts"),
-      "@atlas/adapters/drafts-http": repo("../../packages/adapters/src/drafts/api-drafts.ts"),
-      "@atlas/adapters/sync-http": repo("../../packages/adapters/src/sync/http-remote.ts"),
-      "@atlas/adapters/reference-http": repo("../../packages/adapters/src/reference/http.ts"),
-      "@atlas/adapters/blob": repo("../../packages/adapters/src/ledger-store/blob.ts"),
-      "@atlas/adapters/reference": repo(
-        "../../packages/adapters/src/ledger-store/browser/reference.ts",
-      ),
-      "@atlas/adapters/prices": repo("../../packages/adapters/src/ledger-store/browser/prices.ts"),
-      "@atlas/adapters/clock": repo("../../packages/adapters/src/clock/system.ts"),
-      "@atlas/adapters/random": repo("../../packages/adapters/src/random/web-crypto.ts"),
-    },
+    // The doors of the domain and the adapters, read off their `exports` (the one list). What the
+    // web may import of them is the guard's business (`scripts/check-bundle.mjs`), not this list.
+    alias: workspaceAliases(repo("../.."), ["packages/domain", "packages/adapters"]),
   },
   // The workers are built apart; their graph goes to the guard like the rest.
   worker: { plugins: () => [moduleGraph("worker")] },
@@ -266,6 +245,8 @@ export default defineConfig(({ command }) => ({
          * — compression does not cross a chunk boundary, and each half pays
          * its own import plumbing. Measured: 73,0 KB before the card, 74,3
          * with it and 72,7 with this group, against a ceiling of 74,0.
+         * Measured again on 2026-11-03, without the group: boot 77,3 KB and
+         * total 340,7, against 74,5 and 335,0 with it.
          *
          * The test keeps out exactly what must **not** be on the boot path: `tax/`, `informative/`,
          * the `fiscal.ts` door and the three modules of `filings/` that reach the tax chain — and

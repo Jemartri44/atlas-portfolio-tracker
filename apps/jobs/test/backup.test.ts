@@ -107,6 +107,30 @@ describe("the monthly dump (E4, plan §8)", () => {
     );
   });
 
+  it("dumps the exposure of the owner as it is, after the positions, and goes without when there is none", async () => {
+    const s3 = seeded();
+    // Not even valid: the job never judges it, it keeps the bytes that were there.
+    s3.seed("settings/exposure.json", '{"exposure_format":1,"assets":{}}');
+    await backup(s3).run(["monthly_backup"]);
+    expect(s3.text(`${DUMP}settings/exposure.json`)).toBe('{"exposure_format":1,"assets":{}}');
+    const record = recordOf(s3);
+    expect(record.outcome.counts).toMatchObject({ written: 8, exposure: 1 });
+    expect(record.objects.map((object: { key: string }) => object.key).slice(0, 3)).toEqual([
+      `${DUMP}ledger.jsonl`,
+      `${DUMP}positions.json`,
+      `${DUMP}settings/exposure.json`,
+    ]);
+    expect(s3.conditions.filter((c) => c.key === `${DUMP}settings/exposure.json`)).toEqual([
+      { key: `${DUMP}settings/exposure.json`, ifNoneMatch: "*" },
+    ]);
+
+    const none = seeded();
+    await backup(none).run(["monthly_backup"]);
+    expect(none.keys().some((key) => key.includes("exposure"))).toBe(false);
+    expect(recordOf(none)).toMatchObject({ state: "done", outcome: { counts: { exposure: 0 } } });
+    expect(recordOf(none).findings).toBeUndefined();
+  });
+
   it("finishes a month cut between any two objects, never overwriting what it wrote (mutant 28)", async () => {
     const whole = seeded();
     await backup(whole).run(["monthly_backup"]);

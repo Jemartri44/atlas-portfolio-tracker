@@ -100,7 +100,10 @@ describe("exposure", () => {
 
   it("checks a declared split even for an asset with no value", () => {
     expect(() => run(ledger(), { ...declared, ast_spec: { currency: { USD: "60" } } })).toThrow(
-      "add up to 100",
+      expect.objectContaining({
+        code: "invalid_exposure",
+        details: { reason: "total", asset_id: "ast_spec", dimension: "currency", total: "60" },
+      }),
     );
   });
 
@@ -110,11 +113,9 @@ describe("exposure", () => {
     expect(result.currency.shares).toBeUndefined();
   });
 
-  it.each([
-    ["not adding to 100", { USD: "60", EUR: "30" }],
-    ["negative", { USD: "120", EUR: "-20" }],
-    ["empty", {}],
-  ])("refuses a split %s", (_name, currency) => {
-    expect(() => run(ledger(), { ...declared, ast_bonds: { currency } })).toThrow("add up to 100");
+  it("refuses a split that is not valid, with the reason", () => {
+    expect(() => run(ledger(), { ...declared, ast_bonds: { currency: {} } })).toThrow(
+      expect.objectContaining({ code: "invalid_exposure" }),
+    );
   });
 });

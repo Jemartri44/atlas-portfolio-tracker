@@ -5,7 +5,7 @@
 // `documents/` beside the ledger. With `--from-bucket`, everything comes from the
 // data bucket instead, with the role of administration and only reading: the
 // ledger of the cloud (ADR-0035: the only one there is) and its `documents/` and
-// `imports/`. Every copy is written dated, never over another, read-only for its
+// `imports/`, and the exposure the owner declares. Every copy is written dated, never over another, read-only for its
 // owner (`0400`), and read back to verify it.
 
 import { chmod, constants, copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -151,7 +151,7 @@ export const backupCommand = async (
       ...(bucket === undefined
         ? []
         : [
-            `documents/ e imports/ del bucket, en ${join(directory, "bucket")}: ${describeCopied(bucket)}. En el bucket no se ha escrito ni borrado nada.`,
+            `documents/, imports/ y la exposición (settings/exposure.json) del bucket, en ${join(directory, "bucket")}: ${describeCopied(bucket)}. En el bucket no se ha escrito ni borrado nada.`,
           ]),
     ].join("\n"),
   );

@@ -39,6 +39,8 @@ export const backupRetainUntil = (now: Date): Date =>
 export const DUMP_LEDGER = "ledger.jsonl";
 /** The valued projection of that ledger (`positions.ts`). */
 export const DUMP_POSITIONS = "positions.json";
+/** The exposure the owner declares, as it is (`settings/exposure.json`), when there is one. */
+export const DUMP_EXPOSURE = "settings/exposure.json";
 
 /**
  * Whether a name of the first level of `prices/` goes into the dump: a plain

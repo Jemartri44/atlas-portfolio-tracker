@@ -27,12 +27,20 @@ locals {
       Resource = ["${local.data_arn}/access/last-web-sign-in.json", "${local.data_arn}/access/sessions-valid-from.json"]
     },
     {
-      # `access/` makes a missing marker a 404 and not a 403 (prompt 017, §12.2 B5).
+      # The exposure the owner declares per asset (`docs/api.md` section 6.2): one object, read and
+      # replaced on the version read (If-Match); never deleted.
+      Sid      = "Exposure"
+      Effect   = "Allow"
+      Action   = ["s3:GetObject", "s3:PutObject"]
+      Resource = ["${local.data_arn}/settings/exposure.json"]
+    },
+    {
+      # `access/` and `settings/` make a missing marker a 404 and not a 403 (prompt 017, §12.2 B5).
       Sid       = "List"
       Effect    = "Allow"
       Action    = ["s3:ListBucket"]
       Resource  = [local.data_arn]
-      Condition = { StringLike = { "s3:prefix" = ["ledger/*", "reference/ecb/*", "prices/*", "access/*", "drafts/*"] } }
+      Condition = { StringLike = { "s3:prefix" = ["ledger/*", "reference/ecb/*", "prices/*", "access/*", "drafts/*", "settings/*"] } }
     },
     {
       Sid      = "SsmRead"
