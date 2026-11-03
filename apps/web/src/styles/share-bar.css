@@ -30,23 +30,27 @@
 }
 
 /* The parts of the exposure, in order of weight; what does not fit in three goes to «rest». They are
-   steps of grey, never a hue: in Cartera the hues already mean an asset class and the books, and a
-   currency must not look like either. The order and the figure in the legend tell them apart. The
-   bar and the swatch of its legend read the same colour. */
-.is-a {
-  --part: var(--c-text);
+   steps of grey (`--c-share-*`), never a hue: in Cartera the hues already mean an asset class and the
+   books, and a currency must not look like either. The bar and the swatch of its legend read the same
+   colour; the order and the figure in the legend tell them apart. */
+.share-seg.is-a,
+.swatch.is-a {
+  --part: var(--c-share-1);
 }
 
-.is-b {
-  --part: var(--c-text-3);
+.share-seg.is-b,
+.swatch.is-b {
+  --part: var(--c-share-2);
 }
 
-.is-c {
-  --part: var(--c-border-control);
+.share-seg.is-c,
+.swatch.is-c {
+  --part: var(--c-share-3);
 }
 
-.is-rest {
-  --part: var(--c-border);
+.share-seg.is-rest,
+.swatch.is-rest {
+  --part: var(--c-share-4);
 }
 
 .share-seg.is-a,

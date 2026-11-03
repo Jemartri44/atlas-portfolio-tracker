@@ -7,7 +7,7 @@
 // - The label of a default is always complete: «por defecto · <índice> (según la cartera de <ETF>) ·
 //   ficha <fecha>». An index chosen by the owner that is no longer in the tables is said, not hidden.
 
-import type { Asset } from "@atlas/domain";
+import { type Asset, Decimal } from "@atlas/domain";
 import {
   DEFAULT_INDEX_TABLES,
   type Exposure,
@@ -44,7 +44,7 @@ export const keyLabel = (dimension: Dimension, key: string): string =>
 export const regionOptions = (): { value: string; label: string }[] =>
   Object.entries(REGIONS).map(([value, label]) => ({ value, label }));
 
-/** The parts, from the largest, in the colours `a`…`d`; what does not fit goes together to `rest`. */
+/** The parts, from the largest, in the greys `a`…`c`; what does not fit goes together to `rest`. */
 const PARTS = ["a", "b", "c"] as const;
 
 export interface BarView {
@@ -77,12 +77,12 @@ export const barOf = (
     figure: percentOf(part.pct),
   }));
   if (rest.length > 0) {
-    const width = rest.reduce((sum, part) => sum + Number.parseFloat(part.pct), 0);
-    segments.push({ key: "rest", width });
+    const total = rest.reduce((sum, part) => sum.add(Decimal.parse(part.pct)), Decimal.ZERO);
+    segments.push({ key: "rest", width: Number.parseFloat(total.toString()) });
     legend.push({
       key: "rest",
       label: `Otras (${rest.length})`,
-      figure: percentOf(String(Math.round(width * 100) / 100)),
+      figure: percentOf(total.toString()),
     });
   }
   return { segments, legend };
