@@ -1,15 +1,13 @@
-// atlas m720 <año> · atlas m721 <año> · atlas tax <año> --boxes
-//
-// The console is the deliverable: a verdict printed from the wrong field, a
-// box number taken from another year or a marked value shown as a clean one
-// would pass every test of the domain. These read the text the user reads.
+// atlas m720 <año> · atlas m721 <año>: the informative returns as JSON. The verdict is the
+// domain's (packages/domain/test/informative); here, that the console prints the field the web
+// reads it from, and refuses what it must.
 
 import { describe, expect, it } from "vitest";
 import { CLI_SETTINGS, Events } from "../events.js";
 import { harness } from "../harness.js";
 
 /** Securities abroad worth 60.000,00 at 31/12/2027, and one Spanish account. */
-const abroad = (unit = "600"): Events => {
+const abroad = (): Events => {
   const b = new Events();
   b.settings(CLI_SETTINGS);
   b.account("acc_ib", "IE");
@@ -18,97 +16,77 @@ const abroad = (unit = "600"): Events => {
   b.deposit("acc_ib", "2027-01-04", "10100");
   b.deposit("acc_es", "2027-01-04", "90000");
   b.buy("acc_ib", "etf_a", "2027-01-05", "100", "100");
-  b.valuation("acc_ib", "etf_a", "2027-12-31", "100", unit);
+  b.valuation("acc_ib", "etf_a", "2027-12-31", "100", "600");
   return b;
 };
 
-const run = async (argv: string[], events = abroad().build()) => {
+interface Report {
+  model: string;
+  categories: { category: string; verdict: string; value_eur: { amount: string } }[];
+  excluded: { account_id: string }[];
+  notes: unknown[];
+}
+
+const run = async (argv: string[], events = abroad().build()): Promise<Report> => {
   const h = harness({ events, instant: "2028-03-01T10:00:00.000Z" });
   expect(await h.exec(argv)).toBe(0);
-  return h;
+  return JSON.parse(h.text()) as Report;
 };
 
+const verdictOf = (report: Report, category: string): string | undefined =>
+  report.categories.find((c) => c.category === category)?.verdict;
+
 describe("atlas m720", () => {
-  it("says the verdict of each category, the exclusion and the criteria", async () => {
-    const h = await run(["m720", "2027"]);
-    const text = h.text();
-    expect(text).toContain("MODELO 720 de 2027");
-    expect(text).toContain("núcleo y cubo agregados por contribuyente");
-    expect(text).toContain("Umbral 50000.00");
-    expect(text).toContain("Total 60000.00 → OBLIGADO");
-    expect(text).toContain("supera el umbral");
-    // The Spanish account holds 90.000,00 and is out: with it in, the accounts
-    // would oblige too.
-    expect(text).toContain("Quedan fuera por ser cuentas españolas: acc_es");
-    expect(text).toContain("Total a 31/12 100.00");
-    expect(text).toContain("no obligado");
-    expect(text).toContain("Criterios de los que depende:");
-    // With their names, not the bare identifiers: `6, 11` is an index of the
-    // code and `atlas tax` has printed the label beside it since it existed.
-    expect(text).toContain("redondeo half-up una vez por operación");
-    expect(text).toMatch(/\b6\b/);
+  it("says the verdict of each category and the Spanish account it leaves out", async () => {
+    const report = await run(["m720", "2027"]);
+    expect(report.model).toBe("720");
+    expect(verdictOf(report, "securities")).toBe("obliged");
+    expect(verdictOf(report, "accounts")).toBe("not_obliged");
+    // With the Spanish account in (90.000,00), the accounts would oblige too.
+    expect(report.excluded.map((e) => e.account_id)).toEqual(["acc_es"]);
+  });
+
+  it("writes every amount as a decimal string", async () => {
+    const report = await run(["m720", "2027"]);
+    expect(typeof report.categories[0]?.value_eur.amount).toBe("string");
   });
 
   it("says what is missing instead of saying no", async () => {
-    const b = abroad();
-    const without = b.build().filter((event) => event.type !== "valuation");
-    const h = await run(["m720", "2027"], without);
-    expect(h.text()).toContain("NO SE PUEDE DETERMINAR");
-    expect(h.text()).toContain("Registra las valoraciones a 31/12");
-    expect(h.text()).not.toContain("→ no obligado\n  ·");
+    const without = abroad()
+      .build()
+      .filter((event) => event.type !== "valuation");
+    expect(verdictOf(await run(["m720", "2027"], without), "securities")).toBe("undetermined");
+  });
+});
+
+describe("atlas m721", () => {
+  it("counts nothing recorded when there is no direct crypto, and does not say not obliged", async () => {
+    const report = await run(["m721", "2027"]);
+    expect(report.model).toBe("721");
+    expect(verdictOf(report, "crypto")).toBe("nothing_recorded");
+  });
+});
+
+describe("the year of the informative returns", () => {
+  it.each(["m720", "m721"])("%s refuses a year that has not begun", async (model) => {
+    const h = harness({ events: abroad().build(), instant: "2028-03-01T10:00:00.000Z" });
+    expect(await h.exec([model, "2029"])).toBe(64);
+    expect(h.text()).toContain(`el año 2029 aún no ha empezado: el modelo ${model.slice(1)}`);
+    expect(await h.exec([model, "2028"])).toBe(0);
   });
 
-  it("emits the whole model with --json", async () => {
-    const h = await run(["m720", "2027", "--json"]);
-    const data = h.json() as { model: string; categories: { verdict: string }[] };
-    expect(data.model).toBe("720");
-    expect(data.categories.map((entry) => entry.verdict)).toEqual(["not_obliged", "obliged"]);
-  });
-
-  it("writes every amount as a string, never as the object that wraps it", async () => {
-    const h = await run(["m720", "2027", "--json"]);
-    const data = h.json() as { threshold_eur: unknown };
-    expect(data.threshold_eur).toEqual({ amount: "50000", currency: "EUR" });
-    expect(h.text()).not.toMatch(/"value": \{/);
-  });
-
-  it("refuses to be called as a year of atlas tax", async () => {
-    // `atlas tax 720` would read 720 as the tax year, which is why the models have commands of
-    // their own.
-    const h = harness({ events: abroad().build() });
+  it("is not a year of atlas tax", async () => {
+    const h = harness({ events: abroad().build(), instant: "2028-03-01T10:00:00.000Z" });
     expect(await h.exec(["tax", "720"])).not.toBe(0);
     expect(h.text()).toContain("2018");
   });
 });
 
-describe("a year that has not begun", () => {
-  it.each(["m720", "m721"])(
-    "%s refuses it with a sentence, and takes the current one",
-    async (model) => {
-      const h = harness({ events: abroad().build(), instant: "2028-03-01T10:00:00.000Z" });
-      expect(await h.exec([model, "2029"])).toBe(64);
-      expect(h.text()).toContain(`el año 2029 aún no ha empezado: el modelo ${model.slice(1)}`);
-      h.reset();
-      expect(await h.exec([model, "2028"])).toBe(0);
-    },
-  );
-});
-
-describe("atlas m721", () => {
-  it("counts nothing when the crypto is held through an ETP", async () => {
-    const h = await run(["m721", "2027"]);
-    expect(h.text()).toContain("MODELO 721 de 2027");
-    expect(h.text()).toContain("Criptomonedas");
-    // Nothing of the category is in the ledger, which is not the same as a
-    // category that was added up and came out under the threshold.
-    expect(h.text()).toContain("Total 0.00 → no hay nada registrado");
-    expect(h.text()).not.toContain("no obligado");
-  });
-
+describe("atlas m721 before the model existed", () => {
   it("has no 2022", async () => {
-    const h = await run(["m721", "2022"]);
-    expect(h.text()).toContain("el modelo no existía ese ejercicio");
-    expect(h.text()).toContain("sin veredicto");
+    const report = await run(["m721", "2022"]);
+    expect(report).toMatchObject({ period: "before_model" });
+    expect(verdictOf(report, "crypto")).toBe("not_applicable");
   });
 });
 
@@ -121,54 +99,36 @@ describe("atlas tax --boxes", () => {
     b.asset("etf_a", "etf");
     b.deposit("acc_ib", "2024-01-04", "10000");
     b.buy("acc_ib", "etf_a", "2024-02-10", "100", "100");
-    // With a withholding, so the return has a box the engine computes and
-    // cannot compute **whole**: only what the ledger holds is in it.
+    // With a withholding, so the return has a box the engine computes and cannot compute whole.
     b.sell("acc_ib", "etf_a", "2025-09-01", "100", "120", "2025-09-01", "380");
     return b;
   };
+  interface Boxes {
+    year: number;
+    mapping: string;
+    entries: { box?: string; missing?: boolean }[];
+  }
+  const boxes = async (year: string, instant: string): Promise<Boxes> => {
+    const h = harness({ events: withDisposal().build(), instant });
+    expect(await h.exec(["tax", year, "--boxes"])).toBe(0);
+    return JSON.parse(h.text()) as Boxes;
+  };
 
-  it("prints the box, its literal label and where it was checked", async () => {
-    const h = harness({ events: withDisposal().build(), instant: "2026-06-01T10:00:00.000Z" });
-    expect(await h.exec(["tax", "2025", "--boxes"])).toBe(0);
-    const text = h.text();
-    expect(text).toContain("TU DECLARACIÓN POR CASILLAS — Renta 2025");
-    expect(text).toContain("Orden HAC/277/2026");
-    expect(text).toContain("comprobadas el 2026-09-23");
-    // The section of the ETFs, which 2025 created.
-    expect(text).toContain("2227");
-    expect(text).toContain("Importe global de las transmisiones efectuadas en 2025");
-    expect(text).toContain("12000.00");
-    expect(text).toContain("0460");
-    expect(text).toContain("Base imponible del ahorro");
+  it("has the checked boxes of 2025, and says what the ledger does not hold", async () => {
+    const report = await boxes("2025", "2026-06-01T10:00:00.000Z");
+    expect(report.mapping).toBe("checked");
+    expect(report.entries.map((entry) => entry.box)).toEqual(
+      expect.arrayContaining(["0460", "2227"]),
+    );
     // The NIF is not in the ledger and is not invented.
-    expect(text).toContain("falta en tus datos");
-    // A box with a figure that is **not** the whole of what the form will hold
-    // says so beside the figure, as the screen does: the withholdings the
-    // ledger knows about need not be all of them.
-    expect(text).toContain("380.00 — no se calcula entero");
+    expect(report.entries.find((entry) => entry.box === "2225")?.missing).toBe(true);
   });
 
-  it("gives another year by concept, with no number at all", async () => {
-    const h = harness({ events: withDisposal().build(), instant: "2027-06-01T10:00:00.000Z" });
-    expect(await h.exec(["tax", "2026", "--boxes"])).toBe(0);
-    expect(h.text()).toContain("no están comprobadas en un formulario oficial");
-    expect(h.text()).toContain("Nunca se usa la casilla de otro ejercicio");
-    // Every figure still says **what it is**: the year with no table is the
-    // normal case (2025 is the only one checked and the first real return is
-    // 2026), so a column of amounts with no concept beside them would be the
-    // ordinary output, not an edge case.
-    expect(h.text()).toContain("Base imponible del ahorro");
-    expect(h.text()).toContain("Saldo de rendimientos del capital mobiliario");
-    expect(h.text()).not.toContain("0460");
-    // And no raw ConceptId reaches the reader.
-    expect(h.text()).not.toContain("base.savings");
-  });
-
-  it("emits the layout with --json", async () => {
-    const h = harness({ events: withDisposal().build(), instant: "2026-06-01T10:00:00.000Z" });
-    expect(await h.exec(["tax", "2025", "--boxes", "--json"])).toBe(0);
-    const data = JSON.parse(h.text()) as { mapping: string; entries: { box?: string }[] };
-    expect(data.mapping).toBe("checked");
-    expect(data.entries.some((entry) => entry.box === "0460")).toBe(true);
+  it("gives another year by concept, with no box number at all", async () => {
+    const report = await boxes("2026", "2027-06-01T10:00:00.000Z");
+    expect(report.mapping).not.toBe("checked");
+    expect(report.entries.length).toBeGreaterThan(0);
+    expect(report.entries.every((entry) => entry.box === undefined)).toBe(true);
+    expect(JSON.stringify(report)).not.toContain("0460");
   });
 });

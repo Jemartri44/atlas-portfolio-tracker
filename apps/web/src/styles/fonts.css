@@ -1,0 +1,21 @@
+/*
+ * The two hosted fonts of direction A (docs/design/system.md §2, D14): Inter for the interface
+ * and Fraunces 600 for the title and the hero figure. Files and licences in apps/web/public/fonts.
+ */
+
+/* CSP font-src 'self'; `swap` paints the system font first, never blank. */
+@font-face {
+  font-display: swap;
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  src: url("/fonts/inter-latin-wght.woff2") format("woff2");
+}
+
+@font-face {
+  font-display: swap;
+  font-family: "Fraunces";
+  font-style: normal;
+  font-weight: 600;
+  src: url("/fonts/fraunces-latin-600.woff2") format("woff2");
+}
