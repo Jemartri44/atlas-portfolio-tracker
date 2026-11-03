@@ -90,12 +90,9 @@ describe("transfers only defer tax between funds (art. 94.1.a LIRPF)", () => {
     const legal = b.transfer(transferFields("ast_world", "ast_bonds"));
     const base = b.build();
     b.reversal(legal.id);
-    const illegal = b.transfer({
-      ...transferFields("ast_etf_a", "ast_etf_b"),
-      corrects_id: legal.id,
-    });
-    const unit = b.build().slice(base.length);
-    const { schema_version, id, recorded_at, fingerprint, corrects_id, ...draft } = illegal;
+    const illegal = b.transfer(transferFields("ast_etf_a", "ast_etf_b"));
+    const unit = [...b.build().slice(base.length, -1), { ...illegal, corrects_id: legal.id }];
+    const { schema_version, id, recorded_at, fingerprint, ...draft } = illegal;
     const local = await correctEvent(
       testDeps(new TestStore(base)),
       legal.id,
@@ -109,7 +106,7 @@ describe("transfers only defer tax between funds (art. 94.1.a LIRPF)", () => {
       "not_transferable",
     ]);
     // Replayed, the same ledger opens with a warning, as before the rule.
-    expect(projectLedger(b.build()).warnings.map((warning) => warning.code)).toContain(
+    expect(projectLedger([...base, ...unit]).warnings.map((warning) => warning.code)).toContain(
       "transfer_not_between_funds",
     );
   });
