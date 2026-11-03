@@ -13,7 +13,7 @@
 
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { MailRefused, type MailSender, MailUnknown, type OutgoingMail } from "./mail.js";
-import { factsOf } from "./sdk-errors.js";
+import { factsOf, SDK_MAX_ATTEMPTS, SDK_TIMEOUTS } from "./sdk-errors.js";
 
 /** What the adapter sends: the client of the SDK, or a simulated one with the same call. */
 interface SesSender {
@@ -50,4 +50,7 @@ export class SdkMailSender implements MailSender {
 }
 
 /** The sender of production: the client of SES v2 with the credentials of the role. */
-export const productionMailSender = (): MailSender => new SdkMailSender(new SESv2Client({}));
+export const productionMailSender = (): MailSender =>
+  new SdkMailSender(
+    new SESv2Client({ requestHandler: SDK_TIMEOUTS, maxAttempts: SDK_MAX_ATTEMPTS }),
+  );

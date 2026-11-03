@@ -10,9 +10,9 @@
 //
 // Nothing here reads the ledger or decides an amount: it is a vocabulary.
 
+import { euRegulatedMarket } from "../../projections/markets.js";
 import type { AssetType } from "../../schema/events.js";
 import type { IncomeCategory } from "../../settings/settings.js";
-import { euRegulatedMarket } from "./markets.js";
 
 /**
  * Where a disposal is declared. The section is a **fiscal criterion** and not a

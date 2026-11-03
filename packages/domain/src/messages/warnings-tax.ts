@@ -54,6 +54,8 @@ const FX_FINDING_CORRECTION =
   "La cifra se calcula con el tipo de tus datos; si está mal, corrige el movimiento (anular y registrar de nuevo) y compruébalo antes de declarar.";
 
 export const WARNINGS_TAX: Record<string, Entry> = {
+  capital_return_partial_accounts: (d, v) =>
+    `La devolución no da importe a todas las cuentas que tienen ${v.one(d.asset_id)} (faltan: ${v.many(d.accounts)}): como el FIFO es global, el dinero rebaja también los lotes de esas cuentas. Revisa si falta alguna.`,
   tax_quota_not_computed: () =>
     "Esto es la base del ahorro, no la cuota ni lo que se paga: el mínimo personal, la base general y el tipo medio efectivo no están en tus datos.",
   tax_filing_prefix_unverified: (d) =>
