@@ -212,7 +212,6 @@ describe("recording what was filed after another device wrote (412)", () => {
       () => (host.querySelector("#f-base") as HTMLInputElement).value !== "184,90",
       "the base to be computed again",
     );
-    const fresh = (host.querySelector("#f-base") as HTMLInputElement).value;
     await press(host, "Registrar lo presentado");
     await until(() => lastEvent().type === "tax_return_filed", "the filing");
     const event = lastEvent();
