@@ -1,6 +1,6 @@
 # Especificación — 028 Reparto por plataforma y rebalanceo
 
-Estado: **diseño aprobado el 2026-10-26 (incluido el cambio de la regla 2); en construcción**. Parte de lo que pidió el dueño el 2026-10-26 y aprobó el mismo día: reparto del mes por plataforma, prioridad cuando el dinero no llega y un botón «Rebalancear». Respuestas a las dudas en `questions.md`.
+Estado: **entregada** (PR #237, 2026-10-27); `atlas rebalance` y el bloque «Por plataforma» de la web existen. Diseño aprobado el 2026-10-26 (incluido el cambio de la regla 2). Parte de lo que pidió el dueño el 2026-10-26 y aprobó el mismo día: reparto del mes por plataforma, prioridad cuando el dinero no llega y un botón «Rebalancear». Las respuestas del 2026-10-27 (comisiones leídas del libro, aparte del importe, sin umbral propio) son parte del diseño descrito.
 
 ## Qué y por qué
 

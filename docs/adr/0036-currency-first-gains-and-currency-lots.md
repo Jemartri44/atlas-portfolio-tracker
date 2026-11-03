@@ -1,6 +1,6 @@
 # ADR-0036 — Ganancias en divisa primero en la divisa, y lotes de divisa
 
-**Estado:** Aceptada (2026-10-27), por decisión del dueño transmitida por la coordinadora el 27/10/2026 con sus palabras «Sí a todo lo de atlas» (aceptar ADR-0036 con su corrección); el diseño lo aprobó Coordinación el mismo día (`specs/029-fx-currency-first/`). Acotada por la nota del 2026-10-27 al final. *Verificar con asesor.*
+**Estado:** Aceptada (2026-10-27); enmienda ADR-0030.
 
 ## Contexto
 
@@ -37,3 +37,7 @@ Una auditoría fiscal independiente del mismo día acota la decisión:
 - **Un lote comprado en una divisa y vendido en otra (`mixed`)** imputa `cost_eur − funding_eur` como línea de divisa. Véase el criterio #4 de `docs/fiscal-questions.md`.
 
 ADR-0013 no cambia.
+
+## Notas de estado
+
+Aceptada (2026-10-27), por decisión del dueño transmitida por la coordinadora el 27/10/2026 con sus palabras «Sí a todo lo de atlas» (aceptar ADR-0036 con su corrección); el diseño lo aprobó Coordinación el mismo día (`specs/029-fx-currency-first/`). Acotada por la nota del 2026-10-27 al final. Criterio de Atlas (#4).
