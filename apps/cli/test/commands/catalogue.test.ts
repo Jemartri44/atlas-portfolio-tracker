@@ -270,3 +270,49 @@ describe("atlas settings", () => {
     expect((await h.store.load()).etag).toBe(before);
   });
 });
+
+describe("marking a fund transferable (art. 94 LIRPF)", () => {
+  const fund = (id: string, extra: string[]) => [
+    "asset",
+    "add",
+    "--id",
+    id,
+    "--type",
+    "fund",
+    "--book",
+    "core",
+    "--asset-class",
+    "equity",
+    "--name",
+    "Fondo",
+    "--currency",
+    "EUR",
+    ...extra,
+    "--yes",
+  ];
+
+  it("warns of the requirements for a foreign fund, before recording it", async () => {
+    const h = harness({ events: seed() });
+    expect(await h.exec(fund("ast_ie", ["--transferable", "--isin", "IE0000000001"]))).toBe(0);
+    expect(h.text()).toContain("art. 94.2.a");
+    expect(h.text()).toContain("más de 500 accionistas");
+  });
+
+  it("says nothing for a Spanish fund or one that is not transferable", async () => {
+    const h = harness({ events: seed() });
+    expect(await h.exec(fund("ast_es", ["--transferable", "--isin", "ES0000000001"]))).toBe(0);
+    expect(await h.exec(fund("ast_nt", ["--not-transferable", "--isin", "IE0000000002"]))).toBe(0);
+    expect(h.text()).not.toContain("art. 94");
+  });
+
+  it("warns when an update is what marks it transferable, and only then", async () => {
+    const h = harness({ events: seed() });
+    expect(await h.exec(fund("ast_lu", ["--not-transferable", "--isin", "LU0000000001"]))).toBe(0);
+    h.reset();
+    expect(await h.exec(["asset", "update", "ast_lu", "--transferable", "--yes"])).toBe(0);
+    expect(h.text()).toContain("art. 94.2.a");
+    h.reset();
+    expect(await h.exec(["asset", "update", "ast_lu", "--name", "Otro", "--yes"])).toBe(0);
+    expect(h.text()).not.toContain("art. 94");
+  });
+});
