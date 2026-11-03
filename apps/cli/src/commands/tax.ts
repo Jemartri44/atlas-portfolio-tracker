@@ -33,7 +33,7 @@ import { renderBoxes } from "./tax-boxes.js";
 
 const USAGE = "uso: atlas tax <año> [--lots] [--boxes] [--json]";
 
-/** A figure of the return: always two decimals, so a column reads as money. */
+/** The certainty of a criterion, as the report says it. */
 const CERTAINTY: Record<string, string> = {
   high: "alta",
   medium: "media",
