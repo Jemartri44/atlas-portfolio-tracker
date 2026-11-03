@@ -19,11 +19,14 @@
     <meta name="referrer" content="no-referrer" />
     <meta name="color-scheme" content="light dark" />
     <!-- The colour of the browser bar: the top bar of each theme (tokens.css, --c-surface). -->
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#1f1f1d" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#fffdf8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1d1c19" media="(prefers-color-scheme: dark)" />
     <title>Atlas</title>
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
+    <!-- The two hosted fonts, asked for with the page so the first paint does not jump (base.css). -->
+    <link rel="preload" href="/fonts/inter-latin-wght.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/fraunces-latin-600.woff2" as="font" type="font/woff2" crossorigin />
   </head>
   <body>
     <div id="app"></div>

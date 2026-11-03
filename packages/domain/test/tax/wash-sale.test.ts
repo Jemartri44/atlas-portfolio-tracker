@@ -22,7 +22,7 @@ describe("the window, counted date to date, at its four edges", () => {
         ? DEFAULT_SETTINGS
         : {
             ...DEFAULT_SETTINGS,
-            wash_sale_window: { ...DEFAULT_SETTINGS.wash_sale_window, fund: window as "1y" },
+            wash_sale_window: { ...DEFAULT_SETTINGS.wash_sale_window, fund: window as "1y" | "2m" },
           },
     );
     buy(b, asset, "2026-01-05", "10", "100");
@@ -55,19 +55,15 @@ describe("the window, counted date to date, at its four edges", () => {
     expect(windowCase("stock_s", "2027-03-31", "2027-06-01")).toBe("0");
   });
 
-  /**
-   * The year is no longer the default of a fund (criterion #2), so the ledger
-   * says so: what this pins is the **arithmetic of a year from a 29 February**,
-   * not which asset takes a year.
-   */
-  it("one year, from 29 February: the window ends on 28 February", () => {
-    expect(windowCase("fund_f", "2028-02-29", "2029-02-28", "1y")).toBe("-100");
-    expect(windowCase("fund_f", "2028-02-29", "2029-03-01", "1y")).toBe("0");
+  // A year is the default of a fund (criterion #2, `2:fund_1y`).
+  it("one year for a fund, its default, from 29 February: the window ends on 28 February", () => {
+    expect(windowCase("fund_f", "2028-02-29", "2029-02-28")).toBe("-100");
+    expect(windowCase("fund_f", "2028-02-29", "2029-03-01")).toBe("0");
   });
 
-  it("two months for a fund, which is its default: 29 February plus two is 29 April", () => {
-    expect(windowCase("fund_f", "2028-02-29", "2028-04-29")).toBe("-100");
-    expect(windowCase("fund_f", "2028-02-29", "2028-04-30")).toBe("0");
+  it("two months for a fund when configured (`2:fund_2m`): 29 February plus two is 29 April", () => {
+    expect(windowCase("fund_f", "2028-02-29", "2028-04-29", "2m")).toBe("-100");
+    expect(windowCase("fund_f", "2028-02-29", "2028-04-30", "2m")).toBe("0");
   });
 });
 
@@ -391,12 +387,12 @@ describe("mandatory edge cases", () => {
 
   /**
    * The mandatory edge case of constitution VII, now under the two windows: the
-   * default of a fund is two months (criterion #2), and the case is worth
+   * default of a fund is a year (criterion #2, since 2026-11-03), and the case is worth
    * pinning under both, because which contributions fall inside is exactly what
    * the window moves.
    */
   it("a fund loss followed by the monthly contribution: the nearest purchases inside the window carry it", () => {
-    const monthly = (window?: "1y") => {
+    const monthly = (window?: "2m") => {
       const b = taxBuilder(
         window === undefined
           ? DEFAULT_SETTINGS
@@ -413,7 +409,7 @@ describe("mandatory edge cases", () => {
       return { line: lineOf(reportOf(b.build(), 2027), loss.id), months };
     };
     // Two months, [01/01/2027, 01/05/2027]: the contribution of 10 May is out.
-    const twoMonths = monthly();
+    const twoMonths = monthly("2m");
     expect(text(twoMonths.line.deferred_eur)).toBe("-160");
     expect(
       twoMonths.line.deferral?.acquisitions.map((a) => [a.event_id, a.units.toString()]),
@@ -422,7 +418,7 @@ describe("mandatory edge cases", () => {
       [twoMonths.months[1]?.id, "40"],
     ]);
     // A year: the three of them, and only 100 of the 120 units are needed.
-    const year = monthly("1y");
+    const year = monthly();
     expect(text(year.line.deferred_eur)).toBe("-200");
     expect(year.line.deferral?.acquisitions.map((a) => [a.event_id, a.units.toString()])).toEqual([
       [year.months[0]?.id, "40"],

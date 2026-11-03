@@ -140,7 +140,6 @@ export interface CloudMerge {
 export const cloudLinesToAppend = (
   existing: readonly CloseLine[],
   cloud: readonly CloseLine[],
-  order: readonly QuoteSource[],
   options: {
     readonly today: CivilDate;
     readonly declared?: Partial<Record<QuoteSource, string>>;
@@ -163,7 +162,7 @@ export const cloudLinesToAppend = (
       mismatched += 1;
       continue;
     }
-    for (const next of linesToAppend(held, [line], line.source, order, line.fetched_at)) {
+    for (const next of linesToAppend(held, [line], line.source, line.fetched_at)) {
       held.push(next);
       added.push(next);
     }

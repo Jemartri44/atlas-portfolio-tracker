@@ -1,26 +1,23 @@
-// `prices/config.json`: the order of the sources, the daily budget of calls of
-// each one, the threshold of consecutive failures and, by asset type, the days
+// `prices/config.json`: the daily budget of calls of the source, the threshold of consecutive failures and, by asset type, the days
 // its market trades and the recent days asked again (live test of 2026-09-27).
 // None of it is secret and none of it moves a figure of the ledger, so it lives
 // **outside** the ledger and outside `atlas.config.json`, in a file of its own
-// next to `prices/`. The web never reads it: it does not download, and the
-// console resolves the order when it writes.
+// next to `prices/`. The web never reads it: it does not download.
 //
 // Written by the user, never by the application. A missing file is the
 // defaults; a file that does not read, or that says something this code does
-// not understand, is an error, never a silent default (constitution V).
+// not understand, is an error, never a silent default (constitution V). A
+// `source_order` of the two-source days is such a key.
 
 import { ValidationError } from "../errors.js";
 import type { QuoteSource } from "../projections/prices.js";
 import { ASSET_TYPES, type AssetType } from "../schema/events.js";
 import { parseStrictJson } from "./repeated-key.js";
-import { isQuoteSource, QUOTE_SOURCES } from "./sources.js";
+import { isQuoteSource } from "./sources.js";
 
 export const PRICE_CONFIG_FILE = "config.json";
 
 export interface PriceConfig {
-  /** Which source is asked first, and which next. */
-  readonly source_order: readonly QuoteSource[];
   /** Calls a day of each source; `0` switches it off. */
   readonly daily_calls: Readonly<Record<QuoteSource, number>>;
   /** Consecutive failures of a source after which the console says so, with its own exit code. */
@@ -41,15 +38,14 @@ export const MARKET_DAYS = ["mon_fri", "every_day"] as const;
 export type MarketDays = (typeof MARKET_DAYS)[number];
 
 /**
- * The documented defaults: EODHD first, 20 calls a day on its free plan, and
- * Alpha Vantage second, 25 (verified on 2026-09-24). Crypto trades every day,
+ * The documented defaults: EODHD, 20 calls a day on its free plan (verified on
+ * 2026-09-24). Crypto trades every day,
  * and its last two closes are asked again, because EODHD gave the close of a
  * Saturday equal to Friday's (live test of 2026-09-27); every other type,
  * Monday to Friday and none.
  */
 export const DEFAULT_PRICE_CONFIG: PriceConfig = {
-  source_order: QUOTE_SOURCES,
-  daily_calls: { eodhd: 20, alpha_vantage: 25 },
+  daily_calls: { eodhd: 20 },
   failure_threshold: 3,
   market_days: {
     fund: "mon_fri",
@@ -76,18 +72,6 @@ const wrong = (field: string, message: string): ValidationError =>
 
 const wholeNumber = (value: unknown, least: number): value is number =>
   typeof value === "number" && Number.isInteger(value) && value >= least;
-
-const orderOf = (value: unknown): QuoteSource[] => {
-  if (
-    !Array.isArray(value) ||
-    value.length === 0 ||
-    !value.every(isQuoteSource) ||
-    new Set(value).size !== value.length
-  ) {
-    throw wrong("source_order", "source_order must list known sources, each once");
-  }
-  return value;
-};
 
 const callsOf = (
   value: unknown,
@@ -146,14 +130,13 @@ const isDayCount = (value: unknown): value is number =>
 
 /**
  * The calls a day a console **shares with the cloud** by default: the leftover
- * of the free plans (20 and 25) after the 18 and 23 of the cloud. A console of
+ * of the free plan (20) after the 18 of the cloud. A console of
  * a synced folder spends these unless its `config.json` says otherwise; two
  * stores that never see each other can only keep inside the plan by splitting
  * it.
  */
 export const SHARED_WITH_CLOUD_DAILY_CALLS: Readonly<Record<QuoteSource, number>> = {
   eodhd: 2,
-  alpha_vantage: 2,
 };
 
 /** Parses the text of `prices/config.json`; `undefined` (no file) is the defaults. */
@@ -174,9 +157,7 @@ export const parsePriceConfig = (
   }
   let config: PriceConfig = base;
   for (const [key, value] of Object.entries(raw)) {
-    if (key === "source_order") {
-      config = { ...config, source_order: orderOf(value) };
-    } else if (key === "daily_calls") {
+    if (key === "daily_calls") {
       config = { ...config, daily_calls: callsOf(value, base.daily_calls) };
     } else if (key === "failure_threshold") {
       if (!wholeNumber(value, 1)) {

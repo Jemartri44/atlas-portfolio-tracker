@@ -51,15 +51,9 @@ const synthetic = async (): Promise<LedgerEvent[]> =>
 
 const FISCAL = (year: string) => [
   ["tax", year],
-  ["tax", year, "--lots"],
   ["tax", year, "--boxes"],
-  ["tax", year, "--json"],
-  ["gains", year],
-  ["income", year],
   ["m720", year],
-  ["m720", year, "--json"],
   ["m721", year],
-  ["m721", year, "--json"],
 ];
 
 /**
@@ -88,7 +82,7 @@ const sameFiscalOutput = async (
 };
 
 describe("the fiscal output with prices/ next to the ledger", () => {
-  it("is identical byte for byte, with closes after the valuations of the 720 that win in a view", async () => {
+  it("is identical byte for byte, with closes after the valuations of the 720", async () => {
     // An asset abroad valued by hand on 28 December, and automatic closes on the 29th, 30th and
     // 31st, much higher: they are the ones a view of the latest price would show.
     const b = new Events();
@@ -105,9 +99,10 @@ describe("the fiscal output with prices/ next to the ledger", () => {
     };
     const f = await sameFiscalOutput(events, ["2027"], prices, "2028-03-01T10:00:00.000Z");
 
-    const m720 = JSON.parse((await f.atlas("m720", "2027", "--json")).out);
-    expect(JSON.stringify(m720)).toContain('"unit_value":"400"');
-    expect(JSON.stringify(m720)).not.toContain("902");
+    // The closes do not win over the valuation of the 720, however high they are.
+    const m720 = JSON.stringify(JSON.parse((await f.atlas("m720", "2027")).out));
+    expect(m720).toContain('"unit_value":"400"');
+    expect(m720).not.toContain("902");
   });
 
   it("is identical for the synthetic ledger of the golden files, every year", async () => {

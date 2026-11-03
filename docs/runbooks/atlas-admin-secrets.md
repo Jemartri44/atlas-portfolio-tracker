@@ -10,7 +10,7 @@ Feature 017, E4 (ADR-0034, fila 21). **Los valores de los secretos nunca pasan p
 ## Pasos
 
 1. `atlas admin secrets --env dev` (o `prod`). **No acepta ningún valor en la línea de órdenes, ni por variable de entorno, ni `--yes`**: lo pide, uno a uno, sin eco.
-2. Para cada parámetro dice si **ya existe** (lo pregunta a SSM sin descifrar, P-3) y pide el valor. **Enter lo deja como está.** Los que crea: `auth/allow-list` (se escribe **entera**: retirar el acceso es no incluir la entrada del `sub`, no cambiarle el correo), `auth/google-client-id` (`String`), `auth/google-client-secret`, `auth/session-key` (32 bytes aleatorios en base64url, generada aquí y nunca mostrada), `prices/eodhd-key` y `prices/alpha-vantage-key` (**`dev` no las lleva**, ADR-0034, fila 2).
+2. Para cada parámetro dice si **ya existe** (lo pregunta a SSM sin descifrar, P-3) y pide el valor. **Enter lo deja como está.** Los que crea: `auth/allow-list` (se escribe **entera**: retirar el acceso es no incluir la entrada del `sub`, no cambiarle el correo), `auth/google-client-id` (`String`), `auth/google-client-secret`, `auth/session-key` (32 bytes aleatorios en base64url, generada aquí y nunca mostrada), `prices/eodhd-key` (**`dev` no la lleva**, ADR-0034, fila 2).
 3. **Sobrescribir pide teclear el nombre del entorno.** Rotar la clave de sesión cierra todas las sesiones abiertas.
 4. Los parámetros nuevos llevan las etiquetas `project=atlas`, `env=<entorno>` y `managed_by=atlas-admin-secrets`; al rotar, se vuelven a poner.
 5. El resumen dice por parámetro `creado`, `sobrescrito` o `no se toca`. **Nunca un valor**, tampoco si AWS falla (el mensaje de error de AWS no se copia).

@@ -16,7 +16,7 @@ import {
   type ResolvedEffect,
   targetOf,
 } from "./kind-rules.js";
-import { euRegulatedMarket } from "./markets.js";
+import { euRegulatedAdmission, mixedVenue } from "./markets.js";
 import { accountsHolding } from "./positions.js";
 import {
   applyCarveOut,
@@ -50,10 +50,17 @@ const requireEuShareForCapitalReturn = (state: LedgerState, event: CorporateActi
       { asset_id: asset.asset_id, asset_type: asset.asset_type },
     );
   }
-  const eu = euRegulatedMarket(asset.market);
+  const eu = euRegulatedAdmission(asset);
   if (eu !== true) {
     const written = (asset.market ?? "").trim() !== "";
-    const reason = eu === false ? "not_eu" : written ? "market_unknown" : "market_missing";
+    const reason =
+      eu === false
+        ? "not_eu"
+        : mixedVenue(asset.market)
+          ? "admission_unknown"
+          : written
+            ? "market_unknown"
+            : "market_missing";
     throw new ProjectionError(
       "capital_return_needs_eu_listed",
       event.id,

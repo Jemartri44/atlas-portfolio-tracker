@@ -118,7 +118,7 @@ describe("what a record of a producer says", () => {
   it("finds the producer of a streak by its code and subject, both in closed lists", () => {
     const codes = {
       ecb_update: { ecb_update_rejected: ["ecb"] },
-      prices_update: { source_failing: ["eodhd", "alpha_vantage"] },
+      prices_update: { source_failing: ["eodhd"] },
     };
     expect(producerOf({ code: "task_failed", subject: "monthly_backup" }, codes)).toBe(
       "monthly_backup",

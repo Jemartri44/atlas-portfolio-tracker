@@ -25,9 +25,9 @@ import type {
 } from "../../src/schema/events.js";
 import { decodeLine } from "../../src/schema/line.js";
 import { DEFAULT_INCOME_CATEGORY } from "../../src/settings/settings.js";
-import { taxBoxes } from "../../src/tax/boxes/boxes.js";
+import { boxesOf, taxBoxes } from "../../src/tax/boxes/boxes.js";
 import { taxBoxesJson, taxReportJson } from "../../src/tax/json.js";
-import { taxYear } from "../../src/tax/year.js";
+import { taxYear, taxYearWithChain } from "../../src/tax/year.js";
 import { fixtureLines, fixtureText } from "../fixtures-path.js";
 import { LedgerBuilder } from "../ledger-builder.js";
 import { taxLedgerOf, taxOpArb } from "../properties/tax-ledgers.js";
@@ -121,22 +121,26 @@ const withMorePrices = (events: readonly LedgerEvent[]): LedgerEvent[] => [
 ];
 
 /**
- * A whole report of the same ledger is computed once per year for the whole file: the proofs below
- * compare the same baseline with different variants, and recomputing it each time is what made the
- * file slow under load.
+ * The walk of a ledger for a year (the report and the chain behind it) is computed once per ledger
+ * and year: the layout by box is built from the same walk, so a proof that compares both outputs
+ * does not walk the ledger twice for each variant.
  */
-const reports = new WeakMap<readonly LedgerEvent[], Map<number, ReturnType<typeof taxYear>>>();
-const reportOf = (events: readonly LedgerEvent[], year: number): ReturnType<typeof taxYear> => {
-  const byYear = reports.get(events) ?? new Map<number, ReturnType<typeof taxYear>>();
-  reports.set(events, byYear);
+type Walk = ReturnType<typeof taxYearWithChain>;
+const walks = new WeakMap<readonly LedgerEvent[], Map<number, Walk>>();
+const walkOf = (events: readonly LedgerEvent[], year: number): Walk => {
+  const byYear = walks.get(events) ?? new Map<number, Walk>();
+  walks.set(events, byYear);
   const known = byYear.get(year);
   if (known !== undefined) {
     return known;
   }
-  const report = taxYear(events, year, { today: TODAY });
-  byYear.set(year, report);
-  return report;
+  const walk = taxYearWithChain(events, year, { today: TODAY });
+  byYear.set(year, walk);
+  return walk;
 };
+
+const reportOf = (events: readonly LedgerEvent[], year: number): ReturnType<typeof taxYear> =>
+  walkOf(events, year).report;
 
 const json = (events: readonly LedgerEvent[], year: number): string =>
   JSON.stringify(taxReportJson(reportOf(events, year)));
@@ -147,8 +151,10 @@ const json = (events: readonly LedgerEvent[], year: number): string =>
  * every price of the ledger leaves it identical byte for byte, exactly as for
  * the report underneath.
  */
-const boxesJson = (events: readonly LedgerEvent[], year: number): string =>
-  JSON.stringify(taxBoxesJson(taxBoxes(events, year, { today: TODAY })));
+const boxesJson = (events: readonly LedgerEvent[], year: number): string => {
+  const { report, chain } = walkOf(events, year);
+  return JSON.stringify(taxBoxesJson(boxesOf(report, chain)));
+};
 
 let syntheticEvents: LedgerEvent[] | undefined;
 /** The synthetic ledger, decoded once; no test changes it. */
@@ -160,14 +166,24 @@ const synthetic = (): LedgerEvent[] => {
 const YEARS = [2026, 2027, 2028, 2029];
 
 describe("proof 1: no figure of the return depends on a price", () => {
-  it("deletes every price of the synthetic ledger and every report is identical", () => {
-    const events = synthetic();
-    const stripped = withoutPrices(events);
-    expect(stripped.length).toBeLessThan(events.length);
-    for (const year of YEARS) {
+  // One test per year: each walks the ledger about ten times (the other readings of the doubtful
+  // criteria), so a single test over the four years is the one that a loaded machine times out.
+  it.each(YEARS)(
+    "deletes every price of the synthetic ledger and the report of %i is identical",
+    (year) => {
+      const events = synthetic();
+      const stripped = withoutPrices(events);
+      expect(stripped.length).toBeLessThan(events.length);
       expect(json(stripped, year)).toBe(json(events, year));
       expect(boxesJson(stripped, year)).toBe(boxesJson(events, year));
-    }
+    },
+  );
+
+  it("lays the synthetic ledger out by box through the public door", () => {
+    // The public door of the layout is the same walk handed to the same function.
+    expect(JSON.stringify(taxBoxesJson(taxBoxes(synthetic(), 2027, { today: TODAY })))).toBe(
+      boxesJson(synthetic(), 2027),
+    );
   });
 
   it("deletes every price of the hand-computed exercise and every report is identical", () => {

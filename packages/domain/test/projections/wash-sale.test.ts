@@ -6,6 +6,15 @@ import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 
 const EUR = { currency: "EUR", fx_rate: "1" } as const;
 
+/**
+ * Funds on two months (`2:fund_2m`, a setting since 2026-11-03), for the cases
+ * whose dates are counted in two months: what they pin is how a transfer or a
+ * forced sale meets the window, not which window a fund takes by default.
+ */
+const FUNDS_2M = mergeSettings(DEFAULT_SETTINGS, {
+  wash_sale_window: { ...DEFAULT_SETTINGS.wash_sale_window, fund: "2m", money_market: "2m" },
+});
+
 const codes = (state: LedgerState, code: string) =>
   state.warnings.filter((warning) => warning.code === code);
 
@@ -124,8 +133,8 @@ describe("wash_sale_window_repurchase: buying back after a loss", () => {
     expect(codes(stockCycle("2027-04-11"), "wash_sale_window_repurchase")).toEqual([]);
   });
 
-  it("warns at eleven months and not at thirteen for a fund (one year)", () => {
-    const fundCycle = (repurchase: string, window?: "1y"): LedgerState => {
+  it("warns at eleven months and not at thirteen for a fund (one year, its default)", () => {
+    const fundCycle = (repurchase: string, window?: "2m"): LedgerState => {
       const b = new LedgerBuilder();
       catalogue(b);
       if (window !== undefined) {
@@ -163,14 +172,14 @@ describe("wash_sale_window_repurchase: buying back after a loss", () => {
       });
       return projectLedger(b.build());
     };
-    // A fund is taxed by value date and its window is **two months** (criterion
-    // #2): the sale of 10 February warns until 10 April and not on the 11th.
-    expect(codes(fundCycle("2027-04-10"), "wash_sale_window_repurchase")).toHaveLength(1);
-    expect(codes(fundCycle("2027-04-11"), "wash_sale_window_repurchase")).toEqual([]);
-    // With a year written into the ledger, eleven months still warn and
-    // thirteen do not: the arithmetic of the year is the same as it was.
-    expect(codes(fundCycle("2028-01-10", "1y"), "wash_sale_window_repurchase")).toHaveLength(1);
-    expect(codes(fundCycle("2028-03-10", "1y"), "wash_sale_window_repurchase")).toEqual([]);
+    // A fund is taxed by value date and its window is **a year** by default
+    // (criterion #2, `2:fund_1y`): eleven months still warn, thirteen do not.
+    expect(codes(fundCycle("2028-01-10"), "wash_sale_window_repurchase")).toHaveLength(1);
+    expect(codes(fundCycle("2028-03-10"), "wash_sale_window_repurchase")).toEqual([]);
+    // With two months written into the ledger (`2:fund_2m`), the sale of 10
+    // February warns until 10 April and not on the 11th.
+    expect(codes(fundCycle("2027-04-10", "2m"), "wash_sale_window_repurchase")).toHaveLength(1);
+    expect(codes(fundCycle("2027-04-11", "2m"), "wash_sale_window_repurchase")).toEqual([]);
   });
 
   it("does not warn when the sale made money", () => {
@@ -541,9 +550,11 @@ const NAV = { nav_out: "10", nav_in: "10" } as const;
  * that must behave like `true` (the documented default).
  */
 const withTransferCounts = (b: LedgerBuilder, counts?: boolean): void => {
-  if (counts !== undefined) {
-    b.settings(mergeSettings(DEFAULT_SETTINGS, { wash_sale_transfer_counts: counts }));
-  }
+  b.settings(
+    counts === undefined
+      ? FUNDS_2M
+      : mergeSettings(FUNDS_2M, { wash_sale_transfer_counts: counts }),
+  );
 };
 
 describe("wash_sale_transfer_counts: a transfer in as an acquisition", () => {
@@ -597,7 +608,7 @@ describe("wash_sale_transfer_counts: a transfer in as an acquisition", () => {
         // 10 came in, the sale took 6: 4 are still held.
         held_quantity: "4",
         loss_eur: "-24",
-        // Two months for a fund (criterion #2): the transfer of 3 May is still
+        // Two months for a fund here (`FUNDS_2M`): the transfer of 3 May is still
         // well inside the window of a sale of 1 June.
         window_start: "2027-04-01",
         window: "2m",
@@ -812,6 +823,7 @@ describe("wash_sale_window_prior_buy: a forced sale warns like a sell", () => {
   const liquidation = (buyDate: string): LedgerState => {
     const b = new LedgerBuilder();
     catalogue(b);
+    b.settings(FUNDS_2M);
     // Held before the window opens: a lone purchase in it would be exempt.
     b.buy({
       account_id: "acc_fund",
