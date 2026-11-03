@@ -199,20 +199,6 @@ const refuseSpanishForeignTax = (event: SupportedEvent, before: () => LedgerStat
 };
 
 /**
- * The rules that apply to what is being **written** and never to a ledger on
- * load (ADR-0018): every write path (a new event, a correction, a remote unit)
- * runs them on the event it introduces.
- */
-export const checkOnWrite = (
-  after: LedgerState,
-  event: SupportedEvent,
-  before: () => LedgerState,
-): void => {
-  checkIsinUnique(after, event, before);
-  refuseSpanishForeignTax(event, before);
-};
-
-/**
  * A transfer that cannot defer tax is tolerated when a ledger is replayed (a
  * warning) but never recorded: the book may predate the rule, the entry may not.
  */
@@ -225,6 +211,41 @@ const refuseNonFundTransfer = (state: LedgerState, event: SupportedEvent): void 
       blocked.code === "transfer_not_between_funds" ? "not_transferable" : blocked.code,
       blocked.message,
       blocked.details,
+    );
+  }
+};
+
+/**
+ * The rules that apply to what is being **written** and never to a ledger on
+ * load (ADR-0018): every write path (a new event, a correction, a remote unit)
+ * runs them on the event it introduces.
+ */
+export const checkOnWrite = (
+  after: LedgerState,
+  event: SupportedEvent,
+  before: () => LedgerState,
+): void => {
+  checkIsinUnique(after, event, before);
+  refuseSpanishForeignTax(event, before);
+  refuseNonFundTransfer(after, event);
+};
+
+/**
+ * What a write refuses from the event and its options alone, before projecting
+ * anything: shared by every path that writes or previews a draft, so a preview
+ * never accepts what the write would refuse.
+ */
+export const checkDraft = (event: SupportedEvent, options: RecordOptions): void => {
+  if (hasOverlongDecimal(event)) {
+    throw new ValidationError("invalid_decimal", "a decimal has more digits than a ledger takes", {
+      max: MAX_DECIMAL_DIGITS,
+    });
+  }
+  if (options.acceptInvalid === true && event.type !== "settings_changed") {
+    throw new ValidationError(
+      "accept_invalid_not_allowed",
+      "only a settings_changed may be recorded over events it invalidates",
+      { type: event.type },
     );
   }
 };
@@ -251,7 +272,6 @@ export const checkInvalid = (
     throw own.error;
   }
   checkOnWrite(state, event, () => projectLedger(events, { collectErrors: true }));
-  refuseNonFundTransfer(state, event);
   if (event.type !== "settings_changed") {
     /*
      * An event that was already invalid before this mutation blocks it, but it
@@ -290,18 +310,7 @@ export const recordEvent = async <E extends SupportedEvent>(
 ): Promise<RecordResult<E>> => {
   const { events, etag } = await deps.store.load();
   const event = completeDraft<E>(deps, draft, options.id ?? createUlidGenerator(deps).next());
-  if (hasOverlongDecimal(event)) {
-    throw new ValidationError("invalid_decimal", "a decimal has more digits than a ledger takes", {
-      max: MAX_DECIMAL_DIGITS,
-    });
-  }
-  if (options.acceptInvalid === true && event.type !== "settings_changed") {
-    throw new ValidationError(
-      "accept_invalid_not_allowed",
-      "only a settings_changed may be recorded over events it invalidates",
-      { type: event.type },
-    );
-  }
+  checkDraft(event, options);
   const { affected, state } = checkInvalid(events, event, options);
   const duplicates = duplicatesOf(state.fingerprints, event);
   if (duplicates.length > 0 && options.confirmDuplicate !== true) {
