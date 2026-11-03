@@ -107,8 +107,10 @@ describe("the correspondence beside the prices", () => {
     cloud({ prices: { ast_world: line("2029-06-29", "999") } });
     expect((await loadWebQuotes(["ast_world"])).symbols).toEqual({ problem: "missing" });
     const host = await show("/cartera", Cartera);
-    await settle(20);
-    expect(text(host)).toContain("no se puede comprobar la divisa");
+    await until(
+      () => text(host).includes("no se puede comprobar la divisa"),
+      "the warning about the currency of the prices",
+    );
   });
 });
 

@@ -210,9 +210,20 @@ describe("FileEcbHistoryStore", () => {
     const kept = await store.keepRejected(
       downloaded(Buffer.from("otro"), "zip", "2026-09-25T10:00:00.000Z"),
     );
-    expect(kept.file).toBe("rejected/2026-09-25T10-00-00-000Z-eurofxref-hist.csv");
+    expect(kept.file).toBe("rejected/eurofxref-hist.csv");
     expect((await store.active())?.text).toBe(content.toString("utf8"));
     expect((await store.manifest())?.rejected).toHaveLength(1);
+    // A second rejection of the same source replaces the first; another source adds its own.
+    await store.keepRejected(downloaded(Buffer.from("tercero"), "zip", "2026-09-26T10:00:00.000Z"));
+    expect((await store.manifest())?.rejected).toHaveLength(1);
+    expect(
+      await readFile(join(folder, "reference", "ecb", "rejected", "eurofxref-hist.csv"), "utf8"),
+    ).toBe("tercero");
+    await store.keepRejected(downloaded(Buffer.from("api"), "api", "2026-09-27T10:00:00.000Z"));
+    expect((await store.manifest())?.rejected.map((meta) => meta.file)).toEqual([
+      "rejected/eurofxref-hist.csv",
+      "rejected/api-exr.csv",
+    ]);
   });
 
   it("writes under the lock of the ledger folder, and never with another writer in it (mutant 23)", async () => {

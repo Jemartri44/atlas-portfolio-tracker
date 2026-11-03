@@ -28,7 +28,9 @@ export const describeSecretsError = (error: SecretsError): string => {
     case "secrets_inside_ledger_folder":
       return `el fichero de claves (${error.path}) y la carpeta del libro están uno dentro del otro. Las claves no pueden viajar con el libro, que se copia y se exporta: pon el libro fuera de la carpeta de configuración, o al revés. No se hace nada hasta entonces.`;
     case "secrets_too_open":
-      return `${error.path} lo pueden leer otros usuarios: «chmod 600 ${error.path}».`;
+      return `${error.path} lo pueden leer otros usuarios, o su carpeta les deja entrar: «chmod 600 ${error.path}» y «chmod 700» de su carpeta.`;
+    case "secrets_not_yours":
+      return `${error.path} no es de tu usuario: las claves tienen que ser de quien ejecuta la consola. No se usan.`;
     case "secrets_unknown_key":
       return `${error.path}: la entrada número ${error.position} no es una clave que se conozca. Solo vale «eodhd». No se enseña su nombre, por si fuera la clave misma.`;
     case "secrets_invalid_value":

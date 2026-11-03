@@ -77,7 +77,7 @@ Decidida por la dirección al contestar las diez preguntas de la primera redacci
 7. **Dos fuentes con cierre para la misma fecha:** gana **la primera en el orden configurado**, y se guarda de qué fuente vino. No se promedia nada.
 8. **El correo por fallos seguidos es de la feature 016.** La 013 solo lleva el registro de fallos.
 9. ~~**Atribución de CoinGecko: texto y enlace**, con `rel="noopener noreferrer"`. Un enlace no carga nada de fuera, así que no choca con la CSP. Si la comprobación del paquete rechaza URLs externas, se añade la excepción con su motivo escrito, como la del BOE.~~ Retirada con CoinGecko (tercera enmienda): la web no enlaza a ninguna fuente de precios.
-10. **El techo del total del paquete web** sube con la regla de siempre, en su propio commit, a lo medido más un margen pequeño y con el desglose. **El arranque no sube en ningún caso**, y si no cabe, la feature para.
+10. **El techo del total del paquete web** sube con la regla de siempre, en su propio commit, a lo medido más un margen pequeño y con el desglose. ~~**El arranque no sube en ningún caso**, y si no cabe, la feature para.~~ Sin techo del arranque desde el 2026-11-03; solo el del total.
 
 **Lo que esta ADR dejaba sin decir:**
 
@@ -186,7 +186,7 @@ Sufijos de bolsa documentados en Alpha Vantage: `.LON`, `.DEX` (Xetra), `.TRT`, 
 ### 9. Los ficheros de configuración
 
 - **`prices/config.json`**, escrito por el usuario y nunca por la aplicación: `source_order` (por defecto `eodhd`, `alpha_vantage`), `daily_calls` (20 y 25; `0` apaga una fuente) y `failure_threshold` (3). Sin fichero, los valores por defecto; una clave desconocida o un valor que no se entiende es un error, nunca un valor por defecto en silencio.
-- **`~/.config/atlas/secrets.json`** (o `$XDG_CONFIG_HOME/atlas/secrets.json`), con solo `eodhd` y `alpha_vantage`. **Si su modo deja leer a otros** (cualquier bit de grupo u otros), la consola **no usa las claves** (`secrets_too_open`) y dice la orden `chmod 600` que lo arregla; todo lo demás funciona igual. **`atlas prices update` sale con 1**; **`atlas prices symbols set` sale con 0** y guarda la correspondencia como «sin contrastar», que se contrastará antes de su primera descarga (§4). Una clave desconocida se dice **por su posición**, nunca por su nombre, por si el usuario invirtió nombre y valor. La consola se niega si la carpeta de la configuración y la del libro están una dentro de la otra.
+- **`~/.config/atlas/secrets.json`** (o `$XDG_CONFIG_HOME/atlas/secrets.json`), con solo `eodhd` y `alpha_vantage`. **Si su modo deja leer a otros** (cualquier bit de grupo u otros, también en su carpeta, que ha de ser `700`), la consola **no usa las claves** (`secrets_too_open`) y dice la orden `chmod 600` que lo arregla; todo lo demás funciona igual. **`atlas prices update` sale con 1**; **`atlas prices symbols set` sale con 0** y guarda la correspondencia como «sin contrastar», que se contrastará antes de su primera descarga (§4). Una clave desconocida se dice **por su posición**, nunca por su nombre, por si el usuario invirtió nombre y valor. La consola se niega si la carpeta de la configuración y la del libro están una dentro de la otra.
 - **`prices/` no guarda nada que no pueda viajar**: ni claves ni direcciones. Puede entrar en las copias, la exportación y la sincronización sin excluir nada.
 
 ## Nota del 2026-09-25 (ADR-0033 aceptada)

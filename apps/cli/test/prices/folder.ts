@@ -60,6 +60,7 @@ export const folder = async (
   const config = join(root, "config", "atlas");
   await mkdir(dir, { recursive: true });
   await mkdir(config, { recursive: true });
+  await chmod(config, 0o700);
   const ledger = join(dir, "ledger.jsonl");
   await writeFile(ledger, events.map((event) => `${encodeLine(event)}\n`).join(""));
   const secrets = join(config, "secrets.json");

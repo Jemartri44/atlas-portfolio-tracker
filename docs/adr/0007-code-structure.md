@@ -71,5 +71,5 @@ Las reglas del acceso a la API (ADR-0027) vivían en `packages/domain/src/access
   - `aws-admin`: la API nunca llega a la administración.
   - `remote-answers`: la web la usa fuera del motor de la sincronización.
   - `rebalance`: lleva el motor fiscal, que no puede viajar con `portfolio`.
-- **El grupo de chunks del dominio** (`advancedChunks` en `apps/web/vite.config.ts`) se mantiene. Medido sin él, el arranque pasa de 74,5 a 77,3 KB gzip y el total de 335,0 a 340,7.
+- ~~**El grupo de chunks del dominio** (`advancedChunks` en `apps/web/vite.config.ts`) se mantiene.~~ **Retirado el 2026-11-03** junto con el techo del arranque: fijaba a mano qué módulos del dominio iban en el arranque para ganar 1-3 KB. Medido sin él, el arranque pasa de 78,0 a 81,2 KB gzip y el total de 370,9 a 377,9. Siguen el techo del total y la regla de que lo fiscal, el BCE, los precios y la sincronización no estén en el arranque (`check-bundle.mjs`).
 

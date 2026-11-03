@@ -7,7 +7,6 @@ import { settingsAt, yearOf } from "@atlas/domain";
 import { informativeReturn, repurchaseCalendar, taxBoxes, taxYear } from "@atlas/domain/fiscal";
 import { createMemo, createResource, For, type JSX, Show } from "solid-js";
 import { nameIndex } from "../../format/names.js";
-import { toAppError } from "../../ledger/errors.js";
 import { attempt } from "../../ledger/query.js";
 import { store, today } from "../../ledger/state.js";
 import { useQuotes } from "../../prices/use-quotes.jsx";
@@ -51,13 +50,14 @@ export default function FiscalRoute(): JSX.Element {
         const wide = mediaQuery(GRID);
         // Informative prices, only for the "what if I sell" estimate: no figure of the return uses them.
         const prices = useQuotes(snapshot.state);
-        const current = yearOf(today());
+        // Reactive: a screen left open across the new year follows it.
+        const current = (): number => yearOf(today());
         const filings = [...snapshot.state.filings.values()];
         const choices = createMemo<YearChoice[]>(() =>
           yearsOf(
             [...snapshot.state.gains, ...snapshot.state.externalIncome],
             filings,
-            current,
+            current(),
           ).map((year) => ({
             year,
             filed: filings.some(
@@ -68,7 +68,7 @@ export default function FiscalRoute(): JSX.Element {
             ),
           })),
         );
-        const picked = useYear(() => current - 1);
+        const picked = useYear(() => current() - 1);
         const year = (): number => picked.year();
         // The findings of the ECB check note the lines that depend on them and
         // move no figure (ADR-0029, point 8); they arrive after the first
@@ -90,13 +90,7 @@ export default function FiscalRoute(): JSX.Element {
          * ledger with invalid events cannot be read fiscally (ADR-0015), and
          * the answer to that is the list of what to repair, not a figure.
          */
-        const report = createMemo(() => {
-          try {
-            return { ok: true as const, value: taxYear(snapshot.events, year(), options()) };
-          } catch (error) {
-            return { ok: false as const, error: toAppError(error) };
-          }
-        });
+        const report = createMemo(() => attempt(() => taxYear(snapshot.events, year(), options())));
         // Each part answers or says why it cannot: one that fails does not take the screen with it.
         const boxes = createMemo(() =>
           attempt(() => boxesView(taxBoxes(snapshot.events, year(), options()), names)),

@@ -42,7 +42,7 @@ La **vía c**: la Lambda es el cliente OAuth y el token de Google nunca toca la 
 | `POST /api/auth/logout-all` | **Cierra la sesión en todos los dispositivos** (ADR-0037), esta incluida. Pide cookie válida, `Origin` propio y cuerpo **exactamente** `{}` (otro cuerpo, `400 body_invalid`). Avanza la marca (abajo) a la hora del servidor, borra la cookie y responde `204`. |
 | `GET /api/session` | `200 { "signed_in": true, "expires_at": "<Z>" }`, con `Cache-Control: no-store`: así sabe la SPA si tiene sesión (la cookie es `HttpOnly`) y hasta cuándo. Si no, la misma respuesta que cualquier ruta con cookie (`401 unauthenticated`, `401 session_invalid`, `403 not_allowed`, `503 remote_unavailable`). |
 
-**Duraciones**: la sesión, **24 h absolutas**, sin renovación (ADR-0035, pregunta 6, 2026-10-06; antes eran 8 h, ADR-0027); la cookie transitoria, **10 min** (2026-09-25). Las dos son configuración de la Lambda (§9). **Antes de abrir un formulario, la web avisa si a la sesión le quedan menos de 15 minutos** (`expires_at` de `GET /api/session`), porque un formulario a medias se pierde si la sesión caduca (ADR-0035, §2 y «Riesgos aceptados»).
+**Duraciones**: la sesión, **24 h absolutas**, sin renovación (ADR-0035, pregunta 6, 2026-10-06; antes eran 8 h, ADR-0027). Valen igual en el código (`apps/api/src/access/config.ts`) y en el despliegue (`infra/modules/atlas/api.tf`); una prueba de `infra/` las compara; la cookie transitoria, **10 min** (2026-09-25). Las dos son configuración de la Lambda (§9). **Antes de abrir un formulario, la web avisa si a la sesión le quedan menos de 15 minutos** (`expires_at` de `GET /api/session`), porque un formulario a medias se pierde si la sesión caduca (ADR-0035, §2 y «Riesgos aceptados»).
 
 **La cookie de sesión** es `__Host-atlas_session`, con `Path=/`, `Secure`, `HttpOnly`, `SameSite=Strict` y sin `Domain`, firmada con HMAC-SHA256 y la subclave HKDF de `info` `atlas session v1`, con `typ: "atlas.session"`. Lleva **solo** `sub`, un identificador de sesión (`sid`), la emisión (`iat`, en segundos) y la caducidad (`exp`): **ninguna cookie lleva el correo**. La transitoria, `__Host-atlas_login`, con su propia subclave (`atlas login v1`, `typ: "atlas.login"`). Formato exacto: `packages/access/src/signed.ts`.
 
@@ -308,7 +308,7 @@ Decidido el 2026-09-25 (feature 015). **Los valores los crea y los rota el guion
 
 | Parámetro | Tipo | Valor | Caché en cada instancia |
 |---|---|---|---|
-| `/atlas/<entorno>/auth/allow-list` | `SecureString` | `{"allow_list_format":1,"entries":[{"sub":"…","email":"…"}]}`; el correo se compara **exacto** y además se exige `email_verified` | 120 s |
+| `/atlas/<entorno>/auth/allow-list` | `SecureString` | `{"allow_list_format":1,"entries":[{"sub":"…","email":"…"}]}`; el correo se compara **exacto** y además se exige `email_verified`; una clave repetida la hace ilegible (nadie entra) | 120 s |
 | `/atlas/<entorno>/auth/google-client-id` | `String` | el identificador del cliente OAuth del entorno | 300 s |
 | `/atlas/<entorno>/auth/google-client-secret` | `SecureString` | el secreto, tal cual | 300 s |
 | `/atlas/<entorno>/auth/session-key` | `SecureString` | 32 bytes aleatorios en base64url (43 caracteres); de ella salen las subclaves HKDF | 300 s: rotarla cierra todas las sesiones como mucho en 5 minutos |

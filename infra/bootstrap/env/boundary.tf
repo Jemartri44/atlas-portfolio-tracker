@@ -110,7 +110,6 @@ locals {
         "acm:Get*",
         "acm:ListTagsForCertificate",
         "acm:RemoveTagsFromCertificate",
-        "acm:RequestCertificate",
         "cloudfront:Create*",
         "cloudfront:Delete*",
         "cloudfront:Describe*",
@@ -161,18 +160,13 @@ locals {
       condition = { StringEquals = { "aws:RequestedRegion" = [local.home, local.edge] } }
     },
     {
-      sid       = "PassToLambda"
+      # Both services in one statement (the 6,144 ceiling); the deploy role's own policy
+      # keeps each role bound to its service.
+      sid       = "PassRole"
       effect    = "Allow"
       actions   = ["iam:PassRole"]
-      resources = concat([local.role_arn.api], local.job_role_arns)
-      condition = { StringEquals = { "aws:RequestedRegion" = [local.home, local.edge], "iam:PassedToService" = "lambda.amazonaws.com" } }
-    },
-    {
-      sid       = "PassToScheduler"
-      effect    = "Allow"
-      actions   = ["iam:PassRole"]
-      resources = [local.role_arn.scheduler]
-      condition = { StringEquals = { "aws:RequestedRegion" = [local.home, local.edge], "iam:PassedToService" = "scheduler.amazonaws.com" } }
+      resources = concat([local.role_arn.api, local.role_arn.scheduler], local.job_role_arns)
+      condition = { StringEquals = { "aws:RequestedRegion" = [local.home, local.edge], "iam:PassedToService" = ["lambda.amazonaws.com", "scheduler.amazonaws.com"] } }
     },
   ]
 
@@ -192,6 +186,17 @@ locals {
       effect    = "Deny"
       actions   = ["iam:Attach*", "iam:Create*", "iam:Delete*", "iam:Detach*", "iam:Put*", "iam:Set*", "iam:Tag*", "iam:Untag*", "iam:Update*"]
       resources = concat(local.bootstrap_role_arns, [local.iam_policies])
+    },
+    {
+      # Edge resources are scoped by tag, and `StringEqualsIfExists` in `Edge` lets an
+      # untagged one through: a resource without the `project` tag (another project of
+      # the account) can be read but never changed nor deleted. CloudFront functions and the
+      # web ACL are out of it: the provider cannot tag the former and both are scoped by name.
+      sid       = "DenyUntaggedEdge"
+      effect    = "Deny"
+      actions   = ["acm:Delete*", "cloudfront:DeleteDistribution", "cloudfront:UpdateDistribution"]
+      resources = ["*"]
+      condition = { Null = { "aws:ResourceTag/project" = "true" } }
     },
     {
       sid       = "DenyOtherRegions"

@@ -39,6 +39,11 @@ const describeUpdate = (result: EcbUpdateResult): string[] => {
       ? `Histórico del BCE al día (${sourceName(result.stored.source)}): no hay días nuevos; el último publicado es el ${day(result.latest)}.`
       : `Histórico del BCE actualizado desde ${sourceName(result.stored.source)}: ${result.newDays} ${result.newDays === 1 ? "día nuevo" : "días nuevos"}, hasta el ${day(result.latest)}. Guardado en reference/ecb/${result.stored.file}.`,
   );
+  if (result.backfilled > 0) {
+    lines.push(
+      `Aviso: la descarga trae ${result.backfilled} tipos de días ya conocidos que el histórico anterior no tenía. Se ha activado; revisa que lo esperabas.`,
+    );
+  }
   lines.push(...describeCalendar(result.calendar));
   return lines;
 };
@@ -61,7 +66,7 @@ export const fxCommand = async (
       render(
         ctx,
         { stored: false },
-        "No hay histórico del BCE junto al libro: descárgalo con `atlas fx update`. Sin él, los tipos del libro no se contrastan.",
+        "No hay histórico del BCE junto al libro: lo normal es bajarlo desde la web (Ajustes, BCE); `atlas fx update` queda para un libro local. Sin él, los tipos del libro no se contrastan.",
       );
       return 0;
     }
