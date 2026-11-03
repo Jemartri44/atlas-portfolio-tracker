@@ -10,7 +10,7 @@
     "jsxImportSource": "solid-js",
     "types": ["node", "vite-plugin-pwa/client"]
   },
-  "include": ["src", "test", "vite.config.ts", "../../packages/adapters/test/fake-idb.ts"],
+  "include": ["src", "test", "vite.config.ts"],
   "exclude": [
     "test/cloud/api-support.ts",
     "test/write/cloud-write.test.tsx",

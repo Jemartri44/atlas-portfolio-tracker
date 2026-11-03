@@ -1,127 +1,134 @@
-// Where the web gets the ECB history (ADR-0029, point 3).
+// Where the web gets the ECB history (ADR-0029, point 3; ADR-0035).
 //
-// **The web downloads nothing from a third party.** It uses the public copy
-// kept in this browser: imported by hand, or downloaded from our own cloud
-// (`./cloud.ts`). Without one there is no history: nothing is proposed, and
-// the rates are typed as always.
+// **The web downloads nothing from a third party and keeps nothing on the device.** With the
+// session of this browser it reads `manifest.json` and the file in force from our own API, checks
+// the file's SHA-256 against the manifest, and holds the history in memory for the life of the
+// page. Without one there is no history: nothing is proposed, and the rates are typed as always.
 //
 // Everything here is loaded lazily: nothing of the ECB is on the boot path, and the build fails if
 // it ever is.
 
+import { httpReference } from "@atlas/adapters/reference-http";
+import { DomainError, sha256Hex } from "@atlas/domain";
 import {
-  forgetImportedHistory,
-  importedHistory,
-  saveImportedHistory,
-} from "@atlas/adapters/reference";
-import { DomainError, madridDateOf } from "@atlas/domain";
-import {
+  activeHistoryOf,
   asciiText,
-  checkHistoryUpdate,
   DEFAULT_LOCAL_CONFIG,
   type EcbHistory,
   type EcbSource,
-  type HistoryConflict,
   latestPublication,
   readEcbHistory,
 } from "@atlas/domain/ecb";
-import { entryOfZip, isZip } from "./zip.js";
+import { RemoteError } from "@atlas/domain/remote-answers";
 
 export interface WebHistory {
   history?: EcbHistory;
-  /** Where it came from: a copy imported by hand, or the cloud. */
-  origin?: "imported" | "cloud";
   source?: EcbSource;
   /** The last day it publishes. */
   latest?: string;
-  /** When it was imported or downloaded. */
+  /** When it was read from the cloud. */
   when?: string;
   /** The threshold of a currency the ECB stopped publishing (the default of the domain). */
   staleDays: number;
   /**
-   * Why no history could be read where one may be: this browser keeps no site data at all
-   * (`storage`), or the copy it keeps is not a history that reads (`unreadable`, to be erased and
-   * downloaded again). Said, never swallowed.
+   * Why no history could be read where one may be: the cloud did not answer (`unavailable`, with
+   * the `code` of the failure), or its file is not the one its manifest records or does not read
+   * (`unreadable`). Said, never swallowed.
    */
-  problem?: "storage" | "unreadable";
+  problem?: "unavailable" | "unreadable";
+  code?: string;
 }
 
-const fromImport = async (staleDays: number): Promise<WebHistory | undefined> => {
-  const stored = await importedHistory();
-  if (stored === undefined) {
+const utf8 = new TextDecoder("utf-8", { fatal: true });
+
+const none = (): WebHistory => ({ staleDays: DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days });
+
+const textOf = (bytes: Uint8Array): string | undefined => {
+  try {
+    return utf8.decode(bytes);
+  } catch {
     return undefined;
   }
-  const history = readEcbHistory(stored.text, stored.source);
-  return {
-    history,
-    origin: stored.origin === "cloud" ? "cloud" : "imported",
-    source: stored.source,
-    latest: latestPublication(history),
-    when: stored.imported_at,
-    staleDays,
-  };
+};
+
+/** Reads the history in force in the cloud; a file that does not match its manifest is not used. */
+const fromCloud = async (request: typeof fetch, now: Date): Promise<WebHistory> => {
+  const staleDays = DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days;
+  const reference = httpReference({ origin: "", fetch: request });
+  try {
+    const manifest = await reference.get("ecb", "manifest.json");
+    if (manifest.kind !== "file") {
+      return none();
+    }
+    const manifestText = textOf(manifest.bytes);
+    const active = manifestText === undefined ? undefined : activeHistoryOf(manifestText);
+    if (active === undefined) {
+      return { staleDays, problem: "unreadable" };
+    }
+    const file = await reference.get("ecb", active.file);
+    // The SHA-256 of the bytes as they came, before anything reads them.
+    if (file.kind !== "file" || sha256Hex(file.bytes) !== active.sha256) {
+      return { staleDays, problem: "unreadable" };
+    }
+    const history = readEcbHistory(asciiText(file.bytes), active.source);
+    return {
+      history,
+      source: active.source,
+      latest: latestPublication(history),
+      when: now.toISOString(),
+      staleDays,
+    };
+  } catch (error) {
+    // The cloud's answer (a `RemoteError`) is one thing; a manifest or file that came and does not
+    // read is another.
+    if (error instanceof RemoteError) {
+      return { staleDays, problem: "unavailable", code: error.code };
+    }
+    if (error instanceof DomainError) {
+      return { staleDays, problem: "unreadable", code: error.code };
+    }
+    throw error;
+  }
 };
 
 let cached: Promise<WebHistory> | undefined;
 
-/** The history in force for the web: the copy of this browser (public), else none. */
-export const loadWebHistory = (): Promise<WebHistory> => {
-  cached ??= load().catch(
-    // Without a store to read from (private mode, blocked site data), or with a copy that does not
-    // read, there is no history: the form types the rate as always, and the card says why.
-    (error: unknown): WebHistory => ({
-      staleDays: DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days,
-      problem: error instanceof DomainError ? "unreadable" : "storage",
-    }),
-  );
+/**
+ * The history in force for the web: read from the cloud once per page and held in memory. A cloud
+ * that did not answer is not held: the next call asks again.
+ */
+export const loadWebHistory = (
+  request: typeof fetch = (...args) => fetch(...args),
+): Promise<WebHistory> => {
+  if (cached === undefined) {
+    const reading: Promise<WebHistory> = fromCloud(request, new Date()).then(
+      (web) => {
+        // Only a clean answer is held; a failure, a half-rotated file or a damaged one is asked
+        // again next time. The identity check keeps a late answer from erasing a newer reading.
+        if (web.problem !== undefined && cached === reading) {
+          cached = undefined;
+        }
+        return web;
+      },
+      (error: unknown) => {
+        if (cached === reading) {
+          cached = undefined;
+        }
+        throw error;
+      },
+    );
+    cached = reading;
+  }
   return cached;
 };
 
-const load = async (): Promise<WebHistory> =>
-  (await fromImport(DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days)) ?? {
-    staleDays: DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days,
-  };
-
-/** Forget what was read, after importing a file. */
-export const reloadWebHistory = (): Promise<WebHistory> => {
+/** Forgets what was read — a new download, or the end of the session. */
+export const reloadWebHistory = (request?: typeof fetch): Promise<WebHistory> => {
   cached = undefined;
-  return loadWebHistory();
+  return loadWebHistory(request);
 };
 
-type ImportOutcome =
-  | { kind: "imported"; latest: string; source: EcbSource }
-  | { kind: "rejected"; total: number; conflicts: HistoryConflict[] };
-
-/**
- * Imports the history the user chose: the ECB's ZIP or its CSV, or the CSV of
- * its API. It is read **before** anything is kept; and a file that changes a
- * rate the imported one already has is **not** kept (ADR-0029, point 2).
- */
-export const importHistoryFile = async (
-  name: string,
-  bytes: Uint8Array,
-): Promise<ImportOutcome> => {
-  const csv = isZip(bytes) ? await entryOfZip(bytes, ".csv") : bytes;
-  const text = asciiText(csv);
-  const source: EcbSource = text.startsWith("Date,") ? "zip" : "api";
-  const next = readEcbHistory(text, source);
-  const stored = await importedHistory();
-  const previous = stored === undefined ? undefined : readEcbHistory(stored.text, stored.source);
-  const check = checkHistoryUpdate(previous, next, madridDateOf(new Date()));
-  if (check.kind === "rejected") {
-    return { kind: "rejected", total: check.total, conflicts: check.conflicts };
-  }
-  await saveImportedHistory({
-    text,
-    source,
-    file_name: name,
-    imported_at: new Date().toISOString(),
-  });
-  await reloadWebHistory();
-  return { kind: "imported", latest: check.latest, source };
-};
-
-/** Erases the copy of this browser (imported or from the cloud) and reads again. */
-export const forgetWebCopy = async (): Promise<void> => {
-  await forgetImportedHistory();
-  await reloadWebHistory();
+/** Drops the history held in memory without reading again (the session is over). */
+export const forgetWebHistory = (): void => {
+  cached = undefined;
 };

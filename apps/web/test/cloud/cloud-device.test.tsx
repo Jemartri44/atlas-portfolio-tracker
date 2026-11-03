@@ -1,48 +1,55 @@
 // @vitest-environment happy-dom
 //
 // What is left **on the device** after a session of the cloud mode (ADR-0035, §3 and §6). The
-// ledger is not: no IndexedDB store holds it, no `localStorage` key names it, no cache entry holds
-// a response of the API. Only the public copy of the ECB history (the same for anyone) and the
-// preferences of the interface may remain. The walker below lists everything that is on the device,
-// and a control proves it would see a ledger if one were there.
+// ledger is not: no IndexedDB database is even opened, no `localStorage` key names it, no cache
+// entry holds a response of the API. Prices and the ECB history are read from the API into memory.
+// Only the three preferences of the interface may remain. The walker below lists everything that is
+// on the device, and a control proves it would see a ledger if one were there.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { importedPrices, saveImportedPrices } from "@atlas/adapters/prices";
-import { IMPORTED_HISTORY_KEY, saveImportedHistory } from "@atlas/adapters/reference";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { FakeIdbFactory } from "../../../../packages/adapters/test/fake-idb.js";
-import { reloadWebHistory } from "../../src/ecb/history.js";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+} from "vitest";
+import { forgetWebHistory, loadWebHistory } from "../../src/ecb/history.js";
 import { bootCloud } from "../../src/ledger/cloud.js";
 import { store } from "../../src/ledger/state.js";
+import { forgetPrices, loadWebQuotes } from "../../src/prices/quotes.js";
 import Ajustes from "../../src/routes/ajustes/index.jsx";
 import { SessionCard } from "../../src/routes/ajustes/SessionCard.jsx";
 import Movimientos from "../../src/routes/movimientos/index.jsx";
 import Borradores from "../../src/routes/registrar/borradores.jsx";
 import RegistrarForm from "../../src/routes/registrar/form.jsx";
-import { setPrivacy, setTheme } from "../../src/shell/preferences.js";
+import { setLetterKeys, setPrivacy, setTheme } from "../../src/shell/preferences.js";
+import { serveReference } from "../helpers/cloud-reference.js";
 import { goldenEvents, goldenText } from "../helpers/golden.js";
 import { choose, press, settle, show, showInShell, text, type, until } from "../helpers/render.jsx";
 import { apiAt, sameOrigin, signedIn } from "./api-support.js";
 
 const holder = globalThis as { indexedDB?: unknown; caches?: unknown };
 const before = { indexedDB: holder.indexedDB, caches: holder.caches };
-// One factory for the whole file: `openAtlasDb` keeps its connection at module
-// level, so a factory per test would leave the store writing into the first one.
-// The first test is the one that needs a database that was never opened.
-const factory = new FakeIdbFactory();
 let cachesOpened: string[];
+let databasesOpened: string[];
 
 beforeAll(() => {
-  holder.indexedDB = factory;
+  // IndexedDB as a recorder: opening any database is a finding of this test.
+  holder.indexedDB = {
+    open: (name: string) => {
+      databasesOpened.push(name);
+      throw new Error("the application must not open a database");
+    },
+  };
 });
 beforeEach(() => {
-  for (const db of factory.databases.values()) {
-    for (const name of ["ledger", "handles", "drafts"]) {
-      db.store(name).clear();
-    }
-  }
+  databasesOpened = [];
   cachesOpened = [];
   // The Cache API as a recorder: opening any cache is a finding of this test.
   holder.caches = {
@@ -77,13 +84,8 @@ const onDevice = (): { entries: string[]; values: string[] } => {
       values.push(area.getItem(key) ?? "");
     }
   }
-  for (const [database, db] of factory.databases) {
-    for (const storeName of ["ledger", "handles", "drafts"]) {
-      for (const [key, value] of db.store(storeName)) {
-        entries.push(`indexedDB ${database}/${storeName}: ${key}`);
-        values.push(typeof value === "string" ? value : JSON.stringify(value));
-      }
-    }
+  for (const name of databasesOpened) {
+    entries.push(`indexedDB: ${name}`);
   }
   for (const name of cachesOpened) {
     entries.push(`cache: ${name}`);
@@ -91,11 +93,11 @@ const onDevice = (): { entries: string[]; values: string[] } => {
   return { entries, values };
 };
 
-/** The preferences of the interface and the public copy of the ECB: nothing else may remain. */
+/** The three preferences of the interface: nothing else may remain. */
 const ALLOWED = new Set([
   "localStorage: atlas.privacy",
   "localStorage: atlas.theme",
-  `indexedDB atlas/ledger: ${IMPORTED_HISTORY_KEY}`,
+  "localStorage: atlas.letters",
 ]);
 
 const session = async () => {
@@ -106,31 +108,39 @@ const session = async () => {
 };
 
 describe("what stays on the device after a session of the cloud", () => {
-  it("opens no database at all when nothing public was saved", async () => {
+  it("leaves nothing at all when no preference was changed", async () => {
     const request = await session();
     await bootCloud(request);
     await until(() => store.load().phase === "ready", "the ledger");
     await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(factory.databases.size).toBe(0);
     expect(onDevice().entries).toEqual([]);
   });
 
-  it("is only the interface preferences and the public ECB copy", async () => {
+  it("is only the three interface preferences, with the prices and the ECB read into memory", async () => {
     const request = await session();
     const host = await showInShell("/", { "*": () => <p>{store.snapshot()?.events.length}</p> });
     await bootCloud(request);
     await until(() => text(host).includes("200"), "the ledger on the screen");
 
-    // What a session does: preferences, and the ECB copy the cloud gives to anyone.
+    // What a session does: preferences, and the reference data read from the API.
     setPrivacy(false);
     setTheme("dark");
-    await saveImportedHistory({
-      text: "Date,USD\n2026-10-01,1.1\n",
-      source: "api",
-      file_name: "eurofxref-hist.csv",
-      imported_at: "2026-10-01T10:00:00.000Z",
-      origin: "cloud",
+    setLetterKeys(false);
+    const restoreCloud = serveReference({
+      ecb: { csv: "Date,USD\n2026-10-01,1.1\n", source: "api" },
+      prices: {
+        ast_gold:
+          '{"schema_version":1,"date":"2026-10-01","close":"100","currency":"EUR","source":"eodhd","fetched_at":"2026-10-01T06:00:00.000Z"}\n',
+      },
     });
+    try {
+      forgetWebHistory();
+      forgetPrices();
+      await loadWebHistory();
+      expect((await loadWebQuotes(["ast_gold"])).closes.size).toBe(1);
+    } finally {
+      restoreCloud();
+    }
 
     const found = onDevice();
     expect(found.entries.sort()).toEqual([...ALLOWED].sort());
@@ -144,20 +154,20 @@ describe("what stays on the device after a session of the cloud", () => {
   });
 
   it("keeps no draft on the device: saving, counting, listing and discarding go to the cloud", async () => {
-    // The public ECB copy is what lets a draft be offered; it may stay (ALLOWED).
-    await saveImportedHistory({
-      text: readFileSync(
-        join(
-          dirname(fileURLToPath(import.meta.url)),
-          "../../../../tests/fixtures/ecb/eurofxref-hist.csv",
+    // The ECB history is read from the API, in memory: that is what lets a draft be offered.
+    const restoreCloud = serveReference({
+      ecb: {
+        csv: readFileSync(
+          join(
+            dirname(fileURLToPath(import.meta.url)),
+            "../../../../tests/fixtures/ecb/eurofxref-hist.csv",
+          ),
+          "utf8",
         ),
-        "utf8",
-      ),
-      source: "zip",
-      file_name: "eurofxref-hist.csv",
-      imported_at: "2026-04-01T10:00:00.000Z",
+      },
     });
-    await reloadWebHistory();
+    forgetWebHistory();
+    onTestFinished(restoreCloud);
     const request = await session();
     await bootCloud(request);
     await until(() => store.load().phase === "ready", "the ledger");
@@ -216,11 +226,10 @@ describe("what stays on the device after a session of the cloud", () => {
     await settle(30);
     expect(text(settings)).toContain("atlas-copia-");
     expect(onDevice().entries).toEqual([]);
-    // Reading the public prices opens the database, but no store of the ledger holds anything (checked above).
     expect(cachesOpened).toEqual([]);
   });
 
-  it("forgets the prices imported by hand when the session is closed, and only then", async () => {
+  it("forgets the prices and the ECB history read into memory when the session is closed, and only then", async () => {
     // Only the answers the card asks for: a close that is refused, then one that works, and a
     // signed-out session for the boot that follows. No ledger is needed to prove what is forgotten.
     const closing = (logout: number): typeof fetch =>
@@ -230,33 +239,36 @@ describe("what stays on the device after a session of the cloud", () => {
           : new Response(JSON.stringify({ error: { code: "unauthenticated", details: {} } }), {
               status: 401,
             })) as typeof fetch;
-    await saveImportedPrices({
-      files: { ast_gold: '{"date":"2026-10-01","close":"100"}\n' },
-      imported_at: "2026-10-01T10:00:00.000Z",
-    });
+    const prices = {
+      ast_gold:
+        '{"schema_version":1,"date":"2026-10-01","close":"100","currency":"EUR","source":"eodhd","fetched_at":"2026-10-01T06:00:00.000Z"}\n',
+    };
+    const restoreCloud = serveReference({ prices });
+    onTestFinished(restoreCloud);
+    forgetPrices();
+    expect((await loadWebQuotes(["ast_gold"])).closes.size).toBe(1);
+    // The cloud now has nothing: a read that still finds the close is one held in memory.
+    restoreCloud();
+    onTestFinished(serveReference({}));
     const refused = await show("/ajustes", () => <SessionCard request={closing(500)} />);
     await press(refused, "Cerrar sesión");
-    expect(await importedPrices()).toBeDefined();
+    expect((await loadWebQuotes(["ast_gold"])).closes.size).toBe(1);
     document.body.innerHTML = "";
     const closed = await show("/ajustes", () => <SessionCard request={closing(204)} />);
     await press(closed, "Cerrar sesión");
-    await expect.poll(() => importedPrices()).toBeUndefined();
+    await expect.poll(async () => (await loadWebQuotes(["ast_gold"])).closes.size).toBe(0);
   });
 
-  it("control: the walker would see a ledger, a remembered source or a cache entry", async () => {
-    await saveImportedHistory({
-      text: "x",
-      source: "api",
-      file_name: "f",
-      imported_at: "2026-10-01T10:00:00.000Z",
-    });
-    factory.databases.get("atlas")?.store("ledger").set("current", goldenText());
+  it("control: the walker would see a ledger, a remembered source, a database or a cache entry", async () => {
+    databasesOpened.push("atlas");
     window.localStorage.setItem("atlas.source", "browser");
+    window.localStorage.setItem("atlas.ledger", goldenText());
     cachesOpened.push("api-cache");
     const found = onDevice();
     expect(found.entries.filter((entry) => !ALLOWED.has(entry)).sort()).toEqual([
       "cache: api-cache",
-      "indexedDB atlas/ledger: current",
+      "indexedDB: atlas",
+      "localStorage: atlas.ledger",
       "localStorage: atlas.source",
     ]);
     expect(found.values.join("\n")).toContain(goldenEvents()[0]?.id);

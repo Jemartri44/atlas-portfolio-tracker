@@ -34,7 +34,8 @@ const files = (dir: string): string[] =>
 const KNOWN = new Map<string, string>([
   ["ledger/cloud.ts", "pass-through of the page's fetch to httpRemote (no-store inside it)"],
   ["auth/session.ts", "own requests"],
-  ["ecb/cloud.ts", "httpReference: public data, ETag and 304 on purpose"],
+  ["ecb/history.ts", "httpReference: public data, read whole into memory"],
+  ["prices/quotes.ts", "httpReference: public data, read whole into memory"],
 ]);
 
 describe("the code that reaches the network", () => {

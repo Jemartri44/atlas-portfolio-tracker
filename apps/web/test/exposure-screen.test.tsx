@@ -4,8 +4,7 @@
 // block of Cartera and the card of the configuration. Whatever the owner declares is written to the
 // cloud object and nowhere else.
 
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { FakeIdbFactory } from "../../../packages/adapters/test/fake-idb.js";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { bootCloud } from "../src/ledger/cloud.js";
 import { store } from "../src/ledger/state.js";
 import Configuracion from "../src/routes/ajustes/configuracion.jsx";
@@ -26,19 +25,10 @@ import {
 
 withGoldenLedger();
 
-const holder = globalThis as { indexedDB?: unknown };
-const before = holder.indexedDB;
 const KEY = "settings/exposure.json";
 const DATE = "2027-12-31";
 
 let api: Api;
-
-beforeAll(() => {
-  holder.indexedDB = new FakeIdbFactory();
-});
-afterAll(() => {
-  holder.indexedDB = before;
-});
 
 beforeEach(async () => {
   api = apiAt();

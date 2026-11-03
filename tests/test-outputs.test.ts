@@ -1,5 +1,5 @@
 // Every folder a `tsconfig` compiles into is out of the reach of vitest: the compiled twin of a
-// test (`dist-test-browser/browser.test.js`) would run a second time after `npm run build`, and the
+// test (`dist-test/blob.test.js`) would run a second time after `npm run build`, and the
 // counts of two runs would differ for no reason.
 
 import { readdirSync, readFileSync } from "node:fs";
@@ -31,7 +31,7 @@ describe("vitest leaves out every compiled folder", () => {
         .map((path) => /"outDir":\s*"([^"]+)"/.exec(readFileSync(path, "utf8"))?.[1])
         .filter((outDir): outDir is string => outDir !== undefined),
     );
-    expect(outDirs.has("dist-test-browser")).toBe(true);
+    expect(outDirs.has("dist-test")).toBe(true);
     for (const outDir of outDirs) {
       expect(exclude, outDir).toContain(`"**/${outDir}/**"`);
     }
