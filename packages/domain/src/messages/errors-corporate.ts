@@ -35,7 +35,7 @@ export const ERRORS_CORPORATE: Record<string, Entry> = {
   },
   capital_return_needs_eu_listed: {
     say: (d, v) =>
-      `La devolución de prima o de aportaciones solo rebaja el coste en acciones de un mercado regulado de la UE (art. 25.1.e de la ley del IRPF), y ${v.one(d.asset_id)} ${
+      `La devolución de prima o de aportaciones solo rebaja el coste en acciones de un mercado regulado de la UE (artículo 25 de la ley del IRPF), y ${v.one(d.asset_id)} ${
         d.reason === "not_eu"
           ? "cotiza fuera de la UE: allí la ley la grava como rendimiento con el tope de la diferencia de fondos propios, y Atlas no lo modela."
           : d.reason === "market_missing"
