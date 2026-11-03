@@ -102,25 +102,38 @@ export const classReturns = (events: readonly LedgerEvent[], to: CivilDate): Cla
     } else if (event.type === "swap") {
       const rate = fxOf(event);
       const date = businessDateOf(state, event);
-      put(
-        classOf(event.from_asset_id),
-        date,
-        rate.toEur(money(event.market_value_out, event.currency)).neg(),
-      );
-      put(
-        classOf(event.to_asset_id),
-        date,
-        rate.toEur(money(event.market_value_in, event.currency)),
-      );
+      const out = rate.toEur(money(event.market_value_out, event.currency));
+      const received = rate.toEur(money(event.market_value_in, event.currency));
+      const from = classOf(event.from_asset_id);
+      const into = classOf(event.to_asset_id);
+      if (from === into) {
+        // Inside one class only the difference moves between the class and the cash.
+        put(into, date, received.sub(out));
+      } else {
+        put(from, date, out.neg());
+        put(into, date, received);
+      }
     } else if (event.type === "dividend") {
       const net = money(event.gross, event.currency)
         .sub(money(event.withholding_origin, event.currency))
         .sub(money(event.withholding_spain, event.currency));
       put(classOf(event.asset_id), event.value_date, fxOf(event).toEur(net).neg());
     } else if (event.type === "corporate_action") {
-      flag(classOf(event.asset_id), "corporate_action");
+      if (event.effective_date <= to) {
+        const touched = new Set([event.asset_id]);
+        for (const effect of event.effects) {
+          touched.add(effect.asset_id ?? event.asset_id);
+          if ("to_asset_id" in effect) {
+            touched.add(effect.to_asset_id);
+          }
+        }
+        for (const assetId of touched) {
+          flag(classOf(assetId), "corporate_action");
+        }
+      }
     } else if (
       event.type === "transfer" &&
+      businessDateOf(state, event) <= to &&
       classOf(event.from_asset_id) !== classOf(event.to_asset_id)
     ) {
       flag(classOf(event.from_asset_id), "transfer");

@@ -177,4 +177,102 @@ describe("classReturns", () => {
     });
     expect(of(b, "equity")?.invested_eur?.amount.toString()).toBe("1000");
   });
+
+  it("flags every class a corporate action touches, destination included, but only once it happened", () => {
+    const b = bought();
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_bonds",
+      value_date: "2027-01-05",
+      quantity: "10",
+    });
+    b.corporateAction({
+      kind: "merger",
+      asset_id: "ast_world",
+      effects: [{ op: "convert", to_asset_id: "ast_bonds", ratio: "1" }],
+    });
+    expect(of(b, "equity")?.unsupported_events).toEqual(["corporate_action"]);
+    expect(of(b, "fixed_income")?.unsupported_events).toEqual(["corporate_action"]);
+
+    const later = bought();
+    later.corporateAction({
+      kind: "split",
+      asset_id: "ast_world",
+      effective_date: "2029-03-01",
+      effects: [{ op: "scale", ratio: "2" }],
+    });
+    worth(later, "ast_world", "10", "110");
+    expect(of(later, "equity")?.gap).toBeUndefined();
+  });
+
+  it("nets a swap inside one class to the difference that moved", () => {
+    const b = bought();
+    b.asset("ast_eq2", { asset_class: "equity" });
+    b.swap({
+      account_id: "acc_fund",
+      from_asset_id: "ast_world",
+      to_asset_id: "ast_eq2",
+      value_date: "2027-07-05",
+      market_value_out: "100",
+      market_value_in: "105",
+    });
+    worth(b, "ast_world", "9", "100");
+    worth(b, "ast_eq2", "1", "105");
+    const equity = of(b, "equity");
+    expect(equity?.invested_eur?.amount.toString()).toBe("1005");
+    expect(equity?.returned_eur?.amount.toString()).toBe("0");
+  });
+
+  it("converts a foreign currency once, with its fee and withholding", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const usd = { currency: "USD", fx_rate: "1.25", fee: "5" };
+    b.buy({
+      account_id: "acc_etf",
+      asset_id: "ast_gold",
+      value_date: "2027-01-05",
+      quantity: "4",
+      unit_price: "200",
+      ...usd,
+    });
+    b.sell({
+      account_id: "acc_etf",
+      asset_id: "ast_gold",
+      value_date: "2027-07-05",
+      quantity: "1",
+      unit_price: "250",
+      withholding: "10",
+      ...usd,
+    });
+    b.valuation({
+      account_id: "acc_etf",
+      asset_id: "ast_gold",
+      date: END,
+      quantity: "3",
+      unit_value: "150",
+    });
+    const gold = of(b, "gold");
+    // (800 + 5) / 1.25 in, (250 − 5 − 10) / 1.25 out.
+    expect(gold?.invested_eur?.amount.toString()).toBe("644");
+    expect(gold?.returned_eur?.amount.toString()).toBe("188");
+  });
+
+  it("leaves out a reversed purchase and an income after the date", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    const wrong = b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      value_date: "2027-01-05",
+      quantity: "10",
+    });
+    b.reversal(wrong.id);
+    b.dividend({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      value_date: "2028-06-01",
+      gross: "50",
+    });
+    expect(of(b, "equity")?.gap).toBe("no_flows");
+  });
 });
