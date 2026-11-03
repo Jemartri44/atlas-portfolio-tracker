@@ -306,7 +306,7 @@ export const reportYear = (
   command: string,
 ): number => {
   const year = yearArgument(raw);
-  if (year === undefined) {
+  if (year === undefined || year < 1900) {
     throw new UsageError(usage);
   }
   if (year > Number(todayInMadrid(ctx.deps.clock).slice(0, 4))) {
