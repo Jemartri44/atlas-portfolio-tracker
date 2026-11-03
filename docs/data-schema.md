@@ -224,6 +224,8 @@ Permuta de un activo por otro (cripto por cripto es el caso que la motiva; `fx_e
 
 Un `buy`/`sell` con `order_id` cierra la orden. Un `order_placed` sin cierre es una orden **pendiente** (`pendingOrders`).
 
+**Comisión pagada en cripto.** `fee` es siempre un importe en divisa y se resta del efectivo: una comisión de red o de permuta que se descuenta en unidades de cripto **no tiene campo propio**. No se anota en `fee` (restaría efectivo que no se movió). Se registra incluyendo esas unidades en `quantity_out` de la operación: salen del lote como una unidad más transmitida, a valor de mercado. La DGT V0648-24 (apartado 6) dice que las comisiones forman parte del valor de adquisición o de transmisión (art. 35 LIRPF); que este sea el reparto exacto no lo dice ninguna fuente (criterio de registro de Atlas, pendiente de confirmar con el dueño). Si el uso lo pide, el camino limpio es un campo de comisión en unidades.
+
 **`fx_exchange`** (ADR-0012)
 `account_id`, `value_date`, `sold_amount`, `sold_currency`, `bought_amount`, `bought_currency`, `fee`, `fee_currency`, `fx_rate_sold`, `fx_rate_bought`, `fx_rate_date`, `broker_ref?`, `fingerprint`
 
@@ -505,7 +507,7 @@ Tabla de composición admitida por `kind` (el evento se rechaza si sus `effects`
 | `issuer_restructuring` | `convert`, `forced_sale` y/o `cost_adjustment` (este, con régimen) | según el folleto | Se compone como fusión o liquidación |
 | `capital_return` | `cost_adjustment` | 3 € por título → `cost_adjustment(30 €)` | 10 títulos, coste 970 €, fecha original. Sin ganancia; si supera el coste de un lote, el exceso es rendimiento del capital mobiliario (0029) |
 
-**Un *scrip* con una parte de los derechos vendida y otra convertida** se registra con **dos eventos `stock_dividend`**, no con `grant` + `convert`: un `scale` por las acciones nuevas que se reciben (se aplica a todos los lotes de las antiguas, que reparten su coste y conservan su fecha cada uno, art. 37.1.a LIRPF) y un `grant(derechos, coste 0)` + `forced_sale` por los derechos vendidos. La vía `grant` + `convert` daría a las acciones nuevas coste 0 y la fecha del derecho. En el borrador de casillas solo va al apartado de derechos (0341-0355) la venta cuyo activo es el propio derecho del `grant`: un derecho que cambia de activo (otra serie, otro ISIN) deja de contar como derecho. Lo resume `business-rules.md` (apartados de 2025).
+**Un *scrip* con una parte de los derechos vendida y otra convertida** se registra con **dos eventos `stock_dividend`**, no con `grant` + `convert`: un `scale` por las acciones nuevas que se reciben (se aplica a todos los lotes de las antiguas, que reparten su coste y conservan su fecha cada uno, art. 37.1.a LIRPF) y un `grant(derechos, coste 0)` + `forced_sale` por los derechos vendidos. La vía `grant` + `convert` daría a las acciones nuevas coste 0 y la fecha del derecho. **Un *scrip* cuyos derechos se venden al emisor a precio fijo** (compromiso de compra del emisor) no es una venta de derechos: se registra como `dividend`, rendimiento del capital mobiliario (casilla 0029, con la retención en 0597), no como `grant` + `forced_sale` (Manual de Renta 2025, cap. 11, «supuesto especial: pago de dividendos»). En el borrador de casillas solo va al apartado de derechos (0341-0355) la venta cuyo activo es el propio derecho del `grant`: un derecho que cambia de activo (otra serie, otro ISIN) deja de contar como derecho. Lo resume `business-rules.md` (apartados de 2025).
 
 `identifier_change` y `cash_dividend` no son `corporate_action` (ver ADR-0011).
 
