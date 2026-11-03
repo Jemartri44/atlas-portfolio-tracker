@@ -70,5 +70,6 @@ export const euRegulatedMarket = (market: string | undefined): boolean | undefin
   if (EU.includes(key)) {
     return true;
   }
-  return NOT_EU.includes(key) ? false : undefined;
+  // "NASDAQ GS", "NYSE American": the tiers of the two US exchanges.
+  return NOT_EU.includes(key) || /^(NASDAQ|NYSE)\b/.test(key) ? false : undefined;
 };

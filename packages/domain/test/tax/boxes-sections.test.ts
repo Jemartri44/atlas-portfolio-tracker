@@ -119,6 +119,9 @@ describe("a share outside the EU regulated markets (H4)", () => {
       expect(codes(boxes)).not.toContain("tax_box_section_doubtful");
     }
     expect(transmissionSection("stock", "capital_gain")).toBe("listed_shares");
+    expect(transmissionSection("stock", "capital_gain", { market: "Nasdaq GS" })).toBe(
+      "other_shares",
+    );
     expect(transmissionSection("etf", "capital_gain", { market: "XNYS" })).toBe("etf");
   });
 });
