@@ -9,28 +9,28 @@
 // `tests/`: nothing of the tests reaches production. The ZIP is written by a
 // few lines of `node:zlib`, with no new package.
 
-import { readFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { crc32, deflateRawSync } from "node:zlib";
 import { build } from "esbuild";
+import { workspaceAliases } from "./workspace-aliases.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-/** `@atlas/<pkg>/<door>` to the source its `exports` point at (`./dist/x.js` → `./src/x.ts`). */
+/** `@atlas/<pkg>/<door>` to its source, with the aliases of Vite and Vitest (read off `exports`). */
+const ALIASES = workspaceAliases(repoRoot, [
+  "packages/domain",
+  "packages/access",
+  "packages/adapters",
+]);
 const workspaceSources = {
   name: "atlas-workspace-sources",
   setup(esbuild) {
-    esbuild.onResolve({ filter: /^@atlas\/(domain|access|adapters)(\/.*)?$/ }, async (args) => {
-      const [, pkg, door] = /^@atlas\/(domain|access|adapters)(\/.*)?$/.exec(args.path);
-      const root = join(repoRoot, "packages", pkg);
-      const manifest = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
-      const entry = manifest.exports[door === undefined ? "." : `.${door}`];
-      if (entry === undefined) {
-        return { errors: [{ text: `${args.path} is not an export of @atlas/${pkg}` }] };
-      }
-      const source = entry.import.replace(/^\.\/dist\//, "./src/").replace(/\.js$/, ".ts");
-      return { path: join(root, source) };
+    esbuild.onResolve({ filter: /^@atlas\// }, (args) => {
+      const alias = ALIASES.find(({ find }) => find.test(args.path));
+      return alias === undefined
+        ? { errors: [{ text: `${args.path} is not an export of a workspace the Lambdas bundle` }] }
+        : { path: alias.replacement };
     });
   },
 };

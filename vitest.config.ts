@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import solid from "vite-plugin-solid";
 import { defineConfig } from "vitest/config";
+import { workspaceAliases } from "./scripts/workspace-aliases.mjs";
 
 const local = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
 
@@ -32,45 +33,13 @@ const COVERAGE: Record<string, { include: string[]; thresholds: Record<string, u
 
 export default defineConfig({
   resolve: {
-    // The subpaths go first: aliases are matched by prefix, so the barrel
-    // would otherwise swallow `@atlas/adapters/blob`.
-    alias: {
-      "@atlas/adapters/blob": local("./packages/adapters/src/ledger-store/blob.ts"),
-      "@atlas/adapters/aws-sdk": local("./packages/adapters/src/aws/sdk.ts"),
-      "@atlas/adapters/aws-admin": local("./packages/adapters/src/aws/sdk-admin.ts"),
-      "@atlas/adapters/aws-jobs": local("./packages/adapters/src/aws/jobs.ts"),
-      "@atlas/adapters/aws-daily": local("./packages/adapters/src/aws/daily.ts"),
-      "@atlas/adapters/aws-ses": local("./packages/adapters/src/aws/sdk-ses.ts"),
-      "@atlas/adapters/aws": local("./packages/adapters/src/aws/index.ts"),
-      "@atlas/adapters/access": local("./packages/adapters/src/access/crypto.ts"),
-      "@atlas/adapters/identity": local("./packages/adapters/src/identity/index.ts"),
-      "@atlas/adapters/api-store": local("./packages/adapters/src/sync/api-ledger-store.ts"),
-      "@atlas/adapters/drafts-http": local("./packages/adapters/src/drafts/api-drafts.ts"),
-      "@atlas/adapters/sync-http": local("./packages/adapters/src/sync/http-remote.ts"),
-      "@atlas/adapters/reference-http": local("./packages/adapters/src/reference/http.ts"),
-      "@atlas/adapters/reference": local(
-        "./packages/adapters/src/ledger-store/browser/reference.ts",
-      ),
-      "@atlas/adapters/prices": local("./packages/adapters/src/ledger-store/browser/prices.ts"),
-      "@atlas/adapters/clock": local("./packages/adapters/src/clock/system.ts"),
-      "@atlas/adapters/random": local("./packages/adapters/src/random/web-crypto.ts"),
-      "@atlas/adapters": local("./packages/adapters/src/index.ts"),
-      "@atlas/domain/ecb": local("./packages/domain/src/ecb.ts"),
-      "@atlas/domain/fiscal": local("./packages/domain/src/fiscal.ts"),
-      "@atlas/domain/tools": local("./packages/domain/src/tools.ts"),
-      "@atlas/domain/charts": local("./packages/domain/src/charts.ts"),
-      "@atlas/domain/messages": local("./packages/domain/src/messages.ts"),
-      "@atlas/domain/portfolio": local("./packages/domain/src/portfolio.ts"),
-      "@atlas/domain/rebalance": local("./packages/domain/src/rebalance.ts"),
-      "@atlas/domain/quotes": local("./packages/domain/src/quotes.ts"),
-      "@atlas/domain/sync": local("./packages/domain/src/sync.ts"),
-      "@atlas/domain/remote-answers": local("./packages/domain/src/remote-answers.ts"),
-      "@atlas/domain/admin": local("./packages/domain/src/admin.ts"),
-      "@atlas/domain/jobs": local("./packages/domain/src/jobs.ts"),
-      "@atlas/domain": local("./packages/domain/src/index.ts"),
-      "@atlas/access": local("./packages/access/src/index.ts"),
-      "@atlas/api": local("./apps/api/src/index.ts"),
-    },
+    // Every door of every workspace, read off its `exports` (the one list).
+    alias: workspaceAliases(local("."), [
+      "packages/domain",
+      "packages/access",
+      "packages/adapters",
+      "apps/api",
+    ]),
   },
   test: {
     passWithNoTests: true,
