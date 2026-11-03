@@ -68,12 +68,20 @@ describe("exposure", () => {
       name,
       currency,
       region,
+      via: { isin: "IE0000000002", name: "ETF Mundo" },
       as_of: "2026-10-31",
       checked: "2026-11-03",
     });
     const tables: IndexTables = {
       profiles: {
-        gold: profile("gold", "Oro", { USD: "100" }, { global: "100" }),
+        // A definition: no fund and no date.
+        gold: {
+          key: "gold",
+          name: "Oro",
+          currency: { USD: "100" },
+          region: { global: "100" },
+          checked: "2026-11-03",
+        },
         world: profile(
           "world",
           "Índice Mundo",
@@ -108,9 +116,21 @@ describe("exposure", () => {
       expect(result.counts).toEqual({ owner: 0, default: 3, none: 0 });
       const labels = Object.fromEntries(result.currency.assets.map((a) => [a.asset_id, a.index]));
       expect(labels).toEqual({
-        ast_world: { key: "world", name: "Índice Mundo", as_of: "2026-10-31", proposed: true },
-        ast_bonds: { key: "euro_bonds", name: "Bonos euro", as_of: "2026-10-31", proposed: false },
-        ast_gold: { key: "gold", name: "Oro", as_of: "2026-10-31", proposed: true },
+        ast_world: {
+          key: "world",
+          name: "Índice Mundo",
+          as_of: "2026-10-31",
+          via: "ETF Mundo",
+          proposed: true,
+        },
+        ast_bonds: {
+          key: "euro_bonds",
+          name: "Bonos euro",
+          as_of: "2026-10-31",
+          via: "ETF Mundo",
+          proposed: false,
+        },
+        ast_gold: { key: "gold", name: "Oro", proposed: true },
       });
       // 600 world (70/30), 400 bonds (EUR), 100 gold (USD): USD 420 + 100, EUR 180 + 400.
       expect(shares(result.currency)).toEqual(

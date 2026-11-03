@@ -46,8 +46,10 @@ export type ExposureState = "owner" | "default" | "none";
 export interface ExposureIndex {
   key: string;
   name: string;
-  /** The date of the factsheet. */
-  as_of: string;
+  /** The date of the holdings or factsheet it was read in; absent for a definition. */
+  as_of?: string;
+  /** The fund whose portfolio it was read in («según la cartera de <fondo>»). */
+  via?: string;
   /** Chosen by the owner, or proposed by Atlas from the fund's ISIN or the class. */
   proposed: boolean;
 }
@@ -140,7 +142,8 @@ const dimensionOf = (
             index: {
               key: profile.key,
               name: profile.name,
-              as_of: profile.as_of,
+              ...(profile.as_of === undefined ? {} : { as_of: profile.as_of }),
+              ...(profile.via === undefined ? {} : { via: profile.via.name }),
               proposed: found.proposed,
             },
           }),
