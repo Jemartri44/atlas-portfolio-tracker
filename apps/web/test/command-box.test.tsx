@@ -10,7 +10,7 @@ import Movimientos from "../src/routes/movimientos/index.jsx";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
 import Resumen from "../src/routes/resumen/index.jsx";
 import { setLetterKeys } from "../src/shell/preferences.js";
-import { settle, showInShell, text, withGoldenLedger } from "./helpers/render.jsx";
+import { settle, showInShell, text, until, withGoldenLedger } from "./helpers/render.jsx";
 import { applied, withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
@@ -51,8 +51,10 @@ describe("«Buscar o registrar»", () => {
       "Buscar «valoracion» en los movimientos",
     );
     press("Enter", field);
-    await settle(20);
-    expect(window.location.pathname + window.location.search).toBe("/movimientos?q=valoracion");
+    await until(
+      () => window.location.pathname + window.location.search === "/movimientos?q=valoracion",
+      "the search",
+    );
   });
 
   it("never leaves a screen with a form by a letter: what was typed stays", async () => {
@@ -70,8 +72,7 @@ describe("«Buscar o registrar»", () => {
     withStyles(1440, 900);
     await showInShell("/", ROUTES);
     press("c");
-    await settle(20);
-    expect(window.location.pathname).toBe("/registrar/buy");
+    await until(() => window.location.pathname === "/registrar/buy", "the buy form");
   });
 
   it("closes with Esc and with «Cerrar», for the mouse too", async () => {
@@ -103,10 +104,10 @@ describe("«Buscar o registrar»", () => {
     // Ajustes holds no form: what stops the letter below is the switch alone.
     expect(host.querySelector("main form")).toBeNull();
     press("v");
-    await settle(20);
-    expect(window.location.pathname).toBe("/registrar/sell");
+    await until(() => window.location.pathname === "/registrar/sell", "the sell form");
     window.history.back();
-    await settle(20);
+    await until(() => window.location.pathname === "/ajustes", "Ajustes again");
+    await until(() => host.querySelector("#letters-setting") !== null, "the switch");
     const toggle = host.querySelector("#letters-setting") as HTMLInputElement;
     expect(toggle.checked).toBe(true);
     toggle.click();
