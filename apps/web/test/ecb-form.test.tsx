@@ -22,6 +22,7 @@ import {
   until,
   withGoldenLedger,
 } from "./helpers/render.jsx";
+import { withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
 
@@ -90,8 +91,7 @@ describe("the ECB rate in the form", () => {
     ) as HTMLButtonElement;
     expect(confirm.disabled).toBe(true);
     (host.querySelector("#confirm-fx-rate") as HTMLInputElement).click();
-    await settle(10);
-    expect(confirm.disabled).toBe(false);
+    await until(() => !confirm.disabled, "el sí al tipo");
   });
 
   it("does not ask when the typed rate is the same number written otherwise", async () => {
@@ -102,5 +102,46 @@ describe("the ECB rate in the form", () => {
     await press(host, "Ver el efecto");
     await until(() => host.querySelector("section.effect") !== null);
     expect(text(host)).not.toContain("El tipo no es el oficial");
+  });
+});
+
+describe("the effect beside the form, in a foreign currency", () => {
+  it("still comes when the form fills the ECB rate on its own after the last key", async () => {
+    withStyles(1440, 900);
+    try {
+      const host = await goldBuy("2026-01-02");
+      await until(() => value(host, "f-fx_rate") === "1,1169");
+      await until(
+        () => text(host.querySelector(".effect")).includes("Registrar"),
+        "el efecto en vivo",
+      );
+    } finally {
+      withoutStyles();
+    }
+  });
+});
+
+describe("the yes to a rate that is not the official one, on a computer", () => {
+  it("is not undone by the effect beside the form that was still on its way", async () => {
+    withStyles(1440, 900);
+    try {
+      const host = await goldBuy("2026-01-02");
+      await until(() => value(host, "f-fx_rate") === "1,1169");
+      type(host, "f-fx_rate", "1,2");
+      // Pressed before the effect that follows the keys would come on its own.
+      await press(host, "Ver el efecto");
+      await until(() => text(host).includes("El tipo no es el oficial"));
+      (host.querySelector("#confirm-fx-rate") as HTMLInputElement).click();
+      const recordButton = () =>
+        [...host.querySelectorAll("section.effect button")].find(
+          (button) => button.textContent?.trim() === "Registrar",
+        ) as HTMLButtonElement | undefined;
+      await until(() => recordButton()?.disabled === false, "el sí al tipo");
+      // Longer than the delay of the effect that follows the keys: the yes stays.
+      await settle(600);
+      expect(recordButton()?.disabled).toBe(false);
+    } finally {
+      withoutStyles();
+    }
   });
 });

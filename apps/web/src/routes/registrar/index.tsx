@@ -7,9 +7,12 @@
 //
 // There is nothing left that only the CLI can write.
 
+import type { LedgerEvent, LedgerState, Money } from "@atlas/domain";
 import { A } from "@solidjs/router";
-import { For, type JSX } from "solid-js";
-import { Disclosure, Icon, type IconName, Section } from "../../components/index.js";
+import { createResource, For, type JSX, Show } from "solid-js";
+import { Amount, Disclosure, Icon, type IconName, Section } from "../../components/index.js";
+import { displayName, nameIndex } from "../../format/names.js";
+import { today } from "../../ledger/state.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { CORPORATE_FORMS } from "../../view-models/forms/corporate.js";
 import { type EventFormSpec, FORM_SPECS } from "../../view-models/forms/index.js";
@@ -42,8 +45,63 @@ const entriesOf = (slugs: readonly string[]): Entry[] =>
     when: spec.when,
   }));
 
-const Tiles = (): JSX.Element => (
+/** The next purchase of the month's plan, ready to repeat: where, what and how much. */
+interface Repeat {
+  href: string;
+  name: string;
+  amount: Money;
+}
+
+/**
+ * «Repetir la compra del mes» (direction A): the first purchase of the plan still pending, with
+ * its account (the one that holds the asset); the form asks the plan for the amount again. Absent when the
+ * plan cannot be computed or every purchase of the month is recorded.
+ */
+const repeatOf = async (
+  snapshot: { state: LedgerState; events: readonly LedgerEvent[] },
+  date: string,
+): Promise<Repeat | undefined> => {
+  try {
+    const { accountHolding, monthPlan } = await import("@atlas/domain/portfolio");
+    const plan = monthPlan(snapshot.events, date);
+    if (plan.status !== "ready") {
+      return undefined;
+    }
+    // The first purchase still pending that an account holds: one that none holds is skipped.
+    for (const row of plan.assets.filter((one) => one.done_on === undefined)) {
+      const account = accountHolding(snapshot.state, row.asset_id);
+      if (account !== undefined) {
+        return {
+          href: `/registrar/buy?cuenta=${encodeURIComponent(account)}&activo=${encodeURIComponent(row.asset_id)}&repetir=1`,
+          name: displayName(nameIndex(snapshot.state), row.asset_id),
+          amount: row.proposed_eur,
+        };
+      }
+    }
+    return undefined;
+  } catch {
+    // The tile is a shortcut: if the plan cannot be had, the day to day is still there.
+    return undefined;
+  }
+};
+
+const Tiles = (props: { repeat: Repeat | undefined }): JSX.Element => (
   <ul class="tiles" aria-label="Del día a día">
+    <Show when={props.repeat}>
+      {(repeat) => (
+        <li class="is-repeat">
+          <A href={repeat().href} class="tile">
+            <span class="lead" aria-hidden="true">
+              <Icon name="buy" />
+            </span>
+            <span class="tile-title">Repetir la compra del mes</span>
+            <span class="tile-when">
+              {repeat().name} · <Amount value={repeat().amount} decimals={0} /> propuestos
+            </span>
+          </A>
+        </li>
+      )}
+    </Show>
     <For each={DAILY}>
       {([slug, glyph]) => {
         const spec = FORM_SPECS.find((one) => one.slug === slug);
@@ -86,36 +144,39 @@ const Group = (props: { title: string; entries: readonly Entry[] }): JSX.Element
 export default function RegistrarRoute(): JSX.Element {
   return (
     <RequireLedger writes skeleton={5}>
-      {() => (
-        <>
-          <PageHeader
-            title="Registrar"
-            lead="Cada operación se hace a mano en la plataforma y se anota aquí. Verás el efecto antes de escribir nada."
-          />
+      {(snapshot) => {
+        const [repeat] = createResource(() => repeatOf(snapshot, today()));
+        return (
+          <>
+            <PageHeader
+              title="Registrar"
+              lead="Cada operación se hace a mano en la plataforma y se anota aquí. Verás el efecto antes de escribir nada."
+            />
 
-          <div class="stack">
-            <section aria-labelledby="h-daily">
-              <h2 id="h-daily" class="block-title">
-                Del día a día
-              </h2>
-              <Tiles />
-            </section>
-            <Section title="Otros registros" class="groups">
-              <Group title="Traspasos entre fondos" entries={entriesOf(TRANSFERS)} />
-              <Group title="Cubo especulativo" entries={entriesOf(BUCKET)} />
-              <Group
-                title="Eventos corporativos"
-                entries={CORPORATE_FORMS.map((form) => ({
-                  href: `/registrar/evento-corporativo/${form.slug}`,
-                  title: form.title,
-                  when: form.when,
-                }))}
-              />
-              <Group title="Catálogo: cuentas y activos" entries={entriesOf(CATALOGUE)} />
-            </Section>
-          </div>
-        </>
-      )}
+            <div class="stack">
+              <section aria-labelledby="h-daily">
+                <h2 id="h-daily" class="block-title">
+                  Del día a día
+                </h2>
+                <Tiles repeat={repeat()} />
+              </section>
+              <Section title="Otros registros" class="groups">
+                <Group title="Traspasos entre fondos" entries={entriesOf(TRANSFERS)} />
+                <Group title="Cubo especulativo" entries={entriesOf(BUCKET)} />
+                <Group
+                  title="Eventos corporativos"
+                  entries={CORPORATE_FORMS.map((form) => ({
+                    href: `/registrar/evento-corporativo/${form.slug}`,
+                    title: form.title,
+                    when: form.when,
+                  }))}
+                />
+                <Group title="Catálogo: cuentas y activos" entries={entriesOf(CATALOGUE)} />
+              </Section>
+            </div>
+          </>
+        );
+      }}
     </RequireLedger>
   );
 }

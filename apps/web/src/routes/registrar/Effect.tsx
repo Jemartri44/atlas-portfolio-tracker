@@ -6,7 +6,7 @@
 import type { EventPreview } from "@atlas/domain";
 import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { type JSX, Show } from "solid-js";
-import { ClosedYearNotice, Pending } from "../../components/index.js";
+import { ClosedYearNotice, Pending, Tag } from "../../components/index.js";
 import type { NameIndex } from "../../format/names.js";
 import type { AppError } from "../../ledger/state.js";
 import { store } from "../../ledger/state.js";
@@ -22,6 +22,8 @@ interface EffectProps {
   /** Which fields the user typed, which the sentence of the effect shows unmasked. */
   revealed: (field: string) => boolean;
   wide: boolean;
+  /** The effect follows what is typed on a wide screen (not when rectifying, which needs a reason). */
+  live?: boolean | undefined;
   problem: string | undefined;
   failure: AppError | undefined;
   confirmLabel: string;
@@ -40,8 +42,9 @@ export const Effect = (props: EffectProps): JSX.Element => (
       <Show when={props.wide}>
         <aside class="effect" aria-label="El efecto">
           <Pending>
-            El efecto aparece aquí al pulsar «Ver el efecto»: nada se escribe hasta que lo
-            confirmes.
+            {props.live === true
+              ? "El efecto aparece aquí en cuanto estén los datos necesarios y se actualiza al escribir: nada se escribe hasta que lo confirmes."
+              : "El efecto aparece aquí al pulsar «Ver el efecto»: nada se escribe hasta que lo confirmes."}
           </Pending>
         </aside>
       </Show>
@@ -49,6 +52,11 @@ export const Effect = (props: EffectProps): JSX.Element => (
   >
     {(preview) => (
       <section class="effect" aria-label="El efecto">
+        <Show when={props.live === true && props.wide}>
+          <p class="effect-live">
+            <Tag>se actualiza al escribir</Tag>
+          </p>
+        </Show>
         <Preview preview={preview()} names={props.names} revealed={props.revealed} />
         <ClosedYearNotice impacts={props.closedYears} />
         <Show when={props.rates}>{(rates) => <RateConfirm rates={rates()} />}</Show>

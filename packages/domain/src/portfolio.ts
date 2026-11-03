@@ -67,6 +67,7 @@ export {
   monthPlan,
 } from "./projections/month-plan.js";
 export {
+  accountHolding,
   type FeeEstimate,
   type Order,
   type PlatformLine,

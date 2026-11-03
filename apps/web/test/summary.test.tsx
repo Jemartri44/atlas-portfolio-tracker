@@ -64,7 +64,7 @@ describe("the recent movements of the summary", () => {
     const host = await show("/", Resumen);
     const card = host.querySelector('[aria-label="Últimos movimientos"]');
     // Five entries, a gathered day of valuations counting as one.
-    expect(card?.querySelector(".rows")?.children).toHaveLength(5);
+    expect(card?.querySelectorAll(".day > .rows > li")).toHaveLength(5);
     const dates = [...text(card).matchAll(/(\d{2}\/\d{2}\/\d{4})/g)].map((match) =>
       iso(match[1] as string),
     );

@@ -10,11 +10,11 @@ export {
 } from "./attention.js";
 export { type DetailField, type DetailView, detailView } from "./detail.js";
 export {
-  byMonth,
+  byDay,
+  type DayOfEntries,
   firstEntries,
   groupValuations,
   type ListEntry,
-  type MonthOfEntries,
   type ValuationGroup,
 } from "./movement-entries.js";
 export {

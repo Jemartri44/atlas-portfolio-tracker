@@ -46,7 +46,7 @@ interface FormFieldsProps {
  * too. Computed in a single pass over `next`, so it does not depend on what a
  * read inside a batch would return.
  */
-const withDerived = (
+export const withDerived = (
   fields: readonly FieldSpec[],
   state: LedgerState,
   values: FormValues,
@@ -86,6 +86,12 @@ const isSensitive = (field: FieldSpec): boolean =>
  * a default or can be left empty.
  */
 const SECONDARY = new Set(["broker_ref", "source", "notes"]);
+
+/** The amount of an operation, set large: it is what is checked against the bank (direction A). */
+const BIG = new Set(["amount"]);
+
+/** How many assets go as chips before the list. */
+const CHIPS = 6;
 
 /** The options a select field offers with these values, as of today. */
 const optionsOf = (
@@ -155,6 +161,43 @@ export const FormFields = (props: FormFieldsProps): JSX.Element => {
         />
       );
     }
+    if (field.kind === "select" && field.name === "asset_id") {
+      // Once an account is chosen, the assets it allows as chips a tap away under the list (piece 3
+      // of direction B); the list keeps the rest and the keyboard.
+      const chips = (): Option[] =>
+        optionsOf(field, props.state, props.values, props.events)
+          .filter((option) => option.value !== "")
+          .slice(0, CHIPS);
+      return (
+        <>
+          <SelectField
+            {...common}
+            class={field.full === true ? "full" : field.pair === true ? "pair" : undefined}
+            options={optionsOf(field, props.state, props.values, props.events)}
+            {...(field.required === true ? {} : { placeholder: "Sin indicar" })}
+          />
+          <Show when={(props.values.account_id ?? "") !== "" && chips().length > 1}>
+            <fieldset class="picks full">
+              <legend class="sr-only">{`${field.label}: los más a mano`}</legend>
+              {/* Keyed by value, not by option: the options are new objects on every change, and a
+                  button made again would drop the focus of the keyboard. */}
+              <For each={chips().map((option) => option.value)}>
+                {(id) => (
+                  <button
+                    type="button"
+                    class="pick secondary"
+                    aria-pressed={value() === id}
+                    onClick={() => set(field.name, id)}
+                  >
+                    {chips().find((option) => option.value === id)?.label}
+                  </button>
+                )}
+              </For>
+            </fieldset>
+          </Show>
+        </>
+      );
+    }
     if (field.kind === "select") {
       return (
         <SelectField
@@ -168,7 +211,14 @@ export const FormFields = (props: FormFieldsProps): JSX.Element => {
     return (
       <Field
         {...common}
-        class={field.full === true ? "full" : field.pair === true ? "pair" : undefined}
+        class={
+          [
+            field.full === true ? "full" : field.pair === true ? "pair" : "",
+            BIG.has(field.name) ? "is-big" : "",
+          ]
+            .filter(Boolean)
+            .join(" ") || undefined
+        }
         kind={field.kind}
         sensitive={isSensitive(field)}
         revealed={props.revealed?.(field.name) ?? true}
