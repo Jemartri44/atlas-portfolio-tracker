@@ -57,7 +57,7 @@ Todas viven en `apps/web/src/styles/tokens.css`. **Fuera de ese fichero no se es
 
 ### 3.1 Color: interfaz
 
-Contraste medido con la fórmula WCAG sobre la superficie en la que se usa cada color.
+Contraste medido con la fórmula WCAG; el mínimo entre el papel y la hoja de cada tema (remedido el 2026-11-03 con la hoja `#fffdf8`). `test/contrast.test.ts` y `test/palette.test.ts` leen `tokens.css` y vuelven a medir los pares que importan.
 
 | Variable | Claro | Oscuro | Uso | Contraste mínimo medido |
 |---|---|---|---|---|
@@ -66,17 +66,17 @@ Contraste medido con la fórmula WCAG sobre la superficie en la que se usa cada 
 | `--c-raised` | `#fffdf8` | `#3a3a36` | Segmento actual de un selector | — |
 | `--c-fill` | `#efece4` | `#2a2a27` | Pozos: bloque «pendiente», esqueleto, placa de un aviso neutro | — |
 | `--c-border` | `#e2ded3` | `#30302d` | Separadores de 1 px | — |
-| `--c-border-control` | `#8a877f` | `#76746d` | Borde de campos y botón secundario | 3,2:1 sobre el papel, 3,6:1 sobre la tarjeta / 3,5:1 (≥ 3:1, WCAG 1.4.11) |
-| `--c-text` | `#1c1b18` | `#edece8` | Texto principal (tinta) | 15,4:1 / 15,3:1 |
-| `--c-text-2` | `#54524c` | `#bdbbb4` | Segunda línea, etiquetas | 6,8:1 / 8,6:1 |
-| `--c-text-3` | `#66645d` | `#9e9c95` | Meta, leyendas, la máscara | 5,1:1 / 5,2:1 (sobre `--c-fill`) |
-| `--c-accent` | `#1f4f7c` | `#8fb6e3` | **El único acento**: enlaces, botón principal, pestaña actual, foco | 7,4:1 / 6,8:1 como texto |
+| `--c-border-control` | `#8a877f` | `#76746d` | Borde de campos y botón secundario | 3,2:1 sobre el papel, 3,5:1 sobre la hoja / 3,6:1 (≥ 3:1, WCAG 1.4.11) |
+| `--c-text` | `#1c1b18` | `#edece8` | Texto principal (tinta) | 15,2:1 / 14,4:1 |
+| `--c-text-2` | `#54524c` | `#bdbbb4` | Segunda línea, etiquetas | 6,9:1 / 8,9:1 |
+| `--c-text-3` | `#66645d` | `#9e9c95` | Meta, leyendas, la máscara | 5,0:1 / 5,2:1 (sobre `--c-fill`) |
+| `--c-accent` | `#1f4f7c` | `#8fb6e3` | **El único acento**: enlaces, botón principal, pestaña actual, foco | 7,5:1 / 8,1:1 como texto |
 | `--c-on-accent` | `#ffffff` | `#0f1c2c` | Texto sobre el acento | **8,5:1 / 8,2:1** |
 | `--c-accent-soft` / `-text` | `#e4ecf5` / `#1f4f7c` | `#223246` / `#a9c8ec` | Indicador de pestaña, privacidad activa, «Propuesta» | 7,1:1 / 7,5:1 |
-| `--c-positive` | `#1b6a44` | `#6fc79a` | Ganancia, siempre con «+» | 5,9:1 / 8,1:1 |
-| `--c-negative` | `#a2392b` | `#f0917e` | Pérdida, siempre con «−» | 5,9:1 / 7,1:1 |
-| `--c-caution` / `-icon` / `-soft` | `#80530a` / `#a8700f` / `#faf0dc` | `#e8b659` / `#d9a441` / `#352a14` | Aviso: «hay que mirarlo» | 5,9:1 / 7,6:1 |
-| `--c-danger` / `-soft` / `-border` | `#9e2f27` / `#fbe9e5` / `#e3aca3` | `#f29a8a` / `#3b1f1b` / `#7a3a30` | Problema real; acción destructiva | 6,2:1 / 7,0:1 |
+| `--c-gain` | `#0f6b5c` | `#5cc6b0` | Ganancia, siempre con «+» | 5,7:1 / 8,2:1 |
+| `--c-loss` | `#b04a12` | `#f49a44` | Pérdida, siempre con «−» | 4,8:1 / 7,8:1 |
+| `--c-caution` / `-icon` / `-soft` | `#80530a` / `#a8700f` / `#faf0dc` | `#e8b659` / `#d9a441` / `#352a14` | Aviso: «hay que mirarlo» | 5,9:1 / 9,1:1 |
+| `--c-danger` / `-soft` / `-border` | `#9e2f27` / `#fbe9e5` / `#e3aca3` | `#f29a8a` / `#3b1f1b` / `#7a3a30` | Problema real; acción destructiva | 6,4:1 / 7,9:1 |
 | `--c-on-danger` | `#ffffff` | `#2a0f0b` | Texto del botón destructivo confirmado | 7,3:1 / 8,3:1 |
 | `--c-done` | `#1b6a44` | `#6fc79a` | Paso completado | — |
 
