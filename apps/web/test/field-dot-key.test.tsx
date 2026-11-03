@@ -82,3 +82,12 @@ describe("the dot in a numeric field", () => {
     expect(text(host)).toContain("no se sabe si son decimales o miles");
   });
 });
+
+describe("the dot typed through a keyboard composition", () => {
+  it("is not written either (insertCompositionText, as many Android keyboards report it)", async () => {
+    const host = await open();
+    const amount = host.querySelector("#f-amount") as HTMLInputElement;
+    expect(beforeInput(amount, "insertCompositionText", "0.").defaultPrevented).toBe(true);
+    expect(beforeInput(amount, "insertCompositionText", "0,").defaultPrevented).toBe(false);
+  });
+});

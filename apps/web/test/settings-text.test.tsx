@@ -13,6 +13,7 @@ import {
   SETTINGS_TEXTS,
   settingText,
   settingValue,
+  weightValues,
   withText,
 } from "../src/view-models/index.js";
 import { show, type, withGoldenLedger } from "./helpers/render.jsx";
@@ -30,6 +31,16 @@ describe("a text setting", () => {
     expect(settingValue(current, {}, "deviation_threshold_pp")).toBe("2,5");
     const typed = withText({}, "tax_residence", "E.S.");
     expect(settingText(current, typed, "tax_residence")).toBe("E.S.");
+  });
+
+  it("gives back a figure it could not read as it was typed, with its thousands point", () => {
+    expect(
+      settingValue(current, { deviation_threshold_pp: "1.200,50" }, "deviation_threshold_pp"),
+    ).toBe("1.200,50");
+    expect(settingValue(current, { deviation_threshold_pp: "3.5" }, "deviation_threshold_pp")).toBe(
+      "3,5",
+    );
+    expect(weightValues(current, ["ast_a"], { ast_a: "1.200,5" })).toEqual({ ast_a: "1.200,5" });
   });
 
   it("reaches the field of the configuration as it is, and is typed as it is", async () => {

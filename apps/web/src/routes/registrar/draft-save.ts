@@ -18,7 +18,7 @@ import { draftStep } from "./write-step.js";
 
 export const createDraftSaver = (
   spec: EventFormSpec,
-  state: LedgerState,
+  state: Accessor<LedgerState>,
   currentValues: Accessor<FormValues>,
   web: Accessor<WebHistory | undefined>,
   problems: FormProblems,
@@ -40,7 +40,7 @@ export const createDraftSaver = (
     const form = JSON.stringify(values);
     try {
       const saved = await draftStep(
-        toDraft(spec, values, state),
+        toDraft(spec, values, state()),
         web(),
         unsettled?.form === form ? unsettled.draft : undefined,
       );

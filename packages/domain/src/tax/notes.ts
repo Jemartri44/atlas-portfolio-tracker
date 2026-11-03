@@ -2,7 +2,7 @@
 // in disguise.
 
 import { yearOf } from "../dates/civil-date.js";
-import { Decimal } from "../money/decimal.js";
+import { Decimal, HUNDRED } from "../money/decimal.js";
 import { sum, zero } from "../money/eur.js";
 import { FxRate } from "../money/fx-rate.js";
 import { EUR } from "../money/money.js";
@@ -104,7 +104,7 @@ export const doubleTaxation = (core: Core): { lines: DoubleTaxationLine[]; notes
       );
       continue;
     }
-    const limit = income.gross_eur_rounded.mul(rate).div(Decimal.parse("100")).roundToCents();
+    const limit = income.gross_eur_rounded.mul(rate).div(HUNDRED).roundToCents();
     const deductible = foreignTax.cmp(limit) < 0 ? foreignTax : limit;
     lines.push({
       ...base,
