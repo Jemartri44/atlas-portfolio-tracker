@@ -236,11 +236,11 @@ export const boxesOf = (report: TaxYearReport, chain: ChainCore): TaxBoxes => {
       ),
     );
   }
-  if (entries.some((entry) => entry.section === "other")) {
+  if (entries.some((entry) => entry.section === "other" && entry.row !== undefined)) {
     notes.push(
       note(
         "tax_box_other_inferred",
-        "an exchange difference of currency, or an ETC or ETP configured as a capital gain, has no section of its own: 'otros elementos patrimoniales' with key 4 is an inference by exclusion, not read in any source",
+        "an exchange difference of currency, or an ETC or ETP configured as a capital gain, has no section of its own: it goes to 'otros elementos patrimoniales' with key 4, which the help of 2025 gives to any other asset not in the sections before; the section is chosen by exclusion",
         { section: "other", key: "4" },
       ),
     );
