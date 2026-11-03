@@ -144,6 +144,9 @@ export const toCorporateParams = (
       ? {}
       : { to_asset_id: text(values, "to_asset_id") as string }),
     ...(ratio === undefined ? {} : { ratio }),
+    ...(text(values, "neutrality_regime") === undefined
+      ? {}
+      : { neutrality_regime: values.neutrality_regime === "true" }),
     ...(decimal(values, "cost_share") === undefined
       ? {}
       : { cost_share: decimal(values, "cost_share") as string }),

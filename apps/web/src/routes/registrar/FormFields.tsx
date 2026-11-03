@@ -58,7 +58,11 @@ export const withDerived = (
     if (field.derive === undefined) {
       continue;
     }
-    const trigger = field.derive === "assetCurrency" ? "asset_id" : "account_id";
+    const trigger = {
+      assetCurrency: "asset_id",
+      fromAssetCurrency: "from_asset_id",
+      accountCurrency: "account_id",
+    }[field.derive];
     if (name !== trigger) {
       continue;
     }

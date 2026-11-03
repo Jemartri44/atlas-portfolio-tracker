@@ -63,7 +63,7 @@ export interface FieldSpec {
   /** Shown only when another field has (or has not) a value. */
   visibleWhen?: { field: string; equals?: string; notEquals?: string };
   /** Copy the default from the chosen asset or account. */
-  derive?: "assetCurrency" | "accountCurrency";
+  derive?: "assetCurrency" | "fromAssetCurrency" | "accountCurrency";
   /** Occupies the full width of the grid. */
   full?: boolean;
   /**
@@ -315,6 +315,59 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
       },
       { name: "order_id", label: "Orden que cierra", kind: "select", options: "openOrders" },
       { name: "thesis_id", label: "Tesis", kind: "select", options: "openTheses" },
+    ],
+    omitted: [],
+  },
+  {
+    slug: "permuta",
+    type: "swap",
+    title: "Permuta",
+    when: "Has cambiado un activo por otro: cripto por cripto, o una fusión o un canje sin régimen de neutralidad.",
+    fields: [
+      account(),
+      { ...asset(), name: "from_asset_id", label: "Activo que entregas" },
+      {
+        name: "trade_date",
+        label: "Fecha de contratación",
+        kind: "date",
+        required: true,
+        pair: true,
+      },
+      { name: "value_date", label: "Fecha valor", kind: "date", required: true, pair: true },
+      { name: "quantity_out", label: "Cantidad entregada", kind: "decimal", required: true },
+      {
+        name: "market_value_out",
+        label: "Valor de mercado de lo entregado",
+        kind: "decimal",
+        required: true,
+        hint: "Lo que valía todo lo entregado ese día. Tributa el mayor de los dos valores.",
+      },
+      {
+        ...destinationAsset(),
+        label: "Activo que recibes",
+        bookFrom: "account_id",
+      },
+      { name: "quantity_in", label: "Cantidad recibida", kind: "decimal", required: true },
+      {
+        name: "market_value_in",
+        label: "Valor de mercado de lo recibido",
+        kind: "decimal",
+        required: true,
+        hint: "Lo que valía todo lo recibido ese día, en la misma divisa.",
+      },
+      { ...currency(), derive: "fromAssetCurrency", hint: "La del activo que entregas." },
+      ...fxRate(),
+      { name: "fee", label: "Comisión", kind: "decimal", initial: "0", required: true },
+      {
+        name: "thesis_id",
+        label: "Tesis",
+        kind: "select",
+        options: "openTheses",
+        hint: "Obligatoria en el cubo, para lo que recibes.",
+      },
+      { name: "broker_ref", label: "Referencia del bróker", kind: "text" },
+      { name: "source", label: "Origen del dato", kind: "text", initial: "manual", required: true },
+      notes(),
     ],
     omitted: [],
   },
