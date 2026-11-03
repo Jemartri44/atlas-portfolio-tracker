@@ -51,6 +51,8 @@ describe("the return of the core", () => {
     expect(shown).toContain("Rentabilidad anual, ponderada por dinero");
     expect(shown).toContain("Rentabilidad anual real, descontando el IPC");
     expect(shown).toContain("Por tipo de activo");
+    // A class without a figure says why, in a sentence, and not squeezed in a cell.
+    expect(shown).toContain("Renta variable: hay operaciones que no se calculan.");
   });
 });
 

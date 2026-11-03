@@ -4,7 +4,7 @@
 // (`coreXirr`, `classReturns`); a figure whose data is missing is not shown, the sentence says what
 // is missing. The percentages stay in sight with the privacy mode on; the amounts are masked.
 
-import { type JSX, Show } from "solid-js";
+import { For, type JSX, Show } from "solid-js";
 import {
   Amount,
   type DataColumn,
@@ -42,7 +42,7 @@ const COLUMNS: readonly DataColumn<ClassReturnRowView>[] = [
       row.gap === undefined ? (
         <Figure value={row.gainPct} unit="percent" decimals="auto" signed coloured />
       ) : (
-        <span class="nodata">{row.gap}</span>
+        <span class="nodata">sin cifra</span>
       ),
   },
   {
@@ -54,13 +54,13 @@ const COLUMNS: readonly DataColumn<ClassReturnRowView>[] = [
       row.gap === undefined ? (
         <Figure value={row.xirrPct} unit="percent" decimals={1} signed coloured />
       ) : (
-        <span class="nodata">{row.gap}</span>
+        <span class="nodata">sin cifra</span>
       ),
     cardCell: (row) =>
       row.gap === undefined ? (
         <Figure value={row.xirrPct} unit="percent" decimals={1} signed coloured />
       ) : (
-        <span class="nodata">{row.gap}</span>
+        <span class="nodata">sin cifra</span>
       ),
   },
 ];
@@ -116,6 +116,13 @@ export const ReturnsCard = (props: { view: ReturnsView }): JSX.Element => (
         rows={props.view.classes}
         maskedMerge
       />
+      <For each={props.view.classes.filter((row) => row.gap !== undefined)}>
+        {(row) => (
+          <p class="card-note">
+            {row.label}: {row.gap}.
+          </p>
+        )}
+      </For>
     </Show>
   </Section>
 );
