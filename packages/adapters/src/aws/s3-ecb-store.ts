@@ -45,7 +45,7 @@ import {
 import { EcbHistoryDamaged, type EcbManifest, fileOfSource } from "../ecb/history-store.js";
 import { sha256Bytes } from "../hash.js";
 import { utf8TextOrUndefined } from "../utf8.js";
-import type { ObjectStore, StoredObject } from "./object-store.js";
+import { type ObjectStore, type StoredObject, writeConditional } from "./object-store.js";
 
 const DIR = "reference/ecb/";
 const MANIFEST = `${DIR}manifest.json`;
@@ -88,11 +88,7 @@ export class S3EcbHistoryStore implements EcbHistoryStore {
     body: Uint8Array,
     stored: StoredObject | undefined,
   ): Promise<void> {
-    const done =
-      stored === undefined
-        ? (await this.objects.putIfNoneMatch(key, body)) === "created"
-        : (await this.objects.putIfMatch(key, body, stored.etag)) === "written";
-    if (!done) {
+    if (!(await writeConditional(this.objects, key, body, stored?.etag))) {
       throw new EcbStoreConflict();
     }
   }

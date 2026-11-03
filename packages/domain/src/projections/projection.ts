@@ -12,13 +12,12 @@
 //   ones: a drifted core is projected as if it were already at target.
 // - Informative: nothing fiscal reads it, and it is not a forecast.
 
-import { ValidationError } from "../errors.js";
 import { Decimal, HUNDRED } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
 import type { AssetClass } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import { coreMonthlyOf } from "./core-monthly.js";
-import { grow, monthsToReach } from "./growth.js";
+import { checkHorizon, grow, monthsToReach } from "./growth.js";
 import type { CoreWeights } from "./weights.js";
 
 export interface Scenario {
@@ -80,11 +79,7 @@ export const projection = (
   settings: Settings,
   assumptions: ProjectionAssumptions,
 ): Projection => {
-  if (!Number.isInteger(assumptions.years) || assumptions.years < 0) {
-    throw new ValidationError("invalid_horizon", "the horizon is a whole number of years", {
-      years: assumptions.years,
-    });
-  }
+  checkHorizon(assumptions.years);
   const { monthly, missing } = coreMonthlyOf(settings);
   const base = {
     years: assumptions.years,

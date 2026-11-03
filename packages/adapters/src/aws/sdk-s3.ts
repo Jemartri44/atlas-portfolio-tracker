@@ -44,6 +44,13 @@ export class SdkObjectStore implements ObjectStore {
   constructor(
     private readonly client: S3Sender,
     private readonly bucket: string,
+    /**
+     * Sends the writes. In production a client **without retries**: if the PUT arrived and its answer
+     * was lost, a retry would meet its own object and answer 412, a «conflict» for a write that
+     * happened. Without it, a lost answer is a failure of the dependency (503), the unknown result
+     * it is, and the next read says what is there.
+     */
+    private readonly writer: S3Sender = client,
   ) {}
 
   async get(key: string): Promise<StoredObject | undefined> {
@@ -86,7 +93,7 @@ export class SdkObjectStore implements ObjectStore {
     lock?: ObjectLock,
   ): Promise<"created" | "exists"> {
     try {
-      await this.client.send(
+      await this.writer.send(
         new PutObjectCommand({
           Bucket: this.bucket,
           Key: key,
@@ -113,7 +120,7 @@ export class SdkObjectStore implements ObjectStore {
     etag: string,
   ): Promise<"written" | "precondition_failed"> {
     try {
-      await this.client.send(
+      await this.writer.send(
         new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: body, IfMatch: etag }),
       );
       return "written";
@@ -127,36 +134,50 @@ export class SdkObjectStore implements ObjectStore {
   }
 
   async list(prefix: string): Promise<readonly ListedObject[]> {
-    const listed: ListedObject[] = [];
-    let token: string | undefined;
-    do {
-      let page: ListObjectsV2CommandOutput;
-      try {
-        page = (await this.client.send(
-          new ListObjectsV2Command({
-            Bucket: this.bucket,
-            Prefix: prefix,
-            Delimiter: "/",
-            ...(token === undefined ? {} : { ContinuationToken: token }),
-          }),
-        )) as ListObjectsV2CommandOutput;
-      } catch (error) {
-        return rethrow(error);
-      }
-      for (const object of page.Contents ?? []) {
-        if (object.Key !== undefined && object.ETag !== undefined && object.Size !== undefined) {
-          listed.push({ key: object.Key, etag: object.ETag, size: object.Size });
-        }
-      }
-      token = page.IsTruncated === true ? page.NextContinuationToken : undefined;
-    } while (token !== undefined);
-    return listed.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+    return listObjects(this.client, this.bucket, prefix, "/");
   }
 }
+
+/**
+ * `ListObjectsV2`, every page, by key. With a `delimiter` (`/`) only the first level under the
+ * prefix; without one, every object below it.
+ */
+export const listObjects = async (
+  client: S3Sender,
+  bucket: string,
+  prefix: string,
+  delimiter?: string,
+): Promise<readonly ListedObject[]> => {
+  const listed: ListedObject[] = [];
+  let token: string | undefined;
+  do {
+    let page: ListObjectsV2CommandOutput;
+    try {
+      page = (await client.send(
+        new ListObjectsV2Command({
+          Bucket: bucket,
+          Prefix: prefix,
+          ...(delimiter === undefined ? {} : { Delimiter: delimiter }),
+          ...(token === undefined ? {} : { ContinuationToken: token }),
+        }),
+      )) as ListObjectsV2CommandOutput;
+    } catch (error) {
+      return rethrow(error);
+    }
+    for (const object of page.Contents ?? []) {
+      if (object.Key !== undefined && object.ETag !== undefined && object.Size !== undefined) {
+        listed.push({ key: object.Key, etag: object.ETag, size: object.Size });
+      }
+    }
+    token = page.IsTruncated === true ? page.NextContinuationToken : undefined;
+  } while (token !== undefined);
+  return listed.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+};
 
 /** The store of the data bucket in production, with the default chain of credentials of the Lambda. */
 export const productionObjectStore = (bucket: string): SdkObjectStore =>
   new SdkObjectStore(
     new S3Client({ requestHandler: SDK_TIMEOUTS, maxAttempts: SDK_MAX_ATTEMPTS }),
     bucket,
+    new S3Client({ requestHandler: SDK_TIMEOUTS, maxAttempts: 1 }),
   );

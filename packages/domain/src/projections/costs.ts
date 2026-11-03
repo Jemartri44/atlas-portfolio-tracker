@@ -11,6 +11,7 @@ import { FxRate } from "../money/fx-rate.js";
 import { EUR, Money } from "../money/money.js";
 import { Price } from "../money/price.js";
 import { Quantity } from "../money/quantity.js";
+import { byCode } from "../order.js";
 import type {
   AccountId,
   AssetClass,
@@ -327,7 +328,7 @@ const standaloneBlockOf = (state: LedgerState, totals: Accumulator): StandaloneF
       core = core.add(fees_eur);
     }
   }
-  rows.sort((a, b) => a.account_id.localeCompare(b.account_id));
+  rows.sort((a, b) => byCode(a.account_id, b.account_id));
   return { rows, core_eur: core, bucket_eur: bucket };
 };
 

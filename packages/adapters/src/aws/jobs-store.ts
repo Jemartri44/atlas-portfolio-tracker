@@ -21,7 +21,7 @@ import {
   serializeRunRecord,
 } from "@atlas/domain/jobs";
 import { utf8TextOrUndefined } from "../utf8.js";
-import type { ObjectStore } from "./object-store.js";
+import { type ObjectStore, writeConditional } from "./object-store.js";
 
 const textOf = (bytes: Uint8Array): string | undefined => utf8TextOrUndefined(bytes, true);
 
@@ -73,10 +73,7 @@ export class JobsStore {
    */
   private async write(key: string, text: string, etag: string | undefined): Promise<string> {
     const body = new TextEncoder().encode(text);
-    const done =
-      etag === undefined
-        ? (await this.objects.putIfNoneMatch(this.own(key), body)) === "created"
-        : (await this.objects.putIfMatch(this.own(key), body, etag)) === "written";
+    const done = await writeConditional(this.objects, this.own(key), body, etag);
     const after = done ? await this.objects.get(key) : undefined;
     if (after === undefined || textOf(after.body) !== text) {
       throw new JobsWriteConflict();

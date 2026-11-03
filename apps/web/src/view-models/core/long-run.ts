@@ -3,11 +3,12 @@
 // data), each read the way a Spanish keyboard writes it; a missing piece is said, never filled in.
 
 import { Decimal } from "@atlas/domain";
+import { MAX_HORIZON_YEARS } from "@atlas/domain/portfolio";
 import { parseDecimalInput, parseIntegerInput } from "../../format/input.js";
 
 export const DEFAULT_YEARS = "20";
-/** Each year is twelve steps of a calculation that runs on every key: the horizon has a ceiling. */
-export const MAX_YEARS = 100;
+/** The domain's ceiling, said on the screen before the calculation refuses it. */
+export const MAX_YEARS = MAX_HORIZON_YEARS;
 
 type Parsed<T> = { ok: true; value: T } | { ok: false; message: string };
 

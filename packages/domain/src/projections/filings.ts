@@ -15,6 +15,7 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import { ProjectionError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
+import { byCode } from "../order.js";
 import type {
   FiledFigures,
   FiledInformativeFigures,
@@ -172,7 +173,7 @@ export const filingInForce = (
   );
   // The last one filed, and among those of the same day the last of the file:
   // a chain is written in order, so the later line is the later filing.
-  return candidates.sort((a, b) => a.filed_at.localeCompare(b.filed_at) || a.position - b.position)[
+  return candidates.sort((a, b) => byCode(a.filed_at, b.filed_at) || a.position - b.position)[
     candidates.length - 1
   ];
 };
@@ -196,5 +197,5 @@ export const closedYears = (
       filing: inForce,
     });
   }
-  return [...seen.values()].sort((a, b) => a.year - b.year || a.model.localeCompare(b.model));
+  return [...seen.values()].sort((a, b) => a.year - b.year || byCode(a.model, b.model));
 };

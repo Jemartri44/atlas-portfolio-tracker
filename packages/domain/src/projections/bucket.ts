@@ -11,6 +11,7 @@ import { type CivilDate, daysBetween } from "../dates/civil-date.js";
 import { type Decimal, HUNDRED } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
+import { byCode } from "../order.js";
 import type { AccountId, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import {
@@ -221,8 +222,8 @@ export const bucketPositions = (
 
   rows.sort((a, b) =>
     a.account_id === b.account_id
-      ? a.asset_id.localeCompare(b.asset_id)
-      : a.account_id.localeCompare(b.account_id),
+      ? byCode(a.asset_id, b.asset_id)
+      : byCode(a.account_id, b.account_id),
   );
   const partial = missing.length > 0;
   if (partial) {

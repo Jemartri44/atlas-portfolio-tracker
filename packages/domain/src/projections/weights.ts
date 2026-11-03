@@ -9,6 +9,7 @@ import type { CivilDate } from "../dates/civil-date.js";
 import { Decimal, HUNDRED } from "../money/decimal.js";
 import { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
+import { byCode } from "../order.js";
 import type { AssetClass, AssetId } from "../schema/events.js";
 import { ASSET_CLASSES } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
@@ -136,7 +137,7 @@ const classOrder = (asset_class: AssetClass): number => ASSET_CLASSES.indexOf(as
 export const sortWeightRows = (rows: CoreWeightRow[]): CoreWeightRow[] =>
   rows.sort((a, b) =>
     classOrder(a.asset_class) === classOrder(b.asset_class)
-      ? a.asset_id.localeCompare(b.asset_id)
+      ? byCode(a.asset_id, b.asset_id)
       : classOrder(a.asset_class) - classOrder(b.asset_class),
   );
 
