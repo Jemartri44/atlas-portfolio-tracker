@@ -350,7 +350,7 @@ describe("api: the API only appends, and the domain judges every line", () => {
   });
 
   /**
-   * What a line is worth is `acceptAppend` and `acceptInit`, never a copy in the handler: no source
+   * What a line is worth is `acceptAppend`, never a copy in the handler: no source
    * of the API names a code of the table of `docs/api.md` §5.2.
    */
   it("reimplements no rule of acceptAppend: the codes of a line live in the domain", () => {
@@ -360,7 +360,6 @@ describe("api: the API only appends, and the domain judges every line", () => {
     expect(offenders.map((file) => relative(repoRoot, file))).toEqual([]);
     const sync = readFileSync(join(apiRoot, "src", "sync.ts"), "utf8");
     expect(sync).toMatch(/acceptAppend\(/);
-    expect(sync).toMatch(/acceptInit\(/);
   });
 });
 
@@ -393,19 +392,12 @@ describe("api: the administration is out of reach of the API", () => {
   });
 
   /**
-   * The administration takes the role of administration from the standard chain of the SDK, **never
-   * the token of a device**: nothing it imports is the credentials of the console, the header of
-   * the token or the client of the API.
+   * The console has no access of its own to the API (P1 of 2026-11-03): it works on a local
+   * ledger, and on the cloud only with the role of administration. Nothing of it imports a client
+   * of the API, nor names a route or a token of one.
    */
-  it("uses no token of a device: it imports neither the credentials nor the client of the API", () => {
-    const roots = cliSources().filter((file) =>
-      /[/\\](admin[/\\][^/\\]+|commands[/\\](backup|backup-copies))\.ts$/.test(file),
-    );
-    // `src/admin/` (3) and `src/commands/admin/` (6: the dispatcher, devices, ledger, prices-push,
-    // secrets and the confirmation) join `backup` and `backup-copies`.
-    expect(roots.length).toBe(11);
-    // What they import, by name: never the credentials or the client of the
-    // console, and from the barrel of the adapters only the folder's own.
+  it("reaches the API from no source of the console", () => {
+    const roots = cliSources();
     const imported = roots.flatMap((file) =>
       parse(file).bindings.map((binding) => ({ file, ...binding })),
     );
@@ -413,14 +405,15 @@ describe("api: the administration is out of reach of the API", () => {
     const violations = imported
       .filter(
         ({ specifier, name }) =>
-          /(^|\/)remote\//.test(specifier) ||
-          /^@atlas\/adapters\/(sync-http|identity|access)$/.test(specifier) ||
-          (specifier === "@atlas/adapters" && !["FileLedgerStore"].includes(name)),
+          /^@atlas\/adapters\/(sync-http|drafts-http|reference-http|identity|access)$/.test(
+            specifier,
+          ) ||
+          (specifier === "@atlas/adapters" && /^(ApiLedgerStore|httpRemote)$/.test(name)),
       )
       .map(({ file, specifier, name }) => `${relative(repoRoot, file)}: ${name} from ${specifier}`);
     expect(violations).toEqual([]);
     const named = roots.filter((file) =>
-      /DEVICE_TOKEN_HEADER|x-atlas-device-token|credentials\.json/.test(parse(file).code),
+      /x-atlas-device-token|credentials\.json|["'`]\/api\//.test(parse(file).code),
     );
     expect(named.map((file) => relative(repoRoot, file))).toEqual([]);
   });

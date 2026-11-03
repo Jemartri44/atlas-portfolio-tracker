@@ -17,12 +17,7 @@
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import type { AssetId } from "@atlas/domain";
-import {
-  CLOUD_PULL_FILE,
-  type PriceStore,
-  type PriceTransaction,
-  priceFileName,
-} from "@atlas/domain/quotes";
+import { type PriceStore, type PriceTransaction, priceFileName } from "@atlas/domain/quotes";
 import { nodeFileOps, writeFileAtomically } from "../ledger-store/file-ops.js";
 import { type HeldLock, LedgerLockedError, withFolderLock } from "../ledger-store/folder-lock.js";
 
@@ -38,15 +33,6 @@ const readOrUndefined = async (path: string): Promise<string | undefined> => {
     throw error;
   }
 };
-
-/**
- * What the transaction of the folder adds for the console that pulls from the
- * cloud: `prices/_cloud.json`, written under the same lock
- * as the closes it describes.
- */
-interface FilePriceTransaction extends PriceTransaction {
-  readonly writeCloudPull: (text: string) => Promise<void>;
-}
 
 interface FilePriceStoreOptions {
   /** How many times, and how long apart, a transaction asks for the lock again. */
@@ -72,8 +58,6 @@ export class FilePriceStore implements PriceStore {
   config = () => readOrUndefined(join(this.dir, "config.json"));
   symbols = () => readOrUndefined(join(this.dir, "symbols.json"));
   status = () => readOrUndefined(join(this.dir, "_status.json"));
-  /** `prices/_cloud.json`: what the folder keeps of its last pull from the cloud. */
-  cloudPull = () => readOrUndefined(join(this.dir, CLOUD_PULL_FILE));
   closes = (assetId: AssetId) => readOrUndefined(this.fileOf(assetId));
 
   private async writeAtomically(path: string, text: string, lock: HeldLock): Promise<void> {
@@ -81,7 +65,7 @@ export class FilePriceStore implements PriceStore {
     await writeFileAtomically(nodeFileOps, path, text, lock);
   }
 
-  async transact<T>(work: (tx: FilePriceTransaction) => Promise<T>): Promise<T> {
+  async transact<T>(work: (tx: PriceTransaction) => Promise<T>): Promise<T> {
     const attempts = this.options.lockAttempts ?? 50;
     const wait = this.options.lockWaitMs ?? 100;
     for (let attempt = 1; ; attempt += 1) {
@@ -111,8 +95,6 @@ export class FilePriceStore implements PriceStore {
             writeStatus: (text) => this.writeAtomically(join(this.dir, "_status.json"), text, lock),
             writeSymbols: (text) =>
               this.writeAtomically(join(this.dir, "symbols.json"), text, lock),
-            writeCloudPull: (text) =>
-              this.writeAtomically(join(this.dir, CLOUD_PULL_FILE), text, lock),
           }),
         );
       } catch (error) {

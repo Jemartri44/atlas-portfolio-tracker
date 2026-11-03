@@ -7,13 +7,7 @@
 // (ADR-0025). Refusing is still what happens by default; the way out is asked
 // for by name, one filing at a time, and it is **recorded in the ledger**.
 
-import {
-  type CompactPlan,
-  compactLedger,
-  DomainError,
-  planCompact,
-  type UnverifiedFiling,
-} from "@atlas/domain";
+import { type CompactPlan, compactLedger, planCompact, type UnverifiedFiling } from "@atlas/domain";
 import { assertKnownFlags, type Flags, listFlag } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { table } from "../output/table.js";

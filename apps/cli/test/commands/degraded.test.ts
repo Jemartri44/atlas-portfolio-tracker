@@ -165,14 +165,11 @@ const INVOCATIONS: {
   // The prices live in the folder, outside the ledger; the ledger is read only for the list of
   // assets whose last close is shown.
   { command: "prices", argv: ["prices", "symbols"], readOnly: true, folderOnly: true },
-  // The sessions of the console live in credentials.json, outside the folder; the ledger is never
-  // read nor written by them.
-  { command: "remote", argv: ["remote", "status"], readOnly: true, folderOnly: true },
   // The administration works on the remote with the role of administration, never on the figures of
   // the local ledger.
   {
     command: "admin",
-    argv: ["admin", "devices", "--env", "test"],
+    argv: ["admin", "pull", "--env", "test", "--to", "pulled"],
     readOnly: true,
     folderOnly: true,
   },

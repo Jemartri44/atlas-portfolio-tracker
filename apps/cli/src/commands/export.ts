@@ -3,14 +3,7 @@
 import { lstat, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { FileLedgerStore } from "@atlas/adapters";
-import {
-  DomainError,
-  decodeLines,
-  encodeLine,
-  type LedgerEvent,
-  projectLedger,
-} from "@atlas/domain";
-import { linesOfText } from "@atlas/domain/sync";
+import { DomainError, encodeLine } from "@atlas/domain";
 import { assertKnownFlags, type Flags, stringFlag, UsageError } from "../args.js";
 import { CommandFailure, type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { pathExists } from "../fs.js";

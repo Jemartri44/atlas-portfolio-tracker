@@ -1,9 +1,9 @@
 // `atlas backup` (ADR-0032, layer 4): the local `documents/` beside the ledger and, with
-// `--from-bucket`, `documents/` and `imports/` of the data bucket with the role of administration —
-// against the double of S3, **only reading** there, every file verified and nothing ever
+// `--from-bucket`, the ledger, `documents/` and `imports/` of the data bucket with the role of
+// administration — against the double of S3, **only reading** there, every file verified and nothing ever
 // overwritten on disk.
 
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { encodeLine } from "@atlas/domain";
@@ -84,12 +84,12 @@ describe("atlas backup copies the local documents/", () => {
 });
 
 describe("atlas backup --from-bucket", () => {
-  it("copies documents/ and imports/ of the bucket, only reading there", async () => {
+  it("copies the ledger, documents/ and imports/ of the bucket, only reading there", async () => {
     const api = setup();
     api.s3.seed("documents/01ARYZ6S41TSV4RRFFQ69G5FAV/aviso.pdf", "pdf del bucket");
     api.s3.seed("documents/01ARYZ6S41TSV4RRFFQ69G5FAV/", "");
     api.s3.seed("imports/ibkr/2026-09.csv", "a,b");
-    api.s3.seed("ledger/ledger.jsonl", "no se copia\n");
+    api.s3.seed("ledger/ledger.jsonl", "el de la nube\n");
     const f = await folder(api);
     const target = join(f.dir, "..", `copies-bucket-${Date.now()}`);
     const before = api.s3.keys().map((key) => [key, api.s3.etagOf(key)]);
@@ -105,6 +105,10 @@ describe("atlas backup --from-bucket", () => {
     );
     expect(f.text()).toContain("2 ficheros copiados y verificados");
     expect(f.text()).toContain("En el bucket no se ha escrito ni borrado nada.");
+    // The ledger of the cloud, not the one of the folder, dated and read-only.
+    const [dated] = (await readdir(target)).filter((name) => name.startsWith("ledger-"));
+    expect(await readFile(join(target, dated as string), "utf8")).toBe("el de la nube\n");
+    expect((await stat(join(target, dated as string))).mode & 0o777).toBe(0o400);
     // Only reading: no write reached the bucket, and nothing changed there.
     expect(api.s3.calls.filter((call) => /^put/.test(call))).toEqual([]);
     expect(api.s3.keys().map((key) => [key, api.s3.etagOf(key)])).toEqual(before);
@@ -112,6 +116,7 @@ describe("atlas backup --from-bucket", () => {
 
   it("skips a key that would leave the destination, copies the rest, and fails at the end", async () => {
     const api = setup();
+    api.s3.seed("ledger/ledger.jsonl", "");
     api.s3.seed("documents/../../fuera.txt", "x");
     api.s3.seed("imports/ibkr/2026-09.csv", "a,b");
     const f = await folder(api);

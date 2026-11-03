@@ -77,7 +77,10 @@ describe("the stolen Google account, rehearsed step by step with the doubles", (
     // The intruder, with the stolen account: a session of the web that records a line.
     const intruder = await webSession(api);
     const ledger = await as(api, intruder, "/api/ledger");
+    // Built after the ledger's own events, so its id is a new one.
     const b = new Events();
+    b.settings(CLI_SETTINGS);
+    b.account("acc_ib", "IE");
     const INTRUDER_LINE = b.deposit("acc_ib", "2026-09-30", "1");
     const appended = await api.call("POST", "/api/ledger/lines", {
       jar: false,
@@ -89,7 +92,7 @@ describe("the stolen Google account, rehearsed step by step with the doubles", (
       },
       body: JSON.stringify({ lines: [{ line: encodeLine(INTRUDER_LINE) }] }),
     });
-    expect(appended.statusCode).toBe(200);
+    expect(JSON.parse(appended.body)).toMatchObject({ accepted: 1 });
 
     // 1. The pair out of the allow list; the cache of 120 s goes by. Nobody
     //    with that account gets in.

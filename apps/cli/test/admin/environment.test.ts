@@ -144,7 +144,7 @@ describe("the standard chain with a profile that asks for MFA", () => {
     });
     const lines: string[] = [];
     const code = await run(
-      ["--ledger", join(root, "ledger.jsonl"), "admin", "devices", "--env", "prod"],
+      ["--ledger", join(root, "ledger.jsonl"), "admin", "pull", "--env", "prod", "--to", root],
       { out: (t) => lines.push(t), err: (t) => lines.push(t), confirm: async () => undefined },
     );
     expect(code).toBe(1);
