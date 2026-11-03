@@ -212,10 +212,13 @@ export const SaleSimulatorCard = (props: {
             </Show>
             <Show when={sale().repurchase_until}>
               {(until) => (
-                <Notice severity="caution" title={`No vuelvas a comprar hasta el ${until()}`}>
+                <Notice
+                  severity="caution"
+                  title={`Ventana de recompra abierta hasta el ${until()}`}
+                >
                   Esta venta computa una pérdida, suya o aplazada de antes. Si compras {sale().name}{" "}
-                  antes de esa fecha (incluida), en cualquier cuenta, esa pérdida no cuenta este
-                  año: se aplaza hasta que vendas lo recomprado.
+                  hasta esa fecha (incluida), en cualquier cuenta, esa pérdida no cuenta este año:
+                  se aplaza (no se pierde) hasta que vendas lo recomprado.
                 </Notice>
               )}
             </Show>

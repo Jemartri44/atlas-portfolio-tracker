@@ -189,7 +189,7 @@ describe("the projection", () => {
         text(host.querySelector(".projection-card")).includes(
           "El objetivo tiene que ser mayor que cero.",
         ),
-      "the error",
+      "the message of a goal that is not above zero",
     );
     await press(host, "Añadir un escenario");
     expect(host.querySelectorAll("[id^='pj-name-']").length).toBe(2);
