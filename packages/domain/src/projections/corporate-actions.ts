@@ -7,7 +7,6 @@
 import { ProjectionError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
 import type { AccountId, AssetId, CorporateActionEvent } from "../schema/events.js";
-import { euRegulatedMarket } from "../tax/boxes/markets.js";
 import { requireAsset } from "./catalogue.js";
 import type { CurrencyLots } from "./currency-lots.js";
 import {
@@ -17,6 +16,7 @@ import {
   type ResolvedEffect,
   targetOf,
 } from "./kind-rules.js";
+import { euRegulatedMarket } from "./markets.js";
 import { accountsHolding } from "./positions.js";
 import {
   applyCarveOut,
