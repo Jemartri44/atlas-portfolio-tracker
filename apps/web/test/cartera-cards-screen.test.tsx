@@ -11,7 +11,7 @@ import { store } from "../src/ledger/state.js";
 import Cartera from "../src/routes/cartera/index.jsx";
 import { type Api, apiAt, sameOrigin, signedIn } from "./cloud/api-support.js";
 import { goldenText } from "./helpers/golden.js";
-import { show, text, until, withGoldenLedger } from "./helpers/render.jsx";
+import { settle, show, text, type, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -53,5 +53,23 @@ describe("the return of the core", () => {
     expect(shown).toContain("Por tipo de activo");
     // A class without a figure says why, in a sentence, and not squeezed in a cell.
     expect(shown).toContain("Oro: sin cifra por una operación corporativa.");
+  });
+});
+
+describe("the total cost", () => {
+  it("shows no figure without a gross return, and the costs once it is typed", async () => {
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => host.querySelector("#tc-gross") !== null, "the card");
+    expect(text(host.querySelector(".total-cost"))).toContain(
+      "Escribe la rentabilidad bruta anual",
+    );
+    type(host, "tc-gross", "5");
+    await settle(30);
+    const card = text(host.querySelector(".total-cost"));
+    expect(card).toContain("Coste total en el horizonte");
+    expect(card).toContain("Se lleva el TER");
+    type(host, "tc-gross", "5,x");
+    await settle(30);
+    expect(text(host.querySelector(".total-cost"))).not.toContain("Coste total en el horizonte");
   });
 });
