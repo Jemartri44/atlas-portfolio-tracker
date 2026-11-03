@@ -35,3 +35,6 @@ export const fxMissingReason = (reason: unknown): string | undefined => {
       return undefined;
   }
 };
+
+/** A phrase that opens a sentence starts with a capital letter. */
+export const capital = (phrase: string): string => phrase.charAt(0).toUpperCase() + phrase.slice(1);

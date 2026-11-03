@@ -8,7 +8,7 @@
 
 import { DomainError } from "@atlas/domain";
 import { RemoteError } from "@atlas/domain/sync";
-import { describeError, REMOTE_FAILURES } from "../format/messages/errors.js";
+import { describeError, remoteFailure } from "../format/messages/errors.js";
 import { nameIndex } from "../format/names.js";
 import { maskFigures } from "../format/privacy.js";
 import { privacy } from "../shell/preferences.js";
@@ -35,7 +35,7 @@ export const toAppError = (error: unknown): AppError => {
       message:
         error.code === "network_failed"
           ? "No hay conexión con la nube: no se ha guardado nada."
-          : `No se ha podido hablar con la nube: ${REMOTE_FAILURES[error.code] ?? "ha respondido con un error."} No se ha guardado nada.`,
+          : `No se ha podido hablar con la nube: ${remoteFailure(error.code) ?? "ha respondido con un error."} No se ha guardado nada.`,
     };
   }
   if (error instanceof DomainError) {
