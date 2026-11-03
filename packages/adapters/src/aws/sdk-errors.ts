@@ -18,6 +18,15 @@ export const factsOf = (error: unknown): SdkErrorFacts => {
   };
 };
 
+/**
+ * Limits for the SDK clients of the Lambdas. Without them a hung socket keeps the request until
+ * the Lambda or CloudFront gives up (a 504) instead of the `503 remote_unavailable` the clients
+ * know how to retry; a `TimeoutError` is a transient failure below.
+ */
+export const SDK_TIMEOUTS = { connectionTimeout: 3_000, requestTimeout: 8_000 } as const;
+/** Two attempts of 8 s fit in the 30 s of the API Lambda; the SDK default of three would not. */
+export const SDK_MAX_ATTEMPTS = 2;
+
 /** Errors of the network or of the client's own timeout: nothing reached AWS, or its answer did not come back. */
 const NETWORK = new Set(["TimeoutError", "RequestTimeout", "ECONNRESET", "ETIMEDOUT", "EPIPE"]);
 

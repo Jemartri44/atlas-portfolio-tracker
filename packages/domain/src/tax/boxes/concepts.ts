@@ -12,18 +12,34 @@
 
 import type { AssetType } from "../../schema/events.js";
 import type { IncomeCategory } from "../../settings/settings.js";
+import { euRegulatedMarket } from "./markets.js";
 
 /**
  * Where a disposal is declared. The section is a **fiscal criterion** and not a
  * detail of the form: it decides how the disposal is declared, so it is
  * numbered in `docs/fiscal-questions.md` before it is written here.
  *
- * `other` is "otros elementos patrimoniales", which in 2025 has **no checked
- * mapping**: the only thing that would land there is an ETC or an ETP the user
- * configured as a capital gain, and no official text says where that goes. It
- * exists so the figure is still shown, without a number, saying so.
+ * - `rights`: subscription rights, their own section of the form (0341-0355
+ *   in 2025), whether sold in a scrip or on their own.
+ * - `other_shares`: shares not admitted to trading on a regulated market of
+ *   Directive 2014/65/EU, which the help of the Modelo 100 sends to "otros
+ *   elementos patrimoniales" with key 2. A share of NYSE or Nasdaq lands here;
+ *   the output says the section is doubtful (no source has been read that
+ *   extends the equivalence of those markets to the form).
+ * - `other`: "otros elementos patrimoniales" with **no box**: an exchange
+ *   difference of currency and an ETC or an ETP the user configured as a
+ *   capital gain. No official text says where they go; key 4 ("otros elementos
+ *   no afectos") is an inference by exclusion, and the output says so.
  */
-export const SECTIONS = ["iic", "etf", "listed_shares", "crypto", "other"] as const;
+export const SECTIONS = [
+  "iic",
+  "etf",
+  "listed_shares",
+  "rights",
+  "other_shares",
+  "crypto",
+  "other",
+] as const;
 export type SectionId = (typeof SECTIONS)[number];
 
 /**
@@ -37,6 +53,7 @@ export type SectionId = (typeof SECTIONS)[number];
 export const ROW_FIELDS = [
   "nif",
   "name",
+  "key",
   "transmission",
   "acquisition",
   "gain",
@@ -128,6 +145,18 @@ export const SECTION_FIELDS: Record<SectionId, readonly RowFieldId[]> = {
     "loss",
     "loss_imputable",
   ],
+  rights: ["name", "transmission", "acquisition", "gain", "gain_net", "loss", "loss_imputable"],
+  other_shares: [
+    "name",
+    "key",
+    "transmission",
+    "acquisition",
+    "gain",
+    "gain_net",
+    "gain_imputable",
+    "loss",
+    "loss_imputable",
+  ],
   crypto: [
     "name",
     "transmission",
@@ -138,7 +167,17 @@ export const SECTION_FIELDS: Record<SectionId, readonly RowFieldId[]> = {
     "loss",
     "loss_imputable",
   ],
-  other: ["name", "transmission", "acquisition", "gain", "loss", "loss_imputable"],
+  other: ["name", "key", "transmission", "acquisition", "gain", "loss", "loss_imputable"],
+};
+
+/** "Tipo de elemento patrimonial. Clave" (box 1626 of 2025) of each section of "otros elementos". */
+export const OTHER_ELEMENT_KEYS: Partial<Record<SectionId, string>> = {
+  // «Transmisión de participaciones y acciones no admitidas a negociación en
+  // mercados regulados de valores definidos en la Directiva 2014/65/UE».
+  other_shares: "2",
+  // «Otros elementos patrimoniales no afectos a actividades económicas»: an
+  // inference by exclusion, not read in any source.
+  other: "4",
 };
 
 /**
@@ -171,6 +210,7 @@ type RowConceptId = `gp.${SectionId}.${RowFieldId | "gains" | "losses"}`;
 export const ROW_FIELD_NAMES: Record<RowFieldId | "gains" | "losses", string> = {
   nif: "NIF de la entidad",
   name: "Denominación de los valores",
+  key: "Tipo de elemento patrimonial (clave)",
   transmission: "Importe de las transmisiones",
   acquisition: "Valor de adquisición",
   gain: "Ganancia patrimonial",
@@ -273,13 +313,24 @@ export const SIGNED_CONCEPTS: ReadonlySet<ConceptId> = new Set<ConceptId>([
  * the transfer of financial assets. By default that is an ETC and an ETP
  * (criterion #24, binding ruling V0267-25). Only if the user configures one of
  * them back as a capital gain does it reach `other`, which has no box.
+ *
+ * Two facts of the disposal refine it: subscription rights (`rights`) have a
+ * section of their own, and a share whose market is known to be outside the
+ * regulated markets of the EU goes to `other_shares`.
  */
 export const transmissionSection = (
   assetType: AssetType,
   category: IncomeCategory,
+  facts: { rights?: boolean; market?: string } = {},
 ): SectionId | "movable_capital" => {
   if (category === "movable_capital") {
     return "movable_capital";
+  }
+  if (facts.rights === true) {
+    return "rights";
+  }
+  if (assetType === "stock" && euRegulatedMarket(facts.market) === false) {
+    return "other_shares";
   }
   switch (assetType) {
     case "fund":
@@ -310,6 +361,8 @@ export const BOX_BLOCKS = [
   "iic",
   "etf",
   "listed_shares",
+  "rights",
+  "other_shares",
   "crypto",
   "other",
   "prior_years",

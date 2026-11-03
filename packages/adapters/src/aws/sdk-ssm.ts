@@ -22,7 +22,7 @@ import {
   SSMClient,
 } from "@aws-sdk/client-ssm";
 import type { ParameterEntry, ParameterStore } from "./parameter-store.js";
-import { factsOf, transient } from "./sdk-errors.js";
+import { factsOf, SDK_MAX_ATTEMPTS, SDK_TIMEOUTS, transient } from "./sdk-errors.js";
 
 /** What the adapter sends: the client of the SDK, or a simulated one with the same calls. */
 export interface SsmSender {
@@ -145,4 +145,6 @@ export class SdkParameterStore implements ParameterStore {
 
 /** The parameters of production, with the default chain of credentials of the Lambda. */
 export const productionParameterStore = (): SdkParameterStore =>
-  new SdkParameterStore(new SSMClient({}));
+  new SdkParameterStore(
+    new SSMClient({ requestHandler: SDK_TIMEOUTS, maxAttempts: SDK_MAX_ATTEMPTS }),
+  );

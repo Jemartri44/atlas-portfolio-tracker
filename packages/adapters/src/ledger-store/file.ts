@@ -24,33 +24,19 @@ import {
   ConflictError,
   CURRENT_LEDGER_SCHEMA,
   decodeLines,
-  encodeLine,
   type LedgerEvent,
   type LedgerSchema,
   type LedgerStore,
   type LoadedLedger,
   rawLinesText,
-  ValidationError,
 } from "@atlas/domain";
 import { sha256Bytes } from "../hash.js";
 import { type FileOps, nodeFileOps, type WritableFile, writeFileAtomically } from "./file-ops.js";
 import { type HeldLock, withFolderLock } from "./folder-lock.js";
-
-const NEWLINE = 0x0a;
+import { checkArchiveName, ledgerLinesOf, separatorFor, serialise } from "./text.js";
 
 const hasCode = (error: unknown, code: string): boolean =>
   typeof error === "object" && error !== null && (error as { code?: string }).code === code;
-
-const serialise = (events: readonly LedgerEvent[]): string =>
-  events.map((event) => `${encodeLine(event)}\n`).join("");
-
-const checkArchiveName = (archiveName: string): void => {
-  if (archiveName.length === 0 || /[/\\]/.test(archiveName)) {
-    throw new ValidationError("invalid_archive_name", "archive name must be a plain file name", {
-      archive_name: archiveName,
-    });
-  }
-};
 
 export interface FileLedgerStoreOptions {
   /**
@@ -126,14 +112,6 @@ export class FileLedgerStore implements LedgerStore {
     return sha256Bytes(bytes);
   }
 
-  private static linesOf(bytes: Buffer): string[] {
-    const lines = bytes.toString("utf8").split("\n");
-    if (lines[lines.length - 1] === "") {
-      lines.pop();
-    }
-    return lines;
-  }
-
   /**
    * Writes `bytes` to a temporary file, fsyncs it, checks that the lock is
    * still this writer's own and renames it over the ledger. The check is a
@@ -150,7 +128,7 @@ export class FileLedgerStore implements LedgerStore {
 
   async load(): Promise<LoadedLedger> {
     const bytes = await this.readBytes();
-    const lines = FileLedgerStore.linesOf(bytes);
+    const lines = ledgerLinesOf(bytes);
     const events = decodeLines(lines, this.schema);
     return { events, etag: FileLedgerStore.etagOf(bytes), lines };
   }
@@ -166,8 +144,7 @@ export class FileLedgerStore implements LedgerStore {
   /** Adds `text` at the end, on `etag`. The caller holds `lock`. */
   private async addText(lock: HeldLock, text: string, etag: string): Promise<{ etag: string }> {
     const bytes = await this.currentBytes(etag);
-    const separator = bytes.length > 0 && bytes[bytes.length - 1] !== NEWLINE ? "\n" : "";
-    const next = Buffer.concat([bytes, Buffer.from(separator + text, "utf8")]);
+    const next = Buffer.concat([bytes, Buffer.from(separatorFor(bytes) + text, "utf8")]);
     await this.writeAtomically(next, lock);
     return { etag: FileLedgerStore.etagOf(next) };
   }
