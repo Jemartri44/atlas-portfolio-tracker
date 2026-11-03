@@ -2,7 +2,10 @@
 # Names scope what the ARN names; the `env` tag scopes CloudFront, ACM and WAF, which
 # carry a generated identifier (`aws:RequestTag` when creating, `aws:ResourceTag` when
 # changing). It never has an object action on the data bucket, nor a write on its configuration (the bootstrap owns it), a change action on the
-# OAC or the CloudFront policies, a `GetParameter` on a secret or any `kms:Decrypt`.
+# OAC or the CloudFront policies, a `GetParameter` on a secret or any `kms:Decrypt`. It does
+# reach the ledger through the code it deploys: the Lambda of the API reads and writes it.
+# That path is guarded by the approval of the `prod` environment (ADR-0034, row 21), not by
+# this policy; what it cannot do is rewrite the trust of the roles that code runs under.
 
 locals {
   # Only dev writes the artifact; prod only reads what dev built (prompt 017, §12.2 B6).
@@ -63,6 +66,7 @@ locals {
         "lambda:UntagResource",
         "lambda:UpdateFunctionCode",
         "lambda:UpdateFunctionConfiguration",
+        "lambda:UpdateFunctionEventInvokeConfig",
         "lambda:UpdateFunctionUrlConfig",
       ]
       resources = [local.lambda_fn]
@@ -228,6 +232,14 @@ locals {
       effect    = "Deny"
       actions   = local.iam_bootstrap_role_actions
       resources = local.bootstrap_role_arns
+    },
+    {
+      # The trust of these roles never changes after their creation: a deploy that could
+      # rewrite it could hand the ledger or the mail to another principal.
+      sid       = "DenyWorkloadTrustChange"
+      effect    = "Deny"
+      actions   = ["iam:UpdateAssumeRolePolicy"]
+      resources = concat([local.role_arn.api, local.role_arn.scheduler], local.job_role_arns)
     },
     {
       sid       = "DenyBoundaryRemoval"
