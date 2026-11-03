@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 //
 // A task that stops running sends no mail, so the web says it: the card of Ajustes, and a warning
-// of *Atención* only when one is late. A status that cannot be read takes nothing else with it.
+// of *Atención* when one is late or the status cannot be read, which takes nothing else with it.
 
 import { afterEach, describe, expect, it } from "vitest";
 import { today } from "../src/ledger/state.js";
@@ -59,9 +59,16 @@ describe("the warning of tasks that stopped running", () => {
     expect(lateJobsNotice(rows(2))?.message).toContain("2 tareas automáticas llevan");
   });
 
-  it("says nothing when none is late, the status failed or it has not answered", () => {
+  it("says it could not check them when the status failed", () => {
+    expect(lateJobsNotice({ kind: "failed" })).toMatchObject({
+      severity: "caution",
+      message: expect.stringContaining("No se ha podido comprobar"),
+      action: { to: "/ajustes#tareas" },
+    });
+  });
+
+  it("says nothing when none is late or it has not answered", () => {
     expect(lateJobsNotice(rows(0))).toBeUndefined();
-    expect(lateJobsNotice({ kind: "failed" })).toBeUndefined();
     expect(lateJobsNotice(undefined)).toBeUndefined();
   });
 });
@@ -104,14 +111,17 @@ describe("the summary", () => {
     await until(() => text(host).includes("tareas automáticas llevan"));
   });
 
-  it("stays as it was with every task on time, or with a status it cannot read", async () => {
+  it("stays as it was with every task on time", async () => {
     answer(fresh);
     const onTime = await show("/", Resumen);
     await until(() => text(onTime).includes("Atención"));
     expect(text(onTime)).not.toContain("tareas automáticas");
+  });
+
+  it("warns that it could not check them with a status it cannot read", async () => {
     answer({}, 500);
     const failed = await show("/", Resumen);
-    await until(() => text(failed).includes("Atención"));
-    expect(text(failed)).not.toContain("tareas automáticas");
+    await until(() => text(failed).includes("No se ha podido comprobar"));
+    expect(text(failed)).toContain("Atención");
   });
 });
