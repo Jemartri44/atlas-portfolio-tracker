@@ -66,8 +66,17 @@ const catalogueDraft = (
   type: "account_created" | "account_updated" | "asset_created" | "asset_updated",
   flags: Flags,
   current: Record<string, unknown>,
+  updating?: string,
 ): Record<string, unknown> => {
   const isAccount = type.startsWith("account");
+  // An update names its record once, as the positional: a different --id would copy this record's
+  // fields over another one.
+  const typedId = stringFlag(flags, "id");
+  if (updating !== undefined && typedId !== undefined && typedId !== updating) {
+    throw new UsageError(
+      `--id ${typedId} no coincide con ${updating}: un update no cambia de registro; para otro, indícalo como argumento`,
+    );
+  }
   const allowed = isAccount ? ACCOUNT_FLAGS : ASSET_FLAGS;
   assertKnownFlags(flags, [...allowed, ...GLOBAL_FLAGS]);
   const draft: Record<string, unknown> = { ...current, type };
@@ -152,6 +161,7 @@ export const accountCommand = async (
         "account_updated",
         flags,
         stripProjection(current as unknown as Record<string, unknown>),
+        id,
       ),
     );
     return 0;
@@ -206,6 +216,7 @@ export const assetCommand = async (
       "asset_updated",
       flags,
       stripProjection(current as unknown as Record<string, unknown>),
+      id,
     );
     // Only when this update is the one that marks it transferable.
     await confirmAndRecord(ctx, draft, current.transferable ? [] : transferNotes(draft));
@@ -292,11 +303,21 @@ const SETTINGS_BOOLEANS = ["wash-sale-transfer-counts", "no-wash-sale-transfer-c
 export const parseAssignments = (raw: string, flag: string): Record<string, string> => {
   const result: Record<string, string> = {};
   for (const pair of raw.split(",")) {
-    const [key, value] = pair.split("=");
-    if (key === undefined || value === undefined || key.length === 0 || value.length === 0) {
-      throw new UsageError(`--${flag} espera pares tipo=valor separados por comas`);
+    const parts = pair.split("=");
+    const [key, value] = parts.map((part) => part.trim());
+    if (
+      parts.length !== 2 ||
+      key === undefined ||
+      value === undefined ||
+      key === "" ||
+      value === ""
+    ) {
+      throw new UsageError(`--${flag} espera pares tipo=valor separados por comas, con un solo =`);
     }
-    result[key.trim()] = value.trim();
+    if (Object.hasOwn(result, key)) {
+      throw new UsageError(`--${flag}: ${key} aparece más de una vez`);
+    }
+    result[key] = value;
   }
   return result;
 };

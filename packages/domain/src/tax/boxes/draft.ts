@@ -15,7 +15,7 @@ import { legsRounded, positive, sum, zero } from "../../money/eur.js";
 import type { Money } from "../../money/money.js";
 import type { CurrencyGain } from "../../projections/currency-lots.js";
 import type { LedgerState } from "../../projections/state.js";
-import type { AssetId } from "../../schema/events.js";
+import type { AssetId, CorporateActionEvent } from "../../schema/events.js";
 import type { IncomeCategory } from "../../settings/settings.js";
 import { type ChainCore, categoryOf } from "../chain.js";
 import { type CriterionId, sortCriteria } from "../criteria.js";
@@ -31,6 +31,7 @@ import type { WashSaleOutcome } from "../wash-sale.js";
 import {
   type ConceptId,
   MISSING_FIELDS,
+  OTHER_ELEMENT_KEYS,
   type RowFieldId,
   rowConcept,
   SECTION_FIELDS,
@@ -78,9 +79,27 @@ const rowOf = (gain: {
   fiscal_date: gain.fiscal_date,
 });
 
+/**
+ * Subscription rights: every lot sold was handed over by a `stock_dividend` on
+ * an asset other than the one the event is about (bonus shares are a grant of
+ * the share itself; rights are a grant of the rights).
+ */
+const isRights = (line: TransmissionLine, chain: ChainCore): boolean =>
+  line.lots.length > 0 &&
+  line.lots.every((lot) => {
+    if (lot.root.event_type !== "corporate_action:stock_dividend") {
+      return false;
+    }
+    const action = chain.ctx.events.get(lot.root.event_id) as CorporateActionEvent;
+    return action.asset_id !== lot.root.asset_id;
+  });
+
 /** The section of a disposal that the report already classified as a capital gain. */
-const sectionOf = (line: TransmissionLine): SectionId =>
-  transmissionSection(line.asset_type, "capital_gain") as SectionId;
+const sectionOf = (line: TransmissionLine, chain: ChainCore): SectionId =>
+  transmissionSection(line.asset_type, "capital_gain", {
+    rights: isRights(line, chain),
+    ...(line.market === undefined ? {} : { market: line.market }),
+  }) as SectionId;
 
 /**
  * "Denominación de los valores transmitidos" (box 2226 of 2025 and its
@@ -146,7 +165,7 @@ const disposalRows = (
   const drafts: Draft[] = [];
   const totals = new Map<SectionId, RowTotals>();
   for (const [key, line] of linesByKey(report.capital_gains.lines)) {
-    const section = sectionOf(line);
+    const section = sectionOf(line, chain);
     const own = line.own_eur;
     const deferred = stillDeferred.get(index.get(key) as number) ?? zero();
     const gain = !own.isNegative();
@@ -165,7 +184,12 @@ const disposalRows = (
       : { loss: legs, loss_imputable: imputable };
     for (const field of SECTION_FIELDS[section]) {
       const amount = value[field];
-      if (amount === undefined && !MISSING_FIELDS.has(field) && field !== "name") {
+      if (
+        amount === undefined &&
+        !MISSING_FIELDS.has(field) &&
+        field !== "name" &&
+        field !== "key"
+      ) {
         continue;
       }
       drafts.push({
@@ -177,7 +201,9 @@ const disposalRows = (
           ? { missing: true }
           : field === "name"
             ? { text: nameOf(state, line.asset_id) }
-            : { exact: amount as Money }),
+            : field === "key"
+              ? { text: OTHER_ELEMENT_KEYS[section] as string }
+              : { exact: amount as Money }),
         ...(rounded[field] === undefined ? {} : { rounded: rounded[field] }),
       });
     }
@@ -205,7 +231,7 @@ const disposalRows = (
     };
     for (const field of SECTION_FIELDS.other) {
       const amount = value[field];
-      if (amount === undefined && field !== "name") {
+      if (amount === undefined && field !== "name" && field !== "key") {
         continue;
       }
       drafts.push({
@@ -213,7 +239,11 @@ const disposalRows = (
         section: "other",
         row: currencyRow(line),
         criteria: line.criteria,
-        ...(field === "name" ? { text: `Divisa ${line.currency}` } : { exact: amount as Money }),
+        ...(field === "name"
+          ? { text: `Divisa ${line.currency}` }
+          : field === "key"
+            ? { text: OTHER_ELEMENT_KEYS.other as string }
+            : { exact: amount as Money }),
         ...(field === "gain" || field === "loss"
           ? { rounded: line.gain_eur_rounded }
           : field === "loss_imputable"
@@ -589,7 +619,7 @@ export const draftEntries = (report: TaxYearReport, chain: ChainCore): Draft[] =
   for (const [section, totals] of disposals.totals) {
     const criteria = union([
       ...report.capital_gains.lines
-        .filter((line) => sectionOf(line) === section)
+        .filter((line) => sectionOf(line, chain) === section)
         .map((line) => line.criteria),
       ...(section === "other"
         ? report.capital_gains.currency_lines.map((line) => line.criteria)

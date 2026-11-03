@@ -244,7 +244,8 @@ describe("the two ways the savings base can cross categories", () => {
     const boxes = taxBoxes(b.build(), 2025, { today: TODAY });
     // The balance of capital gains is negative, so it goes in 0425 and not 0424.
     expect(entry(boxes, "gp.balance").box).toBe("0425");
-    expect(text(entry(boxes, "gp.balance").amount_eur)).toBe("-100");
+    expect(text(entry(boxes, "gp.balance").amount_eur)).toBe("100");
+    expect(text(entry(boxes, "gp.balance").exact_eur)).toBe("-100");
     // And it offsets the income of the year up to 25 % of it, which is plenty.
     expect(entry(boxes, "offset.gp_against_rcm").box).toBe("0446");
     expect(text(entry(boxes, "offset.gp_against_rcm").amount_eur)).toBe("100");
@@ -281,7 +282,7 @@ describe("the same crossing, the other way round", () => {
     ).toEqual(["50"]);
     expect(text(total(boxes, "rcm.transmission").amount_eur)).toBe("50");
     // And the −100,00 freed goes where the loss was born.
-    expect(text(entry(boxes, "gp.prior_years.loss").amount_eur)).toBe("-100");
+    expect(text(entry(boxes, "gp.prior_years.loss").amount_eur)).toBe("100");
     expect(entry(boxes, "gp.prior_years.loss").box).toBe("0395");
     expect(entry(boxes, "gp.balance").box).toBe("0425");
   });
@@ -324,6 +325,8 @@ describe("the blocks the form is read in", () => {
       "gp.iic.gains",
       "gp.etf.transmission",
       "gp.listed_shares.losses",
+      "gp.rights.gains",
+      "gp.other_shares.key",
       "gp.crypto.gain_imputable",
       "gp.other.loss",
       "gp.prior_years.loss",
@@ -344,6 +347,8 @@ describe("the blocks the form is read in", () => {
       "iic",
       "etf",
       "listed_shares",
+      "rights",
+      "other_shares",
       "crypto",
       "other",
       "prior_years",
@@ -607,15 +612,15 @@ describe("what every figure is called", () => {
 });
 
 /**
- * **A figure always carries its own sign**, with or without a checked table.
+ * **Without a box a figure carries its own sign**: 2025 is the only year with
+ * a table and the user's first real return is 2026, so in the ordinary year
+ * `5,69 €` for a figure of `−5,69 €` would say the opposite, with no number and
+ * no label to say otherwise.
  *
- * It used to be turned into its magnitude whenever the form resolves the sign
- * by sending the figure to a second box, and that only reads correctly while
- * there *is* a box: 2025 is the only year with a table and the user's first
- * real return is 2026, so in the ordinary year the reader saw `5,69 €` for a
- * figure of `−5,69 €`, with no number and no label to say otherwise. The same
- * class of defect as the internal identifier in the box of the denomination:
- * the number the user copies into the form was wrong.
+ * **With a box it is what the user types**: the form asks for a magnitude
+ * outside `SIGNED_CONCEPTS` (its labels say "pérdidas", its formulas subtract
+ * them), and `-12` typed in 0037 would add 24 € to the income. `exact_eur`
+ * keeps the sign.
  */
 describe("the sign of a figure", () => {
   const withLoss = (year: number) => {
@@ -633,14 +638,27 @@ describe("the sign of a figure", () => {
     expect(text(total(boxes, "gp.balance").amount_eur)).toBe("-400");
   });
 
-  it("keeps it in a year that does have one, and still picks the negative box", () => {
-    // The correspondence does not move: 0424 holds the positive balance and
-    // 0425 the negative one. What changes is that the amount says which.
+  it("drops it in a year that does have one: the box and its label say which", () => {
     const boxes = withLoss(2025);
     expect(boxes.mapping).toBe("checked");
     const balance = total(boxes, "gp.balance");
     expect(balance.box).toBe("0425");
     expect(balance.label).toContain("es negativa");
-    expect(text(balance.amount_eur)).toBe("-400");
+    expect(text(balance.amount_eur)).toBe("400");
+    expect(text(balance.exact_eur)).toBe("-400");
+    expect(text(entry(boxes, "gp.iic.loss").amount_eur)).toBe("400");
+    expect(text(total(boxes, "gp.losses_total").amount_eur)).toBe("400");
+  });
+
+  it("keeps it in the boxes the form asks with a sign", () => {
+    const b = taxBuilder({
+      ...HAND_SETTINGS,
+      income_category: { ...HAND_SETTINGS.income_category, etc: "movable_capital" },
+    });
+    buy(b, "etc_e", "2025-01-10", "10", "100");
+    sell(b, "etc_e", "2025-06-01", "10", "95");
+    const boxes = taxBoxes(b.build(), 2025, { today: TODAY });
+    expect(text(total(boxes, "rcm.transmission").amount_eur)).toBe("-50");
+    expect(total(boxes, "rcm.transmission").box).toBe("0031");
   });
 });

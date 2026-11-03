@@ -34,14 +34,7 @@ import { synthCommand } from "./commands/synth.js";
 import { taxCommand } from "./commands/tax.js";
 import { thesisCommand } from "./commands/thesis.js";
 import { orderCommand, transferCommand } from "./commands/tracking.js";
-import { type Command, CommandFailure, EXIT } from "./context.js";
-
-/** `atlas sync` is gone (ADR-0035): there is no queue and no path between a local ledger and the cloud. */
-const syncRetiredCommand: Command = async () => {
-  throw new CommandFailure(EXIT.usage, "command_retired", [
-    "Error: `atlas sync` se ha retirado (ADR-0035): el libro de la nube es la única fuente de verdad y no hay cola ni sincronización. Para empezar en la nube: `atlas remote login` en una carpeta nueva y `atlas remote upload --from <ledger.jsonl>` sobre una nube vacía. Para bajar una copia: `atlas backup --to <directorio>`.",
-  ]);
-};
+import type { Command } from "./context.js";
 
 interface CommandSpec {
   readonly run: Command;
@@ -68,7 +61,6 @@ export const COMMANDS: Readonly<Record<string, CommandSpec>> = {
   add: { run: addCommand, arity: 2 },
   order: { run: orderCommand, arity: { place: 2, cancel: 3, note: 3, list: 2 } },
   transfer: { run: transferCommand, arity: { request: 2, update: 3, pending: 2, simulate: 2 } },
-  transfers: { run: transferCommand, arity: { request: 2, update: 3, pending: 2, simulate: 2 } },
   ca: { run: corporateActionCommand, arity: 2 },
   thesis: { run: thesisCommand, arity: { open: 2, close: 3, show: 3, list: 2 } },
   valuations: { run: valuationsCommand, arity: 1 },
@@ -115,11 +107,6 @@ export const COMMANDS: Readonly<Record<string, CommandSpec>> = {
       prices: 3,
     },
     looksAtMode: blind,
-  },
-  sync: {
-    // Retired (ADR-0035): any words reach the command, which says where to go.
-    run: syncRetiredCommand,
-    arity: 99,
   },
 };
 

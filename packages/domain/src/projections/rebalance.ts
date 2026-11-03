@@ -17,7 +17,7 @@
 // proportionally from everything (rule 4).
 
 import type { CivilDate } from "../dates/civil-date.js";
-import { type DomainError, ValidationError } from "../errors.js";
+import { asDomainError, ValidationError } from "../errors.js";
 import { Decimal } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
@@ -588,7 +588,7 @@ const saleStep = (
       estimates.push(estimate);
     } catch (error) {
       // The engine only refuses with a domain error (an invalid ledger, a year it does not cover).
-      estimates.push({ code: (error as DomainError).code });
+      estimates.push({ code: asDomainError(error).code });
     }
   });
   const failed = estimates.find((entry): entry is { code: string } => "code" in entry);

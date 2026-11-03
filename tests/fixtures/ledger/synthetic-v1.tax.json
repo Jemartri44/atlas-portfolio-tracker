@@ -949,10 +949,10 @@
         "reason": "regime_not_recorded"
       },
       {
-        "certainty": "disputed",
+        "certainty": "medium",
         "criterion": "13",
-        "direction": "conservative",
-        "documented_risk": "conservative",
+        "direction": "both",
+        "documented_risk": "both",
         "event_ids": [
           "01N428YK78ARMXKW9TRZB7XV2D"
         ],
@@ -960,10 +960,10 @@
         "measure": "exposure"
       },
       {
-        "certainty": "disputed",
+        "certainty": "medium",
         "criterion": "13",
         "direction": "aggressive",
-        "documented_risk": "conservative",
+        "documented_risk": "both",
         "event_ids": [
           "01N428YK78ARMXKW9TRZB7XV2D"
         ],

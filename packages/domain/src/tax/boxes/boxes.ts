@@ -40,13 +40,17 @@ const mappingOf = (table: YearBoxes, draft: Draft): YearBoxMapping | undefined =
  * The form splits a few figures into a positive box and a negative one, and
  * which of the two a figure lands in is decided here, as it always was.
  *
- * **What is never dropped is the sign.** The amount used to be turned into its
- * magnitude whenever the box carried the sign for it, and that is only legible
- * while there *is* a box: 2025 is the only year with a checked table and the
- * user's first real return is 2026, so in the ordinary year the reader saw
- * `5,69 €` for a figure that is `−5,69 €`, with no number and no label to tell
- * them otherwise. A figure that is copied into a real return has to say what it
- * is, and the box beside it —when there is one— says where it goes.
+ * **With a box, the amount is what the user types in it.** The form asks for a
+ * magnitude everywhere except in `SIGNED_CONCEPTS`: the label says what the
+ * figure is (a loss, an expense, what is pending) and its formulas subtract it
+ * ("[0036] – [0037]", "[0422] – [0423]"). Typing `-12` in 0037 would either be
+ * refused by Renta WEB or add 24 € to the income, so outside those concepts a
+ * figure with a box is shown without its sign.
+ *
+ * **Without a box, the sign stays.** 2025 is the only year with a checked
+ * table and the user's first real return is 2026: with no number and no label,
+ * `5,69 €` for a figure that is `−5,69 €` would say the opposite of what it is.
+ * `exact_eur` keeps the sign always.
  */
 const shown = (
   concept: ConceptId,
@@ -58,14 +62,16 @@ const shown = (
   if (mapping === undefined) {
     return { amount };
   }
-  const negative = !SIGNED_CONCEPTS.has(concept) && exact.isNegative();
-  const target = negative ? mapping.when_negative : undefined;
+  const magnitude = !SIGNED_CONCEPTS.has(concept);
+  const target = magnitude && exact.isNegative() ? mapping.when_negative : undefined;
   return {
     box: target?.box ?? mapping.box,
     label: target?.label ?? mapping.label,
-    amount,
+    amount: magnitude ? abs(amount) : amount,
   };
 };
+
+const abs = (amount: Money): Money => (amount.isNegative() ? amount.neg() : amount);
 
 interface Collected {
   /** Concepts the table of the year does not have a box for. */
@@ -196,6 +202,25 @@ export const boxesOf = (report: TaxYearReport, chain: ChainCore): TaxBoxes => {
     // the salvedad has to be there too.
     ...report.notes.filter((entry) => RATE_NOTES.has(entry.code)),
   ];
+  // "Otros elementos patrimoniales": where each of its two sections stands.
+  if (entries.some((entry) => entry.section === "other_shares")) {
+    notes.push(
+      note(
+        "tax_box_section_doubtful",
+        "shares outside the EU regulated markets go to 'otros elementos patrimoniales' with key 2, as the help of the form says; no source extends to the form the equivalence of those markets, so the section is doubtful",
+        { section: "other_shares", key: "2" },
+      ),
+    );
+  }
+  if (entries.some((entry) => entry.section === "other")) {
+    notes.push(
+      note(
+        "tax_box_other_inferred",
+        "an exchange difference of currency, or an ETC or ETP configured as a capital gain, has no section of its own: 'otros elementos patrimoniales' with key 4 is an inference by exclusion, not read in any source",
+        { section: "other", key: "4" },
+      ),
+    );
+  }
   // The repurchase has no numbered box: Renta WEB carries a mark in its capture
   // window, so the output says what it is instead of inventing a number.
   if (report.wash_sale.deferred.length > 0 || report.wash_sale.released.length > 0) {

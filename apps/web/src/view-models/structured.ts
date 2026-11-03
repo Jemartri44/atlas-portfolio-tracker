@@ -122,6 +122,15 @@ const sentencesOf = (effect: Effect, eventAsset: AssetId, names: NameIndex): Sen
             ]),
         ...rateOf(effect),
       ]);
+    case "cost_adjustment":
+      return effect.per_account.map((entry) => [
+        t("Se cobran "),
+        money(entry.amount, effect.currency),
+        t(
+          ` en ${displayName(names, entry.account_id)} que rebajan el coste de los lotes de ${asset}, sin vender nada y conservando su fecha.`,
+        ),
+        ...rateOf(effect),
+      ]);
     default:
       return [[t("Un efecto que esta versión de la aplicación no sabe describir.")]];
   }

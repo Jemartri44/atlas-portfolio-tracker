@@ -25,6 +25,7 @@ import {
   type AssetType,
   type BuyEvent,
   type CorporateActionEvent,
+  type CostAdjustmentEffect,
   type DividendEvent,
   type ForcedSaleEffect,
   feeKindOf,
@@ -63,6 +64,8 @@ export interface LineContext {
   lots: Map<string, FiscalLot>;
   /** Lots a carve-out took cost from or gave cost to (#7). */
   carved: Set<string>;
+  /** Lots a `cost_adjustment` lowered, with the events that did it (#13, #26). */
+  adjusted: Map<string, Ulid[]>;
   walk: WashSaleResult;
   currencyWalk: CurrencyWashResult;
 }
@@ -406,6 +409,12 @@ export const transmissionLine = (ctx: LineContext, outcome: WashSaleOutcome): Tr
     if (lineage.carved) {
       criteria.add("7");
     }
+    for (const step of lineage.steps) {
+      for (const id of ctx.adjusted.get(step.lot_id) ?? []) {
+        const action = ctx.events.get(id) as CorporateActionEvent;
+        criteria.add(action.kind === "capital_return" ? "26" : "13:cost_adjustment");
+      }
+    }
     if (lineage.fork) {
       criteria.add("8");
     }
@@ -534,11 +543,33 @@ export const currencyLine = (ctx: LineContext, gain: CurrencyGain): CurrencyLine
 };
 
 const incomeCriteria = (income: InvestmentIncome, rateDate: CivilDate): CriterionId[] =>
-  sortCriteria(income.gross.currency !== EUR && rateDate < income.fiscal_date ? ["5", "6"] : ["6"]);
+  sortCriteria([
+    ...(income.gross.currency !== EUR && rateDate < income.fiscal_date ? ["5" as const] : []),
+    "6",
+    ...(income.kind === "capital_return" ? ["26" as const] : []),
+  ]);
+
+/** The rate of an income: on the event, or on the `cost_adjustment` of a `capital_return`. */
+const incomeRateOf = (
+  event: LedgerEvent,
+): { fx_rate: string; fx_rate_date: CivilDate; source_country?: string } => {
+  if (event.type === "corporate_action") {
+    const effect = (event as CorporateActionEvent).effects.find(
+      (one) => one.op === "cost_adjustment",
+    ) as CostAdjustmentEffect;
+    return { fx_rate: effect.fx_rate, fx_rate_date: effect.fx_rate_date };
+  }
+  const priced = event as DividendEvent;
+  return {
+    fx_rate: priced.fx_rate,
+    fx_rate_date: priced.fx_rate_date,
+    ...(priced.type === "dividend" ? { source_country: priced.source_country } : {}),
+  };
+};
 
 export const incomeLine = (ctx: LineContext, income: InvestmentIncome): IncomeLine => {
-  const event = ctx.events.get(income.event_id) as DividendEvent;
-  const country = income.kind === "dividend" ? event.source_country : undefined;
+  const rate = incomeRateOf(ctx.events.get(income.event_id) as LedgerEvent);
+  const country = rate.source_country;
   return {
     event_id: income.event_id,
     kind: income.kind,
@@ -547,15 +578,15 @@ export const incomeLine = (ctx: LineContext, income: InvestmentIncome): IncomeLi
     fiscal_date: income.fiscal_date,
     gross: {
       amount: income.gross,
-      fx_rate: event.fx_rate,
-      fx_rate_date: event.fx_rate_date,
+      fx_rate: rate.fx_rate,
+      fx_rate_date: rate.fx_rate_date,
       eur: income.gross_eur,
     },
     gross_eur_rounded: income.gross_eur.roundToCents(),
     withholding_origin: income.withholding_origin,
     withholding_spain: income.withholding_spain,
     ...(country === undefined ? {} : { source_country: country }),
-    criteria: incomeCriteria(income, event.fx_rate_date),
+    criteria: incomeCriteria(income, rate.fx_rate_date),
   };
 };
 
@@ -656,7 +687,8 @@ export const withholdingLines = (
     });
   }
   for (const entry of income) {
-    if (entry.withholding_spain.isZero()) {
+    // A `capital_return` withholds nothing (art. 75.3.h RIRPF): it never gets past here.
+    if (entry.withholding_spain.isZero() || entry.kind === "capital_return") {
       continue;
     }
     const amount = convert(entry.withholding_spain, entry.gross.fx_rate, entry.gross.fx_rate_date);

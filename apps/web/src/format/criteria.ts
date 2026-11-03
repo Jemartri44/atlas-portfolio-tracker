@@ -52,7 +52,8 @@ export const CRITERION_NAMES: Record<CriterionId, string> = {
   "10": "Las pérdidas compensan hasta el 25 % y se arrastran cuatro años",
   "11": "Qué obliga a presentar la declaración de bienes en el extranjero",
   "12": "Retención en los reembolsos de fondos",
-  "13": "Canje con dinero de por medio y régimen de neutralidad",
+  "13": "El dinero de un canje registrado como venta son los picos que vende el depositario",
+  "13:cost_adjustment": "En régimen especial, el dinero de un canje rebaja el coste de lo recibido",
   "14": "La ventana de recompra se cuenta de fecha a fecha",
   "15": "La pérdida aplazada viaja con lo que se compró después",
   "16": "Deducción por lo pagado a Hacienda de otro país",
@@ -71,6 +72,7 @@ export const CRITERION_NAMES: Record<CriterionId, string> = {
   "24:etp": "Un ETP tributa como rendimiento del capital mobiliario",
   "24:etp_gain": "Un ETP tributa como ganancia patrimonial",
   "25": "El tipo del BCE es el de la fecha fiscal vigente; si no, se corrige",
+  "26": "La devolución de prima o de aportaciones rebaja el coste; el exceso es rendimiento",
 };
 
 /** How firm the reading of the law is. */

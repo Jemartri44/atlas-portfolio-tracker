@@ -40,7 +40,8 @@ export const CRITERION_LABELS: Record<CriterionId, string> = {
   "10": "compensación hasta el 25 % y arrastre a cuatro años",
   "11": "Modelo 720",
   "12": "retención en reembolsos de fondos",
-  "13": "canje con compensación en efectivo y régimen de neutralidad",
+  "13": "el dinero de un canje registrado como venta es la venta de picos por el depositario",
+  "13:cost_adjustment": "en régimen especial, el dinero de un canje rebaja el coste de lo recibido",
   "14": "ventana contada de fecha a fecha",
   "15": "el diferimiento viaja con los lotes descendientes",
   "16": "deducción por doble imposición",
@@ -59,4 +60,5 @@ export const CRITERION_LABELS: Record<CriterionId, string> = {
   "24:etp": "ETP como rendimiento del capital mobiliario",
   "24:etp_gain": "ETP como ganancia patrimonial",
   "25": "el tipo del BCE es el de la fecha fiscal vigente; otro se corrige, no se recalcula",
+  "26": "la devolución de prima o de aportaciones rebaja el coste hasta cero; el exceso es rendimiento",
 };

@@ -17,7 +17,7 @@ atlas add buy --account acc_fund --asset ast_world --trade-date 2026-09-01 --val
   --quantity 10.123456 --amount 1000 --currency EUR --fx-rate 1 --fx-rate-date 2026-09-02 --yes
 
 # Consultas
-atlas positions          # posición física por cuenta y activo
+atlas positions          # posición física por cuenta y activo, a hoy (--date AAAA-MM-DD para otra fecha)
 atlas lots               # lotes fiscales (FIFO global por activo), con fecha y coste en EUR
 atlas cash               # efectivo por cuenta y divisa
 atlas gains 2027         # ganancias realizadas del ejercicio (por operación: transmisión redondeada menos adquisición redondeada)
@@ -140,7 +140,7 @@ atlas filed renta 2027 --receipt 100-2027-… --set base=1950.00   # registra lo
 
 **`atlas filed <renta|720|721> <año>`** registra lo que de verdad se presentó. Propone lo que la aplicación calcula —nadie quiere teclear doce cifras— y `--set <clave>=<importe>`, repetible, sustituye cualquiera de ellas por lo declarado. **Lo presentado es un hecho, no un cálculo** (ADR-0020): el libro guarda lo declarado aunque hoy se calcule otra cosa, y guarda al lado lo que la aplicación calculaba ese día y la configuración con que lo hizo, para poder distinguir después un cambio del motor de un cambio del libro. Una complementaria es otra presentación que **sustituye** a la anterior, nunca una anulación: si ya consta una del mismo modelo y ejercicio, se toma esa, y `--supersedes <id>` sirve para nombrar otra a mano.
 
-**`atlas tax <año> --boxes`** ordena las cifras como las pide el Modelo 100 de **ese** ejercicio: número de casilla, rótulo **literal** del impreso y la orden del BOE en que se comprobó, con su fecha. Las casillas son **datos por ejercicio**: un año sin correspondencia comprobada sale por conceptos y **sin ningún número**, y nunca se usa la casilla de otro año, porque la Agencia Tributaria renumera el impreso cada campaña y una casilla heredada es una cifra creíble y falsa. Hoy están comprobadas las de **2025**.
+**`atlas tax <año> --boxes`** ordena las cifras como las pide el Modelo 100 de **ese** ejercicio: número de casilla, rótulo **literal** del impreso y la orden del BOE en que se comprobó, con su fecha. Las casillas son **datos por ejercicio**: un año sin correspondencia comprobada sale por conceptos y **sin ningún número**, y nunca se usa la casilla de otro año, porque la Agencia Tributaria renumera el impreso cada campaña y una casilla heredada es una cifra creíble y falsa. Hoy están comprobadas las de **2025**. Con casilla, los importes salen como se teclean (sin signo, salvo donde el impreso lo pide); los apartados dudosos o inferidos lo dicen en una nota (`docs/business-rules.md` §5.11).
 
 **`atlas m720 <año>`** y **`atlas m721 <año>`** valoran a 31/12 lo que hay en cuentas cuyo país no es España —una cuenta española en ómnibus queda fuera aunque el fondo sea extranjero— y dicen si hay obligación de presentar, por categoría: cuentas (con el saldo a 31/12 **y** el saldo medio del cuarto trimestre) y valores en el 720, y en el 721 la cripto **custodiada por un tercero en el extranjero** —la autocustodia queda fuera, pero el libro no distingue las dos, así que cuenta todo lo que hay en cuentas extranjeras y **lo dice**: sobredeclarar en un modelo informativo es la dirección prudente—. Es la **única** ruta fiscal que lee precios, y solo de Nivel 1: una `valuation` registrada a mano. **Nunca dice «no obligado» con datos incompletos**: si falta una valoración o alguna está marcada, el veredicto es «no se puede determinar» con lo que falta como acción, salvo que lo que sí se conoce ya supere el umbral, y entonces obliga y dice con qué valores marcados se decidió. Y una categoría en la que no hay nada registrado sale como «nada registrado», que tampoco es «no obligado».
 
@@ -196,7 +196,7 @@ atlas ca split --asset ast_acme --ratio 4 --effective-date 2027-03-01 --source-d
 atlas ca reverse-split --asset ast_acme --ratio 1/4 --effective-date 2027-06-01 --source-document https://acme.example/reverse.pdf \
   --cash-per-share 400 --currency EUR --fx-rate 1 --fx-rate-date 2027-06-01 --fees acc_fund=1 --yes
 
-# Otros asistentes: merger, spin-off, fund-merger, share-class-change, fund-liquidation, delisting; raw para el resto
+# Otros asistentes: merger, spin-off, fund-merger, share-class-change, fund-liquidation, capital-return (devolución de prima o de aportaciones), delisting; raw para el resto
 atlas ca raw --asset ast_acme --kind issuer_liquidation --effects-json '[{"op":"forced_sale","per_account":[{"account_id":"acc_fund","quantity":"all"}],"unit_price":"0","currency":"EUR","fx_rate":"1","fx_rate_date":"2028-01-15"}]' --effective-date 2028-01-15 --source-document documents/acme/liquidation.pdf --yes
 ```
 

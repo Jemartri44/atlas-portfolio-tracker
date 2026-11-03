@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ProjectionError } from "../../src/errors.js";
 import {
+  checkCostAdjustmentRegime,
   checkEffectsAgainstKind,
   isLiquidation,
   KIND_RULES,
@@ -46,6 +47,15 @@ const grant = (asset_id = RIGHTS): ResolvedEffect => ({
   fx_rate: "1",
   fx_rate_date: "2027-03-01",
   acquisition_date: "2027-03-01",
+});
+
+const lowerCost = (asset_id = OLD): ResolvedEffect => ({
+  op: "cost_adjustment",
+  asset_id,
+  per_account: [{ account_id: "acc_a", amount: "10" }],
+  currency: "EUR",
+  fx_rate: "1",
+  fx_rate_date: "2027-03-01",
 });
 
 const accepts = (kind: CorporateActionKind, effects: ResolvedEffect[]): void => {
@@ -95,6 +105,10 @@ describe("KIND_RULES", () => {
     accepts("issuer_restructuring", [convert()]);
     accepts("issuer_restructuring", [sale("ast_other")]);
     accepts("issuer_restructuring", [convert(), sale(NEW), convert(SPIN, NEW)]);
+    accepts("merger", [convert(), lowerCost(NEW)]);
+    accepts("spin_off", [carveOut(), lowerCost(SPIN)]);
+    accepts("issuer_restructuring", [convert(), lowerCost(NEW)]);
+    accepts("capital_return", [lowerCost()]);
   });
 
   it("rejects sequences outside the row, with the admitted ones in the details", () => {
@@ -112,7 +126,7 @@ describe("KIND_RULES", () => {
     rejects("issuer_restructuring", [scale()]);
     rejects("issuer_restructuring", [convert(), grant()]);
     expect(rejects("issuer_restructuring", [scale()]).details.allowed).toEqual([
-      "one or more of convert|forced_sale",
+      "one or more of convert|forced_sale|cost_adjustment",
     ]);
     rejects("fund_liquidation", [sale(), sale()]);
     rejects("crypto_fork", [scale()]);
@@ -128,6 +142,23 @@ describe("KIND_RULES", () => {
     rejects("spin_off", [carveOut(), sale(OLD)]);
     rejects("stock_dividend", [grant(), sale(OLD)]);
     rejects("fund_merger", [convert(NEW, SPIN)]);
+    rejects("merger", [convert(), lowerCost(OLD)]);
+    rejects("capital_return", [lowerCost(NEW)]);
+    rejects("capital_return", [lowerCost(), lowerCost()]);
+  });
+
+  it("lowers a cost in an exchange only under the neutrality regime", () => {
+    const effects = [convert(), lowerCost(NEW)];
+    for (const regime of [undefined, false]) {
+      expect(() => checkCostAdjustmentRegime("merger", effects, regime, "01F")).toThrow(
+        expect.objectContaining({ code: "cost_adjustment_requires_neutrality" }),
+      );
+    }
+    expect(() => checkCostAdjustmentRegime("merger", effects, true, "01F")).not.toThrow();
+    expect(() =>
+      checkCostAdjustmentRegime("capital_return", [lowerCost()], undefined, "01F"),
+    ).not.toThrow();
+    expect(() => checkCostAdjustmentRegime("merger", [convert()], undefined, "01F")).not.toThrow();
   });
 
   it("derives the asset a step leaves for the next one", () => {
