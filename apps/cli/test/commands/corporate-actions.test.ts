@@ -432,6 +432,8 @@ describe("atlas ca", () => {
         ...stock,
         "--currency",
         "USD",
+        "--market",
+        "XAMS",
         "--not-transferable",
         "--yes",
       ]),

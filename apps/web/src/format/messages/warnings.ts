@@ -179,6 +179,8 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
     `La fecha del tipo de cambio (${day(d.fx_rate_date)}) es posterior a la fecha fiscal (${day(d.fiscal_date)}).`,
   same_asset_two_accounts: (d, n) =>
     `${n.one(d.asset_id)} está ahora en ${count(d.accounts)} cuentas; el FIFO sigue siendo global, entre todas ellas.`,
+  capital_return_partial_accounts: (d, n) =>
+    `La devolución de ${n.one(d.asset_id)} no da importe a ${n.many(d.missing)}, que también lo tienen: el dinero rebaja también sus compras. Revisa si falta alguna cuenta.`,
   transfer_not_between_funds: (d, n) =>
     `Un traspaso con ${n.one(d.from_asset_id)} y ${n.one(d.to_asset_id)} no puede diferir impuestos: ${n.one(d.asset_id)} no es un fondo. Hacienda lo trata como una venta y una compra; regístralo así para que la renta lo cuente.`,
   transfer_not_resident: () =>

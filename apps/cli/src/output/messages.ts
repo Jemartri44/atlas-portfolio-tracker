@@ -151,6 +151,10 @@ export const describeError = (error: DomainError): string => {
       return `El dinero de un ${text(d.kind)} solo rebaja el coste de lo recibido si la operación se acoge al régimen de neutralidad: indícalo con --neutrality-regime. Sin régimen, el canje es una permuta sujeta y el dinero es parte de lo transmitido.`;
     case "capital_return_needs_stock":
       return `La devolución de prima o de aportaciones solo se registra sobre acciones, y ${text(d.asset_id)} es de tipo ${text(d.asset_type)}: en un fondo, un ETF o una SICAV la ley la trata de otra forma (art. 94.1 LIRPF) y Atlas no la modela.`;
+    case "capital_return_needs_eu_listed":
+      return d.reason === "not_eu"
+        ? `${text(d.asset_id)} cotiza fuera de la UE (${text(d.market)}): ahí la devolución de prima o de aportaciones es rendimiento con el tope de la diferencia de fondos propios (art. 25.1.e LIRPF), y Atlas no lo modela.`
+        : `La devolución de prima o de aportaciones solo rebaja el coste de acciones de un mercado regulado de la UE, y ${text(d.asset_id)} ${d.reason === "market_missing" ? "no tiene mercado anotado" : `tiene un mercado que Atlas no conoce (${text(d.market)})`}: anota su mercado (código MIC, p. ej. XMAD) y vuelve a registrarla.`;
     case "cost_adjustment_exceeds_cost":
       return `El dinero del ${text(d.kind)} supera el coste de los títulos de ${text(d.asset_id)} (exceso: ${text(d.excess_eur)} €): la ley solo dice que el valor disminuye; revisa el importe o consulta cómo declararlo.`;
     case "liquidation_must_cover_all_accounts":

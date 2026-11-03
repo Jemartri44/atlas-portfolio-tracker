@@ -114,6 +114,8 @@ export const describeWarning = (warning: Warning): string => {
       return `fx_rate_date (${text(d.fx_rate_date)}) es posterior a la fecha fiscal (${text(d.fiscal_date)}).`;
     case "same_asset_two_accounts":
       return `El activo ${text(d.asset_id)} está ahora en ${(d.accounts as string[]).length} cuentas; el FIFO sigue siendo global.`;
+    case "capital_return_partial_accounts":
+      return `La devolución de ${text(d.asset_id)} no da importe a ${(d.missing as string[]).join(", ")}, que también lo tienen: el FIFO es global y el dinero rebaja también sus lotes. Revisa si falta alguna cuenta.`;
     case "transfer_not_between_funds":
       return `Un traspaso entre ${text(d.from_asset_id)} y ${text(d.to_asset_id)} no difiere impuestos: ${text(d.asset_id)} no es un fondo. Hacienda lo trata como una venta y una compra; regístralo así (transfer_not_between_funds).`;
     case "transfer_not_resident":

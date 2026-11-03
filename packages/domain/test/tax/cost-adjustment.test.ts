@@ -188,6 +188,60 @@ describe("a return of share premium or contributions (H2)", () => {
     expect(state.invalid.map((entry) => entry.error.code)).toEqual(["capital_return_needs_stock"]);
   });
 
+  // Art. 25.1.e LIRPF lowers the cost "hasta su anulación" only for shares of
+  // an EU regulated market; for the rest the premium is income up to the
+  // difference in equity, which needs a figure Atlas does not hold.
+  it.each([
+    ["outside the EU", "XNYS", "not_eu"],
+    ["with no market written", undefined, "market_missing"],
+    ["with a market Atlas does not know", "XXXX", "market_unknown"],
+  ])("is refused on a share %s (art. 25.1.e)", (_name, market, reason) => {
+    const b = taxBuilder(HAND_SETTINGS);
+    b.asset("stock_u", {
+      asset_type: "stock",
+      transferable: false,
+      ...(market === undefined ? {} : { market }),
+    });
+    buy(b, "stock_u", "2027-01-11", "10", "10");
+    b.corporateAction({
+      kind: "capital_return",
+      asset_id: "stock_u",
+      effective_date: "2027-06-01",
+      effects: [cash("30")],
+    });
+    const state = projectLedger(b.build(), { collectErrors: true });
+    expect(state.invalid.map((entry) => [entry.error.code, entry.error.details.reason])).toEqual([
+      ["capital_return_needs_eu_listed", reason],
+    ]);
+    expect(state.lots.get("stock_u")?.open.map((lot) => text(lot.cost_eur))).toEqual(["100"]);
+  });
+
+  // The FIFO is global, so the cash of acc_a lowers the lots bought from acc_b
+  // too: a return that names only some holders is likely a mistake.
+  it("warns when it does not name every account holding the asset", () => {
+    const b = taxBuilder(HAND_SETTINGS);
+    buy(b, "stock_s", "2027-01-11", "10", "10");
+    b.buy({
+      account_id: "acc_b",
+      asset_id: "stock_s",
+      value_date: "2027-02-01",
+      quantity: "10",
+      unit_price: "10",
+    });
+    const action = b.corporateAction({
+      kind: "capital_return",
+      asset_id: "stock_s",
+      effective_date: "2027-06-01",
+      effects: [cash("30")],
+    });
+    const warnings = projectLedger(b.build()).warnings.filter(
+      (entry) => entry.code === "capital_return_partial_accounts",
+    );
+    expect(warnings.map((entry) => [entry.event_id, entry.details])).toEqual([
+      [action.id, { asset_id: "stock_s", missing: ["acc_b"] }],
+    ]);
+  });
+
   it("is refused for an account that holds nothing of the asset", () => {
     const b = taxBuilder(HAND_SETTINGS);
     buy(b, "stock_s", "2027-01-11", "10", "10");

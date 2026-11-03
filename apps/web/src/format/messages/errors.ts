@@ -163,6 +163,10 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     `El dinero de un evento de tipo ${enumValue(d.kind)} solo rebaja el coste de lo recibido si la operación se acoge al régimen de neutralidad. Sin régimen, el canje es una permuta sujeta.`,
   capital_return_needs_stock: (d, n) =>
     `La devolución de prima o de aportaciones solo se registra sobre acciones, y ${n.one(d.asset_id)} no lo es: en un fondo, un ETF o una SICAV la ley la trata de otra forma (artículo 94 de la ley del IRPF) y Atlas no la modela.`,
+  capital_return_needs_eu_listed: (d, n) =>
+    d.reason === "not_eu"
+      ? `${n.one(d.asset_id)} cotiza fuera de la UE: ahí la devolución de prima o de aportaciones tributa como rendimiento con un tope que depende de los fondos propios de la empresa, y Atlas no lo modela.`
+      : `La devolución de prima o de aportaciones solo rebaja el coste de acciones de un mercado regulado de la UE, y ${n.one(d.asset_id)} no tiene un mercado que Atlas conozca: anota su mercado en el catálogo y vuelve a registrarla.`,
   cost_adjustment_exceeds_cost: (d, n) =>
     `El dinero del evento supera el coste de los títulos de ${n.one(d.asset_id)}: la ley solo dice que el valor disminuye; revisa el importe.`,
   liquidation_must_cover_all_accounts: (d, n) =>
