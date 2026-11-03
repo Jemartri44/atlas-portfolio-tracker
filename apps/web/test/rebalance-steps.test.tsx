@@ -25,7 +25,7 @@ const painted = (tax: SaleTaxView): string => {
     maxDeviationPp: "0",
     name: "World Index Fund",
     amount: eur("1000"),
-    orders: [{ accountId: "acc_mi", quantity: Quantity.of("10"), amount: eur("1000") }],
+    orders: [{ accountId: "acc_mi", quantity: Quantity.parse("10"), amount: eur("1000") }],
     tax,
     buys: { rows: [], note: undefined } as never,
   };
