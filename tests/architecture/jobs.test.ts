@@ -2,9 +2,13 @@ import { readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  chainText,
+  domainRoot,
   listSources,
   parse as parsedSource,
   specifiersOf as parsedSpecifiersOf,
+  productSources,
+  reach,
 } from "../support/source-graph.js";
 import { repoRoot } from "./support.js";
 
@@ -96,4 +100,42 @@ describe("architecture: apps/jobs", () => {
     expect(manifests).toEqual([]);
     // It parses every source and test of the repo: 3-4.7 s measured under a load of 9, 5 s limit.
   }, 20_000);
+});
+
+describe("jobs: two rules of the January and mail tasks", () => {
+  /**
+   * No price reaches the fiscal path, not even a warning (ADR-0031, second amendment): the income
+   * tax and the thresholds of the 720 and 721 are decided in the domain by functions that take the
+   * ledger and the day, and reach nothing price-aware.
+   */
+  it("decides the income tax and the 720 in the domain with nothing price-aware", () => {
+    const sep = String.raw`[/\\]`;
+    const priceAware = new RegExp(
+      `${sep}domain${sep}src${sep}(projections${sep}prices\\.ts$|quotes(\\.ts$|${sep}))`,
+    );
+    const priceAwareIn = (file: string): string[] =>
+      [...reach([join(domainRoot, "src", "jobs", file)])]
+        .filter(([reached]) => priceAware.test(reached))
+        .map(([, chain]) => chainText(chain));
+    for (const file of ["informative.ts", "tax-return.ts"]) {
+      expect(reach([join(domainRoot, "src", "jobs", file)]).size, file).toBeGreaterThan(5);
+      expect(priceAwareIn(file), file).toEqual([]);
+    }
+    // Not vacuous: the weekly review, which values with the closes, does reach them.
+    expect(priceAwareIn("review.ts").length).toBeGreaterThan(0);
+  });
+
+  /**
+   * The switch of the amounts lives in SSM (ADR-0028, row 18). Only the mail task reads it, with the
+   * rule of the domain: a second reader could read «present = on» and the mail would leave with
+   * amounts.
+   */
+  it("names the parameter of the switch of amounts only in the composition of the mail task", () => {
+    const readers = productSources().filter((file) =>
+      /mail\/amounts/.test(parsedSource(file).code),
+    );
+    expect(readers.map((file) => relative(repoRoot, file))).toEqual([
+      "apps/jobs/src/tasks/mail.ts",
+    ]);
+  });
 });
