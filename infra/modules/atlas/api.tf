@@ -35,12 +35,20 @@ locals {
       Resource = ["${local.data_arn}/settings/exposure.json"]
     },
     {
+      # The run records of the scheduled tasks, read only (`docs/api.md` section 6.3): what the web
+      # shows of a task that stopped running. The API never writes under `jobs/`.
+      Sid      = "JobRecords"
+      Effect   = "Allow"
+      Action   = ["s3:GetObject"]
+      Resource = ["${local.data_arn}/jobs/*"]
+    },
+    {
       # `access/` and `settings/` make a missing marker a 404 and not a 403 (prompt 017, §12.2 B5).
       Sid       = "List"
       Effect    = "Allow"
       Action    = ["s3:ListBucket"]
       Resource  = [local.data_arn]
-      Condition = { StringLike = { "s3:prefix" = ["ledger/*", "reference/ecb/*", "prices/*", "access/*", "drafts/*", "settings/*"] } }
+      Condition = { StringLike = { "s3:prefix" = ["ledger/*", "reference/ecb/*", "prices/*", "access/*", "drafts/*", "settings/*", "jobs/*"] } }
     },
     {
       Sid      = "SsmRead"
@@ -112,6 +120,7 @@ resource "aws_lambda_function" "api" {
       ATLAS_CLOCK_TOLERANCE_SECONDS  = "600"
       ATLAS_ALLOW_LIST_CACHE_SECONDS = "120"
       ATLAS_SECRETS_CACHE_SECONDS    = "300"
+      ATLAS_ACTIVE_JOB_FAMILIES      = length(var.enabled_jobs) == 0 ? "none" : join(",", var.enabled_jobs)
     }
   }
 

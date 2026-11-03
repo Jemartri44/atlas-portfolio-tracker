@@ -5,6 +5,7 @@
 // read or ignored.
 
 import { ValidationError } from "@atlas/domain";
+import { JOB_FAMILIES, type JobFamily } from "@atlas/domain/job-records";
 
 /**
  * The ceilings of the durations and caches, **fixed in the code**: a typo of zeros in
@@ -36,6 +37,8 @@ export interface ApiConfig {
   readonly clockToleranceSeconds: number;
   readonly allowListCacheSeconds: number;
   readonly secretsCacheSeconds: number;
+  /** The families of tasks scheduled here (`none` in the variable): what the status says. */
+  readonly activeJobFamilies: readonly JobFamily[];
 }
 
 const NUMBERS = {
@@ -50,6 +53,7 @@ export const API_CONFIG_VARIABLES = [
   "ATLAS_ENV",
   "ATLAS_ORIGIN",
   "ATLAS_DATA_BUCKET",
+  "ATLAS_ACTIVE_JOB_FAMILIES",
   ...Object.keys(NUMBERS),
 ] as readonly string[];
 
@@ -62,6 +66,21 @@ const required = (env: Readonly<Record<string, string | undefined>>, variable: s
     throw invalid(variable, "missing");
   }
   return value;
+};
+
+const isFamily = (name: string): name is JobFamily =>
+  (JOB_FAMILIES as readonly string[]).includes(name);
+
+/** `none`, or families separated by commas: anything else stops the Lambda. */
+const familiesOf = (value: string): readonly JobFamily[] => {
+  if (value === "none") {
+    return [];
+  }
+  const names = value.split(",");
+  if (!names.every(isFamily)) {
+    throw invalid("ATLAS_ACTIVE_JOB_FAMILIES", "not_job_families");
+  }
+  return names;
 };
 
 export const parseApiConfig = (env: Readonly<Record<string, string | undefined>>): ApiConfig => {
@@ -104,6 +123,7 @@ export const parseApiConfig = (env: Readonly<Record<string, string | undefined>>
     ssmPrefix: `/atlas/${environment}/`,
     origin,
     dataBucket,
+    activeJobFamilies: familiesOf(required(env, "ATLAS_ACTIVE_JOB_FAMILIES")),
     sessionTtlSeconds: number("ATLAS_SESSION_TTL_SECONDS"),
     loginTtlSeconds: number("ATLAS_LOGIN_TTL_SECONDS"),
     clockToleranceSeconds: number("ATLAS_CLOCK_TOLERANCE_SECONDS"),
