@@ -56,7 +56,7 @@ export type LoadPhase =
   | { phase: "signed_out"; reason: SignedOutReason }
   /** No connection. No data, no forms; it reloads when it comes back. */
   | { phase: "offline" }
-  /** The session or the ledger could not be read. Nothing is shown but the reason. */
+  /** The session or the ledger could not be read. Nothing is shown but the reason (`chunk_failed` has no message: `CloudGate` says it). */
   | { phase: "cloud_failed"; error: AppError };
 
 /**

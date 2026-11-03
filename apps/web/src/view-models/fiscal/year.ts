@@ -164,7 +164,7 @@ export const yearView = (report: TaxYearReport, names: NameIndex): YearView => {
     ...dated(interest, (line) => incomeRow(line, names)),
     ...dated(expenses, (line) => expenseRow(line, names)),
   ]
-    .sort(([left], [right]) => (left < right ? -1 : 1))
+    .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
     .map(([, row]) => row);
   // What every operation of the year is called, by its event: the rows already
   // say "asset · date", which is the same thing a criterion has to say to tell

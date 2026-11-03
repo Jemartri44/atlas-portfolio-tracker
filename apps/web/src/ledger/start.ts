@@ -14,11 +14,8 @@ export const startCloud = async (): Promise<void> => {
   } catch {
     store.setLoad({
       phase: "cloud_failed",
-      error: {
-        code: "chunk_failed",
-        message:
-          "No se ha podido cargar la aplicación (puede que haya una versión nueva). No se ha leído ni cambiado nada: reintenta, o recarga la página si sigue igual.",
-      },
+      // The sentence is in `CloudGate` (lazy): the boot carries as little as possible.
+      error: { code: "chunk_failed", message: "" },
     });
     return;
   }

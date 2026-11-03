@@ -140,6 +140,7 @@ describe("the movable capital rows", () => {
           ...report.movable_capital,
           dividends: [
             dividend("march", "2028-03-05"),
+            dividend("march-too", "2028-03-05"),
             dividend("next-year", "2029-01-02"),
             dividend("january", "2028-01-20"),
           ],
@@ -150,6 +151,13 @@ describe("the movable capital rows", () => {
     const rows = view.groups
       .flatMap((group) => group.rows)
       .filter((row) => row.kind === "Dividendo");
-    expect(rows.map((row) => row.date)).toEqual(["20/01/2028", "05/03/2028", "02/01/2029"]);
+    expect(rows.map((row) => row.date)).toEqual([
+      "20/01/2028",
+      "05/03/2028",
+      "05/03/2028",
+      "02/01/2029",
+    ]);
+    // A tie keeps the order of the report.
+    expect(rows.map((row) => row.key).slice(1, 3)).toEqual(["march", "march-too"]);
   });
 });
