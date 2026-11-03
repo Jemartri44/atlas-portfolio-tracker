@@ -148,11 +148,13 @@ const monthlyReminder: TaskRunner = async (context): Promise<TaskResult> => {
     webSignIn,
     idleWarningDays: deps.config.mail?.idleWarningDays ?? 150,
     repurchase: await repurchaseOf(context, planned),
+    // The dates come from the table: an unreadable ledger only loses what silences them, and a
+    // June warning said when already filed is better than one lost for the year.
     taxDeadlines: ledger.ok
       ? taxDeadlineFacts(context.today, ledger.state.taxPayments, [
           ...ledger.state.filings.values(),
         ])
-      : [],
+      : taxDeadlineFacts(context.today, [], []),
   });
   const sent = await notifierOf(context).send(reminderMail(facts, amounts, origin(context)));
   const summary = {

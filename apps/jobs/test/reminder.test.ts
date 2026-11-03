@@ -378,6 +378,15 @@ describe("what the reminder warns of, from the ledger", () => {
     expect(jobs.ses.sent[0]?.body).not.toContain("segundo plazo");
   });
 
+  it("still says the end of the campaign in June with a ledger it cannot read", async () => {
+    const jobs = setupJobs({ ledger: "not a ledger\n", now: "2026-06-01T06:00:00Z" });
+    await jobs.run(["monthly_reminder"]);
+    expect(jobs.ses.sent).toHaveLength(1);
+    const [mail] = jobs.ses.sent;
+    expect(mail?.body).toContain("No se ha podido calcular el reparto");
+    expect(mail?.body).toContain("Renta de 2025: el plazo de presentación acaba el 30/06/2026.");
+  });
+
   it("says the end of the campaign in June", async () => {
     const jobs = setupJobs({ now: "2026-06-01T06:00:00Z" });
     await jobs.run(["monthly_reminder"]);

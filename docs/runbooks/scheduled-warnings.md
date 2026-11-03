@@ -33,7 +33,7 @@ Si los cierres o el histórico del BCE de la nube no se han podido leer, el reco
 - **El último inicio de sesión**: si avisa del cliente OAuth, entra en la web antes de la fecha que dice. Google borra un cliente sin uso a los seis meses (ADR-0027).
 - **La copia fuera de AWS**: haz la copia a tu disco con la orden del correo.
 - **La ventana de recompra**: si una compra del plan cae en la ventana de una venta con pérdida, lo avisa arriba, sin nombres ni importes. Mírala en Cartera antes de comprar: comprar no pierde la pérdida, la difiere. Si dice que no se ha podido comprobar, mírala igualmente.
-- **Los plazos de la Renta**: en junio, el fin de la campaña y de la domiciliación, salvo que el libro ya diga que está presentada (una presentación, un pago o una devolución de ese ejercicio). En noviembre, el segundo plazo, solo si consta el pago del primero y no el del segundo. Si dice que la fecha no está comprobada, falta la fila de ese año: se añade a `packages/domain/src/tax/income-tax-deadlines.ts` desde la orden de la campaña en el BOE.
+- **Los plazos de la Renta**: en junio, el fin de la campaña y de la domiciliación, salvo que el libro ya diga que está presentada (una presentación, un pago o una devolución de ese ejercicio). En noviembre, el segundo plazo, solo si consta el pago del primero y no el del segundo. Con el libro ilegible, junio avisa igualmente, aunque ya estuviera presentada, y noviembre calla porque no consta el primer plazo: el correo ya dice que el reparto falló. Si dice que la fecha no está comprobada, falta la fila de ese año: se añade a `packages/domain/src/tax/income-tax-deadlines.ts` desde la orden de la campaña en el BOE.
 
 ## Una fuente de precios falla
 
