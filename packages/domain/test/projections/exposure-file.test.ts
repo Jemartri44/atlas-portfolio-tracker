@@ -26,6 +26,13 @@ describe("validateExposure", () => {
     expect(validateExposure(assets(good2))).toEqual(good2);
     expect(validateExposure(assets({}))).toEqual({});
     expect(validateExposure(assets({ a: {} }))).toEqual({ a: {} });
+    // The index an asset follows, alone or beside the owner's own percentages.
+    expect(validateExposure(assets({ a: { index: "msci_world" } }))).toEqual({
+      a: { index: "msci_world" },
+    });
+    expect(validateExposure(assets({ a: { index: "world", region: { europe: "100" } } }))).toEqual({
+      a: { index: "world", region: { europe: "100" } },
+    });
     // The ledger puts no shape on an id: spaces, slashes and accents are fine.
     expect(validateExposure(assets({ "Fondo A/B ñ": {} }))).toEqual({ "Fondo A/B ñ": {} });
   });
@@ -57,6 +64,9 @@ describe("validateExposure", () => {
     ],
     ["an asset that is not an object", assets({ a: "x" }), "asset"],
     ["an unknown dimension", assets({ a: { sector: { x: "100" } } }), "dimension"],
+    ["an index that is not a string", assets({ a: { index: 3 } }), "index"],
+    ["an index in upper case", assets({ a: { index: "MSCI" } }), "index"],
+    ["an index of 41 characters", assets({ a: { index: `a${"b".repeat(40)}` } }), "index"],
     ["an empty dimension", assets({ a: { currency: {} } }), "empty"],
     ["a dimension that is not an object", assets({ a: { currency: "USD" } }), "empty"],
     ["a currency in lower case", assets({ a: { currency: { usd: "100" } } }), "key"],
