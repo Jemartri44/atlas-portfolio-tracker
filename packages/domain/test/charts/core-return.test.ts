@@ -95,7 +95,6 @@ describe("coreReturn: no figure, and why", () => {
       trade_date: "2027-02-10",
       amount: "0.01",
       quantity: "1",
-      unit_price: undefined,
     });
     expect(coreReturn(b.build(), FEB)).toEqual({ ...FEB, gap: "partial" });
   });
@@ -108,7 +107,6 @@ describe("coreReturn: no figure, and why", () => {
       trade_date: "2027-01-20",
       amount: "0.01",
       quantity: "1",
-      unit_price: undefined,
     });
     valueAt(b, "2027-01-31", "100");
     valueAt(b, "2027-02-28", "110");
