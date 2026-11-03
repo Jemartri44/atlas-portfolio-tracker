@@ -44,7 +44,7 @@ jobs:
         env:
           ARTIFACT_BUCKET: ${{ secrets.ATLAS_ARTIFACT_BUCKET }}
       - name: Verify that the workflow of dev signed the set
-        run: infra/scripts/ci/verify-attestation.sh "$RUNNER_TEMP/artifact"
+        run: infra/scripts/ci/verify-attestation.sh "$RUNNER_TEMP/artifact" "$TREE"
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Apply prod

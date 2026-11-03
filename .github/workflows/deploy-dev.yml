@@ -61,6 +61,17 @@ jobs:
           path: ${{ runner.temp }}/artifact
       - name: Name the source tree
         run: echo "TREE=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_ENV"
+      # Signs what the build job of THIS run produced, before anything is published: if the
+      # bucket already holds another set for the tree, that set has no attestation and prod
+      # refuses it. Prod checks the signer, the branch and the source tree (security audit 03/11,
+      # finding 3).
+      - name: Attest the set
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: |
+            ${{ runner.temp }}/artifact/lambda.zip
+            ${{ runner.temp }}/artifact/jobs.zip
+            ${{ runner.temp }}/artifact/spa.tgz
       - name: Assume the deploy role of dev
         run: infra/scripts/ci/assume-role.sh "$ROLE_ARN"
         env:
@@ -69,15 +80,6 @@ jobs:
         run: infra/scripts/ci/publish-set.sh "$RUNNER_TEMP/artifact" "$TREE"
         env:
           ARTIFACT_BUCKET: ${{ secrets.ATLAS_ARTIFACT_BUCKET }}
-      # Prod verifies these attestations before it applies anything: the reference for the set
-      # does not come from the bucket (security audit 03/11, finding 3).
-      - name: Attest the set
-        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
-        with:
-          subject-path: |
-            ${{ runner.temp }}/artifact/lambda.zip
-            ${{ runner.temp }}/artifact/jobs.zip
-            ${{ runner.temp }}/artifact/spa.tgz
       - name: Apply dev
         run: |
           infra/scripts/ci/artifact-env.sh "$RUNNER_TEMP/artifact" "$TREE" > "$RUNNER_TEMP/artifact.env"

@@ -337,40 +337,108 @@ describe("the scripts of the CI", () => {
     expect(stored("jobs.zip")).toBe("third jobs.zip");
   });
 
-  it("verify-attestation.sh asks for the signer workflow of dev for each file and fails if one lacks it", () => {
-    const run = (fail: string) => {
+  describe("verify-attestation.sh", () => {
+    const git = (cwd: string, ...args: string[]) =>
+      spawnSync("git", ["-c", "user.email=t@example.invalid", "-c", "user.name=t", ...args], {
+        cwd,
+        encoding: "utf8",
+      }).stdout.trim();
+    // A source repository with two commits of different trees, and a clone that fetches from it.
+    const world = () => {
       const root = fixture();
-      writeFileSync(join(root, "gh.log"), "");
-      const result = spawnSync("bash", [join(SCRIPTS, "verify-attestation.sh"), root], {
+      const origin = join(root, "origin");
+      mkdirSync(origin);
+      git(origin, "init", "-q");
+      git(origin, "config", "uploadpack.allowAnySHA1InWant", "true");
+      writeFileSync(join(origin, "a"), "one");
+      git(origin, "add", "a");
+      git(origin, "commit", "-q", "-m", "one");
+      const good = git(origin, "rev-parse", "HEAD");
+      writeFileSync(join(origin, "a"), "two");
+      git(origin, "commit", "-q", "-am", "two");
+      const other = git(origin, "rev-parse", "HEAD");
+      const work = join(root, "work");
+      mkdirSync(work);
+      git(work, "init", "-q");
+      git(work, "remote", "add", "origin", origin);
+      return { root, work, good, other, tree: git(origin, "rev-parse", `${good}^{tree}`) };
+    };
+    const run = (
+      commits: string[],
+      fail = "",
+      mutate?: (w: ReturnType<typeof world>) => string,
+    ) => {
+      const w = world();
+      const tree = mutate ? mutate(w) : w.tree;
+      writeFileSync(join(w.root, "gh.log"), "");
+      const result = spawnSync("bash", [join(SCRIPTS, "verify-attestation.sh"), w.root, tree], {
+        cwd: w.work,
         encoding: "utf8",
         env: {
           PATH: `${FAKES}:${process.env.PATH}`,
           GITHUB_REPOSITORY: "owner/repo",
-          FAKE_GH_LOG: join(root, "gh.log"),
+          FAKE_GH_LOG: join(w.root, "gh.log"),
           FAKE_GH_FAIL: fail,
+          FAKE_GH_BRANCH: branch,
+          FAKE_GH_COMMITS: commits.map((c) => (c === "good" ? w.good : w.other)).join(","),
         },
       });
-      return { result, log: readFileSync(join(root, "gh.log"), "utf8") };
+      return { result, log: readFileSync(join(w.root, "gh.log"), "utf8") };
     };
-    const good = run("");
-    expect(good.result.status, good.result.stderr).toBe(0);
-    expect(good.log.trim().split("\n")).toHaveLength(3);
-    expect(good.log).toContain("--signer-workflow owner/repo/.github/workflows/deploy-dev.yml");
-    const bad = run("jobs.zip");
-    expect(bad.result.status).toBe(1);
-    expect(bad.result.stderr).toContain("jobs.zip no tiene una atestación");
+
+    it("accepts files signed by the dev workflow on develop from a commit with the tree it deploys", () => {
+      const ok = run(["good"]);
+      expect(ok.result.status, ok.result.stderr).toBe(0);
+      expect(ok.log.trim().split("\n")).toHaveLength(3);
+      expect(ok.log).toContain("--signer-workflow owner/repo/.github/workflows/deploy-dev.yml");
+      expect(ok.log).toContain("--source-ref refs/heads/develop");
+      // Several runs signed the same file: one of them is for this tree.
+      expect(run(["other", "good"]).result.status).toBe(0);
+    });
+
+    it("refuses a file signed for another source tree (a run of dev on another commit)", () => {
+      const bad = run(["other"]);
+      expect(bad.result.status).toBe(1);
+      expect(bad.result.stderr).toContain("no para este árbol");
+    });
+
+    it("refuses a file signed from another branch even if its tree is the right one", () => {
+      const bad = run(["good"], "", undefined, "refs/heads/another-branch");
+      expect(bad.result.status).toBe(1);
+      expect(bad.result.stderr).toContain("no tiene una atestación del flujo de dev en develop");
+    });
+
+    it("refuses a file nobody signed on develop, such as a set uploaded ahead of the build", () => {
+      const bad = run(["good"], "jobs.zip");
+      expect(bad.result.status).toBe(1);
+      expect(bad.result.stderr).toContain("jobs.zip no tiene una atestación");
+    });
+
+    it("refuses an invalid tree before asking GitHub anything", () => {
+      const bad = run(["good"], "", () => "not-a-tree");
+      expect(bad.result.status).toBe(64);
+      expect(bad.log).toBe("");
+    });
   });
 
   it("dev attests the three files it publishes, and prod verifies before it applies", () => {
     const dev = flow("deploy-dev.yml");
     expect(dev).toMatch(/actions\/attest-build-provenance@[0-9a-f]{40}/);
     expect(dev).toContain("attestations: write");
+    // Signed before it is published: what the build of this run made, not what the bucket holds.
+    expect(dev.indexOf("attest-build-provenance")).toBeLessThan(dev.indexOf("publish-set.sh"));
     for (const file of ["lambda.zip", "jobs.zip", "spa.tgz"]) {
       expect(dev).toContain(`artifact/${file}`);
     }
     const prod = flow("deploy-prod.yml");
+    expect(prod).toContain('verify-attestation.sh "$RUNNER_TEMP/artifact" "$TREE"');
     expect(prod.indexOf("verify-attestation.sh")).toBeGreaterThan(prod.indexOf("promote.sh"));
     expect(prod.indexOf("verify-attestation.sh")).toBeLessThan(prod.indexOf("terraform-run.sh"));
+    // The script fetches the signed commit by SHA from the public repository: read-only, no token.
+    expect(prod).toMatch(/permissions:\n {6}attestations: read\n {6}contents: read/);
+    expect(prod).toMatch(
+      /actions\/checkout@[0-9a-f]{40} # v4\n\s+with:\n\s+persist-credentials: false/,
+    );
   });
 
   it("promote.sh and artifact-env.sh refuse a SHA256SUMS that does not list both ZIPs", () => {
