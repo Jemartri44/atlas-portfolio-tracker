@@ -33,7 +33,13 @@ import type {
   SupportedEvent,
 } from "../schema/events.js";
 import type { UseCaseDeps } from "./deps.js";
-import { checkInvalid, completeDraft, duplicatesOf, type RecordOptions } from "./record-event.js";
+import {
+  checkDraft,
+  checkInvalid,
+  completeDraft,
+  duplicatesOf,
+  type RecordOptions,
+} from "./record-event.js";
 import { checkCandidate, findTarget, prepareCorrection } from "./rectify.js";
 
 /** Positions and open lots of the assets a candidate touches, at one point in time. */
@@ -135,6 +141,7 @@ export const previewEvent = async <E extends SupportedEvent>(
 ): Promise<EventPreview<E>> => {
   const { events, etag } = await deps.store.load();
   const candidate = completeDraft<E>(deps, draft, createUlidGenerator(deps).next());
+  checkDraft(candidate, options);
   const { affected, state: after } = checkInvalid(events, candidate, options);
   const before = projectLedger(events, { collectErrors: true });
   const assets = options.assets ?? assetsOf(candidate);
@@ -157,19 +164,6 @@ export const previewEvent = async <E extends SupportedEvent>(
   };
 };
 
-/**
- * What a correction would do: the ledger **with the original reversed and the
- * corrected event in its place**, the very pair `correctEvent` appends and the
- * very check it runs (`prepareCorrection`). Adding the corrected event to the
- * ledger as it is counted the movement twice — a deposit corrected from 8.700
- * to 8.000 € showed 18.092,05 € of cash instead of 9.392,05 — and refused a
- * purchase whose order the original itself had filled.
- *
- * A dependent event the correction would break is refused here as the write
- * refuses it, so there is nothing to list in `newlyInvalid`. The duplicates are
- * counted on the ledger after the correction, where the original no longer
- * holds its fingerprint: a correction identical to its original repeats nothing.
- */
 /**
  * What a **reversal** would do: the ledger with the target annulled and nothing
  * in its place.
@@ -213,6 +207,19 @@ export const previewReversal = async (
   };
 };
 
+/**
+ * What a correction would do: the ledger **with the original reversed and the
+ * corrected event in its place**, the very pair `correctEvent` appends and the
+ * very check it runs (`prepareCorrection`). Adding the corrected event to the
+ * ledger as it is counted the movement twice — a deposit corrected from 8.700
+ * to 8.000 € showed 18.092,05 € of cash instead of 9.392,05 — and refused a
+ * purchase whose order the original itself had filled.
+ *
+ * A dependent event the correction would break is refused here as the write
+ * refuses it, so there is nothing to list in `newlyInvalid`. The duplicates are
+ * counted on the ledger after the correction, where the original no longer
+ * holds its fingerprint: a correction identical to its original repeats nothing.
+ */
 export const previewCorrection = async <E extends SupportedEvent>(
   deps: UseCaseDeps,
   targetId: string,
@@ -226,7 +233,7 @@ export const previewCorrection = async <E extends SupportedEvent>(
     reversal,
     event,
     state: after,
-  } = prepareCorrection(deps, events, targetId, replacement, reason);
+  } = prepareCorrection(deps, events, targetId, replacement, reason, options);
   const before = projectLedger(events, { collectErrors: true });
   const assets = options.assets ?? [
     ...new Set([...assetsOf(target as SupportedEvent), ...assetsOf(event)]),

@@ -214,9 +214,11 @@ export const estimateOrders = (
       account_id: holder.account_id,
       quantity,
       amount_eur: amount,
-      ...(fee === undefined
+      ...(fee === undefined ? {} : { fee }),
+      // An order that rounds to 0,00 € has a fee but no share of it.
+      ...(fee === undefined || !amount.amount.isPositive()
         ? {}
-        : { fee, fee_pct: fee.fee_eur.amount.div(amount.amount).mul(HUNDRED) }),
+        : { fee_pct: fee.fee_eur.amount.div(amount.amount).mul(HUNDRED) }),
     });
     remaining = remaining.sub(quantity);
     amountLeft = amountLeft?.sub(amount);
