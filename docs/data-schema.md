@@ -86,6 +86,7 @@ Reglas transversales:
 | Operación | `cash_deposit`, `cash_withdrawal` | Movimientos de efectivo de una cuenta |
 | Operación | `fx_exchange` | Cambio de divisa dentro de una cuenta (vende una, compra otra) (ADR-0012) |
 | Operación | `interest` | Interés de cuenta remunerada, bruto y retención (ADR-0012) |
+| Fiscal | `external_income` | Rendimiento del ahorro **de fuera de la cartera** (interés de otro banco, dividendo de una empresa propia): sin cuenta ni activo, en euros. Solo lo lee la estimación de la cuota. Forma en §6.2 |
 | Operación | `standalone_fee` | Comisión no ligada a una operación (custodia, conectividad…) |
 | Operación | `valuation` | Foto manual de valoración (p. ej. 31/12 para el Modelo 720) |
 | Seguimiento | `order_placed`, `order_updated` | Orden de suscripción/compra o reembolso/venta dada y aún no ejecutada (ADR-0012). Sin efecto sobre lotes ni efectivo |
@@ -97,7 +98,7 @@ Reglas transversales:
 
 | Fiscal *(ADR-0025; implementado en la feature 011)* | `filing_fingerprint_waived` | Deja constancia de que el usuario aceptó, **a propósito y por su nombre**, que la huella de **una** presentación no se pudo verificar, para poder compactar el libro. Se escribe **solo dentro de `compact`** y en la misma reescritura: sin compactación no hay renuncia. No toca la presentación (ADR-0020), no se puede anular y `check` la dice para siempre. Es un **documento administrativo**, sin fecha de negocio (ADR-0016). Su forma, en §6.7 |
 
-Son **26 tipos**. La forma exacta de cada evento (campos obligatorios, validaciones, ejemplo) se define en §6.
+Son **27 tipos**. La forma exacta de cada evento (campos obligatorios, validaciones, ejemplo) se define en §6.
 
 ## 4. Campos comunes de las operaciones
 
@@ -231,6 +232,11 @@ Efecto: resta `sold_amount` y suma `bought_amount` en `cashBalances` de la cuent
 `account_id`, `value_date`, `gross`, `withholding_spain`, `currency`, `fx_rate`, `fx_rate_date`, `broker_ref?`, `fingerprint`, `broker_settled_eur?` (ADR-0030)
 
 Efecto: suma el neto al efectivo; alimenta `investmentIncome` (rendimiento del capital mobiliario con retención).
+
+**`external_income`** (criterio #28 de `fiscal-questions.md`)
+`kind` (`dividend` | `interest`), `value_date`, `gross_eur` (positivo), `withholding_eur` (no mayor que el bruto: `withholding_exceeds_gross`), `payer?`, `notes?`, `fingerprint` (fecha, tipo y bruto: dos apuntes iguales piden confirmación)
+
+Efecto: **ninguno sobre la cartera**: ni efectivo, ni rendimientos, ni patrimonio. Queda en `externalIncome` del estado, cortado por `asOf` en su `value_date`. El motor fiscal lo integra con el capital mobiliario **solo si se le pide** (`TaxOptions.external`, que usan la cuota estimada y el «¿Y si vendo?»); el informe de la cartera, sus casillas y el paquete no lo ven. Tipo nuevo: cambio compatible (ADR-0018), sin versión nueva.
 
 **`dividend`**
 `account_id`, `asset_id`, `value_date`, `gross`, `withholding_origin`, `withholding_spain`, `currency`, `fx_rate`, `fx_rate_date`, `source_country?` (ISO 3166-1 del **pagador**, no del depositario; del convenio con ese país dependen el tipo deducible y el límite de la deducción por doble imposición, pregunta fiscal #16), `per_unit?`, `broker_ref?`, `fingerprint`, `broker_settled_eur?` (ADR-0030). **Al escribir** (nunca al cargar, ADR-0018) se rechaza un `withholding_origin` distinto de cero con `source_country: ES` (`spanish_withholding_as_origin`: la retención española va en `withholding_spain`), y un `settings_changed` con tipo de convenio para `ES` (`treaty_rate_for_spain`)

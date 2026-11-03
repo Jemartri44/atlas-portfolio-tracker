@@ -119,6 +119,10 @@ const AMOUNT_FIELDS = new Set([
   "nav_in",
   "nav_out",
   "broker_settled_eur",
+  "gross_eur",
+  "market_value_in",
+  "market_value_out",
+  "withholding_eur",
 ]);
 
 const QUANTITY_FIELDS = new Set(["quantity", "quantity_in", "quantity_out"]);

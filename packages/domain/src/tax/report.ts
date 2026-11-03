@@ -192,6 +192,16 @@ export interface ExpenseLine {
   criteria: CriterionId[];
 }
 
+/** One savings income received outside the portfolio, in euros as certified. */
+export interface ExternalIncomeLine {
+  event_id: Ulid;
+  kind: "dividend" | "interest";
+  fiscal_date: CivilDate;
+  payer?: string;
+  gross_eur: Money;
+  withholding_eur: Money;
+}
+
 export interface WithholdingLine {
   event_id: Ulid;
   source: "sell" | "forced_sale" | "dividend" | "interest";
@@ -421,6 +431,17 @@ export interface TaxYearReport {
   filing?: FilingComparison;
   base_eur: Money;
   withholdings: { lines: WithholdingLine[]; total_eur: Money };
+  /**
+   * Savings income from outside the portfolio, **only when the reading asked
+   * for it** (`TaxOptions.external`): its gross is already in the movable
+   * capital balance and the base, and its withholdings are **not** in
+   * `withholdings`, which keeps describing the portfolio. Never in the boxes.
+   */
+  external_income?: {
+    lines: ExternalIncomeLine[];
+    gross_eur: Money;
+    withholding_eur: Money;
+  };
   double_taxation: {
     lines: DoubleTaxationLine[];
     deductible_eur: Money;

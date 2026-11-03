@@ -36,3 +36,14 @@ export const CannotCompute = (props: { message: string }): JSX.Element => (
     {props.message}
   </Notice>
 );
+
+/** A year the portfolio has nothing in: said once, not as six cards of zeros. */
+export const NothingThisYear = (props: { year: number }): JSX.Element => (
+  <Section title={`Ejercicio ${props.year}`} class="span-12">
+    <EmptyState
+      what="No hay nada que declarar en este ejercicio"
+      why="En tu cartera no se ha vendido nada, no han llegado rendimientos y no arrastras pérdidas: su base del ahorro es cero."
+      glyph="check"
+    />
+  </Section>
+);

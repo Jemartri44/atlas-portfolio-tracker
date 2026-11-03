@@ -28,6 +28,7 @@ export const EVENT_LABELS: Record<string, string> = {
   transfer_request_updated: "Cambio del traspaso",
   dividend: "Dividendo",
   interest: "Interés",
+  external_income: "Rendimiento de fuera de la cartera",
   fx_exchange: "Cambio de divisa",
   cash_deposit: "Ingreso de efectivo",
   cash_withdrawal: "Retirada de efectivo",
@@ -106,6 +107,10 @@ export const FIELD_LABELS: Record<string, string> = {
   broker_settled_ecb_eur: "Los mismos, al tipo del BCE",
   broker_settled_difference_eur: "Diferencia con el tipo del BCE",
   withholding_spain: "Retención en España",
+  // Savings income from outside the portfolio
+  gross_eur: "Importe bruto en euros",
+  withholding_eur: "Retención en euros",
+  payer: "Pagador",
   source_country: "País del pagador",
   per_unit: "Por título",
   // Transfers
@@ -227,6 +232,9 @@ export const VALUE_LABELS: Record<string, string> = {
   token_migration: "Migración de token",
   issuer_restructuring: "Reestructuración del emisor",
   capital_return: "Devolución de prima o de aportaciones",
+  // The kind of an income from outside the portfolio.
+  dividend: "Dividendo",
+  interest: "Interés",
   true: "Sí",
   false: "No",
 };

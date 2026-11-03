@@ -42,6 +42,7 @@ describe("choosing what to record", () => {
       "Traspasos entre fondos",
       "Cubo especulativo",
       "Eventos corporativos",
+      "Impuestos",
       "Catálogo: cuentas y activos",
     ]);
   });

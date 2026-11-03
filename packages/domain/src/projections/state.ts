@@ -192,6 +192,21 @@ export interface InvestmentIncome {
 }
 
 /**
+ * Savings income received outside the portfolio (`external_income`), in euros.
+ * Apart from `InvestmentIncome` because it belongs to no account and moves no
+ * cash: only the estimate of the quota reads it, and never the boxes.
+ */
+export interface ExternalIncome {
+  event_id: Ulid;
+  kind: "dividend" | "interest";
+  fiscal_date: CivilDate;
+  year: number;
+  payer?: string;
+  gross_eur: Money;
+  withholding_eur: Money;
+}
+
+/**
  * Income received in kind, without a transfer (ADR-0021): a fork, an airdrop,
  * shares from a spin-off outside the neutrality regime, a dividend in kind.
  *
@@ -360,6 +375,8 @@ export interface LedgerState {
   /** What happened to the currency lots, in order, for the wash-sale rule. Never in the snapshot. */
   currencyJournal: CurrencyJournalEntry[];
   income: InvestmentIncome[];
+  /** Savings income received outside the portfolio: only the estimate of the quota reads it. */
+  externalIncome: ExternalIncome[];
   /** Income in kind a grant declares; read by nobody yet (ADR-0021). */
   inKindIncome: InKindIncome[];
   valuations: ValuationEvent[];
@@ -431,6 +448,7 @@ export const createEmptyState = (fiscalSettings: Settings): LedgerState => ({
   currencyGains: [],
   currencyJournal: [],
   income: [],
+  externalIncome: [],
   inKindIncome: [],
   valuations: [],
   orders: new Map(),

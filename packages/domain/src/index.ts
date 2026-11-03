@@ -162,6 +162,7 @@ export {
   migrate,
 } from "./schema/migrations/index.js";
 export { decodeLines, rawLinesText } from "./schema/raw-lines.js";
+export { RULES } from "./schema/rules.js";
 export { knownFieldsOf, validateShape } from "./schema/validate.js";
 export { type BusinessDates, fiscalDateOf } from "./settings/fiscal-date.js";
 export * from "./settings/settings.js";

@@ -1,12 +1,14 @@
 // The operations that touch cash, income or valuations only: no lots are
 // opened or consumed.
 
+import { yearOf } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
 import type {
   CashDepositEvent,
   CashWithdrawalEvent,
   DividendEvent,
+  ExternalIncomeEvent,
   FxExchangeEvent,
   InterestEvent,
   StandaloneFeeEvent,
@@ -57,6 +59,22 @@ export const applyInterest = (state: LedgerState, event: InterestEvent): void =>
   });
   adjustCash(state, event.account_id, net);
   receiveIncome(state, event, net);
+};
+
+/**
+ * Income received outside the portfolio: no account, no cash, no figure of the
+ * portfolio moves. It is kept for the estimate of the quota, and only there.
+ */
+export const applyExternalIncome = (state: LedgerState, event: ExternalIncomeEvent): void => {
+  state.externalIncome.push({
+    event_id: event.id,
+    kind: event.kind,
+    fiscal_date: event.value_date,
+    year: yearOf(event.value_date),
+    ...(event.payer === undefined ? {} : { payer: event.payer }),
+    gross_eur: Money.parse(event.gross_eur, EUR),
+    withholding_eur: Money.parse(event.withholding_eur, EUR),
+  });
 };
 
 const flowOf = (

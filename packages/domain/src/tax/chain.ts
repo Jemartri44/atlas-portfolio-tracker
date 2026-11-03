@@ -72,6 +72,13 @@ export interface TaxOptions {
    * which runs the chain with the oldest first. Never a setting.
    */
   deferralOrder?: DeferralOrder;
+  /**
+   * Integrate the savings income recorded **outside the portfolio**
+   * (`external_income`) with the portfolio's, as the return does. Only the
+   * estimate of the quota and the sale simulator ask for it: the boxes, the
+   * package and the comparison with what was filed describe the portfolio.
+   */
+  external?: boolean;
 }
 
 const zeroBalances = (): YearBalances => ({ capital_gain: zero(), movable_capital: zero() });
@@ -354,6 +361,13 @@ export const taxChain = (
   }
   for (const income of state.income) {
     add(income.year, "movable_capital", income.gross_eur.roundToCents());
+  }
+  // Income from outside the portfolio is integrated and offset with the
+  // portfolio's (art. 49.1.a), but only for the estimate that asks for it.
+  if (options.external === true) {
+    for (const income of state.externalIncome) {
+      add(income.year, "movable_capital", income.gross_eur.roundToCents());
+    }
   }
   // Exchange differences are capital gains and losses of the savings base
   // (V1877-10), what the wash-sale rule leaves computable of them (V1613-25).

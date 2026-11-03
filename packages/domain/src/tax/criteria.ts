@@ -171,6 +171,8 @@ export const FISCAL_CRITERIA = {
   "26": { doc: "26", certainty: "high", risk: "aggressive" },
   // The estimated quota of the savings base: scale of the year, second limit of art. 80.
   "27": { doc: "27", certainty: "medium", risk: "conservative" },
+  // Savings income from outside the portfolio, integrated with it in the estimate.
+  "28": { doc: "28", certainty: "high", risk: "neutral" },
 } as const satisfies Record<string, FiscalCriterion>;
 
 export type CriterionId = keyof typeof FISCAL_CRITERIA;
@@ -228,6 +230,7 @@ export const CRITERION_IDS: readonly CriterionId[] = [
   "25",
   "26",
   "27",
+  "28",
 ];
 
 /** Which variant of criterion #24 an ETC or an ETP applies, by the reading in force. */
