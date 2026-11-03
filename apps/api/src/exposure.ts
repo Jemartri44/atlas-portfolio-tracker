@@ -5,8 +5,9 @@
 
 import type { ExposureObject } from "@atlas/adapters/aws";
 import { sha256Hex, utf8Encode, ValidationError } from "@atlas/domain";
-import { refusal, requestedEtag } from "@atlas/domain/access";
 import { exposureText, MAX_EXPOSURE_BYTES, parseExposureText } from "@atlas/domain/portfolio";
+import { refusal } from "./access/codes.js";
+import { requestedEtag } from "./access/sync-routes.js";
 import { fail, type Outcome } from "./outcome.js";
 import { bytes, json } from "./respond.js";
 
