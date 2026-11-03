@@ -64,6 +64,8 @@ const INPUT: ReminderInput = {
   plan: PLAN,
   webSignIn: "2026-09-26",
   idleWarningDays: 150,
+  repurchase: 0,
+  taxDeadlines: [],
 };
 
 describe("the facts of the monthly reminder", () => {
@@ -260,6 +262,65 @@ describe("the text of the monthly reminder", () => {
     ]);
     expect(mail.html).toContain(
       "<strong>Aviso.</strong> Si nadie inicia sesión antes del 04/11/2026",
+    );
+  });
+
+  const warned = (over: Partial<ReminderInput>) =>
+    reminderMail(reminderFacts({ ...INPUT, ...over }), "off", "https://atlas.example.test");
+
+  it("says a purchase in a repurchase window first, with no name and no amount, in both versions", () => {
+    for (const [repurchase, sentence] of [
+      [1, "Una compra del plan cae en la ventana de recompra. Mírala en Atlas antes de comprar."],
+      [
+        2,
+        "Varias compras del plan caen en la ventana de recompra. Míralas en Atlas antes de comprar.",
+      ],
+      [
+        "unchecked",
+        "No se ha podido comprobar la ventana de recompra. Mírala en Atlas antes de comprar.",
+      ],
+    ] as const) {
+      const mail = warned({ repurchase });
+      expect(mail.body.split("\n")[2]).toBe(`Aviso. ${sentence}`);
+      expect(mail.html).toContain(`<strong>Aviso.</strong> ${sentence}`);
+    }
+    expect(warned({ repurchase: 0 }).body).not.toContain("recompra");
+  });
+
+  it("says each deadline of the income tax with its dates, and an unverified one without any", () => {
+    const sentences = (fact: ReminderInput["taxDeadlines"][number]) =>
+      warned({ taxDeadlines: [fact] }).body.split("\n")[2];
+    expect(
+      sentences({
+        kind: "filing",
+        year: 2025,
+        filing_end: "2026-06-30",
+        direct_debit_end: "2026-06-25",
+      }),
+    ).toBe(
+      "Aviso. Renta de 2025: el plazo de presentación acaba el 30/06/2026. Para domiciliar el pago, el límite es el 25/06/2026.",
+    );
+    expect(sentences({ kind: "filing", year: 2025, filing_end: "2026-06-30" })).toBe(
+      "Aviso. Renta de 2025: el plazo de presentación acaba el 30/06/2026.",
+    );
+    expect(
+      sentences({
+        kind: "second_instalment",
+        year: 2025,
+        due: "2026-11-05",
+        direct_debit_end: "2026-11-02",
+      }),
+    ).toBe(
+      "Aviso. Renta de 2025: el segundo plazo vence el 05/11/2026. Si domiciliaste el primero, puedes domiciliarlo hasta el 02/11/2026.",
+    );
+    expect(sentences({ kind: "second_instalment", year: 2025, due: "2026-11-05" })).toBe(
+      "Aviso. Renta de 2025: el segundo plazo vence el 05/11/2026.",
+    );
+    expect(sentences({ kind: "unverified", year: 2026, deadline: "filing" })).toBe(
+      "Aviso. Renta de 2026: la fecha de fin de campaña no está comprobada en Atlas. Mírala en la sede de la Agencia Tributaria.",
+    );
+    expect(sentences({ kind: "unverified", year: 2026, deadline: "second_instalment" })).toBe(
+      "Aviso. Renta de 2026: la fecha del segundo plazo no está comprobada en Atlas. Mírala en la sede de la Agencia Tributaria.",
     );
   });
 });

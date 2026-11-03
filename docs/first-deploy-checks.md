@@ -24,6 +24,9 @@ Lo que las features 015, 016 y 017 dejaron **sin verificar contra AWS real**. Ca
 - **Vuelta a `http://127.0.0.1`** en el navegador real del usuario, incluido que el reenvío de WSL en modo NAT escuche en el literal `127.0.0.1`.
 - **Qué principal asume el rol de administración** (C5): con IAM Identity Center, `aws sso login`; con un usuario IAM con MFA, la sesión se abre antes por la CLI (`aws configure export-credentials`). Y que `aws:PrincipalArn` de una sesión de Identity Center deje al administrador dentro de las cerraduras de los buckets.
 
+**Correo**
+- **El primer correo real, en un cliente real.** Las capturas del repaso de los correos son simuladas (Chromium, con la inversión de Gmail imitada). Abrir un correo en Gmail de móvil y de PC, en claro y en oscuro: se lee, el aviso y el bloque de la orden se distinguen, y **trae «Abrir Atlas»**. Si no lo trae, el origen configurado no es `https://` pelado: el correo sale igualmente sin enlace, a propósito.
+
 **Libro y permisos de S3**
 - **`404` y no `403`:** un `s3:ListBucket` con la condición `s3:prefix` basta para que un `GetObject` de una clave inexistente dé `404` (la condición no existe en el contexto de `GetObject`). Si da `403`, la salida es un `s3:ListBucket` sin condición sobre el bucket de datos. Hay que comprobarlo también en el primer `init`.
 - **Carrera real de dos `PutObject` condicionales** sobre el libro: una escribe y la otra recibe `412` (S3 responde `412` o `409`, la API traduce los dos).

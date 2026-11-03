@@ -6,7 +6,8 @@
 // redaction the value already understood (`amountsSwitch`: only `on` is on).
 // The architecture test holds that no other module names that parameter.
 //
-// - `monthly_reminder` — always, at least once: a refusal or an unknown fate
+// - `monthly_reminder` — always, at least once, with the repurchase windows of
+//   its plan and the income tax deadlines of the month: a refusal or an unknown fate
 //   of SES leaves the period open, and the next run sends it again with the
 //   period in its subject. So does a reference (closes, ECB) that cannot be
 //   read now: not sent, sent by the first run that can read it.
@@ -17,6 +18,7 @@
 import { readWebSignIn } from "@atlas/adapters/aws";
 import type { JobsStore } from "@atlas/adapters/aws-jobs";
 import { type CivilDate, coreWeights, DomainError } from "@atlas/domain";
+import { planRepurchaseWarnings, repurchaseCalendar } from "@atlas/domain/fiscal";
 import {
   type AmountsSwitch,
   amountsSwitch,
@@ -35,10 +37,12 @@ import {
   periodOf,
   previousPeriod,
   producerOf,
+  type RepurchaseFacts,
   reminderFacts,
   reminderMail,
   reviewDue,
   reviewFacts,
+  taxDeadlineFacts,
   weeklyReviewMail,
   weeklyReviewUnavailableMail,
 } from "@atlas/domain/jobs";
@@ -98,6 +102,29 @@ const planOf = async (context: TaskContext) => {
   }
 };
 
+/**
+ * How many assets of the plan fall in a repurchase window, by the function Cartera uses. A plan
+ * that could not be computed has nothing to buy, and a ledger the engine refuses says so.
+ */
+const repurchaseOf = async (
+  context: TaskContext,
+  plan: Awaited<ReturnType<typeof planOf>>,
+): Promise<RepurchaseFacts> => {
+  const ledger = await context.ledger();
+  if (!ledger.ok || plan === undefined || "failure" in plan.plan) {
+    return 0;
+  }
+  try {
+    const warnings = planRepurchaseWarnings(
+      repurchaseCalendar(ledger.events, context.today),
+      plan.plan,
+    );
+    return new Set(warnings.map((warning) => warning.asset_id)).size;
+  } catch {
+    return "unchecked";
+  }
+};
+
 const monthlyReminder: TaskRunner = async (context): Promise<TaskResult> => {
   const { deps } = context;
   const [planned, webSignIn, amounts] = await Promise.all([
@@ -113,12 +140,19 @@ const monthlyReminder: TaskRunner = async (context): Promise<TaskResult> => {
     return { state: "failed", outcome: { code: "reference_unavailable" } };
   }
   const { plan, counts } = planned;
+  const ledger = await context.ledger();
   const facts = reminderFacts({
     period: context.period,
     today: context.today,
     plan,
     webSignIn,
     idleWarningDays: deps.config.mail?.idleWarningDays ?? 150,
+    repurchase: await repurchaseOf(context, planned),
+    taxDeadlines: ledger.ok
+      ? taxDeadlineFacts(context.today, ledger.state.taxPayments, [
+          ...ledger.state.filings.values(),
+        ])
+      : [],
   });
   const sent = await notifierOf(context).send(reminderMail(facts, amounts, origin(context)));
   const summary = {

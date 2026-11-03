@@ -35,6 +35,8 @@ export const SENTINELS = {
 /** A core of three funds valued by hand, with a contribution of 1234.56 € a month. */
 export const sentinelLedger = (
   extra: Partial<Parameters<typeof mergeSettings>[1]> = {},
+  /** What a test adds after the sentinel events. */
+  more: (builder: LedgerBuilder) => void = () => {},
 ): string => {
   const b = new LedgerBuilder();
   catalogue(b);
@@ -87,6 +89,7 @@ export const sentinelLedger = (
       fx_rate: "1",
     });
   }
+  more(b);
   return `${b.build().map(encodeLine).join("\n")}\n`;
 };
 

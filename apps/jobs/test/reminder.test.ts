@@ -1,7 +1,16 @@
 // The monthly reminder end to end through the handler, with every double, and what each retry does.
 
 import { describe, expect, it } from "vitest";
-import { MAIL_ENV, ORIGIN, RECIPIENT, records, SENDER, SENTINELS, setupJobs } from "./harness.js";
+import {
+  MAIL_ENV,
+  ORIGIN,
+  RECIPIENT,
+  records,
+  SENDER,
+  SENTINELS,
+  sentinelLedger,
+  setupJobs,
+} from "./harness.js";
 
 const lastLog = (logs: readonly string[]) => JSON.parse(logs.at(-1) as string);
 
@@ -311,5 +320,59 @@ describe("the monthly reminder, end to end", () => {
     expect(jobs.ses.attempts).toEqual([]);
     expect(lastLog(jobs.logs)).toMatchObject({ level: "WARN", code: "job_record_conflict" });
     expect(MAIL_ENV.ATLAS_JOBS).toContain("monthly_reminder");
+  });
+});
+
+describe("what the reminder warns of, from the ledger", () => {
+  const sold = (asset: string) =>
+    sentinelLedger({}, (b) => {
+      b.sell({
+        account_id: asset === "ast_gold" ? "acc_etf" : "acc_fund",
+        asset_id: asset,
+        quantity: "1",
+        unit_price: "1",
+        trade_date: "2026-09-15",
+      });
+    });
+
+  it("says a purchase of the plan in a repurchase window, with no name", async () => {
+    const jobs = setupJobs({ ledger: sold("ast_world") });
+    await jobs.run(["monthly_reminder"]);
+    const [mail] = jobs.ses.sent;
+    expect(mail?.body).toContain("Una compra del plan cae en la ventana de recompra.");
+    expect(mail?.html).toContain("Una compra del plan cae en la ventana de recompra.");
+    for (const sentinel of Object.values(SENTINELS).flat()) {
+      expect(mail?.body, sentinel).not.toContain(sentinel);
+      expect(mail?.html, sentinel).not.toContain(sentinel);
+    }
+  });
+
+  it("says nothing of the window with no loss to protect", async () => {
+    const jobs = setupJobs();
+    await jobs.run(["monthly_reminder"]);
+    expect(jobs.ses.sent[0]?.body).not.toContain("recompra");
+  });
+
+  it("says the second instalment in November when the first was paid, and not otherwise", async () => {
+    const paid = (instalment: "first" | "single") =>
+      sentinelLedger({}, (b) => {
+        b.taxPayment({ tax_year: 2025, date: "2026-06-20", instalment });
+      });
+    const first = setupJobs({ ledger: paid("first"), now: "2026-11-01T07:00:00Z" });
+    await first.run(["monthly_reminder"]);
+    expect(first.ses.sent[0]?.body).toContain(
+      "Renta de 2025: el segundo plazo vence el 05/11/2026.",
+    );
+    const single = setupJobs({ ledger: paid("single"), now: "2026-11-01T07:00:00Z" });
+    await single.run(["monthly_reminder"]);
+    expect(single.ses.sent[0]?.body).not.toContain("segundo plazo");
+  });
+
+  it("says the end of the campaign in June", async () => {
+    const jobs = setupJobs({ now: "2026-06-01T06:00:00Z" });
+    await jobs.run(["monthly_reminder"]);
+    expect(jobs.ses.sent[0]?.body).toContain(
+      "Renta de 2025: el plazo de presentación acaba el 30/06/2026. Para domiciliar el pago, el límite es el 25/06/2026.",
+    );
   });
 });

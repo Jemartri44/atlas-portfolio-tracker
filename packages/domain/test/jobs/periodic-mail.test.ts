@@ -16,6 +16,7 @@ import { Money } from "../../src/money/money.js";
 import { inner, titleOf } from "./mail-text.js";
 
 const ORIGIN = "https://a.example";
+const NOTHING_TO_ADD = { staleProfiles: [], staleFunds: 0 };
 const eur = (value: string) => Money.parse(value, "EUR");
 
 const REVIEW: ReviewFacts = {
@@ -127,13 +128,21 @@ describe("a week it could not review by its Sunday (avisos B2)", () => {
 
 describe("the income tax of January by mail (Q10: never a figure)", () => {
   it("says it is ready with its counts, and why when it could not be prepared", () => {
-    const ready = taxReturnMail({ ok: true, year: 2026, notes: 3, disputed: 2 }, ORIGIN);
+    const ready = taxReturnMail(
+      { ok: true, year: 2026, notes: 3, disputed: 2 },
+      NOTHING_TO_ADD,
+      ORIGIN,
+    );
     expect(ready.subject).toBe("[Atlas] Renta 2026 lista");
     expect(inner(ready.body)).toEqual([
       "Los datos de la Renta de 2026 están listos: 3 notas y 2 criterios en disputa.",
       "Revísalos en la aplicación o con «atlas tax 2026» antes de presentar la declaración.",
     ]);
-    const failed = taxReturnMail({ ok: false, year: 2026, code: "tax_ledger_invalid" }, ORIGIN);
+    const failed = taxReturnMail(
+      { ok: false, year: 2026, code: "tax_ledger_invalid" },
+      NOTHING_TO_ADD,
+      ORIGIN,
+    );
     expect(failed.subject).toBe("[Atlas] Renta 2026");
     expect(inner(failed.body)).toEqual([
       "No se han podido preparar los datos de la Renta de 2026 (código tax_ledger_invalid).",
@@ -141,8 +150,34 @@ describe("the income tax of January by mail (Q10: never a figure)", () => {
     ]);
     // A code it does not know is never written as it came.
     expect(
-      taxReturnMail({ ok: false, year: 2026, code: "ES0000000001 fund" }, ORIGIN).body,
+      taxReturnMail({ ok: false, year: 2026, code: "ES0000000001 fund" }, NOTHING_TO_ADD, ORIGIN)
+        .body,
     ).toContain("(código desconocido)");
+  });
+});
+
+describe("what January has to add by hand, in the mail of the income tax", () => {
+  const upkeep = { missingCpi: 2026, staleProfiles: ["MSCI World", "MSCI ACWI"], staleFunds: 2 };
+  const lines = [
+    "Para añadir este mes",
+    "Falta el IPC de 2026: el INE lo publica en enero y hay que añadirlo.",
+    "Perfiles de índice con ficha de más de un año: MSCI World, MSCI ACWI.",
+    "Fichas de fondos de más de un año: 2.",
+  ];
+
+  it("says exactly what is missing, ready or not", () => {
+    for (const facts of [
+      { ok: true, year: 2026, notes: 3, disputed: 2 },
+      { ok: false, year: 2026, code: "tax_failed" },
+    ] as const) {
+      expect(inner(taxReturnMail(facts, upkeep, ORIGIN).body).slice(-4)).toEqual(lines);
+    }
+  });
+
+  it("leaves the section out when nothing is missing", () => {
+    expect(
+      taxReturnMail({ ok: true, year: 2026, notes: 3, disputed: 2 }, NOTHING_TO_ADD, ORIGIN).body,
+    ).not.toContain("Para añadir");
   });
 });
 

@@ -13,6 +13,7 @@
 
 import type { MailMessage } from "../../ports/notifier.js";
 import type { AmountsSwitch } from "../amounts.js";
+import type { AnnualUpkeep } from "../annual-upkeep.js";
 import type { InformativeFacts } from "../informative.js";
 import type { ReviewFacts, ReviewRule, ReviewUnmeasured } from "../review.js";
 import { CODE_SHAPE } from "../strict.js";
@@ -145,27 +146,51 @@ export const weeklyReviewUnavailableMail = (
     origin,
   );
 
-/** The income tax of January: ready, and how many notes and criteria in dispute. No figure, ever. */
-export const taxReturnMail = (facts: TaxReturnFacts, origin: string): MailMessage =>
-  facts.ok
-    ? short(
-        `[Atlas] Renta ${facts.year} lista`,
-        `Renta de ${facts.year} lista`,
-        [
-          `Los datos de la Renta de ${facts.year} están listos: ${count(facts.notes)} notas y ${count(facts.disputed)} criterios en disputa.`,
-          `Revísalos en la aplicación o con «atlas tax ${facts.year}» antes de presentar la declaración.`,
-        ],
-        origin,
-      )
-    : short(
-        `[Atlas] Renta ${facts.year}`,
-        `Renta de ${facts.year}`,
-        [
-          `No se han podido preparar los datos de la Renta de ${facts.year} (código ${codeText(facts.code)}).`,
-          "Abre la aplicación para ver qué falta.",
-        ],
-        origin,
-      );
+/** What January has to add by hand, as sentences; nothing when nothing is missing. */
+const upkeepLines = (upkeep: AnnualUpkeep): string[] => [
+  ...(upkeep.missingCpi === undefined
+    ? []
+    : [`Falta el IPC de ${upkeep.missingCpi}: el INE lo publica en enero y hay que añadirlo.`]),
+  ...(upkeep.staleProfiles.length === 0
+    ? []
+    : [`Perfiles de índice con ficha de más de un año: ${upkeep.staleProfiles.join(", ")}.`]),
+  ...(upkeep.staleFunds === 0
+    ? []
+    : [`Fichas de fondos de más de un año: ${count(upkeep.staleFunds)}.`]),
+];
+
+/**
+ * The income tax of January: ready, and how many notes and criteria in dispute, no figure ever;
+ * and what has to be added by hand this month, ready or not.
+ */
+export const taxReturnMail = (
+  facts: TaxReturnFacts,
+  upkeep: AnnualUpkeep,
+  origin: string,
+): MailMessage =>
+  composeMail(
+    {
+      subject: facts.ok ? `[Atlas] Renta ${facts.year} lista` : `[Atlas] Renta ${facts.year}`,
+      kicker: "Atlas · Aviso",
+      title: facts.ok ? `Renta de ${facts.year} lista` : `Renta de ${facts.year}`,
+      sections: [
+        {
+          blocks: (facts.ok
+            ? [
+                `Los datos de la Renta de ${facts.year} están listos: ${count(facts.notes)} notas y ${count(facts.disputed)} criterios en disputa.`,
+                `Revísalos en la aplicación o con «atlas tax ${facts.year}» antes de presentar la declaración.`,
+              ]
+            : [
+                `No se han podido preparar los datos de la Renta de ${facts.year} (código ${codeText(facts.code)}).`,
+                "Abre la aplicación para ver qué falta.",
+              ]
+          ).map((text) => ({ kind: "paragraph", text })),
+        },
+        ...section("Para añadir este mes", upkeepLines(upkeep)),
+      ],
+    },
+    origin,
+  );
 
 /** The 720 and the 721, neutral; nothing when there is nothing to do. */
 export const informativeMail = (

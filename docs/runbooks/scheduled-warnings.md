@@ -32,6 +32,8 @@ Si los cierres o el histórico del BCE de la nube no se han podido leer, el reco
 - **La aportación del mes**: el reparto por clase. Si dice que no se pudo calcular, el código dice por qué (por ejemplo `missing_manual_prices`): abre la aplicación.
 - **El último inicio de sesión**: si avisa del cliente OAuth, entra en la web antes de la fecha que dice. Google borra un cliente sin uso a los seis meses (ADR-0027).
 - **La copia fuera de AWS**: haz la copia a tu disco con la orden del correo.
+- **La ventana de recompra**: si una compra del plan cae en la ventana de una venta con pérdida, lo avisa arriba, sin nombres ni importes. Mírala en Cartera antes de comprar: comprar no pierde la pérdida, la difiere. Si dice que no se ha podido comprobar, mírala igualmente.
+- **Los plazos de la Renta**: en junio, el fin de la campaña y de la domiciliación, salvo que el libro ya diga que está presentada (una presentación, un pago o una devolución de ese ejercicio). En noviembre, el segundo plazo, solo si consta el pago del primero y no el del segundo. Si dice que la fecha no está comprobada, falta la fila de ese año: se añade a `packages/domain/src/tax/income-tax-deadlines.ts` desde la orden de la campaña en el BOE.
 
 ## Una fuente de precios falla
 
@@ -124,6 +126,7 @@ Llega en enero, como mucho una vez: los datos de la Renta del ejercicio anterior
 - Si el libro o el histórico del BCE no se han podido leer, o el histórico está dañado (una actualización cortada que todavía no se ha deshecho), no se envía ese día y se vuelve a intentar al siguiente. Solo cuando no hay ningún histórico se cuentan las notas sin el contraste del BCE.
 - Si el 31 de enero sigue sin poderse, llega «No se han podido preparar…» con el código. Lo mismo, desde el primer día, si el libro no se puede preparar por su contenido.
 - **Un enero que ya pasó no se envía nunca**: su registro queda como `expired`.
+- **«Para añadir este mes»** dice lo que falta a mano, con los datos listos o sin ellos: el IPC del año que acaba (`charts/spanish-cpi.ts`; el INE lo publica en enero, así que el correo puede llegar antes que el dato) y los perfiles de índice y las fichas de fondos de más de un año (`projections/index-profiles.ts`; los perfiles por su nombre, los fondos solo contados). Cómo se revisan: [`business-rules.md`](../business-rules.md), «Exposición por divisa y región».
 
 ## Los modelos 720 y 721
 
