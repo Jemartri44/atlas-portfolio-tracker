@@ -159,6 +159,14 @@ const INVOCATIONS: {
   { command: "compact", argv: ["compact", "--yes"], readOnly: false },
   { command: "synth", argv: ["synth", "--out", "/dev/null"], readOnly: false },
   { command: "backup", argv: ["backup", "--to", "/dev/null"], readOnly: false },
+  // Reads a dump file and the ledger, writes nothing; it judges the ledger itself (a restore has
+  // to match what the projection gives), so it has no degraded header to answer with.
+  {
+    command: "rehearse",
+    argv: ["rehearse", "--dump", "/dev/null"],
+    readOnly: true,
+    folderOnly: true,
+  },
   { command: "lock", argv: ["lock", "show"], readOnly: true, folderOnly: true },
   { command: "fx", argv: ["fx", "status"], readOnly: true, folderOnly: true },
   // The drafts live in the folder, outside the ledger; the ledger is read only
