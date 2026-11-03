@@ -230,7 +230,10 @@ export const classReturns = (events: readonly LedgerEvent[], to: CivilDate): Cla
           if (effect.op === "forced_sale") {
             // An event the projection rejected is not a live operation, so an applied forced sale
             // always has its sale recorded.
-            const sold = (gainsOf.get(event.id) ?? []).filter((gain) => gain.asset_id === assetId);
+            const accounts = new Set(effect.per_account.map((entry) => entry.account_id));
+            const sold = (gainsOf.get(event.id) ?? []).filter(
+              (gain) => gain.asset_id === assetId && accounts.has(gain.account_id),
+            );
             const rate = fxOf({ id: event.id, ...effect });
             const withheld = effect.per_account.reduce(
               (sum, entry) => sum.add(money(entry.withholding ?? "0", effect.currency)),

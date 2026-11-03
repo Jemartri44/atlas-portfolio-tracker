@@ -177,6 +177,103 @@ describe("classReturns", () => {
     expect(equity?.unsupported).toEqual([]);
   });
 
+  it("converts the cash in lieu of a foreign currency, in two accounts, with each withholding", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.account("acc_etf2", { platform: "ibkr", country: "IE" });
+    const usd = { currency: "USD", fx_rate: "1.25" };
+    for (const account of ["acc_etf", "acc_etf2"]) {
+      b.buy({
+        account_id: account,
+        asset_id: "ast_gold",
+        value_date: "2027-01-05",
+        quantity: "4",
+        unit_price: "200",
+        ...usd,
+      });
+    }
+    b.corporateAction({
+      kind: "reverse_split",
+      asset_id: "ast_gold",
+      effective_date: "2027-06-06",
+      effects: [
+        { op: "scale", ratio: "1/4" },
+        {
+          op: "forced_sale",
+          per_account: [
+            { account_id: "acc_etf", quantity: "0.5", fee: "1", withholding: "10" },
+            { account_id: "acc_etf2", quantity: "0.5", fee: "1", withholding: "20" },
+          ],
+          unit_price: "800",
+          currency: "USD",
+          fx_rate: "1.25",
+          fx_rate_date: "2027-06-04",
+        },
+      ],
+    });
+    b.valuation({
+      account_id: "acc_etf",
+      asset_id: "ast_gold",
+      date: END,
+      quantity: "1",
+      unit_value: "150",
+    });
+    b.valuation({
+      account_id: "acc_etf2",
+      asset_id: "ast_gold",
+      date: END,
+      quantity: "1",
+      unit_value: "150",
+    });
+    const gold = of(b, "gold");
+    // Each account: 0.5 × 800 − 1 = 399 USD. Both: 798 / 1.25 = 638.4 EUR, less 30 / 1.25 = 24 withheld.
+    expect(gold?.returned_eur?.amount.toString()).toBe("614.4");
+    expect(gold?.unsupported).toEqual([]);
+  });
+
+  it("values a transfer leg with no NAV at the price of that day in its own currency", () => {
+    const b = bought();
+    b.asset("ast_usd_bonds", {
+      asset_class: "fixed_income",
+      asset_type: "fund",
+      currency: "USD",
+    });
+    b.transfer({
+      from_account_id: "acc_fund",
+      from_asset_id: "ast_world",
+      quantity_out: "10",
+      nav_out: "100",
+      value_date_out: "2027-02-05",
+      to_account_id: "acc_fund",
+      to_asset_id: "ast_usd_bonds",
+      quantity_in: "10",
+      value_date_in: "2027-02-06",
+    });
+    b.valuation({
+      account_id: "acc_fund",
+      asset_id: "ast_usd_bonds",
+      date: "2027-02-06",
+      quantity: "10",
+      unit_value: "120",
+      currency: "USD",
+      fx_rate: "1.2",
+      fx_rate_date: "2027-02-05",
+    });
+    b.valuation({
+      account_id: "acc_fund",
+      asset_id: "ast_usd_bonds",
+      date: END,
+      quantity: "10",
+      unit_value: "120",
+      currency: "USD",
+      fx_rate: "1.2",
+      fx_rate_date: "2028-01-04",
+    });
+    // 10 × 120 USD at 1.2 USD per euro = 1000 euros.
+    expect(of(b, "fixed_income")?.invested_eur?.amount.toString()).toBe("1000");
+    expect(of(b, "fixed_income")?.unsupported).toEqual([]);
+  });
+
   it("counts the cash that comes with a merger inside the class as money out", () => {
     const b = bought();
     b.asset("ast_eq2", { asset_class: "equity" });
