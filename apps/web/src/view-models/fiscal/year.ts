@@ -154,12 +154,23 @@ export const yearView = (report: TaxYearReport, names: NameIndex): YearView => {
     ...report.capital_gains.lines.map((line) => transmissionRow(line, names)),
     ...currency,
   ];
+  // Sorted by the ISO fiscal date: the row's own date is already dd/mm/yyyy text.
   const movable = [
-    ...report.movable_capital.transmissions.map((line) => transmissionRow(line, names)),
-    ...report.movable_capital.dividends.map((line) => incomeRow(line, names)),
-    ...report.movable_capital.interest.map((line) => incomeRow(line, names)),
-    ...report.movable_capital.expenses.map((line) => expenseRow(line, names)),
-  ].sort((left, right) => left.date.localeCompare(right.date));
+    ...report.movable_capital.transmissions.map(
+      (line) => [line.fiscal_date, transmissionRow(line, names)] as const,
+    ),
+    ...report.movable_capital.dividends.map(
+      (line) => [line.fiscal_date, incomeRow(line, names)] as const,
+    ),
+    ...report.movable_capital.interest.map(
+      (line) => [line.fiscal_date, incomeRow(line, names)] as const,
+    ),
+    ...report.movable_capital.expenses.map(
+      (line) => [line.fiscal_date, expenseRow(line, names)] as const,
+    ),
+  ]
+    .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+    .map(([, row]) => row);
   // What every operation of the year is called, by its event: the rows already
   // say "asset · date", which is the same thing a criterion has to say to tell
   // two of its entries apart.

@@ -116,6 +116,19 @@ describe("the projection", () => {
     expect(card).not.toContain("Falta la rentabilidad de");
   });
 
+  it("keeps the very input (and its focus) while the owner types in it", async () => {
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => host.querySelector("#pj-years") !== null, "the card");
+    for (const id of ["pj-name-0", "pj-0-equity"]) {
+      const input = host.querySelector(`#${id}`) as HTMLInputElement;
+      input.focus();
+      type(host, id, "5");
+      await settle(3);
+      expect(host.querySelector(`#${id}`)).toBe(input);
+      expect(document.activeElement).toBe(input);
+    }
+  });
+
   it("keeps up to three scenarios and says what a wrong figure is", async () => {
     const host = await show(`/cartera?fecha=${DATE}`, Cartera);
     await until(() => host.querySelector("#pj-years") !== null, "the card");
