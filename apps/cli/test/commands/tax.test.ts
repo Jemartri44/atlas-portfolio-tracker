@@ -118,7 +118,7 @@ describe("atlas tax", () => {
     const h = harness({ lines: goldenLines(), instant: "2027-12-15T10:00:00.000Z" });
     expect(await h.exec(["tax", "2027"])).toBe(0);
     expect(h.text()).toContain("(provisional)");
-    expect(h.text()).toContain("es PROVISIONAL");
+    expect(h.text()).toContain("es provisional");
   });
 
   it("shows the difference with the previous settings", async () => {
@@ -149,7 +149,7 @@ describe("atlas tax", () => {
     });
     const bad = harness({ lines: [...lines, oversold], instant: "2029-03-01T10:00:00.000Z" });
     expect(await bad.exec(["tax", "2027"])).toBe(EXIT.domain);
-    expect(bad.text()).toContain("eventos inválidos");
+    expect(bad.text()).toContain("movimiento inválido");
     expect(bad.text()).toContain("01ARYZ6S41TSV4RRFFQ69ZZZZZ");
   });
 });

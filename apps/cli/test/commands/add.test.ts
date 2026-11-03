@@ -38,7 +38,9 @@ describe("atlas add buy|sell: the wash-sale warning before confirming", () => {
     // it leaves in the portfolio, names it by its date and by what of it is
     // still held (10 bought, 5 of it sold), and the window that actually applies: a
     // fund has **two months** since the correction of criterion #2 (2026-09-22).
-    expect(h.text()).toContain("cuando siguen en cartera 5 títulos de una compra del 2027-01-11");
+    expect(h.text()).toContain(
+      "cuando en cartera hay todavía 5 títulos de una compra del 2027-01-11",
+    );
     expect(h.text()).toContain("ventana de dos meses");
     expect(h.text()).toContain("puede no ser computable en 2027");
     h.reset();
