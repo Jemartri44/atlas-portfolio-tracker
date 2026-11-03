@@ -24,8 +24,33 @@ const recordedOn = (v: Voice, value: unknown): string =>
 
 export const ERRORS_SETTINGS: Record<string, Entry> = {
   invalid_exposure: {
-    say: (d, v) =>
-      `La exposición ${d.dimension === "region" ? "por región" : "por divisa"} de ${v.one(d.asset_id)} tiene que sumar 100 y no llevar porcentajes negativos.`,
+    say: (d, v) => {
+      const dimension = d.dimension === "region" ? "por región" : "por divisa";
+      switch (d.reason) {
+        case "total":
+          return `La exposición ${dimension} de ${v.one(d.asset_id)} suma ${v.num(d.total)} y tiene que sumar exactamente 100.`;
+        case "negative":
+          return `La exposición ${dimension} de ${v.one(d.asset_id)} no puede llevar porcentajes negativos.`;
+        case "empty":
+          return `La exposición ${dimension} de ${v.one(d.asset_id)} está vacía: o la declaras entera o la quitas.`;
+        case "key":
+        case "percent":
+          return `La exposición ${dimension} de ${v.one(d.asset_id)} lleva ${d.reason === "key" ? "una clave mal formada (divisa de tres letras mayúsculas, región en minúsculas con guiones bajos)" : "un porcentaje que no es un número decimal"}.`;
+        case "asset":
+        case "dimension":
+          return `La exposición de ${v.one(d.asset_id)} solo admite «currency» y «region», cada una con su reparto.`;
+        case "too_many_assets":
+          return `La exposición declara más de ${v.num(d.max)} activos.`;
+        case "too_large":
+          return `El fichero de exposición pesa más de ${v.num(d.max)} bytes.`;
+        case "repeated_key":
+          return "El fichero de exposición repite una clave.";
+        case "json":
+          return "El fichero de exposición no es JSON.";
+        default:
+          return "El fichero de exposición no tiene el formato esperado: exposure_format 1 y assets, con ids de activo válidos.";
+      }
+    },
   },
   invalid_inflation: {
     say: (d, v) =>

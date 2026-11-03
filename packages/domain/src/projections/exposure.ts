@@ -4,16 +4,17 @@
 //
 // - **Core only**: the bucket never takes part (constitution III). Positions only: the cash of
 //   the core is not in `coreWeights`, so it is not here either.
-// - The exposure is a parameter. Where it is stored is not this module's business.
+// - The exposure is a parameter, validated by `validateExposure` (`exposure-file.ts`), which also
+//   guards its storage outside the ledger.
 // - **No data, not a guess**: if an asset with value declares no exposure for a dimension, that
 //   dimension has no breakdown and lists the assets. The one exception is the currency of gold and
 //   crypto, USD when the owner says nothing else, and `defaulted` lists them so the output says it.
 // - Informative: it reads current prices, nothing fiscal reads it.
 
-import { ValidationError } from "../errors.js";
 import { Decimal, HUNDRED } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
 import type { AssetClass, AssetId } from "../schema/events.js";
+import { EXPOSURE_FORMAT, validateExposure } from "./exposure-file.js";
 import type { CoreWeights } from "./weights.js";
 
 /** One dimension of an asset: key → percent, adding up to 100. */
@@ -53,18 +54,6 @@ export interface Exposure {
 /** Gold and crypto move with the dollar unless the owner declares otherwise. */
 const USD_BY_DEFAULT: ReadonlySet<AssetClass> = new Set(["gold", "crypto"]);
 const USD: Split = { USD: "100" };
-
-const validSplit = (assetId: AssetId, dimension: string, split: Split): void => {
-  const parts = Object.values(split).map((pct) => Decimal.parse(pct));
-  const total = parts.reduce((sum, pct) => sum.add(pct), Decimal.ZERO);
-  if (parts.length === 0 || parts.some((pct) => pct.isNegative()) || !total.eq(HUNDRED)) {
-    throw new ValidationError(
-      "invalid_exposure",
-      `${dimension} exposure of ${assetId} must be non-negative and add up to 100`,
-      { asset_id: assetId, dimension },
-    );
-  }
-};
 
 const dimensionOf = (
   weights: CoreWeights,
@@ -112,14 +101,7 @@ const dimensionOf = (
 
 export const exposure = (weights: CoreWeights, exposures: Exposures): Exposure => {
   // Everything declared is checked, valued or not: a bad split must not wait for the purchase.
-  for (const [assetId, declared] of Object.entries(exposures)) {
-    for (const dimension of ["currency", "region"] as const) {
-      const split = declared[dimension];
-      if (split !== undefined) {
-        validSplit(assetId, dimension, split);
-      }
-    }
-  }
+  validateExposure({ exposure_format: EXPOSURE_FORMAT, assets: exposures });
   const empty: ExposureDimension = { missing_assets: [], defaulted: [] };
   if (weights.partial) {
     return { gap: "partial", total_eur: weights.total_eur, currency: empty, region: empty };
