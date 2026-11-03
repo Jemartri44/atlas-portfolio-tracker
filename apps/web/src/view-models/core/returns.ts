@@ -4,9 +4,16 @@
 // missing (a price, the CPI of a year) is not shown: the sentence says what is missing.
 
 import type { Money } from "@atlas/domain";
-import type { ClassReturnGap, ClassReturns, CoreXirr, CoreXirrGap } from "@atlas/domain/charts";
+import type {
+  ClassReturnGap,
+  ClassReturns,
+  CoreXirr,
+  CoreXirrGap,
+  UnsupportedEvent,
+} from "@atlas/domain/charts";
 import { formatDate } from "../../format/date.js";
 import { valueLabel } from "../../format/labels.js";
+import { displayNames, type NameIndex } from "../../format/names.js";
 
 const GAPS: Record<CoreXirrGap, string> = {
   partial: "falta un precio de la cartera principal",
@@ -18,22 +25,30 @@ const GAPS: Record<CoreXirrGap, string> = {
 const CLASS_GAPS: Record<ClassReturnGap, string> = {
   partial: "falta un precio",
   no_flows: "sin compras",
-  unsupported_events: "hay operaciones que no se calculan",
+  unsupported_events: "hay operaciones que no se leen",
   no_rate: "sin rentabilidad anual",
 };
 
-const KINDS: Record<string, string> = {
-  transfer: "un traspaso a otra clase de activo",
-  corporate_action: "una operación corporativa",
-  asset_updated: "un cambio de clase o de libro de un activo",
+/** What the owner can do or understand about each event the class return does not read. */
+const reasonOf = (item: UnsupportedEvent, names: NameIndex): string => {
+  const date = formatDate(item.date);
+  const assets = displayNames(names, item.asset_ids);
+  switch (item.reason) {
+    case "transfer_without_nav":
+      return `falta el valor del traspaso de ${assets} del ${date}: añade el valor liquidativo al traspaso o una valoración de ese día`;
+    case "transfer_without_rate":
+      return `falta el tipo de cambio del BCE del ${date} para el traspaso de ${assets}, cuyo valor liquidativo va en divisa: añade una operación o una valoración de ese día en esa divisa`;
+    case "corporate_action_reclassifies":
+      return `la operación corporativa de ${assets} del ${date} cambia de clase de activo o de libro y todavía no se calcula`;
+    case "corporate_action_grant":
+      return `la entrega de unidades de ${assets} del ${date} no trae un precio y todavía no se calcula`;
+    case "asset_reclassified":
+      return `${assets} cambió de clase o de libro (registrado el ${date}) y todavía no se calcula`;
+  }
 };
 
 const gapOf = (row: ClassReturns["classes"][number]): string | undefined =>
-  row.gap === "unsupported_events"
-    ? `sin cifra por ${row.unsupported_events.map((kind) => KINDS[kind] ?? kind).join(" y ")}`
-    : row.gap === undefined
-      ? undefined
-      : CLASS_GAPS[row.gap];
+  row.gap === undefined ? undefined : CLASS_GAPS[row.gap];
 
 export interface RealView {
   xirrPct?: string;
@@ -54,6 +69,8 @@ export interface ClassReturnRowView {
   xirrPct?: string;
   /** Why a figure is missing. */
   gap?: string;
+  /** One sentence per event of the class that is not read: which, when, on what, and what to do. */
+  reasons?: string[];
 }
 
 export interface ReturnsView {
@@ -96,7 +113,11 @@ const realOf = (xirr: CoreXirr): RealView | undefined => {
   };
 };
 
-export const returnsView = (xirr: CoreXirr, classes: ClassReturns): ReturnsView => {
+export const returnsView = (
+  xirr: CoreXirr,
+  classes: ClassReturns,
+  names: NameIndex,
+): ReturnsView => {
   const real = realOf(xirr);
   return {
     ...(xirr.gap === undefined ? {} : { gap: GAPS[xirr.gap] }),
@@ -118,6 +139,9 @@ export const returnsView = (xirr: CoreXirr, classes: ClassReturns): ReturnsView 
         ...(row.gain_pct === undefined ? {} : { gainPct: row.gain_pct.toString() }),
         ...(row.xirr_pct === undefined ? {} : { xirrPct: row.xirr_pct.toString() }),
         ...(gap === undefined ? {} : { gap }),
+        ...(row.unsupported.length === 0
+          ? {}
+          : { reasons: row.unsupported.map((item) => reasonOf(item, names)) }),
       };
     }),
   };

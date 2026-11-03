@@ -1,11 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Atlas">
-  <rect width="512" height="512" rx="112" fill="#0b1220" />
-  <path
-    d="M113 399 L215 282 L317 348 L399 113"
-    fill="none"
-    stroke="#4a9eff"
-    stroke-width="38"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Atlas"><rect width="512" height="512" rx="112" fill="#1f4f7c"/><g transform="translate(0 4)"><circle cx="256" cy="214" r="146" fill="#fffdf8"/><path d="M256 68C140 130 140 298 256 360C200 298 200 130 256 68Z" fill="#d6d3cb"/><g fill="none" stroke="#1f4f7c" stroke-width="24" stroke-linecap="round"><path d="M256 68C140 130 140 298 256 360"/><path d="M256 68C200 130 200 298 256 360"/><path d="M256 68C362 130 362 298 256 360"/></g><path d="M84 262A174 174 0 0 0 428 262" fill="none" stroke="#fffdf8" stroke-width="50" stroke-linecap="round"/></g></svg>

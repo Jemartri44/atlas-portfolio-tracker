@@ -204,7 +204,8 @@ export const AppShell = (props: { children?: JSX.Element }): JSX.Element => (
           current page on "/", and the summary tab is already that.
         */}
         <a href="/" class="brand" aria-label="Atlas, ir al resumen">
-          <Icon name="globe" class="mark" />
+          <img src="/simbolo-claro.svg" alt="" class="mark mark-light" />
+          <img src="/simbolo-oscuro.svg" alt="" class="mark mark-dark" />
           <span>Atlas</span>
         </a>
         <Show when={hasLedger()}>

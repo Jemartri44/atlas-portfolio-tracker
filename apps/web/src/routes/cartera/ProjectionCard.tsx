@@ -11,28 +11,19 @@ import { Amount, Field, Figure, Notice, Section, StatLine } from "../../componen
 import { valueLabel } from "../../format/labels.js";
 import {
   emptyProjectionInputs,
+  goalText,
   MAX_SCENARIOS,
   type ProjectionInputs,
   projectionView,
   readProjection,
-  type ScenarioView,
 } from "../../view-models/core/projection.js";
-
-const goalText = (goal: ScenarioView["goal"]): string => {
-  if (goal === "now") {
-    return "ya lo tienes";
-  }
-  if (goal === "never") {
-    return "no se alcanza en el horizonte";
-  }
-  const years = Math.floor((goal as number) / 12);
-  const months = (goal as number) % 12;
-  return `en ${years} años y ${months} meses`;
-};
+import { ProjectionChart } from "./ProjectionChart.jsx";
 
 export const ProjectionCard = (props: {
   weights: CoreWeights;
   settings: Settings;
+  /** The date asked about: the horizon counts from it. */
+  asOf: string;
 }): JSX.Element => {
   const [inputs, setInputs] = createSignal<ProjectionInputs>(emptyProjectionInputs());
   const read = createMemo(() => readProjection(inputs()));
@@ -47,7 +38,8 @@ export const ProjectionCard = (props: {
       ? undefined
       : projectionView(
           projection(props.weights, props.settings, assumptions),
-          assumptions.goalEur !== undefined,
+          props.asOf,
+          assumptions.goalEur,
         );
   });
   const patch = (change: Partial<ProjectionInputs>) => setInputs({ ...inputs(), ...change });
@@ -163,6 +155,7 @@ export const ProjectionCard = (props: {
             <StatLine label="Aportación mensual a la cartera principal">
               <Amount value={shown().monthly} missingReason="sin dato" />
             </StatLine>
+            <Show when={shown().plot}>{(plot) => <ProjectionChart plot={plot()} />}</Show>
             <For each={shown().scenarios}>
               {(scenario) => (
                 <div class="scenario-result">
@@ -185,7 +178,9 @@ export const ProjectionCard = (props: {
                       <Amount value={scenario.contributed} />
                     </StatLine>
                     <Show when={scenario.goal !== undefined}>
-                      <StatLine label="Objetivo">{goalText(scenario.goal)}</StatLine>
+                      <StatLine label="Objetivo">
+                        <Amount value={shown().goalAmount} /> {goalText(scenario.goal)}
+                      </StatLine>
                     </Show>
                   </Show>
                 </div>

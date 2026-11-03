@@ -109,6 +109,7 @@ export default function CarteraRoute(): JSX.Element {
           returnsView(
             coreXirr(snapshot.events, date(), spanishCpiPct()),
             classReturns(snapshot.events, date()),
+            names,
           ),
         );
 
@@ -170,7 +171,7 @@ export default function CarteraRoute(): JSX.Element {
               />
               <CostsCard view={costs()} />
               <TotalCostCard summary={summary()} settings={settings()} />
-              <ProjectionCard weights={projection()} settings={settings()} />
+              <ProjectionCard weights={projection()} settings={settings()} asOf={date()} />
             </div>
           </>
         );
