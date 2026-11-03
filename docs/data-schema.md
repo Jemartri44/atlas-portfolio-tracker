@@ -236,7 +236,7 @@ Efecto: resta `sold_amount` y suma `bought_amount` en `cashBalances` de la cuent
 Efecto: suma el neto al efectivo; alimenta `investmentIncome` (rendimiento del capital mobiliario con retención).
 
 **`dividend`**
-`account_id`, `asset_id`, `value_date`, `gross`, `withholding_origin`, `withholding_spain`, `currency`, `fx_rate`, `fx_rate_date`, `source_country?` (ISO 3166-1 del **pagador**, no del depositario; del convenio con ese país dependen el tipo deducible y el límite de la deducción por doble imposición, pregunta fiscal #16), `per_unit?`, `broker_ref?`, `fingerprint`, `broker_settled_eur?` (ADR-0030)
+`account_id`, `asset_id`, `value_date`, `gross`, `withholding_origin`, `withholding_spain`, `currency`, `fx_rate`, `fx_rate_date`, `source_country?` (ISO 3166-1 del **pagador**, no del depositario; del convenio con ese país dependen el tipo deducible y el límite de la deducción por doble imposición, pregunta fiscal #16), `per_unit?`, `broker_ref?`, `fingerprint`, `broker_settled_eur?` (ADR-0030). **Al escribir** (nunca al cargar, ADR-0018) se rechaza un `withholding_origin` distinto de cero con `source_country: ES` (`spanish_withholding_as_origin`: la retención española va en `withholding_spain`), y un `settings_changed` con tipo de convenio para `ES` (`treaty_rate_for_spain`)
 
 Efecto: no toca lotes; suma al efectivo de la cuenta el neto; alimenta rendimientos del capital mobiliario y deducción por doble imposición.
 

@@ -13,7 +13,7 @@ import {
 import { type ClosedYear, closedYearsTouched, unfiledPastYears } from "../filings/touched.js";
 import type { UlidGenerator } from "../ids/ulid.js";
 import { createUlidGenerator } from "../ids/ulid.js";
-import { hasOverlongDecimal, MAX_DECIMAL_DIGITS } from "../money/decimal.js";
+import { Decimal, hasOverlongDecimal, MAX_DECIMAL_DIGITS } from "../money/decimal.js";
 import { normalizeIsin } from "../projections/isin.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import type { LedgerState, Warning } from "../projections/state.js";
@@ -164,6 +164,51 @@ export const checkIsinUnique = (
 };
 
 /**
+ * A Spanish withholding is a payment on account (box 0597), never foreign tax:
+ * article 80 LIRPF is for income "obtenidas y gravadas en el extranjero". Put in
+ * `withholding_origin`, it would either reach the double-taxation window, which
+ * is not refunded in a year with no quota, or be lost. Checked only when
+ * written (ADR-0018): a ledger already written that way still loads.
+ */
+const refuseSpanishForeignTax = (event: SupportedEvent): void => {
+  if (
+    event.type === "dividend" &&
+    event.source_country === "ES" &&
+    !Decimal.parse(event.withholding_origin).isZero()
+  ) {
+    throw new ValidationError(
+      "spanish_withholding_as_origin",
+      "a Spanish withholding goes in withholding_spain, not in withholding_origin",
+      { event_id: event.id, withholding_origin: event.withholding_origin },
+    );
+  }
+  if (
+    event.type === "settings_changed" &&
+    event.settings.treaty_withholding_pct?.ES !== undefined
+  ) {
+    throw new ValidationError(
+      "treaty_rate_for_spain",
+      "Spain has no treaty rate: a Spanish withholding is a payment on account",
+      { country: "ES" },
+    );
+  }
+};
+
+/**
+ * The rules that apply to what is being **written** and never to a ledger on
+ * load (ADR-0018): every write path (a new event, a correction, a remote unit)
+ * runs them on the event it introduces.
+ */
+export const checkOnWrite = (
+  after: LedgerState,
+  event: SupportedEvent,
+  before: () => LedgerState,
+): void => {
+  checkIsinUnique(after, event, before);
+  refuseSpanishForeignTax(event);
+};
+
+/**
  * A transfer that cannot defer tax is tolerated when a ledger is replayed (a
  * warning) but never recorded: the book may predate the rule, the entry may not.
  */
@@ -201,7 +246,7 @@ export const checkInvalid = (
   if (own !== undefined) {
     throw own.error;
   }
-  checkIsinUnique(state, event, () => projectLedger(events, { collectErrors: true }));
+  checkOnWrite(state, event, () => projectLedger(events, { collectErrors: true }));
   refuseNonFundTransfer(state, event);
   if (event.type !== "settings_changed") {
     /*
