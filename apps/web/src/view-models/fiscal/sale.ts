@@ -1,4 +1,4 @@
-// "¿Y si vendo?" and "No recomprar hasta", turned into what their cards paint.
+// "¿Y si vendo?" and "Ventana de recompra abierta", turned into what their cards paint.
 // Every figure is the domain's (`simulateSale`, `repurchaseCalendar`); this
 // layer names assets and accounts and dates the rows.
 
