@@ -14,7 +14,7 @@
 //   once per streak, at most once each: a streak is marked `sending` before
 //   its mail goes, and a cut after that never sends it again.
 
-import { readWebSignIn, TokenRegistry } from "@atlas/adapters/aws";
+import { readWebSignIn } from "@atlas/adapters/aws";
 import type { JobsStore } from "@atlas/adapters/aws-jobs";
 import { type CivilDate, coreWeights, DomainError } from "@atlas/domain";
 import {
@@ -100,15 +100,11 @@ const planOf = async (context: TaskContext) => {
 
 const monthlyReminder: TaskRunner = async (context): Promise<TaskResult> => {
   const { deps } = context;
-  const [planned, webSignIn, tokens, amounts] = await Promise.all([
+  const [planned, webSignIn, amounts] = await Promise.all([
     planOf(context),
     readWebSignIn(deps.objects)
       .then((read) => read.date)
       .catch(() => "unreadable" as const),
-    new TokenRegistry(deps.parameters, deps.config.ssmPrefix, {})
-      .list()
-      .then((records) => records.map((entry) => entry.read))
-      .catch(() => "unavailable" as const),
     amountsOf(context),
   ]);
   if (planned === undefined) {
@@ -117,14 +113,11 @@ const monthlyReminder: TaskRunner = async (context): Promise<TaskResult> => {
     return { state: "failed", outcome: { code: "reference_unavailable" } };
   }
   const { plan, counts } = planned;
-  const now = deps.now();
   const facts = reminderFacts({
     period: context.period,
     today: context.today,
-    nowMs: now.getTime(),
     plan,
     webSignIn,
-    tokens,
     idleWarningDays: deps.config.mail?.idleWarningDays ?? 150,
   });
   const sent = await notifierOf(context).send(reminderMail(facts, amounts, origin(context)));

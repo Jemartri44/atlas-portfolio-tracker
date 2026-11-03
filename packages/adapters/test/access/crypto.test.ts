@@ -24,7 +24,6 @@ describe("Signer: one subkey per purpose (B3)", () => {
       a: 1,
     });
     expect(signer.open("login", signed)).toBeUndefined();
-    expect(signer.open("console_code", signed)).toBeUndefined();
     expect(signer.open("session", signer.sign("login", { a: 1 }))).toBeUndefined();
   });
 

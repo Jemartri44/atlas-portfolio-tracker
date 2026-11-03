@@ -1,9 +1,8 @@
-// The sign-in of the web with Google by way c, the session and the device of the web, walked end to
-// end against the doubles of Google, SSM and S3.
+// The sign-in of the web with Google by way c, the session and closing every session at once,
+// walked end to end against the doubles of Google, SSM and S3.
 
 import { createHmac } from "node:crypto";
 import { base64url, pkceChallenge, Signer } from "@atlas/adapters/access";
-import { newDevice, serializeDeviceObject } from "@atlas/domain/access";
 import { describe, expect, it } from "vitest";
 import {
   ALLOWED,
@@ -72,7 +71,7 @@ describe("GET /api/auth/callback, the branch of the web (R06 to R17)", () => {
     const payload = JSON.parse(
       Signer.fromSessionKey(SESSION_KEY).open("session", api.session() as string) as string,
     );
-    expect(Object.keys(payload).sort()).toEqual(["did", "exp", "iat", "sid", "sub", "typ", "v"]);
+    expect(Object.keys(payload).sort()).toEqual(["exp", "iat", "sid", "sub", "typ", "v"]);
     expect(payload.sub).toBe(ALLOWED.sub);
     expect(JSON.stringify(payload)).not.toContain(ALLOWED.email);
   });
@@ -277,150 +276,98 @@ describe("GET /api/auth/callback, the branch of the web (R06 to R17)", () => {
   });
 });
 
-describe("the device of the web (R20, R21)", () => {
-  it("assigns a new device the first time, with its object, and GET /api/session says which (R23)", async () => {
+describe("GET /api/session (R23)", () => {
+  it("says signed in and until when, and nothing else; the sign-in writes only its date", async () => {
     const api = setup();
     await api.signIn();
     const view = await api.call("GET", "/api/session");
     expect(view.statusCode).toBe(200);
     expect(view.headers["cache-control"]).toBe("no-store");
-    const body = JSON.parse(view.body);
-    expect(Object.keys(body).sort()).toEqual(["device_id", "expires_at", "signed_in"]);
-    expect(body.signed_in).toBe(true);
-    expect(body.expires_at).toBe("2026-10-01T18:00:00Z");
-    // The date of the last web sign-in, and nothing else.
-    expect(api.s3.keys()).toEqual([
-      "access/last-web-sign-in.json",
-      `sync/devices/${body.device_id}.json`,
-    ]);
-    expect(JSON.parse(api.s3.text(`sync/devices/${body.device_id}.json`) as string)).toMatchObject({
-      type: "web",
-      state: "active",
+    expect(JSON.parse(view.body)).toEqual({
+      signed_in: true,
+      expires_at: "2026-10-01T18:00:00Z",
     });
+    expect(api.s3.keys()).toEqual(["access/last-web-sign-in.json"]);
   });
+});
 
-  it("keeps a presented id the API issued for a live web device", async () => {
+describe("POST /api/auth/logout-all", () => {
+  const SESSION = "__Host-atlas_session";
+  const closeAll = (api: ReturnType<typeof setup>, origin = SELF) =>
+    api.call("POST", "/api/auth/logout-all", {
+      headers: { origin, "content-type": "application/json" },
+      body: "{}",
+    });
+
+  it("closes every session issued before it, this one too, with the clock of the API", async () => {
     const api = setup();
     await api.signIn();
-    const first = JSON.parse((await api.call("GET", "/api/session")).body).device_id;
+    const phone = api.session() as string;
+    api.advance(60_000);
     api.jar.clear();
-    await api.signIn(ALLOWED, first);
-    expect(JSON.parse((await api.call("GET", "/api/session")).body).device_id).toBe(first);
-    expect(api.s3.keys()).toEqual(["access/last-web-sign-in.json", `sync/devices/${first}.json`]);
-  });
-
-  it("assigns a new one for an id it never issued, a forgotten one, a console's or a malformed one (R20)", async () => {
-    const api = setup();
-    const forgotten = "FFFFFFFFFFFFFFFFFFFFFF";
-    const console_ = "CCCCCCCCCCCCCCCCCCCCCC";
-    api.s3.seed(
-      `sync/devices/${forgotten}.json`,
-      serializeDeviceObject({
-        ...newDevice({ deviceId: forgotten, type: "web", createdAt: "2026-09-01T10:00:00Z" }),
-        state: "forgotten",
-        forgotten_at: "2026-09-02T10:00:00Z",
-      }),
+    await api.signIn();
+    const laptop = api.session() as string;
+    api.advance(60_000);
+    const out = await closeAll(api);
+    expect(out.statusCode).toBe(204);
+    expect(setCookies(out).get(SESSION)).toBe("");
+    expect(api.s3.text("access/sessions-valid-from.json")).toBe(
+      `{"sessions_valid_from_format":1,"at":${Math.floor(api.nowMs() / 1000)}}\n`,
     );
-    api.s3.seed(
-      `sync/devices/${console_}.json`,
-      serializeDeviceObject(
-        newDevice({
-          deviceId: console_,
-          type: "console",
-          createdAt: "2026-09-01T10:00:00Z",
-          deviceName: "portátil",
-        }),
-      ),
-    );
-    for (const presented of [
-      "NNNNNNNNNNNNNNNNNNNNNN",
-      forgotten,
-      console_,
-      "../../ledger/ledger",
-    ]) {
-      api.jar.clear();
-      await api.signIn(ALLOWED, presented);
-      const view = await api.call("GET", "/api/session");
-      expect(view.statusCode).toBe(200);
-      const assigned = JSON.parse(view.body).device_id as string;
-      expect(assigned).not.toBe(presented);
-      expect(JSON.parse(api.s3.text(`sync/devices/${assigned}.json`) as string)).toMatchObject({
-        type: "web",
-        state: "active",
+    for (const cookie of [phone, laptop]) {
+      const refused = await api.call("GET", "/api/ledger", {
+        jar: false,
+        cookies: [`${SESSION}=${cookie}`],
       });
+      expect(errorOf(refused)).toEqual({ code: "session_invalid", details: { reason: "closed" } });
     }
-    expect(api.s3.text(`sync/devices/${forgotten}.json`)).toContain('"forgotten"');
-    expect(api.s3.calls.some((call) => call.includes(".."))).toBe(false);
+    expect(JSON.parse(api.logs.at(-2) as string)).toMatchObject({ reason: "closed" });
   });
 
-  it("ignores a presented id when the sign-in does not come from our own site (S2)", async () => {
+  it("refuses a cookie issued strictly before the mark, and keeps the sign-in right after it", async () => {
     const api = setup();
     await api.signIn();
-    const mine = JSON.parse((await api.call("GET", "/api/session")).body).device_id as string;
-    for (const headers of [
-      { "sec-fetch-site": "cross-site" },
-      { "sec-fetch-site": "same-site" },
-      {},
-      { origin: "https://evil.example" },
-    ]) {
-      api.jar.clear();
-      const start = await api.call("GET", "/api/auth/login", {
-        query: { device_id: mine },
-        headers,
-      });
-      const back = api.google.authorize(start.headers.location as string, ALLOWED);
-      await api.call("GET", "/api/auth/callback", {
-        query: { code: back.code, state: back.state },
-      });
-      const assigned = JSON.parse((await api.call("GET", "/api/session")).body).device_id;
-      expect(assigned).not.toBe(mine);
-    }
-    api.jar.clear();
-    const start = await api.call("GET", "/api/auth/login", {
-      query: { device_id: mine },
-      headers: { origin: SELF },
+    const before = api.session() as string;
+    api.advance(1_000);
+    await closeAll(api);
+    expect(api.session()).toBeUndefined();
+    // The next sign-in, in the same second as the mark: good at once, and still a second later.
+    await api.signIn();
+    expect((await api.call("GET", "/api/session")).statusCode).toBe(200);
+    api.advance(1_000);
+    expect((await api.call("GET", "/api/session")).statusCode).toBe(200);
+    const old = await api.call("GET", "/api/session", {
+      jar: false,
+      cookies: [`${SESSION}=${before}`],
     });
-    const back = api.google.authorize(start.headers.location as string, ALLOWED);
-    await api.call("GET", "/api/auth/callback", { query: { code: back.code, state: back.state } });
-    expect(JSON.parse((await api.call("GET", "/api/session")).body).device_id).toBe(mine);
+    expect(errorOf(old)).toEqual({ code: "session_invalid", details: { reason: "closed" } });
   });
 
-  it("never takes the device from the query, a header or the body of a request (R20)", async () => {
+  it("is a session route: a valid cookie, from our Origin, with exactly {}", async () => {
+    const api = setup();
+    expect(errorOf(await closeAll(api)).code).toBe("unauthenticated");
+    await api.signIn();
+    expect(errorOf(await closeAll(api, "https://evil.example")).code).toBe("origin_rejected");
+    const shaped = await api.call("POST", "/api/auth/logout-all", {
+      headers: { origin: SELF, "content-type": "application/json" },
+      body: '{"at":0}',
+    });
+    expect(errorOf(shaped)).toEqual({
+      code: "body_invalid",
+      details: { reason: "not_empty_object" },
+    });
+    expect(api.s3.keys()).not.toContain("access/sessions-valid-from.json");
+    expect((await api.call("GET", "/api/session")).statusCode).toBe(200);
+  });
+
+  it("lets nobody through when the mark cannot be read, rather than reopen what was closed", async () => {
     const api = setup();
     await api.signIn();
-    const mine = JSON.parse((await api.call("GET", "/api/session")).body).device_id;
-    const other = "OOOOOOOOOOOOOOOOOOOOOO";
-    const tried = await api.call("GET", "/api/session", {
-      query: { device_id: other },
-      headers: { "x-atlas-device-id": other },
+    api.s3.seed("access/sessions-valid-from.json", "{ not json");
+    expect(errorOf(await api.call("GET", "/api/session"))).toEqual({
+      code: "session_invalid",
+      details: { reason: "closed" },
     });
-    expect(JSON.parse(tried.body).device_id).toBe(mine);
-  });
-
-  it("refuses every request of a session whose device was forgotten, removed or retyped (R21)", async () => {
-    for (const [change, reason] of [
-      ["forgotten", "forgotten"],
-      ["missing", "missing"],
-      ["retyped", "wrong_type"],
-      ["damaged", "unreadable"],
-    ] as const) {
-      const api = setup();
-      await api.signIn();
-      const deviceId = JSON.parse((await api.call("GET", "/api/session")).body).device_id as string;
-      const key = `sync/devices/${deviceId}.json`;
-      const object = JSON.parse(api.s3.text(key) as string);
-      if (change === "forgotten")
-        api.s3.seed(
-          key,
-          JSON.stringify({ ...object, state: "forgotten", forgotten_at: "2026-10-01T11:00:00Z" }),
-        );
-      if (change === "missing") api.s3.deleteOutOfBand(key);
-      if (change === "retyped") api.s3.seed(key, JSON.stringify({ ...object, type: "console" }));
-      if (change === "damaged") api.s3.seed(key, "{");
-      const refused = await api.call("GET", "/api/session");
-      expect(refused.statusCode).toBe(403);
-      expect(errorOf(refused)).toEqual({ code: "device_forgotten", details: { reason } });
-    }
   });
 });
 
@@ -457,7 +404,6 @@ describe("a request with the session (R18, R19, R23, R31)", () => {
     for (const [cookie, reason] of [
       [other.sign("session", good), "signature"],
       [signer.sign("login", good), "signature"],
-      [signer.sign("console_code", good), "signature"],
       [signer.sign("session", { ...good, typ: "atlas.login" }), "invalid"],
     ] as const) {
       const refused = await api.call("GET", "/api/session", {
@@ -496,6 +442,7 @@ describe("a request with the session (R18, R19, R23, R31)", () => {
       code: "remote_unavailable",
       details: { dependency: "ssm" },
     });
+    // The one read of S3 here is the mark of logout-all: failing, it never lets the cookie through.
     api.s3.failNext();
     expect(errorOf(await api.call("GET", "/api/session"))).toEqual({
       code: "remote_unavailable",
@@ -516,36 +463,13 @@ describe("a request with the session (R18, R19, R23, R31)", () => {
   });
 
   it("answers an unexpected failure of the return with the error page, and clears the attempt (N1, S1)", async () => {
-    for (const breakIt of ["s3_throws", "collision", "bad_session_key"] as const) {
-      const api = setup(
-        breakIt === "s3_throws"
-          ? {
-              objects: {
-                get: async () => undefined,
-                putIfNoneMatch: async () => {
-                  throw new Error("AccessDenied from an SDK that did not translate it");
-                },
-                putIfMatch: async () => "written",
-                list: async () => [],
-              },
-            }
-          : breakIt === "collision"
-            ? {
-                objects: {
-                  get: async () => undefined,
-                  putIfNoneMatch: async () => "exists",
-                  putIfMatch: async () => "written",
-                  list: async () => [],
-                },
-              }
-            : {},
-      );
+    // The session key turns unusable between the start and the return.
+    {
+      const api = setup();
       const start = await api.call("GET", "/api/auth/login");
       const back = api.google.authorize(start.headers.location as string, ALLOWED);
-      if (breakIt === "bad_session_key") {
-        api.ssm.set(NAMES.sessionKey, "short");
-        api.advance(300_000);
-      }
+      api.ssm.set(NAMES.sessionKey, "short");
+      api.advance(300_000);
       const done = await api.call("GET", "/api/auth/callback", {
         query: { code: back.code, state: back.state },
       });
@@ -610,7 +534,7 @@ describe("POST /api/auth/logout", () => {
 
 /**
  * The API records the **date** of each web sign-in for the monthly mail, of Madrid, only moving
- * forward, and with nothing else in it — no `sub`, no mail, no device. The sign-in never fails for
+ * forward, and with nothing else in it — no `sub`, no mail. The sign-in never fails for
  * it: what happened is the reason of its log line.
  */
 describe("the date of the last web sign-in (016, R16)", () => {
@@ -621,7 +545,7 @@ describe("the date of the last web sign-in (016, R16)", () => {
       '{"web_sign_in_format":1,"last_web_sign_in":"2026-10-01"}\n',
     );
     const text = api.s3.text("access/last-web-sign-in.json") as string;
-    for (const leak of [ALLOWED.sub, ALLOWED.email, "device"]) {
+    for (const leak of [ALLOWED.sub, ALLOWED.email]) {
       expect(text).not.toContain(leak);
     }
     expect(api.logs.at(-1)).toContain('"reason":"sign_in_date_written"');
@@ -647,7 +571,7 @@ describe("the date of the last web sign-in (016, R16)", () => {
     const signedIn = await api.signIn();
     expect(signedIn.done.statusCode).toBe(302);
     expect(api.logs.at(-1)).toContain('"reason":"sign_in_date_conflict"');
-    expect(api.logs.at(-1)).toContain('"code":"signed_in_new_device"');
+    expect(api.logs.at(-1)).toContain('"code":"signed_in"');
   });
 
   it("signs in all the same when the bucket does not answer for the date", async () => {

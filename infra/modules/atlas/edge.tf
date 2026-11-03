@@ -68,8 +68,8 @@ resource "aws_wafv2_web_acl" "this" {
 }
 
 # The CSP of the web, with `frame-ancestors`, on the responses of the default behaviour
-# only. It is NOT attached to /api/*: the Lambda's own pages carry their own CSP, two of
-# them with `sandbox` (ADR-0033; docs/api.md section 8), and this must never overwrite it.
+# only. It is NOT attached to /api/*: the Lambda's own pages carry their own CSP, and this
+# must never overwrite it.
 resource "aws_cloudfront_function" "csp" {
   provider = aws.us_east_1
 

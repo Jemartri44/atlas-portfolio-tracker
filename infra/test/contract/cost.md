@@ -40,7 +40,7 @@ Estado: **cerrada en E4** (cuenta, datos y borde, tareas y correo, más lo que c
 
 ## Cierre (E4)
 
-E4 no añade ningún tipo de recurso de Terraform: la orden `atlas admin secrets` escribe parámetros `SecureString` estándar (sin cargo, ADR-0033 F1; las 20.000 peticiones gratuitas de KMS son de la cuenta), el guion del plan de tarifa plana suscribe un plan Free (0 $; cancelarlo devuelve la distribución al pago por uso) y los flujos de Actions no cuestan en un repositorio público. El bucket de artefactos y su caducidad (90 días) ya están en `aws_s3_bucket*` de E1. **Suma esperada: del orden de 0,01-0,05 $ al mes** (S3 y Lambda a céntimos, SES unos 10 correos al mes, todo lo demás a 0); sin clave KMS propia (ADR-0034, filas 7-8, decisión del dueño del 2026-11-03). Fuente de cada fila: la columna «Coste esperado», con las páginas de precios consultadas en E2 y E3. El consumo real lo mide la 018 con Cost Explorer.
+E4 no añade ningún tipo de recurso de Terraform: la orden `atlas admin secrets` escribe parámetros `SecureString` estándar (sin cargo; las 20.000 peticiones gratuitas de KMS son de la cuenta), el guion del plan de tarifa plana suscribe un plan Free (0 $; cancelarlo devuelve la distribución al pago por uso) y los flujos de Actions no cuestan en un repositorio público. El bucket de artefactos y su caducidad (90 días) ya están en `aws_s3_bucket*` de E1. **Suma esperada: del orden de 0,01-0,05 $ al mes** (S3 y Lambda a céntimos, SES unos 10 correos al mes, todo lo demás a 0); sin clave KMS propia (ADR-0034, filas 7-8, decisión del dueño del 2026-11-03). Fuente de cada fila: la columna «Coste esperado», con las páginas de precios consultadas en E2 y E3. El consumo real lo mide la 018 con Cost Explorer.
 
 ## Cómo se comprueba
 

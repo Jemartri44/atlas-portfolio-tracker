@@ -325,3 +325,16 @@ export const readCloses = (
   }
   return { closes, unreadable, mismatched, unserved };
 };
+
+/** The asset of a file of closes, only by the round trip of its name. */
+export const assetOfPriceFile = (name: string): AssetId | undefined => {
+  if (!name.endsWith(".jsonl")) {
+    return undefined;
+  }
+  try {
+    const assetId = decodeURIComponent(name.slice(0, -".jsonl".length));
+    return assetId !== "" && priceFileName(assetId) === name ? assetId : undefined;
+  } catch {
+    return undefined;
+  }
+};

@@ -6,7 +6,7 @@ import type { AppError } from "./state.js";
 import type { WriteFailure } from "./write.js";
 
 const CONFLICT_SENTENCE =
-  "Tus datos han cambiado mientras rellenabas esto (otro dispositivo, otra pestaña o la consola). Se han vuelto a leer y no se ha guardado nada: revisa el efecto y confirma otra vez.";
+  "Tus datos han cambiado mientras rellenabas esto (otro dispositivo u otra pestaña). Se han vuelto a leer y no se ha guardado nada: revisa el efecto y confirma otra vez.";
 
 const UNKNOWN_SENTENCE =
   "No sabemos si se ha guardado: la conexión falló justo al enviarlo. Mira el aviso de arriba; no hace falta que repitas nada.";

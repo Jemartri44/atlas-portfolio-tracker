@@ -7,10 +7,9 @@ describe("the local configuration (atlas.config.json)", () => {
     expect(parseLocalConfig("{}")).toEqual({
       ecb_stale_currency_days: 30,
       lock_stale_minutes: 10,
-      token_expiry_warning_days: 14,
     });
-    // When the console warns that its token expires.
-    expect(parseLocalConfig('{"token_expiry_warning_days": 3}').token_expiry_warning_days).toBe(3);
+    // Retired with the token of the console: a key it no longer reads is refused, as any other.
+    expect(() => parseLocalConfig('{"token_expiry_warning_days": 3}')).toThrow(ValidationError);
     expect(parseLocalConfig('{"lock_stale_minutes": 3}')).toEqual({
       ...DEFAULT_LOCAL_CONFIG,
       lock_stale_minutes: 3,

@@ -175,12 +175,11 @@ describe.each(ENVS)("the roles of the task functions of %s", (env) => {
       );
       expect(ssmOnPrices.length > 0, family).toBe(family === "prices");
     }
-    // The mail role: no parameter at all but the two of the mail and the token path.
+    // The mail role: no parameter at all but the two of the mail.
     const mailSsm = roleStatements(plan, roleName(env, "mail"))
       .filter((s) => [s.Action].flat().some((a) => a?.startsWith("ssm:")))
       .flatMap((s) => [s.Resource].flat());
     expect(mailSsm.sort()).toEqual([
-      `arn:aws:ssm:eu-west-1:${ACCOUNT}:parameter/atlas/${env}/device-tokens`,
       `arn:aws:ssm:eu-west-1:${ACCOUNT}:parameter/atlas/${env}/mail/amounts`,
       `arn:aws:ssm:eu-west-1:${ACCOUNT}:parameter/atlas/${env}/mail/recipient`,
     ]);
