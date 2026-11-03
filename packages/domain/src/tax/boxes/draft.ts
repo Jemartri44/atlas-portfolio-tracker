@@ -14,7 +14,8 @@
 import { imputableRounded, legsRounded, positive, sum, zero } from "../../money/eur.js";
 import type { Money } from "../../money/money.js";
 import type { CurrencyGain } from "../../projections/currency-lots.js";
-import type { LedgerState } from "../../projections/state.js";
+import { euRegulatedAdmission } from "../../projections/markets.js";
+import type { Asset, LedgerState } from "../../projections/state.js";
 import type { AssetId, CorporateActionEvent } from "../../schema/events.js";
 import type { IncomeCategory } from "../../settings/settings.js";
 import { type ChainCore, categoryOf } from "../chain.js";
@@ -94,11 +95,18 @@ const isRights = (line: TransmissionLine, chain: ChainCore): boolean =>
     return action.asset_id !== lot.root.asset_id && lot.root.asset_id === line.asset_id;
   });
 
+/**
+ * The section whose totals a disposal adds to. Both keys of "otros elementos
+ * patrimoniales" add to one pair of sums (0385/0386 in 2025), which the form
+ * prints once for the whole part.
+ */
+const totalOf = (section: SectionId): SectionId => (section === "other_shares" ? "other" : section);
+
 /** The section of a disposal that the report already classified as a capital gain. */
 const sectionOf = (line: TransmissionLine, chain: ChainCore): SectionId =>
   transmissionSection(line.asset_type, "capital_gain", {
     rights: isRights(line, chain),
-    ...(line.market === undefined ? {} : { market: line.market }),
+    eu: euRegulatedAdmission(chain.state.assets.get(line.asset_id) as Asset),
   }) as SectionId;
 
 /**
@@ -207,17 +215,17 @@ const disposalRows = (
         ...(rounded[field] === undefined ? {} : { rounded: rounded[field] }),
       });
     }
-    const current = totals.get(section) ?? { gains: zero(), losses: zero() };
+    const current = totals.get(totalOf(section)) ?? { gains: zero(), losses: zero() };
     totals.set(
-      section,
+      totalOf(section),
       gain
         ? { ...current, gains: current.gains.add(legs) }
         : { ...current, losses: current.losses.add(imputable) },
     );
   }
   // An exchange difference is the transmission of "otros elementos
-  // patrimoniales": its box is not checked yet, so it is shown by concept. A
-  // loss shows what is still deferred of it at 31/12, like a security.
+  // patrimoniales" with key 4. A loss shows what is still deferred of it at
+  // 31/12, like a security.
   const stillDeferredFx = chain.currencyWalk.pendingAt(report.year);
   for (const line of report.capital_gains.currency_lines) {
     const gain = !line.gain_eur.isNegative();
@@ -226,7 +234,7 @@ const disposalRows = (
       transmission: line.proceeds_eur,
       acquisition: line.cost_eur,
       ...(gain
-        ? { gain: line.gain_eur }
+        ? { gain: line.gain_eur, gain_net: line.gain_eur, gain_imputable: line.gain_eur }
         : { loss: line.gain_eur, loss_imputable: line.gain_eur.sub(deferred) }),
     };
     for (const field of SECTION_FIELDS.other) {
@@ -244,7 +252,10 @@ const disposalRows = (
           : field === "key"
             ? { text: OTHER_ELEMENT_KEYS.other as string }
             : { exact: amount as Money }),
-        ...(field === "gain" || field === "loss"
+        ...(field === "gain" ||
+        field === "gain_net" ||
+        field === "gain_imputable" ||
+        field === "loss"
           ? { rounded: line.gain_eur_rounded }
           : field === "loss_imputable"
             ? { rounded: imputableRounded(line.gain_eur_rounded, deferred) }
@@ -610,7 +621,7 @@ export const draftEntries = (report: TaxYearReport, chain: ChainCore): Draft[] =
   for (const [section, totals] of disposals.totals) {
     const criteria = union([
       ...report.capital_gains.lines
-        .filter((line) => sectionOf(line, chain) === section)
+        .filter((line) => totalOf(sectionOf(line, chain)) === section)
         .map((line) => line.criteria),
       ...(section === "other"
         ? report.capital_gains.currency_lines.map((line) => line.criteria)
