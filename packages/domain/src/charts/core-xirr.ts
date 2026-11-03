@@ -56,12 +56,20 @@ export interface CoreXirr {
 }
 
 export interface RealReturn {
-  /** Years of the period with no inflation entered: without them there is no real figure. */
+  /**
+   * The date the real figures are measured at: `to`, or the 31/12 of the last year with an
+   * inflation entered, whichever comes first (a year's inflation is known only after it ends).
+   * Absent when the first year of the period has none.
+   */
+  until?: CivilDate;
+  /** Years from the first flow to `to` with no inflation entered. */
   missing_years: string[];
-  /** The same rate with every flow and the value in euros of the end date; absent without a root. */
+  /** The same rate with every flow and the value in euros of `until`; absent without a root. */
   xirr_pct?: Decimal;
-  /** What the core earned in euros of the end date: value − the flows brought up to it. */
+  /** What the core earned up to `until`, in euros of `until`. */
   gain_eur?: Money;
+  /** A price or a rate is missing at `until`: no real figures. */
+  gap?: "partial";
 }
 
 type DatedFlow = { days: number; eur: Decimal };
@@ -195,11 +203,12 @@ const inflationBetween = (
   return factor;
 };
 
+/** The real figures at `until`, with the inflation of the calendar years from `from` to there. */
 const realOf = (
-  flows: readonly { date: CivilDate; eur: Money }[],
+  events: readonly LedgerEvent[],
+  flowsAll: readonly { date: CivilDate; eur: Money }[],
   from: CivilDate,
   to: CivilDate,
-  value: Money,
   inflationPct: Readonly<Record<string, string>>,
 ): RealReturn => {
   const years: string[] = [];
@@ -207,19 +216,29 @@ const realOf = (
     years.push(String(year));
   }
   const missing = years.filter((year) => inflationPct[year] === undefined);
-  if (missing.length > 0) {
+  const covered = years.slice(
+    0,
+    missing.length === 0 ? years.length : years.indexOf(missing[0] as string),
+  );
+  const last = covered.at(-1);
+  if (last === undefined) {
     return { missing_years: missing };
   }
+  const until = `${last}-12-31` < to ? `${last}-12-31` : to;
+  const [point] = bookCashSeries(events, { to: until, dates: [until] }).points;
+  const value = point?.core_eur;
+  if (value === undefined) {
+    return { until, missing_years: missing, gap: "partial" };
+  }
+  const flows = flowsAll.filter((flow) => flow.date <= until);
   const daily = new Map(
-    years.map((year) => {
+    covered.map((year) => {
       const pct = Decimal.parse(inflationPct[year] as string);
       if (!pct.gt(MIN_INFLATION) || !pct.lt(MAX_INFLATION)) {
         throw new ValidationError(
           "invalid_inflation",
           "the yearly change of prices is out of range",
-          {
-            year,
-          },
+          { year },
         );
       }
       return [year, dailyRateOf(pct)] as const;
@@ -227,15 +246,16 @@ const realOf = (
   );
   const brought = flows.map((flow) => ({
     date: flow.date,
-    eur: flow.eur.amount.mul(inflationBetween(flow.date, to, daily)).round(GRID),
+    eur: flow.eur.amount.mul(inflationBetween(flow.date, until, daily)).round(GRID),
   }));
   const net = brought.reduce((sum, flow) => sum.add(flow.eur), Decimal.ZERO);
   const rate = annualRateOf(
-    brought.map((flow) => ({ days: daysBetween(flow.date, to), eur: flow.eur })),
+    brought.map((flow) => ({ days: daysBetween(flow.date, until), eur: flow.eur })),
     value.amount,
   );
   return {
-    missing_years: [],
+    until,
+    missing_years: missing,
     gain_eur: Money.of(value.amount.sub(net), "EUR"),
     ...(rate === undefined ? {} : { xirr_pct: rate }),
   };
@@ -278,7 +298,7 @@ export const coreXirr = (
   const dated = flows.map((flow) => ({ days: daysBetween(flow.date, to), eur: flow.eur.amount }));
   const rate = annualRateOf(dated, value.amount);
   const real =
-    inflationPct === undefined ? {} : { real: realOf(flows, from, to, value, inflationPct) };
+    inflationPct === undefined ? {} : { real: realOf(events, flows, from, to, inflationPct) };
   return rate === undefined
     ? { ...base, ...real, gap: "no_rate" }
     : { ...base, ...real, xirr_pct: rate };

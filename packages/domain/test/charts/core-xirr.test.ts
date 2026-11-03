@@ -142,12 +142,35 @@ describe("coreXirr", () => {
       expect(result.real?.gain_eur?.amount.round(2).toString()).toBe("100");
     });
 
-    it("gives no real figure, and says which years, when one is missing; the nominal stays", () => {
+    it("measures the real figures at the 31/12 of the last year with inflation, nominal still at the end", () => {
+      const b = core();
+      worth(b, "2027-12-31", "105");
+      worth(b, END, "110");
+      const result = coreXirr(b.build(), END, { "2027": "2" });
+      expect(result.xirr_pct?.toString()).toBe("10");
+      expect(result.real?.until).toBe("2027-12-31");
+      expect(result.real?.missing_years).toEqual(["2028"]);
+      // 1000 held 363 days (2027-01-02 → 2027-12-31) ends at 1050; prices rose 2 % a year over them.
+      const inflation = 1.02 ** (363 / 365);
+      expect(Number(result.real?.gain_eur?.amount.toString())).toBeCloseTo(
+        1050 - 1000 * inflation,
+        0,
+      );
+    });
+
+    it("gives no real figure when the first year has no inflation, and says which years", () => {
+      const b = core();
+      worth(b, END, "110");
+      const result = coreXirr(b.build(), END, { "2028": "0" });
+      expect(result.real).toEqual({ missing_years: ["2027"] });
+      expect(result.xirr_pct?.toString()).toBe("10");
+    });
+
+    it("gives no real figure when a price is missing on the date it is measured at", () => {
       const b = core();
       worth(b, END, "110");
       const result = coreXirr(b.build(), END, { "2027": "2" });
-      expect(result.real).toEqual({ missing_years: ["2028"] });
-      expect(result.xirr_pct?.toString()).toBe("10");
+      expect(result.real).toEqual({ until: "2027-12-31", missing_years: ["2028"], gap: "partial" });
     });
 
     it("gives no real rate when it lies out of bounds, but still the real gain", () => {
