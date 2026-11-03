@@ -364,8 +364,15 @@ export interface TaxYearReport {
     lines: TransmissionLine[];
     /** Exchange differences of foreign currency, in the same balance (spec 029). */
     currency_lines: CurrencyLine[];
+    /** The sum of the lines' rounded figures, by sign. */
     gains_eur: Money;
     losses_eur: Money;
+    /**
+     * Rounded as the form does, by origin of each deferred loss (criterion
+     * #6), and the figure of box 0460. It is not the sum of the lines: when a
+     * loss is released in part, `gains_eur + losses_eur` can differ from it by
+     * a few cents, one at most per loss released.
+     */
     balance_eur: Money;
     /** Releases of a loss of the other category, integrated where they came from. */
     foreign_releases_eur: Money;
