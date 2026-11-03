@@ -146,7 +146,7 @@ export default function RegistrarRoute(): JSX.Element {
   return (
     <RequireLedger writes skeleton={5}>
       {(snapshot) => {
-        const [repeat] = createResource(() => repeatOf(snapshot, today()));
+        const [repeat] = createResource(today, (day) => repeatOf(snapshot, day));
         return (
           <>
             <PageHeader
