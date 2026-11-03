@@ -1,6 +1,6 @@
 # ADR-0026 — La nube como capa sobre lo local: sincronización del libro entre dispositivos
 
-**Estado:** Aceptada (2026-09-24), por decisión de la dirección, que elige la opción 2. **La Parte B (la cola por dispositivo, lo retenido y los once casos de conflicto) está reemplazada por [ADR-0035](0035-cloud-ledger-single-source.md); la Parte A (la API como único escritor) y la Parte C (una corrección viva por raíz) siguen vigentes.** Ronda 8. El marco —la nube se **añade** a lo local y no lo sustituye— lo fija también la dirección. Completa ADR-0019, que no queda reemplazado. **Enmendada el mismo día** tres veces, tras las tres pasadas de revisión de la PR #72, con las decisiones de la dirección: ver las enmiendas al final. **Enmendada otra vez al cerrar la feature 012** (Partes B y C; ver «Enmienda del 2026-09-24 (cierre de la feature 012)»). **Nota del cierre de la feature 013** (2026-09-25): no hay nada de `prices/` que excluir de la sincronización (ver al final). **Nota del 2026-09-25 (ADR-0033 aceptada):** la consola se autentica con un token de dispositivo propio (ver al final). **Nota del 2026-09-25 (prompt de la 014):** al volver a descargar tras una reescritura, lo que se retiene se decide por `event_id` y forma canónica sin el sello de las presentaciones, y el primer dispositivo inicializa el remoto con los bytes enteros de su libro (ver las dos notas al final). **Nota del cierre de la feature 014** (2026-09-25): lo que decidieron la dirección y las tres revisiones de la PR #83 (ver al final).
+**Estado:** Aceptada (2026-09-24); la Parte B (la cola) la reemplaza ADR-0035; las Partes A y C siguen.
 
 ## Contexto
 
@@ -24,7 +24,7 @@ Restricciones que pesan:
 - Una huella repetida es un **aviso con confirmación**, nunca un rechazo ni un silencio (ADR-0012).
 - `settings_changed` y los `*_updated` del catálogo guardan el **estado completo**, no un parche (ADR-0022, `data-schema.md` §6.1): el último que se aplica gana entero.
 - La validación está siempre en el backend (constitución, Seguridad).
-- Los dos almacenes locales tienen una ventana entre comprobar el etag y escribir (ADR-0025, enmienda; `docs/pendientes-post-010.md`, «Lo que la 011 deja apuntado», punto 1). En S3, la escritura condicional hace la comparación y la escritura en una sola petición.
+- Los dos almacenes locales tienen una ventana entre comprobar el etag y escribir (ADR-0025, enmienda; `docs/pendientes-post-010.md` (retirado; en git), «Lo que la 011 deja apuntado», punto 1). En S3, la escritura condicional hace la comparación y la escritura en una sola petición.
 
 **Qué puede salir mal, que no es de bytes sino de significado.** Juntar dos colas de líneas es trivial; lo difícil es que el resultado siga significando algo:
 
@@ -232,7 +232,7 @@ La feature 014 (PR #83) construyó el núcleo de esta ADR sin desplegar: el caso
 - **D-Q9.** Tres `412` seguidos (`remote_contention`) o tres cambios del libro local en el paso 6 (`local_changed`) paran la sincronización.
 - **D-Q10 y D-Q18.** Una línea cruda con `"\r"` se rechaza (`raw_line_break`). El mensaje de la consola da la orden exacta para convertir el libro a finales LF, con una copia previa que nunca se sobrescribe, y el contrato de `compact` no cambia.
 - **D-Q11.** Un remoto que ya tiene eventos inválidos para la sincronización (`remote_ledger_invalid`) sin retener nada.
-- **D-Q17.** La negativa a importar y lo retenido en la exportación de la web (P2 y P3) pasan a la 015. **La 015 no puede permitir configurar la sincronización en la web sin ellos** (`specs/014-ledger-sync-core/deferred/`).
+- **D-Q17.** La negativa a importar y lo retenido en la exportación de la web (P2 y P3) pasan a la 015. **La 015 no puede permitir configurar la sincronización en la web sin ellos** (`specs/014-ledger-sync-core/deferred/` (retirada; en git)).
 
 **Corrección a «Restricciones que pesan»** (revisión de la PR #84): «las mutaciones exigen un libro válido» no era la regla del código. `recordEvent` se niega mientras queden eventos inválidos anteriores, salvo con un `settings_changed`; `correctEvent` y `reverseEvent` solo se niegan por los inválidos que ellos mismos crean (ADR-0015, nota del 2026-09-25).
 
@@ -267,3 +267,7 @@ La feature 014 (PR #83) construyó el núcleo de esta ADR sin desplegar: el caso
 - la Parte C.
 
 La enmienda está vigente en la decisión; el código cambia con las entregas de ADR-0035 (§7), y hasta que la nube esté desplegada (features 018 y 019) lo construido sigue como está.
+
+## Notas de estado
+
+Aceptada (2026-09-24), por decisión de la dirección, que elige la opción 2. **La Parte B (la cola por dispositivo, lo retenido y los once casos de conflicto) está reemplazada por [ADR-0035](0035-cloud-ledger-single-source.md); la Parte A (la API como único escritor) y la Parte C (una corrección viva por raíz) siguen vigentes.** Ronda 8. El marco —la nube se **añade** a lo local y no lo sustituye— lo fija también la dirección. Completa ADR-0019, que no queda reemplazado. **Enmendada el mismo día** tres veces, tras las tres pasadas de revisión de la PR #72, con las decisiones de la dirección: ver las enmiendas al final. **Enmendada otra vez al cerrar la feature 012** (Partes B y C; ver «Enmienda del 2026-09-24 (cierre de la feature 012)»). **Nota del cierre de la feature 013** (2026-09-25): no hay nada de `prices/` que excluir de la sincronización (ver al final). **Nota del 2026-09-25 (ADR-0033 aceptada):** la consola se autentica con un token de dispositivo propio (ver al final). **Nota del 2026-09-25 (prompt de la 014):** al volver a descargar tras una reescritura, lo que se retiene se decide por `event_id` y forma canónica sin el sello de las presentaciones, y el primer dispositivo inicializa el remoto con los bytes enteros de su libro (ver las dos notas al final). **Nota del cierre de la feature 014** (2026-09-25): lo que decidieron la dirección y las tres revisiones de la PR #83 (ver al final).

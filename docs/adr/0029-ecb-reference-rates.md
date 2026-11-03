@@ -1,6 +1,6 @@
 # ADR-0029 — Tipos del BCE: histórico oficial en local, días sin publicación y comprobación de integridad
 
-**Estado:** Aceptada (2026-09-24), por decisión de la dirección, que elige la opción B para la operación registrada antes de la publicación y fija qué pasa tras un cambio de `fiscal_date_rule`. **Enmendada el mismo día** tras la revisión de la PR #72 (ver al final), otra vez al contestar las preguntas del prompt 012, y una tercera al cerrar la feature 012 (lo verificado, la procedencia del histórico, los hallazgos añadidos y la confirmación de un borrador). Ronda 8. Las decisiones de fuente, forma canónica y resolución de los días sin publicación son también de la dirección. Recoge lo que la Ronda 6 tenía pendiente del hallazgo 5 del *challenge* 2 (cotejo de `fx_rate` y festivos TARGET).
+**Estado:** Aceptada (2026-09-24); enmendada tres veces.
 
 ## Contexto
 
@@ -130,3 +130,7 @@ Decidida por la dirección en la revisión de las PR #106 a #109 (`specs/016-sch
 Con [ADR-0035](0035-cloud-ledger-single-source.md): (a) **en la web, el histórico del BCE llega desde la nube** por la API, y su copia pública en IndexedDB **se conserva** (pregunta 4); la lectura desde la carpeta enlazada y la copia importada a mano se retiran con «vincular la carpeta» e «importar». (b) **Los borradores pasan a la nube** (entrega E6), por la API, como objetos que nunca se borran y se marcan confirmados o descartados (pregunta 1); **hasta E6, los clientes de nube no tienen borradores**. Lo que ADR-0035 retira del código se retira en sus entregas E1 a E5 (y E6 para los borradores); hasta entonces, el código sigue como está.
 
 **Nota de E6 (feature 027, 2026-10-06):** los borradores ya están en la nube, como objetos inmutables de `drafts/` compartidos por la web y la consola (`docs/api.md` §6.1, `docs/data-schema.md` §1 y §6.3). El libro sigue sin guardar nunca un dato provisional. La web ya los usa (guardar desde el formulario, contador del marco, lista, confirmar y descartar), sin guardar nada en el dispositivo.
+
+## Notas de estado
+
+Aceptada (2026-09-24), por decisión de la dirección, que elige la opción B para la operación registrada antes de la publicación y fija qué pasa tras un cambio de `fiscal_date_rule`. **Enmendada el mismo día** tras la revisión de la PR #72 (ver al final), otra vez al contestar las preguntas del prompt 012, y una tercera al cerrar la feature 012 (lo verificado, la procedencia del histórico, los hallazgos añadidos y la confirmación de un borrador). Ronda 8. Las decisiones de fuente, forma canónica y resolución de los días sin publicación son también de la dirección. Recoge lo que la Ronda 6 tenía pendiente del hallazgo 5 del *challenge* 2 (cotejo de `fx_rate` y festivos TARGET).

@@ -1,6 +1,6 @@
 # ADR-0017 — Stack de la aplicación web
 
-**Estado:** Aceptada (2026-09-18). Cierra la parte de *stack* de la Ronda 7; el diseño de las pantallas y el flujo de autenticación se deciden aparte. Sustituye las recomendaciones sin verificar que el relevo de dirección arrastraba desde agosto.
+**Estado:** Aceptada (2026-09-18); la parte de Pico, reemplazada por ADR-0023.
 
 ## Contexto
 

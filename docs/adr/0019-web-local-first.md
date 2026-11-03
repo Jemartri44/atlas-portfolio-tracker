@@ -1,6 +1,6 @@
 # ADR-0019 — La aplicación web funciona sola: local-first, sin servidor
 
-**Estado:** Aceptada (2026-09-18). **Reemplazada en lo esencial por [ADR-0035](0035-cloud-ledger-single-source.md)** (2026-10-06): la web es cloud-only, sin libro en el dispositivo, sin registro sin conexión y con acceso con Google. Se conserva como historia y por lo que sigue vigente (el *stack* de ADR-0017). Completa ADR-0017 (*stack*) con el modo de funcionamiento. Adelanta la web por delante de la Fase 4.
+**Estado:** Reemplazada en lo esencial por ADR-0035 (2026-10-06).
 
 ## Contexto
 
@@ -66,3 +66,7 @@ Decidida por la dirección al levantar la parada del paso 0 de la feature 012 (d
 - la lectura de la carpeta de la consola.
 
 **Sigue valiendo:** el dominio compartido, que proyecta en el navegador sobre el libro descargado, y la caché del *shell* de la PWA. La enmienda está vigente en la decisión; el código de la web cambia con las entregas de ADR-0035 (§7), y hasta que la nube esté desplegada (features 018 y 019) la web actual sigue como está.
+
+## Notas de estado
+
+Aceptada (2026-09-18). **Reemplazada en lo esencial por [ADR-0035](0035-cloud-ledger-single-source.md)** (2026-10-06): la web es cloud-only, sin libro en el dispositivo, sin registro sin conexión y con acceso con Google. Se conserva como historia y por lo que sigue vigente (el *stack* de ADR-0017). Completa ADR-0017 (*stack*) con el modo de funcionamiento. Adelanta la web por delante de la Fase 4.
