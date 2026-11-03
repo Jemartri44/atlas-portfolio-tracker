@@ -186,3 +186,21 @@ a.card-foot:hover {
   font-weight: var(--fw-semibold);
   margin-top: var(--space-1);
 }
+
+/* ---- The lead figures of a card, in the serif (direction A) ------------- */
+
+.kpis.is-lead {
+  border-top: 0;
+  margin-bottom: var(--space-4);
+}
+
+.kpi-lead {
+  font-family: var(--font-serif);
+  font-size: var(--text-2xl);
+  line-height: var(--lh-tight);
+  margin: 0;
+}
+
+.kpi-lead .unit {
+  font-size: 0.6em;
+}

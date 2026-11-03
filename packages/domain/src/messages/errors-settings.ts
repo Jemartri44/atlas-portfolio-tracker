@@ -23,6 +23,10 @@ const recordedOn = (v: Voice, value: unknown): string =>
   value === undefined ? "" : ` (${v.date(value)})`;
 
 export const ERRORS_SETTINGS: Record<string, Entry> = {
+  invalid_inflation: {
+    say: (d, v) =>
+      `La variación de precios de ${v.text(d.year)} está fuera de rango: tiene que estar entre −99 % y 1000 %.`,
+  },
   invalid_horizon: {
     say: () => "El horizonte de la proyección tiene que ser un número entero de años, 0 o más.",
   },

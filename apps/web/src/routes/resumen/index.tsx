@@ -6,7 +6,7 @@
 // share a row, and the evolution closes the page.
 //
 // Every figure comes from a projection of the domain **at today's date**
-// (`asOf`), the same one `atlas networth` uses without `--date`, and the
+// (`asOf`), and the
 // recent movements are cut at that date too: a valuation dated next month is
 // not something that happened lately.
 //
