@@ -28,8 +28,9 @@ export class SdkAdminObjectStore extends SdkObjectStore implements AdminObjectSt
   constructor(
     private readonly sender: S3Sender,
     private readonly name: string,
+    writer: S3Sender = sender,
   ) {
-    super(sender, name);
+    super(sender, name, writer);
   }
 
   async getVersion(key: string, versionId: string): Promise<StoredObject | undefined> {
@@ -158,6 +159,8 @@ export const adminClients = (environment: {
   objects: new SdkAdminObjectStore(
     new S3Client({ region: environment.region }),
     environment.data_bucket,
+    // Writes never retried by the SDK: see `SdkObjectStore`.
+    new S3Client({ region: environment.region, maxAttempts: 1 }),
   ),
   parameters: new SdkParameterStore(new SSMClient({ region: environment.region })),
   secrets: new SdkSecretStore(new SSMClient({ region: environment.region })),
