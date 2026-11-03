@@ -77,6 +77,7 @@ export type ConceptId =
   | "rcm.interest"
   | "rcm.dividends"
   | "rcm.transmission"
+  | "rcm.transmission_total"
   | "rcm.gross_total"
   | "rcm.expenses"
   | "rcm.net"
@@ -241,6 +242,8 @@ export const CONCEPT_NAMES: Record<Exclude<ConceptId, RowConceptId>, string> = {
   "rcm.interest": "Intereses",
   "rcm.dividends": "Dividendos",
   "rcm.transmission": "Transmisión de activos financieros",
+  "rcm.transmission_total":
+    "Suma de las transmisiones de activos financieros: no se teclea otra vez",
   "rcm.gross_total": "Total de rendimientos íntegros",
   "rcm.expenses": "Gastos de administración y depósito",
   "rcm.net": "Rendimiento neto",
@@ -318,6 +321,7 @@ export const MISSING_FIELDS: ReadonlySet<RowFieldId> = new Set(["nif"]);
 export const SIGNED_CONCEPTS: ReadonlySet<ConceptId> = new Set<ConceptId>([
   "rcm.interest",
   "rcm.transmission",
+  "rcm.transmission_total",
   "rcm.gross_total",
   "rcm.net",
   "rcm.net_reduced",

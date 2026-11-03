@@ -403,7 +403,7 @@ const movableCapital = (report: TaxYearReport, releases: ReturnType<typeof forei
   ]);
   drafts.push(
     {
-      concept: "rcm.transmission",
+      concept: "rcm.transmission_total",
       section: "movable_capital",
       exact: transmissions,
       criteria: criteriaOf(movable.transmissions),
