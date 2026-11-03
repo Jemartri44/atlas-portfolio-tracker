@@ -259,7 +259,8 @@ export const CONCEPT_NAMES: Record<Exclude<ConceptId, RowConceptId>, string> = {
   "annex.movable_capital.new": "Saldo negativo de este ejercicio (rendimientos)",
   "base.savings": "Base imponible del ahorro",
   "base.savings_taxable": "Base liquidable del ahorro",
-  "ddi.income": "Rendimiento obtenido en el extranjero",
+  "ddi.income":
+    "Rendimiento neto obtenido en el extranjero (el íntegro menos su parte de los gastos de la casilla 0037)",
   "ddi.foreign_tax": "Impuesto satisfecho en el extranjero (limitado al convenio)",
   "ddi.withheld":
     "Retenido en origen, solo detalle: el exceso sobre el convenio se reclama en el país de origen",
