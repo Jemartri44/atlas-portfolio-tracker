@@ -20,7 +20,14 @@ import {
 import { washSaleWindowOf } from "../settings/wash-sale.js";
 import { isInvalid, isUnsupported, type TaxOptions } from "./chain.js";
 import { type Core, exchangesOfYear, tryComputeCore } from "./core.js";
-import { CRITERION_IDS, type CriterionId, categoryCriterion, FISCAL_CRITERIA } from "./criteria.js";
+import {
+  CRITERION_IDS,
+  type CriterionId,
+  categoryCriterion,
+  FISCAL_CRITERIA,
+  FUND_CRITERIA,
+  type FundCriterion,
+} from "./criteria.js";
 import type { CriterionStake, TransmissionLine } from "./report.js";
 import { linesByKey } from "./shared.js";
 import type { DeferralOrder, WashSaleOutcome } from "./wash-sale.js";
@@ -75,6 +82,8 @@ interface Alternative {
   settings: Settings;
   /** A reading that is not a setting: only the measure of #19b runs it. */
   deferralOrder?: DeferralOrder;
+  /** Nor is this one: the funds of one fund criterion with the other window. */
+  flipFunds?: FundCriterion;
 }
 
 const alternatives = (settings: Settings): Alternative[] => {
@@ -95,7 +104,9 @@ const alternatives = (settings: Settings): Alternative[] => {
     from: "1y" | "2m",
     to: "1y" | "2m",
   ): { criterion: CriterionId; settings: Settings }[] => {
-    const applying = types.filter((type) => washSaleWindowOf(settings, type) === from);
+    const applying = types.filter(
+      (type) => washSaleWindowOf(settings, { asset_type: type }) === from,
+    );
     return applying.length === 0
       ? []
       : [
@@ -147,10 +158,10 @@ const alternatives = (settings: Settings): Alternative[] => {
     ...windows("2:crypto", ["crypto"], "1y", "2m"),
     ...windows("2:crypto_2m", ["crypto"], "2m", "1y"),
     // Funds: a criterion that is doubtful and offers no figure is of no use to
-    // anybody, so the other reading is computed like the one of listed
-    // securities, whichever of the two is the default.
-    ...windows("2:fund_2m", ["fund", "money_market"], "2m", "1y"),
-    ...windows("2:fund_1y", ["fund", "money_market"], "1y", "2m"),
+    // anybody. The window of a fund depends on its domicile, which a setting
+    // per type cannot flip alone, so each fund criterion is measured by giving
+    // its own funds the other window and leaving the rest as they are.
+    ...FUND_CRITERIA.map((criterion) => ({ criterion, settings, flipFunds: criterion })),
     {
       criterion: "2b",
       settings: {
@@ -199,16 +210,24 @@ export const criterionStakes = (
       continue;
     }
     const lines = declaring(alternative.criterion);
-    // Running the chain again is not free: #19b only when a figure applies it.
-    if (alternative.criterion === "19b" && lines.length === 0) {
+    // Running the chain again is not free: #19b and a fund criterion only when
+    // a figure applies them.
+    if (
+      (alternative.criterion === "19b" || alternative.flipFunds !== undefined) &&
+      lines.length === 0
+    ) {
       continue;
     }
     const other = tryComputeCore(
       events,
       year,
-      alternative.deferralOrder === undefined
-        ? options
-        : { ...options, deferralOrder: alternative.deferralOrder },
+      {
+        ...options,
+        ...(alternative.deferralOrder === undefined
+          ? {}
+          : { deferralOrder: alternative.deferralOrder }),
+        ...(alternative.flipFunds === undefined ? {} : { flipFunds: alternative.flipFunds }),
+      },
       alternative.settings,
     );
     // The other reading reaches below the first supported year: it cannot be

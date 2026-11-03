@@ -18,9 +18,9 @@ import type { CivilDate } from "../dates/civil-date.js";
 import { lastWorkingDay, yearOf } from "../dates/civil-date.js";
 import { hasForeignAccountsAt } from "../projections/foreign-accounts.js";
 import { projectLedger } from "../projections/project-ledger.js";
-import type { AssetType, LedgerEvent } from "../schema/events.js";
+import type { LedgerEvent } from "../schema/events.js";
 import { rentaSeasonOf } from "../settings/settings.js";
-import { washSaleWindowEnd, washSaleWindowOf } from "../settings/wash-sale.js";
+import { type WashSaleAsset, washSaleWindowEnd, washSaleWindowOf } from "../settings/wash-sale.js";
 import { FILING_DEADLINES } from "./deadlines.js";
 import { yearEnd } from "./valuation.js";
 
@@ -92,8 +92,8 @@ export const fiscalCalendar = (
       continue;
     }
     // A sale that booked a gain has its asset in the catalogue.
-    const { asset_type } = state.assets.get(gain.asset_id) as { asset_type: AssetType };
-    const end = washSaleWindowEnd(gain.fiscal_date, washSaleWindowOf(settings, asset_type));
+    const asset = state.assets.get(gain.asset_id) as WashSaleAsset;
+    const end = washSaleWindowEnd(gain.fiscal_date, washSaleWindowOf(settings, asset));
     if (end >= today) {
       add({
         date: end,

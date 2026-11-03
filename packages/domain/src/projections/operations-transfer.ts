@@ -88,13 +88,6 @@ export const applyTransfer = (state: LedgerState, event: TransferEvent): void =>
       fiscal_date: event.value_date_in,
       quantity: quantityIn,
     });
-    warnRepurchase(
-      state,
-      event.id,
-      event.to_asset_id,
-      toAsset.asset_type,
-      event.value_date_in,
-      quantityIn,
-    );
+    warnRepurchase(state, event.id, toAsset, event.value_date_in, quantityIn);
   }
 };

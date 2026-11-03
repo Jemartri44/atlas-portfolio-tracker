@@ -74,7 +74,7 @@ export const repurchaseCalendar = (
   const settings = projectLedger(events, { collectErrors: true, asOf: today }).fiscalSettings;
   const longest = Math.max(
     ...ASSET_TYPES.map((type) => {
-      const window = washSaleWindowOf(settings, type);
+      const window = washSaleWindowOf(settings, { asset_type: type });
       return window.endsWith("d") ? Math.ceil(Number(window.slice(0, -1)) / 365) : 1;
     }),
   );
