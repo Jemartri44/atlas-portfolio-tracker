@@ -166,7 +166,7 @@ export const WARNINGS_TAX: Record<string, Entry> = {
     web: () => "Se anota en Catálogo.",
   },
   tax_box_other_inferred: () =>
-    "Las diferencias de cambio de la divisa (y un ETC o ETP configurado como ganancia) no tienen apartado propio en el impreso: por exclusión irían a «otros elementos patrimoniales», clave 4 («otros elementos patrimoniales no afectos a actividades económicas»). Es una inferencia, no está escrita en ninguna fuente; por eso no llevan casilla.",
+    "Las diferencias de cambio de la divisa (y un ETC o ETP configurado como ganancia) no tienen apartado propio en el impreso: van a «otros elementos patrimoniales» con la clave 4, que la ayuda del Modelo 100 de 2025 reserva para «cualesquiera otros bienes o derechos no incluidos en los apartados anteriores». El apartado se elige por exclusión: ninguna fuente nombra la divisa.",
   tax_box_repurchase_has_no_number: () =>
     "La parte de una pérdida que no es computable por recompra se marca en la ventana de captura de Renta WEB: no tiene casilla con número.",
 
