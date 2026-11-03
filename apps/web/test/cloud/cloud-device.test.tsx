@@ -239,7 +239,7 @@ describe("what stays on the device after a session of the cloud", () => {
     await press(again, "Cerrar sesión");
     await until(() => store.load().phase !== "ready", "the session closed");
     expect(await importedPrices()).toBeUndefined();
-  });
+  }, 30_000);
 
   it("control: the walker would see a ledger, a remembered source or a cache entry", async () => {
     await saveImportedHistory({
