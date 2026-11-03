@@ -226,6 +226,7 @@ Decidida por la coordinación, con el visto bueno del dueño para reabrir decisi
   - `alpha_vantage` en `secrets.json`;
   - el parámetro SSM `prices/alpha-vantage-key`;
   - `ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS` y su variable de Terraform.
+- **Ficheros anteriores.** Nada está desplegado, así que no hay datos en la nube. Si una carpeta local de prueba (la de la prueba en vivo de la 013) conserva `alpha_vantage` en `secrets.json`, `prices/symbols.json`, `prices/config.json`, `prices/_status.json` o en líneas de cierre, la consola la rechaza con su código. El arreglo es quitar esa clave, o borrar `prices/_status.json` y las líneas de esa fuente. No se migra nada.
 - **Sin efecto fiscal**: los precios nunca entran en los impuestos (trampa 5), y el 720 solo lee valoraciones manuales.
 - **Queda abierto**, para el dueño: si `EUFUND` de EODHD cubre sus fondos de MyInvestor. Si no los cubre, para esos fondos el camino es la valoración manual y la aproximación por ETF de referencia, como ya decía la Decisión.
 
