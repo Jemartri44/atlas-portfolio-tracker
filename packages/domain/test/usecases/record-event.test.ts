@@ -14,8 +14,9 @@ import type { BuyEvent } from "../../src/schema/events.js";
 import { encodeLine } from "../../src/schema/line.js";
 import { DEFAULT_SETTINGS, mergeSettings } from "../../src/settings/settings.js";
 import { loadAndProject } from "../../src/usecases/load-and-project.js";
-import { previewEvent } from "../../src/usecases/preview-event.js";
-import { duplicatesOf, recordEvent } from "../../src/usecases/record-event.js";
+import { previewCorrection, previewEvent } from "../../src/usecases/preview-event.js";
+import { duplicatesOf, type RecordOptions, recordEvent } from "../../src/usecases/record-event.js";
+import { correctEvent } from "../../src/usecases/rectify.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 import { TestStore } from "../memory-store.js";
 import { testDeps } from "./helpers.js";
@@ -54,16 +55,6 @@ describe("recordEvent", () => {
     expect(result.etag).toBe("1");
     const { state } = await loadAndProject(deps);
     expect(physicalPositions(state)[0]?.quantity.toString()).toBe("10");
-  });
-
-  it("refuses a decimal of more digits than a ledger takes, and writes nothing", async () => {
-    const store = seeded();
-    const deps = testDeps(store);
-    const before = (await store.load()).events.length;
-    await expect(
-      recordEvent<BuyEvent>(deps, { ...buyDraft, quantity: "1".repeat(41) }),
-    ).rejects.toMatchObject({ code: "invalid_decimal", details: { max: 40 } });
-    expect((await store.load()).events.length).toBe(before);
   });
 
   it("keeps an explicit fingerprint and reports warnings of the new event only", async () => {
@@ -323,12 +314,49 @@ describe("recordEvent: a settings change that reinterprets the past (ADR-0015)",
     const { state } = await loadAndProject({ store }, { collectErrors: true });
     expect(state.invalid).toEqual([]);
   });
+});
 
-  it("admits acceptInvalid only for a settings change", async () => {
-    const store = seeded();
-    await expect(
-      recordEvent(testDeps(store), buyDraft, { acceptInvalid: true, cloudLedger: false }),
-    ).rejects.toMatchObject({ code: "accept_invalid_not_allowed" });
+describe("what a draft alone refuses, on every path that writes or previews it", () => {
+  const overlong = { draft: { ...buyDraft, quantity: "1".repeat(41) }, options: {} };
+  const accepting = { draft: buyDraft, options: { acceptInvalid: true, cloudLedger: false } };
+  const paths = {
+    record: (store: TestStore, c: typeof overlong) =>
+      recordEvent(testDeps(store), c.draft, c.options as RecordOptions),
+    preview: (store: TestStore, c: typeof overlong) =>
+      previewEvent(testDeps(store), c.draft, c.options as RecordOptions),
+    correct: async (store: TestStore, c: typeof overlong) =>
+      correctEvent(
+        testDeps(store),
+        await original(store),
+        c.draft,
+        "fix",
+        c.options as RecordOptions,
+      ),
+    "preview the correction": async (store: TestStore, c: typeof overlong) =>
+      previewCorrection(
+        testDeps(store),
+        await original(store),
+        c.draft,
+        "fix",
+        c.options as RecordOptions,
+      ),
+  };
+  const original = async (store: TestStore): Promise<string> =>
+    (await store.load()).events.find((event) => event.type === "buy")?.id as string;
+
+  it.each(
+    Object.keys(paths).flatMap((path) => [
+      [path, "invalid_decimal", overlong],
+      [path, "accept_invalid_not_allowed", accepting],
+    ]) as [keyof typeof paths, string, typeof overlong][],
+  )("%s refuses %s and writes nothing", async (path, code, c) => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.buy({ account_id: "acc_fund", asset_id: "ast_world" });
+    const store = new TestStore(b.build());
+    const before = (await store.load()).events.length;
+    await expect(paths[path](store, c)).rejects.toMatchObject({ code });
+    expect((await store.load()).events.length).toBe(before);
   });
 });
 
