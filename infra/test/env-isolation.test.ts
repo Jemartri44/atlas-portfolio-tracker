@@ -301,18 +301,93 @@ describe.each(ENVS)(
       );
     });
 
+    it("never rewrites the trust of the API, the jobs or the scheduler, but may that of another role of the environment", () => {
+      const withBoundary = {
+        "iam:PermissionsBoundary": `arn:aws:iam::${ACCOUNT}:policy/atlas-${env}-boundary`,
+      };
+      const names = [
+        "api",
+        "scheduler",
+        "job-ecb",
+        "job-prices",
+        "job-mail",
+        "job-backup",
+        "job-integrity",
+      ];
+      for (const name of names) {
+        expect(
+          verdict(env, "deploy", "iam:UpdateAssumeRolePolicy", own.role(name), withBoundary),
+          name,
+        ).toBe("deny");
+        expect(
+          verdict(env, "deploy", "iam:PutRolePolicy", own.role(name), withBoundary),
+          name,
+        ).toBe("allow");
+      }
+    });
+
+    it("(S1) the boundary alone leaves an untagged distribution or certificate unchangeable (the web ACL and the functions are scoped by name), and still readable", () => {
+      const boundary = boundaryOf(plans[env] as Plan);
+      const none = { "aws:RequestedRegion": "us-east-1" };
+      for (const [action, resource] of [
+        ["cloudfront:UpdateDistribution", own.distribution],
+        ["cloudfront:DeleteDistribution", own.distribution],
+        ["acm:DeleteCertificate", own.certificate],
+      ] as const) {
+        expect(decide(boundary, { action, resource, context: none }), action).not.toBe("allow");
+        expect(
+          decide(boundary, {
+            action,
+            resource,
+            context: { ...none, "aws:ResourceTag/env": env, "aws:ResourceTag/project": "atlas" },
+          }),
+          `${action} tagged`,
+        ).toBe("allow");
+      }
+      expect(
+        decide(boundary, {
+          action: "cloudfront:GetDistribution",
+          resource: own.distribution,
+          context: none,
+        }),
+      ).toBe("allow");
+    });
+
+    it("changes its own CloudFront functions, which carry no tag, and never those of the other environment", () => {
+      const boundary = boundaryOf(plans[env] as Plan);
+      const none = { "aws:RequestedRegion": "us-east-1" };
+      for (const action of [
+        "cloudfront:UpdateFunction",
+        "cloudfront:DeleteFunction",
+        "cloudfront:PublishFunction",
+      ]) {
+        expect(verdict(env, "deploy", action, own.cfFunction, {}), action).toBe("allow");
+        expect(
+          verdict(env, "deploy", action, foreign.cfFunction, {}),
+          `${action} foreign`,
+        ).not.toBe("allow");
+        expect(
+          decide(boundary, { action, resource: own.cfFunction, context: none }),
+          `${action} boundary`,
+        ).toBe("allow");
+      }
+    });
+
     it("creates only roles `atlas-<env>-*` and only with its boundary, and cannot remove it or change it", () => {
       const boundary = `arn:aws:iam::${ACCOUNT}:policy/atlas-${env}-boundary`;
       for (const action of ["iam:CreateRole", "iam:PutRolePolicy", "iam:UpdateAssumeRolePolicy"]) {
         expect(
-          verdict(env, "deploy", action, own.role("api"), { "iam:PermissionsBoundary": boundary }),
+          verdict(env, "deploy", action, own.role("worker"), {
+            "iam:PermissionsBoundary": boundary,
+          }),
           action,
         ).toBe("allow");
-        expect(verdict(env, "deploy", action, own.role("api"), {}), `${action} with none`).not.toBe(
-          "allow",
-        );
         expect(
-          verdict(env, "deploy", action, own.role("api"), {
+          verdict(env, "deploy", action, own.role("worker"), {}),
+          `${action} with none`,
+        ).not.toBe("allow");
+        expect(
+          verdict(env, "deploy", action, own.role("worker"), {
             "iam:PermissionsBoundary": `arn:aws:iam::${ACCOUNT}:policy/atlas-${other}-boundary`,
           }),
           `${action} with the other one`,

@@ -6,7 +6,7 @@
 
 import type { CoreWeights, Settings } from "@atlas/domain";
 import { projection } from "@atlas/domain/portfolio";
-import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
+import { createMemo, createSignal, For, Index, type JSX, Show } from "solid-js";
 import { Amount, Field, Figure, FoldSection, Notice, StatLine } from "../../components/index.js";
 import { valueLabel } from "../../format/labels.js";
 import {
@@ -104,28 +104,29 @@ export const ProjectionCard = (props: {
           onInput={(goal) => patch({ goal })}
         />
       </div>
-      <For each={inputs().scenarios}>
+      {/* Index, not For: typing replaces the scenario object, and For would rebuild the inputs and drop the focus. */}
+      <Index each={inputs().scenarios}>
         {(scenario, index) => (
           <fieldset class="scenario">
-            <legend>Escenario {index() + 1}</legend>
+            <legend>Escenario {index + 1}</legend>
             <div class="fieldset assumptions">
               <Field
-                id={`pj-name-${index()}`}
+                id={`pj-name-${index}`}
                 kind="text"
                 label="Nombre"
-                value={scenario.name}
-                onInput={(name) => setName(index(), name)}
+                value={scenario().name}
+                onInput={(name) => setName(index, name)}
               />
               <For each={classes()}>
                 {(assetClass) => (
                   <Field
-                    id={`pj-${index()}-${assetClass}`}
+                    id={`pj-${index}-${assetClass}`}
                     kind="decimal"
                     label={`Rentabilidad anual de ${valueLabel(assetClass).toLowerCase()}`}
                     unit="%"
-                    value={scenario.returns[assetClass] ?? ""}
-                    error={read().returns[`${index()}:${assetClass}`]}
-                    onInput={(raw) => setReturn(index(), assetClass, raw)}
+                    value={scenario().returns[assetClass] ?? ""}
+                    error={read().returns[`${index}:${assetClass}`]}
+                    onInput={(raw) => setReturn(index, assetClass, raw)}
                   />
                 )}
               </For>
@@ -135,7 +136,7 @@ export const ProjectionCard = (props: {
                 type="button"
                 class="secondary"
                 onClick={() =>
-                  patch({ scenarios: inputs().scenarios.filter((_, at) => at !== index()) })
+                  patch({ scenarios: inputs().scenarios.filter((_, at) => at !== index) })
                 }
               >
                 Quitar este escenario
@@ -143,7 +144,7 @@ export const ProjectionCard = (props: {
             </Show>
           </fieldset>
         )}
-      </For>
+      </Index>
       <Show when={inputs().scenarios.length < MAX_SCENARIOS}>
         <button
           type="button"

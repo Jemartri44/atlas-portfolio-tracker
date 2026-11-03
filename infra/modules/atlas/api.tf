@@ -107,7 +107,7 @@ resource "aws_lambda_function" "api" {
       ATLAS_ENV                      = var.env
       ATLAS_ORIGIN                   = "https://${var.domain}"
       ATLAS_DATA_BUCKET              = local.data_name
-      ATLAS_SESSION_TTL_SECONDS      = "28800"
+      ATLAS_SESSION_TTL_SECONDS      = "86400"
       ATLAS_LOGIN_TTL_SECONDS        = "600"
       ATLAS_CLOCK_TOLERANCE_SECONDS  = "600"
       ATLAS_ALLOW_LIST_CACHE_SECONDS = "120"

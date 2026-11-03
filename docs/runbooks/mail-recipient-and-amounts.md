@@ -4,16 +4,15 @@
 
 **Cuándo usarlo.** Cuando quieres que los correos lleven los euros (o dejen de llevarlos), o que lleguen a otra dirección.
 
-**Dos reglas, antes de nada:**
+**Tres reglas, antes de nada:**
 
-1. **Los dos valores tienen una sola fuente: `terraform.tfvars`**, fuera del repositorio (`~/personal/atlas/privado/terraform/<entorno>/terraform.tfvars`). Terraform escribe con ellos dos parámetros `String` de SSM que lee la función de correo:
-   - `/atlas/<entorno>/mail/recipient`;
-   - `/atlas/<entorno>/mail/amounts`.
+1. **Los dos valores tienen una sola fuente: el `terraform.tfvars` del entorno** (`mail_recipient` y `mail_amounts`, `infra/envs/<entorno>/variables.tf`; ejemplo en `terraform.tfvars.example`). La copia de trabajo vive fuera del repositorio (`~/personal/atlas/privado/terraform/<entorno>/terraform.tfvars`, permisos `600`) y **la que aplica el *pipeline* es el secreto `ATLAS_<ENTORNO>_TFVARS_B64`** (el de `prod` es del *environment* `prod`). Terraform escribe con ellos dos parámetros `String` de SSM que lee la función de correo, `/atlas/<entorno>/mail/recipient` y `/atlas/<entorno>/mail/amounts`, y la condición `ses:Recipients` de IAM que impide enviar a cualquier otra dirección (ADR-0028, filas 17 y 18; ADR-0034, fila 12). **Nunca a mano en SSM** (IAM negaría el envío) **ni en `Settings` ni en el repositorio.**
+2. **La dirección no pasa por la línea de órdenes**: nada de `-var 'mail_recipient=…'` ni de `echo … >> terraform.tfvars`, que se quedaría en el historial del *shell*. Se escribe con un editor.
+3. **Aplicar es publicar el secreto y dejar que el *pipeline* aplique.** `prod` solo se aplica con `deploy-prod.yml` (un empujón a `main` con la aprobación del *environment*); `dev`, con `deploy-dev.yml` en `develop`. Un `terraform apply` a mano no es el camino.
 
-   Con el destinatario escribe también la condición de IAM que impide enviar a cualquier otra dirección (ADR-0028, filas 17 y 18; ADR-0034, fila 12). **Nunca a mano en SSM**: la condición de IAM no cambiaría, y un envío a la dirección nueva lo negaría IAM. **Nunca en `Settings` ni en el repositorio.**
-2. **La dirección no pasa por la línea de órdenes.** Nada de `-var 'mail_recipient=…'`, ni de `echo … >> terraform.tfvars`: se quedaría en el historial del *shell*. Se escribe con un editor, dentro del fichero, que tiene permisos `600`.
+Para publicar el secreto sin que el valor toque el historial: `base64 -w0 <tfvars> | gh secret set ATLAS_PROD_TFVARS_B64 --env prod` (`dev`: `ATLAS_DEV_TFVARS_B64` sin `--env`, secreto del repositorio).
 
-**Sin verificar**: los nombres de las variables de Terraform (`mail_recipient` y `mail_amounts`, abajo) son una **propuesta**. Los fija la 017, que escribe el módulo, y la 018 prueba el procedimiento en `dev`. Hasta entonces no hay nada que aplicar.
+**`mail_sender` aparece también en el `terraform.tfvars` del *bootstrap* del entorno** (acota `ses:FromAddress` en el límite de permisos). Tienen que ser la misma dirección, y nada lo comprueba sobre los ficheros privados: míralo al cambiarla.
 
 ## 1. Encender o apagar los importes
 
@@ -28,34 +27,20 @@ Con los importes **apagados**, que es el valor por defecto (ADR-0028, fila 18), 
    "${EDITOR:-nano}" ~/personal/atlas/privado/terraform/prod/terraform.tfvars
    ```
 2. Pon `mail_amounts = "on"` para encenderlos, o `mail_amounts = "off"` para apagarlos. **Cualquier otro valor los deja apagados**: la función solo entiende `on` (§8.2 M2).
-3. Guarda y cierra. Revisa el plan y aplícalo desde la carpeta de Terraform del entorno:
-   ```sh
-   terraform plan
-   ```
-   El plan tiene que cambiar **solo** el parámetro `/atlas/prod/mail/amounts`. Si cambia algo más, para.
-   ```sh
-   terraform apply
-   ```
+3. Guarda y cierra. Publica el secreto (arriba) y revisa el `plan` del *pipeline*: tiene que cambiar **solo** el parámetro `/atlas/prod/mail/amounts`. Si cambia algo más, para. Luego lo aplica el despliegue de `prod`.
 4. **Comprobar**: el próximo recordatorio mensual dice los euros del reparto, o deja de decirlos. La función lee el parámetro en cada envío, así que no hace falta desplegar nada más.
 
 ## 2. Cambiar el destinatario
 
 1. Abre el fichero con tu editor, como en el paso 1 de arriba.
 2. Cambia `mail_recipient = "…"` por la dirección nueva: **una sola**, sin nombre delante y sin espacios.
-3. Revisa el plan:
-   ```sh
-   terraform plan
-   ```
-   Tiene que cambiar **dos cosas**:
+3. Publica el secreto y revisa el `plan` del *pipeline*. Tiene que cambiar **dos cosas**:
    - el parámetro `/atlas/prod/mail/recipient`;
    - la condición `ses:Recipients` de la política del rol de correo.
 
    Si la cuenta de SES sigue en el *sandbox*, cambia también la identidad verificada del destinatario. Si falta alguna de las dos cosas, para: la dirección nueva no recibiría nada, porque IAM negaría el envío.
-4. Aplícalo:
-   ```sh
-   terraform apply
-   ```
-5. **Comprobar**: el próximo correo llega a la dirección nueva. Hoy no hay una orden para enviar un correo de prueba. Hasta que la 018 la pruebe en `dev`, la comprobación es el siguiente recordatorio mensual.
+4. Lo aplica el despliegue del entorno.
+5. **Comprobar**: el próximo correo llega a la dirección nueva. No hay una orden para enviar un correo de prueba: la comprobación es el siguiente recordatorio mensual.
 
 ---
 
@@ -63,4 +48,4 @@ Con los importes **apagados**, que es el valor por defecto (ADR-0028, fila 18), 
 - **Sí, con los dobles**:
   - la función solo entiende `on` (`packages/domain/test/jobs/event-config.test.ts`, el interruptor);
   - un destinatario que no es una dirección válida no envía (`packages/adapters/test/aws/mail.test.ts`).
-- **No**: Terraform no existe todavía (017). Todo el procedimiento se prueba en la 018.
+- **No**: el procedimiento contra AWS real se prueba en la 018.

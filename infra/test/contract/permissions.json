@@ -39,17 +39,11 @@
           "actions": [
             "cloudfront:CreateInvalidation",
             "cloudfront:DeleteDistribution",
-            "cloudfront:DeleteFunction",
-            "cloudfront:PublishFunction",
             "cloudfront:TagResource",
             "cloudfront:UntagResource",
-            "cloudfront:UpdateDistribution",
-            "cloudfront:UpdateFunction"
+            "cloudfront:UpdateDistribution"
           ],
-          "resources": [
-            "arn:aws:cloudfront::{account}:distribution/*",
-            "arn:aws:cloudfront::{account}:function/atlas-{env}-*"
-          ],
+          "resources": ["arn:aws:cloudfront::{account}:distribution/*"],
           "condition": {
             "StringEquals": {
               "aws:ResourceTag/env": "{env}",
@@ -57,6 +51,17 @@
             }
           },
           "contract": "A34-5; NB4"
+        },
+        {
+          "sid": "CloudFrontFunctionChange",
+          "effect": "Allow",
+          "actions": [
+            "cloudfront:DeleteFunction",
+            "cloudfront:PublishFunction",
+            "cloudfront:UpdateFunction"
+          ],
+          "resources": ["arn:aws:cloudfront::{account}:function/atlas-{env}-*"],
+          "contract": "A34-5; functions carry no tag (provider)"
         },
         {
           "sid": "WafCreate",
@@ -173,6 +178,21 @@
             "arn:aws:iam::{account}:role/atlas-{env}-plan"
           ],
           "contract": "A34-5; B4(d)"
+        },
+        {
+          "sid": "DenyWorkloadTrustChange",
+          "effect": "Deny",
+          "actions": ["iam:UpdateAssumeRolePolicy"],
+          "resources": [
+            "arn:aws:iam::{account}:role/atlas-{env}-api",
+            "arn:aws:iam::{account}:role/atlas-{env}-scheduler",
+            "arn:aws:iam::{account}:role/atlas-{env}-job-ecb",
+            "arn:aws:iam::{account}:role/atlas-{env}-job-prices",
+            "arn:aws:iam::{account}:role/atlas-{env}-job-mail",
+            "arn:aws:iam::{account}:role/atlas-{env}-job-backup",
+            "arn:aws:iam::{account}:role/atlas-{env}-job-integrity"
+          ],
+          "contract": "A34-5; S3 ronda 4"
         },
         {
           "sid": "DenyBoundaryRemoval",
@@ -538,6 +558,7 @@
             "lambda:UntagResource",
             "lambda:UpdateFunctionCode",
             "lambda:UpdateFunctionConfiguration",
+            "lambda:UpdateFunctionEventInvokeConfig",
             "lambda:UpdateFunctionUrlConfig"
           ],
           "resources": ["arn:aws:lambda:eu-west-1:{account}:function:atlas-{env}-*"],
