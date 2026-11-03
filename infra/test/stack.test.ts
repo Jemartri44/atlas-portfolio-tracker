@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseApiConfig } from "@atlas/api";
+import { API_CONFIG_CEILINGS, parseApiConfig } from "@atlas/api";
 import { describe, expect, it } from "vitest";
 import { costTypes } from "./lib/cost.js";
 import { UNTAGGABLE } from "./lib/exempt.js";
@@ -355,13 +355,9 @@ describe.each(ENVS)("the parameters, logs and function of %s", (env) => {
     expect(parsed.env).toBe(env);
     expect(parsed.dataBucket).toBe(`atlas-${env}-data-${SUFFIX}`);
     expect(parsed.origin).toBe("https://atlas.example.invalid");
-    // The session length is one figure: the default of the code and what Terraform sets.
-    const defaults = parseApiConfig({
-      ATLAS_ENV: env,
-      ATLAS_ORIGIN: parsed.origin,
-      ATLAS_DATA_BUCKET: parsed.dataBucket,
-    });
-    expect(parsed.sessionTtlSeconds).toBe(defaults.sessionTtlSeconds);
+    // The session length is one figure: the ceiling of the code is what Terraform sets (24 h,
+    // ADR-0035, question 6), so neither can move without the other.
+    expect(parsed.sessionTtlSeconds).toBe(API_CONFIG_CEILINGS.ATLAS_SESSION_TTL_SECONDS);
     expect(
       Object.keys(variables).filter(
         (k) => /KEY|SECRET|PASSWORD/.test(k) && !k.endsWith("_SECONDS"),
