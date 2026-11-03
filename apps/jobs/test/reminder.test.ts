@@ -324,19 +324,19 @@ describe("the monthly reminder, end to end", () => {
 });
 
 describe("what the reminder warns of, from the ledger", () => {
-  const sold = (asset: string) =>
+  const sold = (unit_price: string) =>
     sentinelLedger({}, (b) => {
       b.sell({
-        account_id: asset === "ast_gold" ? "acc_etf" : "acc_fund",
-        asset_id: asset,
+        account_id: "acc_fund",
+        asset_id: "ast_world",
         quantity: "1",
-        unit_price: "1",
+        unit_price,
         trade_date: "2026-09-15",
       });
     });
 
   it("says a purchase of the plan in a repurchase window, with no name", async () => {
-    const jobs = setupJobs({ ledger: sold("ast_world") });
+    const jobs = setupJobs({ ledger: sold("1") });
     await jobs.run(["monthly_reminder"]);
     const [mail] = jobs.ses.sent;
     expect(mail?.body).toContain("Una compra del plan cae en la ventana de recompra.");
@@ -347,8 +347,8 @@ describe("what the reminder warns of, from the ledger", () => {
     }
   });
 
-  it("says nothing of the window with no loss to protect", async () => {
-    const jobs = setupJobs();
+  it("says nothing of the window when the same sale made a gain", async () => {
+    const jobs = setupJobs({ ledger: sold("2000") });
     await jobs.run(["monthly_reminder"]);
     expect(jobs.ses.sent[0]?.body).not.toContain("recompra");
   });
@@ -366,6 +366,16 @@ describe("what the reminder warns of, from the ledger", () => {
     const single = setupJobs({ ledger: paid("single"), now: "2026-11-01T07:00:00Z" });
     await single.run(["monthly_reminder"]);
     expect(single.ses.sent[0]?.body).not.toContain("segundo plazo");
+  });
+
+  it("does not count a payment of the first instalment that was reversed", async () => {
+    const ledger = sentinelLedger({}, (b) => {
+      const payment = b.taxPayment({ tax_year: 2025, date: "2026-06-20", instalment: "first" });
+      b.reversal(payment.id);
+    });
+    const jobs = setupJobs({ ledger, now: "2026-11-01T07:00:00Z" });
+    await jobs.run(["monthly_reminder"]);
+    expect(jobs.ses.sent[0]?.body).not.toContain("segundo plazo");
   });
 
   it("says the end of the campaign in June", async () => {
