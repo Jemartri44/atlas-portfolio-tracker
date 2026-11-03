@@ -22,6 +22,8 @@ export const ERRORS_OPERATIONS: Record<string, Entry> = {
       : `El activo ${v.one(d.asset_id)} no es traspasable: el diferimiento solo existe entre fondos de inversión; registra una venta y una compra.`,
   transfer_not_resident: (d, v) =>
     `Tu residencia fiscal no es España${d.tax_residence === undefined ? "" : ` (${v.text(d.tax_residence)})`}: el diferimiento del traspaso solo existe para residentes en España.`,
+  withholding_exceeds_gross: (d, v) =>
+    `La retención (${v.money(d.withholding)}) no puede ser mayor que el bruto (${v.money(d.gross)}).`,
   sale_asset_not_held: (d, v) =>
     `No tienes ${v.one(d.asset_id)} en ninguna cuenta activa: solo se puede simular la venta de lo que tienes.`,
   sale_exceeds_holding: (d, v) =>

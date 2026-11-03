@@ -245,6 +245,17 @@ export const RULES: Record<SupportedEventType, Rules> = {
     notes: opt("string"),
     broker_settled_eur: opt("signed_decimal"),
   },
+  // Savings income received outside the portfolio (a bank's interest, a
+  // dividend of the user's own company): in euros, as the payer certifies it.
+  external_income: {
+    kind: oneOf(["dividend", "interest"]),
+    value_date: req("date"),
+    gross_eur: req("positive_decimal"),
+    withholding_eur: req("decimal"),
+    payer: opt("string"),
+    fingerprint: req("string"),
+    notes: opt("string"),
+  },
   fx_exchange: {
     account_id: req("string"),
     value_date: req("date"),

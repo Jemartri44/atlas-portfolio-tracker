@@ -252,6 +252,20 @@ export const snapshotOf = (state: LedgerState): Snapshot => {
     currency_gains: state.currencyGains.map(currencyGainOf),
     income: state.income.map(incomeOf),
     in_kind_income: state.inKindIncome.map(inKindOf),
+    // Only when there is some: a ledger without it keeps the snapshot it had.
+    ...(state.externalIncome.length === 0
+      ? {}
+      : {
+          external_income: state.externalIncome.map((entry) => ({
+            event_id: entry.event_id,
+            kind: entry.kind,
+            fiscal_date: entry.fiscal_date,
+            year: entry.year,
+            payer: entry.payer,
+            gross_eur: text(entry.gross_eur),
+            withholding_eur: text(entry.withholding_eur),
+          })),
+        }),
     valuations: state.valuations.map((event) => ({
       event_id: event.id,
       account_id: event.account_id,

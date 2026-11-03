@@ -183,6 +183,7 @@ describe("architecture: the tax engine", () => {
       "currencyGains",
       "currencyJournal",
       "income",
+      "externalIncome",
       "inKindIncome",
       "valuations",
       "orders",

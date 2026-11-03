@@ -17,6 +17,8 @@ import {
   TotalLine,
 } from "../../components/index.js";
 import type { QuotaBracketView, QuotaView } from "../../view-models/fiscal/quota.js";
+import { ExternalIncomeCard } from "./ExternalIncomeCard.jsx";
+import type { Estimate } from "./estimates.js";
 
 const COLUMNS: DataColumn<QuotaBracketView>[] = [
   { key: "label", header: "Tramo", card: "title", cell: (row) => row.label },
@@ -70,6 +72,13 @@ export const QuotaCard = (props: { view: QuotaView }): JSX.Element => (
         rows={props.view.brackets}
         columns={COLUMNS}
       />
+      <Show when={props.view.external_eur}>
+        {(external) => (
+          <StatLine label="De esa base, rendimientos de fuera de la cartera">
+            <Amount value={external()} />
+          </StatLine>
+        )}
+      </Show>
       <Show when={props.view.state_eur}>
         {(state) => (
           <StatLine label="Parte del Estado">
@@ -123,4 +132,12 @@ export const QuotaCard = (props: { view: QuotaView }): JSX.Element => (
       {(note) => <Notice severity={note.severity}>{note.text}</Notice>}
     </For>
   </Section>
+);
+
+/** The quota and, beside it, the income from outside the portfolio it counts. */
+export const EstimateCards = (props: { estimate: Estimate }): JSX.Element => (
+  <>
+    <QuotaCard view={props.estimate.quota} />
+    <ExternalIncomeCard view={props.estimate.external} />
+  </>
 );

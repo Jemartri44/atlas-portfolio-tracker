@@ -39,8 +39,14 @@ const BOOT_BUDGET_GZIP_BYTES = 80_000;
  * 346,7 KB. The screens add about 9 KB of lazily loaded code (tables of the indexes 2,8, client and
  * view model 2,2, card and dialog 2,7, Cartera 0,8, the common bar 0,6, CSS 0,3); the boot ceiling
  * is untouched (76,4 → 76,8 KB of 78,1), which is what a phone feels.
+ *
+ * 365_000 → 395_000 (2026-11-03, savings income from outside the portfolio, decided by the
+ * coordination): back to the ~10 % margin the line above promises, over the 357,0 KB measured with
+ * that branch (`develop` 355,9 KB). The branch adds 1,1 KB: fiscal 0,6, sale-tax 0,2, the forms
+ * 0,2, the messages 0,1, all lazy; the boot grows 0,3 KB in the domain (the schema and the
+ * projection of the new event, which loading any ledger needs) to 77,3 KB of 78,1.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 365_000;
+const TOTAL_BUDGET_GZIP_BYTES = 395_000;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None

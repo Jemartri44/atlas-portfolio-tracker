@@ -376,6 +376,16 @@ const CONSISTENCY: Partial<Record<SupportedEventType, (raw: UnknownRecord) => vo
   },
   dividend: (raw) => checkBrokerSettled(raw, true),
   interest: (raw) => checkBrokerSettled(raw, true),
+  external_income: (raw) => {
+    // What is withheld comes out of what was paid: more than it is a typo.
+    if (Decimal.parse(raw.withholding_eur as string).gt(Decimal.parse(raw.gross_eur as string))) {
+      throw invalid(
+        "withholding_exceeds_gross",
+        "external_income: withholding_eur is above gross_eur",
+        { type: raw.type, gross: raw.gross_eur, withholding: raw.withholding_eur },
+      );
+    }
+  },
   standalone_fee: (raw) => checkBrokerSettled(raw, false),
   asset_created: (raw) => checkAssetClass(raw),
   asset_updated: (raw) => checkAssetClass(raw),

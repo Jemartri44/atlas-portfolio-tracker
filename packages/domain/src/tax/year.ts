@@ -41,7 +41,7 @@ import {
   taxChain,
   tryReading,
 } from "./chain.js";
-import { computeCore } from "./core.js";
+import { type Core, computeCore } from "./core.js";
 import { doubleTaxation, notesOf, rateNotes, settingsFromCode } from "./notes.js";
 import { settingsDiff } from "./settings-diff.js";
 import { eventNote } from "./shared.js";
@@ -153,6 +153,25 @@ const pendingText = (pending: readonly PendingLoss[]): string =>
     .join(",");
 
 // --- The report -----------------------------------------------------------------
+
+/** The income from outside the portfolio of `year`, rounded as the form rounds. */
+const externalOf = (core: Core, year: number): NonNullable<TaxYearReport["external_income"]> => {
+  const lines = core.state.externalIncome
+    .filter((entry) => entry.year === year)
+    .map((entry) => ({
+      event_id: entry.event_id,
+      kind: entry.kind,
+      fiscal_date: entry.fiscal_date,
+      ...(entry.payer === undefined ? {} : { payer: entry.payer }),
+      gross_eur: entry.gross_eur.roundToCents(),
+      withholding_eur: entry.withholding_eur.roundToCents(),
+    }));
+  return {
+    lines,
+    gross_eur: sum(lines.map((line) => line.gross_eur)),
+    withholding_eur: sum(lines.map((line) => line.withholding_eur)),
+  };
+};
 
 /**
  * The tax report of `year`. Refuses a ledger with invalid events: a projection
@@ -319,6 +338,7 @@ export const taxYearWithChain = (
       not_deductible_eur: sum(ddi.lines.map((line) => line.not_deductible_eur ?? zero())),
     },
     in_kind: inKind,
+    ...(options.external === true ? { external_income: externalOf(core, year) } : {}),
     // One walk, two lists: the reading that is open and the reading that is
     // settled. Splitting instead of filtering is what keeps a criterion of high
     // certainty from taking its figure with it when it stops being doubtful.

@@ -14,6 +14,7 @@ import type {
   CashWithdrawalEvent,
   CorporateActionEvent,
   DividendEvent,
+  ExternalIncomeEvent,
   FiledFigures,
   FxExchangeEvent,
   InterestEvent,
@@ -238,6 +239,16 @@ export class LedgerBuilder {
       currency: "EUR",
       fx_rate: "1",
       fx_rate_date: "2027-04-30",
+      ...overrides,
+    });
+  }
+
+  externalIncome(overrides: Partial<Fields<ExternalIncomeEvent>> = {}): ExternalIncomeEvent {
+    return this.push<ExternalIncomeEvent>("external_income", {
+      kind: "dividend",
+      value_date: "2027-06-30",
+      gross_eur: "1000",
+      withholding_eur: "190",
       ...overrides,
     });
   }
