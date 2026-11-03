@@ -349,31 +349,14 @@ describe("the scripts of the CI", () => {
   });
 
   describe("verify-attestation.sh", () => {
-    const git = (cwd: string, ...args: string[]) =>
-      spawnSync("git", ["-c", "user.email=t@example.invalid", "-c", "user.name=t", ...args], {
-        cwd,
-        encoding: "utf8",
-      }).stdout.trim();
-    // A source repository with two commits of different trees, and a clone that fetches from it.
-    const world = () => {
-      const root = fixture();
-      const origin = join(root, "origin");
-      mkdirSync(origin);
-      git(origin, "init", "-q");
-      git(origin, "config", "uploadpack.allowAnySHA1InWant", "true");
-      writeFileSync(join(origin, "a"), "one");
-      git(origin, "add", "a");
-      git(origin, "commit", "-q", "-m", "one");
-      const good = git(origin, "rev-parse", "HEAD");
-      writeFileSync(join(origin, "a"), "two");
-      git(origin, "commit", "-q", "-am", "two");
-      const other = git(origin, "rev-parse", "HEAD");
-      const work = join(root, "work");
-      mkdirSync(work);
-      git(work, "init", "-q");
-      git(work, "remote", "add", "origin", origin);
-      return { root, work, good, other, tree: git(origin, "rev-parse", `${good}^{tree}`) };
-    };
+    // Two commits of the source repository, each with its tree, as the API would answer.
+    const world = () => ({
+      root: fixture(),
+      good: "1".repeat(40),
+      other: "2".repeat(40),
+      tree: "a".repeat(40),
+      otherTree: "b".repeat(40),
+    });
     const run = (
       commits: string[],
       fail = "",
@@ -384,7 +367,6 @@ describe("the scripts of the CI", () => {
       const tree = mutate ? mutate(w) : w.tree;
       writeFileSync(join(w.root, "gh.log"), "");
       const result = spawnSync("bash", [join(SCRIPTS, "verify-attestation.sh"), w.root, tree], {
-        cwd: w.work,
         encoding: "utf8",
         env: {
           PATH: `${FAKES}:${process.env.PATH}`,
@@ -392,7 +374,10 @@ describe("the scripts of the CI", () => {
           FAKE_GH_LOG: join(w.root, "gh.log"),
           FAKE_GH_FAIL: fail,
           FAKE_GH_BRANCH: branch,
-          FAKE_GH_COMMITS: commits.map((c) => (c === "good" ? w.good : w.other)).join(","),
+          FAKE_GH_TREES: JSON.stringify({ [w.good]: w.tree, [w.other]: w.otherTree }),
+          FAKE_GH_COMMITS: commits
+            .map((c) => (c === "good" ? w.good : c === "unknown" ? "3".repeat(40) : w.other))
+            .join(","),
         },
       });
       return { result, log: readFileSync(join(w.root, "gh.log"), "utf8") };
@@ -418,6 +403,12 @@ describe("the scripts of the CI", () => {
       const bad = run(["good"], "", undefined, "refs/heads/another-branch");
       expect(bad.result.status).toBe(1);
       expect(bad.result.stderr).toContain("no tiene una atestación del flujo de dev en develop");
+    });
+
+    it("refuses, with its own message, a commit the API cannot read", () => {
+      const bad = run(["unknown"]);
+      expect(bad.result.status).toBe(1);
+      expect(bad.result.stderr).toContain("no se pudo leer de GitHub el commit firmado");
     });
 
     it("refuses a file nobody signed on develop, such as a set uploaded ahead of the build", () => {
@@ -446,7 +437,7 @@ describe("the scripts of the CI", () => {
     expect(prod).toContain('verify-attestation.sh "$RUNNER_TEMP/artifact" "$TREE"');
     expect(prod.indexOf("verify-attestation.sh")).toBeGreaterThan(prod.indexOf("promote.sh"));
     expect(prod.indexOf("verify-attestation.sh")).toBeLessThan(prod.indexOf("terraform-run.sh"));
-    // The script fetches the signed commit by SHA from the public repository: read-only, no token.
+    // The tree of the signed commit comes from the API with the token of the job.
     expect(prod).toMatch(/permissions:\n {6}attestations: read\n {6}contents: read/);
     expect(prod).toMatch(
       /actions\/checkout@[0-9a-f]{40} # v4\n\s+with:\n\s+persist-credentials: false/,
