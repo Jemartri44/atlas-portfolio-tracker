@@ -33,6 +33,19 @@ export const ERRORS_CORPORATE: Record<string, Entry> = {
       `La devolución de prima o de aportaciones solo se registra sobre acciones, y ${v.one(d.asset_id)} no lo es (es de tipo ${v.word(d.asset_type)}): en un fondo, un ETF o una SICAV la ley la trata de otra forma (artículo 94 de la ley del IRPF) y Atlas no la modela.`,
     cli: () => "Es el artículo 94.1.",
   },
+  capital_return_needs_eu_listed: {
+    say: (d, v) =>
+      `La devolución de prima o de aportaciones solo rebaja el coste en acciones de un mercado regulado de la UE (artículo 25 de la ley del IRPF), y ${v.one(d.asset_id)} ${
+        d.reason === "not_eu"
+          ? "cotiza fuera de la UE: allí la ley la grava como rendimiento con el tope de la diferencia de fondos propios, y Atlas no lo modela."
+          : d.reason === "market_missing"
+            ? "no tiene mercado anotado. Anota el mercado del activo (código MIC, por ejemplo XMAD) y vuelve a registrarla."
+            : "tiene un mercado que Atlas no conoce. Anota el mercado del activo (código MIC, por ejemplo XMAD) y vuelve a registrarla."
+      }`,
+    cli: (d, v) =>
+      d.reason === "not_eu" ? "" : `\`atlas asset update ${v.one(d.asset_id)} --market <MIC>\`.`,
+    web: (d) => (d.reason === "not_eu" ? "" : "Se anota en Catálogo."),
+  },
   cost_adjustment_exceeds_cost: (d, v) =>
     `El dinero del evento supera el coste de los títulos de ${v.one(d.asset_id)} (exceso: ${v.money(d.excess_eur)}): la ley solo dice que el valor disminuye; revisa el importe o consulta cómo declararlo.`,
   liquidation_must_cover_all_accounts: (d, v) =>
