@@ -6,9 +6,10 @@
 // 2. `@atlas/*` resolve to **source**, like vitest.config.ts already does, so a
 //    change in the domain shows up without rebuilding dist and Rolldown shakes
 //    the tree over the sources.
-// 3. The adapters barrel is never imported: it pulls `node:fs` through
-//    FileLedgerStore. Only the subpaths are aliased, and both the architecture
-//    test and scripts/check-bundle.mjs verify it on the real output.
+// 3. Every door is aliased, read off the `exports` of its package; which ones
+//    the web may import is not this list's business. The adapters barrel, the
+//    doors of the server and anything that pulls `node:` are refused by the
+//    architecture test and by scripts/check-bundle.mjs on the real output.
 
 import { existsSync, realpathSync } from "node:fs";
 import { isAbsolute, relative } from "node:path";
