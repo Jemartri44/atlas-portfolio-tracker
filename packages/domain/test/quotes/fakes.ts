@@ -116,7 +116,7 @@ export const symbolsFile = (assets: Record<string, Record<string, unknown>>): st
     symbols_format: 2,
     assets: Object.fromEntries(
       Object.entries(assets).map(([id, { currency, ...entry }]) => {
-        const named = ["eodhd", "alpha_vantage"].filter((source) => entry[source] !== undefined);
+        const named = ["eodhd"].filter((source) => entry[source] !== undefined);
         return [
           id,
           {
@@ -136,8 +136,8 @@ export const symbolsFile = (assets: Record<string, Record<string, unknown>>): st
 /** A declaration with the same currency for every source it names. */
 export const declared = (
   currency: string,
-  symbols: { eodhd?: string; alpha_vantage?: string },
-): { eodhd?: string; alpha_vantage?: string; currencies: Record<string, string> } => ({
+  symbols: { eodhd?: string },
+): { eodhd?: string; currencies: Record<string, string> } => ({
   ...symbols,
   currencies: Object.fromEntries(Object.keys(symbols).map((source) => [source, currency])),
 });

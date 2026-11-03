@@ -31,11 +31,13 @@ import type { LedgerState, Warning } from "./state.js";
 export type PriceOrigin = "manual" | "external";
 
 /**
- * The sources of automatic daily closes (ADR-0031). Declared here, with every
- * type of the gate: the modules of `quotes/` import them from this file, never
- * the other way round.
+ * The source of automatic daily closes (ADR-0031: one source, the manual price
+ * as the main path). A union of one: the price files are keyed by source, so
+ * another source tomorrow is a new adapter, not a new format. Declared here,
+ * with every type of the gate: the modules of `quotes/` import it from this
+ * file, never the other way round.
  */
-export type QuoteSource = "eodhd" | "alpha_vantage";
+export type QuoteSource = "eodhd";
 
 /**
  * Why a quote has no value in euros: the ECB rate of its date could not be

@@ -27,6 +27,9 @@ export const ERRORS_SETTINGS: Record<string, Entry> = {
     say: (d, v) =>
       `La variación de precios de ${v.text(d.year)} está fuera de rango: tiene que estar entre −99 % y 1000 %.`,
   },
+  invalid_horizon: {
+    say: () => "El horizonte de la proyección tiene que ser un número entero de años, 0 o más.",
+  },
   missing_manual_prices: {
     say: (d, v) =>
       `${v.count(d.assets) === 1 ? "Falta un precio en euros" : "Faltan precios en euros"} a ${v.date(d.date)}: ${v.many(d.assets)}. Registra una valoración o, si ${v.count(d.assets) === 1 ? "tiene una cotización" : "tienen una cotización"} en otra divisa, trae el histórico del BCE.`,
@@ -162,4 +165,6 @@ export const ERRORS_SETTINGS: Record<string, Entry> = {
   },
   newly_invalid_events: (d, v) =>
     `Este cambio de configuración deja inválidos ${counted(v, v.count(d.affected), "evento ya registrado", "eventos ya registrados")}.`,
+  treaty_rate_for_spain: () =>
+    "España no tiene tipo de convenio: una retención española es un pago a cuenta (casilla 0597), no un impuesto extranjero. Quita ES de los tipos de convenio.",
 };

@@ -23,11 +23,11 @@ import { parseStrictJson } from "./repeated-key.js";
 import { isQuoteSource, QUOTE_SOURCES } from "./sources.js";
 
 /**
- * The currency is declared **per source**: a London share quotes in pounds at
- * EODHD and in pence at Alpha Vantage, and one currency for the asset made one
- * of the two ask for a confirmation forever, or stored the closes of the other
- * a hundred times too high. Format 1 (one `currency` per asset) is no longer
- * read.
+ * The currency is declared **per source**: the same share may quote in pounds
+ * at one source and in pence at another, so a currency belongs to the pair
+ * asset-source, never to the asset. Format 1 (one `currency` per asset) is no
+ * longer read; the key `alpha_vantage` of the two-source days is refused like
+ * any other unknown key.
  */
 export const SYMBOLS_FORMAT = 2;
 
@@ -40,7 +40,6 @@ export interface CurrencyCheck {
 
 export interface SymbolEntry {
   readonly eodhd?: string;
-  readonly alpha_vantage?: string;
   /**
    * The currency of the quote **of each source** (it may be a subunit such as
    * GBX), declared by the user: one per source that has a symbol.
@@ -84,7 +83,6 @@ const CURRENCY = /^[A-Z]{3}$/;
 const ENTRY_KEYS = [
   "currencies",
   "eodhd",
-  "alpha_vantage",
   "confirmed_at",
   "currency_check",
   "currency_confirmed_over",
@@ -284,7 +282,6 @@ export const currencyAgrees = (entry: SymbolEntry, source: QuoteSource): boolean
 /** What the user declares for one asset: each symbol with the currency of its quote. */
 export interface SymbolDeclaration {
   readonly eodhd?: string;
-  readonly alpha_vantage?: string;
   readonly currencies: Partial<Record<QuoteSource, string>>;
 }
 
@@ -332,9 +329,6 @@ export const declareSymbols = (
   }
   const entry: SymbolEntry = {
     ...(declaration.eodhd === undefined ? {} : { eodhd: declaration.eodhd }),
-    ...(declaration.alpha_vantage === undefined
-      ? {}
-      : { alpha_vantage: declaration.alpha_vantage }),
     currencies: Object.fromEntries(
       QUOTE_SOURCES.filter((source) => declaration[source] !== undefined).map((source) => [
         source,

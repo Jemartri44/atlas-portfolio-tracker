@@ -28,7 +28,7 @@ export const SOURCE_FAILURE_KINDS: readonly SourceFailureKind[] = [
  * One daily close as the source gave it: the close **as traded** (never an
  * adjusted one), as the decimal text it arrived with (ADR-0005; a number is
  * never read through a float), and the currency **only if the source says
- * it** — neither EODHD nor Alpha Vantage do, and
+ * it** — EODHD does not, and
  * then the currency declared in `prices/symbols.json` applies.
  */
 export interface DailyClose {
