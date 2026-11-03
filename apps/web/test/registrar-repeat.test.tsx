@@ -68,6 +68,8 @@ describe("the form of a purchase", () => {
 
   it("offers the assets of the account as picks that choose the asset, and sets the amount large", async () => {
     const host = await show("/registrar/buy", RegistrarForm, "/registrar/:tipo");
+    // No account yet: no picks, which would be every asset of every account.
+    expect(host.querySelector(".picks")).toBeNull();
     choose(host, "f-account_id", ACCOUNT);
     await until(() => host.querySelectorAll(".picks .pick").length > 1, "los activos a mano");
     const pick = host.querySelector(".picks .pick") as HTMLButtonElement;
