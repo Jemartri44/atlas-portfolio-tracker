@@ -41,7 +41,7 @@ export const WARNINGS_OPERATIONS: Record<string, Entry> = {
   exchange_acquirer_outside_eu: (d, v) =>
     `${v.one(d.asset_id)} es de un emisor de fuera de España y de la UE (${v.text(d.country)}). Si la operación es un canje de valores, queda fuera del régimen de neutralidad (art. 80.1.b LIS) y es una permuta sujeta: regístrala como permuta. Si es una fusión, el requisito mira al socio (art. 81.1 LIS).`,
   exchange_partner_communication: (d, v) =>
-    `Ni ${v.one(d.from_asset_id)} ni ${v.one(d.to_asset_id)} son de una entidad española: si aplicas la neutralidad, tienes que comunicarlo tú a Hacienda en el plazo de tu declaración (art. 48.2 RIS). No hacerlo es una multa fija de 10.000 € por operación (art. 89.1 LIS).`,
+    `Ni ${v.one(d.from_asset_id)} ni ${v.one(d.to_asset_id)} son de una entidad española: si aplicas la neutralidad, tienes que comunicarlo tú a Hacienda en el plazo de tu declaración (art. 48.2 RIS). No hacerlo es una multa fija de ${v.money(d.fine_eur)} por operación (art. 89.1 LIS).`,
   exchange_cash_cap: () =>
     "El dinero del canje no puede pasar del 10 % del valor nominal de los valores entregados a cambio (art. 76 LIS); si lo pasa, la operación no entra en el régimen. Atlas no guarda el nominal: compruébalo en el folleto.",
   convert_fund_to_listed_fund: (d, v) =>

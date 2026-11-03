@@ -1,6 +1,9 @@
 import type { AssetFields, AssetId, CorporateActionEvent } from "../schema/events.js";
 import { isEuCountry } from "./markets.js";
 
+/** Fixed fine per operation for not filing the communication (art. 89.1 LIS). */
+const PARTNER_FINE_EUR = "10000";
+
 /** The operations the neutrality regime of the LIS speaks about, when they hand over other securities. */
 export const isCompanyExchange = (event: CorporateActionEvent): boolean =>
   ["merger", "spin_off", "issuer_restructuring"].includes(event.kind) &&
@@ -79,7 +82,11 @@ export const exchangeNotices = (
     if (from !== undefined && from !== "ES" && to !== "ES") {
       notices.push({
         code: "exchange_partner_communication",
-        details: { from_asset_id: event.asset_id, to_asset_id: assetId },
+        details: {
+          from_asset_id: event.asset_id,
+          to_asset_id: assetId,
+          fine_eur: PARTNER_FINE_EUR,
+        },
       });
     }
   }
