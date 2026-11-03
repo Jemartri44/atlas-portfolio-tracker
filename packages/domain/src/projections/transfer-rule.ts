@@ -36,6 +36,7 @@ interface TransferEnd {
 export const RECORD_ONLY_BLOCKS: readonly string[] = [
   "transfer_not_between_funds",
   "transfer_not_resident",
+  "neutrality_denied_keeps_cost",
 ];
 
 const isSpanish = (taxResidence: string | undefined): boolean =>
