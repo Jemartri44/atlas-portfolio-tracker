@@ -21,6 +21,12 @@
 // and friends, ADR-0019), and the architecture test holds both ends of it.
 
 export {
+  type AfterTaxYear,
+  type AfterTaxYearGap,
+  type CoreXirrAfterTax,
+  coreXirrAfterTax,
+} from "./charts/core-xirr-after-tax.js";
+export {
   type ClosedYearComparison,
   type ClosedYearImpact,
   type ClosedYearNotCompared,
