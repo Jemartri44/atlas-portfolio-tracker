@@ -213,10 +213,6 @@ const LAZY_ONLY = [
   // first commit. The door, the folder of the domain and the reader of the web.
   { path: "/packages/domain/src/quotes/", what: "los precios automáticos" },
   { path: "/packages/domain/src/quotes.ts", what: "la puerta de los precios automáticos" },
-  {
-    path: "/packages/adapters/src/ledger-store/browser/prices.ts",
-    what: "la lectura de los precios",
-  },
   { path: "/src/prices/", what: "los precios automáticos de la web" },
   // Feature 014: **nothing of the sync on the boot path**, from its first
   // commit: the domain of the sync and its door, the shared orchestration and

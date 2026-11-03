@@ -32,12 +32,13 @@ export const SessionCard = (props: { readonly request?: typeof fetch }): JSX.Ele
       setFailed(true);
       return;
     }
-    // The ledger and everything on screen go with the session, and so do the prices imported by
-    // hand: they say which assets are followed, and the next person on this browser must not see it.
+    // The ledger and everything on screen go with the session, and so do the prices read from the
+    // cloud: they say which assets are followed, and the next person on this browser must not see it.
     try {
-      await (await import("../../prices/quotes.js")).forgetPrices();
+      (await import("../../prices/quotes.js")).forgetPrices();
+      (await import("../../ecb/history.js")).forgetWebHistory();
     } catch {
-      // A browser that keeps no site data has nothing to forget; the sign-out goes on.
+      // A chunk that does not load (an old PWA) holds nothing to forget; the sign-out goes on.
     }
     const { bootCloud } = await import("../../ledger/cloud.js");
     await bootCloud(request);

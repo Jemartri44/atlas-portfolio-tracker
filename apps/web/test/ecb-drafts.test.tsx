@@ -10,16 +10,15 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ApiDraftStore } from "@atlas/adapters/drafts-http";
-import { saveImportedHistory } from "@atlas/adapters/reference";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { FakeIdbFactory } from "../../../packages/adapters/test/fake-idb.js";
-import { reloadWebHistory } from "../src/ecb/history.js";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { forgetWebHistory, reloadWebHistory } from "../src/ecb/history.js";
 import { bootCloud } from "../src/ledger/cloud.js";
 import { store } from "../src/ledger/state.js";
 import Borradores from "../src/routes/registrar/borradores.jsx";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
 import Resumen from "../src/routes/resumen/index.jsx";
 import { type Api, apiAt, cloudText, sameOrigin, signedIn } from "./cloud/api-support.js";
+import { serveReference } from "./helpers/cloud-reference.js";
 import { goldenText } from "./helpers/golden.js";
 import {
   choose,
@@ -36,8 +35,7 @@ import {
 withGoldenLedger();
 
 const LEDGER = "ledger/ledger.jsonl";
-const holder = globalThis as { indexedDB?: unknown };
-const before = holder.indexedDB;
+const _holder = globalThis as { indexedDB?: unknown };
 const synthetic = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), "../../../tests/fixtures/ecb/eurofxref-hist.csv"),
   "utf8",
@@ -49,13 +47,11 @@ const later = (() => {
   return [header, next, newest, ...rest].join("\n");
 })();
 
+/** The cloud as the API answers it: the ECB history under test, and the account behind it. */
+let restoreCloud: (() => void) | undefined;
 const importHistory = async (csv: string): Promise<void> => {
-  await saveImportedHistory({
-    text: csv,
-    source: "zip",
-    file_name: "eurofxref-hist.csv",
-    imported_at: "2026-04-01T10:00:00.000Z",
-  });
+  restoreCloud?.();
+  restoreCloud = serveReference({ ecb: { csv } });
   await reloadWebHistory();
 };
 
@@ -71,13 +67,6 @@ let api: Api;
 let net: Net;
 let request: typeof fetch;
 let cookie: string | undefined;
-
-beforeAll(() => {
-  holder.indexedDB = new FakeIdbFactory();
-});
-afterAll(() => {
-  holder.indexedDB = before;
-});
 
 beforeEach(async () => {
   await importHistory(synthetic);
@@ -112,6 +101,9 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  restoreCloud?.();
+  restoreCloud = undefined;
+  forgetWebHistory();
   store.setDeps(undefined);
   store.setPending(undefined);
 });

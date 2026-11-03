@@ -1,17 +1,16 @@
 // @vitest-environment happy-dom
 //
-// The ECB rate in the form: proposed from the history imported into this browser for the fiscal
+// The ECB rate in the form: proposed from the history read from the cloud for the fiscal
 // date, never invented, and a typed rate that is not the official one asks for its yes before the
-// write. The browser storage is the IndexedDB double of the adapters.
+// write.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { saveImportedHistory } from "@atlas/adapters/reference";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { FakeIdbFactory } from "../../../packages/adapters/test/fake-idb.js";
-import { reloadWebHistory } from "../src/ecb/history.js";
+import { forgetWebHistory, reloadWebHistory } from "../src/ecb/history.js";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
+import { serveReference } from "./helpers/cloud-reference.js";
 import {
   choose,
   press,
@@ -26,26 +25,20 @@ import { withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
 
-const holder = globalThis as { indexedDB?: unknown };
-const before = holder.indexedDB;
 const synthetic = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), "../../../tests/fixtures/ecb/eurofxref-hist.csv"),
   "utf8",
 );
 
+let restore: (() => void) | undefined;
 beforeAll(async () => {
-  holder.indexedDB = new FakeIdbFactory();
-  await saveImportedHistory({
-    text: synthetic,
-    source: "zip",
-    file_name: "eurofxref-hist.csv",
-    imported_at: "2026-04-01T10:00:00.000Z",
-  });
+  restore = serveReference({ ecb: { csv: synthetic } });
   await reloadWebHistory();
 });
 
 afterAll(() => {
-  holder.indexedDB = before;
+  restore?.();
+  forgetWebHistory();
 });
 
 const value = (host: HTMLElement, id: string): string =>

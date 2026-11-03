@@ -1,86 +1,37 @@
-// «Tipos del BCE» in Ajustes: which history the web is
-// using — one imported by hand or one downloaded from the cloud —, until when
-// it publishes, and the ways to get one. The web never downloads from a third
-// party: the history is imported, or **downloaded from our own cloud** with the
-// session of this browser — only when the card opens
-// or the user asks, never at start nor on a timer. Everything of the ECB is
-// loaded here, lazily.
+// «Tipos del BCE» in Ajustes: the history the web is using — read from our own cloud with the
+// session and held in memory, never from a third party and never kept on the device —, until when
+// it publishes, and the button to read it again. Everything of the ECB is loaded here, lazily.
 
-import { createResource, createSignal, type JSX, Show } from "solid-js";
-// Statically, as the card of the session does: the section of Ajustes is
-// lazy already, and a dynamic import would split it for nothing.
-import { readSession } from "../../auth/session.js";
-import { ConfirmDialog, Icon, Section } from "../../components/index.js";
-import { downloadCloudHistory } from "../../ecb/cloud.js";
+import { createResource, type JSX, Show } from "solid-js";
+import { Icon, Section } from "../../components/index.js";
 import { formatDate, formatInstantDate } from "../../format/date.js";
+import { remoteFailure } from "../../format/messages/errors.js";
 import { SaidNotice, useCardAction } from "./card-action.jsx";
-import { cloudSaid } from "./ecb-cloud-said.js";
 
 const ecb = () => import("../../ecb/history.js");
 
-type Fetch = typeof fetch;
-
 const PROBLEMS = {
-  storage:
-    "Este navegador no permite guardar datos del sitio: no puede guardar un histórico importado.",
-  unreadable:
-    "La copia del BCE que guarda este navegador no se puede leer: no se usa. Bórrala y bájala otra vez de la nube, o importa el archivo del BCE.",
+  unavailable: (code: string | undefined) =>
+    `No se ha podido leer el histórico del BCE de la nube: ${
+      (code === undefined ? undefined : remoteFailure(code)) ??
+      "la nube no ha respondido como se esperaba."
+    } Los tipos se teclean; vuelve a intentarlo con «Volver a leer».`,
+  unreadable: () =>
+    "El histórico de la nube no es el archivo que registra su manifiesto o no se entiende: no se usa. Los tipos se teclean.",
 } as const;
 
-export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element => {
-  const request: Fetch = (input, init) => (props.request ?? fetch)(input, init);
+export const EcbCard = (): JSX.Element => {
   const [web, { refetch }] = createResource(async () => (await ecb()).loadWebHistory());
   const { busy, said, run } = useCardAction(() => void refetch());
-  const [signedIn, setSignedIn] = createSignal(false);
-  const [forgetting, setForgetting] = createSignal(false);
 
-  /** Downloads the history of the cloud; `asked`: the user pressed the button. */
-  const onCloud = (asked: boolean): Promise<void> =>
-    run(async () => cloudSaid(await downloadCloudHistory(request), asked));
-
-  // Opening the card is asking: with a session, the history of
-  // the cloud comes down. Never at start and never on a timer. A
-  // resource, as the card of the session reads its state: no start-up hook
-  // outside the few files ADR-0017 allows.
-  createResource(async () => {
-    const state = await readSession(request);
-    if (state.kind === "signed_in") {
-      setSignedIn(true);
-      await onCloud(false);
-    }
-    return state.kind;
-  });
-
-  /** Erases the copy of this browser, after asking. */
-  const onForget = (): Promise<void> => {
-    setForgetting(false);
-    return run(async () => {
-      await (await ecb()).forgetWebCopy();
-      return "Copia borrada: este navegador ya no tiene histórico del BCE. La próxima descarga de la nube lo baja entero.";
+  /** Reads the history of the cloud again. */
+  const onReload = (): Promise<void> =>
+    run(async () => {
+      const read = await (await ecb()).reloadWebHistory();
+      return read.history === undefined
+        ? undefined
+        : `Histórico leído de la nube: publica hasta el ${formatDate(read.latest as string)}.`;
     });
-  };
-
-  const onImport = async (event: Event): Promise<void> => {
-    const input = event.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    if (file === undefined) {
-      return;
-    }
-    await run(async () => {
-      const outcome = await (await ecb()).importHistoryFile(
-        file.name,
-        new Uint8Array(await file.arrayBuffer()),
-      );
-      if (outcome.kind === "rejected") {
-        return {
-          tone: "caution",
-          text: `El archivo cambia ${outcome.total} ${outcome.total === 1 ? "tipo ya publicado" : "tipos ya publicados"} del histórico importado antes: no se ha usado, y sigue el anterior. O el BCE ha corregido un tipo o el archivo está mal.`,
-        };
-      }
-      return `Histórico importado: publica hasta el ${formatDate(outcome.latest)}.`;
-    });
-    input.value = "";
-  };
 
   return (
     <Section title="Tipos del BCE">
@@ -91,88 +42,39 @@ export const EcbCard = (props: { readonly request?: Fetch } = {}): JSX.Element =
               when={loaded().history !== undefined}
               fallback={
                 <p>
-                  <strong>Sin histórico del BCE en este dispositivo.</strong> Los tipos se teclean,
-                  y la verificación no puede contrastarlos con el oficial.
+                  <strong>Sin histórico del BCE.</strong> Los tipos se teclean, y la verificación no
+                  puede contrastarlos con el oficial.
                 </p>
               }
             >
               <p>
-                {loaded().origin === "cloud"
-                  ? "Bajado de tu nube"
-                  : "Importado a mano en este navegador"}
-                ,{" "}
+                Leído de tu nube,{" "}
                 {loaded().source === "zip"
                   ? "del ZIP oficial del BCE"
                   : "de la API de datos del BCE"}
                 ; publica hasta el {formatDate(loaded().latest as string)}
                 {loaded().when === undefined
                   ? "."
-                  : `, ${loaded().origin === "imported" ? "importado" : "descargado"} el ${formatInstantDate(loaded().when as string)}.`}
+                  : `, leído el ${formatInstantDate(loaded().when as string)}.`}
               </p>
             </Show>
             <Show when={loaded().problem}>
-              {(problem) => <p class="card-note">{PROBLEMS[problem()]}</p>}
+              {(problem) => <p class="card-note">{PROBLEMS[problem()](loaded().code)}</p>}
             </Show>
           </>
         )}
       </Show>
       <SaidNotice said={said()} />
       <div class="button-row">
-        <Show when={signedIn()}>
-          <button
-            type="button"
-            class="secondary"
-            disabled={busy()}
-            onClick={() => void onCloud(true)}
-          >
-            <Icon name="import" class="icon-sm" />
-            Bajar de la nube
-          </button>
-        </Show>
-        <Show
-          when={
-            web()?.origin === "imported" ||
-            web()?.origin === "cloud" ||
-            web()?.problem === "unreadable"
-          }
-        >
-          <button
-            type="button"
-            class="secondary danger"
-            disabled={busy()}
-            onClick={() => setForgetting(true)}
-          >
-            Borrar la copia del BCE de este navegador
-          </button>
-        </Show>
-        <label class="file-button">
+        <button type="button" class="secondary" disabled={busy()} onClick={() => void onReload()}>
           <Icon name="import" class="icon-sm" />
-          <span>Importar el histórico</span>
-          <input
-            type="file"
-            class="sr-only"
-            accept=".zip,.csv,application/zip,text/csv"
-            disabled={busy()}
-            onChange={(event) => void onImport(event)}
-          />
-        </label>
+          Volver a leer
+        </button>
       </div>
       <p class="card-note">
-        La web no descarga nada de fuera: con la sesión iniciada se baja de tu nube al abrir esta
-        tarjeta, o importa el <code>eurofxref-hist.zip</code> de la web del BCE.
+        El histórico lo descarga la nube del BCE cada día; la web lo lee con tu sesión al abrir esta
+        tarjeta o una pantalla que lo necesita, sin guardarlo en este dispositivo.
       </p>
-      <ConfirmDialog
-        open={forgetting()}
-        title="¿Borrar la copia del BCE de este navegador?"
-        confirm="Borrar la copia"
-        destructive
-        onClose={() => setForgetting(false)}
-        onConfirm={() => void onForget()}
-      >
-        Solo se borra el histórico que guarda este navegador; el libro no se toca. Con la sesión
-        iniciada, se puede volver a bajar de la nube entero, por ejemplo después de que se haya
-        restaurado allí una versión buena.
-      </ConfirmDialog>
     </Section>
   );
 };

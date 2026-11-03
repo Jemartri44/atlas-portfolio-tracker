@@ -6,22 +6,19 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { saveImportedHistory } from "@atlas/adapters/reference";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { FakeIdbFactory } from "../../../packages/adapters/test/fake-idb.js";
-import { reloadWebHistory } from "../src/ecb/history.js";
+import { afterEach, describe, expect, it } from "vitest";
+import { forgetWebHistory, reloadWebHistory } from "../src/ecb/history.js";
 import Verificacion from "../src/routes/ajustes/verificacion.jsx";
+import { serveReference } from "./helpers/cloud-reference.js";
 import { show, text, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
-const holder = globalThis as { indexedDB?: unknown };
-const before = holder.indexedDB;
-beforeAll(() => {
-  holder.indexedDB = new FakeIdbFactory();
-});
-afterAll(() => {
-  holder.indexedDB = before;
+let restore: (() => void) | undefined;
+afterEach(() => {
+  restore?.();
+  restore = undefined;
+  forgetWebHistory();
 });
 
 const section = (host: HTMLElement): string =>
@@ -33,6 +30,7 @@ const section = (host: HTMLElement): string =>
 
 describe("the ECB rates in the verification", () => {
   it("says «sin contrastar» without a history, never «sin hallazgos»", async () => {
+    restore = serveReference({});
     await reloadWebHistory();
     const host = await show("/ajustes/verificacion", Verificacion);
     await until(() => section(host).includes("Sin contrastar"));
@@ -42,17 +40,16 @@ describe("the ECB rates in the verification", () => {
   });
 
   it("with a history, contrasts them and says what it found", async () => {
-    await saveImportedHistory({
-      text: readFileSync(
-        join(
-          dirname(fileURLToPath(import.meta.url)),
-          "../../../tests/fixtures/ecb/eurofxref-hist.csv",
+    restore = serveReference({
+      ecb: {
+        csv: readFileSync(
+          join(
+            dirname(fileURLToPath(import.meta.url)),
+            "../../../tests/fixtures/ecb/eurofxref-hist.csv",
+          ),
+          "utf8",
         ),
-        "utf8",
-      ),
-      source: "zip",
-      file_name: "eurofxref-hist.csv",
-      imported_at: "2026-04-01T10:00:00.000Z",
+      },
     });
     await reloadWebHistory();
     const host = await show("/ajustes/verificacion", Verificacion);
