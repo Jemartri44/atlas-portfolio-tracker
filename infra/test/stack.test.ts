@@ -287,6 +287,22 @@ describe.each(ENVS)("the data bucket of %s", (env) => {
     );
   });
 
+  it("gives the API one object of settings/ to read and replace, the backup job only to read it", () => {
+    const key = `arn:aws:s3:::${bucket}/settings/exposure.json`;
+    const onSettings = (role: string) =>
+      roleStatements(stack(env), `atlas-${env}-${role}`).filter(
+        (statement) =>
+          JSON.stringify(statement.Resource).includes("settings/") && statement.Sid !== "List",
+      );
+    expect(onSettings("api")).toMatchObject([
+      { Effect: "Allow", Action: ["s3:GetObject", "s3:PutObject"], Resource: [key] },
+    ]);
+    expect(
+      onSettings("job-backup").flatMap((statement) => [statement.Action ?? []].flat()),
+    ).toEqual(["s3:GetObject"]);
+    expect(JSON.stringify(onSettings("job-backup"))).toContain(key);
+  });
+
   it("has no Allow at all: the identity policies grant, the bucket policy only denies", () => {
     expect(policyOf(renderEnv(env)).filter((s) => s.Effect !== "Deny")).toEqual([]);
   });
