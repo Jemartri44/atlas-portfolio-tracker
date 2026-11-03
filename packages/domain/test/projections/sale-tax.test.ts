@@ -86,7 +86,8 @@ describe("estimateSale", () => {
     });
     const result = estimateSale(b.build(), [], DATE, sale("5", "80"), BRACKETS);
     expect(result.deferred_eur.amount.isPositive()).toBe(true);
-    expect(result.deferral_window_end).toBe("2028-02-29");
+    // A fund takes a year by default (criterion #2, `2:fund_1y`).
+    expect(result.deferral_window_end).toBe("2028-12-31");
   });
 
   it("counts the sales already planned as done when it prices the next one", () => {
