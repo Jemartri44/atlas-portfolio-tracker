@@ -54,6 +54,7 @@ export {
 export { type EcbRecovery, ecbRecovery } from "./jobs/ecb-recovery.js";
 export { type JobEvent, type JobEventRefusal, parseJobEvent } from "./jobs/event.js";
 export { ecbFindings, PRODUCER_FINDINGS, pricesFindings } from "./jobs/findings.js";
+export { lastRunOf, runPeriods } from "./jobs/health.js";
 export { type InformativeFacts, informativeFacts } from "./jobs/informative.js";
 export { INTEGRITY_ERROR_CODES, integrityFindings, REHEARSAL_CODES } from "./jobs/integrity.js";
 export { type LedgerFailureKind, ledgerFailureKind } from "./jobs/ledger-failure.js";
@@ -114,3 +115,4 @@ export {
   type JobFrequencyKey,
   readJobFrequencies,
 } from "./settings/job-frequencies.js";
+export type { JobLastRun, JobStatus } from "./settings/job-health.js";

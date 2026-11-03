@@ -23,6 +23,10 @@
 | `[Atlas] Renta AAAA lista`, `[Atlas] Renta AAAA` | [La Renta de enero](#la-renta-de-enero) |
 | `[Atlas] Modelos 720 y 721 de AAAA` | [Los modelos 720 y 721](#los-modelos-720-y-721) |
 
+## Una tarea no arranca
+
+No llega ningún correo, porque el que falla es el que avisa: lo dice **Resumen**, con un aviso de tareas con retraso, y **Ajustes › Tareas automáticas** dice cuál y cuándo corrió por última vez. El margen sale de su frecuencia: 3 días una diaria, 9 una semanal, 33 una mensual, 94 una trimestral y 368 una anual. Mira su programación en EventBridge Scheduler y los registros de la función; si la tarea corrió pero falló, llega su correo aparte.
+
 ## Recordatorio mensual
 
 Llega siempre, una vez al mes. Si llega dos veces con el mismo mes en el asunto, es un reintento (el recordatorio se envía **al menos una vez**): ignora el segundo.

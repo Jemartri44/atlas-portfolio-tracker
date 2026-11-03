@@ -952,6 +952,13 @@
           "contract": "EXP-1"
         },
         {
+          "sid": "JobRecords",
+          "effect": "Allow",
+          "actions": ["s3:GetObject"],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}/jobs/*"],
+          "contract": "JOBS-1"
+        },
+        {
           "sid": "List",
           "effect": "Allow",
           "actions": ["s3:ListBucket"],
@@ -964,7 +971,8 @@
                 "prices/*",
                 "access/*",
                 "drafts/*",
-                "settings/*"
+                "settings/*",
+                "jobs/*"
               ]
             }
           },

@@ -252,6 +252,19 @@ Decidido el 2026-11-03. La exposición **por divisa y por región** de cada acti
 - **Registros de la Lambda:** solo el código (`exposure_read`, `exposure_written` o el del error). Nunca un activo ni un porcentaje.
 
 
+### 6.3 La última ejecución de cada tarea
+
+Decidido el 2026-11-03. Una tarea que ni siquiera arranca no manda ningún aviso, así que la web lo dice a partir de los registros que las tareas dejan en `jobs/` ([`data-schema.md`](data-schema.md) §1).
+
+| Ruta | Qué hace |
+|---|---|
+| `GET /api/jobs/status` | `200 { "since"?, "tasks": [...] }`. `tasks`, una entrada por tarea **activa en este entorno** (`ATLAS_ACTIVE_JOB_FAMILIES`, §9; `dev` dormido, ninguna): `{ "task", "schedule", "period", "state", "at" }` con su última ejecución (`at`: cuándo se cerró o, abierta, cuándo se reclamó), `{ "task", "schedule", "unreadable": true }` si su registro no se lee, o `{ "task", "schedule" }` si no tiene ninguno. `schedule` es la clave de `job_frequencies` de la tarea o `{ "fixed": <frecuencia> }`: las reglas de las tareas no llegan a la web, que lee ahí de qué frecuencia depende. `since`: cuándo se reclamó el primer registro de esas tareas; falta si nunca ha corrido ninguna. `Cache-Control: no-store` |
+
+- **No juzga:** cuál va con retraso lo dice `jobHealth` (`@atlas/domain`), en la web, que tiene las frecuencias del libro: la duración más larga del periodo y dos días de margen. Una tarea sin ningún registro va con retraso cuando desde `since` ha pasado ese margen; sin `since`, siempre: es lo que se ve hasta la primera ejecución tras el primer despliegue.
+- **Nunca sale** el resultado de un registro, sus recuentos ni sus hallazgos.
+- **Permisos:** el rol de la API tiene `GetObject` sobre `jobs/*` y ese prefijo en su `ListBucket`; ninguna escritura. Con la cookie (§2.3).
+- **Registros de la Lambda:** solo el código, `job_status_read`.
+
 ## 7. Errores
 
 Todo error de la Lambda tiene esta forma, sin mensaje en lenguaje natural (lo ponen las interfaces, que traducen cada código, `tests/messages.test.ts`):
@@ -313,7 +326,7 @@ Decidido el 2026-09-25 (feature 015). **Los valores los crea y los rota el guion
 | `/atlas/<entorno>/auth/google-client-secret` | `SecureString` | el secreto, tal cual | 300 s |
 | `/atlas/<entorno>/auth/session-key` | `SecureString` | 32 bytes aleatorios en base64url (43 caracteres); de ella salen las subclaves HKDF | 300 s: rotarla cierra todas las sesiones como mucho en 5 minutos |
 
-**Configuración que no es secreta**, en variables de entorno de la Lambda (**ningún secreto en una variable de entorno**): `ATLAS_ENV`, `ATLAS_ORIGIN`, `ATLAS_DATA_BUCKET`, `ATLAS_SESSION_TTL_SECONDS` (86.400), `ATLAS_LOGIN_TTL_SECONDS` (600), `ATLAS_CLOCK_TOLERANCE_SECONDS` (600), `ATLAS_ALLOW_LIST_CACHE_SECONDS` (120) y `ATLAS_SECRETS_CACHE_SECONDS` (300). Una variable `ATLAS_*` desconocida, o un valor que no se entiende, impide arrancar. **Techos fijos en el código** (revisión de seguridad de la PR #90, S4): la sesión, como mucho 24 h (86.400); la cookie transitoria, 30 min (1.800); las dos cachés, 1 h (3.600); la tolerancia del reloj, 1 h (3.600). Por encima, la configuración se rechaza y la Lambda no arranca.
+**Configuración que no es secreta**, en variables de entorno de la Lambda (**ningún secreto en una variable de entorno**): `ATLAS_ENV`, `ATLAS_ORIGIN`, `ATLAS_DATA_BUCKET`, `ATLAS_SESSION_TTL_SECONDS` (86.400), `ATLAS_LOGIN_TTL_SECONDS` (600), `ATLAS_CLOCK_TOLERANCE_SECONDS` (600), `ATLAS_ALLOW_LIST_CACHE_SECONDS` (120), `ATLAS_SECRETS_CACHE_SECONDS` (300) y `ATLAS_ACTIVE_JOB_FAMILIES` (las familias programadas en ese entorno, separadas por comas, o `none`; una familia desconocida impide arrancar, §6.3). Una variable `ATLAS_*` desconocida, o un valor que no se entiende, impide arrancar. **Techos fijos en el código** (revisión de seguridad de la PR #90, S4): la sesión, como mucho 24 h (86.400); la cookie transitoria, 30 min (1.800); las dos cachés, 1 h (3.600); la tolerancia del reloj, 1 h (3.600). Por encima, la configuración se rechaza y la Lambda no arranca.
 
 ### 9.1 Las tareas programadas *(016)*
 

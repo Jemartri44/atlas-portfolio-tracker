@@ -16,6 +16,7 @@ const ENV = {
   ATLAS_SESSION_TTL_SECONDS: "28800",
   ATLAS_LOGIN_TTL_SECONDS: "600",
   ATLAS_CLOCK_TOLERANCE_SECONDS: "600",
+  ATLAS_ACTIVE_JOB_FAMILIES: "ecb,prices,mail,backup,integrity",
   ATLAS_ALLOW_LIST_CACHE_SECONDS: "120",
   ATLAS_SECRETS_CACHE_SECONDS: "300",
   // The runtime of Lambda sets its own variables: they are not ours to judge.
