@@ -78,6 +78,11 @@ a.card-foot:hover {
   margin: var(--space-5) 0 var(--space-1);
 }
 
+/* A button, or a row of them, under a paragraph of a card is not glued to it. */
+.card :is(p, .card-note) + :is(button, .button-row) {
+  margin-top: var(--space-3);
+}
+
 .button-row {
   display: flex;
   flex-wrap: wrap;
