@@ -19,7 +19,6 @@ import {
 } from "../../components/index.js";
 import { createExposure } from "../../exposure/use-exposure.js";
 import type { NameIndex } from "../../format/names.js";
-import { countOf } from "../../format/number.js";
 import {
   type DimensionView,
   type ExposureBlockView,
@@ -110,18 +109,8 @@ export const ExposureBlock = (props: {
     );
     return { view: exposureBlockView(computed, props.names), unreadable: state.unreadable };
   });
-  const aside = () => {
-    const ready = view();
-    return ready === undefined || ready.view.partial
-      ? undefined
-      : countOf(
-          ready.view.counts.default + ready.view.counts.owner + ready.view.counts.none,
-          "activo",
-          "activos",
-        );
-  };
   return (
-    <Section title="Exposición" class="span-12 exposure-block" aside={aside()}>
+    <Section title="Exposición" class="span-12 exposure-block">
       <Show
         when={declared.state().kind !== "failed"}
         fallback={
