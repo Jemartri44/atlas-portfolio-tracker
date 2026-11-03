@@ -13,17 +13,12 @@ import {
   Notice,
   Section,
   SelectField,
-  ShareBar,
-  ShareLegend,
   Skeleton,
   StatLine,
-  Tag,
-  type TagTone,
 } from "../../components/index.js";
 import { createExposure } from "../../exposure/use-exposure.js";
 import {
   type Dimension,
-  type DimensionRowView,
   type ExposureRowView,
   exposureRows,
   indexOptions,
@@ -31,44 +26,8 @@ import {
   withoutOwn,
   withSplit,
 } from "../../view-models/core/exposure.js";
+import { DimensionLine } from "./ExposureLine.jsx";
 import { SplitDialog } from "./SplitDialog.jsx";
-
-const STATE: Record<DimensionRowView["state"], { text: string; tone: TagTone }> = {
-  owner: { text: "tuyo", tone: "accent" },
-  default: { text: "por defecto", tone: "neutral" },
-  none: { text: "sin propuesta", tone: "caution" },
-};
-
-const TITLES: Record<Dimension, string> = { currency: "Divisa", region: "Región" };
-
-const DimensionLine = (props: {
-  dimension: Dimension;
-  view: DimensionRowView;
-  busy: boolean;
-  onEdit: () => void;
-}): JSX.Element => (
-  <div class="exposure-line">
-    <p class="exposure-line-head">
-      <strong>{TITLES[props.dimension]}</strong>
-      <Tag tone={STATE[props.view.state].tone}>{STATE[props.view.state].text}</Tag>
-      <Show when={props.view.label}>{(label) => <span class="meta">{label()}</span>}</Show>
-    </p>
-    <Show
-      when={props.view.bar}
-      fallback={<p class="meta">Sin propuesta: elige un índice o escribe tus porcentajes.</p>}
-    >
-      {(bar) => (
-        <>
-          <ShareBar segments={bar().segments} thin />
-          <ShareLegend entries={bar().legend} />
-        </>
-      )}
-    </Show>
-    <button type="button" class="secondary" disabled={props.busy} onClick={props.onEdit}>
-      Editar {TITLES[props.dimension].toLowerCase()}
-    </button>
-  </div>
-);
 
 export const ExposureCard = (props: { assets: readonly Asset[] }): JSX.Element => {
   const declared = createExposure();

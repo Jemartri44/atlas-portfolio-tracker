@@ -7,100 +7,30 @@
 // - The label of a default is always complete: «por defecto · <índice> (según la cartera de <ETF>) ·
 //   ficha <fecha>». An index chosen by the owner that is no longer in the tables is said, not hidden.
 
-import { type Asset, Decimal } from "@atlas/domain";
+import type { Asset } from "@atlas/domain";
 import {
   DEFAULT_INDEX_TABLES,
   type Exposure,
   type ExposureAsset,
   type ExposureCatalogue,
   type ExposureDimension,
-  type ExposureIndex,
   type Exposures,
   INDEX_PROFILES,
   resolveAsset,
   type Split,
 } from "@atlas/domain/portfolio";
-import type { BarSegment, LegendEntry } from "../../components/index.js";
-import { formatDate } from "../../format/date.js";
 import type { NameIndex } from "../../format/names.js";
-import { formatPercent, meaningfulDecimals } from "../../format/number.js";
+import { type BarView, barOf, barOfSplit, type Dimension, indexLabel } from "./exposure-bars.js";
 
-export type Dimension = "currency" | "region";
-
-const REGIONS: Readonly<Record<string, string>> = {
-  north_america: "América del Norte",
-  europe_developed: "Europa desarrollada",
-  asia_pacific_developed: "Asia-Pacífico desarrollada",
-  emerging: "Emergentes",
-  global: "Global",
-  other: "Otras",
-};
-
-/** The name of a key: the ISO code of a currency, the words of a region. */
-export const keyLabel = (dimension: Dimension, key: string): string =>
-  dimension === "currency" ? key : (REGIONS[key] ?? key);
-
-/** The regions an owner can write: the closed list, in the order they are explained. */
-export const regionOptions = (): { value: string; label: string }[] =>
-  Object.entries(REGIONS).map(([value, label]) => ({ value, label }));
-
-/** The parts, from the largest, in the greys `a`…`c`; what does not fit goes together to `rest`. */
-const PARTS = ["a", "b", "c"] as const;
-
-export interface BarView {
-  segments: BarSegment[];
-  legend: LegendEntry[];
-}
-
-const percentOf = (pct: string): string =>
-  formatPercent(pct, { decimals: Math.min(1, meaningfulDecimals(pct)) });
-
-/** A split as a bar and its legend. The widths are read as numbers only to draw; the text is exact. */
-export const barOf = (
-  dimension: Dimension,
-  parts: readonly { key: string; pct: string }[],
-): BarView => {
-  const sorted = [...parts]
-    .filter((part) => Number.parseFloat(part.pct) > 0)
-    .sort(
-      (a, b) => Number.parseFloat(b.pct) - Number.parseFloat(a.pct) || a.key.localeCompare(b.key),
-    );
-  const shown = sorted.slice(0, PARTS.length);
-  const rest = sorted.slice(PARTS.length);
-  const segments: BarSegment[] = shown.map((part, index) => ({
-    key: PARTS[index] as string,
-    width: Number.parseFloat(part.pct),
-  }));
-  const legend: LegendEntry[] = shown.map((part, index) => ({
-    key: PARTS[index] as string,
-    label: keyLabel(dimension, part.key),
-    figure: percentOf(part.pct),
-  }));
-  if (rest.length > 0) {
-    const total = rest.reduce((sum, part) => sum.add(Decimal.parse(part.pct)), Decimal.ZERO);
-    segments.push({ key: "rest", width: Number.parseFloat(total.toString()) });
-    legend.push({
-      key: "rest",
-      label: `Otras (${rest.length})`,
-      figure: percentOf(total.toString()),
-    });
-  }
-  return { segments, legend };
-};
-
-const barOfSplit = (dimension: Dimension, split: Split): BarView =>
-  barOf(
-    dimension,
-    Object.entries(split).map(([key, pct]) => ({ key, pct })),
-  );
-
-/** «por defecto · MSCI World (según la cartera de SPDR…) · ficha 02/11/2026». */
-export const indexLabel = (index: ExposureIndex): string =>
-  [
-    "por defecto",
-    `${index.name}${index.via === undefined ? "" : ` (según la cartera de ${index.via})`}`,
-    index.as_of === undefined ? "por definición" : `ficha ${formatDate(index.as_of)}`,
-  ].join(" · ");
+export {
+  type BarView,
+  barOf,
+  type Dimension,
+  indexLabel,
+  keyLabel,
+  regionOptions,
+} from "./exposure-bars.js";
+export { withIndex, withoutOwn, withSplit } from "./exposure-edit.js";
 
 // ---- The whole core (Cartera) ------------------------------------------------------------------
 
@@ -243,38 +173,3 @@ export const indexOptions = (): { value: string; label: string }[] =>
   Object.values(INDEX_PROFILES)
     .map((profile) => ({ value: profile.key, label: profile.name }))
     .sort((a, b) => a.label.localeCompare(b.label));
-
-// ---- Changing it -------------------------------------------------------------------------------
-
-type Own = { index?: string; currency?: Split; region?: Split };
-
-const without = (exposures: Exposures, assetId: string): Record<string, Own> => {
-  const { [assetId]: _dropped, ...rest } = exposures as Record<string, Own>;
-  return rest;
-};
-
-/** An asset with nothing left to say is not kept in the file. */
-const tidy = (exposures: Exposures, assetId: string, own: Own): Exposures =>
-  own.index === undefined && own.currency === undefined && own.region === undefined
-    ? without(exposures, assetId)
-    : { ...exposures, [assetId]: own };
-
-/** The index chosen (or `""`: back to the proposal), keeping the owner's own splits. */
-export const withIndex = (exposures: Exposures, assetId: string, index: string): Exposures => {
-  const { index: _old, ...rest } = (exposures[assetId] ?? {}) as Own;
-  return tidy(exposures, assetId, index === "" ? rest : { ...rest, index });
-};
-
-/** The owner's own split of a dimension. */
-export const withSplit = (
-  exposures: Exposures,
-  assetId: string,
-  dimension: Dimension,
-  split: Split,
-): Exposures => tidy(exposures, assetId, { ...(exposures[assetId] ?? {}), [dimension]: split });
-
-/** Back to the defaults: the owner's own splits go, the index chosen stays. */
-export const withoutOwn = (exposures: Exposures, assetId: string): Exposures => {
-  const { currency: _c, region: _r, ...rest } = (exposures[assetId] ?? {}) as Own;
-  return tidy(exposures, assetId, rest);
-};
