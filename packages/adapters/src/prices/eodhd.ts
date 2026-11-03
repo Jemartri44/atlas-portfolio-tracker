@@ -16,6 +16,7 @@
 
 import type { CivilDate } from "@atlas/domain";
 import type { DailyClose, PriceSource, SourceResult } from "@atlas/domain/quotes";
+import { safeFetch } from "../safe-fetch.js";
 import { JsonNumber, parseExactJson } from "./exact-json.js";
 import { type Answer, ask, type Fetch, failure } from "./fetch.js";
 import { closeOf, saidCurrency } from "./shape.js";
@@ -59,7 +60,7 @@ export class EodhdPriceSource implements PriceSource {
 
   constructor(
     private readonly key: string,
-    private readonly fetchUrl: Fetch = (url) => fetch(url),
+    private readonly fetchUrl: Fetch = safeFetch(15_000),
     /** The `JSON.parse` of the runtime; replaced in tests by one without `context`. */
     private readonly parse?: Parameters<typeof parseExactJson>[1],
   ) {}

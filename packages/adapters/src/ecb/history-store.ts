@@ -7,7 +7,7 @@
 //                                    `eurofxref-hist.csv` from the ZIP, or
 //                                    `api-exr.csv` from the API
 //   reference/ecb/previous/<name>    the one it replaced, as a backup
-//   reference/ecb/rejected/<when>-<name>  a download that did not validate
+//   reference/ecb/rejected/<name>    the last download that did not validate (only the last)
 //
 // Every write goes under the lock of the ledger folder (ADR-0026, Part B): one lock for every write
 // in the folder. Files are written to a temporary name, synced and renamed, so a history is never
@@ -138,11 +138,14 @@ export class FileEcbHistoryStore implements EcbHistoryStore {
       if (manifest === undefined) {
         throw new EcbHistoryDamaged(MANIFEST);
       }
-      const stamp = next.fetched_at.replace(/[:.]/g, "-");
-      const file = `rejected/${stamp}-${fileOfSource(next.source)}`;
+      // Only the last rejection of each source is kept, under a name of it.
+      const file = `rejected/${fileOfSource(next.source)}`;
       const meta = this.metaOf(next, file);
       await this.writeAtomically(join(this.dir, file), next.bytes, lock);
-      const updated: EcbManifest = { ...manifest, rejected: [...manifest.rejected, meta] };
+      const updated: EcbManifest = {
+        ...manifest,
+        rejected: [...manifest.rejected.filter((kept) => kept.file !== file), meta],
+      };
       await this.writeAtomically(
         join(this.dir, MANIFEST),
         Buffer.from(`${JSON.stringify(updated, null, 2)}\n`),

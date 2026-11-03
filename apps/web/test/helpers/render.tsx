@@ -32,9 +32,14 @@ const deps = (text: string): UseCaseDeps => ({
   random: (target) => target.fill(7),
 });
 
-/** Opens a ledger, the golden one unless another text is given. */
-export const openLedger = async (text: string = goldenText()): Promise<void> =>
-  loadInto({ deps: deps(text), source: { expiresAt: "2099-01-01T00:00:00.000Z" } });
+/** Opens a ledger, the golden one unless another text is given; `quiet` is a reload under the screen. */
+export const openLedger = async (text: string = goldenText(), quiet = false): Promise<void> =>
+  loadInto(
+    { deps: deps(text), source: { expiresAt: "2099-01-01T00:00:00.000Z" } },
+    undefined,
+    undefined,
+    quiet,
+  );
 
 const disposers: (() => void)[] = [];
 

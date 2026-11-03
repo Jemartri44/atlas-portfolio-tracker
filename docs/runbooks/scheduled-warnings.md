@@ -54,7 +54,7 @@ Si los cierres o el histórico del BCE de la nube no se han podido leer, el reco
 
 ## Histórico del BCE
 
-`ecb_update_rejected`, `ecb_calendar_mismatch`, `ecb_history_damaged`, `ecb_history_rebuilt` y `ecb_rebuilt_unverified`: sigue [ecb-history-in-the-cloud.md](ecb-history-in-the-cloud.md), que dice qué hacer con cada uno. Un calendario que no cuadra es un aviso, no un bloqueo.
+`ecb_update_rejected`, `ecb_history_backfilled` (una descarga aceptada trae tipos de días ya conocidos que el histórico anterior no tenía: no cambia lo publicado ni lo registrado, solo el tipo propuesto para operaciones nuevas en esos días), `ecb_calendar_mismatch`, `ecb_history_damaged`, `ecb_history_rebuilt` y `ecb_rebuilt_unverified`: sigue [ecb-history-in-the-cloud.md](ecb-history-in-the-cloud.md), que dice qué hacer con cada uno. Un calendario que no cuadra es un aviso, no un bloqueo.
 
 `ecb_update_undone`: una actualización se cortó entre el fichero y su manifiesto, y la ejecución siguiente la ha deshecho y ha vuelto a descargar. No hay nada que hacer salvo que se repita. Si se repite, mira `reference/ecb/` con el mismo procedimiento.
 

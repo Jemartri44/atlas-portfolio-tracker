@@ -1,0 +1,20 @@
+# Placeholders only. The real file lives outside the repository
+# (~/personal/atlas/privado/terraform/dev/terraform.tfvars) and, for the pipeline, as the secret
+# ATLAS_DEV_TFVARS_B64 (docs/runbooks/bootstrap-and-ci.md). The four artifact variables
+# (artifact_key, artifact_sha256_base64, jobs_artifact_key, jobs_artifact_sha256_base64) are
+# never written here: the pipeline passes them as TF_VAR_*.
+account_id      = "000000000000"
+bucket_suffix   = "example000"
+domain          = "atlas.example.invalid"
+edge_mode       = "pay_per_use"
+# Must equal mail_sender of infra/bootstrap/env (nothing checks the private files: look at both).
+mail_sender     = "atlas@example.invalid"
+mail_recipient  = "owner@example.invalid"
+mail_amounts    = "off"
+# Outputs of the bootstrap of this environment.
+oac_spa_id      = "E0000000000000"
+oac_api_id      = "E0000000000001"
+certificate_arn = "arn:aws:acm:us-east-1:000000000000:certificate/00000000-0000-0000-0000-000000000000"
+# dev sleeps: the distribution is disabled and no schedule is enabled until named here.
+dev_active      = false
+dev_active_jobs = []

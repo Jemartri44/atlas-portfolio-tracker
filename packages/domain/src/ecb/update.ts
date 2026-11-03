@@ -27,6 +27,12 @@ export type HistoryUpdate =
       /** Days of publication the new history adds after the previous one. */
       newDays: number;
       latest: CivilDate;
+      /**
+       * Rates the new history holds on or before the last day the previous one knew, that the
+       * previous one did not have (a past day with no publication that now has one, or a currency
+       * with a history of its own). Accepted, and said: an integrity finding, not a rejection.
+       */
+      backfilled: number;
     }
   | {
       kind: "rejected";
@@ -54,7 +60,7 @@ export const checkHistoryUpdate = (
     });
   }
   if (previous === undefined) {
-    return { kind: "accepted", newDays: next.publications.length, latest };
+    return { kind: "accepted", newDays: next.publications.length, latest, backfilled: 0 };
   }
   const conflicts: HistoryConflict[] = [];
   let total = 0;
@@ -78,9 +84,18 @@ export const checkHistoryUpdate = (
     return { kind: "rejected", conflicts, total };
   }
   const known = latestPublication(previous);
+  let backfilled = 0;
+  for (const [currency, series] of next.series) {
+    for (const date of series.dates) {
+      if (date <= known && rateOn(previous, currency, date) === undefined) {
+        backfilled += 1;
+      }
+    }
+  }
   return {
     kind: "accepted",
     newDays: next.publications.filter((day) => day > known).length,
     latest,
+    backfilled,
   };
 };

@@ -9,6 +9,7 @@ describe("compareForRestore", () => {
 
   it("says the same events, a prefix and its lost tail, or the difference both ways", () => {
     expect(compareForRestore([a, b], [a, b])).toEqual({ kind: "same" });
+    expect(compareForRestore([b, a], [a, b])).toEqual({ kind: "reordered" });
     expect(compareForRestore([a], [a, b, c])).toEqual({ kind: "prefix", lost: [b.id, c.id] });
     expect(compareForRestore([a, c], [a, b])).toEqual({
       kind: "differs",

@@ -284,11 +284,15 @@ export class S3EcbHistoryStore implements EcbHistoryStore {
       throw new EcbHistoryDamaged("manifest.json");
     }
     this.assertSeen(read.stored);
-    const stamp = next.fetched_at.replace(/[:.]/g, "-");
-    const file = `rejected/${stamp}-${fileOfSource(next.source)}`;
+    // Only the last rejection of each source is kept, under a name of it: a rejection a day would pile up
+    // megabytes and a manifest that grows with them.
+    const file = `rejected/${fileOfSource(next.source)}`;
     const meta = this.metaOf(next, file);
-    await this.put(`${DIR}${file}`, next.bytes, undefined);
-    const updated: EcbManifest = { ...read.manifest, rejected: [...read.manifest.rejected, meta] };
+    await this.put(`${DIR}${file}`, next.bytes, await this.objects.get(`${DIR}${file}`));
+    const updated: EcbManifest = {
+      ...read.manifest,
+      rejected: [...read.manifest.rejected.filter((kept) => kept.file !== file), meta],
+    };
     await this.put(
       MANIFEST,
       new TextEncoder().encode(`${JSON.stringify(updated, null, 2)}\n`),

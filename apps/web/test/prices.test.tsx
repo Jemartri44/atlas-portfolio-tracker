@@ -190,8 +190,10 @@ describe("second pass of PR #80 in the web: the correspondence beside the prices
     await importPriceFiles([{ name: "ast_world.jsonl", text: line("2029-06-29", "999") }]);
     expect((await loadWebQuotes(["ast_world"])).symbols).toEqual({ problem: "missing" });
     const host = await show("/cartera", Cartera);
-    await settle(20);
-    expect(text(host)).toContain("no se puede comprobar la divisa");
+    await until(
+      () => text(host).includes("no se puede comprobar la divisa"),
+      "the warning about the currency of the imported prices",
+    );
   });
 });
 

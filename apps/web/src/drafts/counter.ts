@@ -48,10 +48,12 @@ const paint = (slot: HTMLElement, total: number): void => {
 export const mountDraftCounter = (slot: HTMLElement): void => {
   // The latest answer wins: a slow one never paints over a newer one.
   let asked = 0;
+  // The slot may not be on the page yet when mounted; once it has been, leaving it means stop.
+  let seen = false;
   createRoot((dispose) => {
     const read = (): void => {
-      // Painted once and since gone from the page (the frame was replaced): stop.
-      if (!slot.isConnected && slot.childNodes.length > 0) {
+      seen ||= slot.isConnected;
+      if (seen && !slot.isConnected) {
         window.removeEventListener(DRAFTS_CHANGED, read);
         dispose();
         return;
