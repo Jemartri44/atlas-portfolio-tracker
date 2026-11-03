@@ -261,6 +261,39 @@ describe("an exchange difference of currency (H7)", () => {
     ]);
   });
 
+  // 800 € → 1.000 USD at 1,25, back for 750 €: loss −50,00 (1638). Art.
+  // 33.5.e LIRPF: buying the same currency again within the year after defers
+  // it (criterion 4:currency_wash_sale), so 1639 and 0385 hold what is left.
+  it.each([
+    ["with no repurchase", false, "50.00"],
+    ["when the dollars are bought again within the year", true, "0.00"],
+  ])("declares a loss of currency %s", (_name, rebuy, imputable) => {
+    const b = roundTrip("800", "1000", "1.25", "750", "1.3333");
+    if (rebuy) {
+      b.fx({
+        account_id: "acc_us",
+        value_date: "2025-08-01",
+        sold_amount: "750",
+        sold_currency: "EUR",
+        bought_amount: "1000",
+        bought_currency: "USD",
+        fee: "0",
+        fee_currency: "EUR",
+        fx_rate_bought: "1.3333",
+        fx_rate_date: "2025-08-01",
+      });
+    }
+    const boxes = taxBoxes(b.build(), 2025, { today: TODAY });
+    expect(["1626", "1638", "1639", "0385"].map((box) => shown(boxes, box))).toEqual([
+      "4",
+      "50.00",
+      imputable,
+      imputable,
+    ]);
+    const sum = boxes.entries.find((item) => item.box === "0385");
+    expect(sum?.criteria).toContain("4:currency_wash_sale");
+  });
+
   // Key 2 and key 4 are rows of the same part of the form: one sum each way.
   it("adds both keys of 'otros elementos' into one 0385 and one 0386", () => {
     const b = roundTrip("800", "1000", "1.25", "850", "1.1765");
@@ -292,6 +325,18 @@ describe("an exchange difference of currency (H7)", () => {
     expect(boxes.entries.filter((item) => item.box === "1626").map((item) => item.text)).toEqual([
       "2",
       "4",
+    ]);
+    // The sums carry the criteria of both keys, and the balance adds them.
+    const criteria = sums("0385")[0]?.criteria ?? [];
+    expect(criteria).toContain("4:currency_fifo");
+    expect(criteria.some((id) => id.startsWith("2:"))).toBe(true);
+    const amount = (concept: string) =>
+      boxes.entries.find((item) => item.concept === concept)?.amount_eur?.centsText();
+    // The form prints the balance as a positive amount in the box of its sign.
+    expect(["gp.gains_total", "gp.losses_total", "gp.balance"].map(amount)).toEqual([
+      "50.00",
+      "200.00",
+      "150.00",
     ]);
   });
 });
