@@ -11,6 +11,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { yearOf } from "../../src/dates/civil-date.js";
 import { model720, model721 } from "../../src/informative/m720.js";
+import { legsRounded } from "../../src/money/eur.js";
 import { realizedGains } from "../../src/projections/gains.js";
 import { integrity } from "../../src/projections/integrity.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
@@ -458,7 +459,7 @@ describe("proof 2: the defaults change nothing that already existed", () => {
         (a[0] as string).localeCompare(b[0] as string) ||
         (a[1] as string).localeCompare(b[1] as string);
       const lines = [...report.capital_gains.lines, ...report.movable_capital.transmissions]
-        .map((line) => [key(line), line.own_eur.roundToCents().amount.toString()])
+        .map((line) => [key(line), legsRounded(line.proceeds.eur, line.cost_eur).amount.toString()])
         .sort(order);
       const gains = realizedGains(state, year)
         .map((gain) => [key(gain), gain.gain_eur_rounded.amount.toString()])

@@ -67,8 +67,6 @@ export interface BoxRowView {
    */
   checked?: string;
   amount_eur?: Money;
-  /** What the form will compute, when it differs by a cent from the engine. */
-  form_eur?: Money;
   /** A value that is not an amount: the name of a security. */
   text?: string;
   /** The ledger does not hold it: said, never invented. */
@@ -137,7 +135,6 @@ const rowView = (entry: BoxEntry, index: number, names: NameIndex): BoxRowView =
     ...(entry.label === undefined ? {} : { label: entry.label }),
     ...(checked === undefined ? {} : { checked }),
     ...(entry.amount_eur === undefined ? {} : { amount_eur: entry.amount_eur }),
-    ...(entry.form_eur === undefined ? {} : { form_eur: entry.form_eur }),
     ...(entry.text === undefined ? {} : { text: entry.text }),
     missing: entry.missing === true,
     ...(entry.partial === undefined ? {} : { partial: PARTIAL_TEXTS[entry.partial] }),

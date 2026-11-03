@@ -18,7 +18,7 @@ import type { CivilDate } from "../dates/civil-date.js";
 import { yearOf } from "../dates/civil-date.js";
 import { DomainError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
-import { zero } from "../money/eur.js";
+import { computableRounded, zero } from "../money/eur.js";
 import { EUR, Money } from "../money/money.js";
 import { type Filing, filingInForce } from "../projections/filings.js";
 import {
@@ -306,7 +306,11 @@ export const taxChain = (
   };
   for (const outcome of walk.outcomes) {
     const gain = state.gains[outcome.gain_index] as RealizedGain;
-    add(gain.year, categoryOf(state, gain.asset_id), outcome.computable_eur.roundToCents());
+    add(
+      gain.year,
+      categoryOf(state, gain.asset_id),
+      computableRounded(gain, outcome.computable_eur),
+    );
     for (const release of outcome.foreign_released) {
       const origin = state.gains[release.origin] as RealizedGain;
       add(gain.year, categoryOf(state, origin.asset_id), release.amount_eur.roundToCents());
@@ -319,7 +323,7 @@ export const taxChain = (
   // (V1877-10), what the wash-sale rule leaves computable of them (V1613-25).
   state.currencyGains.forEach((gain, index) => {
     const outcome = currencyWalk.outcomes[index] as CurrencyWashOutcome;
-    add(gain.year, "capital_gain", outcome.computable_eur.roundToCents());
+    add(gain.year, "capital_gain", computableRounded(gain, outcome.computable_eur));
   });
   const expenses = expenseLines(ctx);
   for (const expense of expenses) {

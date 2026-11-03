@@ -20,7 +20,7 @@ atlas add buy --account acc_fund --asset ast_world --trade-date 2026-09-01 --val
 atlas positions          # posición física por cuenta y activo
 atlas lots               # lotes fiscales (FIFO global por activo), con fecha y coste en EUR
 atlas cash               # efectivo por cuenta y divisa
-atlas gains 2027         # ganancias realizadas del ejercicio (redondeadas una vez por operación)
+atlas gains 2027         # ganancias realizadas del ejercicio (por operación: transmisión redondeada menos adquisición redondeada)
 atlas income 2027        # dividendos e intereses
 atlas tax 2028           # la base imponible del ahorro del ejercicio, por apartados
 atlas weights --date 2027-12-31   # pesos, objetivos y desviaciones del núcleo

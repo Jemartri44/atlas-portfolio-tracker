@@ -149,19 +149,19 @@ describe("what the layout says it cannot fill in", () => {
   });
 });
 
-describe("the rounding of a row (ficha F2)", () => {
-  it("shows what the form will subtract when it differs a cent from the engine", () => {
+describe("the rounding of a row (criterion #6)", () => {
+  it("is what the form subtracts: transmission and acquisition rounded first", () => {
     const b = taxBuilder(HAND_SETTINGS);
     buy(b, "stock_s", "2024-02-10", "1", "50.004");
     sell(b, "stock_s", "2025-09-01", "1", "100.005");
     const boxes = taxBoxes(b.build(), 2025, { today: TODAY });
-    // The form rounds each value once and subtracts: 100,01 − 50,00 = 50,01.
-    // The engine rounds the result once: 50,001 → 50,00.
+    // 100,005 → 100,01 and 50,004 → 50,00: the row and its total are 50,01,
+    // not the 50,00 that rounding 50,001 once would give.
     expect(text(entry(boxes, "gp.listed_shares.transmission").amount_eur)).toBe("100.01");
     expect(text(entry(boxes, "gp.listed_shares.acquisition").amount_eur)).toBe("50");
-    expect(text(entry(boxes, "gp.listed_shares.gain").amount_eur)).toBe("50");
-    expect(text(entry(boxes, "gp.listed_shares.gain").form_eur)).toBe("50.01");
-    expect(codes(boxes)).toContain("tax_box_rounding_differs");
+    expect(text(entry(boxes, "gp.listed_shares.gain").amount_eur)).toBe("50.01");
+    expect(text(total(boxes, "gp.listed_shares.gains").amount_eur)).toBe("50.01");
+    expect(text(entry(boxes, "gp.listed_shares.gain").exact_eur)).toBe("50.001");
   });
 });
 
