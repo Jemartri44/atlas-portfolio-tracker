@@ -18,7 +18,7 @@
 import type { EventPreview, LedgerEvent, LedgerState } from "@atlas/domain";
 import type { ClosedYearImpact } from "@atlas/domain/fiscal";
 import { useNavigate } from "@solidjs/router";
-import { createSignal, type JSX, Show } from "solid-js";
+import { createSignal, type JSX, onCleanup, Show } from "solid-js";
 import { nameIndex } from "../../format/names.js";
 import { today } from "../../ledger/state.js";
 import { GRID, mediaQuery } from "../../shell/media.js";
@@ -36,7 +36,7 @@ import { DuplicateDialog } from "./DuplicateDialog.jsx";
 import { createDraftSaver } from "./draft-save.js";
 import { Effect } from "./Effect.jsx";
 import { FormActions } from "./FormActions.jsx";
-import { FormFields } from "./FormFields.jsx";
+import { FormFields, withDerived } from "./FormFields.jsx";
 import { CorrectionReason, dependentsSentence, Reloaded, ThesisFirst } from "./FormNotices.jsx";
 import { useFormProblems } from "./form-problems.js";
 import { previewStep } from "./preview-step.js";
@@ -54,21 +54,51 @@ interface EventFormProps {
   correcting?: { id: string; values: FormValues };
   /** Recording a draft: its values, the rate left for the history to propose. */
   fromDraft?: { id: string; values: FormValues } | undefined;
+  /**
+   * What the application proposes (the purchase of the month): an account, an asset, an amount.
+   * Filled as if chosen, so the currency follows; the amount came from the user's data and is
+   * masked until the field is edited (docs/design/system.md §5.10).
+   */
+  prefill?: FormValues | undefined;
 }
 
+/** The values of a new form with what the application proposes, derived fields included. */
+const withPrefill = (
+  spec: EventFormSpec,
+  state: LedgerState,
+  base: FormValues,
+  prefill: FormValues,
+): FormValues =>
+  Object.entries(prefill).reduce(
+    (values, [name, value]) =>
+      spec.fields.some((field) => field.name === name)
+        ? withDerived(spec.fields, state, values, name, value)
+        : values,
+    base,
+  );
+
 type Step = "form" | "preview";
+
+/** How long after the last keystroke the effect beside the form is asked again. */
+const LIVE_DELAY_MS = 350;
 
 export const EventForm = (props: EventFormProps): JSX.Element => {
   const navigate = useNavigate();
   const wide = mediaQuery(GRID);
   const [values, setValues] = createSignal<FormValues>(
-    props.correcting?.values ?? props.fromDraft?.values ?? initialValues(props.spec, today()),
+    props.correcting?.values ??
+      props.fromDraft?.values ??
+      withPrefill(props.spec, props.state, initialValues(props.spec, today()), props.prefill ?? {}),
   );
   const [step, setStep] = createSignal<Step>("form");
   // What the user typed, by field: in the draft and not in the fields, which a
   // phone takes off the screen while it shows the effect.
   const [typed, setTyped] = createSignal<ReadonlySet<string>>(new Set());
-  const revealed = (name: string): boolean => props.correcting === undefined || typed().has(name);
+  const proposed = new Set(
+    Object.keys(props.prefill ?? {}).filter((name) => name === "amount" || name === "quantity"),
+  );
+  const revealed = (name: string): boolean =>
+    (props.correcting === undefined && !proposed.has(name)) || typed().has(name);
   const [preview, setPreview] = createSignal<EventPreview | undefined>(undefined);
   const [closedYears, setClosedYears] = createSignal<readonly ClosedYearImpact[]>([]);
   const problems = useFormProblems(props.spec.fields);
@@ -100,6 +130,38 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
     isBucketAccount(props.state, values().account_id) &&
     (values().thesis_id ?? "") === "";
 
+  /**
+   * On a wide screen the effect sits beside the form and follows what is typed (direction A): a
+   * moment after the last keystroke, with every required field filled, it is asked again, quietly —
+   * a refusal does not mark the fields while the user is still typing; «Ver el efecto» says why.
+   * Nothing is written until «Registrar». On a phone the effect stays a step of its own, before
+   * the button that writes. Rectifying asks for a reason first, so it keeps the button.
+   */
+  let pending: ReturnType<typeof setTimeout> | undefined;
+  const livePreview = (): void => {
+    clearTimeout(pending);
+    if (!wide() || props.correcting !== undefined || blocked() !== undefined) {
+      return;
+    }
+    const asked = values();
+    pending = setTimeout(() => {
+      void (async () => {
+        try {
+          const live = await previewStep(toDraft(props.spec, asked, props.state), undefined, "");
+          if (values() === asked) {
+            rates.check(asked);
+            setPreview(live.preview);
+            setClosedYears(live.closedYears);
+            setStep("preview");
+          }
+        } catch {
+          // Said when asked for: «Ver el efecto» places the refusal on its field.
+        }
+      })();
+    }, LIVE_DELAY_MS);
+  };
+  onCleanup(() => clearTimeout(pending));
+
   /** Editing a field clears what was said about it. */
   const onChange = (next: FormValues): void => {
     setFieldErrors(errorsAfterEdit(fieldErrors(), values(), next));
@@ -111,6 +173,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
       setStep("form");
       setPreview(undefined);
     }
+    livePreview();
   };
 
   const onPreview = async (): Promise<void> => {
@@ -263,6 +326,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
           names={nameIndex(props.state)}
           revealed={revealed}
           wide={wide()}
+          live={props.correcting === undefined}
           problem={problem()}
           failure={failure()}
           confirmLabel={props.correcting === undefined ? "Registrar" : "Rectificar"}

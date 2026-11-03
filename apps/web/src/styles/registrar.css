@@ -215,3 +215,30 @@
     top: calc(var(--topbar-h) + var(--space-4));
   }
 }
+
+/* ---- Direction A: the assets as picks, the amount large, the live effect ---- */
+
+.picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.pick[aria-pressed="true"] {
+  background-color: var(--c-accent-soft);
+  border-color: var(--c-accent);
+  color: var(--c-accent-soft-text);
+}
+
+/* The amount is what is checked against the bank: large, in the figure's weight. */
+.field.is-big input {
+  font-size: var(--text-2xl);
+  font-weight: var(--fw-semibold);
+  min-height: 3.5rem;
+}
+
+.effect-live {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-2);
+}

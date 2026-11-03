@@ -46,7 +46,7 @@ interface FormFieldsProps {
  * too. Computed in a single pass over `next`, so it does not depend on what a
  * read inside a batch would return.
  */
-const withDerived = (
+export const withDerived = (
   fields: readonly FieldSpec[],
   state: LedgerState,
   values: FormValues,
@@ -86,6 +86,12 @@ const isSensitive = (field: FieldSpec): boolean =>
  * a default or can be left empty.
  */
 const SECONDARY = new Set(["broker_ref", "source", "notes"]);
+
+/** The amount of an operation, set large: it is what is checked against the bank (direction A). */
+const BIG = new Set(["amount"]);
+
+/** How many assets go as chips before the list. */
+const CHIPS = 6;
 
 /** The options a select field offers with these values, as of today. */
 const optionsOf = (
@@ -155,6 +161,40 @@ export const FormFields = (props: FormFieldsProps): JSX.Element => {
         />
       );
     }
+    if (field.kind === "select" && field.name === "asset_id") {
+      // The assets the chosen account allows, as chips a tap away (piece 3 of direction B); the
+      // list stays under them for the rest and for the keyboard.
+      const chips = (): Option[] =>
+        optionsOf(field, props.state, props.values, props.events)
+          .filter((option) => option.value !== "")
+          .slice(0, CHIPS);
+      return (
+        <>
+          <Show when={chips().length > 1}>
+            <div class="picks full" role="group" aria-label={`${field.label}: los más a mano`}>
+              <For each={chips()}>
+                {(option) => (
+                  <button
+                    type="button"
+                    class="pick secondary"
+                    aria-pressed={value() === option.value}
+                    onClick={() => set(field.name, option.value)}
+                  >
+                    {option.label}
+                  </button>
+                )}
+              </For>
+            </div>
+          </Show>
+          <SelectField
+            {...common}
+            class={field.full === true ? "full" : field.pair === true ? "pair" : undefined}
+            options={optionsOf(field, props.state, props.values, props.events)}
+            {...(field.required === true ? {} : { placeholder: "Sin indicar" })}
+          />
+        </>
+      );
+    }
     if (field.kind === "select") {
       return (
         <SelectField
@@ -168,7 +208,14 @@ export const FormFields = (props: FormFieldsProps): JSX.Element => {
     return (
       <Field
         {...common}
-        class={field.full === true ? "full" : field.pair === true ? "pair" : undefined}
+        class={
+          [
+            field.full === true ? "full" : field.pair === true ? "pair" : "",
+            BIG.has(field.name) ? "is-big" : "",
+          ]
+            .filter(Boolean)
+            .join(" ") || undefined
+        }
         kind={field.kind}
         sensitive={isSensitive(field)}
         revealed={props.revealed?.(field.name) ?? true}

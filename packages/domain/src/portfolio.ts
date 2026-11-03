@@ -40,6 +40,7 @@ export {
   type StandaloneFeeRow,
   type StandaloneFees,
 } from "./projections/costs.js";
+export { accountHolding } from "./projections/platform-plan.js";
 export {
   type MonthAssetTask,
   type MonthPlan,

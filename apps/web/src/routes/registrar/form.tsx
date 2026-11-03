@@ -54,7 +54,18 @@ export default function RegistrarFormRoute(): JSX.Element {
 
 const EventFormRoute = (): JSX.Element => {
   const params = useParams<{ tipo: string }>();
-  const [search] = useSearchParams<{ borrador?: string }>();
+  const [search] = useSearchParams<{
+    borrador?: string;
+    cuenta?: string;
+    activo?: string;
+    importe?: string;
+  }>();
+  /** «Repetir la compra del mes»: what the plan proposes, carried in the address. */
+  const prefill = (): Record<string, string> => ({
+    ...(search.cuenta === undefined ? {} : { account_id: search.cuenta }),
+    ...(search.activo === undefined ? {} : { asset_id: search.activo }),
+    ...(search.importe === undefined ? {} : { amount: search.importe }),
+  });
   const spec = () => formSpec(params.tipo);
   const [fromDraft] = createResource(
     () => [search.borrador, spec()] as const,
@@ -89,6 +100,7 @@ const EventFormRoute = (): JSX.Element => {
                   spec={found()}
                   state={snapshot.state}
                   events={snapshot.events}
+                  prefill={prefill()}
                   fromDraft={
                     fromDraft()?.kind === "draft"
                       ? (fromDraft() as Extract<Found, { kind: "draft" }>)
