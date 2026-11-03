@@ -128,6 +128,40 @@ describe("the estimate with income from outside the portfolio", () => {
     ]);
   });
 
+  it("carries forward what it let a loss offset, into the next year", () => {
+    // 2024: −1,000 of loss and 2,000 of outside interest; the loss offsets 500
+    // and 500 is left. 2025: a gain of 2,000 takes the 500 left: base 1,500.
+    // Read without the interest, the whole 1,000 was left: base 1,000.
+    const b = taxBuilder(HAND_SETTINGS);
+    b.buy({ account_id: "acc_a", asset_id: "fund_f", quantity: "100", value_date: "2018-03-01" });
+    b.sell({
+      account_id: "acc_a",
+      asset_id: "fund_f",
+      quantity: "50",
+      unit_price: "80",
+      value_date: "2024-06-10",
+    });
+    b.externalIncome({
+      kind: "interest",
+      value_date: "2024-12-31",
+      gross_eur: "2000",
+      withholding_eur: "380",
+    });
+    b.sell({
+      account_id: "acc_a",
+      asset_id: "fund_f",
+      quantity: "50",
+      unit_price: "140",
+      value_date: "2025-06-10",
+    });
+    const events = b.build();
+    expect(taxYear(events, 2025, { today: TODAY }).base_eur.centsText()).toBe("1000.00");
+    const joint = taxYear(events, 2025, { today: TODAY, external: true });
+    expect(joint.base_eur.centsText()).toBe("1500.00");
+    // Nothing from outside in 2025 itself: the reading still has to ask for it.
+    expect(joint.external_income?.lines).toEqual([]);
+  });
+
   it("raises the tax a sale would add when it fills the first bracket", () => {
     // 6,000 of dividends already fill the 19 % bracket of 2027 (the 2025
     // wording). A sale with 200 of gain is then taxed at 21 %: 42.00, not 38.00.

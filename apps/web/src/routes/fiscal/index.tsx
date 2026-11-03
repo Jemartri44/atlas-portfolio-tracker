@@ -6,7 +6,6 @@
 import { settingsAt, yearOf } from "@atlas/domain";
 import { informativeReturn, repurchaseCalendar, taxBoxes, taxYear } from "@atlas/domain/fiscal";
 import { createMemo, createResource, For, type JSX, Show } from "solid-js";
-import { EmptyState, Section } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
 import { toAppError } from "../../ledger/errors.js";
 import { attempt } from "../../ledger/query.js";
@@ -27,7 +26,7 @@ import { FilingCard } from "./FilingCard.jsx";
 import { InformativeCard } from "./InformativeCard.jsx";
 import { LossesCard } from "./LossesCard.jsx";
 import { PartFailed } from "./PartFailed.jsx";
-import { CannotCompute, NothingYet } from "./Placeholders.jsx";
+import { CannotCompute, NothingThisYear, NothingYet } from "./Placeholders.jsx";
 import { EstimateCards } from "./QuotaCard.jsx";
 import { RateNotes } from "./RateNotes.jsx";
 import { RepurchaseCard } from "./RepurchaseCard.jsx";
@@ -55,7 +54,11 @@ export default function FiscalRoute(): JSX.Element {
         const current = yearOf(today());
         const filings = [...snapshot.state.filings.values()];
         const choices = createMemo<YearChoice[]>(() =>
-          yearsOf(snapshot.state.gains, filings, current).map((year) => ({
+          yearsOf(
+            [...snapshot.state.gains, ...snapshot.state.externalIncome],
+            filings,
+            current,
+          ).map((year) => ({
             year,
             filed: filings.some(
               (filing) =>
@@ -143,13 +146,11 @@ export default function FiscalRoute(): JSX.Element {
             {(year) => (
               <>
                 <Show when={year().empty}>
-                  <Section title={`Ejercicio ${year().year}`} class="span-12">
-                    <EmptyState
-                      what="No hay nada que declarar en este ejercicio"
-                      why="No se ha vendido nada, no han llegado rendimientos y no arrastras pérdidas. La base del ahorro es cero."
-                      glyph="check"
-                    />
-                  </Section>
+                  <NothingThisYear year={year().year} />
+                  {/* A year with only income from outside the portfolio still has an estimate. */}
+                  <Show when={quota()?.external && quota()}>
+                    {(estimate) => <EstimateCards estimate={estimate()} />}
+                  </Show>
                 </Show>
                 <Show when={!year().empty}>
                   <BaseCard view={year()} />

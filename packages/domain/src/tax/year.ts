@@ -154,11 +154,6 @@ const pendingText = (pending: readonly PendingLoss[]): string =>
 
 // --- The report -----------------------------------------------------------------
 
-/**
- * The tax report of `year`. Refuses a ledger with invalid events: a projection
- * that skipped one gives an approximate base, and the answer to that is the
- * list of what to repair, not a number.
- */
 /** The income from outside the portfolio of `year`, rounded as the form rounds. */
 const externalOf = (core: Core, year: number): NonNullable<TaxYearReport["external_income"]> => {
   const lines = core.state.externalIncome
@@ -178,6 +173,11 @@ const externalOf = (core: Core, year: number): NonNullable<TaxYearReport["extern
   };
 };
 
+/**
+ * The tax report of `year`. Refuses a ledger with invalid events: a projection
+ * that skipped one gives an approximate base, and the answer to that is the
+ * list of what to repair, not a number.
+ */
 export const taxYear = (
   events: readonly LedgerEvent[],
   year: number,
