@@ -39,7 +39,7 @@ export const ERRORS_CORPORATE: Record<string, Entry> = {
         d.reason === "not_eu"
           ? "cotiza fuera de la UE: allí la ley la grava como rendimiento con el tope de la diferencia de fondos propios, y Atlas no lo modela."
           : d.reason === "admission_unknown"
-            ? "se compró en una bolsa (Xetra, Fráncfort, Euronext o BME) donde también cotizan valores no admitidos en su mercado regulado, y su ISIN o su divisa no dejan claro que el valor sea de la UE. Lo que cuenta es dónde está admitido el valor, no dónde lo compraste: si es de una sociedad de la UE, comprueba que su ISIN y su divisa (euros) están bien anotados y vuelve a registrarla; si es de fuera, la ley grava la devolución como rendimiento y Atlas no lo modela."
+            ? "se compró en una bolsa (Xetra, Fráncfort, Dublín, Milán, Viena, Euronext o BME) donde también cotizan valores no admitidos en su mercado regulado, y su ISIN o su divisa no dejan claro que el valor sea de la UE. Lo que cuenta es dónde está admitido el valor, no dónde lo compraste: si es de una sociedad de la UE, comprueba que su ISIN y su divisa (euros) están bien anotados y vuelve a registrarla; si es de fuera, la ley grava la devolución como rendimiento y Atlas no lo modela."
             : d.reason === "market_missing"
               ? "no tiene mercado anotado. Anota el mercado del activo (código MIC, por ejemplo XMAD) y vuelve a registrarla."
               : "tiene un mercado que Atlas no conoce. Anota el mercado del activo (código MIC, por ejemplo XMAD) y vuelve a registrarla."

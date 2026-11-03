@@ -10,43 +10,26 @@
 // it was bought on. It is a short table of the markets this portfolio can
 // reach, not the ESMA register: what it cannot tell answers `undefined`.
 
-/** Regulated markets of the EU, by MIC and by the names people write. */
-const EU = [
-  "XMAD",
-  "XMCE",
-  "XBAR",
-  "XBIL",
-  "XVAL",
-  "BMEX",
-  "BME",
-  "XPAR",
-  "XAMS",
-  "XBRU",
-  "XLIS",
-  "XMIL",
-  "XDUB",
-  "XETR",
-  "XFRA",
-  "XETRA",
-  "XWBO",
-  "XHEL",
-  "XSTO",
-  "XCSE",
-  "XWAR",
-  "XATH",
-  "XPRA",
-  "XBUD",
-  "XLUX",
-  "EURONEXT",
-  "BOLSA DE MADRID",
-];
+import { FUND_REGULATED_MARKETS } from "../settings/defaults.js";
 
 /**
- * EU venues that also run a non-regulated segment (Freiverkehr in Frankfurt
- * and Xetra, Euronext Growth, BME Growth) where foreign shares usually trade:
- * there the venue alone does not prove the admission.
+ * The regulated markets of the EU, by MIC: the segments of category `RMKT` in
+ * ISO 10383, the one list the funds use too. Then the names people write: the
+ * Mercado Continuo (`XMCE`, a MIC expired in ISO 10383 that still names the
+ * regulated Spanish exchanges) and «Bolsa de Madrid».
  */
-const MIXED = ["XETR", "XFRA", "XETRA", "BMEX", "BME", "EURONEXT"];
+const EU = [...FUND_REGULATED_MARKETS, "XMCE", "BOLSA DE MADRID"];
+
+/**
+ * Operating MICs of a whole exchange (`NSPD` in ISO 10383) and names of a
+ * group, which also run a non-regulated segment (Freiverkehr in Frankfurt and
+ * Xetra, Euronext Growth in Dublin and Milan, the Vienna MTF, BME Growth) where
+ * foreign shares usually trade. A share written with one of them is presumed
+ * to be on its regulated segment when it is quoted in euros and its ISIN is of
+ * a member state, as the owner writes `XETR` for a share of the DAX; otherwise
+ * the admission is checked by hand. The regulated segment, written, decides.
+ */
+const MIXED = ["XETR", "XFRA", "XETRA", "XDUB", "XMIL", "XWBO", "BMEX", "BME", "EURONEXT"];
 
 /** ISO 3166-1 alpha-2 codes of the 27 member states, as an ISIN begins. */
 const EU_COUNTRIES = [
@@ -121,9 +104,9 @@ export const euRegulatedAdmission = (asset: ListingFacts): boolean | undefined =
   }
   const key = normalise(asset.market);
   if (EU.includes(key)) {
-    if (!MIXED.includes(key)) {
-      return true;
-    }
+    return true;
+  }
+  if (MIXED.includes(key)) {
     const country = asset.isin === undefined ? "" : normalise(asset.isin).slice(0, 2);
     return asset.currency === "EUR" && EU_COUNTRIES.includes(country) ? true : undefined;
   }
