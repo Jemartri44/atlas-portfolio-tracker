@@ -226,6 +226,7 @@ describe("rebalancePlan", () => {
     expect(sale.tax.available && sale.tax.gain_eur.isNegative()).toBe(true);
     expect(sale.tax.available && sale.tax.tax_eur.isZero()).toBe(true);
     expect(sale.tax.available && sale.tax.deferred_eur.amount.isPositive()).toBe(true);
+    // Two months, pinned in `core`, from 31/12/2027 date to date: 29/02/2028.
     expect(sale.tax.available && sale.tax.deferral_window_end).toBe("2028-02-29");
   });
 

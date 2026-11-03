@@ -61,7 +61,6 @@ const plans: Record<string, Plan> = {
   },
 };
 const identityCenter = (): Plan => renderEnv("dev", { admin_trust_mode: "identity_center_role" });
-const prodKey = (): Plan => renderEnv("prod", { use_customer_managed_key: true });
 
 const trustOf = (plan: Plan, role: string): Statement[] => {
   const document = roleOf(plan, role).assume_role_policy as string;
@@ -564,9 +563,5 @@ describe("the closed list of costs and the shape of the plans", () => {
     const text = JSON.stringify(boundaryOf(plans.dev as Plan));
     expect(text).toContain(`identity/${SENDER}`);
     expect(text).toContain(`identity/${SENDER.split("@")[1]}`);
-  });
-
-  it("keeps the key of the prod plan when C2 asks for it (the policy of the key is tested apart)", () => {
-    expect(changes(prodKey()).filter((change) => change.type === "aws_kms_key")).toHaveLength(1);
   });
 });

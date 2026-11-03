@@ -77,10 +77,17 @@ describe("one navigation, in the order the eye reads it", () => {
     expect(applied(host.querySelector("nav"), "position")).toBe("fixed");
   });
 
-  it("puts Registrar after the group of the top bar from 1200px, in the DOM too", async () => {
+  it("puts Registrar after the destinations of the top bar from 1200px, the declaration among them", async () => {
     withStyles(1440);
     const host = await showInShell("/", ROUTES);
-    expect(order(host)).toEqual(["Resumen", "Movimientos", "Cartera", "Cubo", "Registrar"]);
+    expect(order(host)).toEqual([
+      "Resumen",
+      "Movimientos",
+      "Cartera",
+      "Cubo",
+      "Declaración",
+      "Registrar",
+    ]);
     expect(applied(host.querySelector("nav"), "position")).toBe("static");
   });
 

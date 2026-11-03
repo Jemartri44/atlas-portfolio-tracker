@@ -8,6 +8,8 @@ Personal investment portfolio manager, single user, 20+ year horizon. It records
 
 **It never executes orders.** Every trade is placed manually on the platform and recorded here.
 
+**The web is the main surface.** The `atlas` console (`apps/cli`) is the maintenance tool: data entry and correction, `check`, backups and restore, export, `remote`, `admin`, `synth`, and a few JSON reports (`positions`, `lots`, `tax`, `m720`, `m721`, …) so that Claude can diagnose a ledger without the web. New views and simulations go in the web, not in the console (`docs/cli.md`).
+
 User: Spanish tax resident. Planned integrations: MyInvestor (fund statements) and Interactive Brokers (Flex Query). Cash is recorded by hand.
 
 ## Documents
@@ -64,7 +66,7 @@ Target weights apply **across the whole core**. The bucket is a *budget* (a fixe
 | Infrastructure | Terraform |
 | Domain | Own subdomain (value lives in `terraform.tfvars`, outside the repo), CNAME to CloudFront, ACM certificate in us-east-1 |
 
-**Cost constraint:** minimum cost with a budget alarm (ADR-0028), not "always-free indefinitely" — the cloud layer costs an estimated ≈ $0.01-0.05/month, covered by AWS credits while they last and paid afterwards; a single Budgets alarm, `atlas-cost`, fires at $1 ($2 if the SSM customer-managed key of ADR-0034 is adopted), measured on the cost before credits **and filtered by the `project=atlas` cost-allocation tag** (ADR-0034) (an alarm that stays silent while credits last protects nothing). Before introducing a new service, verify its cost stays minimal at this scale.
+**Cost constraint:** minimum cost with a budget alarm (ADR-0028), not "always-free indefinitely" — the cloud layer costs an estimated ≈ $0.01-0.05/month, covered by AWS credits while they last and paid afterwards; a single Budgets alarm, `atlas-cost`, fires at $1, measured on the cost before credits **and filtered by the `project=atlas` cost-allocation tag** (ADR-0034) (an alarm that stays silent while credits last protects nothing). Before introducing a new service, verify its cost stays minimal at this scale.
 
 ## Code architecture (ADR-0007)
 
@@ -73,7 +75,7 @@ Monorepo with npm workspaces, **hexagonal architecture** with a pure functional 
 ```
 packages/domain    pure core: types, money, events, projections, FIFO, tax, use cases, PORTS (interfaces). No I/O, no runtime npm deps.
 packages/adapters  port implementations: S3/file/memory LedgerStore, price sources, ECB FxRateSource, SES Notifier. AWS SDK lives only here.
-apps/cli           Phase-1 interface over a local file or S3.
+apps/cli           Maintenance console over a local file or S3 (the web is the main surface).
 apps/api           Lambda Function URL behind CloudFront (/api/*): verifies the Google token at sign-in, issues its own session, composes domain + adapters.
 apps/web           Vite SPA; uses domain to project/simulate the ledger it reads from the API.
 apps/jobs          Scheduled Lambdas run by EventBridge Scheduler (ECB, prices, email, backups, integrity); compose domain + adapters. Nothing imports apps/jobs.
@@ -129,7 +131,7 @@ Errors that go unnoticed for years. Details in `docs/business-rules.md`.
 6. **Corporate actions are first-class transactions** with their own lot-transformation logic. No manual patches on the database.
 7. **The own ledger is the source of truth.** Broker statements are for reconciliation, not for feeding the system.
 8. **The ledger is append-only.** Transactions are never edited or deleted; "edit" = `reversal` + corrected transaction (ADR-0003). Reversing an event that later events consumed is **rejected** (rectify the dependants first). Amounts are serialised as strings in JSON, never as JSON numbers.
-9. **Fiscal date depends on asset type** (`trade_date` for listed securities, `value_date` for funds, configurable, ADR-0013); the wash-sale window is **two months for securities admitted to trading — funds among them, money-market funds included** (criterion #2, default `2:fund_2m` since 2026-09-22, medium certainty, aggressive direction), **one year for those not admitted**, and **one year after the sale only (never before it) for direct crypto**, art. 33.5.e) read literally (criterion #2, medium certainty; the user has yet to confirm it). All of it is per-asset-type configuration (`wash_sale_window`), never a constant; certainty per criterion in `docs/fiscal-questions.md`.
+9. **Fiscal date depends on asset type** (`trade_date` for listed securities, `value_date` for funds, configurable, ADR-0013); the wash-sale window is **two months for securities admitted to trading**, **one year for those not admitted**, **one year by default for funds and money-market funds** (criterion #2, `2:fund_1y` since 2026-11-03, the prudent reading; two months stays a setting, `2:fund_2m`, measured in the doubtful section), and **one year after the sale only (never before it) for direct crypto**, art. 33.5.e) read literally (criterion #2, medium certainty; the user has yet to confirm it). All of it is per-asset-type configuration (`wash_sale_window`), never a constant; certainty per criterion in `docs/fiscal-questions.md`.
 10. **Loader rejects newer schema versions; `append` never re-serialises existing lines.** An old client must never rewrite a newer ledger.
 
 ## Design principles

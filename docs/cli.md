@@ -2,7 +2,7 @@
 
 Guía de la consola `atlas`: la herramienta de mantenimiento (alta y corrección de datos, `check`, copias, exportación, nube y administración). La aplicación principal es la web; las vistas de cartera, cubo y patrimonio ya no están en la consola. Para arrancar el proyecto en local, véase el [`README`](../README.md); el contrato con la API en la nube está en [`api.md`](api.md).
 
-Tras `npm run build`, el ejecutable es `node apps/cli/dist/main.js` (o `npm run atlas --`). Todos los comandos aceptan `--ledger <ruta>` (por defecto `./ledger.jsonl`), `--yes` (omite la confirmación), `--confirm-duplicate` y `--json`. En `add` (también con `--draft`), `edit`, `delete`, `ca`, `settings set`, `fx correct`, `draft confirm` y `draft discard` (y los comandos que registran con la misma confirmación), `--json` deja en stdout un único objeto (`{"status": "recorded"|"cancelled"|"discarded"|"draft_saved"|"already_recorded"|"nothing_to_correct", …}`) y lo que se lee antes del sí, preguntas incluidas, va a stderr; un error (código de salida distinto de 0, como un tipo del BCE aún sin publicar) deja como único objeto `{"status": "error", "code": …, "exit_code": …, "message": …}` y la frase, como sin `--json`, también en stderr; una orden que ya imprimió su propio resultado (p. ej. `prices update` con una fuente caída) conserva ese objeto y no añade otro. `remote login|logout|status`, `lock break` y `export --out` responden también con un solo objeto. Las consultas sobre el libro (`positions`, `lots`, `cash`, `gains`, `income`, `valuations`, `m720`, `m721`, `settings show`, `thesis show`, `order list`, `transfer pending`) dejan `{"invalid_count": n, "data": …}`, donde `invalid_count` son las líneas que no se han podido leer (modo degradado); `tax`, `check` y los estados de `fx`, `prices`, `lock` y `draft` dejan directamente su propio objeto. Importes, cantidades y tipos salen siempre como cadenas. Ejemplo completo con datos inventados:
+Tras `npm run build`, el ejecutable es `node apps/cli/dist/main.js` (o `npm run atlas --`). Todos los comandos aceptan `--ledger <ruta>` (por defecto `./ledger.jsonl`), `--yes` (omite la confirmación), `--confirm-duplicate` y `--json`. En `add` (también con `--draft`), `edit`, `delete`, `ca`, `settings set`, `fx correct`, `draft confirm` y `draft discard` (y los comandos que registran con la misma confirmación), `--json` deja en stdout un único objeto (`{"status": "recorded"|"cancelled"|"discarded"|"draft_saved"|"already_recorded"|"nothing_to_correct", …}`) y lo que se lee antes del sí, preguntas incluidas, va a stderr; un error (código de salida distinto de 0, como un tipo del BCE aún sin publicar) deja como único objeto `{"status": "error", "code": …, "exit_code": …, "message": …}` y la frase, como sin `--json`, también en stderr; una orden que ya imprimió su propio resultado (p. ej. `prices update` con una fuente caída) conserva ese objeto y no añade otro. `remote login|logout|status`, `lock break` y `export --out` responden también con un solo objeto. Las consultas sobre el libro (`positions`, `lots`, `settings show`, `thesis show`, `order list`, `transfer pending`) dejan `{"invalid_count": n, "data": …}`, donde `invalid_count` son las líneas que no se han podido leer (modo degradado); `tax`, `m720`, `m721`, `check` y los estados de `fx`, `prices`, `lock` y `draft` dejan directamente su propio objeto. Importes, cantidades y tipos salen siempre como cadenas. Ejemplo completo con datos inventados:
 
 ```bash
 alias atlas='node apps/cli/dist/main.js --ledger ./demo.jsonl'
@@ -19,10 +19,7 @@ atlas add buy --account acc_fund --asset ast_world --trade-date 2026-09-01 --val
 # Consultas
 atlas positions          # posición física por cuenta y activo, a hoy (--date AAAA-MM-DD para otra fecha)
 atlas lots               # lotes fiscales (FIFO global por activo), con fecha y coste en EUR
-atlas cash               # efectivo por cuenta y divisa
-atlas gains 2027         # ganancias realizadas del ejercicio (por operación: transmisión redondeada menos adquisición redondeada)
-atlas income 2027        # dividendos e intereses
-atlas tax 2028           # la base imponible del ahorro del ejercicio, por apartados
+atlas tax 2028           # la base imponible del ahorro del ejercicio (JSON)
 atlas thesis show th_delta        # la ficha de una tesis: hipótesis, plazo, operaciones y resultado
 atlas check              # integridad del libro (proyección)
 atlas check --deep       # además, líneas crudas: ids duplicados, huellas manipuladas o ilegibles, líneas no canónicas o antiguas
@@ -107,44 +104,25 @@ atlas thesis show th_delta --date 2028-12-31
 
 El cubo entero (posiciones con su condición de invalidación a la vista, tesis frente al índice, estadísticas, comisiones sobre el capital operado y avisos de las reglas 17 y 18) y el patrimonio total, siempre desglosado, se ven en la web (Cubo y Resumen). Todo avisa y nada bloquea: el libro nunca rechaza un hecho que ya ocurrió.
 
-Y al registrar una compra o una venta con pérdida, la aplicación avisa si cae dentro de la **ventana de recompra** (por defecto dos meses para cotizados y fondos, monetarios incluidos, y un año para la cripto, contados de fecha a fecha y configurables por tipo de activo): es el error fiscal más común en operativa activa. Avisa en las dos direcciones y **antes** de confirmar, y el motor fiscal **calcula el diferimiento**: la pérdida queda asociada a los lotes recomprados, viaja con ellos si se traspasan o se canjean, y se libera cuando se transmiten.
+Y al registrar una compra o una venta con pérdida, la aplicación avisa si cae dentro de la **ventana de recompra** (por defecto dos meses para cotizados, y un año para fondos, monetarios y cripto, contados de fecha a fecha y configurables por tipo de activo): es el error fiscal más común en operativa activa. Avisa en las dos direcciones y **antes** de confirmar, y el motor fiscal **calcula el diferimiento**: la pérdida queda asociada a los lotes recomprados, viaja con ellos si se traspasan o se canjean, y se libera cuando se transmiten.
 
 ## La Renta (Fase 5)
 
+La lectura de la Renta (la base del ahorro, las casillas del Modelo 100, el 720 y el 721) es de la web (`/fiscal`). La consola conserva los informes en JSON (`tax`, `m720`, `m721`), para revisar una cifra sin la web, y el registro de lo presentado.
+
 ```bash
-atlas tax 2028            # la base imponible del ahorro del ejercicio, por apartados
-atlas tax 2028 --lots     # además, los lotes que consumió cada operación y su linaje
-atlas tax 2028 --json     # el informe entero, con los importes como cadenas decimales
-atlas tax 2025 --boxes    # la misma base ordenada por casillas del Modelo 100
-atlas m720 2027           # bienes en el extranjero a 31/12 y si hay que presentar
-atlas m721 2027           # lo mismo para las criptomonedas en tenencia directa
+atlas tax 2028            # el informe entero en JSON, con los importes como cadenas y, en cada operación, los lotes que consumió y su linaje
+atlas tax 2025 --boxes    # la misma base ordenada por casillas del Modelo 100, en JSON
+atlas m720 2027           # obligación, saldos a 31/12 y media del 4T de bienes en el extranjero (JSON)
+atlas m721 2027           # lo mismo para las criptomonedas en tenencia directa (JSON)
 atlas filed renta 2027 --receipt 100-2027-… --set base=1950.00   # registra lo presentado
 ```
 
 **`atlas filed <renta|720|721> <año>`** registra lo que de verdad se presentó. Propone lo que la aplicación calcula —nadie quiere teclear doce cifras— y `--set <clave>=<importe>`, repetible, sustituye cualquiera de ellas por lo declarado. **Lo presentado es un hecho, no un cálculo** (ADR-0020): el libro guarda lo declarado aunque hoy se calcule otra cosa, y guarda al lado lo que la aplicación calculaba ese día y la configuración con que lo hizo, para poder distinguir después un cambio del motor de un cambio del libro. Una complementaria es otra presentación que **sustituye** a la anterior, nunca una anulación: si ya consta una del mismo modelo y ejercicio, se toma esa, y `--supersedes <id>` sirve para nombrar otra a mano.
 
-**`atlas tax <año> --boxes`** ordena las cifras como las pide el Modelo 100 de **ese** ejercicio: número de casilla, rótulo **literal** del impreso y la orden del BOE en que se comprobó, con su fecha. Las casillas son **datos por ejercicio**: un año sin correspondencia comprobada sale por conceptos y **sin ningún número**, y nunca se usa la casilla de otro año, porque la Agencia Tributaria renumera el impreso cada campaña y una casilla heredada es una cifra creíble y falsa. Hoy están comprobadas las de **2025**. Con casilla, los importes salen como se teclean (sin signo, salvo donde el impreso lo pide); los apartados dudosos o inferidos lo dicen en una nota (`docs/business-rules.md` §5.11).
-
-**`atlas m720 <año>`** y **`atlas m721 <año>`** valoran a 31/12 lo que hay en cuentas cuyo país no es España —una cuenta española en ómnibus queda fuera aunque el fondo sea extranjero— y dicen si hay obligación de presentar, por categoría: cuentas (con el saldo a 31/12 **y** el saldo medio del cuarto trimestre) y valores en el 720, y en el 721 la cripto **custodiada por un tercero en el extranjero** —la autocustodia queda fuera, pero el libro no distingue las dos, así que cuenta todo lo que hay en cuentas extranjeras y **lo dice**: sobredeclarar en un modelo informativo es la dirección prudente—. Es la **única** ruta fiscal que lee precios, y solo de Nivel 1: una `valuation` registrada a mano. **Nunca dice «no obligado» con datos incompletos**: si falta una valoración o alguna está marcada, el veredicto es «no se puede determinar» con lo que falta como acción, salvo que lo que sí se conoce ya supere el umbral, y entonces obliga y dice con qué valores marcados se decidió. Y una categoría en la que no hay nada registrado sale como «nada registrado», que tampoco es «no obligado».
-
-`atlas tax <año> [--lots] [--json]` calcula la **base, no la cuota**: no aplica tramos, no resta el mínimo personal y no dice lo que se paga. La cabecera lo recuerda, y avisa además de que el informe es un **total fiscal** —núcleo y cubo agregados por contribuyente, la excepción de la constitución III—, de con qué configuración se ha calculado y de qué fecha se ha tomado como día de la consulta.
+`atlas tax <año>` calcula la **base, no la cuota**: no aplica tramos, no resta el mínimo personal y no dice lo que se paga. Es un **total fiscal** —núcleo y cubo agregados por contribuyente, la excepción de la constitución III—.
 
 Ninguna cifra fiscal mira un precio: la declaración sale del libro y solo del libro. Cada línea dice de qué **criterios fiscales** depende (los de `docs/fiscal-questions.md`), y los dudosos van marcados con un asterisco y explicados en la leyenda del final.
-
-Doce apartados, en este orden:
-
-1. **Ganancias y pérdidas patrimoniales** (art. 33), una línea por operación: fecha fiscal, evento, activo, libro, cuenta, cantidad, importe transmitido en su divisa con el tipo del BCE y su fecha, transmisión y coste en euros, resultado propio, lo liberado, lo diferido, lo computable y sus criterios. Con `--lots`, debajo, los lotes que consumió y de dónde venía cada uno.
-2. **Rendimientos del capital mobiliario** (art. 25): dividendos, intereses, las transmisiones cuya categoría de renta configurada los lleve aquí, y los gastos de administración y depósito deducibles (art. 26.1.a).
-3. **Regla de recompra**: lo diferido en el ejercicio con su ventana y las adquisiciones que lo causan, lo liberado con la pérdida de la que viene, y lo que sigue diferido a 31/12 y en qué lotes.
-4. **Compensación** (art. 49), paso a paso, con el límite del 25 % en los dos sentidos.
-5. **Saldos negativos pendientes**, por ejercicio de origen y categoría, con el último ejercicio en que se pueden usar y un aviso de lo que caduca. Debajo, en una línea destacada, la **base imponible del ahorro**.
-6. **Lo declarado en este ejercicio**: si consta una Renta presentada, su fecha y su justificante, y cifra a cifra lo declarado, lo que la aplicación calculaba aquel día y lo que calcula hoy, con la diferencia repartida en sus cuatro causas (lo que cambiaste al presentar, un cambio del motor, un cambio de configuración y los eventos registrados después). Si no consta ninguna, lo dice y explica cómo registrarla. Se imprime **siempre**: un apartado que aparece y desaparece renumeraría a los de debajo, y esta numeración es un contrato.
-7. **Retenciones a cuenta**, que se restan de la cuota que este motor no calcula.
-8. **Doble imposición internacional**: lo deducible hasta el tipo del convenio de cada país y lo que excede, que se pierde. Sin el tipo del convenio configurado, o sin el país del pagador, no se calcula y se dice por qué.
-9. **Criterios dudosos**: los criterios cuya **lectura está abierta** —todo lo que el documento no da por certeza alta—, con cuánto dinero hay en juego si el criterio está mal y en qué dirección, medido como diferencia real de base cuando el criterio es configuración y como exposición cuando no lo es. Nunca con un precio de por medio: lo que no se puede cuantificar desde el libro se dice así.
-10. **Criterios firmes**: los de certeza alta que la declaración aplica, con lo que moverían **leídos al revés**. Existe porque un criterio que deja de ser dudoso no deja de tener dinero detrás: cuando el #18 y el #19 subieron a certeza alta se llevaron su importe con ellos, y «no sé cómo se lee» y «sé cómo se lee, y esto es lo que hay detrás» no son lo mismo. Una lectura contraria que no mueve nada **aparece igual, con su cero**: comprobado y sin efecto es información, y es la que tranquiliza. Lo único que no sale en ninguno de los dos apartados es un criterio que ninguna cifra del ejercicio aplica.
-11. **Lo que este motor no calcula**, y avisos.
-12. **Diferencias con la configuración anterior**, cuando el libro tiene algún `settings_changed`: qué operaciones cambian respecto de la configuración anterior (o de los valores por defecto documentados, si solo hay una).
 
 Dos cosas que el comando se niega a hacer:
 
@@ -204,7 +182,6 @@ atlas thesis open --id th_spec_1 --account acc_bucket --asset ast_spec --hypothe
 atlas add buy --account acc_bucket --asset ast_spec --trade-date 2027-07-01 --value-date 2027-07-03 --quantity 10 --unit-price 50 --fee 1 --currency USD --fx-rate 1.1 --fx-rate-date 2027-07-01 --thesis th_spec_1 --yes
 atlas add sell --account acc_bucket --asset ast_spec --trade-date 2027-09-01 --value-date 2027-09-03 --quantity 10 --unit-price 60 --fee 1 --currency USD --fx-rate 1.1 --fx-rate-date 2027-09-01 --thesis th_spec_1 --yes
 atlas thesis close th_spec_1 --notes "Cumplida" --yes
-atlas valuations --date 2027-12-31   # última foto de valoración por cuenta y activo (Modelo 720)
 ```
 
 Códigos de salida: `0` OK · `1` error de validación o de proyección · `2` conflicto de escritura (repite) · `3` huella repetida sin `--confirm-duplicate` · `4` falta confirmación sin terminal (añade `--yes`) · `5` libro escrito por una versión más nueva · `64` uso incorrecto (una línea de error y la pista de `atlas --help`, no el uso entero).

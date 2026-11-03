@@ -5,6 +5,7 @@
  */
 export const UNTAGGABLE: Record<string, string> = {
   aws_s3_bucket_policy: "configuration of a bucket: the bucket carries the tags",
+  aws_s3_bucket_object_lock_configuration: "configuration of a bucket: the bucket carries the tags",
   aws_s3_bucket_versioning: "configuration of a bucket: the bucket carries the tags",
   aws_s3_bucket_server_side_encryption_configuration:
     "configuration of a bucket: the bucket carries the tags",
@@ -18,7 +19,6 @@ export const UNTAGGABLE: Record<string, string> = {
   aws_lambda_function_url: "a Function URL is not taggable",
   aws_lambda_permission: "a resource policy statement is not taggable",
   aws_acm_certificate_validation: "waits for DNS: not a taggable resource",
-  aws_kms_alias: "an alias is not taggable",
   aws_scheduler_schedule:
     "a schedule is not taggable: only the schedule group is (API_TagResource; 016 questions 1.6)",
   aws_lambda_function_event_invoke_config: "the invoke configuration of a function is not taggable",

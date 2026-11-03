@@ -21,7 +21,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
-import type { ListedObject, ObjectStore, StoredObject } from "./object-store.js";
+import type { ListedObject, ObjectLock, ObjectStore, StoredObject } from "./object-store.js";
 import { factsOf, SDK_MAX_ATTEMPTS, SDK_TIMEOUTS, transient } from "./sdk-errors.js";
 
 /** What the adapter sends: the client of the SDK, or a simulated one with the same calls. */
@@ -80,10 +80,22 @@ export class SdkObjectStore implements ObjectStore {
     };
   }
 
-  async putIfNoneMatch(key: string, body: Uint8Array): Promise<"created" | "exists"> {
+  async putIfNoneMatch(
+    key: string,
+    body: Uint8Array,
+    lock?: ObjectLock,
+  ): Promise<"created" | "exists"> {
     try {
       await this.client.send(
-        new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: body, IfNoneMatch: "*" }),
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+          Body: body,
+          IfNoneMatch: "*",
+          ...(lock === undefined
+            ? {}
+            : { ObjectLockMode: "GOVERNANCE", ObjectLockRetainUntilDate: lock.retainUntil }),
+        }),
       );
       return "created";
     } catch (error) {

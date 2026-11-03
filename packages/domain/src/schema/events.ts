@@ -121,6 +121,10 @@ export interface AssetFields {
    * it, and the doubtful item of criterion `2:listed` lists the markets at
    * stake, so that the reading of the dispute can be checked market by market.
    * Nothing chooses a window with it yet: that is the criterion's to decide.
+   *
+   * With the currency and the ISIN it also guesses whether a share is admitted
+   * on an EU regulated market (`projections/markets.ts`): that decides the
+   * section of the form and whether a `capital_return` lowers the cost.
    */
   market?: string;
   /**

@@ -14,7 +14,7 @@ variables {
   domain              = "atlas.example.invalid"
 }
 
-run "dev_has_three_roles_and_two_oac_and_no_key" {
+run "dev_has_three_roles_and_two_oac" {
   command = plan
 
   variables {
@@ -30,11 +30,6 @@ run "dev_has_three_roles_and_two_oac_and_no_key" {
     condition     = aws_cloudfront_origin_access_control.spa.name == "atlas-dev-spa" && aws_cloudfront_origin_access_control.api.name == "atlas-dev-api"
     error_message = "the two OAC of dev"
   }
-
-  assert {
-    condition     = length(aws_kms_key.ssm) == 0
-    error_message = "no key without C2"
-  }
 }
 
 run "prod_has_its_own_names" {
@@ -48,31 +43,6 @@ run "prod_has_its_own_names" {
     condition     = aws_iam_role.deploy.name == "atlas-prod-deploy" && aws_iam_policy.boundary.name == "atlas-prod-boundary"
     error_message = "the names of prod"
   }
-}
-
-run "c2_customer_key_in_prod" {
-  command = plan
-
-  variables {
-    env                      = "prod"
-    use_customer_managed_key = true
-  }
-
-  assert {
-    condition     = length(aws_kms_key.ssm) == 1 && aws_kms_key.ssm[0].enable_key_rotation
-    error_message = "the key exists and rotates"
-  }
-}
-
-run "c2_customer_key_is_refused_in_dev" {
-  command = plan
-
-  variables {
-    env                      = "dev"
-    use_customer_managed_key = true
-  }
-
-  expect_failures = [var.use_customer_managed_key]
 }
 
 run "c5_iam_user_with_mfa" {

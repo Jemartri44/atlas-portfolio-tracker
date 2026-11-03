@@ -4,7 +4,9 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  BACKUP_LOCK_DAYS,
   backupFindings,
+  backupRetainUntil,
   DUMP_LEDGER,
   DUMP_POSITIONS,
   dumpablePriceName,
@@ -15,6 +17,15 @@ import {
 
 const A = "a".repeat(64);
 const B = "b".repeat(64);
+
+describe("how long a copy is locked (ADR-0032)", () => {
+  it("is one day over the 365 the bucket policy demands, counted from the write", () => {
+    expect(BACKUP_LOCK_DAYS).toBe(366);
+    expect(backupRetainUntil(new Date("2026-10-01T01:15:00Z")).toISOString()).toBe(
+      "2027-10-02T01:15:00.000Z",
+    );
+  });
+});
 
 describe("where a dump lives (E4)", () => {
   it("is the month of Madrid under backups/, with its ledger and its positions", () => {
