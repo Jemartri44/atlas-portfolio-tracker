@@ -47,7 +47,7 @@ Una observación ordena todo lo demás: **en un libro append-only, un error de r
 **La prueba de que se puede restaurar:**
 
 - **Automática, cada trimestre**, dentro de la tarea de integridad de `docs/specification.md` §9.5: carga el último volcado en un almacén en memoria, lo proyecta y compara la proyección con la del libro vivo cortado en los mismos eventos. Cualquier diferencia manda un correo.
-- **Manual, cada año** (constitución VI): el usuario descarga el último volcado en su ordenador, lo abre con la consola y con la web **desde una carpeta vacía**, ejecuta `check --deep` y `atlas rehearse --dump <volcado> --ledger <copia del libro actual>` (siempre contra un fichero local, nunca la nube; contra una carpeta vacía fallaría por construcción), y contrasta las cifras principales con la aplicación en uso.
+- **Manual, cada año** (constitución VI): el usuario descarga el último volcado en su ordenador, lo abre con la consola **desde una carpeta vacía** (la web solo lee la nube, [ADR-0037](0037-web-only-access.md)), ejecuta `check --deep` y `atlas rehearse --dump <volcado> --ledger <copia del libro actual>` (siempre contra un fichero local, nunca la nube; contra una carpeta vacía fallaría por construcción), y contrasta las cifras principales con la web en uso.
 - **Nunca en `dev`**: «datos de producción jamás en `dev`» también vale para un ensayo. La prueba se hace en memoria dentro de `prod` o en la máquina del usuario.
 
 ## Consecuencias

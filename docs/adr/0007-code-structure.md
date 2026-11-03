@@ -1,6 +1,6 @@
 # ADR-0007 — Estructura del código: monorepo, arquitectura hexagonal y CLI primero
 
-**Estado:** Aceptada (2026-08-30). Nota del 2026-09-25 sobre los adaptadores de `PriceSource` (ver al final).
+**Estado:** Aceptada (2026-08-30). Nota del 2026-09-25 sobre los adaptadores de `PriceSource` y enmienda del 2026-11-03 sobre `@atlas/access` (ver al final).
 
 ## Contexto
 
@@ -54,3 +54,11 @@ El AWS SDK solo aparece en `adapters` (S3 para el libro y documentos, SSM para e
 ## Nota del 2026-09-25 (cierre de la feature 013)
 
 Los adaptadores que la tabla preveía para `PriceSource` —Yahoo y CoinGecko— **están retirados por ADR-0031**: Yahoo porque sus condiciones prohíben el acceso automatizado, y CoinGecko en su tercera enmienda, porque sus condiciones describen el plan gratuito como para probar. El único adaptador que existe es **EODHD** (`packages/adapters/src/prices/`). La entrada manual no es un adaptador del puerto: es la `valuation` del libro, que la puerta de precios lee aparte. Nada más de esta ADR cambia.
+
+## Enmienda del 2026-11-03: `@atlas/access` sale del dominio
+
+Las reglas del acceso a la API (ADR-0027) vivían en `packages/domain/src/access/` tras la puerta `@atlas/domain/access`, aunque no son de inversión y la web no las usa. Pasan a un paquete propio, **`packages/access` (`@atlas/access`)**: la lista permitida, las cargas firmadas, la comprobación del ID token de Google, los identificadores, la marca de «cerrar todas las sesiones» ([ADR-0037](0037-web-only-access.md)) y la fecha del último inicio de sesión web. La fontanería HTTP (tabla de rutas, códigos, cuerpos, cookies, configuración de la Lambda y rutas del libro) baja a `apps/api/src/access/`, porque solo la usa la API. Las reglas del libro de la administración (`compareForRestore`, `parseAdminConfig`) no son acceso y se quedan en el dominio, en `domain/src/admin/`, tras `@atlas/domain/admin`.
+
+- **Regla de dependencias:** `@atlas/access` importa solo `@atlas/domain` (sus errores y guardas puras, sin copiarlas). Los adaptadores, la API y la consola pueden importarlo. **El dominio y la web nunca lo alcanzan.** Lo fijan `tests/architecture/access.test.ts`, `domain-imports.test.ts` y `api.test.ts`.
+- **Cobertura:** cada área se mide en una pasada propia (`npm run test:coverage:<área>`). `packages/access` y `apps/api/src/access` van al 100 %, porque son seguridad.
+- No cambia ninguna línea de lógica: se movieron los ficheros y sus pruebas.
