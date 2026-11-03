@@ -220,7 +220,8 @@ describe("rebalancePlan", () => {
     expect(sale.tax.available && sale.tax.gain_eur.isNegative()).toBe(true);
     expect(sale.tax.available && sale.tax.tax_eur?.isZero()).toBe(true);
     expect(sale.tax.available && sale.tax.deferred_eur.amount.isPositive()).toBe(true);
-    expect(sale.tax.available && sale.tax.deferral_window_end).toBe("2028-02-29");
+    // A fund takes a year by default (criterion #2, `2:fund_1y`).
+    expect(sale.tax.available && sale.tax.deferral_window_end).toBe("2028-12-31");
   });
 
   it("refuses without a threshold, without target weights or with a missing price", () => {
