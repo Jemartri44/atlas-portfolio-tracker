@@ -101,35 +101,47 @@ locals {
       condition = { StringEquals = { "aws:RequestedRegion" = [local.home], "ses:FromAddress" = var.mail_sender } }
     },
     {
+      # Reads, tags and creation follow the tags when they exist; a resource of another
+      # project of the account (no tags) is only readable.
       sid    = "Edge"
       effect = "Allow"
       actions = [
         "acm:AddTagsToCertificate",
-        "acm:Delete*",
         "acm:Describe*",
         "acm:Get*",
         "acm:ListTagsForCertificate",
         "acm:RemoveTagsFromCertificate",
         "acm:RequestCertificate",
         "cloudfront:Create*",
-        "cloudfront:Delete*",
         "cloudfront:Describe*",
         "cloudfront:Get*",
         "cloudfront:List*",
         "cloudfront:PublishFunction",
         "cloudfront:TagResource",
         "cloudfront:UntagResource",
-        "cloudfront:Update*",
         "wafv2:Create*",
-        "wafv2:Delete*",
         "wafv2:Get*",
         "wafv2:ListTagsForResource",
         "wafv2:TagResource",
         "wafv2:UntagResource",
-        "wafv2:Update*",
       ]
       resources = [local.cf_distribution, local.cf_function, local.acm_certificate, local.waf_web_acl]
       condition = merge(local.boundary_edge, { StringEqualsIfExists = { "aws:ResourceTag/env" = var.env, "aws:ResourceTag/project" = "atlas" } })
+    },
+    {
+      # Changing or deleting needs the tags to exist and to be Atlas's: without
+      # `IfExists`, an untagged resource of another project is out of reach.
+      sid    = "EdgeChange"
+      effect = "Allow"
+      actions = [
+        "acm:Delete*",
+        "cloudfront:Delete*",
+        "cloudfront:Update*",
+        "wafv2:Delete*",
+        "wafv2:Update*",
+      ]
+      resources = [local.cf_distribution, local.cf_function, local.acm_certificate, local.waf_web_acl]
+      condition = { StringEquals = merge(local.boundary_edge.StringEquals, local.tag_env_equals.StringEquals) }
     },
     {
       # Actions that take no resource type (SAR): only the request tag can scope them.
