@@ -8,6 +8,7 @@
 import type { MailMessage } from "../../ports/notifier.js";
 import type { AmountsSwitch } from "../amounts.js";
 import type { ReminderFacts } from "../reminder.js";
+import type { TaxDeadlineFacts } from "../tax-deadlines.js";
 import { CLASS_NAMES, count, day, euros, monthName, percent } from "./format.js";
 import { composeMail, type MailBlock, type MailSection } from "./layout.js";
 
@@ -77,6 +78,41 @@ const access = (facts: ReminderFacts): MailSection => {
   };
 };
 
+const repurchaseWarning = (facts: ReminderFacts): string[] => {
+  if (facts.repurchase === "unchecked") {
+    return ["No se ha podido comprobar la ventana de recompra. Mírala en Atlas antes de comprar."];
+  }
+  if (facts.repurchase === 0) {
+    return [];
+  }
+  return [
+    facts.repurchase === 1
+      ? "Una compra del plan cae en la ventana de recompra. Mírala en Atlas antes de comprar."
+      : "Varias compras del plan caen en la ventana de recompra. Míralas en Atlas antes de comprar.",
+  ];
+};
+
+const deadlineWarning = (fact: TaxDeadlineFacts): string => {
+  switch (fact.kind) {
+    case "filing":
+      return `Renta de ${fact.year}: el plazo de presentación acaba el ${day(fact.filing_end)}.${
+        fact.direct_debit_end === undefined
+          ? ""
+          : ` Para domiciliar el pago, el límite es el ${day(fact.direct_debit_end)}.`
+      }`;
+    case "second_instalment":
+      return `Renta de ${fact.year}: el segundo plazo vence el ${day(fact.due)}.${
+        fact.direct_debit_end === undefined
+          ? ""
+          : ` Si domiciliaste el primero, puedes domiciliarlo hasta el ${day(fact.direct_debit_end)}.`
+      }`;
+    case "unverified":
+      return `Renta de ${fact.year}: la fecha ${
+        fact.deadline === "filing" ? "de fin de campaña" : "del segundo plazo"
+      } no está comprobada en Atlas. Mírala en la sede de la Agencia Tributaria.`;
+  }
+};
+
 export const reminderMail = (
   facts: ReminderFacts,
   amounts: AmountsSwitch,
@@ -87,12 +123,15 @@ export const reminderMail = (
       subject: `[Atlas] Recordatorio de ${monthName(facts.period)}`,
       kicker: "Atlas · Recordatorio mensual",
       title: `Aportación de ${monthName(facts.period)}`,
-      warnings:
-        facts.signIn.deadline === undefined
+      warnings: [
+        ...repurchaseWarning(facts),
+        ...facts.taxDeadlines.map(deadlineWarning),
+        ...(facts.signIn.deadline === undefined
           ? []
           : [
               `Si nadie inicia sesión antes del ${day(facts.signIn.deadline)}, Google puede borrar el cliente OAuth. Entra en la web para evitarlo.`,
-            ],
+            ]),
+      ],
       sections: [
         contribution(facts, amounts),
         access(facts),

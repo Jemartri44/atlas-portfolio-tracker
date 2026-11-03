@@ -106,6 +106,8 @@ describe("the common layout of the mails", () => {
   });
 });
 
+const UPKEEP = { missingCpi: 2026, staleProfiles: ["MSCI World"], staleFunds: 2 };
+
 /** Every mail Atlas writes, in its variants. */
 const everyMail = (): MailMessage[] => {
   const facts = reminderFacts({
@@ -114,6 +116,17 @@ const everyMail = (): MailMessage[] => {
     plan: { failure: "ledger_unreadable" },
     webSignIn: "2026-05-04",
     idleWarningDays: 150,
+    repurchase: 2,
+    taxDeadlines: [
+      {
+        kind: "filing",
+        year: 2025,
+        filing_end: "2026-06-30",
+        direct_debit_end: "2026-06-25",
+      },
+      { kind: "second_instalment", year: 2025, due: "2026-11-05", direct_debit_end: "2026-11-02" },
+      { kind: "unverified", year: 2026, deadline: "filing" },
+    ],
   });
   const notices = NOTICE_CODES.flatMap((code) =>
     ["2026-10-02", "2026-W41", "2026-10", "2026-Q4", "2026"].flatMap((period) =>
@@ -146,8 +159,8 @@ const everyMail = (): MailMessage[] => {
     weeklyReviewMail(review, "on", "2026-W41", ORIGIN),
     weeklyReviewMail(review, "off", "2026-10", ORIGIN),
     weeklyReviewUnavailableMail("2026-W41", "ledger_unavailable", ORIGIN),
-    taxReturnMail({ ok: true, year: 2026, notes: 1, disputed: 0 }, ORIGIN),
-    taxReturnMail({ ok: false, year: 2026, code: "tax_failed" }, ORIGIN),
+    taxReturnMail({ ok: true, year: 2026, notes: 1, disputed: 0 }, UPKEEP, ORIGIN),
+    taxReturnMail({ ok: false, year: 2026, code: "tax_failed" }, UPKEEP, ORIGIN),
     informativeMail({ year: 2026, invalid: false, models: ["720"] }, ORIGIN) as MailMessage,
     ...notices,
   ];

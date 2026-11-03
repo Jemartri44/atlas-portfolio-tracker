@@ -6,13 +6,21 @@
 //   approximation; or the code of why it could not be computed;
 // - the days since the last sign-in (ADR-0027, «Riesgo»): the date the API
 //   records for the web, and the warning before the six months after which
-//   Google may delete an unused OAuth client.
+//   Google may delete an unused OAuth client;
+// - whether a purchase of the plan falls in a repurchase window (criterion #2),
+//   by how many assets and never which: the job counts them with
+//   `planRepurchaseWarnings`, the function Cartera uses;
+// - the deadlines of the income tax of this month (`tax-deadlines.ts`).
 
 import { addMonths, type CivilDate, daysBetween } from "../dates/civil-date.js";
 import { Decimal, HUNDRED } from "../money/decimal.js";
 import { Money } from "../money/money.js";
 import type { ContributionPlan } from "../projections/contribution.js";
 import { ASSET_CLASSES, type AssetClass } from "../schema/events.js";
+import type { TaxDeadlineFacts } from "./tax-deadlines.js";
+
+/** How many assets of the plan fall in a repurchase window, or that it could not be checked. */
+export type RepurchaseFacts = number | "unchecked";
 
 export interface ReminderInput {
   /** The period of the job, `YYYY-MM`. */
@@ -21,6 +29,8 @@ export interface ReminderInput {
   readonly plan: ContributionPlan | { readonly failure: string };
   readonly webSignIn: CivilDate | "unreadable" | undefined;
   readonly idleWarningDays: number;
+  readonly repurchase: RepurchaseFacts;
+  readonly taxDeadlines: readonly TaxDeadlineFacts[];
 }
 
 export interface ClassShare {
@@ -53,6 +63,8 @@ export interface ReminderFacts {
   readonly period: string;
   readonly contribution: ContributionFacts;
   readonly signIn: SignInFacts;
+  readonly repurchase: RepurchaseFacts;
+  readonly taxDeadlines: readonly TaxDeadlineFacts[];
 }
 
 const contributionOf = (plan: ReminderInput["plan"]): ContributionFacts => {
@@ -98,5 +110,7 @@ export const reminderFacts = (input: ReminderInput): ReminderFacts => {
     period: input.period,
     contribution: contributionOf(input.plan),
     signIn: since,
+    repurchase: input.repurchase,
+    taxDeadlines: input.taxDeadlines,
   };
 };
