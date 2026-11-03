@@ -63,6 +63,10 @@ const RESULTS: Record<string, { count: number; what: string }> = {
     count: 1,
     what: "the gain or loss each lot of a proposed sale would produce",
   },
+  "routes/cartera/AfterTaxLines.tsx": {
+    count: 1,
+    what: "the core's annual rate after the tax it causes",
+  },
   "routes/cartera/ReturnsCard.tsx": {
     count: 7,
     what: "what the core and each class have earned: amount, %, annual rate and the real one",
