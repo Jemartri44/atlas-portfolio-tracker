@@ -8,7 +8,16 @@
 
 import { describe, expect, it } from "vitest";
 import Cartera from "../src/routes/cartera/index.jsx";
-import { press, settle, show, text, type, until, withGoldenLedger } from "./helpers/render.jsx";
+import {
+  openLedger,
+  press,
+  settle,
+  show,
+  text,
+  type,
+  until,
+  withGoldenLedger,
+} from "./helpers/render.jsx";
 import { withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
@@ -84,6 +93,16 @@ describe("the rebalance card", () => {
         expect(text(step.querySelector("[data-testid=tax]"))).toMatch(/Impuesto/);
       }
     }
+  });
+
+  it("drops its proposal when the ledger is read again under it", async () => {
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await press(host, "Calcular rebalanceo");
+    const shown = () =>
+      card(host, "Rebalancear")?.querySelector("[aria-label='Desviación de cada activo']") !== null;
+    await until(shown, "the proposal");
+    await openLedger(undefined, true);
+    await until(() => !shown(), "the proposal to go");
   });
 
   it("refuses a new-money amount that is not a number without computing", async () => {
