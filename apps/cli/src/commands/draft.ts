@@ -27,19 +27,15 @@ import {
 import { assertKnownFlags, type Flags, UsageError } from "../args.js";
 import { CommandFailure, type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { ecbOf } from "../ecb-history.js";
-import { cloudStoreOf } from "../folder-mode.js";
 import { day } from "../output/ecb.js";
 import { answer, aside, cancelled, confirm, confirmAndRecord, preview, render } from "./shared.js";
 
-/** The drafts of the cloud for a cloud folder (ADR-0035), the folder's own `drafts/` otherwise. */
-const storeOf = async (ctx: Context): Promise<PendingDraftStore> => {
-  const cloud = cloudStoreOf(ctx);
-  return cloud === undefined ? new FileDraftStore(dirname(ctx.ledgerPath)) : cloud.drafts();
-};
+/** The folder's own `drafts/`. */
+const storeOf = async (ctx: Context): Promise<PendingDraftStore> =>
+  new FileDraftStore(dirname(ctx.ledgerPath));
 
-/** Where the drafts are, for the messages: the folder's `drafts/` or those of the cloud. */
-const placeOf = (ctx: Context): string =>
-  cloudStoreOf(ctx) === undefined ? "drafts/" : "los borradores de la nube";
+/** Where the drafts are, for the messages. */
+const placeOf = (_ctx: Context): string => "drafts/";
 
 /** One line that tells a draft apart: what, where and when. */
 const summaryOf = (draft: PendingDraft): string => {

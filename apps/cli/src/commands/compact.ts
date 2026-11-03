@@ -57,13 +57,7 @@ export const compactCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["accept-unverified", ...GLOBAL_FLAGS]);
-  // A cloud folder has no ledger to compact: the cloud's is compacted by
-  // `atlas admin compact` (ADR-0035, §4; ADR-0032). Nothing is planned or asked.
-  if (ctx.mode.kind === "cloud") {
-    throw new DomainError("compact_cloud_folder", "a cloud folder has no ledger to compact", {});
-  }
-  // A `sync/state.json` left by the old queue (ADR-0026) is not read: the
-  // folder is a local one (ADR-0035), and compacts as any local ledger.
+  // The ledger of the cloud is compacted by `atlas admin compact` (ADR-0032); this one is local.
   const accepted = listFlag(flags, "accept-unverified");
   const plan = await planCompact(ctx.deps);
   if (plan.outdated === 0) {

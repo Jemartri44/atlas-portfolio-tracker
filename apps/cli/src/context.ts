@@ -2,10 +2,8 @@ import type { LedgerEvent, UseCaseDeps, Warning } from "@atlas/domain";
 import type { FxRateSource } from "@atlas/domain/ecb";
 import type { AdminAccess } from "./admin/environment.js";
 import type { Flags } from "./args.js";
-import type { FolderMode } from "./folder-mode.js";
 import { describeWarning } from "./output/warnings.js";
 import type { PriceEnvironment } from "./prices/load.js";
-import type { RemoteEnvironment } from "./remote/environment.js";
 
 /** Where a question is written: `aside` puts it on stderr, so `--json` keeps stdout for the answer. */
 export interface PromptOptions {
@@ -34,8 +32,6 @@ export interface Context {
   deps: UseCaseDeps;
   io: Io;
   ledgerPath: string;
-  /** Cloud folder or local folder (ADR-0035, §4): decided once, before the order runs. */
-  mode: FolderMode;
   yes: boolean;
   confirmDuplicate: boolean;
   acceptInvalid: boolean;
@@ -46,8 +42,6 @@ export interface Context {
   fxSource?: () => FxRateSource;
   /** The sources of prices and where the keys are; replaced in tests, which never touch the network. */
   prices?: PriceEnvironment;
-  /** The network, the credentials and the browser of `atlas remote`; the system's when absent. */
-  remote?: RemoteEnvironment;
   /**
    * The clients of the administration (`atlas admin`, `atlas backup
    * --from-bucket`), with the role of administration; the system's — the
@@ -78,12 +72,6 @@ export const EXIT = {
   locked: 6,
   /** `atlas prices update`: a source reached the threshold of consecutive failures (ADR-0031). */
   sourcesFailing: 7,
-  /** A cloud folder and no answer from the cloud: nothing was read or recorded (ADR-0035, §4). */
-  offline: 8,
-  /** A write was sent and the connection broke: it is not known whether it was recorded. */
-  outcomeUnknown: 9,
-  /** The session of a cloud folder is missing, expired or refused: `atlas remote login`. */
-  session: 10,
   usage: 64,
 } as const;
 

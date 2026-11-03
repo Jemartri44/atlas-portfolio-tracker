@@ -13,9 +13,7 @@ import {
 import { linesOfText } from "@atlas/domain/sync";
 import { assertKnownFlags, type Flags, stringFlag, UsageError } from "../args.js";
 import { CommandFailure, type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
-import { cloudStoreOf } from "../folder-mode.js";
 import { pathExists } from "../fs.js";
-import { assertNoLedgerInCloudFolder } from "../remote/credentials-file.js";
 import {
   aside,
   cancelled,
@@ -96,11 +94,6 @@ const sameFile = async (a: string, b: string): Promise<boolean> => {
   }
 };
 
-const cloudProjection = (events: LedgerEvent[]) => ({
-  events,
-  state: projectLedger(events, { collectErrors: true }),
-});
-
 export const exportCommand = async (
   ctx: Context,
   _positionals: string[],
@@ -112,13 +105,7 @@ export const exportCommand = async (
   if (format !== "jsonl" && format !== "csv") {
     throw new UsageError("uso: atlas export --format jsonl|csv [--out <ruta>]");
   }
-  // In a cloud folder the ledger is the cloud's, once and with its own bytes.
-  const cloud = cloudStoreOf(ctx);
-  const snapshot = cloud === undefined ? undefined : await (await cloud.remote()).read();
-  const { events, state } =
-    snapshot === undefined
-      ? await loadForQuery(ctx)
-      : cloudProjection(decodeLines(linesOfText(snapshot.text), ctx.deps.store.schema));
+  const { events, state } = await loadForQuery(ctx);
   // A mistyped `--ledger` reads as an empty ledger, which is right for a view; as a file written
   // with `--out` it would be an empty export that looks like a backup.
   if (
@@ -132,11 +119,9 @@ export const exportCommand = async (
   }
   let content: string;
   if (format === "jsonl") {
-    content =
-      snapshot?.text ??
-      (await readFile(ctx.ledgerPath, "utf8").catch(
-        () => `${events.map((event) => encodeLine(event)).join("\n")}\n`,
-      ));
+    content = await readFile(ctx.ledgerPath, "utf8").catch(
+      () => `${events.map((event) => encodeLine(event)).join("\n")}\n`,
+    );
   } else {
     content = `${toCsv(events as unknown as Record<string, unknown>[])}\n`;
   }
@@ -144,9 +129,6 @@ export const exportCommand = async (
   const header = degradedHeader(state);
   if (header !== undefined) {
     ctx.io.err(header);
-  }
-  if (out !== undefined) {
-    await assertNoLedgerInCloudFolder(out);
   }
   if (out === undefined) {
     ctx.io.out(content.endsWith("\n") ? content.slice(0, -1) : content);
