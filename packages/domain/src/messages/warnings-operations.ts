@@ -1,5 +1,6 @@
 // Warnings about operations, the wash-sale window and swaps.
 
+import { neutralityDenied } from "./errors-corporate.js";
 import type { Entry, Voice } from "./voice.js";
 import { windowText, year } from "./words.js";
 
@@ -28,24 +29,27 @@ export const WARNINGS_OPERATIONS: Record<string, Entry> = {
       "Un traspaso se registró con la residencia fiscal fuera de España: sin residencia en España no hay diferimiento. Regístralo como una venta y una compra.",
     cli: (d, v) => `(tax_residence ${v.text(d.tax_residence)}; transfer_not_resident)`,
   },
-  neutrality_denied_keeps_cost: {
+  neutrality_denied_keeps_cost: neutralityDenied,
+  exchange_acquirer_outside_eu: {
     say: (d, v) =>
-      v.text(d.kind) === "spin_off"
-        ? "Una escisión sin régimen de neutralidad aún no se puede registrar en Atlas: no conserva fecha ni coste, y una permuta tampoco sirve, porque daría por entregadas las acciones que sigues teniendo."
-        : `Un evento de tipo ${v.word(d.kind)} sin régimen de neutralidad no conserva fecha ni coste: es una transmisión sujeta y su ganancia se declara ese año. Regístralo como una permuta.`,
-    cli: (d, v) =>
-      v.text(d.kind) === "spin_off"
-        ? "(neutrality_denied_keeps_cost)"
-        : "Usa «atlas add swap» con el valor de mercado de lo entregado y de lo recibido.",
+      `${v.one(d.asset_id)} es de un emisor de fuera de España y de la UE (${v.text(d.country)}). Si la operación es un canje de valores, queda fuera del régimen de neutralidad y es una permuta sujeta: regístrala como permuta. Si es una fusión, el requisito mira a dónde reside el socio.`,
+    cli: () => "(art. 80.1.b LIS; en la fusión, art. 81.1 LIS)",
   },
-  exchange_acquirer_outside_eu: (d, v) =>
-    `${v.one(d.asset_id)} es de un emisor de fuera de España y de la UE (${v.text(d.country)}). Si la operación es un canje de valores, queda fuera del régimen de neutralidad (art. 80.1.b LIS) y es una permuta sujeta: regístrala como permuta. Si es una fusión, el requisito mira al socio (art. 81.1 LIS).`,
-  exchange_partner_communication: (d, v) =>
-    `Ni ${v.one(d.from_asset_id)} ni ${v.one(d.to_asset_id)} son de una entidad española: si aplicas la neutralidad, tienes que comunicarlo tú a Hacienda en el plazo de tu declaración (art. 48.2 RIS). No hacerlo es una multa fija de ${v.money(d.fine_eur)} por operación (art. 89.1 LIS).`,
-  exchange_cash_cap: () =>
-    "El dinero del canje no puede pasar del 10 % del valor nominal de los valores entregados a cambio (art. 76 LIS); si lo pasa, la operación no entra en el régimen. Atlas no guarda el nominal: compruébalo en el folleto.",
-  convert_fund_to_listed_fund: (d, v) =>
-    `${v.one(d.from_asset_id)} pasa a ${v.one(d.to_asset_id)}, un ETF, conservando fecha y coste. El diferimiento entre fondos excluye los fondos cotizados (art. 94.1.a LIRPF): compruébalo antes de darlo por bueno.`,
+  exchange_partner_communication: {
+    say: (d, v) =>
+      `Ni ${v.one(d.from_asset_id)} ni ${v.one(d.to_asset_id)} son de una entidad española: si aplicas la neutralidad, tienes que comunicarlo tú a Hacienda en el plazo de tu declaración. No hacerlo es una multa fija de ${v.money(d.fine_eur)} por operación.`,
+    cli: () => "(art. 89.1 LIS y art. 48.2 RIS)",
+  },
+  exchange_cash_cap: {
+    say: () =>
+      "El dinero del canje no puede pasar del 10 % del valor nominal de los valores entregados a cambio; si lo pasa, la operación no entra en el régimen. Atlas no guarda el nominal: compruébalo en el folleto.",
+    cli: () => "(art. 76 LIS)",
+  },
+  convert_fund_to_listed_fund: {
+    say: (d, v) =>
+      `${v.one(d.from_asset_id)} pasa a ${v.one(d.to_asset_id)}, un ETF, conservando fecha y coste. El diferimiento entre fondos excluye los fondos cotizados: compruébalo antes de darlo por bueno.`,
+    cli: () => "(art. 94.1.a LIRPF)",
+  },
   transferable_not_fund: (d, v) =>
     `${v.one(d.asset_id)} es de tipo ${v.word(d.asset_type)} y está marcado como traspasable, pero el diferimiento solo existe entre fondos: esa marca no tiene efecto.`,
   sell_without_thesis: (d, v) =>

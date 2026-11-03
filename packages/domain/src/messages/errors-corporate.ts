@@ -2,6 +2,23 @@
 
 import type { Entry } from "./voice.js";
 
+/** Refused on entry and only a warning on replay, so both catalogues say the same. */
+export const neutralityDenied: Entry = {
+  say: (d, v) => {
+    const kind = v.text(d.kind);
+    if (kind === "spin_off") {
+      return "Una escisión sin régimen de neutralidad aún no se puede registrar en Atlas: no conserva fecha ni coste, y una permuta tampoco sirve, porque daría por entregadas las acciones que sigues teniendo.";
+    }
+    return kind === "merger" || kind === "issuer_restructuring"
+      ? `Un evento de tipo ${v.word(d.kind)} sin régimen de neutralidad no conserva fecha ni coste: es una transmisión sujeta y su ganancia se declara ese año. Regístralo como una permuta.`
+      : `Un evento de tipo ${v.word(d.kind)} dice que no hay régimen de neutralidad y conserva fecha y coste. Si conserva las dos cosas, no marques que no hay régimen; si no las conserva, es una transmisión.`;
+  },
+  cli: (d, v) =>
+    v.text(d.kind) === "merger" || v.text(d.kind) === "issuer_restructuring"
+      ? "Usa «atlas add swap» con el valor de mercado de lo entregado y de lo recibido."
+      : "(neutrality_denied_keeps_cost)",
+};
+
 export const ERRORS_CORPORATE: Record<string, Entry> = {
   missing_source_document: {
     say: (d, v) =>
@@ -23,6 +40,7 @@ export const ERRORS_CORPORATE: Record<string, Entry> = {
       `Un evento corporativo de tipo ${v.word(d.kind)} no admite esa combinación de efectos: revisa el tipo elegido.`,
     cli: (d, v) => `Efectos: ${v.text(d.effects)}; admitidas: ${v.text(d.allowed)}.`,
   },
+  neutrality_denied_keeps_cost: neutralityDenied,
   cost_adjustment_requires_neutrality: {
     say: (d, v) =>
       `El dinero de un evento de tipo ${v.word(d.kind)} solo rebaja el coste de lo recibido si la operación se acoge al régimen de neutralidad. Sin régimen, el canje es una permuta sujeta y el dinero es parte de lo transmitido.`,

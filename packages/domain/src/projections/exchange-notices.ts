@@ -25,9 +25,16 @@ export interface ExchangeNotice {
 
 type Catalogue = ReadonlyMap<AssetId, Pick<AssetFields, "asset_type" | "isin" | "issuer_country">>;
 
-/** The ISIN decides the domicile, as in the wash-sale rule; `undefined` when Atlas cannot tell. */
-const domicileOf = (asset: { isin?: string; issuer_country?: string } | undefined) =>
-  (asset?.isin?.slice(0, 2) ?? asset?.issuer_country)?.toUpperCase();
+/**
+ * The ISIN decides the domicile, as in the wash-sale rule, unless its prefix is
+ * no country (`XS`, international securities); `undefined` when Atlas cannot tell.
+ */
+const domicileOf = (asset: { isin?: string; issuer_country?: string } | undefined) => {
+  const prefix = asset?.isin?.slice(0, 2).toUpperCase();
+  return prefix === undefined || prefix.startsWith("X")
+    ? asset?.issuer_country?.toUpperCase()
+    : prefix;
+};
 
 const received = (event: CorporateActionEvent): AssetId[] =>
   event.effects.flatMap((effect) =>
@@ -68,27 +75,29 @@ export const exchangeNotices = (
     return notices;
   }
   const from = domicileOf(origin);
-  for (const assetId of received(event)) {
+  const targets = [...new Set(received(event))].flatMap((assetId) => {
     const to = domicileOf(assets.get(assetId));
-    if (to === undefined) {
-      continue;
-    }
-    if (event.kind !== "spin_off" && !isEuCountry(to)) {
+    return to === undefined ? [] : [{ assetId, to }];
+  });
+  if (event.kind !== "spin_off") {
+    for (const { assetId, to } of targets.filter(({ to }) => !isEuCountry(to))) {
       notices.push({
         code: "exchange_acquirer_outside_eu",
         details: { asset_id: assetId, country: to },
       });
     }
-    if (from !== undefined && from !== "ES" && to !== "ES") {
-      notices.push({
-        code: "exchange_partner_communication",
-        details: {
-          from_asset_id: event.asset_id,
-          to_asset_id: assetId,
-          fine_eur: PARTNER_FINE_EUR,
-        },
-      });
-    }
+  }
+  // One communication per operation, however many securities it hands over.
+  const foreign = targets.find(({ to }) => to !== "ES");
+  if (from !== undefined && from !== "ES" && foreign !== undefined) {
+    notices.push({
+      code: "exchange_partner_communication",
+      details: {
+        from_asset_id: event.asset_id,
+        to_asset_id: foreign.assetId,
+        fine_eur: PARTNER_FINE_EUR,
+      },
+    });
   }
   if (event.effects.some((effect) => effect.op === "cost_adjustment")) {
     notices.push({ code: "exchange_cash_cap", details: { kind: event.kind } });

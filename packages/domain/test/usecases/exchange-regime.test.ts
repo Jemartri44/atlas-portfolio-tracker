@@ -4,6 +4,8 @@
 // requisites Atlas cannot decide are notices, on recording and in the return.
 
 import { describe, expect, it } from "vitest";
+import { say } from "../../src/messages/index.js";
+import type { Voice } from "../../src/messages/voice.js";
 import { exchangeNotices } from "../../src/projections/exchange-notices.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
 import type { CorporateActionEvent, Effect } from "../../src/schema/events.js";
@@ -46,6 +48,17 @@ describe("a conversion that denies the neutrality regime", () => {
       (error: { code: string }) => error.code,
     );
     expect(outcome).toBe(expected);
+  });
+
+  it.each([
+    ["merger", "Regístralo como una permuta"],
+    ["issuer_restructuring", "Regístralo como una permuta"],
+    ["spin_off", "aún no se puede registrar"],
+    ["share_class_change", "no marques que no hay régimen"],
+  ])("a %s is told what to do in the refusal itself", (kind, sentence) => {
+    const voice = { text: String, word: String, surface: "web" } as unknown as Voice;
+    const text = say("error", "neutrality_denied_keeps_cost", { kind }, voice, "domain message");
+    expect(text).toContain(sentence);
   });
 
   it("is only a warning in a ledger that already holds it", () => {
@@ -94,6 +107,7 @@ describe("what an exchange that keeps date and cost is told", () => {
       ["exchange_acquirer_outside_eu", "exchange_partner_communication"],
     ],
     ["into an unknown domicile", us, asset("stock"), []],
+    ["an international ISIN says nothing", es, asset("stock", "XS0000000001"), []],
     [
       "the country when there is no ISIN",
       es,
@@ -116,6 +130,13 @@ describe("what an exchange that keeps date and cost is told", () => {
 
   it("says nothing once the regime is denied: that is the refusal's job", () => {
     expect(noticesOf(es, us, { neutrality_regime: false })).toEqual([]);
+  });
+
+  it("asks for one communication per operation, however many securities it hands over", () => {
+    const twice = { ...convert, ratio: "2" } as Effect;
+    expect(noticesOf(de, asset("stock", "FR0000000001"), { effects: [convert, twice] })).toEqual([
+      "exchange_partner_communication",
+    ]);
   });
 
   it("recalls the cap on the cash of the exchange", () => {
