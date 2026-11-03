@@ -1,7 +1,7 @@
 # The data bucket without `prevent_destroy`: the unprotected one, which the rehearsal of
-# 018 destroys (prompt 017, §12 P8). `prevent_destroy` takes no variable, so the root of
-# each environment picks this module or its protected twin (same interface); the
-# configuration and the policy of the bucket live in `modules/atlas`.
+# 018 destroys (prompt 017, §12 P8). `prevent_destroy` takes no variable, so the bootstrap
+# of each environment (`bootstrap/env/data-bucket.tf`) picks this module or its protected twin
+# (same interface); the configuration and the policy of the bucket live there too.
 variable "name" {
   description = "Bucket name, atlas-<env>-data-<suffix>, built by the root."
   type        = string

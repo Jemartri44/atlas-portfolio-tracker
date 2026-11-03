@@ -1,4 +1,4 @@
-# The data bucket WITH `prevent_destroy`: the protected one (prompt 017, §12 P8). Same interface as `data-bucket`.
+# The data bucket WITH `prevent_destroy`: the protected one (prompt 017, §12 P8). Same interface as `data-bucket`; the production bootstrap uses it.
 variable "name" {
   description = "Bucket name, atlas-<env>-data-<suffix>, built by the root."
   type        = string

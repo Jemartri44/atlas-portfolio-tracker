@@ -1,0 +1,28 @@
+#!/usr/bin/env node
+// TEST ONLY: a fake `gh` for `gh attestation verify` and `gh api`. It records its arguments in FAKE_GH_LOG,
+// fails for the file names listed in FAKE_GH_FAIL (comma separated) and, with `--format json`,
+// answers one attestation per commit in FAKE_GH_COMMITS (comma separated).
+import { appendFileSync } from "node:fs";
+import { basename } from "node:path";
+
+const args = process.argv.slice(2);
+appendFileSync(process.env.FAKE_GH_LOG, `${args.join(" ")}\n`);
+// `gh api repos/<repo>/git/commits/<sha> --jq .tree.sha`: the tree of the commit, from the map
+// in FAKE_GH_TREES (a JSON object sha -> tree); an unknown commit is an error.
+if (args[0] === "api") {
+  const sha = args[1].split("/").pop();
+  const tree = JSON.parse(process.env.FAKE_GH_TREES ?? "{}")[sha];
+  if (tree === undefined) process.exit(1);
+  process.stdout.write(`${tree}\n`);
+  process.exit(0);
+}
+const failing = (process.env.FAKE_GH_FAIL ?? "").split(",").filter(Boolean);
+if (failing.includes(basename(args[2] ?? ""))) process.exit(1);
+// The attestations in FAKE_GH_COMMITS were signed on FAKE_GH_BRANCH: a request for another
+// `--source-ref` finds none, as GitHub would.
+const asked = args[args.indexOf("--source-ref") + 1];
+if (asked !== (process.env.FAKE_GH_BRANCH ?? "refs/heads/develop")) process.exit(1);
+const commits = (process.env.FAKE_GH_COMMITS ?? "").split(",").filter(Boolean);
+process.stdout.write(
+  `${JSON.stringify(commits.map((sha) => ({ verificationResult: { signature: { certificate: { sourceRepositoryDigest: sha } } } })))}\n`,
+);

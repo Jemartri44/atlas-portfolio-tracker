@@ -1,5 +1,6 @@
-# The stack of the environment (E2) reads these; none carries the domain, a bucket
-# suffix or an address, so none is sensitive (prompt 017, §12.2 B3). The account
+# The stack of the environment (E2) reads these; none carries a bucket suffix or an
+# address, so none is sensitive, except the DNS records of the certificate, which carry the
+# domain (prompt 017, §12.2 B3). The account
 # identifier is in every ARN and is not sensitive (ADR-0034, row 1).
 output "boundary_policy_arn" {
   description = "The permissions boundary every role of the environment carries."
@@ -31,4 +32,19 @@ output "oac_api_id" {
 output "kms_key_arn" {
   description = "ARN of the customer managed key (C2), or null."
   value       = one(aws_kms_key.ssm[*].arn)
+}
+
+output "certificate_arn" {
+  description = "ARN of the certificate of the distribution (us-east-1); the stack waits for its validation."
+  value       = aws_acm_certificate.edge.arn
+}
+
+output "certificate_validation_records" {
+  description = "The DNS record that validates the certificate, to create by hand."
+  value = [for option in aws_acm_certificate.edge.domain_validation_options : {
+    name  = option.resource_record_name
+    type  = option.resource_record_type
+    value = option.resource_record_value
+  }]
+  sensitive = true
 }

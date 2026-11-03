@@ -32,6 +32,7 @@ const envBase: Record<string, Value> = {
   bucket_suffix: SUFFIX,
   admin_principal_arn: ADMIN,
   mail_sender: SENDER,
+  domain: "atlas.example.invalid",
 };
 
 const memo = new Map<string, Plan>();
@@ -63,6 +64,8 @@ const stackBase: Record<string, Value> = {
   edge_mode: "free_plan",
   oac_spa_id: "E2EXAMPLESPA000",
   oac_api_id: "E2EXAMPLEAPI000",
+  certificate_arn:
+    "arn:aws:acm:us-east-1:111122223333:certificate/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
   artifact_key: "builds/0000000000000000000000000000000000000000/lambda.zip",
   artifact_sha256_base64: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
   mail_sender: SENDER,

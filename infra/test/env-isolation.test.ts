@@ -145,7 +145,8 @@ describe.each(ENVS)(
       }
     });
 
-    it("scenario 2: a foreign resource with no tags: the damage is denied, the tagging is the written hole", () => {
+    it("scenario 2: a foreign resource with no tags: the certificate is out of reach, the distribution keeps a written hole", () => {
+      // The damage on a foreign resource that carries no tag is denied.
       for (const action of [
         "cloudfront:UpdateDistribution",
         "cloudfront:DeleteDistribution",
@@ -159,19 +160,38 @@ describe.each(ENVS)(
             : own.distribution;
         expect(verdict(env, "deploy", action, resource, {}), action).not.toBe("allow");
       }
-      // The hole, with its reason: creating a distribution with tags needs
-      // `cloudfront:TagResource` while `aws:ResourceTag/env` does not exist yet, so the
-      // same call on an untagged resource of another project cannot be told apart from
-      // a creation. It is not between dev and prod (every resource of prod carries its
-      // env tag, and that is denied above) and it changes nothing but the tag, which
-      // gives no power over the resource afterwards.
-      expect(
-        verdict(env, "deploy", "cloudfront:TagResource", own.distribution, {
-          "aws:RequestTag/env": env,
-          "aws:RequestTag/project": "atlas",
-          "aws:TagKeys": ["env", "project", "managed_by"],
-        }),
-      ).toBe("allow");
+      const label = {
+        "aws:RequestTag/env": env,
+        "aws:RequestTag/project": "atlas",
+        "aws:TagKeys": ["env", "project", "managed_by"],
+      };
+      // Both steps chained. ACM: the bootstrap requests the certificate, so the deploy role has
+      // no Allow to label one, nor to delete it afterwards, tagged or not.
+      expect(verdict(env, "deploy", "acm:AddTagsToCertificate", own.certificate, label)).not.toBe(
+        "allow",
+      );
+      expect(verdict(env, "deploy", "acm:RequestCertificate", "*", label)).not.toBe("allow");
+      for (const action of ["acm:DeleteCertificate", "acm:RemoveTagsFromCertificate"]) {
+        expect(
+          verdict(env, "deploy", action, own.certificate, {
+            "aws:ResourceTag/env": env,
+            "aws:ResourceTag/project": "atlas",
+          }),
+          action,
+        ).not.toBe("allow");
+      }
+      // CloudFront, the residual risk (ADR-0034): creating a distribution with tags needs
+      // `cloudfront:TagResource` while `aws:ResourceTag/env` does not exist yet, so the same
+      // call on an untagged distribution of another project cannot be told apart from a
+      // creation, and a Deny on "no project tag yet" would also deny the creation. Step 1
+      // labels it, step 2 (with the tags now there) changes it: both are allowed. It is not
+      // between dev and prod; it is the cost of letting the pipeline create the distribution.
+      const step1 = verdict(env, "deploy", "cloudfront:TagResource", own.distribution, label);
+      const step2 = verdict(env, "deploy", "cloudfront:UpdateDistribution", own.distribution, {
+        "aws:ResourceTag/env": env,
+        "aws:ResourceTag/project": "atlas",
+      });
+      expect([step1, step2]).toEqual(["allow", "allow"]);
     });
 
     it("scenario 3: changes the OAC or a cache, request or headers policy of the other environment: denied", () => {
@@ -218,8 +238,9 @@ describe.each(ENVS)(
           "aws:TagKeys": ["env", "project", "managed_by"],
         };
         if (!untagging) {
+          // The certificate is requested by the bootstrap: the deploy role never labels one.
           expect(verdict(env, "deploy", action, resource, creating), `creating ${action}`).toBe(
-            "allow",
+            action.startsWith("acm:") ? "implicit-deny" : "allow",
           );
         }
         const changingEnv = { "aws:ResourceTag/env": env, "aws:TagKeys": ["env"] };
@@ -241,7 +262,7 @@ describe.each(ENVS)(
           "aws:TagKeys": ["managed_by"],
         };
         expect(verdict(env, "deploy", action, resource, otherKey), `other key ${action}`).toBe(
-          "allow",
+          action.startsWith("acm:") ? "implicit-deny" : "allow",
         );
       }
     });
@@ -449,15 +470,17 @@ describe.each(ENVS)(
       },
     );
 
-    it("deploy changes the configuration of the data bucket, within what row 6 leaves it", () => {
+    it("deploy cannot change the configuration of the data bucket: versioning, lifecycle and policy are the bootstrap's", () => {
       for (const action of [
         "s3:PutBucketPolicy",
+        "s3:DeleteBucketPolicy",
         "s3:PutBucketVersioning",
         "s3:PutLifecycleConfiguration",
         "s3:PutEncryptionConfiguration",
         "s3:PutBucketPublicAccessBlock",
+        "s3:DeleteBucket",
       ]) {
-        expect(verdict(env, "deploy", action, a.data), action).toBe("allow");
+        expect(verdict(env, "deploy", action, a.data), action).not.toBe("allow");
         expect(verdict(env, "plan", action, a.data), `plan ${action}`).not.toBe("allow");
       }
     });

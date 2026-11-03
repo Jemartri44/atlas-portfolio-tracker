@@ -2,7 +2,8 @@
 // TEST ONLY: a fake `aws` for the rehearsals of the scripts of infra/ (feature 017, E4;
 // plan.md (h)). It never reaches a network: it answers from the JSON file FAKE_AWS_STATE
 // and records every call (its arguments, one line each) in FAKE_AWS_LOG.
-import { appendFileSync, cpSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 
 const args = process.argv.slice(2);
 appendFileSync(process.env.FAKE_AWS_LOG, `${args.join(" ")}\n`);
@@ -43,6 +44,15 @@ if (service === "cloudfront" && operation === "list-tags-for-resource") {
   found.scheduledChange = { type: "CANCELLATION" };
   save();
   say({ subscription: found });
+} else if (service === "s3api" && operation === "put-object") {
+  // `--if-none-match *` is honoured as S3 does: an existing key answers PreconditionFailed.
+  const target = `${process.env.FAKE_S3_DIR}/${flag("key")}`;
+  if (flag("if-none-match") === "*" && existsSync(target)) {
+    process.stderr.write("An error occurred (PreconditionFailed) when calling the PutObject operation\n");
+    process.exit(254);
+  }
+  mkdirSync(dirname(target), { recursive: true });
+  copyFileSync(flag("body"), target);
 } else if (service === "s3" && operation === "cp") {
   // `s3 cp s3://bucket/<prefix> <dir> --recursive`: copies FAKE_S3_DIR/<prefix> to <dir>.
   const [, , source, target] = args;

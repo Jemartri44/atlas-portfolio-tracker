@@ -11,6 +11,7 @@ variables {
   bucket_suffix       = "abc123def456"
   admin_principal_arn = "arn:aws:iam::111122223333:user/example-admin"
   mail_sender         = "atlas@example.invalid"
+  domain              = "atlas.example.invalid"
 }
 
 run "dev_has_three_roles_and_two_oac_and_no_key" {
