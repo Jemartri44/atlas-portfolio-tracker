@@ -84,12 +84,12 @@ export class TestOnlyFakeS3 implements AdminObjectStore {
     lock?: ObjectLock,
   ): Promise<"created" | "exists"> {
     this.step(`putIfNoneMatch ${key}`);
-    this.locks.set(key, lock?.retainUntil);
     this.conditions.push({ key, ifNoneMatch: "*" });
     if (this.contend(key) || this.objects.has(key)) {
       return "exists";
     }
     this.store(key, body);
+    this.locks.set(key, lock?.retainUntil);
     return "created";
   }
 
