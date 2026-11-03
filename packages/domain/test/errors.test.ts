@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ArchiveExistsError,
+  asDomainError,
   CompactRejectedError,
   ConflictError,
   CurrencyMismatchError,
@@ -15,6 +16,15 @@ import {
   ValidationError,
   WriteOutcomeUnknownError,
 } from "../src/errors.js";
+
+describe("asDomainError", () => {
+  it("returns a domain error and rethrows anything else", () => {
+    const domain = new ValidationError("invalid_decimal", "not a decimal");
+    expect(asDomainError(domain)).toBe(domain);
+    const bug = new TypeError("boom");
+    expect(() => asDomainError(bug)).toThrow(bug);
+  });
+});
 
 describe("domain errors", () => {
   it("carry a code, a message and details", () => {

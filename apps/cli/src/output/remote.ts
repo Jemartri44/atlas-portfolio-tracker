@@ -39,6 +39,10 @@ export const describeCredentialsError = (code: CredentialsProblem): string => {
       return "la carpeta de credentials.json y la del libro están una dentro de la otra: el token nunca puede viajar con una copia del libro. Usa otra carpeta para el libro o XDG_CONFIG_HOME.";
     case "credentials_too_open":
       return "credentials.json tiene permisos abiertos a otros usuarios y no se usa. Ciérralos con chmod 600.";
+    case "credentials_not_yours":
+      return "credentials.json es de otro usuario y no se usa. Bórralo y vuelve a iniciar sesión.";
+    case "credentials_folder_open":
+      return "la carpeta de credentials.json está abierta a otros usuarios y no se usa ni se escribe en ella. Ciérrala con chmod 700.";
     case "credentials_unreadable":
       return "credentials.json no se puede leer. No se ha tocado; revísalo o bórralo y vuelve a iniciar sesión.";
     case "sync_remote_unreadable":

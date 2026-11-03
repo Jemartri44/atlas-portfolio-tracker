@@ -19,31 +19,43 @@ const refusal = (raw: string): string | undefined => {
 };
 
 describe("a decimal typed the Spanish way", () => {
-  it("with a comma, the comma is the decimal and the dots group thousands", () => {
-    expect(value("1.200,50")).toBe("1200.50");
-    expect(value("12.345.678,9")).toBe("12345678.9");
+  it("the comma is the decimal and nothing groups thousands", () => {
     expect(value("0,5")).toBe("0.5");
-    expect(value("1200,5")).toBe("1200.5");
+    expect(value("0,500")).toBe("0.500");
+    expect(value("1234,5")).toBe("1234.5");
+    expect(value("12345678,9")).toBe("12345678.9");
     expect(value("4,8765")).toBe("4.8765");
-  });
-
-  it("without a comma, dots in groups of three are thousands", () => {
-    expect(value("1.200")).toBe("1200");
-    expect(value("12.345.678")).toBe("12345678");
+    expect(value("1234")).toBe("1234");
     expect(value("600")).toBe("600");
   });
 
-  it("refuses a point that could be a decimal, saying how to write it", () => {
-    for (const ambiguous of ["1.5", "1234.5", "0.12", "1.20", "1.2345"]) {
+  // The defect: "0.500" was read as 500 and "1.234" as 1234, a factor of a
+  // thousand on a quantity of three decimals, recorded without complaint.
+  it("never accepts a dot, thousands included, and says how to write it", () => {
+    for (const ambiguous of [
+      "0.500",
+      "1.234",
+      "0.001",
+      "00.123",
+      "-0.500",
+      "1.5",
+      "1234.5",
+      "0.12",
+    ]) {
+      expect(value(ambiguous), ambiguous).toBeUndefined();
       expect(refusal(ambiguous), ambiguous).toContain("no se sabe si son decimales o miles");
     }
-    // The sentence gives the two ways out, with the user's own figure.
     expect(refusal("1.5")).toContain("escribe 1,5");
-    expect(refusal("1.5")).toContain("1.500");
+    expect(refusal("1.5")).toContain("escribe 15, sin punto");
+    for (const grouped of ["1.200,50", "12.345.678", "1.234.567,8"]) {
+      expect(refusal(grouped), grouped).toMatch(/^No es un número: el punto no se admite/);
+    }
   });
 
   it("refuses what is not a number at all", () => {
-    for (const wrong of ["abc", "12,3,4", "1.20,5", ",5", "1,", "1.2.3", "1,2a", "--1"]) {
+    expect(refusal("1,2.3")).toMatch(/^No es un número/);
+    expect(refusal("1.2.3")).toMatch(/^No es un número/);
+    for (const wrong of ["abc", "12,3,4", ",5", "1,", "1,2a", "--1"]) {
       expect(refusal(wrong), wrong).toMatch(/^No es un número/);
     }
   });
@@ -59,7 +71,8 @@ describe("a decimal typed the Spanish way", () => {
 
   it("reads a whole number, and nothing with decimals, for a count of days", () => {
     expect(parseIntegerInput("90")).toEqual({ ok: true, value: "90" });
-    expect(parseIntegerInput("1.000")).toEqual({ ok: true, value: "1000" });
+    expect(parseIntegerInput("1000")).toEqual({ ok: true, value: "1000" });
+    expect(parseIntegerInput("1.000").ok).toBe(false);
     expect(parseIntegerInput("90,5").ok).toBe(false);
     expect(parseIntegerInput("noventa").ok).toBe(false);
   });

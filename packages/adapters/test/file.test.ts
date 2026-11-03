@@ -57,6 +57,15 @@ describe("FileLedgerStore", () => {
     expect(await readdir(dir)).toEqual(["ledger.jsonl"]);
   });
 
+  it("reads a file that starts with a byte-order mark and keeps its bytes on append", async () => {
+    const { path } = await fresh(`\uFEFF${lineOf(account)}\n`);
+    const store = new FileLedgerStore(path);
+    const { events, etag } = await store.load();
+    expect(events).toHaveLength(1);
+    await store.append([deposit], etag);
+    expect((await readFile(path, "utf8")).startsWith(`\uFEFF${lineOf(account)}\n`)).toBe(true);
+  });
+
   it("keeps the original bytes verbatim and adds the missing newline exactly once", async () => {
     const original = lineOf(account);
     const { path } = await fresh(original);

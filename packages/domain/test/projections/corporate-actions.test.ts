@@ -40,13 +40,14 @@ const sale = (
   per_account: { account_id: string; quantity: string; fee?: string }[],
   unit_price: string,
   asset_id?: string,
+  foreign?: { currency: string; fx_rate: string },
 ): Effect => ({
   op: "forced_sale",
   ...(asset_id === undefined ? {} : { asset_id }),
   per_account,
   unit_price,
-  currency: "EUR",
-  fx_rate: "1",
+  currency: foreign?.currency ?? "EUR",
+  fx_rate: foreign?.fx_rate ?? "1",
   fx_rate_date: "2027-03-01",
 });
 
@@ -648,6 +649,30 @@ describe("mandatory edge cases (prompt §3.7)", () => {
     expect(cashBalances(collected).map((c) => c.balance.amount.toString())).toEqual(["-1000"]);
     expect(collected.gains).toEqual([]);
     expect(collected.warnings).toEqual([]);
+  });
+
+  it("rolls back the currency lots a forced sale in a foreign currency opened", () => {
+    const b = new LedgerBuilder();
+    catalogueOf(b);
+    ten(b, "ast_old");
+    b.corporateAction({
+      kind: "issuer_restructuring",
+      asset_id: "ast_old",
+      effects: [
+        sale([{ account_id: "acc_a", quantity: "2" }], "130", undefined, {
+          currency: "USD",
+          fx_rate: "1.3",
+        }),
+        { op: "convert", to_asset_id: "ast_new", ratio: "1" },
+        { op: "convert", asset_id: "ast_new", to_asset_id: "ast_spec", ratio: "1" },
+      ],
+    });
+    const collected = projectLedger(b.build(), { collectErrors: true });
+    expect(collected.invalid[0]?.error.code).toBe("book_mismatch");
+    expect(collected.currencyLots.size).toBe(0);
+    expect(collected.currencyLotCounts.size).toBe(0);
+    expect(collected.currencyGains).toEqual([]);
+    expect(collected.currencyJournal).toEqual([]);
   });
 
   it("rolls back the acquisitions and the income in kind a grant noted before a later effect failed", () => {

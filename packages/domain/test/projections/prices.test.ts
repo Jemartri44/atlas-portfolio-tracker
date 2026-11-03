@@ -332,6 +332,30 @@ describe("priceAt: the single gate", () => {
     ).toBeUndefined();
   });
 
+  it("values a position with a single division, so a tiny unit price keeps its precision", () => {
+    // 0.00000123 USD at 1.1 is 0.0000011181818...; rounded to 10 decimals first, 10^9 units
+    // would be worth 1118.2 instead of 1118.18.
+    const external: ExternalPrices = {
+      at: (_assetId, date) => ({
+        date,
+        unit_value: Decimal.parse("0.00000123"),
+        currency: "USD",
+        source: "eodhd",
+        fx_rate: Decimal.parse("1.1"),
+      }),
+    };
+    const price = priceAt(
+      project(withPrices()),
+      "ast_gold",
+      "2027-12-31",
+      DEFAULT_SETTINGS,
+      external,
+    );
+    expect(positionValueOf(price, Quantity.parse("1000000000"))?.amount.toString()).toBe(
+      "1118.1818181818",
+    );
+  });
+
   /**
    * A quote whose ECB rate could not be resolved is shown in its currency,
    * without a value in euros, and nothing adds it up.

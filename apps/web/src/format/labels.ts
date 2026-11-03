@@ -226,6 +226,7 @@ export const VALUE_LABELS: Record<string, string> = {
   crypto_fork: "Bifurcación de una cripto",
   token_migration: "Migración de token",
   issuer_restructuring: "Reestructuración del emisor",
+  capital_return: "Devolución de prima o de aportaciones",
   true: "Sí",
   false: "No",
 };
