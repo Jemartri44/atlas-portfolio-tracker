@@ -161,8 +161,8 @@ export const WARNINGS_TAX: Record<string, Entry> = {
     "Las acciones de mercados de fuera de la UE (NYSE, Nasdaq…) van a «otros elementos patrimoniales» con la clave 2, como dice la ayuda del Modelo 100; ninguna fuente leída extiende a la declaración la equivalencia de esos mercados, así que el apartado es dudoso.",
   tax_box_market_unknown: {
     say: (d, v) =>
-      `Estas acciones no tienen mercado anotado o Atlas no lo conoce (${v.many(d.assets)}): se dejan en «acciones negociadas», pero si cotizan fuera de la UE van a «otros elementos patrimoniales» (clave 2). Anota el mercado.`,
-    cli: () => "`atlas asset update <asset_id> --market <MIC>`.",
+      `Atlas no sabe si estas acciones están admitidas en un mercado regulado de la UE (${v.many(d.assets)}): no tienen mercado anotado, tienen uno que Atlas no conoce, o se compraron en Xetra, Fráncfort, Euronext o BME sin un ISIN de la UE en euros. Se dejan en «acciones negociadas». Compruébalo antes de presentar: si el valor no está admitido en un mercado regulado de la UE (lo normal en una acción de EE. UU. comprada en Xetra), va a «otros elementos patrimoniales» con la clave 2. Si es de la UE, anota su mercado y su ISIN y el aviso desaparece.`,
+    cli: () => "`atlas asset update <asset_id> --market <MIC> --isin <ISIN>`.",
     web: () => "Se anota en Catálogo.",
   },
   tax_box_other_inferred: () =>
