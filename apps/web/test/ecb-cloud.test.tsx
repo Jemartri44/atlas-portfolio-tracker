@@ -58,12 +58,11 @@ const api = (cloud: Cloud) => {
             JSON.stringify({
               signed_in: true,
               expires_at: "2026-10-30T00:00:00.000Z",
-              device_id: "D".repeat(22),
             }),
           );
     }
     if (cloud.status !== undefined) {
-      return new Response(JSON.stringify({ error: { code: "device_forgotten", details: {} } }), {
+      return new Response(JSON.stringify({ error: { code: "not_allowed", details: {} } }), {
         status: cloud.status,
       });
     }
@@ -149,7 +148,7 @@ describe("the ECB history of the cloud in the web (016, E3, block 2)", () => {
     expect(await downloadCloudHistory(api({}).request, NOW)).toEqual({ kind: "none" });
     expect(await downloadCloudHistory(api({ status: 403 }).request, NOW)).toEqual({
       kind: "failed",
-      code: "device_forgotten",
+      code: "not_allowed",
     });
   });
 
