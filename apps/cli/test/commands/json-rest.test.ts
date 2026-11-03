@@ -72,14 +72,6 @@ const ratedBuy = [
 ];
 const draftBuy = buy("2026-04-01", "2026-04-03");
 
-const _laterCsv = async (): Promise<Buffer> => {
-  const [header, newest, ...rest] = (
-    await readFile(join(ECB_FIXTURES, "eurofxref-hist.csv"), "utf8")
-  ).split("\n");
-  const next = (newest as string).replace("2026-03-31,1.1091,", "2026-04-01,1.1104,");
-  return Buffer.from([header, next, newest, ...rest].join("\n"));
-};
-
 const setup = async () => {
   const dir = await mkdtemp(join(tmpdir(), "atlas-json-rest-"));
   const ledger = join(dir, "ledger.jsonl");
