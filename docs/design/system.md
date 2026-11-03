@@ -248,7 +248,7 @@ Tres o cuatro cifras que van juntas: etiqueta a 13 px sobre la cifra a 18 px en 
 
 ### 5.20 Baldosa con minigráfica (`.part`, `Sparkline`)
 
-Pieza 1 tomada de la dirección B. En escritorio, cada libro del patrimonio es una baldosa sobre el papel: su nombre con la clave de su serie, el porcentaje del total, la cifra en la serifa, su dato propio (la cartera principal, su variación de «este mes» y «12 meses»; el cubo, frente al índice; el efectivo, en cuántas cuentas) y la **minigráfica** del último año: SVG propio, sin ejes ni cifras (no delata nada con la privacidad puesta), cortada en los huecos y con un punto donde un valor queda solo. En el móvil son filas, sin minigráfica (la evolución, justo debajo, enseña lo mismo), y la variación de la cartera va bajo la cifra.
+Pieza 1 tomada de la dirección B. En escritorio, cada libro del patrimonio es una baldosa sobre el papel: su nombre con la clave de su serie, el porcentaje del total, la cifra en la serifa, su dato propio (la cartera principal, su variación de «este mes» y «12 meses»; el cubo, frente al índice; el efectivo, en cuántas cuentas) y la **minigráfica** del último año de la misma cifra que enseña la baldosa: SVG propio, sin ejes ni cifras (no delata nada con la privacidad puesta), cortada en los huecos y con un punto donde un valor queda solo. En el móvil son filas, sin minigráfica (la evolución, justo debajo, enseña lo mismo), y la variación de la cartera va bajo la cifra.
 
 ### 5.21 Barra de bala (`Bullet`)
 

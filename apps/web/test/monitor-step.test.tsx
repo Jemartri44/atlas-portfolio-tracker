@@ -7,7 +7,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import Resumen from "../src/routes/resumen/index.jsx";
 import { summaryOrder } from "../src/view-models/summary-order.js";
-import { show, until, withGoldenLedger } from "./helpers/render.jsx";
+import { show, today, until, withGoldenLedger } from "./helpers/render.jsx";
 import { applied, token, withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
@@ -107,6 +107,16 @@ describe("the summary by device", () => {
     expect(span("summary-allocation")).toBe("span 5");
     expect(span("summary-moves")).toBe("span 7");
     expect(span("summary-fiscal")).toBe("span 5");
+  });
+
+  it("lays the tax card across the first row in the season, never alone beside seven empty columns", async () => {
+    today("2027-04-20");
+    withStyles(1440, 900);
+    const host = await show("/", Resumen);
+    await until(() => host.querySelector(".summary-fiscal") !== null, "la tarjeta fiscal");
+    const first = host.querySelector(".grid > .card");
+    expect(first?.classList.contains("summary-fiscal")).toBe(true);
+    expect(applied(first, "grid-column")).toBe("1 / -1");
   });
 
   it("puts this month and attention right after the net worth on a phone", async () => {

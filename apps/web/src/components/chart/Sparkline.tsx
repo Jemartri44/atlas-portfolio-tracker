@@ -60,7 +60,8 @@ export const Sparkline = (props: {
       <For each={sparkRuns(props.values)}>
         {(run) =>
           run.length === 1 ? (
-            <circle cx={run[0]?.x} cy={run[0]?.y} r="1.6" />
+            // A dot that stays round in a box that stretches: a stroke of no length, round caps.
+            <path class="dot" d={`M${run[0]?.x} ${run[0]?.y} h0.01`} />
           ) : (
             <path d={pathOf(run)} />
           )
