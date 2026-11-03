@@ -6,12 +6,14 @@ import {
   ConflictError,
   CurrencyMismatchError,
   DependentEventsError,
+  DomainError,
   DuplicateFingerprintError,
   NotFoundError,
   ProjectionError,
   RemoteRejectedError,
   SchemaTooNewError,
   UnsupportedEventError,
+  ValidationError,
   WriteOutcomeUnknownError,
 } from "../src/errors.js";
 
@@ -25,6 +27,21 @@ describe("asDomainError", () => {
 });
 
 describe("domain errors", () => {
+  it("carry a code, a message and details", () => {
+    const error = new ValidationError("invalid_decimal", "not a decimal", { field: "amount" });
+    expect(error).toBeInstanceOf(DomainError);
+    expect(error).toBeInstanceOf(Error);
+    expect(error.name).toBe("ValidationError");
+    expect(error.code).toBe("invalid_decimal");
+    expect(error.message).toBe("not a decimal");
+    expect(error.details).toEqual({ field: "amount" });
+  });
+
+  it("default to empty details", () => {
+    expect(new DomainError("x", "y").details).toEqual({});
+    expect(new ProjectionError("x", "01A", "y").details).toEqual({ event_id: "01A" });
+  });
+
   it("build specific errors with their context", () => {
     expect(new CurrencyMismatchError("EUR", "USD").details).toEqual({ left: "EUR", right: "USD" });
     const projection = new ProjectionError("insufficient_lots", "01A", "no lots", { asset: "a" });
