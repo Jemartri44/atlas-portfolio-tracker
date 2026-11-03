@@ -1,6 +1,6 @@
 # Sistema de diseño de Atlas: «papel y tinta»
 
-> **Estado.** Aprobado por la dirección el 2026-09-19, con las decisiones D1–D13 de §8 y la barra de proporción del patrimonio. La especificación de partida es [`brief.md`](brief.md), entero. La referencia visual exacta fue un prototipo estático (HTML y CSS con los datos de ejemplo de la sección 9 del encargo), retirado del árbol y recuperable en el historial de git (`git log -- docs/design/prototype`); hoy la referencia es `apps/web/src/styles/`. Las capturas de referencia se guardan fuera del repositorio.
+> **Estado.** Aprobado por la dirección el 2026-09-19, con las decisiones D1–D13 de §8 y la barra de proporción del patrimonio. El encargo de partida es [`brief.md`](brief.md), hoy reducido a los requisitos que siguen vigentes tras ADR-0035. La referencia visual exacta fue un prototipo estático (HTML y CSS con los datos de ejemplo de la sección 9 del encargo), retirado del árbol y recuperable en el historial de git (`git log -- docs/design/prototype`); hoy la referencia es `apps/web/src/styles/`. Las capturas de referencia se guardan fuera del repositorio.
 >
 > **Cómo leerlo.** §1 es el diagnóstico de la base anterior y por qué se quitó Pico (ADR-0023). §2 a §5 son el sistema: dirección, variables, maquetación y componentes. §6 es el vocabulario. §7 describe la composición de cada pantalla. §8 recoge las decisiones tomadas. §9 dice dónde vive cada cosa en el código.
 
@@ -151,13 +151,13 @@ El armazón y la rejilla tienen puntos de corte distintos a propósito: responde
 
 ### 4.2 El armazón: una sola navegación
 
-Un `<header>` y dentro **un** `<nav>`, **antes que `<main>` en el DOM**. El orden de tabulación sigue el visual: en escritorio, Resumen, Movimientos, Cartera, Cubo y Registrar; en la barra inferior, Registrar va en el centro también en el DOM de su lista. **Nunca hay dos destinos marcados como actuales**: Ajustes no es un destino de la barra y no se marca en ella. Una subpágina (el detalle de un movimiento, su corrección, un formulario de Registrar) marca su sección con `aria-current="page"`, y las páginas de Ajustes y la de cambiar de archivo (`/libro`, con datos abiertos) marcan su botón.
+Un `<header>` y dentro **un** `<nav>`, **antes que `<main>` en el DOM**. El orden de tabulación sigue el visual: en escritorio, Resumen, Movimientos, Cartera, Cubo y Registrar; en la barra inferior, Registrar va en el centro también en el DOM de su lista. **Nunca hay dos destinos marcados como actuales**: Ajustes no es un destino de la barra y no se marca en ella. Una subpágina (el detalle de un movimiento, su corrección, un formulario de Registrar) marca su sección con `aria-current="page"`, y las páginas de Ajustes marcan su botón.
 
-- **Móvil y tableta** (< 1200): el `<header>` es una barra de estado de 52 px pegada arriba, con el origen de los datos a la izquierda y la privacidad y Ajustes a la derecha. El `<nav>` se fija abajo (64 px más la zona segura) como barra de cinco huecos, con **Registrar en el centro**. Cada destino es un icono de 24 px con su etiqueta a 13 px; el actual lleva un indicador en píldora de acento suave y la etiqueta en seminegrita. Registrar es una placa llena del acento con el «+». Por debajo de 380 px se retira el icono decorativo del origen y se estrecha la placa: ninguna palabra desaparece.
-- **Escritorio** (≥ 1200): una sola barra de 64 px con la marca, los cuatro destinos **agrupados en un carril** (la pestaña actual en relieve), **Registrar** como botón principal a continuación del grupo y, a la derecha, el origen de los datos, la privacidad y Ajustes.
-- **Origen de los datos**, siempre visible: icono + «Navegador» o «Este ordenador» + antigüedad de la exportación, en color de aviso y con su icono si pasa de una semana. Lleva a Ajustes.
+- **Móvil y tableta** (< 1200): el `<header>` es una barra de estado de 52 px pegada arriba, con la marca a la izquierda y la privacidad y Ajustes a la derecha. El `<nav>` se fija abajo (64 px más la zona segura) como barra de cinco huecos, con **Registrar en el centro**. Cada destino es un icono de 24 px con su etiqueta a 13 px; el actual lleva un indicador en píldora de acento suave y la etiqueta en seminegrita. Registrar es una placa llena del acento con el «+». Por debajo de 380 px se estrecha la placa: ninguna palabra desaparece.
+- **Escritorio** (≥ 1200): una sola barra de 64 px con la marca, los cuatro destinos **agrupados en un carril** (la pestaña actual en relieve), **Registrar** como botón principal a continuación del grupo y, a la derecha, la privacidad y Ajustes.
+- **Origen de los datos**: la web solo funciona contra la nube (ADR-0035), así que la barra no lleva indicador de origen. Dónde están los datos y «Descargar copia» (la copia descargada, JSONL y CSV) viven en Ajustes, en *Tus datos*.
 - **Privacidad**: un botón con `aria-pressed` y forma de píldora (ojo tachado y «Oculto» o «Importes ocultos» cuando está activa; ojo y «Visible» cuando no). El objetivo táctil es el botón entero.
-- **Sin libro abierto** (primer arranque) no se muestra la navegación: nada funciona sin datos. **Con un libro vacío sí**, porque los primeros pasos llevan a Registrar y a Ajustes (D8).
+- **Sin sesión o sin libro cargado** (la pantalla de entrada del §7.1) no se muestra la navegación: nada funciona sin datos. **Con un libro vacío sí**, porque los primeros pasos llevan a Registrar y a Ajustes (D8).
 - **Banda de datos con problemas**: franja de `--c-danger-soft` bajo la barra, permanente, con el texto y «Verificar».
 
 ### 4.3 La rejilla
@@ -210,7 +210,7 @@ De 44 px de alto, radio 8, seminegrita e icono opcional de 16.
 
 | Variante | Aspecto | Uso |
 |---|---|---|
-| principal (`.primary`) | Acento lleno | Una por vista: en el primer arranque con carpeta, «Elegir la carpeta», y el del navegador pasa a secundario |
+| principal (`.primary`) | Acento lleno | Una por vista: en la entrada, «Entrar con Google» |
 | secundario (por defecto) | Superficie con contorno `--c-border-control` | Exportar, Corregir |
 | discreto (`.quiet`) | Texto en acento, sin caja | «Ver todos», acciones dentro de bloques |
 | destructivo (`.danger`) | Contorno y texto de `--c-danger` | «Anular movimiento»: **nunca** con aspecto de principal |
@@ -282,9 +282,9 @@ Lista numerada con el estado de cada paso: **hecho** (círculo lleno con ✓), *
 
 ## 7. Composición de cada pantalla
 
-### 7.1 Primer arranque: «¿Dónde guardamos tus datos?»
+### 7.1 Entrada: «Entrar en Atlas»
 
-Marca y título; una frase («Atlas funciona en este dispositivo: sin servidor, sin cuenta, sin subir nada a ningún sitio.»). Con carpeta disponible (Chrome o Edge en el ordenador), dos tarjetas de opción lado a lado (6+6), centradas con un máximo de 960 px, porque es una elección y no una pantalla de datos: «Una carpeta de tu ordenador» con «Recomendado» junto al título y **el único botón principal**, y «El almacenamiento del navegador», con su botón secundario, el aviso de exportar e «Importar un archivo». Sin carpeta (el móvil, Firefox, Safari), una sola tarjeta, la del navegador con su botón principal, y **una línea** debajo que dice dónde se puede usar la carpeta: media pantalla de teléfono para una opción que el teléfono no puede usar era ruido. Reconectar es una sola tarjeta con «Reconectar» y «Elegir otra carpeta». Sin navegación (D8).
+Marca y título «Entrar en Atlas»; una frase que dice que los datos están en la nube y que se entra con la cuenta de Google. **Una sola tarjeta**, centrada, con **el único botón principal**, «Entrar con Google» (si hay un aviso previo, «Entrar de todos modos»). Sin conexión, la pantalla solo dice «Sin conexión» con «Reintentar»; con la sesión caducada, «Entrar de nuevo». Sin navegación (D8). Desde ADR-0035 no hay elección de dónde guardar los datos, ni carpeta, ni almacenamiento del navegador, ni «Importar un archivo».
 
 ### 7.2 Resumen
 
@@ -321,7 +321,7 @@ Marca y título; una frase («Atlas funciona en este dispositivo: sin servidor, 
 
 ### 7.7 Ajustes y Configuración
 
-*Tus datos* (dónde están, exportar, importar, cambiar de archivo y reconectar), *Privacidad y apariencia* y *Verificación*, que agrupa sus hallazgos igual que Atención. La **Configuración** va en grupos plegables, con los pesos objetivo y su total en vivo. Se piden pesos **solo de activos vivos** (`view-models/weighted.ts`): no de uno dado de baja ni de uno que una fusión o un cambio de clase convirtió en otro y ya no tiene nada, aunque el catálogo lo siga dando por activo; uno que aún lleve peso sí sale, para que guardar nunca quite un peso sin verlo. La *Verificación* nombra `atlas backup` solo cuando los datos están en una carpeta del ordenador; en el móvil dice que la copia es exportar y guardar el archivo fuera del dispositivo. Con la privacidad activa **se enmascaran todos sus importes**, incluidos los tramos de la base del ahorro y los umbrales de los modelos 720 y 721: una sola regla. El índice de referencia del cubo no ofrece activos dados de baja. En escritorio, dos columnas de tarjetas, y los formularios nunca pasan de su ancho de lectura.
+*Tus datos* (dónde están y «Descargar copia»), *Privacidad y apariencia* y *Verificación*, que agrupa sus hallazgos igual que Atención. La **Configuración** va en grupos plegables, con los pesos objetivo y su total en vivo. Se piden pesos **solo de activos vivos** (`view-models/weighted.ts`): no de uno dado de baja ni de uno que una fusión o un cambio de clase convirtió en otro y ya no tiene nada, aunque el catálogo lo siga dando por activo; uno que aún lleve peso sí sale, para que guardar nunca quite un peso sin verlo. La *Verificación* nombra `atlas backup` solo cuando los datos están en una carpeta del ordenador; en el móvil dice que la copia es exportar y guardar el archivo fuera del dispositivo. Con la privacidad activa **se enmascaran todos sus importes**, incluidos los tramos de la base del ahorro y los umbrales de los modelos 720 y 721: una sola regla. El índice de referencia del cubo no ofrece activos dados de baja. En escritorio, dos columnas de tarjetas, y los formularios nunca pasan de su ancho de lectura.
 
 ### 7.8 Declaración (`/fiscal`)
 
