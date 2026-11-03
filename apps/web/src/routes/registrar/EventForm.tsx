@@ -170,6 +170,10 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   };
 
   const onPreview = async (): Promise<void> => {
+    // Asked by hand: the effect that follows the keys, if still on its way, is not this one, and
+    // would undo the yes given to a rate that is not the official one.
+    clearTimeout(pending);
+    edits++;
     if (!readable(values())) {
       return;
     }
