@@ -42,10 +42,12 @@ export const MAX_APPEND_UNITS = 100;
 
 /**
  * The most a single line of the ledger may take, in bytes of UTF-8. A real line takes some
- * 300 to 600 (the widest of the synthetic ledger, a `settings_changed`, 1,232); the bound only
- * stops a free text that fills the ledger. A bound of the protocol, not a setting of the user.
+ * 300 to 600 (the widest of the synthetic ledger, a `settings_changed`, 1,232), but a 720/721
+ * filing lists every declared asset twice (`declared` and `computed`) and, the ledger being
+ * append-only, cannot be shortened afterwards: 200 assets take some 46 KB. The bound only stops
+ * a free text that fills the ledger. A bound of the protocol, not a setting of the user.
  */
-export const MAX_LINE_BYTES = 16 * 1024;
+export const MAX_LINE_BYTES = 64 * 1024;
 
 /**
  * The ledger the remote keeps, in bytes, as a guard well under what the Function URL answers
