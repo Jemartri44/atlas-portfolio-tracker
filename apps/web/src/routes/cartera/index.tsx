@@ -14,6 +14,7 @@
 // of the title.
 
 import { assets, coreWeights, settingsAt } from "@atlas/domain";
+import { classReturns, coreXirr, spanishCpiPct } from "@atlas/domain/charts";
 import { contributionPlan, costSummary, platformPlan } from "@atlas/domain/portfolio";
 import { createMemo, createSignal, type JSX } from "solid-js";
 import { AsOfPicker, useAsOf } from "../../components/index.js";
@@ -30,6 +31,7 @@ import {
   type UnitPrices,
   weightsView,
 } from "../../view-models/core/index.js";
+import { returnsView } from "../../view-models/core/returns.js";
 import { unitPricesOf } from "../../view-models/core/whole-units.js";
 import { absorbedAssets } from "../../view-models/weighted.js";
 import { RequireLedger } from "../guard.jsx";
@@ -37,6 +39,7 @@ import { ContributionCard } from "./ContributionCard.jsx";
 import { CostsCard } from "./CostsCard.jsx";
 import { ExposureBlock } from "./ExposureBlock.jsx";
 import { RebalanceCard } from "./RebalanceCard.jsx";
+import { ReturnsCard } from "./ReturnsCard.jsx";
 import { WeightsCard } from "./WeightsCard.jsx";
 
 export default function CarteraRoute(): JSX.Element {
@@ -103,6 +106,13 @@ export default function CarteraRoute(): JSX.Element {
           ),
         );
 
+        const returns = createMemo(() =>
+          returnsView(
+            coreXirr(snapshot.events, date(), spanishCpiPct()),
+            classReturns(snapshot.events, date()),
+          ),
+        );
+
         const plan = () => {
           const outcome = contribution();
           return outcome.ok ? outcome.value : undefined;
@@ -149,6 +159,7 @@ export default function CarteraRoute(): JSX.Element {
                   return outcome.kind === "invalid" ? outcome.message : undefined;
                 })()}
               />
+              <ReturnsCard view={returns()} />
               <ExposureBlock weights={projection()} catalogue={catalogue()} names={names} />
               <RebalanceCard
                 state={dated()}
