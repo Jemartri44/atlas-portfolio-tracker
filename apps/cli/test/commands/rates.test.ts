@@ -136,6 +136,148 @@ describe("atlas add with the ECB history", () => {
     expect(await last()).toMatchObject({ fx_rate: "1.1169", fx_rate_date: "2026-01-02" });
   });
 
+  it("proposes the official rate of the new date when an edit moves the date, and says so", async () => {
+    const { atlas, last } = await setup();
+    await atlas(undefined, ...buy("gold", "USD", "2026-01-02", "2026-01-06"), "--yes");
+    const id = (await last()).id as string;
+    const result = await atlas(
+      undefined,
+      "edit",
+      id,
+      "--reason",
+      "fecha mal tecleada",
+      "--trade-date",
+      "2026-01-09",
+      "--value-date",
+      "2026-01-13",
+      "--yes",
+    );
+    expect(result.code).toBe(0);
+    expect(result.text).toContain("El tipo se ha vuelto a proponer");
+    expect(result.text).toContain("fx_rate 1.1169 → 1.1013");
+    expect(result.text).toContain("1.1013 del 09/01/2026");
+    expect(await last()).toMatchObject({ fx_rate: "1.1013", fx_rate_date: "2026-01-09" });
+  });
+
+  it("re-proposes the rate of a valuation edited with --date and of both legs of an exchange", async () => {
+    const { atlas, last } = await setup();
+    await atlas(
+      undefined,
+      "add",
+      "valuation",
+      "--account",
+      "acc",
+      "--asset",
+      "gold",
+      "--date",
+      "2026-01-02",
+      "--quantity",
+      "1",
+      "--unit-value",
+      "100",
+      "--currency",
+      "USD",
+      "--yes",
+    );
+    const valuation = await atlas(
+      undefined,
+      "edit",
+      (await last()).id as string,
+      "--reason",
+      "x",
+      "--date",
+      "2026-01-09",
+      "--yes",
+    );
+    expect(valuation.code).toBe(0);
+    expect(valuation.text).toContain("fx_rate 1.1169 → 1.1013");
+    expect(await last()).toMatchObject({ fx_rate: "1.1013", fx_rate_date: "2026-01-09" });
+    const added = await atlas(
+      undefined,
+      "add",
+      "fx",
+      "--account",
+      "acc",
+      "--value-date",
+      "2026-01-02",
+      "--sold-amount",
+      "100",
+      "--sold-currency",
+      "USD",
+      "--bought-amount",
+      "89",
+      "--bought-currency",
+      "EUR",
+      "--fee-currency",
+      "EUR",
+      "--yes",
+    );
+    const exchange = await atlas(
+      undefined,
+      "edit",
+      (await last()).id as string,
+      "--reason",
+      "x",
+      "--value-date",
+      "2026-01-09",
+      "--yes",
+    );
+    expect(added.code).toBe(0);
+    expect(exchange.code).toBe(0);
+    expect(exchange.text).toContain("fx_rate_sold 1.1169 → 1.1013");
+    expect(exchange.text).not.toContain("undefined");
+    expect(await last()).toMatchObject({ fx_rate_sold: "1.1013", fx_rate_date: "2026-01-09" });
+  });
+
+  it("keeps the typed rate when the edit also types one, and keeps the old one without a history", async () => {
+    const typed = await setup();
+    await typed.atlas(undefined, ...buy("gold", "USD", "2026-01-02", "2026-01-06"), "--yes");
+    const id = (await typed.last()).id as string;
+    const explicit = await typed.atlas(
+      undefined,
+      "edit",
+      id,
+      "--reason",
+      "x",
+      "--trade-date",
+      "2026-01-09",
+      "--value-date",
+      "2026-01-13",
+      "--fx-rate",
+      "1.1013",
+      "--fx-rate-date",
+      "2026-01-09",
+      "--yes",
+    );
+    expect(explicit.code).toBe(0);
+    expect(explicit.text).not.toContain("vuelto a proponer");
+    const bare = await setup(false);
+    await bare.atlas(
+      undefined,
+      ...buy("gold", "USD", "2026-01-02", "2026-01-06"),
+      "--fx-rate",
+      "1.12",
+      "--fx-rate-date",
+      "2026-01-02",
+      "--yes",
+    );
+    const bareId = (await bare.last()).id as string;
+    const kept = await bare.atlas(
+      undefined,
+      "edit",
+      bareId,
+      "--reason",
+      "x",
+      "--trade-date",
+      "2026-01-09",
+      "--value-date",
+      "2026-01-13",
+      "--yes",
+    );
+    expect(kept.code).toBe(0);
+    expect(await bare.last()).toMatchObject({ fx_rate: "1.12", fx_rate_date: "2026-01-02" });
+  });
+
   it("dates a purchase in euros from its fiscal date, not from trade_date", async () => {
     const { atlas, last } = await setup(false);
     // A fund: fiscal date = value date, a Saturday → the Friday before.

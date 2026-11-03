@@ -19,6 +19,9 @@ import { table } from "../output/table.js";
 import { assertNoLedgerInCloudFolder } from "../remote/credentials-file.js";
 import { render } from "./shared.js";
 
+/** The generator seeds a 32-bit state: anything larger would be silently folded. */
+const MAX_SEED = 2 ** 32 - 1;
+
 const describe = (path: string, seed: number, summary: LedgerSummary): string =>
   [
     `Libro sintético escrito en ${path} (semilla ${seed}): ${summary.events} eventos, ${summary.accounts.length} cuentas, ${summary.assets.length} activos, ejercicios ${summary.years.join(", ")}.`,
@@ -36,10 +39,10 @@ export const synthCommand = async (
   assertKnownFlags(flags, ["out", "seed", ...GLOBAL_FLAGS]);
   const out = requireFlag(flags, "out");
   const seedText = stringFlag(flags, "seed") ?? "1";
-  if (!/^\d+$/.test(seedText)) {
-    throw new UsageError("--seed debe ser un entero no negativo");
+  const seed = /^\d{1,10}$/.test(seedText) ? Number(seedText) : Number.NaN;
+  if (!(seed <= MAX_SEED)) {
+    throw new UsageError(`--seed debe ser un entero entre 0 y ${MAX_SEED}`);
   }
-  const seed = Number(seedText);
   await assertNoLedgerInCloudFolder(out);
   if (await pathExists(out)) {
     throw new DomainError("path_exists", `${out} already exists`, { path: out });

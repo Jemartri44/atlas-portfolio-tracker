@@ -807,7 +807,7 @@ describe("the form specs", () => {
       {
         account_id: "acc_mi",
         value_date: "2027-03-01",
-        amount: "1.000,50",
+        amount: "1000,50",
         currency: "EUR",
         fx_rate: "1",
         fx_rate_date: "",
@@ -820,8 +820,7 @@ describe("the form specs", () => {
       account_id: "acc_mi",
       value_date: "2027-03-01",
       // The decimal comma the user typed becomes the point the ledger stores,
-      // and the dot of the thousands goes. This line used to expect "1.000.50":
-      // it froze the defect that made "1.200,50" unrecordable.
+      // and no dot is ever read as thousands.
       amount: "1000.50",
       currency: "EUR",
       fx_rate: "1",
@@ -974,7 +973,7 @@ describe("the form specs", () => {
   it("normalises the decimal the way a Spanish keyboard types it", () => {
     expect(normaliseDecimal(" 1,5 ")).toBe("1.5");
     expect(normaliseDecimal("1 000,25")).toBe("1000.25");
-    expect(normaliseDecimal("1.200,50")).toBe("1200.50");
+    expect(normaliseDecimal("1200,50")).toBe("1200.50");
     // Ambiguous: it goes back as typed, and `inputErrors` stops the form first.
     expect(normaliseDecimal("1000.25")).toBe("1000.25");
     expect(normaliseDecimal("1.5")).toBe("1.5");

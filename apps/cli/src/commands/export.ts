@@ -2,6 +2,7 @@
 
 import { lstat, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { FileLedgerStore } from "@atlas/adapters";
 import {
   DomainError,
   decodeLines,
@@ -11,7 +12,7 @@ import {
 } from "@atlas/domain";
 import { linesOfText } from "@atlas/domain/sync";
 import { assertKnownFlags, type Flags, stringFlag, UsageError } from "../args.js";
-import { type Context, GLOBAL_FLAGS } from "../context.js";
+import { CommandFailure, type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
 import { cloudStoreOf } from "../folder-mode.js";
 import { pathExists } from "../fs.js";
 import { assertNoLedgerInCloudFolder } from "../remote/credentials-file.js";
@@ -118,6 +119,17 @@ export const exportCommand = async (
     snapshot === undefined
       ? await loadForQuery(ctx)
       : cloudProjection(decodeLines(linesOfText(snapshot.text), ctx.deps.store.schema));
+  // A mistyped `--ledger` reads as an empty ledger, which is right for a view; as a file written
+  // with `--out` it would be an empty export that looks like a backup.
+  if (
+    out !== undefined &&
+    ctx.deps.store instanceof FileLedgerStore &&
+    !(await pathExists(ctx.ledgerPath))
+  ) {
+    throw new CommandFailure(EXIT.domain, "export_no_ledger", [
+      `Error: no existe el libro ${ctx.ledgerPath}: no hay nada que exportar. Indica el libro con --ledger <ruta>.`,
+    ]);
+  }
   let content: string;
   if (format === "jsonl") {
     content =

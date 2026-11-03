@@ -144,11 +144,11 @@ const login = async (ctx: Context, flags: Flags, env: RemoteEnvironment): Promis
     // §4); one with a ledger stays local and untouched. Never both.
     const links = at.remote === undefined && !(await pathExists(ctx.ledgerPath));
     if (links) {
-      await mkdir(join(at.folder, "sync"), { recursive: true });
+      await mkdir(join(at.folder, "sync"), { recursive: true, mode: 0o700 });
       await writeFile(
         join(at.folder, "sync", "remote.json"),
         serializeRemoteJson({ format: 1, origin, device_id: entry.device_id }),
-        { flag: "wx" },
+        { flag: "wx", mode: 0o600 },
       );
     }
     // The token itself is in no answer: only its public identifiers.
