@@ -491,6 +491,8 @@ Tabla de composición admitida por `kind` (el evento se rechaza si sus `effects`
 | `issuer_restructuring` | `convert`, `forced_sale` y/o `cost_adjustment` (este, con régimen) | según el folleto | Se compone como fusión o liquidación |
 | `capital_return` | `cost_adjustment` | 3 € por título → `cost_adjustment(30 €)` | 10 títulos, coste 970 €, fecha original. Sin ganancia; si supera el coste de un lote, el exceso es rendimiento del capital mobiliario (0029) |
 
+**Un *scrip* con una parte de los derechos vendida y otra convertida** se registra con **dos eventos `stock_dividend`**, no con `grant` + `convert`: un `scale` por las acciones nuevas que se reciben (reparten el coste de las antiguas y conservan su fecha, art. 37.1.a LIRPF) y un `grant(derechos, coste 0)` + `forced_sale` por los derechos vendidos. La vía `grant` + `convert` daría a las acciones nuevas coste 0 y la fecha del derecho. En el borrador de casillas solo va al apartado de derechos (0341-0355) la venta cuyo activo es el propio derecho del `grant`.
+
 `identifier_change` y `cash_dividend` no son `corporate_action` (ver ADR-0011).
 
 
