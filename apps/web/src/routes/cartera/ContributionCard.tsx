@@ -35,6 +35,7 @@ import { privacy } from "../../shell/preferences.js";
 import type { ContributionRowView, ContributionView } from "../../view-models/core/index.js";
 import { COLUMNS } from "./contribution-columns.jsx";
 import { PlatformSection } from "./PlatformsBlock.jsx";
+import { PlanRepurchaseNotes, type Repurchase } from "./plan-repurchase.jsx";
 import { REMEDIES } from "./remedies.js";
 import { SplitNotes } from "./SplitNotes.jsx";
 
@@ -48,7 +49,7 @@ const Refusal = (props: { error: AppError }): JSX.Element => (
   </Show>
 );
 
-const Split = (props: { view: ContributionView }): JSX.Element => {
+const Split = (props: { view: ContributionView; repurchase?: Repurchase }): JSX.Element => {
   const wide = mediaQuery(GRID);
   const active = (): ContributionRowView[] => props.view.rows.filter((row) => !row.idle);
   return (
@@ -141,6 +142,7 @@ const Split = (props: { view: ContributionView }): JSX.Element => {
                   </svg>
                 )}
               </Show>
+              <PlanRepurchaseNotes warnings={props.repurchase?.(row.assetId) ?? []} />
             </li>
           )}
         </For>
@@ -188,6 +190,8 @@ export const ContributionCard = (props: {
   onAmountText?: (text: string) => void;
   /** Why the typed text was not used, if it was not. */
   amountError?: string | undefined;
+  /** What a purchase of the plan would defer; loaded apart, so absent at first. */
+  repurchase?: Repurchase;
 }): JSX.Element => (
   <Section
     title={
@@ -233,7 +237,7 @@ export const ContributionCard = (props: {
               </Notice>
             )}
           </Show>
-          <Split view={view()} />
+          <Split view={view()} {...(props.repurchase ? { repurchase: props.repurchase } : {})} />
         </>
       )}
     </Show>

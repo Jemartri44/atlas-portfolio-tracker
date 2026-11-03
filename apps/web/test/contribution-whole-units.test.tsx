@@ -19,7 +19,7 @@ import { setPrivacy } from "../src/shell/preferences.js";
 import { contributionView } from "../src/view-models/core/index.js";
 import { totalLeftover, unitPricesOf, wholeUnitsFor } from "../src/view-models/core/whole-units.js";
 import { goldenEvents, goldenText } from "./helpers/golden.js";
-import { openLedger, show, text, withGoldenLedger } from "./helpers/render.jsx";
+import { openLedger, show, text, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -261,5 +261,74 @@ describe("the card, further", () => {
     const host = await show(`/cartera?fecha=${DATE}`, Cartera);
     expect(host.querySelector("[data-testid=whole-units]")).toBeNull();
     expect(host.querySelector("[data-testid=whole-leftover]")).toBeNull();
+  });
+});
+
+describe("the repurchase warning of the plan", () => {
+  it("says beside the purchase what loss it would defer, masked with privacy, without removing it", async () => {
+    const view = contributionView(goldenPlan());
+    const target = view.rows.find((row) => !row.idle)?.assetId as string;
+    const warning = {
+      asset_id: target,
+      sale_event_id: "01J0000000000000000000000",
+      sale_date: "2028-12-01",
+      until: "2029-02-01",
+      at_stake_eur: eur("400"),
+    };
+    const screen = () => (
+      <ContributionCard
+        view={view}
+        error={undefined}
+        repurchase={(id) => (id === target ? [warning] : [])}
+      />
+    );
+    setPrivacy(true);
+    const masked = await show("/", screen);
+    const notes = masked.querySelectorAll("[data-testid=plan-repurchase]");
+    expect(notes).toHaveLength(1);
+    expect(text(notes[0])).toContain("Esta compra aplazaría hasta");
+    expect(text(notes[0])).toContain("01/12/2028");
+    expect(notes[0]?.querySelector(".mask")).not.toBeNull();
+    // The purchase is still in the plan.
+    expect(masked.querySelectorAll("[aria-label='Reparto de la aportación'] > li").length).toBe(
+      view.rows.filter((row) => !row.idle).length,
+    );
+    setPrivacy(false);
+  });
+});
+
+describe("the repurchase warning of the plan, from the ledger", () => {
+  it("names the purchase of the fund sold at a loss whose window is open", async () => {
+    // The golden ledger plus 100 units of ast_world sold at 80 on 09/01/2029,
+    // more than the year of monthly purchases before it covers: a loss stays at stake.
+    const sale = JSON.stringify({
+      schema_version: 1,
+      id: "01P8ZZZZ80QQQQQQQQQQQQQQQQ",
+      recorded_at: "2029-01-09T18:00:00.000Z",
+      type: "sell",
+      account_id: "acc_mi",
+      asset_id: "ast_world",
+      trade_date: "2029-01-08",
+      value_date: "2029-01-09",
+      quantity: "100",
+      unit_price: "80",
+      currency: "EUR",
+      fx_rate: "1",
+      fx_rate_date: "2029-01-09",
+      fee: "0",
+      source: "manual",
+      fingerprint: `sha256:${"0".repeat(62)}aa`,
+    });
+    await openLedger(`${goldenText().trimEnd()}\n${sale}\n`);
+    const host = await show("/cartera?fecha=2029-01-20", Cartera);
+    await until(
+      () => host.querySelector("[data-testid=plan-repurchase]") !== null,
+      "the repurchase warning of the plan",
+    );
+    const notes = [...host.querySelectorAll("[data-testid=plan-repurchase]")];
+    expect(notes).toHaveLength(1);
+    expect(text(notes[0])).toContain("de la venta del 09/01/2029");
+    expect(text(notes[0])).toContain("abierta hasta el 09/01/2030");
+    expect(text(notes[0]?.closest("li")?.querySelector(".title"))).toBe("World Index Fund");
   });
 });
