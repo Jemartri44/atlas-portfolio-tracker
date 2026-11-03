@@ -6,7 +6,7 @@ import { WORKBOX_OPTIONS } from "../vite.config.js";
 
 describe("the service worker", () => {
   it("precaches only the shell, by the patterns of static files", () => {
-    expect(WORKBOX_OPTIONS.globPatterns).toEqual(["**/*.{js,css,html,svg,png,webmanifest}"]);
+    expect(WORKBOX_OPTIONS.globPatterns).toEqual(["**/*.{js,css,html,svg,png,webmanifest,woff2}"]);
   });
 
   it("has no runtime caching rule: nothing fetched at run time is ever kept", () => {
