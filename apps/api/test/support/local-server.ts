@@ -20,13 +20,13 @@ import { fileURLToPath } from "node:url";
 import { base64url } from "@atlas/adapters/access";
 import { parameterNames } from "@atlas/adapters/aws";
 import { createHandler } from "@atlas/api";
-import type { ApiConfig } from "@atlas/domain/access";
 import { TestOnlyFakeS3 } from "../../../../packages/adapters/test/aws/test-only-fake-s3.js";
 import { TestOnlyFakeSsm } from "../../../../packages/adapters/test/aws/test-only-fake-ssm.js";
 import {
   type FakeAccount,
   TestOnlyFakeGoogle,
 } from "../../../../packages/adapters/test/identity/test-only-fake-google.js";
+import type { ApiConfig } from "../../src/access/config.js";
 
 const ACCOUNTS: Record<string, FakeAccount> = {
   allowed: { sub: "108000000000000000001", email: "usuario@ejemplo.test" },

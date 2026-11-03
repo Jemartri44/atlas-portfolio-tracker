@@ -4,8 +4,8 @@
 // a write asks for, the names of the reference data and the answer of a
 // conditional read. The handler decides nothing of it.
 
-import type { RemoteError } from "../ports/remote-ledger.js";
-import { priceFileName } from "../quotes/line.js";
+import { priceFileName } from "@atlas/domain/quotes";
+import type { RemoteError } from "@atlas/domain/sync";
 import { API_ERRORS, type ApiErrorCode, type ApiRefusal, refusal } from "./codes.js";
 
 const STRONG_SHA = /^"([0-9a-f]{64})"$/;

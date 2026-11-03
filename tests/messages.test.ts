@@ -16,10 +16,11 @@ import { describe, expect, it } from "vitest";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const domainSrc = join(repoRoot, "packages", "domain", "src");
-// Where a code can be born: the domain, the adapters that translate the outside world into
-// errors, the API and the console.
+// Where a code can be born: the domain, the rules of the access, the adapters that translate the
+// outside world into errors, the API and the console.
 const SOURCES = [
   domainSrc,
+  join(repoRoot, "packages", "access", "src"),
   join(repoRoot, "packages", "adapters", "src"),
   join(repoRoot, "apps", "api", "src"),
   join(repoRoot, "apps", "cli", "src"),

@@ -2,6 +2,7 @@
 // the etag a request asks for, the names and types of the reference data, the index and the
 // conditional read.
 
+import { REMOTE_FAILURE_CODES, RemoteError } from "@atlas/domain/sync";
 import { describe, expect, it } from "vitest";
 import { API_ERRORS, refusal } from "../../src/access/codes.js";
 import {
@@ -12,7 +13,6 @@ import {
   refusalOfRemote,
   requestedEtag,
 } from "../../src/access/sync-routes.js";
-import { REMOTE_FAILURE_CODES, RemoteError } from "../../src/ports/remote-ledger.js";
 
 const SHA = "a".repeat(64);
 
