@@ -193,9 +193,9 @@ describe("reference/ecb/ in the bucket (R31)", () => {
           return s3.get(key);
         },
         list: (prefix) => s3.list(prefix),
-        putIfNoneMatch: async (key, body) => {
+        putIfNoneMatch: async (key, body, lock) => {
           await pause.put?.(key);
-          return s3.putIfNoneMatch(key, body);
+          return s3.putIfNoneMatch(key, body, lock);
         },
         putIfMatch: async (key, body, etag) => {
           await pause.put?.(key);

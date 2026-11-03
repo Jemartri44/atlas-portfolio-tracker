@@ -10,6 +10,7 @@ export { DependencyUnavailable } from "./errors.js";
 export type {
   AdminObjectStore,
   ListedObject,
+  ObjectLock,
   ObjectStore,
   StoredObject,
 } from "./object-store.js";

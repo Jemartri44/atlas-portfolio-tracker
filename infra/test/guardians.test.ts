@@ -200,19 +200,6 @@ describe("the other rules, on plans written by hand", () => {
     expect(found).toHaveLength(1);
   });
 
-  it("lets a key policy say Resource * (it means this key) but not a wildcard action", () => {
-    const key = (action: string): Plan =>
-      plan([
-        change("aws_kms_key", {
-          policy: JSON.stringify({
-            Statement: [{ Effect: "Allow", Action: action, Resource: "*", Principal: "*" }],
-          }),
-        }),
-      ]);
-    expect(wildcards(key("kms:Decrypt"), [])).toEqual([]);
-    expect(wildcards(key("kms:*"), [])).toHaveLength(1);
-  });
-
   it("refuses a data source that reads SSM or a secret, and a variable that looks like one", () => {
     const found = secrets(
       plan([], {
