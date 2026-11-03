@@ -221,25 +221,27 @@ describe("what stays on the device after a session of the cloud", () => {
   });
 
   it("forgets the prices imported by hand when the session is closed, and only then", async () => {
-    const request = await session();
-    await bootCloud(request);
-    await until(() => store.load().phase === "ready", "the ledger");
+    // Only the answers the card asks for: a close that is refused, then one that works, and a
+    // signed-out session for the boot that follows. No ledger is needed to prove what is forgotten.
+    const closing = (logout: number): typeof fetch =>
+      (async (input: string | URL | Request) =>
+        String(input).endsWith("/api/auth/logout")
+          ? new Response(null, { status: logout })
+          : new Response(JSON.stringify({ error: { code: "unauthenticated", details: {} } }), {
+              status: 401,
+            })) as typeof fetch;
     await saveImportedPrices({
       files: { ast_gold: '{"date":"2026-10-01","close":"100"}\n' },
       imported_at: "2026-10-01T10:00:00.000Z",
     });
-    // A close that fails leaves them: the session may still be open.
-    const refused = (async () => new Response("{}", { status: 500 })) as typeof fetch;
-    document.body.innerHTML = "";
-    const failing = await show("/ajustes", () => <SessionCard request={refused} />);
-    await press(failing, "Cerrar sesión");
+    const refused = await show("/ajustes", () => <SessionCard request={closing(500)} />);
+    await press(refused, "Cerrar sesión");
     expect(await importedPrices()).toBeDefined();
     document.body.innerHTML = "";
-    const again = await show("/ajustes", () => <SessionCard request={request} />);
-    await press(again, "Cerrar sesión");
-    await until(() => store.load().phase !== "ready", "the session closed");
-    expect(await importedPrices()).toBeUndefined();
-  }, 30_000);
+    const closed = await show("/ajustes", () => <SessionCard request={closing(204)} />);
+    await press(closed, "Cerrar sesión");
+    await expect.poll(() => importedPrices()).toBeUndefined();
+  });
 
   it("control: the walker would see a ledger, a remembered source or a cache entry", async () => {
     await saveImportedHistory({
