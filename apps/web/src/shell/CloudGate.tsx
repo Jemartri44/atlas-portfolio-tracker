@@ -9,6 +9,7 @@
 import { createSignal, type JSX, Match, Show, Switch } from "solid-js";
 import { SIGN_IN_HREF } from "../auth/session.js";
 import { Notice } from "../components/Notice.jsx";
+import { startCloud } from "../ledger/start.js";
 import type { SignedOutReason } from "../ledger/state.js";
 import { store } from "../ledger/state.js";
 
@@ -23,7 +24,7 @@ const SENTENCES: Readonly<Record<SignedOutReason, string>> = {
 
 /** Reads the session and the ledger again, from the start. */
 const retry = (): void => {
-  void import("../ledger/cloud.js").then((cloud) => cloud.bootCloud());
+  void startCloud();
 };
 
 const Retry = (): JSX.Element => (
