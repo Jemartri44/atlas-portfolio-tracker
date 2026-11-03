@@ -80,10 +80,6 @@ const raisedCodes = (): Set<string> => {
 const NOT_SHOWN: Record<string, string> = {
   invalid_archive_name: "guarda interna de los adaptadores: el nombre lo construye el programa",
   operation_not_supported: "guarda interna: la administración no pasa por el almacén de la API",
-  // Internal guards of the value objects: they can only fire on a bug, and the
-  // wrapper that catches them reports the field that was wrong.
-  // Raised while validating a line and re-raised with `line N:` by the store;
-  // the reader sees the wrapped one.
   // Raised only inside the Lambda of the API, which answers with a code of docs/api.md §7
   // (remote_unavailable, device_forgotten) or refuses to start; neither interface ever holds one of
   // these errors.
