@@ -154,6 +154,12 @@ export const WARNINGS_TAX: Record<string, Entry> = {
   },
   tax_box_section_doubtful: () =>
     "Las acciones de mercados de fuera de la UE (NYSE, Nasdaq…) van a «otros elementos patrimoniales» con la clave 2, como dice la ayuda del Modelo 100; ninguna fuente leída extiende a la declaración la equivalencia de esos mercados, así que el apartado es dudoso.",
+  tax_box_market_unknown: {
+    say: (d, v) =>
+      `Estas acciones no tienen mercado anotado o Atlas no lo conoce (${v.many(d.assets)}): se dejan en «acciones negociadas», pero si cotizan fuera de la UE van a «otros elementos patrimoniales» (clave 2). Anota el mercado.`,
+    cli: () => "`atlas asset update <asset_id> --market <MIC>`.",
+    web: () => "Se anota en Catálogo.",
+  },
   tax_box_other_inferred: () =>
     "Las diferencias de cambio de la divisa (y un ETC o ETP configurado como ganancia) no tienen apartado propio en el impreso: por exclusión irían a «otros elementos patrimoniales», clave 4 («otros elementos patrimoniales no afectos a actividades económicas»). Es una inferencia, no está escrita en ninguna fuente; por eso no llevan casilla.",
   tax_box_repurchase_has_no_number: () =>
