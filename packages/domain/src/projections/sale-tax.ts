@@ -320,12 +320,14 @@ export const simulateSale = (
     },
     hypothetical,
   );
-  const failed = estimates.find((entry): entry is RefusedOrder => "code" in entry);
-  if (failed !== undefined) {
-    // The engine's own error, with its details: what to repair is in them.
-    throw failed.error;
+  const done: SaleEstimate[] = [];
+  for (const entry of estimates) {
+    if ("code" in entry) {
+      // The engine's own error, with its details: what to repair is in them.
+      throw entry.error;
+    }
+    done.push(entry);
   }
-  const done = estimates as SaleEstimate[];
   const summary = summariseEstimates(done);
   const until = done
     .map((estimate) => estimate.repurchase_until)

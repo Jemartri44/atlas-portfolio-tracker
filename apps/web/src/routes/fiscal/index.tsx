@@ -4,20 +4,10 @@
 // the year first; a phone, the deadlines and the informative models, then the return.
 
 import { settingsAt, yearOf } from "@atlas/domain";
-import {
-  informativeReturn,
-  rentaPackage,
-  repurchaseCalendar,
-  savingsQuota,
-  taxBoxes,
-  taxYear,
-} from "@atlas/domain/fiscal";
-import { A } from "@solidjs/router";
+import { informativeReturn, repurchaseCalendar, taxBoxes, taxYear } from "@atlas/domain/fiscal";
 import { createMemo, createResource, For, type JSX, Show } from "solid-js";
-import { EmptyState, Notice, Section } from "../../components/index.js";
-import { describeWarning } from "../../format/messages/warnings.js";
+import { EmptyState, Section } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
-import { download } from "../../ledger/copy.js";
 import { toAppError } from "../../ledger/errors.js";
 import { attempt } from "../../ledger/query.js";
 import { store, today } from "../../ledger/state.js";
@@ -25,24 +15,19 @@ import { useQuotes } from "../../prices/use-quotes.jsx";
 import { GRID, mediaQuery } from "../../shell/media.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { privacy } from "../../shell/preferences.js";
-import {
-  BLOCK_TITLES,
-  boxesView,
-  informativeView,
-  PARTIAL_TEXTS,
-  yearView,
-} from "../../view-models/fiscal/index.js";
-import { quotaView } from "../../view-models/fiscal/quota.js";
+import { boxesView, informativeView, yearView } from "../../view-models/fiscal/index.js";
 import { repurchaseView } from "../../view-models/fiscal/sale.js";
 import { RequireLedger } from "../guard.jsx";
 import { BaseCard } from "./BaseCard.jsx";
 import { BoxesCard } from "./BoxesCard.jsx";
 import { LedgerCalendar } from "./CalendarCard.jsx";
 import { DoubtfulCard, SettledCard } from "./CriteriaCards.jsx";
+import { downloadPackage, quotaOf } from "./estimates.js";
 import { FilingCard } from "./FilingCard.jsx";
 import { InformativeCard } from "./InformativeCard.jsx";
 import { LossesCard } from "./LossesCard.jsx";
 import { PartFailed } from "./PartFailed.jsx";
+import { CannotCompute, NothingYet } from "./Placeholders.jsx";
 import { QuotaCard } from "./QuotaCard.jsx";
 import { RateNotes } from "./RateNotes.jsx";
 import { RepurchaseCard } from "./RepurchaseCard.jsx";
@@ -50,11 +35,7 @@ import { SaleSimulatorCard } from "./SaleSimulatorCard.jsx";
 import { useYear, type YearChoice, YearPicker } from "./YearPicker.jsx";
 import { yearsOf } from "./years.js";
 
-/**
- * What sets a ledger up without moving anything. A ledger that only has these has nothing to
- * declare and nothing to say about it, so the screen is **one** empty state with the next step and
- * not six cards of zeros (un único estado vacío con el siguiente paso").
- */
+/** What sets a ledger up without moving anything: with only these, the screen is `NothingYet`. */
 const SETUP = new Set([
   "account_created",
   "account_updated",
@@ -129,19 +110,13 @@ export default function FiscalRoute(): JSX.Element {
             ),
           })),
         );
-        /** The package of the year as a CSV, worded as the screen words it. */
-        const downloadPackage = (): void => {
-          const csv = rentaPackage(snapshot.events, year(), options(), {
-            block: (block) => BLOCK_TITLES[block],
-            partial: (reason) => PARTIAL_TEXTS[reason],
-            note: (note) => describeWarning(note, { names, privacy: false }),
-          });
-          download(csv, `atlas-renta-${year()}.csv`, "text/csv");
-        };
         const boxesCard = (): JSX.Element => {
           const result = boxes();
           return result.ok ? (
-            <BoxesCard view={result.value} onDownload={downloadPackage} />
+            <BoxesCard
+              view={result.value}
+              onDownload={() => downloadPackage(snapshot.events, year(), options(), names)}
+            />
           ) : (
             <PartFailed title="Tu declaración por casillas" error={result.error} />
           );
@@ -150,18 +125,9 @@ export default function FiscalRoute(): JSX.Element {
           const computed = report();
           return computed.ok ? yearView(computed.value, names) : undefined;
         });
-        /**
-         * The estimated quota of the year, with the brackets the settings in
-         * force at its close carry, if any (criterion #27).
-         */
         const quota = createMemo(() => {
           const computed = report();
-          if (!computed.ok) {
-            return undefined;
-          }
-          const close = `${year()}-12-31` < today() ? `${year()}-12-31` : today();
-          const brackets = settingsAt(snapshot.state, close).settings.savings_tax_brackets;
-          return quotaView(savingsQuota(computed.value, brackets));
+          return computed.ok ? quotaOf(snapshot.state, computed.value, today()) : undefined;
         });
         const failure = () => {
           const computed = report();
@@ -247,36 +213,14 @@ export default function FiscalRoute(): JSX.Element {
             />
 
             <Show when={untouched}>
-              <div class="grid">
-                <Section title="Todavía no hay nada que declarar" class="span-12">
-                  <EmptyState
-                    what="Tu libro no tiene ninguna operación"
-                    why="En cuanto registres una compra, una venta o un dividendo, aquí verás la base del ahorro del ejercicio, las casillas del Modelo 100 y si te toca el Modelo 720."
-                    glyph="plus"
-                  >
-                    <A href="/registrar" role="button">
-                      Registrar la primera operación
-                    </A>
-                  </EmptyState>
-                </Section>
-              </div>
+              <NothingYet />
             </Show>
 
             <Show
               when={!untouched && report().ok}
               fallback={
                 <Show when={!untouched}>
-                  <Notice
-                    severity="danger"
-                    title="No se puede calcular tu declaración"
-                    action={
-                      <A href="/ajustes/verificacion" role="button">
-                        Ver la verificación
-                      </A>
-                    }
-                  >
-                    {failure()?.message ?? ""}
-                  </Notice>
+                  <CannotCompute message={failure()?.message ?? ""} />
                 </Show>
               }
             >
