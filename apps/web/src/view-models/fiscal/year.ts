@@ -37,6 +37,12 @@ export interface FiscalRow {
   date: string;
   amount_eur: Money;
   criteria: readonly CriterionId[];
+  /**
+   * A loss whose repurchase window is still open (`tax_window_open`): the
+   * figure may still move, so the row says it beside the amount, not only in
+   * the list of notes.
+   */
+  provisional_until?: string;
 }
 
 /** A total of the return, with the operations it is made of. */
@@ -95,7 +101,11 @@ const transmissionRow = (line: TransmissionLine, names: NameIndex): FiscalRow =>
   date: formatDate(line.fiscal_date),
   amount_eur: line.computable_eur_rounded,
   criteria: sortCriteria(line.criteria),
+  ...provisional(line.provisional_until),
 });
+
+const provisional = (until: string | undefined): { provisional_until?: string } =>
+  until === undefined ? {} : { provisional_until: formatDate(until) };
 
 const CURRENCY_KINDS: Record<CurrencyLine["kind"], string> = {
   conversion: "Cambio a euros",
@@ -113,6 +123,7 @@ const currencyRow = (line: CurrencyLine): FiscalRow => ({
   date: formatDate(line.fiscal_date),
   amount_eur: line.computable_eur_rounded,
   criteria: sortCriteria(line.criteria),
+  ...provisional(line.provisional_until),
 });
 
 const incomeRow = (line: IncomeLine, names: NameIndex): FiscalRow => ({

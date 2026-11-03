@@ -2,7 +2,7 @@
 // options are the ones `vite.config.ts` hands to the plugin, read as they are, not a copy.
 
 import { describe, expect, it } from "vitest";
-import { WORKBOX_OPTIONS } from "../vite.config.js";
+import { MANIFEST, WORKBOX_OPTIONS } from "../vite.config.js";
 
 describe("the service worker", () => {
   it("precaches only the shell, by the patterns of static files", () => {
@@ -25,5 +25,14 @@ describe("the service worker", () => {
     }
     expect(denied.some((rule) => rule.test("/cartera"))).toBe(false);
     expect(WORKBOX_OPTIONS.navigateFallback).toBe("index.html");
+  });
+});
+
+describe("the shortcuts of the installed application", () => {
+  it("offer to record a purchase and a valuation from a long press on the icon", () => {
+    expect(MANIFEST.shortcuts?.map(({ name, url }) => [name, url])).toEqual([
+      ["Registrar compra", "/registrar/buy"],
+      ["Registrar valoración", "/registrar/valuation"],
+    ]);
   });
 });

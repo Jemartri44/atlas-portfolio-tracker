@@ -101,6 +101,9 @@ describe("savingsQuota", () => {
       { up_to: "300000", rate_pct: "27" },
       { rate_pct: "30" },
     ]);
+    // The same scale typed into the settings is the law: halves and all.
+    expect(same.scale_origin).toBe("law");
+    expect(same.state_eur?.centsText()).toBe("780.00");
     expect(same.notes).toEqual([]);
   });
 

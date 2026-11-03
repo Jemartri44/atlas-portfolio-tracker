@@ -16,17 +16,21 @@
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { yearOf } from "../dates/civil-date.js";
+import { asDomainError, type DomainError, ValidationError } from "../errors.js";
 import { systemUlid } from "../ids/ulid.js";
-import type { Decimal } from "../money/decimal.js";
+import { Decimal, HUNDRED } from "../money/decimal.js";
 import { Money } from "../money/money.js";
-import type { Quantity } from "../money/quantity.js";
+import { Quantity } from "../money/quantity.js";
 import { CURRENT_SCHEMA_VERSION } from "../schema/envelope.js";
-import type { AccountId, AssetId, LedgerEvent, SellEvent } from "../schema/events.js";
+import type { AccountId, AssetId, Book, LedgerEvent, SellEvent } from "../schema/events.js";
 import { fingerprintOf } from "../schema/fingerprint.js";
-import type { TaxBracket } from "../settings/defaults.js";
+import type { Settings, TaxBracket } from "../settings/defaults.js";
 import { type SavingsQuota, savingsQuota } from "../tax/quota.js";
 import type { TransmissionLine, TransmissionLot } from "../tax/report.js";
 import { taxYear } from "../tax/year.js";
+import { type FeeEstimate, feeEstimate, holdersOf } from "./platform-plan.js";
+import { type ExternalPrices, type PriceLookup, positionValueOf, priceAt } from "./prices.js";
+import type { LedgerState } from "./state.js";
 
 /** What is sold: the quantity and what the market pays for it at the informative price. */
 export interface HypotheticalSale {
@@ -144,5 +148,222 @@ export const estimateSale = (
     // The scales start at the first year the engine computes (`savings-scale.ts`), so both have a quota.
     tax_eur: (quotaAfter.quota_eur as Money).sub(quotaBefore.quota_eur as Money),
     event,
+  };
+};
+
+/** An order the engine refused: its code, and the error itself with its details. */
+export interface RefusedOrder {
+  code: string;
+  error: DomainError;
+}
+
+/** One order of a sale: an order is placed in one account, even though the FIFO is across all (ADR-0009). */
+export interface SaleOrder {
+  account_id: AccountId;
+  quantity: Quantity;
+  amount_eur: Money;
+  /** Absent when the ledger has no equivalent sale: unknown, never zero. */
+  fee?: FeeEstimate;
+  fee_pct?: Decimal;
+}
+
+/**
+ * Splits `quantity` of an asset across the accounts that hold it, largest
+ * position first, and estimates each order on top of `hypothetical`, which
+ * collects them so each one sees the ones before it. `total_eur`, when given,
+ * is what the orders add up to exactly: the last one takes the rest, so the
+ * rounding of each never makes the sum drift. An order the engine refuses
+ * carries its code instead of an estimate.
+ */
+export const estimateOrders = (
+  state: LedgerState,
+  events: readonly LedgerEvent[],
+  input: {
+    date: CivilDate;
+    brackets: readonly TaxBracket[] | undefined;
+    asset_id: AssetId;
+    quantity: Quantity;
+    price: PriceLookup;
+    book: Book;
+    total_eur?: Money;
+  },
+  hypothetical: LedgerEvent[],
+): { orders: SaleOrder[]; estimates: (SaleEstimate | RefusedOrder)[] } => {
+  const { date, asset_id: assetId, price } = input;
+  // A held asset has a price in euros, so its rate to the euro is there.
+  const rate = price.fx_rate as Decimal;
+  const holders = holdersOf(state, assetId, input.book);
+  let remaining = input.quantity;
+  let amountLeft = input.total_eur;
+  const orders: SaleOrder[] = [];
+  const estimates: (SaleEstimate | RefusedOrder)[] = [];
+  holders.forEach((holder, index) => {
+    if (!remaining.isPositive()) {
+      return;
+    }
+    const quantity = remaining.lt(holder.quantity) ? remaining : holder.quantity;
+    const last = index === holders.length - 1 || !remaining.gt(holder.quantity);
+    const value = (positionValueOf(price, quantity) as Money).roundToCents();
+    const amount = last && amountLeft !== undefined ? amountLeft : value;
+    const fee = feeEstimate(state, events, date, {
+      side: "sell",
+      account_id: holder.account_id,
+      asset_id: assetId,
+    });
+    orders.push({
+      account_id: holder.account_id,
+      quantity,
+      amount_eur: amount,
+      ...(fee === undefined
+        ? {}
+        : { fee, fee_pct: fee.fee_eur.amount.div(amount.amount).mul(HUNDRED) }),
+    });
+    remaining = remaining.sub(quantity);
+    amountLeft = amountLeft?.sub(amount);
+    const sale: HypotheticalSale = {
+      account_id: holder.account_id,
+      asset_id: assetId,
+      quantity,
+      currency: price.currency,
+      fx_rate: rate,
+      fx_rate_date: date,
+      amount: quantity.value.mul(price.unit_value).toString(),
+      fee: (fee?.fee_eur.amount ?? Decimal.ZERO).mul(rate).toString(),
+    };
+    try {
+      const estimate = estimateSale(events, hypothetical, date, sale, input.brackets);
+      hypothetical.push(estimate.event);
+      estimates.push(estimate);
+    } catch (error) {
+      // The engine only refuses with a domain error (an invalid ledger, a year it does not cover).
+      const refused = asDomainError(error);
+      estimates.push({ code: refused.code, error: refused });
+    }
+  });
+  return { orders, estimates };
+};
+
+/** "What if I sell this?": the orders, the gain lot by lot and the tax, never written. */
+export interface SaleSimulation {
+  asset_id: AssetId;
+  /** The informative price it is valued at, with its date and origin: always shown. */
+  price: PriceLookup;
+  quantity: Quantity;
+  orders: SaleOrder[];
+  gain_eur: Money;
+  cost_eur: Money;
+  lots: TransmissionLot[];
+  deferred_eur: Money;
+  deferral_window_end?: CivilDate;
+  repurchase_until?: CivilDate;
+  /** The year's estimated quota before the first order and after the last. */
+  quota_before: SavingsQuota;
+  quota_after: SavingsQuota;
+  tax_eur: Money;
+}
+
+/**
+ * Sells `quantity` of an asset (all of it when absent) on `date` at its
+ * informative price, across the accounts that hold it, on a copy of the ledger.
+ * Either book: the bucket's sales are taxed like any other.
+ */
+export const simulateSale = (
+  state: LedgerState,
+  events: readonly LedgerEvent[],
+  query: {
+    asset_id: AssetId;
+    quantity?: Quantity;
+    date: CivilDate;
+    settings: Settings;
+    external?: ExternalPrices;
+  },
+): SaleSimulation => {
+  const { asset_id: assetId, date } = query;
+  const book = state.assets.get(assetId)?.book ?? "core";
+  const held = holdersOf(state, assetId, book).reduce(
+    (sum, holder) => sum.add(holder.quantity),
+    Quantity.ZERO,
+  );
+  if (!held.isPositive()) {
+    throw new ValidationError("sale_asset_not_held", "no active account holds the asset", {
+      asset_id: assetId,
+    });
+  }
+  const quantity = query.quantity ?? held;
+  if (!quantity.isPositive() || quantity.gt(held)) {
+    throw new ValidationError(
+      "sale_exceeds_holding",
+      "the quantity is not positive or exceeds what is held",
+      {
+        asset_id: assetId,
+        held: held.toString(),
+      },
+    );
+  }
+  const price = priceAt(state, assetId, date, query.settings, query.external);
+  if (price?.unit_value_eur === undefined || price.fx_rate === undefined) {
+    throw new ValidationError("sale_missing_price", "the asset has no price in euros on the date", {
+      asset_id: assetId,
+      date,
+    });
+  }
+  const priced = price as PriceLookup;
+  const hypothetical: LedgerEvent[] = [];
+  const { orders, estimates } = estimateOrders(
+    state,
+    events,
+    {
+      date,
+      brackets: query.settings.savings_tax_brackets,
+      asset_id: assetId,
+      quantity,
+      price: priced,
+      book,
+    },
+    hypothetical,
+  );
+  const done: SaleEstimate[] = [];
+  for (const entry of estimates) {
+    if ("code" in entry) {
+      // The engine's own error, with its details: what to repair is in them.
+      throw entry.error;
+    }
+    done.push(entry);
+  }
+  const summary = summariseEstimates(done);
+  const until = done
+    .map((estimate) => estimate.repurchase_until)
+    .filter((end): end is CivilDate => end !== undefined)
+    .sort()
+    .pop();
+  return {
+    asset_id: assetId,
+    price: priced,
+    quantity,
+    orders,
+    ...summary,
+    ...(until === undefined ? {} : { repurchase_until: until }),
+    quota_before: (done[0] as SaleEstimate).quota_before,
+    quota_after: (done.at(-1) as SaleEstimate).quota_after,
+  };
+};
+
+const sumOf = (values: readonly Money[]): Money =>
+  values.reduce((sum, value) => sum.add(value), Money.zero("EUR"));
+
+/** Several estimates of one sale, added up: what the screen says of the sale as a whole. */
+export const summariseEstimates = (estimates: readonly SaleEstimate[]) => {
+  const windowEnd = estimates
+    .map((estimate) => estimate.deferral_window_end)
+    .filter((end): end is CivilDate => end !== undefined)
+    .sort()
+    .pop();
+  return {
+    tax_eur: sumOf(estimates.map((estimate) => estimate.tax_eur)),
+    gain_eur: sumOf(estimates.map((estimate) => estimate.gain_eur)),
+    cost_eur: sumOf(estimates.map((estimate) => estimate.cost_eur)),
+    lots: estimates.flatMap((estimate) => estimate.lots),
+    deferred_eur: sumOf(estimates.map((estimate) => estimate.deferred_eur)),
+    ...(windowEnd === undefined ? {} : { deferral_window_end: windowEnd }),
   };
 };

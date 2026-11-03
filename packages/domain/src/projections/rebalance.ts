@@ -17,7 +17,7 @@
 // proportionally from everything (rule 4).
 
 import type { CivilDate } from "../dates/civil-date.js";
-import { asDomainError, ValidationError } from "../errors.js";
+import { ValidationError } from "../errors.js";
 import { Decimal, HUNDRED } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
@@ -25,16 +25,18 @@ import type { AccountId, AssetClass, AssetId, LedgerEvent } from "../schema/even
 import type { Settings } from "../settings/settings.js";
 import type { TransmissionLot } from "../tax/report.js";
 import { fillByLevel, purchasesOnlyOf, splitCore } from "./contribution.js";
+import { holdersOf, type Order, type PlatformPlan, platformPlan } from "./platform-plan.js";
+import type { ExternalPrices, PriceLookup } from "./prices.js";
 import {
-  type FeeEstimate,
-  feeEstimate,
-  holdersOf,
-  type Order,
-  type PlatformPlan,
-  platformPlan,
-} from "./platform-plan.js";
-import { type ExternalPrices, type PriceLookup, positionValueOf } from "./prices.js";
-import { estimateSale, type HypotheticalSale, type SaleEstimate } from "./sale-tax.js";
+  estimateOrders,
+  type RefusedOrder,
+  type SaleEstimate,
+  type SaleOrder,
+  summariseEstimates,
+} from "./sale-tax.js";
+
+export type { SaleOrder };
+
 import type { Account, LedgerState, Warning } from "./state.js";
 import { transferBlock } from "./transfer-rule.js";
 import { coreWeights } from "./weights.js";
@@ -87,15 +89,6 @@ export interface TransferStep {
   quantity: Quantity;
   from_account_id?: AccountId;
   to_account_id?: AccountId;
-}
-
-export interface SaleOrder {
-  account_id: AccountId;
-  quantity: Quantity;
-  amount_eur: Money;
-  /** Absent when the ledger has no equivalent sale: unknown, never zero. */
-  fee?: FeeEstimate;
-  fee_pct?: Decimal;
 }
 
 export type SaleTax =
@@ -449,7 +442,7 @@ export const rebalancePlan = (
       ).map((amount, index) => ({ item: (toBuy[index] as { item: Item }).item, amount }));
       const hypothetical: LedgerEvent[] = [];
       for (const leg of splitLegs(sold, bought)) {
-        const step = saleStep(state, events, date, settings, weights, leg, hypothetical);
+        const step = saleStep(state, events, date, settings, leg, hypothetical);
         for (const order of step.orders) {
           bookSale(order);
         }
@@ -531,68 +524,26 @@ const saleStep = (
   events: readonly LedgerEvent[],
   date: CivilDate,
   settings: Settings,
-  weights: ReturnType<typeof coreWeights>,
   leg: SaleLeg,
   hypothetical: LedgerEvent[],
 ): SaleStep => {
   const assetId = leg.item.asset_id;
-  const price = weights.rows.find((row) => row.asset_id === assetId)?.price;
   const priced = leg.item.price as PriceLookup;
-  const holders = holdersOf(state, assetId);
-  let remaining = quantityOf(leg.amount, priced);
-  let amountLeft = leg.amount;
-  const orders: SaleOrder[] = [];
-  const estimates: (SaleEstimate | { code: string })[] = [];
-  holders.forEach((holder, index) => {
-    if (!remaining.isPositive()) {
-      return;
-    }
-    const quantity = remaining.lt(holder.quantity) ? remaining : holder.quantity;
-    const last = index === holders.length - 1 || !remaining.gt(holder.quantity);
-    const amount = last ? amountLeft : (positionValueOf(priced, quantity) as Money).roundToCents();
-    const fee = feeEstimate(state, events, date, {
-      side: "sell",
-      account_id: holder.account_id,
+  const { orders, estimates } = estimateOrders(
+    state,
+    events,
+    {
+      date,
+      brackets: settings.savings_tax_brackets,
       asset_id: assetId,
-    });
-    orders.push({
-      account_id: holder.account_id,
-      quantity,
-      amount_eur: amount,
-      ...(fee === undefined ? {} : { fee }),
-      ...(fee === undefined ? {} : { fee_pct: fee.fee_eur.amount.div(amount.amount).mul(HUNDRED) }),
-    });
-    remaining = remaining.sub(quantity);
-    amountLeft = amountLeft.sub(amount);
-    const quoted = price as NonNullable<typeof price>;
-    // A held asset has a price in euros, so its rate to the euro is there.
-    const rate = quoted.fx_rate as Decimal;
-    const sale: HypotheticalSale = {
-      account_id: holder.account_id,
-      asset_id: assetId,
-      quantity,
-      currency: quoted.currency,
-      fx_rate: rate,
-      fx_rate_date: date,
-      amount: quantity.value.mul(quoted.unit_value).toString(),
-      fee: (fee?.fee_eur.amount ?? Decimal.ZERO).mul(rate).toString(),
-    };
-    try {
-      const estimate = estimateSale(
-        events,
-        hypothetical,
-        date,
-        sale,
-        settings.savings_tax_brackets,
-      );
-      hypothetical.push(estimate.event);
-      estimates.push(estimate);
-    } catch (error) {
-      // The engine only refuses with a domain error (an invalid ledger, a year it does not cover).
-      estimates.push({ code: asDomainError(error).code });
-    }
-  });
-  const failed = estimates.find((entry): entry is { code: string } => "code" in entry);
+      quantity: quantityOf(leg.amount, priced),
+      price: priced,
+      book: "core",
+      total_eur: leg.amount,
+    },
+    hypothetical,
+  );
+  const failed = estimates.find((entry): entry is RefusedOrder => "code" in entry);
   const done = estimates.filter((entry): entry is SaleEstimate => !("code" in entry));
   return {
     kind: "sale",
@@ -600,26 +551,10 @@ const saleStep = (
     asset_id: assetId,
     amount_eur: leg.amount,
     orders,
-    tax: failed !== undefined ? { available: false, code: failed.code } : taxOf(done),
+    tax:
+      failed !== undefined
+        ? { available: false, code: failed.code }
+        : { available: true, ...summariseEstimates(done) },
     buys: { rows: [], unassigned: [] },
-  };
-};
-
-const sumOf = (values: readonly Money[]): Money => values.reduce((sum, v) => sum.add(v), ZERO);
-
-const taxOf = (estimates: readonly SaleEstimate[]): SaleTax => {
-  const windowEnd = estimates
-    .map((estimate) => estimate.deferral_window_end)
-    .filter((end): end is CivilDate => end !== undefined)
-    .sort()
-    .pop();
-  return {
-    available: true,
-    tax_eur: sumOf(estimates.map((estimate) => estimate.tax_eur)),
-    gain_eur: sumOf(estimates.map((estimate) => estimate.gain_eur)),
-    cost_eur: sumOf(estimates.map((estimate) => estimate.cost_eur)),
-    lots: estimates.flatMap((estimate) => estimate.lots),
-    deferred_eur: sumOf(estimates.map((estimate) => estimate.deferred_eur)),
-    ...(windowEnd === undefined ? {} : { deferral_window_end: windowEnd }),
   };
 };

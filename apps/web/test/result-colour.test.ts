@@ -91,6 +91,10 @@ const RESULTS: Record<string, { count: number; what: string }> = {
   "routes/fiscal/LossesCard.tsx": { count: 3, what: "the losses pending compensation" },
   "routes/movimientos/DetailFields.tsx": { count: 3, what: "what a sale produced" },
   "routes/registrar/Preview.tsx": { count: 1, what: "the result a sale would produce" },
+  "routes/fiscal/SaleSimulatorCard.tsx": {
+    count: 2,
+    what: "the gain or loss a simulated sale would produce, per lot and in total",
+  },
 };
 
 const asked = (source: string): number =>

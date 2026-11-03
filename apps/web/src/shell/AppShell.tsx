@@ -29,6 +29,7 @@ import { countOf } from "../format/number.js";
 import { maskFigures } from "../format/privacy.js";
 import { blocksTheApp, store } from "../ledger/state.js";
 import { decodeFragment, historyGate, scrollToFragment } from "./anchor.js";
+import { CommandBox } from "./CommandBox.jsx";
 import { LedgerChip } from "./LedgerChip.jsx";
 import { inSection, Nav } from "./Nav.jsx";
 import { PrivacyToggle } from "./PrivacyToggle.jsx";
@@ -212,6 +213,7 @@ export const AppShell = (props: { children?: JSX.Element }): JSX.Element => (
         {/* Without a session there is nothing to hide and nowhere to go: the gate is alone. */}
         <Show when={hasLedger()}>
           <div class="status">
+            <CommandBox />
             <LedgerChip />
             <DraftSlot />
             <PrivacyToggle />

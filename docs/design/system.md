@@ -172,6 +172,10 @@ Desde 1024 px, 12 columnas con espacio de 20 y clases `span-N`. Las tarjetas de 
 
 La hoja visual de componentes estaba en el prototipo retirado; hoy son los estilos de `apps/web/src/styles/`.
 
+### 4.4 El teclado del ordenador
+
+Solo desde la barra superior (≥ 1200 px): un botón **«Buscar o registrar»** con su tecla `/` (en la barra compacta, el icono y la tecla) abre un diálogo con una caja de órdenes (un *combobox* ARIA: flechas, Intro y Esc). Ofrece registrar cada operación del día a día, ir a cada destino y, siempre al final, buscar lo escrito en los movimientos (`/movimientos?q=`). Desde una pantalla **sin formulario**, **C** compra, **V** venta y **P** valoración: en un formulario la letra no actúa, porque salir de él perdería lo escrito. Las teclas solo responden **solas** y una vez aunque se mantengan: con Ctrl, Cmd o Alt son del navegador o del sistema; dentro de un campo, una lista o algo editable, o mientras se compone un carácter, son lo que se escribe; con un diálogo abierto, del diálogo. Las letras **se pueden apagar** en Ajustes (WCAG 2.1.4: un lector de pantalla usa letras sueltas para moverse); «/» abre siempre la caja. La caja se cierra con Esc o con «Cerrar». En el móvil no hay teclas: la aplicación instalada ofrece «Registrar compra» y «Registrar valoración» con una pulsación larga en su icono (`shortcuts` del manifiesto).
+
 ### 5.1 Tarjeta (`.card`)
 
 Hoja cálida (`--c-surface`), borde de 1 px, radio 14, sombra mínima. Cabecera (`.card-head`): `h2` a la izquierda y, a la derecha, un dato de contexto (`--text-sm`, `--c-text-3`) o una etiqueta. **Sin franja gris.** Pie (`.card-foot`): fila de 44 px de borde a borde con un enlace, pulsable entera.
@@ -346,6 +350,8 @@ La **Configuración** termina con *Exposición* (`ExposureCard`, ancla `#exposic
 
 En escritorio es un destino de la barra (D16); en el móvil se llega desde la tarjeta del Resumen. Siempre abre con el calendario fiscal y las notas de los tipos del BCE. Con rejilla (desde 1024 px) sigue la Renta del ejercicio y después los modelos 720 y 721; sin ella, primero los modelos y después la Renta, entera y a la vista. La Renta empieza por la **base del ahorro** como cifra protagonista, rotulada «cartera y cubo juntos» —la primera excepción de la constitución III, dicha siempre, nunca en silencio—; el selector de ejercicio va en la URL (`?ejercicio=`) y es el mismo control compacto que la fecha de consulta. Cada total se abre en sus operaciones, **nombradas por activo y fecha**, jamás por el identificador de un evento. Los criterios van en dos tarjetas que no se mezclan, *en duda* y *firmes con dinero detrás*: se enseñan **tres y se pliega el resto**, y cada entrada dice de qué operaciones viene o por qué motivo la emitió el motor, para que dos entradas del mismo criterio no se lean iguales. Debajo, lo pendiente de compensar y lo que caduca, **la declaración por casillas** (cada cifra con lo que es, el rótulo literal del formulario cuando el ejercicio está comprobado, y la cita del anexo del BOE una vez por bloque), el estado de los modelos 720 y 721 y la comparación con lo presentado. `/fiscal/presentar/<modelo>/<año>` registra lo presentado: los importes llegan con lo que la aplicación calcula y el error de una cifra mal escrita se marca **en su campo**.
 
+Junto al calendario, **«No recomprar hasta»**: los activos con la ventana de recompra abierta, la fecha y la pérdida en juego; sin ninguna, no se enseña. Bajo la base, la **cuota estimada del ahorro**, rotulada «estimación» en el título y en su primera frase: tramo a tramo, la parte del Estado y la de la comunidad, el tipo medio, el del siguiente euro, la deducción por doble imposición y las retenciones como «parte del ahorro, estimación». Una pérdida provisional (ventana de recompra abierta) lo dice **junto a su cifra**, con una etiqueta de precaución. Después de las casillas, **«¿Y si vendo?»**: activo y cantidad, órdenes por cuenta, lotes FIFO, ganancia, lo que sube o baja la cuota y, si hay pérdida, hasta cuándo no recomprar; siempre con «nada registrado». La tarjeta de casillas lleva **«Descargar el paquete (CSV)»** e **«Imprimir o guardar en PDF»**: el navegador imprime solo esa tarjeta, con los bloques abiertos.
+
 Con el libro vacío no enseña seis tarjetas de ceros: una sola con el siguiente paso.
 
 ---
@@ -379,6 +385,7 @@ Dirección A «Cuaderno vivo», elegida por el dueño el 2026-11-03 sobre la aud
 | D15 | Avisos con placa, botones y pestañas en píldora, hoja cálida | Los tokens de color, casi sin tocar |
 | D16 | La Declaración, destino de la barra en escritorio | Pieza tomada de la dirección B; en el móvil sigue desde su tarjeta |
 | D17 | Resumen: baldosas con minigráfica, evolución en áreas apiladas, «Este mes» y reparto en barras de bala | Las baldosas, de B; la variación de la cartera y el plan del mes, del dominio (`docs/business-rules.md`) |
+| D18 | Atajos: «Buscar o registrar» con `/`, C, V y P en el ordenador y accesos del icono instalado | Decidido por el dueño el 2026-11-03 sobre el informe visual §4 |
 
 ---
 

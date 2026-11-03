@@ -57,7 +57,8 @@ export const copyName = (format: CopyFormat, day: string): string => `atlas-copi
 
 const REVOKE_AFTER_MS = 30_000;
 
-const download = (text: string, name: string, type: string): void => {
+/** Hands `text` to the browser as a file called `name`. */
+export const download = (text: string, name: string, type: string): void => {
   const url = URL.createObjectURL(new Blob([text], { type }));
   const anchor = document.createElement("a");
   anchor.href = url;
