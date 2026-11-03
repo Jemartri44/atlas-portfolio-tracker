@@ -442,6 +442,7 @@ describe("a request with the session (R18, R19, R23, R31)", () => {
       code: "remote_unavailable",
       details: { dependency: "ssm" },
     });
+    // The one read of S3 here is the mark of logout-all: failing, it never lets the cookie through.
     api.s3.failNext();
     expect(errorOf(await api.call("GET", "/api/session"))).toEqual({
       code: "remote_unavailable",
