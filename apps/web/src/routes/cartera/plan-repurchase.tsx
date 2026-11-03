@@ -25,8 +25,11 @@ interface Source {
  * ledger and date: a new amount only filters it again.
  */
 export const usePlanRepurchase = (source: () => Source): Repurchase => {
+  // Apart, or every change of the plan would read as a new ledger: `source` tracks the plan too.
+  const events = createMemo(() => source().events);
+  const date = createMemo(() => source().date);
   const [calendar] = createResource(
-    () => ({ events: source().events, date: source().date }),
+    () => ({ events: events(), date: date() }),
     async ({ events, date }) => {
       const fiscal = await import("@atlas/domain/fiscal");
       return { fiscal, calendar: fiscal.repurchaseCalendar(events, date) };
