@@ -28,8 +28,8 @@ const webRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const dist = join(webRoot, "dist");
 
 /**
- * Ceiling on everything the browser may download (JS + CSS, gzip): about
- * 10 % over what is measured, so only a real growth edits it.
+ * Ceiling on everything the browser may download (JS + CSS, gzip): a margin over what is
+ * measured, so only a real growth edits it.
  *
  * 355_000 → 365_000 (2026-11-03, the exposure screens): `develop` already measured 346,4 KB of
  * 346,7 KB. The screens add about 9 KB of lazily loaded code (tables of the indexes 2,8, client and
