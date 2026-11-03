@@ -15,7 +15,7 @@
 import type { AssetId } from "@atlas/domain";
 import { type PriceStore, type PriceTransaction, priceFileName } from "@atlas/domain/quotes";
 import { decodeUtf8Strict } from "../utf8.js";
-import type { ObjectStore } from "./object-store.js";
+import { type ObjectStore, writeConditional } from "./object-store.js";
 
 const PREFIX = "prices/";
 const SYMBOLS = `${PREFIX}symbols.json`;
@@ -91,11 +91,7 @@ export class S3PriceStore implements PriceStore {
         }
       }
       const body = encoder.encode(text);
-      const done =
-        was === undefined
-          ? (await this.objects.putIfNoneMatch(key, body)) === "created"
-          : (await this.objects.putIfMatch(key, body, was.etag)) === "written";
-      if (!done) {
+      if (!(await writeConditional(this.objects, key, body, was?.etag))) {
         throw new PriceStoreConflict();
       }
       written.set(key, text);
