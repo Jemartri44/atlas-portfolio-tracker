@@ -4,7 +4,7 @@
 import type { Decimal, Money } from "@atlas/domain";
 
 /** Shown where a figure exists but is unknown, never a zero (constitution V). */
-export const DASH = "—";
+const DASH = "—";
 
 /** Percentage to two decimals; a dash when it is not known, like `eur`. */
 export const pct = (value: Decimal | undefined): string =>
