@@ -104,6 +104,8 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   const onChange = (next: FormValues): void => {
     setFieldErrors(errorsAfterEdit(fieldErrors(), values(), next));
     setValues(next);
+    // Editing is the answer to «Tus datos han cambiado»: the notice has been read.
+    setConflict(false);
     // The effect beside the form is the effect of what was there before.
     if (step() === "preview") {
       setStep("form");
@@ -150,10 +152,21 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
     if (!rates.cleared()) {
       return;
     }
-    const draft = toDraft(props.spec, values(), props.state);
+    let draft: ReturnType<typeof toDraft>;
+    let result: Awaited<ReturnType<typeof writeStep>>;
+    try {
+      draft = toDraft(props.spec, values(), props.state);
+      result = await writeStep(
+        draft,
+        props,
+        reason().trim(),
+        warned.confirms([draft, reason().trim()], confirmDuplicate),
+      );
+    } catch (refusal) {
+      place(refusal, values());
+      return;
+    }
     const asked = [draft, reason().trim()];
-    const yes = warned.confirms(asked, confirmDuplicate);
-    const result = await writeStep(draft, props, reason().trim(), yes);
     if (result.ok) {
       navigate(result.value);
       return;

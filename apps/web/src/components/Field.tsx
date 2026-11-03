@@ -20,6 +20,7 @@ import { createSignal, type JSX, Show } from "solid-js";
 import { MASK } from "../format/privacy.js";
 import { privacy } from "../shell/preferences.js";
 import { Icon } from "./Icon.jsx";
+import { keypadComma, noDot } from "./number-keys.js";
 
 export interface Option {
   value: string;
@@ -115,6 +116,10 @@ export const Field = (props: TextFieldProps): JSX.Element => {
       disabled={props.disabled}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
+      onBeforeInput={props.kind === "decimal" || props.kind === "integer" ? noDot : undefined}
+      onKeyDown={
+        props.kind === "decimal" || props.kind === "integer" ? keypadComma(props.kind) : undefined
+      }
       onInput={(event) => {
         // The value first: marking the field as typed re-renders it, and
         // the control would be read back after that with the old value.
