@@ -130,6 +130,16 @@ describe("totalCost", () => {
     expect(result.ter_missing_eur.amount.toString()).toBe("1000");
     const alone = costOf(pot("1"), settings, { commissionPct: d("0") });
     expect(result.ter_cost_eur?.amount.toString()).toBe(alone.ter_cost_eur?.amount.toString());
+    // The exit-tax basis is the 1000 invested in the TER asset, not the 2000 of the whole core.
+    const taxed = costOf(b.build(), settings, {
+      commissionPct: d("0"),
+      exitTaxPct: d("20"),
+      grossReturnPct: d("5"),
+    });
+    const net = taxed.end_net_eur?.amount as Decimal;
+    expect(taxed.exit_tax_eur?.amount.toString()).toBe(
+      net.sub(d("1000")).sub(d("1080")).mul(d("20")).div(d("100")).toString(),
+    );
   });
 
   it("reports a missing contribution and bucket share instead of assuming them", () => {

@@ -127,7 +127,11 @@ export const totalCost = (
   let total = terCost.add(commissionCost ?? Decimal.ZERO);
   let tax: Decimal | undefined;
   if (assumptions.exitTaxPct !== undefined) {
-    const basis = totals.invested_eur.amount.add(net.contributed.sub(start));
+    // The basis follows the pot: only what was invested in the assets that declare a TER.
+    const invested = summary.core.rows
+      .filter((row) => row.ter !== undefined && row.value_eur !== undefined)
+      .reduce((sum, row) => sum.add(row.invested_eur.amount), Decimal.ZERO);
+    const basis = invested.add(net.contributed.sub(start));
     const gain = net.value.sub(basis);
     tax = gain.isPositive() ? gain.mul(assumptions.exitTaxPct).div(HUNDRED) : Decimal.ZERO;
     total = total.add(tax);
