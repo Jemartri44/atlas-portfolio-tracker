@@ -31,6 +31,7 @@ const DAILY: readonly (readonly [string, IconName])[] = [
 const TRANSFERS = ["traspaso-solicitud", "traspaso-etapa", "traspaso"];
 const BUCKET = ["tesis", "tesis-cierre"];
 const CATALOGUE = ["cuenta", "activo"];
+const TAXES = ["fuera-de-cartera"];
 
 interface Entry {
   href: string;
@@ -171,6 +172,7 @@ export default function RegistrarRoute(): JSX.Element {
                     when: form.when,
                   }))}
                 />
+                <Group title="Impuestos" entries={entriesOf(TAXES)} />
                 <Group title="Catálogo: cuentas y activos" entries={entriesOf(CATALOGUE)} />
               </Section>
             </div>

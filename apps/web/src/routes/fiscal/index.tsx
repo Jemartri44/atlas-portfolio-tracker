@@ -22,13 +22,13 @@ import { BaseCard } from "./BaseCard.jsx";
 import { BoxesCard } from "./BoxesCard.jsx";
 import { LedgerCalendar } from "./CalendarCard.jsx";
 import { DoubtfulCard, SettledCard } from "./CriteriaCards.jsx";
-import { downloadPackage, quotaOf } from "./estimates.js";
+import { downloadPackage, estimateOf } from "./estimates.js";
 import { FilingCard } from "./FilingCard.jsx";
 import { InformativeCard } from "./InformativeCard.jsx";
 import { LossesCard } from "./LossesCard.jsx";
 import { PartFailed } from "./PartFailed.jsx";
 import { CannotCompute, NothingYet } from "./Placeholders.jsx";
-import { QuotaCard } from "./QuotaCard.jsx";
+import { EstimateCards } from "./QuotaCard.jsx";
 import { RateNotes } from "./RateNotes.jsx";
 import { RepurchaseCard } from "./RepurchaseCard.jsx";
 import { SaleSimulatorCard } from "./SaleSimulatorCard.jsx";
@@ -125,10 +125,7 @@ export default function FiscalRoute(): JSX.Element {
           const computed = report();
           return computed.ok ? yearView(computed.value, names) : undefined;
         });
-        const quota = createMemo(() => {
-          const computed = report();
-          return computed.ok ? quotaOf(snapshot.state, computed.value, today()) : undefined;
-        });
+        const quota = createMemo(() => estimateOf(snapshot, report(), options()));
         const failure = () => {
           const computed = report();
           return computed.ok ? undefined : computed.error;
@@ -156,7 +153,9 @@ export default function FiscalRoute(): JSX.Element {
                 </Show>
                 <Show when={!year().empty}>
                   <BaseCard view={year()} />
-                  <Show when={quota()}>{(estimate) => <QuotaCard view={estimate()} />}</Show>
+                  <Show when={quota()}>
+                    {(estimate) => <EstimateCards estimate={estimate()} />}
+                  </Show>
                   <DoubtfulCard stakes={year().doubtful} />
                   <SettledCard stakes={year().settled} />
                   <LossesCard

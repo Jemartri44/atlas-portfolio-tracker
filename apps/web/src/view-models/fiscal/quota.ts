@@ -41,6 +41,8 @@ export interface QuotaView {
   deduction_eur?: Money;
   withholdings_eur: Money;
   result_eur?: Money;
+  /** The income from outside the portfolio inside the base, when there is some. */
+  external_eur?: Money;
   notes: QuotaNoteView[];
 }
 
@@ -104,6 +106,7 @@ export const quotaView = (quota: SavingsQuota): QuotaView => {
       : { deduction_eur: quota.double_taxation.deduction_eur }),
     withholdings_eur: quota.savings_withholdings_eur,
     ...(quota.result_eur === undefined ? {} : { result_eur: quota.result_eur }),
+    ...(quota.external_eur === undefined ? {} : { external_eur: quota.external_eur }),
     notes: quota.notes.map((note) => NOTES[note](quota.year, checked)),
   };
 };
