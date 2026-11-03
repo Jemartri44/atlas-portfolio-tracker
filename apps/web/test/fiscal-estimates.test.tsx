@@ -137,13 +137,13 @@ describe("a loss whose repurchase window is open", () => {
   });
 });
 
-describe("no recomprar hasta", () => {
+describe("ventana de recompra abierta", () => {
   it("lists the asset, the last day and the loss at stake", async () => {
     // A loss of 0.55 € on 05/11/2027: a purchase until 05/01/2028 would defer it.
     const view = repurchaseView(repurchaseCalendar(events, "2027-11-20"), NO_NAMES);
     const host = await show("/", () => <RepurchaseCard view={view} />);
     const shown = text(host);
-    expect(shown).toContain("No recomprar hasta");
+    expect(shown).toContain("Ventana de recompra abierta");
     expect(shown).toContain("05/01/2028");
     expect(shown).toContain("0,55");
   });
@@ -187,7 +187,7 @@ describe("¿y si vendo?", () => {
     expect(shown).toMatch(/−943,00/);
     expect(shown).toContain("No cambia tu cuota estimada del año");
     expect(shown).not.toMatch(/Sube tu cuota|Reduce tu cuota/);
-    expect(shown).toContain("No vuelvas a comprar hasta el 10/03/2029");
+    expect(shown).toContain("Ventana de recompra abierta hasta el 10/03/2029");
   });
 
   it("says in Spanish why a sale cannot be simulated", async () => {
