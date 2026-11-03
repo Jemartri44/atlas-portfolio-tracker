@@ -15,7 +15,9 @@ locals {
   deploy_sub = var.env == "dev" ? "repo:${var.github_repository}:ref:refs/heads/develop:job_workflow_ref:${var.github_repository}/.github/workflows/deploy-dev.yml@refs/heads/develop" : "repo:${var.github_repository}:environment:prod:job_workflow_ref:${var.github_repository}/.github/workflows/deploy-prod.yml@refs/heads/main"
   # The sub of a pull request carries neither a branch nor an environment: the plan
   # job declares no `environment:` for that reason (research b0.4). The ref of the
-  # workflow is `refs/pull/<n>/merge`, hence the only wildcard of the trusts.
+  # workflow is `refs/pull/<n>/merge`, hence the only wildcard of the trusts. That ref
+  # runs the workflow file of the pull request itself, so this pins the file name, not its
+  # content: the plan role is read-only (ADR-0034, row 3).
   plan_sub = "repo:${var.github_repository}:pull_request:job_workflow_ref:${var.github_repository}/.github/workflows/infra-plan.yml@refs/pull/*/merge"
 
   oidc_trust = { for key, sub in { deploy = local.deploy_sub, plan = local.plan_sub } : key => jsonencode({
