@@ -304,9 +304,11 @@ export const reportYear = (
   raw: string | undefined,
   usage: string,
   command: string,
+  /** The first year the command can be asked for; `tax` and the models say their own regime. */
+  floor = 1,
 ): number => {
   const year = yearArgument(raw);
-  if (year === undefined || year < 1900) {
+  if (year === undefined || year < floor) {
     throw new UsageError(usage);
   }
   if (year > Number(todayInMadrid(ctx.deps.clock).slice(0, 4))) {

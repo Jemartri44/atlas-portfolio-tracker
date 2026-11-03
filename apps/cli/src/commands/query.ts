@@ -184,7 +184,13 @@ export const gainsCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["lots", ...GLOBAL_FLAGS]);
-  const year = reportYear(ctx, positionals[1], "uso: atlas gains <año> [--lots]", "atlas gains");
+  const year = reportYear(
+    ctx,
+    positionals[1],
+    "uso: atlas gains <año> [--lots]",
+    "atlas gains",
+    1900,
+  );
   const { events, state } = await loadForQuery(ctx);
   const gains = realizedGains(state, year);
   const total = gains.reduce((sum, g) => sum.add(g.gain_eur_rounded), Money.zero("EUR"));
@@ -262,7 +268,7 @@ export const incomeCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, GLOBAL_FLAGS);
-  const year = reportYear(ctx, positionals[1], "uso: atlas income <año>", "atlas income");
+  const year = reportYear(ctx, positionals[1], "uso: atlas income <año>", "atlas income", 1900);
   const { state } = await loadForQuery(ctx);
   const rows = investmentIncome(state, year);
   renderQuery(
