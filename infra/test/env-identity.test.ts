@@ -112,8 +112,14 @@ describe("the trust of the deploy and plan roles", () => {
   const oidc = `arn:aws:iam::${ACCOUNT}:oidc-provider/token.actions.githubusercontent.com`;
 
   it.each([
-    ["dev", `repo:${REPOSITORY}:ref:refs/heads/develop`],
-    ["prod", `repo:${REPOSITORY}:environment:prod`],
+    [
+      "dev",
+      `repo:${REPOSITORY}:ref:refs/heads/develop:job_workflow_ref:${REPOSITORY}/.github/workflows/deploy-dev.yml@refs/heads/develop`,
+    ],
+    [
+      "prod",
+      `repo:${REPOSITORY}:environment:prod:job_workflow_ref:${REPOSITORY}/.github/workflows/deploy-prod.yml@refs/heads/main`,
+    ],
   ])("the deploy role of %s accepts exactly one sub, with the audience", (env, sub) => {
     expect(trustOf(plans[env] as Plan, `atlas-${env}-deploy`)).toEqual([
       {
@@ -131,25 +137,27 @@ describe("the trust of the deploy and plan roles", () => {
     ]);
   });
 
-  it.each(ENVS)("the plan role of %s accepts the sub of a pull request and nothing else", (env) => {
+  it.each(ENVS)("the plan role of %s accepts the plan workflow on a pull request only", (env) => {
     const [statement] = trustOf(plans[env] as Plan, `atlas-${env}-plan`);
     expect(statement?.Condition).toEqual({
-      StringEquals: {
-        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-        "token.actions.githubusercontent.com:sub": `repo:${REPOSITORY}:pull_request`,
+      StringEquals: { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com" },
+      StringLike: {
+        "token.actions.githubusercontent.com:sub": `repo:${REPOSITORY}:pull_request:job_workflow_ref:${REPOSITORY}/.github/workflows/infra-plan.yml@refs/pull/*/merge`,
       },
     });
   });
 
   it.each(ENVS)(
-    "no trust of %s has a wildcard, a StringLike or an environment in the plan one",
+    "no trust of %s has a wildcard but the pull request number of the plan one, nor an environment in it",
     (env) => {
-      for (const role of ["deploy", "plan", "admin"]) {
+      for (const role of ["deploy", "admin"]) {
         const text = JSON.stringify(trustOf(plans[env] as Plan, `atlas-${env}-${role}`));
         expect(text, role).not.toContain("*");
         expect(text, role).not.toContain("StringLike");
-        expect(text, role).not.toContain(`${REPOSITORY}:*`);
       }
+      const plan = JSON.stringify(trustOf(plans[env] as Plan, `atlas-${env}-plan`));
+      expect(plan.match(/\*/g)).toHaveLength(1);
+      expect(plan).not.toContain(`${REPOSITORY}:*`);
       expect(JSON.stringify(trustOf(plans[env] as Plan, `atlas-${env}-plan`))).not.toContain(
         "environment",
       );
