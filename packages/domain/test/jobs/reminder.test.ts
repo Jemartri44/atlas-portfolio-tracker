@@ -3,6 +3,7 @@
 // looked for in the mail with the switch off — also written with thousands and a decimal comma.
 
 import { describe, expect, it } from "vitest";
+import { FOOTER } from "../../src/jobs/mail/layout.js";
 import { reminderMail } from "../../src/jobs/mail/reminder.js";
 import { type ReminderInput, reminderFacts } from "../../src/jobs/reminder.js";
 import { Decimal } from "../../src/money/decimal.js";
@@ -63,6 +64,8 @@ const INPUT: ReminderInput = {
   plan: PLAN,
   webSignIn: "2026-09-26",
   idleWarningDays: 150,
+  repurchase: 0,
+  taxDeadlines: [],
 };
 
 describe("the facts of the monthly reminder", () => {
@@ -142,52 +145,59 @@ describe("the text of the monthly reminder", () => {
   const off = reminderMail(facts, "off", "https://atlas.example.test");
   const on = reminderMail(facts, "on", "https://atlas.example.test");
 
-  it("carries the period in an ASCII subject (R20; §8.1 P10)", () => {
-    expect(off.subject).toBe("[Atlas] Recordatorio mensual 2026-10");
+  it("carries the month in an ASCII subject (R20; §8.1 P10)", () => {
+    expect(off.subject).toBe("[Atlas] Recordatorio de octubre de 2026");
     expect(on.subject).toBe(off.subject);
     expect(/^[\x20-\x7e]+$/.test(off.subject)).toBe(true);
   });
 
-  it("carries no amount, quantity, price, name, ISIN or account with the switch off (R1, R3)", () => {
-    const text = `${off.subject}\n${off.body}`;
-    for (const sentinel of [
-      ...Object.values(SENTINELS),
-      "987654",
-      "987.654",
-      "1234",
-      "1.234",
-      "1172",
-      "733",
-      "61,73",
-      "139,81",
-      "300,00",
-      "€",
-      "EUR",
-      "44444",
-      "555555",
-    ]) {
-      expect(occurrences(text, sentinel), sentinel).toBe(0);
+  it("carries no amount, quantity, price, name, ISIN or account with the switch off, in either version (R1, R3)", () => {
+    for (const text of [`${off.subject}\n${off.body}`, off.html]) {
+      for (const sentinel of [
+        ...Object.values(SENTINELS),
+        "987654",
+        "987.654",
+        "1234",
+        "1.234",
+        "1172",
+        "733",
+        "61,73",
+        "139,81",
+        "300,00",
+        "€",
+        "EUR",
+        "44444",
+        "555555",
+      ]) {
+        expect(occurrences(text, sentinel), sentinel).toBe(0);
+      }
     }
   });
 
   it("says exactly the percentages, counts and dates, with or without the switch", () => {
     expect(off.body).toBe(
       [
-        "Aportación de octubre de 2026",
-        "  Renta variable   62,5 %",
-        "  Renta fija       25,6 %",
-        "  Oro              11,9 %",
-        "  Cripto            0,0 %",
-        "  Cubo: presupuesto aparte, fuera del reparto.",
-        "  Algún peso usa la aproximación por ETF de referencia (weights_use_approximation).",
+        "APORTACIÓN DE OCTUBRE DE 2026",
+        "",
+        "Reparto del núcleo",
+        "- Renta variable: 62,5 %",
+        "- Renta fija: 25,6 %",
+        "- Oro: 11,9 %",
+        "- Cripto: 0,0 %",
+        "El cubo es un presupuesto aparte, fuera del reparto.",
+        "Algún peso usa la aproximación por ETF de referencia (weights_use_approximation).",
         "",
         "Acceso",
-        "  Último inicio de sesión en la web: hace 5 días (2026-09-26).",
+        "Último inicio de sesión en la web: hace 5 días (26/09/2026).",
         "",
         "Copia fuera de AWS",
-        "  Haz la copia a tu disco: atlas backup --to <dir> --from-bucket --env prod",
+        "Haz la copia a tu disco:",
+        "atlas backup --to <dir> --from-bucket --env prod",
         "",
-        "Abre Atlas: https://atlas.example.test",
+        "Abrir Atlas: https://atlas.example.test",
+        "",
+        "--",
+        FOOTER,
         "",
       ].join("\n"),
     );
@@ -196,15 +206,18 @@ describe("the text of the monthly reminder", () => {
   it("adds exactly the euros of the split with the switch on, and never an account or an ISIN (R2)", () => {
     const added = on.body.split("\n").filter((line) => !off.body.split("\n").includes(line));
     expect(added).toEqual([
-      "  Importes: total 1.234,56 €; núcleo 1.172,83 €; cubo 61,73 €.",
-      "    Renta variable: 733,02 €",
-      "    Renta fija: 300,00 €",
-      "    Oro: 139,81 €",
-      "    Cripto: 0,00 €",
+      "- Renta variable: 62,5 % (733,02 €)",
+      "- Renta fija: 25,6 % (300,00 €)",
+      "- Oro: 11,9 % (139,81 €)",
+      "- Cripto: 0,0 % (0,00 €)",
+      "Total 1.234,56 €: núcleo 1.172,83 €, cubo 61,73 €. El cubo es un presupuesto aparte, fuera del reparto.",
     ]);
-    for (const sentinel of Object.values(SENTINELS)) {
-      expect(occurrences(on.body, sentinel), sentinel).toBe(0);
+    for (const text of [on.body, on.html]) {
+      for (const sentinel of Object.values(SENTINELS)) {
+        expect(occurrences(text, sentinel), sentinel).toBe(0);
+      }
     }
+    expect(on.html).toContain(">733,02&nbsp;€</td>");
   });
 
   it("still arrives, saying why, when the split or the sign-in could not be read (R8)", () => {
@@ -218,9 +231,9 @@ describe("the text of the monthly reminder", () => {
       "https://atlas.example.test",
     );
     expect(broken.body).toContain(
-      "  No se ha podido calcular el reparto (ledger_unreadable). Abre la aplicación para verlo.",
+      "No se ha podido calcular el reparto (ledger_unreadable). Abre la aplicación para verlo.",
     );
-    expect(broken.body).toContain("  No consta ningún inicio de sesión.");
+    expect(broken.body).toContain("No consta ningún inicio de sesión.");
     expect(broken.body).toContain("(web_sign_in_unreadable)");
     expect(broken.body).toContain("atlas backup --to <dir> --from-bucket --env prod");
     expect(broken.body).not.toContain("€");
@@ -236,14 +249,78 @@ describe("the text of the monthly reminder", () => {
     expect(off.body).toContain("aproximación por ETF de referencia");
   });
 
-  it("warns before the six months of an unused OAuth client, with the date (R14)", () => {
+  it("warns first, before the six months of an unused OAuth client, with the date (R14)", () => {
     const mail = reminderMail(
       reminderFacts({ ...INPUT, webSignIn: "2026-05-04" }),
       "off",
       "https://atlas.example.test",
     );
-    expect(mail.body).toContain(
-      "  Aviso: si nadie inicia sesión antes del 2026-11-04, Google puede borrar el cliente OAuth. Entra en la web para evitarlo.",
+    expect(mail.body.split("\n").slice(0, 3)).toEqual([
+      "APORTACIÓN DE OCTUBRE DE 2026",
+      "",
+      "Aviso. Si nadie inicia sesión antes del 04/11/2026, Google puede borrar el cliente OAuth. Entra en la web para evitarlo.",
+    ]);
+    expect(mail.html).toContain(
+      "<strong>Aviso.</strong> Si nadie inicia sesión antes del 04/11/2026",
+    );
+  });
+
+  const warned = (over: Partial<ReminderInput>) =>
+    reminderMail(reminderFacts({ ...INPUT, ...over }), "off", "https://atlas.example.test");
+
+  it("says a purchase in a repurchase window first, with no name and no amount, in both versions", () => {
+    for (const [repurchase, sentence] of [
+      [1, "Una compra del plan cae en la ventana de recompra. Mírala en Atlas antes de comprar."],
+      [
+        2,
+        "Varias compras del plan caen en la ventana de recompra. Míralas en Atlas antes de comprar.",
+      ],
+      [
+        "unchecked",
+        "No se ha podido comprobar la ventana de recompra. Mírala en Atlas antes de comprar.",
+      ],
+    ] as const) {
+      const mail = warned({ repurchase });
+      expect(mail.body.split("\n")[2]).toBe(`Aviso. ${sentence}`);
+      expect(mail.html).toContain(`<strong>Aviso.</strong> ${sentence}`);
+    }
+    expect(warned({ repurchase: 0 }).body).not.toContain("recompra");
+  });
+
+  it("says each deadline of the income tax with its dates, and an unverified one without any", () => {
+    const sentences = (fact: ReminderInput["taxDeadlines"][number]) =>
+      warned({ taxDeadlines: [fact] }).body.split("\n")[2];
+    expect(
+      sentences({
+        kind: "filing",
+        year: 2025,
+        filing_end: "2026-06-30",
+        direct_debit_end: "2026-06-25",
+      }),
+    ).toBe(
+      "Aviso. Renta de 2025: el plazo de presentación acaba el 30/06/2026. Para domiciliar el pago, el límite es el 25/06/2026.",
+    );
+    expect(sentences({ kind: "filing", year: 2025, filing_end: "2026-06-30" })).toBe(
+      "Aviso. Renta de 2025: el plazo de presentación acaba el 30/06/2026.",
+    );
+    expect(
+      sentences({
+        kind: "second_instalment",
+        year: 2025,
+        due: "2026-11-05",
+        direct_debit_end: "2026-11-02",
+      }),
+    ).toBe(
+      "Aviso. Renta de 2025: el segundo plazo vence el 05/11/2026. Si domiciliaste el primero, puedes domiciliarlo hasta el 02/11/2026.",
+    );
+    expect(sentences({ kind: "second_instalment", year: 2025, due: "2026-11-05" })).toBe(
+      "Aviso. Renta de 2025: el segundo plazo vence el 05/11/2026.",
+    );
+    expect(sentences({ kind: "unverified", year: 2026, deadline: "filing" })).toBe(
+      "Aviso. Renta de 2026: la fecha de fin de campaña no está comprobada en Atlas. Mírala en la sede de la Agencia Tributaria.",
+    );
+    expect(sentences({ kind: "unverified", year: 2026, deadline: "second_instalment" })).toBe(
+      "Aviso. Renta de 2026: la fecha del segundo plazo no está comprobada en Atlas. Mírala en la sede de la Agencia Tributaria.",
     );
   });
 });

@@ -1,7 +1,16 @@
 // The monthly reminder end to end through the handler, with every double, and what each retry does.
 
 import { describe, expect, it } from "vitest";
-import { MAIL_ENV, ORIGIN, RECIPIENT, records, SENDER, SENTINELS, setupJobs } from "./harness.js";
+import {
+  MAIL_ENV,
+  ORIGIN,
+  RECIPIENT,
+  records,
+  SENDER,
+  SENTINELS,
+  sentinelLedger,
+  setupJobs,
+} from "./harness.js";
 
 const lastLog = (logs: readonly string[]) => JSON.parse(logs.at(-1) as string);
 
@@ -35,9 +44,9 @@ describe("the monthly reminder, end to end", () => {
     const [mail] = jobs.ses.sent;
     expect(mail?.from).toBe(SENDER);
     expect(mail?.to).toBe(RECIPIENT);
-    expect(mail?.subject).toBe("[Atlas] Recordatorio mensual 2026-10");
-    expect(mail?.body).toContain(`Abre Atlas: ${ORIGIN}`);
-    expect(mail?.body).toContain("  Renta variable");
+    expect(mail?.subject).toBe("[Atlas] Recordatorio de octubre de 2026");
+    expect(mail?.body).toContain(`Abrir Atlas: ${ORIGIN}`);
+    expect(mail?.body).toContain("- Renta variable");
     expect(mail?.body).not.toContain("No se ha podido calcular");
     expect(records(jobs.s3)).toEqual(["jobs/mail/monthly_reminder/2026-10.json"]);
     const record = JSON.parse(jobs.s3.text("jobs/mail/monthly_reminder/2026-10.json") as string);
@@ -64,7 +73,7 @@ describe("the monthly reminder, end to end", () => {
     const on = setupJobs();
     on.ssm.set("/atlas/prod/mail/amounts", "on");
     await on.run(["monthly_reminder"]);
-    expect(on.ses.sent[0]?.body).toContain("  Importes: total 1.234,56 €;");
+    expect(on.ses.sent[0]?.body).toContain("Total 1.234,56 €: núcleo");
     for (const sentinel of SENTINELS.ids) {
       expect(on.ses.sent[0]?.body, sentinel).not.toContain(sentinel);
     }
@@ -133,8 +142,8 @@ describe("the monthly reminder, end to end", () => {
     jobs.setNow("2026-10-01T06:15:00Z");
     await jobs.run(["monthly_reminder"], "req-3");
     expect(jobs.ses.sent.map((mail) => mail.subject)).toEqual([
-      "[Atlas] Recordatorio mensual 2026-10",
-      "[Atlas] Recordatorio mensual 2026-10",
+      "[Atlas] Recordatorio de octubre de 2026",
+      "[Atlas] Recordatorio de octubre de 2026",
     ]);
     expect(
       JSON.parse(jobs.s3.text("jobs/mail/monthly_reminder/2026-10.json") as string),
@@ -193,7 +202,7 @@ describe("the monthly reminder, end to end", () => {
     jobs.setNow("2026-10-03T06:00:00Z");
     await jobs.run(["monthly_reminder"], "req-3");
     expect(jobs.ses.sent.map((mail) => mail.subject)).toEqual([
-      "[Atlas] Recordatorio mensual 2026-10",
+      "[Atlas] Recordatorio de octubre de 2026",
     ]);
     expect(
       JSON.parse(jobs.s3.text("jobs/mail/monthly_reminder/2026-10.json") as string),
@@ -207,8 +216,8 @@ describe("the monthly reminder, end to end", () => {
     jobs.setNow("2026-11-01T07:00:00Z");
     await jobs.run(["monthly_reminder"], "req-2");
     expect(jobs.ses.sent.map((mail) => mail.subject)).toEqual([
-      "[Atlas] Recordatorio mensual 2026-10",
-      "[Atlas] Recordatorio mensual 2026-11",
+      "[Atlas] Recordatorio de octubre de 2026",
+      "[Atlas] Recordatorio de noviembre de 2026",
     ]);
   });
 
@@ -217,13 +226,13 @@ describe("the monthly reminder, end to end", () => {
     const november = setupJobs({ now: "2026-10-31T23:30:00Z" });
     await november.run(["monthly_reminder"]);
     expect(november.ses.sent.map((mail) => mail.subject)).toEqual([
-      "[Atlas] Recordatorio mensual 2026-11",
+      "[Atlas] Recordatorio de noviembre de 2026",
     ]);
     // 22:30 UTC of the 31st of December is still the old year in Madrid.
     const december = setupJobs({ now: "2026-12-31T22:30:00Z" });
     await december.run(["monthly_reminder"]);
     expect(december.ses.sent.map((mail) => mail.subject)).toEqual([
-      "[Atlas] Recordatorio mensual 2026-12",
+      "[Atlas] Recordatorio de diciembre de 2026",
     ]);
   });
 
@@ -231,7 +240,7 @@ describe("the monthly reminder, end to end", () => {
     const jobs = setupJobs({ now: "2026-11-01T07:00:00Z" });
     await jobs.run(["monthly_reminder"]);
     expect(jobs.ses.sent.map((mail) => mail.subject)).toEqual([
-      "[Atlas] Recordatorio mensual 2026-11",
+      "[Atlas] Recordatorio de noviembre de 2026",
     ]);
   });
 
@@ -252,7 +261,7 @@ describe("the monthly reminder, end to end", () => {
     jobs.s3.seed("jobs/mail/monthly_reminder/2026-10.json", "{}\n");
     await jobs.run(["monthly_reminder"]);
     expect(jobs.ses.sent.map((mail) => mail.subject)).toEqual([
-      "[Atlas] Recordatorio mensual 2026-10",
+      "[Atlas] Recordatorio de octubre de 2026",
     ]);
     expect(jobs.logs.map((line) => JSON.parse(line))).toContainEqual(
       expect.objectContaining({
@@ -311,5 +320,78 @@ describe("the monthly reminder, end to end", () => {
     expect(jobs.ses.attempts).toEqual([]);
     expect(lastLog(jobs.logs)).toMatchObject({ level: "WARN", code: "job_record_conflict" });
     expect(MAIL_ENV.ATLAS_JOBS).toContain("monthly_reminder");
+  });
+});
+
+describe("what the reminder warns of, from the ledger", () => {
+  const sold = (unit_price: string) =>
+    sentinelLedger({}, (b) => {
+      b.sell({
+        account_id: "acc_fund",
+        asset_id: "ast_world",
+        quantity: "1",
+        unit_price,
+        trade_date: "2026-09-15",
+      });
+    });
+
+  it("says a purchase of the plan in a repurchase window, with no name", async () => {
+    const jobs = setupJobs({ ledger: sold("1") });
+    await jobs.run(["monthly_reminder"]);
+    const [mail] = jobs.ses.sent;
+    expect(mail?.body).toContain("Una compra del plan cae en la ventana de recompra.");
+    expect(mail?.html).toContain("Una compra del plan cae en la ventana de recompra.");
+    for (const sentinel of Object.values(SENTINELS).flat()) {
+      expect(mail?.body, sentinel).not.toContain(sentinel);
+      expect(mail?.html, sentinel).not.toContain(sentinel);
+    }
+  });
+
+  it("says nothing of the window when the same sale made a gain", async () => {
+    const jobs = setupJobs({ ledger: sold("2000") });
+    await jobs.run(["monthly_reminder"]);
+    expect(jobs.ses.sent[0]?.body).not.toContain("recompra");
+  });
+
+  it("says the second instalment in November when the first was paid, and not otherwise", async () => {
+    const paid = (instalment: "first" | "single") =>
+      sentinelLedger({}, (b) => {
+        b.taxPayment({ tax_year: 2025, date: "2026-06-20", instalment });
+      });
+    const first = setupJobs({ ledger: paid("first"), now: "2026-11-01T07:00:00Z" });
+    await first.run(["monthly_reminder"]);
+    expect(first.ses.sent[0]?.body).toContain(
+      "Renta de 2025: el segundo plazo vence el 05/11/2026.",
+    );
+    const single = setupJobs({ ledger: paid("single"), now: "2026-11-01T07:00:00Z" });
+    await single.run(["monthly_reminder"]);
+    expect(single.ses.sent[0]?.body).not.toContain("segundo plazo");
+  });
+
+  it("does not count a payment of the first instalment that was reversed", async () => {
+    const ledger = sentinelLedger({}, (b) => {
+      const payment = b.taxPayment({ tax_year: 2025, date: "2026-06-20", instalment: "first" });
+      b.reversal(payment.id);
+    });
+    const jobs = setupJobs({ ledger, now: "2026-11-01T07:00:00Z" });
+    await jobs.run(["monthly_reminder"]);
+    expect(jobs.ses.sent[0]?.body).not.toContain("segundo plazo");
+  });
+
+  it("still says the end of the campaign in June with a ledger it cannot read", async () => {
+    const jobs = setupJobs({ ledger: "not a ledger\n", now: "2026-06-01T06:00:00Z" });
+    await jobs.run(["monthly_reminder"]);
+    expect(jobs.ses.sent).toHaveLength(1);
+    const [mail] = jobs.ses.sent;
+    expect(mail?.body).toContain("No se ha podido calcular el reparto");
+    expect(mail?.body).toContain("Renta de 2025: el plazo de presentación acaba el 30/06/2026.");
+  });
+
+  it("says the end of the campaign in June", async () => {
+    const jobs = setupJobs({ now: "2026-06-01T06:00:00Z" });
+    await jobs.run(["monthly_reminder"]);
+    expect(jobs.ses.sent[0]?.body).toContain(
+      "Renta de 2025: el plazo de presentación acaba el 30/06/2026. Para domiciliar el pago, el límite es el 25/06/2026.",
+    );
   });
 });

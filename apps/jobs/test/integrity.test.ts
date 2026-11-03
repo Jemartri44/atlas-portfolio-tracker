@@ -183,7 +183,9 @@ describe("the quarterly integrity (E4, plan §9)", () => {
     await mail.run(["dispatch_findings"]);
     const subjects = mail.ses.sent.map((sent) => sent.subject);
     expect(
-      subjects.filter((subject) => subject === "[Atlas] Aviso: integridad 2026-Q4"),
+      subjects.filter(
+        (subject) => subject === "[Atlas] Aviso: integridad del cuarto trimestre de 2026",
+      ),
     ).toHaveLength(3);
     expect(mail.ses.sent.map((sent) => sent.body).join("\n")).toContain(
       "encontró 1 errores (duplicate_id: 1)",
