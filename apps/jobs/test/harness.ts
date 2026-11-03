@@ -38,15 +38,18 @@ export const sentinelLedger = (
 ): string => {
   const b = new LedgerBuilder();
   catalogue(b);
-  b.settings(
-    mergeSettings(DEFAULT_SETTINGS, {
+  // The frequencies go in by spread, not by `mergeSettings`: that one refuses what the jobs read
+  // tolerantly (a reserved key, an `off`), and a ledger may already carry exactly that.
+  const { job_frequencies, ...rest } = extra;
+  b.settings({
+    ...mergeSettings(DEFAULT_SETTINGS, {
       target_weights: { ast_world: "60", ast_bonds: "30", ast_gold: "10" },
       monthly_contribution_eur: "1234.56",
       bucket_pct_of_contribution: "5",
-      job_frequencies: { reminder: "monthly", reconciliation: "quarterly" },
-      ...extra,
+      ...rest,
     }),
-  );
+    job_frequencies: job_frequencies ?? { reminder: "monthly", reconciliation: "quarterly" },
+  });
   b.buy({
     account_id: "acc_fund",
     asset_id: "ast_world",

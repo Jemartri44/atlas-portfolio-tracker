@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_SETTINGS, mergeSettings } from "../../src/settings/settings.js";
+import { DEFAULT_SETTINGS, mergeSettings, type Settings } from "../../src/settings/settings.js";
 import {
   washSaleTransferCounts,
   washSaleWindowEnd,
@@ -41,6 +41,13 @@ describe("washSaleWindowOf", () => {
     expect(washSaleWindowOf(legacy, "stock")).toBe("61d");
     // A type neither form mentions falls back to its default, never to undefined.
     expect(washSaleWindowOf(legacy, "crypto")).toBe("1y");
+  });
+
+  it("reads a change written before the window map existed (days only)", () => {
+    const { wash_sale_window: _window, ...rest } = DEFAULT_SETTINGS;
+    const old = { ...rest, wash_sale_window_days: { fund: 365 } } as unknown as Settings;
+    expect(washSaleWindowOf(old, "fund")).toBe("365d");
+    expect(washSaleWindowOf(old, "crypto")).toBe("1y");
   });
 });
 

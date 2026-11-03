@@ -18,12 +18,12 @@ describe("typedAmount", () => {
   });
 
   it("reads a Spanish amount into a decimal string", () => {
-    expect(typedAmount("1.200,50")).toEqual({ kind: "amount", value: "1200.50" });
+    expect(typedAmount("1200,50")).toEqual({ kind: "amount", value: "1200.50" });
     expect(typedAmount("600")).toEqual({ kind: "amount", value: "600" });
   });
 
   it("refuses an ambiguous or malformed text with a sentence", () => {
-    for (const raw of ["1.5", "abc", "1,2,3"]) {
+    for (const raw of ["1.5", "1.200,50", "abc", "1,2,3"]) {
       const outcome = typedAmount(raw);
       expect(outcome.kind).toBe("invalid");
     }

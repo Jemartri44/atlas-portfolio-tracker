@@ -7,7 +7,7 @@
 // settled nothing, and the domain then produces no sale at all.
 //
 // Numbers are read like every other number of the application
-// (`format/input.ts`): `1.200,50` is twelve hundred, `1.5` is refused.
+// (`format/input.ts`): `1200,50` is twelve hundred, any dot is refused.
 
 import { isCivilDate, lastWorkingDay } from "@atlas/domain";
 import { type CorporateActionParams, ratioDirection } from "@atlas/domain/tools";

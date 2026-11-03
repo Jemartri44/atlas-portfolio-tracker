@@ -447,7 +447,11 @@ describe("ECB rate rules (data-schema.md §4)", () => {
     expect(missing).toEqual([]);
     // And it sees them: a guardian that finds nothing would pass by looking at nothing.
     expect(Object.keys(FX_FIELDS.pairs).length).toBeGreaterThan(8);
-    expect(Object.keys(FX_FIELDS.effectPairs).sort()).toEqual(["forced_sale", "grant"]);
+    expect(Object.keys(FX_FIELDS.effectPairs).sort()).toEqual([
+      "cost_adjustment",
+      "forced_sale",
+      "grant",
+    ]);
   });
 
   it('requires exactly "1" when the currency is the euro', () => {

@@ -27,7 +27,9 @@ export const washSaleWindowOf = (settings: Settings, assetType: AssetType): Wash
   if (incomeCategoryOf(settings, assetType) === "movable_capital") {
     return "2m";
   }
-  const configured = settings.wash_sale_window[assetType];
+  const configured = (
+    settings.wash_sale_window as Partial<Settings["wash_sale_window"]> | undefined
+  )?.[assetType];
   if (configured !== undefined) {
     return configured;
   }

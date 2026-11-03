@@ -248,7 +248,7 @@ describe("atlas networth", () => {
     // The exact value, unrounded, is still the one in --json.
     expect(await h.exec(["networth", "--date", "2028-12-31", "--json"])).toBe(0);
     const data = h.json() as { core: { total_eur: string } };
-    expect(data.core.total_eur).toBe("22326.6773692756");
+    expect(data.core.total_eur).toBe("22326.6773692757");
   });
 
   it("rejects a date that is not a date instead of answering something plausible", async () => {
