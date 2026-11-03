@@ -14,8 +14,6 @@ export interface AuthorizationRequest {
   readonly state: string;
   readonly nonce: string;
   readonly codeChallenge: string;
-  /** `select_account` forces the interactive screen (ADR-0033, point 2). */
-  readonly prompt?: "select_account";
 }
 
 export interface CodeExchange {

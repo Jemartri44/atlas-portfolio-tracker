@@ -1,6 +1,6 @@
 # ADR-0031 — Precios de cierre diarios: puerto, almacén y política de fallo
 
-**Estado:** Aceptada (2026-09-24); enmendada tres veces (2026-09-24/25).
+**Estado:** Aceptada (2026-09-24); enmendada tres veces (2026-09-24/25) y una cuarta el 2026-11-03 (una sola fuente).
 
 ## Contexto
 
@@ -28,7 +28,7 @@ La especificación separa dos niveles de precio (§7.1): el **exacto**, que se t
 
 ## Decisión
 
-**Fuentes** (decisión de la dirección): principal **EODHD Free**, respaldo **Alpha Vantage Free**; ~~cripto, **CoinGecko Demo**, con la atribución **visible** donde se enseñe su cotización~~ cripto, **EODHD si su plan gratuito la cubre**, y si no, entrada manual (tercera enmienda). Fondos por `EUFUND` **solo si cubre el ISIN concreto**; si no, extracto o entrada manual, y para la evolución, **la aproximación por ETF de referencia** de `docs/specification.md` §7.1, **siempre marcada como aproximación** (fórmula y alcance en la segunda enmienda). La entrada manual nunca desaparece.
+**Fuentes** (decisión de la dirección): principal **EODHD Free**, ~~respaldo **Alpha Vantage Free**~~ (retirada en la cuarta enmienda: EODHD es la única fuente); ~~cripto, **CoinGecko Demo**, con la atribución **visible** donde se enseñe su cotización~~ cripto, **EODHD si su plan gratuito la cubre**, y si no, entrada manual (tercera enmienda). Fondos por `EUFUND` **solo si cubre el ISIN concreto**; si no, extracto o entrada manual, y para la evolución, **la aproximación por ETF de referencia** de `docs/specification.md` §7.1, **siempre marcada como aproximación** (fórmula y alcance en la segunda enmienda). La entrada manual nunca desaparece.
 
 **Correspondencia ISIN → símbolo: configuración de la descarga, no una búsqueda diaria.** ~~`asset_created`/`asset_updated` ganan `price_symbols?`, un mapa de fuente (`eodhd`, `alpha_vantage`, `coingecko`) a su símbolo.~~ **Corregido en la enmienda:** la correspondencia **no va en el libro**. Es configuración para descargar precios, que son informativos, no un hecho de la cartera, y una foto completa `asset_updated` escrita por un cliente antiguo la borraría sin avisar (ADR-0026, caso 6). Vive **con los precios**, en `prices/symbols.json` (junto a `prices/` en local, en el bucket en la nube): por activo, un mapa de fuente (`eodhd`, `alpha_vantage`~~, `coingecko`~~) a su símbolo. ~~OpenFIGI **propone** el símbolo al dar de alta el activo y el usuario lo confirma; nada lo consulta después.~~ **El usuario la declara**, con la divisa de la cotización, y la aplicación **la contrasta con la fuente** al declararla (tercera enmienda). Si el fichero se pierde, se rehace.
 
@@ -36,7 +36,7 @@ La especificación separa dos niveles de precio (§7.1): el **exacto**, que se t
 
 **Almacén: `prices/<asset_id>.jsonl`** (`docs/data-schema.md` §1), fuera del libro, ~~una línea por fecha y fuente~~ una línea por cierre, con **un solo cierre en vigor por fecha**, el de la última línea de esa fecha (tercera enmienda, §6): `schema_version`, `date`, `close` (decimal como cadena, ADR-0005), `currency` tal como la devuelve la fuente (o, si no la devuelve, la declarada en `prices/symbols.json`: segunda enmienda), `source`, `fetched_at`. Solo se añade ~~(salvo los datos de CoinGecko, en un fichero propio que se sobrescribe: segunda enmienda)~~: si una fuente corrige un cierre ya guardado, entra una línea nueva y gana la más reciente, con la diferencia a la vista. **El paso a euros no se guarda**: lo hace la puerta al leer, con el histórico del BCE (ADR-0029); una cotización en una divisa sin tipo se enseña en su divisa, no se convierte con un tipo inventado.
 
-**Política de fallo** (§7.2 y constitución V): fuente principal → respaldo → **último valor conocido con su antigüedad** → entrada manual ~~(`valuation`, que gana siempre)~~ (`valuation`; para enseñar un valor gana el dato de fecha más reciente, y con la misma fecha la valoración manual: segunda enmienda). `stale_price_days` marca lo antiguo. **Nunca se interpola** ni se rellena un día que falta. Cada fuente lleva su estado en `prices/_status.json` (fallos seguidos, último éxito, tipo del último fallo); un `blocked` o un `rate_limited` no se reintenta en bucle dentro de la misma ejecución; y superar un número configurable de fallos seguidos manda un correo, que es lo que avisará de que una fuente ha cambiado sus condiciones (el correo es de la feature 016; la 013 solo registra los fallos: segunda enmienda).
+**Política de fallo** (§7.2 y constitución V): fuente principal → ~~respaldo →~~ **último valor conocido con su antigüedad** → entrada manual ~~(`valuation`, que gana siempre)~~ (`valuation`; para enseñar un valor gana el dato de fecha más reciente, y con la misma fecha la valoración manual: segunda enmienda). `stale_price_days` marca lo antiguo. **Nunca se interpola** ni se rellena un día que falta. Cada fuente lleva su estado en `prices/_status.json` (fallos seguidos, último éxito, tipo del último fallo); un `blocked` o un `rate_limited` no se reintenta en bucle dentro de la misma ejecución; y superar un número configurable de fallos seguidos manda un correo, que es lo que avisará de que una fuente ha cambiado sus condiciones (el correo es de la feature 016; la 013 solo registra los fallos: segunda enmienda).
 
 **Presupuesto de llamadas.** Veinte o veinticinco al día obligan a priorizar: primero las posiciones del cubo (la tarea diaria de §9.5 avisa si una tesis se acerca a su invalidación), después el índice de referencia del cubo y los ETF de referencia, después el resto del núcleo. Lo que no quepa ese día conserva su último valor con su antigüedad.
 
@@ -45,6 +45,8 @@ La especificación separa dos niveles de precio (§7.1): el **exacto**, que se t
 **Dónde se descarga.** Etapa local: la consola (`atlas prices update`, nombre provisional). La web de escritorio lee `prices/` de la carpeta compartida; en el móvil, sin nube, no hay precios automáticos, y sí la importación a mano (segunda enmienda). No se abre la CSP (ADR-0029, punto 3). Etapa de nube: una tarea diaria en la Lambda escribe `prices/` y los dispositivos lo reciben por la API.
 
 ## Consecuencias
+
+> Todo lo que esta sección dice de Alpha Vantage, de `source_order` y del cupo de 24 horas lo retira la [cuarta enmienda](#cuarta-enmienda-del-2026-11-03-una-sola-fuente).
 
 - ~~**CoinGecko** (decisión de la dirección): sus condiciones piden refrescar la caché cada 24 h, y §1 del esquema dice que `prices/` se guarda **para siempre**. **De cripto solo se guarda el último valor conocido, sin histórico**, renovado cada día, hasta que alguien lea sus condiciones completas (la segunda enmienda precisa que la regla es **por fuente**, no por tipo de activo, y que un valor sin renovar en 24 horas deja de mostrarse). **Las acciones y los ETF sí guardan histórico.**~~ CoinGecko, retirada (tercera enmienda): todo lo que guarda `prices/` es histórico de solo añadir.
 - **Una sola clave, un solo presupuesto diario.** Cuando exista la tarea programada, la consola deja de pedir lo que ya pidió la nube y lo descarga de la API; si no, las dos se comen el mismo cupo.
@@ -59,6 +61,8 @@ La especificación separa dos niveles de precio (§7.1): el **exacto**, que se t
 Decidida por la dirección el mismo día. La correspondencia de símbolos iba como campo opcional de `asset_created`/`asset_updated`. Un cliente antiguo que escribiera un `asset_updated` —una foto completa, ADR-0022— lo borraría sin avisar, aunque añadir el campo fuera compatible según ADR-0018. En vez de parchearlo, sale del libro: es configuración de la descarga de precios, que son informativos, y vive en `prices/symbols.json`.
 
 ## Segunda enmienda del 2026-09-24 (prompt de la feature 013)
+
+> Todo lo que esta sección dice de Alpha Vantage, de `source_order` y del cupo de 24 horas lo retira la [cuarta enmienda](#cuarta-enmienda-del-2026-11-03-una-sola-fuente).
 
 Decidida por la dirección al contestar las diez preguntas de la primera redacción de `docs/prompts/013-daily-close-prices.md` y seis puntos que esta ADR dejaba sin decir. El prompt las recoge en su §6.2 y §6.3, con su motivo. Las frases de arriba que ya no aplican están tachadas o remiten aquí.
 
@@ -99,6 +103,8 @@ Decidida por la dirección al contestar las diez preguntas de la primera redacci
 **Documentos que hay que actualizar** además de esta ADR: `docs/data-schema.md` §1 (las filas de `prices/`, `prices/config.json`, ~~`cache/` con el fichero de CoinGecko y su exclusión de copias, exportación y sincronización,~~ y el fichero de secretos fuera de la carpeta), **ADR-0032** ~~(`cache/` fuera de las copias mensuales)~~, **ADR-0026** ~~(`cache/` fuera de la sincronización)~~ y `docs/specification.md` §7.2 (la entrada manual «gana siempre») y §11.8 («con ellas van el orden de las fuentes y su presupuesto»). Los traslada la dirección al cerrar la feature 013, con lo verificado.
 
 ## Tercera enmienda del 2026-09-24/25 (cierre de la feature 013)
+
+> Todo lo que esta sección dice de Alpha Vantage, de `source_order` y del cupo de 24 horas lo retira la [cuarta enmienda](#cuarta-enmienda-del-2026-11-03-una-sola-fuente).
 
 Decidida por la dirección durante la feature 013 (PR #78, fusionada el 2026-09-25 a las 02:45 hora de Madrid) y escrita al cerrarla. El registro entero está en `specs/013-daily-close-prices/questions.md (en el historial de git)`: la verificación en §1, las respuestas de la dirección en §6 y las dos pasadas de la revisión en §10 y §11. Las frases de arriba que ya no aplican están tachadas o remiten aquí.
 
@@ -185,6 +191,8 @@ Sufijos de bolsa documentados en Alpha Vantage: `.LON`, `.DEX` (Xetra), `.TRT`, 
 
 ## Nota del 2026-09-25 (ADR-0033 aceptada)
 
+> **Historia (2026-11-03).** El token de la consola y su fichero se retiraron con [ADR-0037](0037-web-only-access.md); `secrets.json` sigue igual.
+
 **`~/.config/atlas/secrets.json` no cambia.** El token de dispositivo de la consola (ADR-0033) va en un fichero **hermano**, `~/.config/atlas/credentials.json` (o `$XDG_CONFIG_HOME/atlas/`), con **las mismas reglas**: permisos `600` o no se usa, fuera de la carpeta del libro (la consola se niega si una está dentro de la otra) y nunca lo leen la web, una copia, una exportación ni una sincronización. La diferencia es que **ese sí lo escribe la consola**, al iniciar y al cerrar sesión, de forma atómica. No va en `secrets.json` porque esta ADR fija que la aplicación nunca lo escribe, y porque su lector rechaza el fichero entero ante una clave desconocida: una consola de la 013 perdería sus claves de precios en cuanto apareciera el token.
 
 ## Nota del 2026-09-27 (prueba real de precios)
@@ -197,12 +205,32 @@ Decisiones de la dirección tras la prueba real del 2026-09-27 ([`docs/runbooks/
 
 ## Nota del 2026-09-28 (cierre de la feature 016): los precios en la nube
 
+> Todo lo que esta sección dice de Alpha Vantage, de `source_order` y del cupo de 24 horas lo retira la [cuarta enmienda](#cuarta-enmienda-del-2026-11-03-una-sola-fuente).
+
 Decidida por la dirección el 2026-09-27 y el 2026-09-28 (`specs/016-scheduled-jobs/questions.md (en el historial de git)` §9, §18 y §19.2).
 
 - **Los presupuestos de la nube son variables de la función de precios**, no un `prices/config.json` del bucket, que en la nube no existe: `ATLAS_PRICES_EODHD_DAILY_CALLS` (18 por defecto, como mucho 20), `ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS` (23, como mucho 25) y `ATLAS_PRICES_FAILURE_THRESHOLD` (3), que escribe Terraform desde `terraform.tfvars` (`docs/api.md` §9.1). Un valor por encima del techo impide arrancar a la función.
 - **La nube nunca contrasta ni escribe `prices/symbols.json`.** `updatePrices` recibe `symbols: "read_only"`: una fuente sin `currency_check` se salta con el resultado `currency_unchecked`, que la tarea deja como hallazgo y la función de correo avisa, y no se persiguen los `refetch_days` de una purga local. El almacén de S3 **se niega** además a `writeSymbols` y `rewriteCloses`, como segunda cerradura, e IAM niega a la función de precios escribir `symbols.json` y `config.json`. `symbols.json` del bucket lo sube solo `atlas admin prices push --env <entorno>`, con el rol de administración ([`docs/runbooks/cloud-symbols-and-budgets.md`](../runbooks/cloud-symbols-and-budgets.md)).
-- **El cupo compartido.** En una carpeta sincronizada, `atlas prices update` **baja los cierres de la API y no llama a ninguna fuente**. `atlas prices update --from-sources` las llama y gasta el cupo que comparte con la nube, con **2 llamadas de EODHD y 2 de Alpha Vantage al día por defecto** (`SHARED_WITH_CLOUD_DAILY_CALLS`), salvo lo que diga `prices/config.json`. La suma de la nube y la consola no debe pasar del cupo del plan gratuito, con una sola clave.
+- *(Historia: sin carpetas de nube ni descarga de la nube en la consola desde [ADR-0037](0037-web-only-access.md); `atlas prices update` siempre llama a la fuente.)* **El cupo compartido.** En una carpeta sincronizada, `atlas prices update` **baja los cierres de la API y no llama a ninguna fuente**. `atlas prices update --from-sources` las llama y gasta el cupo que comparte con la nube, con **2 llamadas de EODHD y 2 de Alpha Vantage al día por defecto** (`SHARED_WITH_CLOUD_DAILY_CALLS`), salvo lo que diga `prices/config.json`. La suma de la nube y la consola no debe pasar del cupo del plan gratuito, con una sola clave.
 - **La asimetría de N5, anotada.** En local, la consola nunca baja un precio en una divisa que no haya contrastado. **Lo que baja de la nube** solo se contrasta con el `symbols.json` local si ese fichero declara la divisa de la fuente de la línea; si no la declara (la fuente sin divisa, el activo ausente o ningún `symbols.json`), la línea entra y la consola se fía de la correspondencia del bucket, que es la que subió `atlas admin prices push`. Queda así por decisión de la dirección (`specs/016-scheduled-jobs/questions.md (en el historial de git)` §19.2).
+
+## Cuarta enmienda del 2026-11-03: una sola fuente
+
+Decidida por la coordinación, con el visto bueno del dueño para reabrir decisiones de arquitectura que simplifiquen (auditoría general del 03/11, punto 2.2.10).
+
+- **Alpha Vantage se retira.** Queda EODHD como única fuente automática. La cadena es EODHD → **último valor conocido con su antigüedad** → **`valuation` manual**, que es el camino principal y gana en su fecha. Con un solo usuario y pocos activos, el respaldo costaba más de lo que daba: un adaptador, una clave en local y otra en SSM, una ventana de cupo de 24 horas, el orden entre fuentes y una divisa distinta por fuente para el mismo activo. Si EODHD falla, el precio queda marcado como antiguo hasta que vuelva o se meta a mano. Es el fallo seguro de siempre.
+- **El formato sigue indexado por fuente.** `prices/symbols.json` (formato 2), `prices/_status.json` y la línea de cierre conservan su clave o campo `source`, y `QuoteSource` es una unión de un solo valor. Otra fuente mañana es un adaptador nuevo, no un formato nuevo. Hoy, `alpha_vantage` es una clave desconocida y se rechaza como cualquier otra.
+- **Lo que desaparece:**
+  - `source_order` de `prices/config.json`, que ahora es una clave desconocida;
+  - el orden entre fuentes al añadir cierres (`linesToAppend` añade si no hay cierre o si el valor cambia);
+  - `BUDGET_WINDOW`: el cupo se cuenta por día GMT;
+  - en la consola, `--alpha-vantage`, `--alpha-vantage-currency`, `--eodhd-currency` y `prices purge --source`;
+  - `alpha_vantage` en `secrets.json`;
+  - el parámetro SSM `prices/alpha-vantage-key`;
+  - `ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS` y su variable de Terraform.
+- **Ficheros anteriores.** Nada está desplegado, así que no hay datos en la nube. Si una carpeta local de prueba (la de la prueba en vivo de la 013) conserva `alpha_vantage` en `secrets.json`, `prices/symbols.json`, `prices/config.json`, `prices/_status.json` o en líneas de cierre, la consola la rechaza con su código. El arreglo es quitar esa clave, o borrar `prices/_status.json` y las líneas de esa fuente. No se migra nada.
+- **Sin efecto fiscal**: los precios nunca entran en los impuestos (trampa 5), y el 720 solo lee valoraciones manuales.
+- **Queda abierto**, para el dueño: si `EUFUND` de EODHD cubre sus fondos de MyInvestor. Si no los cubre, para esos fondos el camino es la valoración manual y la aproximación por ETF de referencia, como ya decía la Decisión.
 
 ## Notas de estado
 

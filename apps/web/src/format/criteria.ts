@@ -63,6 +63,7 @@ export const CRITERION_NAMES: Record<CriterionId, string> = {
   "18:single_purchase_etc":
     "Una sola compra en los dos meses anteriores no cuenta como recompra (por analogía, ETC o ETP)",
   "19": "Cada participación recomprada aplaza una pérdida una sola vez",
+  "19b": "La pérdida aplazada la llevan las participaciones recompradas más cercanas a la venta",
   "20": "La regla de la recompra mira la venta entera, no cada lote",
   "21": "Solo una venta definitiva, sin recompra en su ventana, libera la pérdida diferida",
   "22": "En qué orden se compensan las pérdidas de distintos años",
@@ -73,6 +74,7 @@ export const CRITERION_NAMES: Record<CriterionId, string> = {
   "24:etp_gain": "Un ETP tributa como ganancia patrimonial",
   "25": "El tipo del BCE es el de la fecha fiscal vigente; si no, se corrige",
   "26": "La devolución de prima o de aportaciones rebaja el coste; el exceso es rendimiento",
+  "27": "Cuota del ahorro estimada con la escala del año",
 };
 
 /** How firm the reading of the law is. */

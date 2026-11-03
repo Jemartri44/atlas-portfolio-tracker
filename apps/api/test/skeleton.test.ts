@@ -58,27 +58,15 @@ describe("routing and the shape of an error (R29)", () => {
   });
 });
 
-describe("the credentials (R01 to R03)", () => {
-  it("refuses a cookie and a token together without reading either (R02)", async () => {
-    const api = setup();
-    const result = await api.call("GET", "/api/session", {
-      cookies: ["__Host-atlas_session=garbage"],
-      headers: { "x-atlas-device-token": "not-a-token" },
-    });
-    expect(result.statusCode).toBe(400);
-    expect(errorOf(result).code).toBe("credentials_ambiguous");
-    expect(api.ssm.reads).toEqual([]);
-    expect(api.s3.calls).toEqual([]);
-  });
-
-  it("answers 401 without a credential and 403 to a token on a session route (R03)", async () => {
+describe("the credential (R01, R03)", () => {
+  it("answers 401 without a credential, and takes no other header for one (R03)", async () => {
     const api = setup();
     expect(errorOf(await api.call("GET", "/api/session")).code).toBe("unauthenticated");
-    const token = await api.call("GET", "/api/session", {
+    const header = await api.call("GET", "/api/session", {
       headers: { "X-Atlas-Device-Token": "t" },
     });
-    expect(token.statusCode).toBe(403);
-    expect(errorOf(token).code).toBe("forbidden_for_credential");
+    expect(errorOf(header).code).toBe("unauthenticated");
+    expect(api.ssm.reads).toEqual([]);
   });
 
   it("never takes Authorization for a credential (R01)", async () => {

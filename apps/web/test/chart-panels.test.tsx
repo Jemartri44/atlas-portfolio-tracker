@@ -228,7 +228,7 @@ describe("the evolution of the summary", () => {
       chart.getAttribute("aria-label"),
     );
     expect(labels).toEqual([
-      "Evolución del patrimonio: cartera principal con su efectivo y lo aportado",
+      "Evolución del patrimonio: cartera principal con su efectivo, el cubo apilado encima y lo aportado",
       "Evolución del patrimonio: Cubo",
     ]);
   });

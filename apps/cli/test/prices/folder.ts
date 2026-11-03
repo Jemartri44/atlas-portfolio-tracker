@@ -42,7 +42,6 @@ export interface Folder {
   readonly secrets: string;
   readonly keysSeen: Keys[];
   eodhd: ScriptedSource;
-  alpha: ScriptedSource;
   instant: string;
   /** The ledger of the folder with the fixed clock, for a test that calls `run` itself. */
   compose: (path: string) => UseCaseDeps;
@@ -54,7 +53,7 @@ export interface Folder {
 export const folder = async (
   events: readonly LedgerEvent[],
   /** `null`: no file of keys at all. */
-  keys: Record<string, string> | null = { eodhd: KEY, alpha_vantage: KEY },
+  keys: Record<string, string> | null = { eodhd: KEY },
 ): Promise<Folder> => {
   const root = await mkdtemp(join(tmpdir(), "atlas-prices-013-"));
   const dir = join(root, "ledger");
@@ -75,7 +74,6 @@ export const folder = async (
     secrets,
     keysSeen,
     eodhd: new ScriptedSource("eodhd", () => ({ ok: true, value: [] })),
-    alpha: new ScriptedSource("alpha_vantage", () => ({ ok: true, value: [] })),
     instant: "2027-06-09T08:00:00.000Z",
     compose: (path) => ({
       store: new FileLedgerStore(path),
@@ -98,7 +96,6 @@ export const folder = async (
             keysSeen.push(given);
             return {
               ...(given.eodhd === undefined ? {} : { eodhd: state.eodhd }),
-              ...(given.alpha_vantage === undefined ? {} : { alpha_vantage: state.alpha }),
             };
           },
         },

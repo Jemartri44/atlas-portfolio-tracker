@@ -195,6 +195,7 @@ Funcionalidad común a las cuatro clases de activo:
 - Histórico de aportaciones y evolución del valor, total y por clase.
 - TER medio ponderado del núcleo y coste anual estimado en euros. El promedio cuenta solo los activos con TER declarado y dice cuánto valor de la cartera valorada queda fuera, en vez de contarlo como TER 0.
 - Exposición del núcleo por divisa y por región (`exposure`): el valor del núcleo repartido según la exposición que el dueño declara por activo (porcentajes que suman 100; `currency` de un activo es su divisa de cotización, no su exposición). Sin dato no se estima: si un activo con valor no declara una dimensión, esa dimensión no da reparto y lista los activos. Única excepción, la divisa del oro y la cripto, USD si el dueño no dice otra cosa, y la salida lo dice (`defaulted`). El cubo no entra, ni el efectivo del núcleo (no está en `coreWeights`; incluirlo exige valorar cada saldo en divisa a euros): la exposición cubre las posiciones, no el efectivo. Dónde se guarda la exposición se decide aparte (fuera del libro, ADR-0018).
+- Coste total a 20 años (`totalCost`): TER, comisiones y fricción fiscal de venta proyectados en euros sobre el núcleo, con supuestos editables (rentabilidad bruta, horizonte, comisión, tipo de salida). Usa la aportación y el porcentaje del cubo de los ajustes. Solo proyecta el valor con TER declarado (dice cuánto deja fuera). La fricción fiscal es un tipo plano sobre la ganancia frente a lo invertido: orden de magnitud, no el impuesto del motor fiscal. Sin precio de algún activo del núcleo no da cifra; lo que falta (aportación, comisión, tipo) se dice, no se inventa.
 - Coste acumulado en comisiones por activo, en euros y como porcentaje de lo invertido; la comisión de una permuta (`swap`) se imputa al activo recibido.
 
 #### 6.1.1 Renta variable y renta fija (fondos)
@@ -253,11 +254,11 @@ Es el libro con más funcionalidad propia: es una parte pequeña de la cartera p
 
 ## 7. Fuentes de datos
 
-> **Vigente desde ADR-0031 (2026-09-24, Ronda 8).** Yahoo Finance, Stooq y Morningstar quedan **descartados**: las condiciones de Yahoo prohíben por escrito el acceso automatizado, Stooq responde con un reto anti-*bot* y Morningstar solo ofrece API de empresa (investigación del 2026-09-24). Las fuentes de precio de cierre diario son APIs gratuitas con clave: **EODHD** (principal) y **Alpha Vantage** (respaldo). **CoinGecko y OpenFIGI quedaron retirados al cerrar la feature 013** (ADR-0031, tercera enmienda): las condiciones de CoinGecko describen su plan gratuito como para probar, y OpenFIGI no documenta qué bolsa es cada código. La tabla de abajo queda como referencia histórica salvo las filas corregidas.
+> **Vigente desde ADR-0031 (2026-09-24, Ronda 8).** Yahoo Finance, Stooq y Morningstar quedan **descartados**: las condiciones de Yahoo prohíben por escrito el acceso automatizado, Stooq responde con un reto anti-*bot* y Morningstar solo ofrece API de empresa (investigación del 2026-09-24). Las fuentes de precio de cierre diario es una API gratuita con clave: **EODHD**. **CoinGecko y OpenFIGI quedaron retirados al cerrar la feature 013** (ADR-0031, tercera enmienda): las condiciones de CoinGecko describen su plan gratuito como para probar, y OpenFIGI no documenta qué bolsa es cada código. La tabla de abajo queda como referencia histórica salvo las filas corregidas.
 
 | Dato | Fuente | Fiabilidad | Riesgo |
 |---|---|---|---|
-| Acciones, ETFs, ETCs | **EODHD (principal), Alpha Vantage (respaldo)**, APIs con clave gratuita (ADR-0031) | Buena | Cupo diario (20 y 25 llamadas) y condiciones de uso de una API gratuita. El plan gratuito de Alpha Vantage solo ve **los últimos 100 días de mercado**: sirve para el día a día, no para rellenar un año |
+| Acciones, ETFs, ETCs | **EODHD**, API con clave gratuita (ADR-0031) | Buena | Cupo diario (20 llamadas) y condiciones de uso de una API gratuita |
 | Cripto | **EODHD si su plan gratuito la cubre**; si no, entrada manual (ADR-0031, tercera enmienda). ~~CoinGecko Demo~~ | **Sin verificar** | Cobertura del plan gratuito **SIN VERIFICAR** hasta la prueba con la clave del usuario (`docs/runbooks/013-daily-close-prices-live-test.md`) |
 | Tipos de cambio | BCE (CSV/API oficial) | Excelente | Ninguno |
 | Valor liquidativo de fondos | `EUFUND` de EODHD si cubre el ISIN; si no, **aproximación por ETF equivalente**, siempre marcada como tal (ADR-0031) | Buena para consulta | No sirve para fiscalidad |
@@ -281,7 +282,7 @@ Estos precios son **exclusivamente informativos** y la interfaz los marca como a
 
 Cada fuente es un adaptador del puerto `PriceSource` (`packages/domain/src/ports/`, ADR-0031), asíncrono, que pide cierres diarios de un símbolo entre dos fechas. Requisitos:
 
-- **Cascada de respaldo**: fuente primaria (EODHD) → secundaria (Alpha Vantage) → último valor conocido con su antigüedad → entrada manual. ~~La entrada manual gana siempre.~~ **Para enseñar un valor, gana el dato de fecha más reciente, y con la misma fecha la valoración manual**, siempre entre los precios que tienen valor en euros (ADR-0031, segunda y tercera enmiendas). El Modelo 720 y toda ruta fiscal siguen leyendo solo la valoración manual.
+- **Cascada de respaldo**: EODHD → último valor conocido con su antigüedad → entrada manual. ~~La entrada manual gana siempre.~~ **Para enseñar un valor, gana el dato de fecha más reciente, y con la misma fecha la valoración manual**, siempre entre los precios que tienen valor en euros (ADR-0031, segunda y tercera enmiendas). El Modelo 720 y toda ruta fiscal siguen leyendo solo la valoración manual.
 - **Antigüedad siempre visible.** Si un precio lleva más de `stale_price_days` sin refrescarse, la interfaz lo indica.
 - **Nunca interpolar ni estimar en silencio.**
 - **Registro de fallos con tipo** (`unavailable`, `not_found`, `rate_limited`, `blocked`, `invalid_response`, `budget_exhausted`); si una fuente falla repetidamente, aviso por correo. Es lo que avisará de que una fuente ha cambiado sus condiciones o agotado su cupo.
@@ -337,12 +338,11 @@ Frontend estático en S3 y backend en Lambda, con Terraform para toda la infraes
 
 ### 9.2 Componentes
 
-**Atlas es siempre en la nube (ADR-0035).** El libro de S3 (`ledger/ledger.jsonl`) es la única fuente de verdad: la web y la consola escriben directamente contra la API con `If-Match`, sin cola local y sin libro en el dispositivo; la API es el único escritor y solo añade ([`api.md`](api.md) §5.8). Una carpeta de la consola es **de nube** (`sync/remote.json`, sin `ledger.jsonl`) o **local** (`ledger.jsonl`, sin identidad remota); con las dos cosas se niega (`folder_mode_ambiguous`). Sin conexión la consola sale con el código 8, con la sesión caducada con el 10 (`atlas remote login`).
+**Atlas es siempre en la nube (ADR-0035).** El libro de S3 (`ledger/ledger.jsonl`) es la única fuente de verdad: la web escribe directamente contra la API con `If-Match`, sin cola local y sin libro en el dispositivo; la API es el único escritor y solo añade ([`api.md`](api.md) §5.8). **La consola no tiene acceso propio a la API** (ADR-0037): trabaja sobre una carpeta local (`ledger.jsonl`) y llega a la nube solo como administración, con el rol de AWS y MFA (`atlas admin pull|compact|restore`, [`cli.md`](cli.md)).
 
 ```
-Navegador (PC / móvil)      Consola (`atlas`; token de dispositivo
-    │                           │  en cabecera propia, ADR-0033)
-    ├───────────────────────────┘
+Navegador (PC / móvil)      Consola (`atlas`): solo administración,
+    │                        con el rol de AWS y MFA, directa a S3 (ADR-0037)
     └── CloudFront  <dominio de la app>   [plan Free de tarifa plana + WAF]
            │
            ├── /*      ──── S3 (SPA estática, privada vía OAC)
@@ -350,13 +350,13 @@ Navegador (PC / móvil)      Consola (`atlas`; token de dispositivo
            └── /api/*  ──── Lambda Function URL ─── Lambda (API) ─── S3 (datos: libro mayor
                             (AuthType=AWS_IAM; OAC firma                JSONL versionado, precios,
                              la petición; la Lambda verifica            histórico del BCE,
-                             la sesión propia, el token de              documentos; nunca origen
-                             la consola o el ID token de Google)        de CloudFront)
+                             la sesión propia o el ID token             documentos; nunca origen
+                             de Google)                                 de CloudFront)
 
 EventBridge Scheduler ─── Lambdas programadas (cinco, un solo artefacto) ─── SES (solo la función de correo)
                                 │
                                 └── SSM Parameter Store (secretos, lista permitida, claves de precios,
-                                    destinatario del correo, registro de los tokens de consola)
+                                    destinatario del correo)
 ```
 
 Decisiones deliberadas para minimizar coste y servicios, cada una en su ADR:
@@ -370,7 +370,7 @@ Decisiones deliberadas para minimizar coste y servicios, cada una en su ADR:
 
 ### 9.3 Costes
 
-Restricción: **coste mínimo con alarma de presupuesto**, no «always-free indefinido» (constitución VI, ADR-0028). Estimación de ≈ 0,01-0,05 $/mes, cubierta por los créditos de la cuenta mientras duren y pagada después. Una alarma de AWS Budgets, `atlas-cost`, avisa por correo a 1 $, medida antes de créditos y filtrada por la etiqueta `project=atlas` (ADR-0028, ADR-0034). Los niveles gratuitos de Lambda, SSM y CloudFront son por cuenta y se comparten con los otros proyectos de ella (ADR-0034). Las fuentes de precios (EODHD, Alpha Vantage) son planes gratuitos con cupo diario (ADR-0031).
+Restricción: **coste mínimo con alarma de presupuesto**, no «always-free indefinido» (constitución VI, ADR-0028). Estimación de ≈ 0,01-0,05 $/mes, cubierta por los créditos de la cuenta mientras duren y pagada después. Una alarma de AWS Budgets, `atlas-cost`, avisa por correo a 1 $, medida antes de créditos y filtrada por la etiqueta `project=atlas` (ADR-0028, ADR-0034). Los niveles gratuitos de Lambda, SSM y CloudFront son por cuenta y se comparten con los otros proyectos de ella (ADR-0034). Las fuentes de precios (EODHD) son un plan gratuito con cupo diario (ADR-0031).
 
 ### 9.4 Cuenta en el Paid Plan
 
@@ -383,10 +383,10 @@ Construidas (feature 016) y sin desplegar todavía: la infraestructura es de la 
 | Función (hora de Madrid) | Tarea | `job_frequencies` (por defecto, primero) | Notifica |
 |---|---|---|---|
 | `job-ecb` (17:15) | Histórico del BCE, con el calendario TARGET como comprobación (ADR-0029) | `ecb`: `daily`, `weekly` | Solo con un hallazgo |
-| `job-prices` (07:00) | Precios de cierre: EODHD, respaldo Alpha Vantage; nunca escribe `prices/symbols.json` (ADR-0031). Cada llamada, 15 s de tope, sin seguir redirecciones (la clave va en la dirección) y leyendo como mucho 8 MiB | `prices`: `daily`, `weekly` | Solo con un hallazgo (fuente caída, correspondencias sin contrastar, horizonte de una tesis vencido) |
+| `job-prices` (07:00) | Precios de cierre: EODHD; nunca escribe `prices/symbols.json` (ADR-0031). Cada llamada, 15 s de tope, sin seguir redirecciones (la clave va en la dirección) y leyendo como mucho 8 MiB | `prices`: `daily`, `weekly` | Solo con un hallazgo (fuente caída, correspondencias sin contrastar, horizonte de una tesis vencido) |
 | `job-backup` (03:15) | Volcado mensual a `backups/<YYYY-MM>/` (ADR-0032) | `backup`: `monthly` (fijo) | Solo si falla o queda incompleto |
 | `job-integrity` (04:15) | Errores de `atlas check --deep`, ensayo de restauración en memoria y tamaño del libro (ADR-0032) | `integrity`: `quarterly`, `monthly` | Solo con errores |
-| `job-mail` (08:00) | Recordatorio mensual: reparto de la aportación (sin importes salvo que se active, ADR-0028), días desde el último inicio de sesión y tokens de consola vivos | `reminder`: `monthly` (fijo) | **Siempre, al menos una vez** |
+| `job-mail` (08:00) | Recordatorio mensual: reparto de la aportación (sin importes salvo que se active, ADR-0028), días desde el último inicio de sesión en la web | `reminder`: `monthly` (fijo) | **Siempre, al menos una vez** |
 | `job-mail` | Revisión de desviaciones de los pesos del núcleo por clase y reglas 17 y 18 del cubo | `review`: `weekly`, `monthly` | Solo si se pasa un umbral, como mucho una vez por periodo |
 | `job-mail` | Datos de la Renta y modelos 720 y 721 (enero) | `tax_return` y `informative_thresholds`: `yearly` (fijos) | Una vez, sin cifras ni base |
 | *(bloqueadas, Ronda 6)* | Importación diaria de IBKR y conciliación semanal | `reconciliation`: reservada | — |
@@ -408,12 +408,12 @@ Requisitos transversales:
 
 ## 10. Seguridad
 
-Son datos financieros personales completos: nivel de exigencia alto. Las decisiones están en ADR-0026, ADR-0027, ADR-0028, ADR-0033 y ADR-0034; el contrato de acceso, en [`api.md`](api.md) §2-§4.
+Son datos financieros personales completos: nivel de exigencia alto. Las decisiones están en ADR-0026, ADR-0027, ADR-0028, ADR-0034 y ADR-0037; el contrato de acceso, en [`api.md`](api.md) §2 y §3.
 
 - **Nunca se almacenan credenciales de brókers.** Los secretos van en SSM como `SecureString`, nunca en el frontend ni en el repositorio (§11.8).
 - **S3 privado**, servido solo vía CloudFront con Origin Access Control; el bucket de datos nunca es origen de CloudFront.
 - **Acceso solo con Google**, verificado en la propia Lambda con PKCE y `state`, lista permitida de `{sub, email}` en SSM y sesión propia en una cookie `__Host-` firmada (ADR-0027).
-- **La consola usa un token de dispositivo propio**, emitido solo al final de un inicio de sesión con Google que abre la propia consola, nunca desde la web; caduca a los 90 días y se revoca uno a uno (ADR-0033).
+- **La consola no tiene acceso propio a la API**: solo administración, con credenciales cortas de AWS y MFA. Desde Ajustes se pueden **cerrar a la vez las sesiones de todos los dispositivos** (ADR-0037).
 - IAM de mínimo privilegio, un rol por Lambda; cifrado en reposo y TLS en tránsito.
 - Sin analítica de terceros, CDN externos ni fuentes remotas; CSP restrictiva que solo permite el propio origen.
 - Validación siempre en el backend: el frontend es comodidad, no control de seguridad.
@@ -438,7 +438,7 @@ Todo lo técnico en inglés (código, comentarios, commits, ramas, ficheros, inf
 
 - Git flow con comandos básicos (`main`, `develop`, `feature/*`, `fix/*`, `release/*`, `hotfix/*`), fusiones con `--no-ff`; commits atómicos, Conventional Commits en inglés y sin coautoría de herramientas de IA.
 - Pull requests obligatorias hacia `develop` y `main`, sin push directo: `main` tiene protección de rama en GitHub (PR con una aprobación, sin comprobaciones obligatorias); `develop` no está protegida y el «sin push directo» es disciplina (`CLAUDE.md`).
-- Hooks versionados en `.githooks/` (`core.hooksPath`): `commit-msg` valida el formato y `pre-commit` ejecuta `gitleaks` (reglas por defecto más las de `.gitleaks.toml`, entre ellas la del token de dispositivo, ADR-0033) y `biome check` sobre los ficheros preparados. Si falta la herramienta, el hook avisa y no bloquea; la CI sigue ejecutando `npm run lint`.
+- Hooks versionados en `.githooks/` (`core.hooksPath`): `commit-msg` valida el formato y `pre-commit` ejecuta `gitleaks` (reglas por defecto más las de `.gitleaks.toml`, entre ellas la del antiguo token de dispositivo de ADR-0033) y `biome check` sobre los ficheros preparados. Si falta la herramienta, el hook avisa y no bloquea; la CI sigue ejecutando `npm run lint`.
 - Plantilla de PR con la lista de la constitución en `.github/pull_request_template.md`.
 
 ### 11.3 Entornos
@@ -459,7 +459,7 @@ GitHub Actions: lint y formato (Biome, ADR-0008), tipos, tests, `npm audit`, `te
 
 ### 11.7 Logging por capas
 
-Niveles `ERROR` (requiere intervención), `WARN` (degradación), `INFO` (eventos de negocio) y `DEBUG` (desactivado en producción), en JSON con `request_id`. **Nunca se registran importes, posiciones ni identificadores de cuenta**, ni tokens, correos o `sub` de Google (ADR-0027, ADR-0028, ADR-0033). Retención de 30 días en producción y 7 en `dev`.
+Niveles `ERROR` (requiere intervención), `WARN` (degradación), `INFO` (eventos de negocio) y `DEBUG` (desactivado en producción), en JSON con `request_id`. **Nunca se registran importes, posiciones ni identificadores de cuenta**, ni tokens, correos o `sub` de Google (ADR-0027, ADR-0028). Retención de 30 días en producción y 7 en `dev`.
 
 ### 11.8 Gestión de secretos
 
@@ -469,7 +469,6 @@ Todo en SSM Parameter Store estándar como `SecureString`; los valores nunca pas
 - Secreto del cliente OAuth de Google y clave de firma de la sesión, uno por entorno (ADR-0027).
 - Claves de las fuentes de precios: en local, `~/.config/atlas/secrets.json` (`600`, fuera del repositorio y del libro); en la nube, SSM (ADR-0031).
 - Lista permitida de `{sub, email}` y destinatario del correo (que sale de `terraform.tfvars`) y el interruptor de importes del correo, en SSM (ADR-0028, ADR-0034).
-- Tokens de dispositivo de la consola: un `SecureString` por token bajo `/atlas/<entorno>/device-tokens/`, solo el hash, fuera del bucket de datos (ADR-0033).
 - Sin secretos en variables de entorno de la Lambda; `.gitignore` estricto y escaneo de secretos.
 
 ### 11.9 Documentación
@@ -493,7 +492,7 @@ Requisitos que no son técnicos pero deciden si el sistema sigue vivo en 2046:
 
 ## 13. Fases
 
-**Estado a 2026-10-24:** entregadas las fases 1, 2, 3 y 5, la aplicación web y la consola, ambas contra la nube (ADR-0035). La Fase 4 y la infraestructura están en código y probadas con dobles, **sin desplegar** (018 y 019).
+**Estado a 2026-10-24:** entregadas las fases 1, 2, 3 y 5, la aplicación web contra la nube (ADR-0035) y la consola, local y de administración (ADR-0037). La Fase 4 y la infraestructura están en código y probadas con dobles, **sin desplegar** (018 y 019).
 
 **Fase 0 — Validación (antes de escribir nada)**
 1. **Pasar la cuenta AWS al Paid Plan** y configurar alerta de presupuesto en 1$.
@@ -543,7 +542,7 @@ Puntos detectados al revisar la especificación. Sin decidir todavía; cada uno 
 - [x] **Corrección de errores de registro**: libro append-only con rectificación; lotes como proyección (ADR-0003).
 - [x] **Posición de efectivo.** Decidido (ADR-0004): saldo derivado por cuenta de inversión; el colchón bancario queda fuera de la app.
 - [x] **Retención a cuenta en reembolsos de fondos.** Hecho: `sell.withholding` (`data-schema.md` §6.2), con su equivalente por cuenta en `forced_sale` (§6.5). Sale del efectivo que entra, no toca el valor de transmisión ni el coste de los lotes, y la salida fiscal la suma a las retenciones del ejercicio (criterio #12).
-- [x] **Valoración a 31 de diciembre.** Resuelta como se preveía (feature 010): los Modelos 720 y 721 valoran con la `valuation` registrada a mano, dato de **Nivel 1**, convertida al tipo del BCE de esa fecha. Es la única ruta fiscal que lee precios; si falta alguno, el veredicto es «no se puede determinar» y nunca «no obligado» (§5.8 de `business-rules.md`).
+- [x] **Valoración a 31 de diciembre.** Resuelta como se preveía (feature 010): los Modelos 720 y 721 valoran con la `valuation` registrada a mano, dato de **Nivel 1**, convertida al tipo del BCE de esa fecha (en una IIC, su valor liquidativo: criterio #11). Es la única ruta fiscal que lee precios; si falta alguno, el veredicto es «no se puede determinar» y nunca «no obligado» (§5.8 de `business-rules.md`).
 - [x] **Despliegue desde GitHub Actions con OIDC**, sin claves de AWS de larga duración en el repositorio. Resuelto (ADR-0028, 2026-09-24; cuenta compartida desde ADR-0034, 2026-09-25): un rol de despliegue por entorno en la misma cuenta, que solo puede crear roles con el límite de permisos de su entorno; el de `dev` solo desde `develop`, el de `prod` solo desde el *environment* `prod` con aprobación obligatoria, y un rol de `terraform plan` de solo lectura que nunca se usa para una PR desde un *fork*.
 - [x] **Tests de propiedades** para el motor FIFO. Hecho con `fast-check` en `packages/domain/test/properties/`: los lotes abiertos igualan la posición física por activo, proyectar dos veces da lo mismo y el diario reconstruye cada lote y cada ganancia, y `scale` seguido de su inverso deja lotes y posiciones idénticos.
 - [x] **Reconsiderar DynamoDB frente a JSONL en S3**: S3 (ADR-0002).

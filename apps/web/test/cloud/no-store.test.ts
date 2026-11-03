@@ -1,5 +1,5 @@
 // Every request of the web to its own API says `cache: "no-store"` (ADR-0035, §3), so the HTTP
-// cache of the browser never writes the ledger, the session or the list of devices to disk. One
+// cache of the browser never writes the ledger or the session to disk. One
 // test per caller of the web; the ECB reference (`/api/reference/ecb/*`) is public and keeps its
 // `ETag`/`304` on purpose, and is not among them.
 
@@ -13,12 +13,7 @@ describe("requests of the web to the API", () => {
   it("every caller asks with no-store", async () => {
     const calls = await listCalls();
     expect(calls.map((call) => call.url).sort()).toEqual(
-      [
-        "/api/auth/logout",
-        "/api/devices/tokens",
-        "/api/devices/tokens/AAAAAAAAAAAAAAAAAAAAAA/revoke",
-        "/api/session",
-      ].sort(),
+      ["/api/auth/logout", "/api/auth/logout-all", "/api/session"].sort(),
     );
     for (const call of calls) {
       expect(call.cache, call.url).toBe("no-store");
@@ -38,7 +33,6 @@ const files = (dir: string): string[] =>
 /** Files that go to the network, with how: the ones that build the request themselves are read. */
 const KNOWN = new Map<string, string>([
   ["ledger/cloud.ts", "pass-through of the page's fetch to httpRemote (no-store inside it)"],
-  ["auth/devices.ts", "own requests"],
   ["auth/session.ts", "own requests"],
   ["ecb/cloud.ts", "httpReference: public data, ETag and 304 on purpose"],
 ]);
@@ -49,13 +43,17 @@ describe("the code that reaches the network", () => {
     for (const file of files(src)) {
       const text = readFileSync(file, "utf8").replace(/^\s*(\/\/|\*|\/\*).*$/gm, "");
       if (
-        /\bfetch\(|\brequest\(\s*[`"']|httpRemote\(|httpReference\(|XMLHttpRequest|sendBeacon/.test(
+        /\bfetch\(|\brequest\(\s*([`"']|path\b)|httpRemote\(|httpReference\(|XMLHttpRequest|sendBeacon/.test(
           text,
         )
       ) {
         found.set(relative(src, file).replaceAll("\\", "/"), "");
-        if (/(^|\/)auth\/(devices|session)\.ts$/.test(file)) {
-          for (const call of text.matchAll(/\brequest\(\s*[`"'][\s\S]*?\n\s*\}\s*\)?;?\s*\n?/g)) {
+        if (/(^|\/)auth\/session\.ts$/.test(file)) {
+          const calls = [
+            ...text.matchAll(/\brequest\(\s*([`"']|path\b)[\s\S]*?\n\s*\}\s*\)?;?\s*\n?/g),
+          ];
+          expect(calls.length, file).toBe(2);
+          for (const call of calls) {
             expect(call[0], file).toContain('cache: "no-store"');
           }
         }

@@ -16,7 +16,6 @@ import { assertKnownFlags, type Flags, requireFlag, stringFlag, UsageError } fro
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { pathExists } from "../fs.js";
 import { table } from "../output/table.js";
-import { assertNoLedgerInCloudFolder } from "../remote/credentials-file.js";
 import { render } from "./shared.js";
 
 /** The generator seeds a 32-bit state: anything larger would be silently folded. */
@@ -43,7 +42,6 @@ export const synthCommand = async (
   if (!(seed <= MAX_SEED)) {
     throw new UsageError(`--seed debe ser un entero entre 0 y ${MAX_SEED}`);
   }
-  await assertNoLedgerInCloudFolder(out);
   if (await pathExists(out)) {
     throw new DomainError("path_exists", `${out} already exists`, { path: out });
   }

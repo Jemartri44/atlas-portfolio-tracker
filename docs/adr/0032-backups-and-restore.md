@@ -47,7 +47,7 @@ Una observación ordena todo lo demás: **en un libro append-only, un error de r
 **La prueba de que se puede restaurar:**
 
 - **Automática, cada trimestre**, dentro de la tarea de integridad de `docs/specification.md` §9.5: carga el último volcado en un almacén en memoria, lo proyecta y compara la proyección con la del libro vivo cortado en los mismos eventos. Cualquier diferencia manda un correo.
-- **Manual, cada año** (constitución VI): el usuario descarga el último volcado en su ordenador, lo abre con la consola y con la web **desde una carpeta vacía**, ejecuta `check --deep` y contrasta las cifras principales con la aplicación en uso.
+- **Manual, cada año** (constitución VI): el usuario descarga el último volcado en su ordenador, lo abre con la consola y con la web **desde una carpeta vacía**, ejecuta `check --deep` y `atlas rehearse --dump <volcado> --ledger <copia del libro actual>` (siempre contra un fichero local, nunca la nube; contra una carpeta vacía fallaría por construcción), y contrasta las cifras principales con la aplicación en uso.
 - **Nunca en `dev`**: «datos de producción jamás en `dev`» también vale para un ensayo. La prueba se hace en memoria dentro de `prod` o en la máquina del usuario.
 
 ## Consecuencias
@@ -79,10 +79,10 @@ No habrá cuentas miembro dedicadas: Atlas se despliega en una cuenta de AWS que
 
 Decidida por la dirección el 2026-09-27 tras la revisión de seguridad de la PR #98 (N1; `specs/015-api-access/questions.md (en el historial de git)` §35). El paso 4 pide una «confirmación explícita, con esa lista delante», y un `--yes` no la cumple: se escribe antes de ver la lista, y basta recuperar la orden del historial del shell para devolver la nube a una copia antigua sin ninguna pregunta. Por eso:
 
-- `atlas admin restore`, `atlas admin compact` y `atlas admin forget-device` **se niegan con `--yes`**;
+- `atlas admin restore`, `atlas admin compact` y `atlas admin forget-device` **se niegan con `--yes`** (la tercera se retiró con [ADR-0037](0037-web-only-access.md));
 - se confirman **escribiendo el nombre del entorno** (`prod`), con lo que está en juego delante. Un «sí» no vale, y cualquier otra respuesta no toca nada;
 - sin una terminal a la que preguntar, se detienen sin escribir nada;
-- la confirmación de olvidar un dispositivo enseña además su tipo, su nombre y su última sincronización, para no olvidar el que no es.
+- la confirmación de olvidar un dispositivo enseñaba además su tipo, su nombre y su última sincronización (sin objetos de dispositivo desde [ADR-0037](0037-web-only-access.md)).
 
 El paso 5 lee además la copia como UTF-8 estricto: un byte que no lo es se niega (`restore_candidate_invalid`, `not_utf8`), en vez de escribirse como otros bytes que los de la copia.
 
@@ -92,7 +92,7 @@ Decidida por la dirección en la revisión de la PR #109 (`specs/016-scheduled-j
 
 - **Qué vuelca la capa 3**, en `backups/<YYYY-MM>/` del mes de Madrid y en este orden: el libro byte a byte; `positions.json`, del libro **del mismo volcado**; el histórico del BCE en vigor, `eurofxref-hist.csv` o `api-exr.csv`, y después su manifiesto; y el primer nivel de `prices/`. **`previous/` no se vuelca.** Sin histórico que cuadre con su manifiesto va sin BCE, y lo dice `backup_ecb_missing`; con un libro que no se proyecta va sin `positions.json` (`backup_positions_missing`).
 - **Un volcado nunca se sobrescribe.** Cada objeto se escribe con `If-None-Match: *`, y la política del bucket lo impone (ADR-0034, nota del 2026-09-28). Un reintento del mismo mes solo guarda como suyo (`kept_from_earlier_attempt`) un objeto con los bytes que un intento anterior **anotó en su registro antes de escribirlo**; cualquier otro es `backup_object_differs`, el volcado para y se trata como un incidente.
-- **`positions.json`** es informativo y se lee sin la aplicación: importes redondeados a céntimos y cantidades exactas, núcleo y cubo separados, **cada total con `partial`** y sin total de los dos (constitución III), la procedencia de cada precio (`manual`, `eodhd`, `alpha_vantage` o ninguno) y nunca una cifra fiscal.
+- **`positions.json`** es informativo y se lee sin la aplicación: importes redondeados a céntimos y cantidades exactas, núcleo y cubo separados, **cada total con `partial`** y sin total de los dos (constitución III), la procedencia de cada precio (`manual`, `eodhd` o ninguno) y nunca una cifra fiscal.
 - **La prueba automática trimestral** compara el último volcado cerrado con su libro, **contrastado con el SHA-256 que guardó su registro**, con el libro vivo **cortado en los mismos eventos**: por identificador, contenido y orden, y después por posiciones, efectivo, lotes, ganancias y rendimientos. Sus códigos: `event_missing_in_live`, `event_differs`, `order_differs`, `positions_differ`, `cash_differ`, `lots_differ`, `gains_differ`, `income_differ`, `dump_missing`, `dump_unreadable`, `dump_invalid` y `rehearsal_skipped_invalid` (el libro vivo repite un `id`).
 - **La integridad** son los **errores** de `atlas check --deep` sobre el libro vivo, **sin el contraste de los tipos del BCE**, que solo da avisos: esa función no lee `reference/ecb/`.
 
@@ -106,6 +106,10 @@ Con [ADR-0035](0035-cloud-ledger-single-source.md), sin cola ni réplicas en los
 - **Se conserva:** `compact` y la restauración como operaciones de administración sobre el remoto (pasos 1 a 5), y la prueba anual de restauración. Si la nube desaparece, la consola trabaja en local sobre la última copia y después se usa `atlas admin restore`.
 
 Lo que ADR-0035 retira del código se retira en sus entregas E1 a E5; hasta entonces, el código sigue como está.
+
+## Nota del 2026-11-03 (ADR-0037)
+
+[ADR-0037](0037-web-only-access.md): la subida inicial a una nube vacía es `atlas admin restore`, y `atlas backup --from-bucket` copia también el libro de la nube (fechado, `0400`, verificado por SHA-256). Procedimiento: [`docs/runbooks/restore-the-ledger.md`](../runbooks/restore-the-ledger.md).
 
 ## Notas de estado
 

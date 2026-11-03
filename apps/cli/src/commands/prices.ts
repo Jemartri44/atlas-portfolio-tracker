@@ -6,18 +6,14 @@
 // It never writes in the ledger. Without keys it calls nobody and says so:
 // that is not an error, and everything else works the same.
 
-import { readdir } from "node:fs/promises";
-import { join } from "node:path";
-import { FilePriceStore, PRICES_DIR } from "@atlas/adapters";
+import { FilePriceStore } from "@atlas/adapters";
 import { type AssetId, isCurrency, settingsAt, todayInMadrid } from "@atlas/domain";
 import {
   type AssetOutcome,
   assertNothingMisstored,
   checkSymbols,
-  isQuoteSource,
   type PriceStatus,
   type PriceStore,
-  parseCloudPull,
   parsePriceConfig,
   parseStatus,
   parseSymbols,
@@ -32,18 +28,15 @@ import {
   type UpdateReport,
   updatePrices,
 } from "@atlas/domain/quotes";
-import { RemoteError } from "@atlas/domain/remote-answers";
 import { assertKnownFlags, booleanFlag, type Flags, stringFlag, UsageError } from "../args.js";
 import { CommandFailure, type Context, EXIT, GLOBAL_FLAGS } from "../context.js";
-import { OFFLINE_CODES, SESSION_CODES } from "../output/cloud.js";
 import { FAILURE_TEXT, mismatchedNotes, SOURCE_NAMES, unservedNotes } from "../output/prices.js";
 import { table } from "../output/table.js";
-import { type PullOutcome, priceOriginOf, pullFromCloud } from "../prices/cloud.js";
 import { folderOf, keysFor, sourcesFor } from "../prices/load.js";
 import { aside, cancelled, confirm, loadForQuery, render } from "./shared.js";
 
 const USAGE_PRICES =
-  "uso: atlas prices update [--from-sources] | atlas prices status | atlas prices symbols [<activo>] | atlas prices symbols set <activo> [--eodhd <símbolo>] [--alpha-vantage <símbolo>] --currency <divisa> [--eodhd-currency <divisa>] [--alpha-vantage-currency <divisa>] [--accept-currency] | atlas prices symbols remove <activo> | atlas prices purge <activo> --source eodhd|alpha_vantage [--yes]";
+  "uso: atlas prices update | atlas prices status | atlas prices symbols [<activo>] | atlas prices symbols set <activo> --eodhd <símbolo> --currency <divisa> [--accept-currency] | atlas prices symbols remove <activo> | atlas prices purge <activo> [--yes]";
 
 const NO_KEYS =
   "No hay claves de fuentes de precios configuradas: sin precios automáticos. La entrada manual (`atlas add valuation`) sigue funcionando igual.";
@@ -87,73 +80,7 @@ const updateText = (report: UpdateReport, failing: readonly QuoteSource[]): stri
   ].join("\n");
 };
 
-/** Said when a cloud folder calls the sources: they spend the plans it shares with the cloud. */
-const SHARED_QUOTA =
-  "la consola llama a las fuentes y gasta el cupo que comparte con la nube: por defecto, 2 llamadas de EODHD y 2 de Alpha Vantage al día, salvo que prices/config.json diga otra cosa.";
-
-const pulledText = (outcome: Extract<PullOutcome, { kind: "pulled" }>, origin: string): string => {
-  const added = outcome.files.reduce((sum, file) => sum + file.added, 0);
-  const problems = outcome.files.filter((file) => file.problem !== undefined);
-  return [
-    `Precios de la nube (${origin}), bajados el ${outcome.pulled_at}: ${outcome.files.length} ficheros con cambios, ${added} líneas añadidas. No se ha llamado a ninguna fuente.`,
-    ...(outcome.files.length === 0 ? ["La carpeta ya estaba al día con la nube."] : []),
-    // What the cloud had and the folder never takes.
-    ...(outcome.discarded.future === 0
-      ? []
-      : [
-          `Aviso (cloud_lines_future): ${outcome.discarded.future} cierres de la nube con fecha de hoy o futura, o tomados el mismo día de su sesión, no se han añadido; nunca se guarda un cierre del día en curso.`,
-        ]),
-    ...(outcome.discarded.currency_mismatch === 0
-      ? []
-      : [
-          `Aviso (cloud_currency_mismatch): ${outcome.discarded.currency_mismatch} cierres de la nube en otra divisa que la que declara esta carpeta para su fuente no se han añadido. Si cambiaste la divisa aquí, súbela con «atlas admin prices push».`,
-        ]),
-    ...problems.map((file) =>
-      file.problem === "local_unreadable"
-        ? `Aviso: el fichero de precios de ${file.asset_id} de esta carpeta no se lee: no se ha tocado. Míralo con «atlas prices status».`
-        : `Aviso: el fichero de precios de ${file.asset_id} de la nube no se lee: no se ha añadido nada de él.`,
-    ),
-  ].join("\n");
-};
-
-const update = async (ctx: Context, flags: Flags): Promise<number> => {
-  // A cloud folder takes its prices from the cloud,
-  // and calls the sources only when asked, sharing the plans.
-  const fromSources = booleanFlag(flags, "from-sources");
-  const origin = await priceOriginOf(ctx);
-  if (origin.kind === "refused" && !fromSources) {
-    throw new CommandFailure(EXIT.session, "cloud_prices_unavailable", [
-      `Error: no se pueden bajar los precios de la nube: ${origin.message}`,
-    ]);
-  }
-  if (origin.kind === "cloud" && !fromSources) {
-    let outcome: PullOutcome;
-    try {
-      outcome = await pullFromCloud(ctx, origin);
-    } catch (error) {
-      if (error instanceof RemoteError) {
-        throw new CommandFailure(
-          SESSION_CODES.has(error.code)
-            ? EXIT.session
-            : OFFLINE_CODES.has(error.code)
-              ? EXIT.offline
-              : EXIT.domain,
-          error.code,
-          [
-            `Error (${error.code}): no se han podido bajar los precios de la nube. No se ha llamado a ninguna fuente ni se ha tocado nada; vuelve a intentarlo más tarde.`,
-          ],
-        );
-      }
-      throw error;
-    }
-    if (outcome.kind === "pulled") {
-      render(ctx, outcome, pulledText(outcome, origin.origin));
-      return EXIT.ok;
-    }
-    ctx.io.err(`La nube todavía no tiene precios: esta vez ${SHARED_QUOTA}`);
-  } else if (origin.kind !== "local") {
-    ctx.io.err(`Con --from-sources en una carpeta de nube, ${SHARED_QUOTA}`);
-  }
+const update = async (ctx: Context): Promise<number> => {
   const { keys, note } = await keysFor(ctx);
   if (note !== undefined) {
     ctx.io.err(note);
@@ -167,7 +94,6 @@ const update = async (ctx: Context, flags: Flags): Promise<number> => {
     now: () => ctx.deps.clock.now(),
     store: new FilePriceStore(folderOf(ctx)),
     sources: sourcesFor(ctx, keys),
-    sharedWithCloud: origin.kind !== "local",
   });
   if (report.no_sources) {
     render(ctx, report, NO_KEYS);
@@ -180,36 +106,13 @@ const update = async (ctx: Context, flags: Flags): Promise<number> => {
 const statusOf = async (store: PriceStore): Promise<PriceStatus> =>
   parseStatus(await store.status());
 
-/** The assets with a `prices/<id>.jsonl` in the folder: the inverse of `priceFileName`. */
-const assetsWithPriceFiles = async (ctx: Context): Promise<AssetId[]> => {
-  const names = await readdir(join(folderOf(ctx), PRICES_DIR)).catch(() => []);
-  // A name that does not decode is not one of ours: it is skipped, not a reason to fail.
-  return names.flatMap((name) => {
-    if (!name.endsWith(".jsonl")) {
-      return [];
-    }
-    try {
-      return [decodeURIComponent(name.slice(0, -".jsonl".length)) as AssetId];
-    } catch {
-      return [];
-    }
-  });
-};
-
 const status = async (ctx: Context): Promise<number> => {
   const store = new FilePriceStore(folderOf(ctx));
   const today = todayInMadrid(ctx.deps.clock);
-  // A cloud folder reads no ledger here (no session, no network): its assets are those the folder
-  // holds prices or symbols for.
-  const ledgerAssets: readonly AssetId[] =
-    ctx.mode.kind === "cloud"
-      ? await assetsWithPriceFiles(ctx)
-      : [...(await loadForQuery(ctx, today)).state.assets.keys()];
-  // A cloud folder shares the plans with the cloud.
-  const config = parsePriceConfig(await store.config(), {
-    sharedWithCloud: ctx.mode.kind === "cloud",
-  });
-  const pull = parseCloudPull(await store.cloudPull());
+  const ledgerAssets: readonly AssetId[] = [
+    ...(await loadForQuery(ctx, today)).state.assets.keys(),
+  ];
+  const config = parsePriceConfig(await store.config());
   const symbols = parseSymbols(await store.symbols());
   const ids = [...new Set([...ledgerAssets, ...Object.keys(symbols.assets)])].sort();
   const files = new Map<AssetId, string>();
@@ -234,27 +137,12 @@ const status = async (ctx: Context): Promise<number> => {
     .sort()
     .at(-1);
   const text = [
-    ...(pull?.discarded === undefined || pull.discarded.future === 0
-      ? []
-      : [
-          `cloud_lines_future: ${pull.discarded.future} cierres de la nube con fecha de hoy o futura, o tomados el mismo día de su sesión, se dejaron fuera en la última descarga.`,
-        ]),
-    ...(pull?.discarded === undefined || pull.discarded.currency_mismatch === 0
-      ? []
-      : [
-          `cloud_currency_mismatch: ${pull.discarded.currency_mismatch} cierres de la nube en otra divisa que la declarada se dejaron fuera en la última descarga.`,
-        ]),
     // Where the prices of the folder came from, and when.
     `Procedencia: ${
-      [
-        ...(pull === undefined
-          ? []
-          : [`de la nube (${pull.origin}), última descarga ${pull.pulled_at}`]),
-        ...(lastCall === undefined ? [] : [`de las fuentes, última llamada con éxito ${lastCall}`]),
-      ].join("; ") || "todavía ninguna"
+      lastCall === undefined ? "todavía ninguna" : `de EODHD, última llamada con éxito ${lastCall}`
     }.`,
     "",
-    "Fuentes de precios (el cupo de EODHD se cuenta por día GMT; el de Alpha Vantage, en las últimas 24 horas):",
+    "Fuente de precios (el cupo de EODHD se cuenta por día GMT):",
     table(
       [
         "fuente",
@@ -302,11 +190,8 @@ const status = async (ctx: Context): Promise<number> => {
   return EXIT.ok;
 };
 
-const purge = async (ctx: Context, assetId: string, flags: Flags): Promise<number> => {
-  const source = stringFlag(flags, "source");
-  if (source === undefined || !isQuoteSource(source)) {
-    throw new UsageError("uso: atlas prices purge <activo> --source eodhd|alpha_vantage [--yes]");
-  }
+const purge = async (ctx: Context, assetId: string): Promise<number> => {
+  const source: QuoteSource = "eodhd";
   const store = new FilePriceStore(folderOf(ctx));
   const read = readCloses(
     new Map([[assetId, (await store.closes(assetId)) ?? ""]]),
@@ -351,7 +236,7 @@ const listSymbols = async (ctx: Context, assetId: string | undefined): Promise<n
     ctx,
     Object.fromEntries(entries),
     table(
-      ["activo", "EODHD", "Alpha Vantage", "contraste con la fuente"],
+      ["activo", "EODHD", "contraste con la fuente"],
       entries.map(([id, entry]) => [
         id,
         // Each symbol with the currency declared for it.
@@ -376,72 +261,31 @@ const listSymbols = async (ctx: Context, assetId: string | undefined): Promise<n
 /** A symbol of a source is a word of the URL it goes in: no blanks, no delimiters. */
 const SYMBOL = /^[^\s/?#&%\\]+$/;
 
-/**
- * The declaration from the flags: each symbol with **its own** currency
- * (`--eodhd-currency`, `--alpha-vantage-currency`), and `--currency` for every
- * source that has none of its own. A London share quotes in pounds at EODHD
- * and in pence at Alpha Vantage: one currency for both made one
- * of them ask forever, or stored its closes a hundred times too high.
- */
+/** The declaration from the flags: the symbol with the currency of its quote, declared. */
 const declarationOf = (flags: Flags): SymbolDeclaration => {
-  const common = stringFlag(flags, "currency");
-  const symbols = {
-    eodhd: stringFlag(flags, "eodhd"),
-    alpha_vantage: stringFlag(flags, "alpha-vantage"),
-  };
-  const own = {
-    eodhd: stringFlag(flags, "eodhd-currency"),
-    alpha_vantage: stringFlag(flags, "alpha-vantage-currency"),
-  };
-  const flagOf = { eodhd: "eodhd", alpha_vantage: "alpha-vantage" } as const;
+  const symbol = stringFlag(flags, "eodhd");
+  const currency = stringFlag(flags, "currency");
   // What is written to `prices/symbols.json` has to be something the file reads back: a blank
   // symbol, or a currency that is not a code, would leave the file unusable for every order after.
-  for (const source of QUOTE_SOURCES) {
-    const symbol = symbols[source];
-    if (symbol !== undefined && !SYMBOL.test(symbol)) {
-      throw new UsageError(
-        `--${flagOf[source]} necesita un símbolo sin espacios ni «/ ? # & %» (recibido: «${symbol}»)`,
-      );
-    }
-    const currency = own[source] ?? common;
-    if (currency !== undefined && !isCurrency(currency)) {
-      throw new UsageError(
-        `la divisa tiene que ser un código de tres letras mayúsculas, como EUR o GBP (recibido: «${currency}»)`,
-      );
-    }
+  if (symbol === undefined) {
+    throw new UsageError("no se declara ningún símbolo: añade --eodhd <símbolo>");
   }
-  // Nothing is dropped in silence: a currency for a source
-  // without its symbol, or a declaration without any symbol, is a mistake.
-  for (const source of QUOTE_SOURCES) {
-    if (own[source] !== undefined && symbols[source] === undefined) {
-      throw new UsageError(
-        `--${flagOf[source]}-currency sin --${flagOf[source]}: una divisa sin su símbolo no declara nada`,
-      );
-    }
-  }
-  if (symbols.eodhd === undefined && symbols.alpha_vantage === undefined) {
+  if (!SYMBOL.test(symbol)) {
     throw new UsageError(
-      "no se declara ningún símbolo: añade --eodhd <símbolo>, --alpha-vantage <símbolo> o los dos",
+      `--eodhd necesita un símbolo sin espacios ni «/ ? # & %» (recibido: «${symbol}»)`,
     );
   }
-  const currencies: Partial<Record<QuoteSource, string>> = {};
-  for (const source of QUOTE_SOURCES) {
-    if (symbols[source] === undefined) {
-      continue;
-    }
-    const currency = own[source] ?? common;
-    if (currency === undefined) {
-      throw new UsageError(
-        `falta la divisa de ${SOURCE_NAMES[source]} (--currency, o --${source === "eodhd" ? "eodhd" : "alpha-vantage"}-currency): la divisa de la cotización se declara, nunca se supone`,
-      );
-    }
-    currencies[source] = currency;
+  if (currency === undefined) {
+    throw new UsageError(
+      "falta la divisa de EODHD (--currency): la divisa de la cotización se declara, nunca se supone",
+    );
   }
-  return {
-    ...(symbols.eodhd === undefined ? {} : { eodhd: symbols.eodhd }),
-    ...(symbols.alpha_vantage === undefined ? {} : { alpha_vantage: symbols.alpha_vantage }),
-    currencies,
-  };
+  if (!isCurrency(currency)) {
+    throw new UsageError(
+      `la divisa tiene que ser un código de tres letras mayúsculas, como EUR o GBP (recibido: «${currency}»)`,
+    );
+  }
+  return { eodhd: symbol, currencies: { eodhd: currency } };
 };
 
 const setSymbols = async (ctx: Context, assetId: string, flags: Flags): Promise<number> => {
@@ -524,35 +368,27 @@ export const pricesCommand = async (
 ): Promise<number> => {
   const sub = positionals[1];
   if (sub === "update") {
-    assertKnownFlags(flags, ["from-sources", ...GLOBAL_FLAGS]);
-    return update(ctx, flags);
+    assertKnownFlags(flags, [...GLOBAL_FLAGS]);
+    return update(ctx);
   }
   if (sub === "status") {
     assertKnownFlags(flags, [...GLOBAL_FLAGS]);
     return status(ctx);
   }
   if (sub === "purge") {
-    assertKnownFlags(flags, ["source", ...GLOBAL_FLAGS]);
+    assertKnownFlags(flags, [...GLOBAL_FLAGS]);
     const assetId = positionals[2];
     if (assetId === undefined) {
       throw new UsageError(USAGE_PRICES);
     }
-    return purge(ctx, assetId, flags);
+    return purge(ctx, assetId);
   }
   if (sub !== "symbols") {
     throw new UsageError(USAGE_PRICES);
   }
   const action = positionals[2];
   if (action === "set") {
-    assertKnownFlags(flags, [
-      "currency",
-      "eodhd",
-      "eodhd-currency",
-      "alpha-vantage",
-      "alpha-vantage-currency",
-      "accept-currency",
-      ...GLOBAL_FLAGS,
-    ]);
+    assertKnownFlags(flags, ["currency", "eodhd", "accept-currency", ...GLOBAL_FLAGS]);
     const assetId = positionals[3];
     if (assetId === undefined) {
       throw new UsageError(USAGE_PRICES);

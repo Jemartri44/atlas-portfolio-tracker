@@ -1,9 +1,13 @@
 // What the web learns of its session, and how it closes it (docs/api.md §3).
 
 import { describe, expect, it } from "vitest";
-import { bodySha256, readSession, signInHref, signOut } from "../../src/auth/session.js";
-
-const ID = "AAAAAAAAAAAAAAAAAAAAAA";
+import {
+  bodySha256,
+  readSession,
+  SIGN_IN_HREF,
+  signOut,
+  signOutEverywhere,
+} from "../../src/auth/session.js";
 
 const answering = (status: number, body?: unknown) => {
   const calls: { url: string; init: RequestInit | undefined }[] = [];
@@ -18,16 +22,14 @@ const answering = (status: number, body?: unknown) => {
 };
 
 describe("readSession", () => {
-  it("says signed in with the expiry and the device id the API gave", async () => {
+  it("says signed in with the expiry the API gave", async () => {
     const { request, calls } = answering(200, {
       signed_in: true,
       expires_at: "2026-10-01T18:00:00Z",
-      device_id: ID,
     });
     expect(await readSession(request)).toEqual({
       kind: "signed_in",
       expiresAt: "2026-10-01T18:00:00Z",
-      deviceId: ID,
     });
     expect(calls[0]?.url).toBe("/api/session");
     expect(calls[0]?.init?.redirect).toBe("error");
@@ -40,9 +42,9 @@ describe("readSession", () => {
       [401, { error: { code: "session_invalid", details: {} } }, { kind: "expired" }],
       [403, { error: { code: "not_allowed", details: {} } }, { kind: "not_allowed" }],
       [
-        403,
-        { error: { code: "device_forgotten", details: { reason: "forgotten" } } },
-        { kind: "forgotten" },
+        401,
+        { error: { code: "session_invalid", details: { reason: "closed" } } },
+        { kind: "closed" },
       ],
       [
         503,
@@ -52,7 +54,7 @@ describe("readSession", () => {
       [404, "<html>not here</html>", { kind: "unavailable", code: "transport_rejected" }],
       [
         200,
-        { signed_in: true, expires_at: "x", device_id: "../bad" },
+        { signed_in: true, expires_at: 5 },
         { kind: "unavailable", code: "transport_rejected" },
       ],
       [200, "not json", { kind: "unavailable", code: "transport_rejected" }],
@@ -68,9 +70,8 @@ describe("readSession", () => {
 });
 
 describe("signing in and out", () => {
-  it("navigates to our own origin, presenting the kept id only when well formed", () => {
-    expect(signInHref(undefined)).toBe("/api/auth/login");
-    expect(signInHref(ID)).toBe(`/api/auth/login?device_id=${ID}`);
+  it("navigates to our own origin", () => {
+    expect(SIGN_IN_HREF).toBe("/api/auth/login");
   });
 
   it("closes with {} and the hash of its exact bytes, never with Authorization", async () => {
@@ -87,6 +88,16 @@ describe("signing in and out", () => {
       "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
     );
     expect(Object.keys(headers).map((name) => name.toLowerCase())).not.toContain("authorization");
+  });
+
+  it("closes every session with the same request to its own route", async () => {
+    const { request, calls } = answering(204);
+    expect(await signOutEverywhere(request)).toBe("signed_out");
+    expect(calls[0]?.url).toBe("/api/auth/logout-all");
+    expect(calls[0]?.init).toMatchObject({ method: "POST", body: "{}", redirect: "error" });
+    expect(
+      await signOutEverywhere(answering(401, { error: { code: "unauthenticated" } }).request),
+    ).toEqual({ code: "unauthenticated" });
   });
 
   it("says why it could not close", async () => {

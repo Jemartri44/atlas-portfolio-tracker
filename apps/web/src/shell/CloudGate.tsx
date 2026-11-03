@@ -7,7 +7,7 @@
 // ones of the rest of the application.
 
 import { createSignal, type JSX, Match, Show, Switch } from "solid-js";
-import { signInHref } from "../auth/session.js";
+import { SIGN_IN_HREF } from "../auth/session.js";
 import { Icon } from "../components/Icon.jsx";
 import { Notice } from "../components/Notice.jsx";
 import type { SignedOutReason } from "../ledger/state.js";
@@ -18,7 +18,8 @@ const SENTENCES: Readonly<Record<SignedOutReason, string>> = {
   expired: "Tu sesión ha caducado. Entra de nuevo con Google para seguir.",
   not_allowed:
     "Esta cuenta de Google no tiene acceso a Atlas. Entra con otra cuenta si tienes más de una.",
-  forgotten: "Este navegador se ha olvidado desde otro dispositivo. Entra de nuevo con Google.",
+  closed:
+    "Se ha cerrado la sesión en todos tus dispositivos. Si fuiste tú, entra de nuevo con Google.",
 };
 
 /** Reads the session and the ledger again, from the start. */
@@ -52,7 +53,7 @@ export default function CloudGate(): JSX.Element {
       setWarned(true);
       return;
     }
-    window.location.assign(signInHref(undefined));
+    window.location.assign(SIGN_IN_HREF);
   };
   return (
     <Switch>

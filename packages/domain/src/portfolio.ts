@@ -41,6 +41,12 @@ export {
   type StandaloneFees,
 } from "./projections/costs.js";
 export {
+  type MonthAssetTask,
+  type MonthPlan,
+  type MonthTask,
+  monthPlan,
+} from "./projections/month-plan.js";
+export {
   type FeeEstimate,
   type Order,
   type PlatformLine,
@@ -49,3 +55,10 @@ export {
   platformPlan,
   type UnassignedOrder,
 } from "./projections/platform-plan.js";
+export {
+  DEFAULT_COST_YEARS,
+  type TotalCost,
+  type TotalCostAssumptions,
+  type TotalCostGap,
+  totalCost,
+} from "./projections/total-cost.js";

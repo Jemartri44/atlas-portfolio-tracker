@@ -11,19 +11,20 @@ locals {
       Sid      = "LedgerRead"
       Effect   = "Allow"
       Action   = ["s3:GetObject"]
-      Resource = ["${local.data_arn}/ledger/ledger.jsonl", "${local.data_arn}/sync/devices/*", "${local.data_arn}/reference/ecb/*", "${local.data_arn}/prices/*", "${local.data_arn}/drafts/*"]
+      Resource = ["${local.data_arn}/ledger/ledger.jsonl", "${local.data_arn}/reference/ecb/*", "${local.data_arn}/prices/*", "${local.data_arn}/drafts/*"]
     },
     {
       Sid      = "LedgerWrite"
       Effect   = "Allow"
       Action   = ["s3:PutObject"]
-      Resource = ["${local.data_arn}/ledger/ledger.jsonl", "${local.data_arn}/sync/devices/*", "${local.data_arn}/drafts/*"]
+      Resource = ["${local.data_arn}/ledger/ledger.jsonl", "${local.data_arn}/drafts/*"]
     },
     {
+      # The date of the last web sign-in, and the mark of «close every session».
       Sid      = "AccessMarker"
       Effect   = "Allow"
       Action   = ["s3:GetObject", "s3:PutObject"]
-      Resource = ["${local.data_arn}/access/last-web-sign-in.json"]
+      Resource = ["${local.data_arn}/access/last-web-sign-in.json", "${local.data_arn}/access/sessions-valid-from.json"]
     },
     {
       # `access/` makes a missing marker a 404 and not a 403 (prompt 017, §12.2 B5).
@@ -31,25 +32,13 @@ locals {
       Effect    = "Allow"
       Action    = ["s3:ListBucket"]
       Resource  = [local.data_arn]
-      Condition = { StringLike = { "s3:prefix" = ["ledger/*", "sync/devices/*", "reference/ecb/*", "prices/*", "access/*", "drafts/*"] } }
+      Condition = { StringLike = { "s3:prefix" = ["ledger/*", "reference/ecb/*", "prices/*", "access/*", "drafts/*"] } }
     },
     {
       Sid      = "SsmRead"
       Effect   = "Allow"
       Action   = ["ssm:GetParameter"]
-      Resource = ["${local.ssm_base}/auth/*", "${local.ssm_base}/device-tokens/*"]
-    },
-    {
-      Sid      = "SsmByPath"
-      Effect   = "Allow"
-      Action   = ["ssm:GetParametersByPath"]
-      Resource = ["${local.ssm_base}/device-tokens"]
-    },
-    {
-      Sid      = "SsmTokens"
-      Effect   = "Allow"
-      Action   = ["ssm:AddTagsToResource", "ssm:PutParameter"]
-      Resource = ["${local.ssm_base}/device-tokens/*"]
+      Resource = ["${local.ssm_base}/auth/*"]
     },
     {
       Sid      = "Logs"
@@ -112,9 +101,6 @@ resource "aws_lambda_function" "api" {
       ATLAS_DATA_BUCKET              = local.data_name
       ATLAS_SESSION_TTL_SECONDS      = "28800"
       ATLAS_LOGIN_TTL_SECONDS        = "600"
-      ATLAS_CONSOLE_CODE_TTL_SECONDS = "300"
-      ATLAS_TOKEN_LIFETIME_DAYS      = "90"
-      ATLAS_RECENT_ISSUE_DAYS        = "7"
       ATLAS_CLOCK_TOLERANCE_SECONDS  = "600"
       ATLAS_ALLOW_LIST_CACHE_SECONDS = "120"
       ATLAS_SECRETS_CACHE_SECONDS    = "300"

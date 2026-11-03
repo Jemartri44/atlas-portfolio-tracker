@@ -1,14 +1,13 @@
 // @vitest-environment happy-dom
 //
 // The step of the monitor: from 1800px one more step of type, a taller chart and more air; and the
-// summary in 8+4, with the net worth beside the tax card and the evolution beside attention and the
-// recent movements. Measured here on what the browser applies, and again in the real browser at
-// 1799, 1800 and 2045×1141 (`medidas.json` of the captures).
+// order and the rows of the summary on a phone and from the grid's 12 columns. Measured here on
+// what the browser applies.
 
 import { afterEach, describe, expect, it } from "vitest";
 import Resumen from "../src/routes/resumen/index.jsx";
 import { summaryOrder } from "../src/view-models/summary-order.js";
-import { show, until, withGoldenLedger } from "./helpers/render.jsx";
+import { show, today, until, withGoldenLedger } from "./helpers/render.jsx";
 import { applied, token, withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
@@ -62,67 +61,71 @@ describe("the step of the monitor", () => {
   });
 });
 
-describe("the summary in 8+4", () => {
-  it("walks the cards in the order of reading of each width", () => {
-    // Out of the season and with nothing to lose, the tax card is moved to the end.
-    expect(summaryOrder({ monitor: false, season: false, dataLoss: false })).toEqual([
+describe("the summary by device", () => {
+  it("walks the cards in the order of reading of each width, the tax card first in the season", () => {
+    expect(summaryOrder({ wide: false, season: false })).toEqual([
       "worth",
+      "month",
       "attention",
-      "moves",
       "evolution",
+      "allocation",
+      "moves",
       "fiscal",
     ]);
-    expect(summaryOrder({ monitor: true, season: false, dataLoss: false })).toEqual([
+    expect(summaryOrder({ wide: true, season: false })).toEqual([
       "worth",
-      "fiscal",
       "evolution",
+      "month",
       "attention",
+      "allocation",
       "moves",
+      "fiscal",
     ]);
+    expect(summaryOrder({ wide: true, season: true })[0]).toBe("fiscal");
   });
 
-  it("puts the tax card beside the net worth and the evolution beside attention, from 1800px", async () => {
-    withStyles(2045, 1141);
-    const host = await show("/", Resumen);
-    await until(() => host.querySelector(".summary-fiscal") !== null, "la tarjeta fiscal");
-    const cards = [...host.querySelectorAll(".grid > .card")];
-    const order = cards.map((card) =>
-      [...card.classList].find((name) => name.startsWith("summary-")),
-    );
-    expect(order).toEqual([
-      "summary-worth",
-      "summary-fiscal",
-      "summary-evolution",
-      "summary-attention",
-      "summary-moves",
-    ]);
-    const span = (name: string): string => applied(host.querySelector(`.${name}`), "grid-column");
-    expect(span("summary-worth")).toBe("span 8");
-    expect(span("summary-evolution")).toBe("span 8");
-    expect(span("summary-fiscal")).toBe("span 4");
-    expect(span("summary-attention")).toBe("span 4");
-    expect(span("summary-moves")).toBe("span 4");
-    expect(applied(host.querySelector(".summary-evolution"), "grid-row")).toBe("span 2");
-    // Nothing reorders by CSS: the markup is already in the order read (the tax card has no
-    // `order`).
-    expect(applied(host.querySelector(".summary-fiscal"), "order")).toMatch(/^(0)?$/);
-  });
-
-  it("keeps the order of the phone below 1800px", async () => {
-    withStyles(1799, 1141);
+  it("lays the cards in rows from the grid's 12 columns, in the order of the markup", async () => {
+    withStyles(1440, 900);
     const host = await show("/", Resumen);
     await until(() => host.querySelector(".summary-fiscal") !== null, "la tarjeta fiscal");
     const order = [...host.querySelectorAll(".grid > .card")].map((card) =>
       [...card.classList].find((name) => name.startsWith("summary-")),
     );
-    // Out of the season, the tax card is a row at the end.
     expect(order).toEqual([
       "summary-worth",
-      "summary-attention",
-      "summary-moves",
       "summary-evolution",
+      "summary-month",
+      "summary-attention",
+      "summary-allocation",
+      "summary-moves",
       "summary-fiscal",
     ]);
-    expect(applied(host.querySelector(".summary-worth"), "grid-column")).toBe("1 / -1");
+    const span = (name: string): string => applied(host.querySelector(`.${name}`), "grid-column");
+    expect(span("summary-evolution")).toBe("span 8");
+    expect(span("summary-month")).toBe("span 4");
+    expect(span("summary-attention")).toBe("span 7");
+    expect(span("summary-allocation")).toBe("span 5");
+    expect(span("summary-moves")).toBe("span 7");
+    expect(span("summary-fiscal")).toBe("span 5");
+  });
+
+  it("lays the tax card across the first row in the season, never alone beside seven empty columns", async () => {
+    today("2027-04-20");
+    withStyles(1440, 900);
+    const host = await show("/", Resumen);
+    await until(() => host.querySelector(".summary-fiscal") !== null, "la tarjeta fiscal");
+    const first = host.querySelector(".grid > .card");
+    expect(first?.classList.contains("summary-fiscal")).toBe(true);
+    expect(applied(first, "grid-column")).toBe("1 / -1");
+  });
+
+  it("puts this month and attention right after the net worth on a phone", async () => {
+    withStyles(390, 844);
+    const host = await show("/", Resumen);
+    await until(() => host.querySelector(".summary-fiscal") !== null, "la tarjeta fiscal");
+    const order = [...host.querySelectorAll(".grid > .card")].map((card) =>
+      [...card.classList].find((name) => name.startsWith("summary-")),
+    );
+    expect(order.slice(0, 3)).toEqual(["summary-worth", "summary-month", "summary-attention"]);
   });
 });

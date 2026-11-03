@@ -6,11 +6,11 @@
 //
 // Signing in again opens **another tab**: the Lambda answers with a redirect to
 // Google, and this page — with what was typed in it, only in memory — stays where
-// it is. Coming back, «Ya he entrado» reads the session again and gives the page
-// the device of the new one; nothing is written on the device.
+// it is. Coming back, «Ya he entrado» reads the session again; nothing is
+// written on the device.
 
 import { createSignal, type JSX, onCleanup, Show } from "solid-js";
-import { signInHref } from "../auth/session.js";
+import { SIGN_IN_HREF } from "../auth/session.js";
 import { Notice } from "../components/Notice.jsx";
 import { store } from "../ledger/state.js";
 
@@ -49,7 +49,7 @@ export const SessionNotice = (props: {
     props.expired === true || (left() ?? Number.POSITIVE_INFINITY) < SESSION_WARNING_MINUTES;
 
   const signIn = (): void => {
-    window.open(signInHref(undefined), "_blank", "noopener");
+    window.open(SIGN_IN_HREF, "_blank", "noopener");
     setOpened(true);
     setSaid(undefined);
   };

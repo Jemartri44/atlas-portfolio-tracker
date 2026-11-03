@@ -71,6 +71,8 @@ Decidida por la dirección el mismo día. Se declara como **sustitución** que l
 
 ## Nota del 2026-09-25 (ADR-0033 aceptada)
 
+> **Historia (2026-11-03).** Sin token de consola desde [ADR-0037](0037-web-only-access.md): el rol de la API ya no tiene permisos en SSM bajo `device-tokens/`, ni la política de origen tiene que reenviar su cabecera, ni hay página con `sandbox`. Esta nota ya no rige.
+
 ADR-0033 (el token de dispositivo de la consola) toca cuatro filas de esta ADR:
 
 - **Fila 7 (permisos del rol de la API):** el rol gana lectura y escritura en SSM **solo bajo `/atlas/<entorno>/device-tokens/`** (`GetParameter`, `GetParametersByPath` y `PutParameter`), **sin `DeleteParameter` ni `LabelParameterVersion`**. Para él, la lista permitida, el secreto del cliente y la clave de sesión siguen siendo de solo lectura. Qué permisos de KMS hacen falta para `aws/ssm` está SIN VERIFICAR (feature 017).

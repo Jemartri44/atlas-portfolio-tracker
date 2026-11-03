@@ -63,9 +63,6 @@ export class TestOnlyFakeGoogle implements IdentityProvider {
     url.searchParams.set("state", request.state);
     url.searchParams.set("nonce", request.nonce);
     url.searchParams.set("code_challenge", request.codeChallenge);
-    if (request.prompt !== undefined) {
-      url.searchParams.set("prompt", request.prompt);
-    }
     return url.toString();
   }
 

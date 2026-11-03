@@ -1,5 +1,5 @@
 // The rules of the routes of the sync and of the reference data (`docs/api.md`
-// §5 and §6), pure. What a line is worth is `acceptAppend` and `acceptInit`
+// §5 and §6), pure. What a line is worth is `acceptAppend`
 // (`@atlas/domain/sync`); this is what the handler needs around them: the etag
 // a write asks for, the names of the reference data and the answer of a
 // conditional read. The handler decides nothing of it.
@@ -11,7 +11,7 @@ import { API_ERRORS, type ApiErrorCode, type ApiRefusal, refusal } from "./codes
 const STRONG_SHA = /^"([0-9a-f]{64})"$/;
 
 /**
- * The `If-Match` of `POST /api/ledger/lines` and `PUT /api/ledger`: absent
+ * The `If-Match` of `POST /api/ledger/lines`: absent
  * (`428`), or the SHA-256 it quotes. Anything else — weak, unquoted, a list,
  * `*`, upper case — can never be the etag of the remote, and is the empty
  * etag that no remote has: the write is `412` and nothing is written.
