@@ -3,7 +3,7 @@
 // client's preview. They reach S3 only through `DraftObjects`: read, create once, list. **Nothing
 // is overwritten and nothing is deleted.**
 
-import { type DraftObjects, decodeUtf8Strict } from "@atlas/adapters/aws";
+import { type DraftObjects, utf8TextOrUndefined } from "@atlas/adapters/aws";
 import { isUlid, utf8Encode } from "@atlas/domain";
 import { refusal } from "@atlas/domain/access";
 import {
@@ -35,11 +35,7 @@ const textOf = async (objects: DraftObjects, key: string): Promise<string | unde
   if (stored === undefined) {
     return undefined;
   }
-  try {
-    return decodeUtf8Strict(stored.body, false);
-  } catch {
-    return "�";
-  }
+  return utf8TextOrUndefined(stored.body, false) ?? "�";
 };
 
 const sameEnd = (left: DraftEnd, right: DraftEnd): boolean =>

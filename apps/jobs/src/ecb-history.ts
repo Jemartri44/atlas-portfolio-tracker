@@ -5,10 +5,10 @@
 // reach a price (`tests/architecture/jobs-reach.test.ts`).
 
 import {
-  decodeUtf8Strict,
   type ObjectStore,
   referenceReader,
   sha256Bytes,
+  utf8TextOrUndefined,
 } from "@atlas/adapters/aws";
 import { DEFAULT_LOCAL_CONFIG, type EcbHistory, readEcbHistory } from "@atlas/domain/ecb";
 import { activeHistoryOf } from "@atlas/domain/jobs";
@@ -21,13 +21,7 @@ import { activeHistoryOf } from "@atlas/domain/jobs";
  */
 export const CLOUD_ECB_STALE_DAYS = DEFAULT_LOCAL_CONFIG.ecb_stale_currency_days;
 
-export const textOf = (bytes: Uint8Array): string | undefined => {
-  try {
-    return decodeUtf8Strict(bytes, true);
-  } catch {
-    return undefined;
-  }
-};
+export const textOf = (bytes: Uint8Array): string | undefined => utf8TextOrUndefined(bytes, true);
 
 /**
  * What the bucket holds of the history of the ECB: **none at all** (no manifest), a history in
