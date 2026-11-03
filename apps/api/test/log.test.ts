@@ -8,19 +8,21 @@ const base = {
   level: "INFO",
   request_id: "req-1",
   method: "POST",
-  route: "/api/devices/tokens/{token_id}/revoke",
+  route: "/api/drafts/{id}/end",
   status: 200,
 } as const;
 
 describe("logLine", () => {
-  it("keeps our own values: a route template, a code, a token id, a number", () => {
-    expect(
-      JSON.parse(logLine({ ...base, code: "token_revoked", token_id: "A".repeat(22) })),
-    ).toEqual({ ...base, code: "token_revoked", token_id: "A".repeat(22) });
+  it("keeps our own values: a route template, a code, a reason, a number", () => {
+    expect(JSON.parse(logLine({ ...base, code: "draft_ended", reason: "closed" }))).toEqual({
+      ...base,
+      code: "draft_ended",
+      reason: "closed",
+    });
   });
 
   it("drops an e-mail, a token, a value too long, and anything with spaces or quotes", () => {
-    const token = `atlasdt1.${"A".repeat(22)}.${"s".repeat(43)}`;
+    const token = `Bearer ${"A".repeat(22)}`;
     for (const value of [
       "someone@example.com",
       token,
@@ -29,7 +31,7 @@ describe("logLine", () => {
       'a"b',
       "",
     ]) {
-      const line = logLine({ ...base, code: value, reason: value, token_id: value });
+      const line = logLine({ ...base, code: value, reason: value, dependency: value });
       expect(line).not.toContain(value === "" ? '""' : value);
       expect(JSON.parse(line)).toEqual(base);
     }

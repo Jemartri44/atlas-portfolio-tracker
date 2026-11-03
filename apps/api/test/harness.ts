@@ -2,15 +2,15 @@
 // that keeps what the API sets, so a sign-in can be walked end to end.
 
 import { randomBytes } from "node:crypto";
-import { base64url, pkceChallenge } from "@atlas/adapters/access";
+import { base64url } from "@atlas/adapters/access";
 import { parameterNames } from "@atlas/adapters/aws";
-import { type ApiConfig, parseApiConfig } from "@atlas/domain/access";
 import { TestOnlyFakeS3 } from "../../../packages/adapters/test/aws/test-only-fake-s3.js";
 import { TestOnlyFakeSsm } from "../../../packages/adapters/test/aws/test-only-fake-ssm.js";
 import {
   type FakeAccount,
   TestOnlyFakeGoogle,
 } from "../../../packages/adapters/test/identity/test-only-fake-google.js";
+import { type ApiConfig, parseApiConfig } from "../src/access/config.js";
 import type { FunctionUrlEvent, FunctionUrlResult } from "../src/event.js";
 import { createHandler, type HandlerDeps } from "../src/handler.js";
 
@@ -28,9 +28,6 @@ export const CONFIG: ApiConfig = parseApiConfig({
   ATLAS_DATA_BUCKET: "atlas-dev-data-test",
   ATLAS_SESSION_TTL_SECONDS: "28800",
   ATLAS_LOGIN_TTL_SECONDS: "600",
-  ATLAS_CONSOLE_CODE_TTL_SECONDS: "300",
-  ATLAS_TOKEN_LIFETIME_DAYS: "90",
-  ATLAS_RECENT_ISSUE_DAYS: "7",
   ATLAS_CLOCK_TOLERANCE_SECONDS: "600",
   ATLAS_ALLOW_LIST_CACHE_SECONDS: "120",
   ATLAS_SECRETS_CACHE_SECONDS: "300",
@@ -121,14 +118,8 @@ export const setup = (overrides: Partial<HandlerDeps> = {}) => {
   };
 
   /** A whole sign-in of the web: start, the user chooses `account` at the provider, the return. */
-  const signIn = async (account: FakeAccount = ALLOWED, deviceId?: string) => {
-    const start = await call(
-      "GET",
-      "/api/auth/login",
-      deviceId === undefined
-        ? {}
-        : { query: { device_id: deviceId }, headers: { "sec-fetch-site": "same-origin" } },
-    );
+  const signIn = async (account: FakeAccount = ALLOWED) => {
+    const start = await call("GET", "/api/auth/login");
     const back = google.authorize(start.headers.location as string, account);
     const done = await call("GET", "/api/auth/callback", {
       query: { code: back.code, state: back.state },
@@ -158,36 +149,3 @@ export const errorOf = (
   result: FunctionUrlResult,
 ): { code: string; details: Record<string, unknown> } =>
   (JSON.parse(result.body) as { error: { code: string; details: Record<string, unknown> } }).error;
-
-/**
- * A whole `atlas remote login` by loopback, as the console walks it: the token it keeps and what
- * the exchange answered.
- */
-export const consoleLogin = async (
-  api: ReturnType<typeof setup>,
-  account: FakeAccount = ALLOWED,
-): Promise<{ token: string; device_id: string; token_id: string }> => {
-  const verifier = base64url(randomBytes(32));
-  const state = base64url(randomBytes(32));
-  const start = await api.call("GET", "/api/auth/console/start", {
-    query: {
-      port: "49152",
-      state,
-      code_challenge: pkceChallenge(verifier),
-      code_challenge_method: "S256",
-      device_name: "sobremesa",
-    },
-    jar: true,
-  });
-  const back = api.google.authorize(start.headers.location as string, account);
-  const done = await api.call("GET", "/api/auth/callback", {
-    query: { code: back.code, state: back.state },
-  });
-  const code = new URL(done.headers.location as string).searchParams.get("code") as string;
-  const answer = await api.call("POST", "/api/auth/console/token", {
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ code, code_verifier: verifier }),
-    jar: false,
-  });
-  return JSON.parse(answer.body) as { token: string; device_id: string; token_id: string };
-};

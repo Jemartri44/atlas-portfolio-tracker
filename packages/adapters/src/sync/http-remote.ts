@@ -1,13 +1,10 @@
-// The remote ledger over HTTP (`docs/api.md` §5 and §7): the
-// `RemoteLedger` of the console, with its device token, and of the web, with
-// its cookie. **One client, the credential injected.** No rule lives here:
+// The remote ledger over HTTP (`docs/api.md` §5 and §7): the `RemoteLedger` of
+// the web, with its cookie. No rule lives here:
 // what an answer may be is the domain's (`@atlas/domain/sync`, `answers.ts`).
 //
 // - Every request goes to `origin` + the path of the API, with
-//   `redirect: "error"`: a redirect is a failure, and the token never leaves
-//   for another origin (ADR-0033, point 4). The console builds it only with
-//   the HTTPS origin of its own entry of `credentials.json`.
-// - Every `POST` and `PUT` carries `x-amz-content-sha256`, the SHA-256 of
+//   `redirect: "error"`: a redirect is a failure.
+// - Every `POST` carries `x-amz-content-sha256`, the SHA-256 of
 //   **the exact bytes of the body**, with Web Crypto (ADR-0027, fact 2).
 // - The body of `GET /api/ledger` is hashed as it arrived — decompressed, if
 //   CloudFront compressed it — and decoded to text
@@ -19,7 +16,7 @@
 //   not arrive is `network_failed`. None of them holds a line.
 //
 // Web Crypto and `fetch` exist in Node 22 and in the browser: no Node module
-// and no DOM type here, so the web can bundle it and the console runs it.
+// and no DOM type here, so the web can bundle it and Node can test it.
 
 import {
   type AppendEntry,
@@ -27,7 +24,6 @@ import {
   etagOfHeader,
   parseAppendAnswer,
   parseErrorAnswer,
-  parseInitAnswer,
   RemoteError,
   type RemoteLedger,
   type RemoteSnapshot,
@@ -36,11 +32,9 @@ import { decodeUtf8Strict } from "../utf8.js";
 import { apiFetch, hex } from "./api-fetch.js";
 
 export interface HttpRemoteOptions {
-  /** `https://…` of the console's entry, or the web's own origin. */
+  /** The web's own origin. */
   readonly origin: string;
   readonly fetch: typeof fetch;
-  /** The device token of the console; without it, the cookie of the web travels (same origin). */
-  readonly token?: string;
 }
 
 const transportRejected = (status: number | undefined, reason: string): RemoteError =>
@@ -48,7 +42,7 @@ const transportRejected = (status: number | undefined, reason: string): RemoteEr
 
 export const httpRemote = (options: HttpRemoteOptions): RemoteLedger => {
   const call = (
-    method: "GET" | "POST" | "PUT",
+    method: "GET" | "POST",
     path: string,
     body?: unknown,
     headers: Record<string, string> = {},
@@ -119,18 +113,6 @@ export const httpRemote = (options: HttpRemoteOptions): RemoteLedger => {
       return answer(
         await call("POST", "/api/ledger/lines", { lines: entries }, { "if-match": `"${ifMatch}"` }),
         parseAppendAnswer,
-      );
-    },
-
-    async init(content: string, confirmDuplicateIds: readonly string[], ifMatch: string) {
-      return answer(
-        await call(
-          "PUT",
-          "/api/ledger",
-          { content, confirm_duplicate_ids: confirmDuplicateIds },
-          { "if-match": `"${ifMatch}"` },
-        ),
-        parseInitAnswer,
       );
     },
   };

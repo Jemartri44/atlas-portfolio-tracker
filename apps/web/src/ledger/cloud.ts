@@ -25,7 +25,7 @@ import type { UseCaseDeps } from "@atlas/domain";
 import { RemoteError } from "@atlas/domain/sync";
 import { readSession, type SessionState } from "../auth/session.js";
 import { loadInto } from "./actions.js";
-import { SIGNED_OUT } from "./session-errors.js";
+import { signedOutReason } from "./session-errors.js";
 import type { AppError, LoadPhase } from "./state.js";
 import { store } from "./state.js";
 
@@ -73,7 +73,7 @@ const ofReadFailure = async (error: unknown): Promise<LoadPhase> => {
     if (error.code === "network_failed") {
       return { phase: "offline" };
     }
-    const reason = SIGNED_OUT[error.code];
+    const reason = signedOutReason(error);
     if (reason !== undefined) {
       return { phase: "signed_out", reason };
     }

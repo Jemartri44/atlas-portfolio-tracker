@@ -1,16 +1,14 @@
-// The routes of the sync (`docs/api.md` §5) over the double of S3, with both credentials. The API
-// only appends: the valid stretch up to the first rejected line, in one conditional write, decided
-// by the domain's `acceptAppend`; a stale `If-Match` writes nothing; the device publishes on its
-// own object and never brings it back.
+// The routes of the ledger (`docs/api.md` §5) over the double of S3, with the session of the web.
+// The API only appends: the valid stretch up to the first rejected line, in one conditional write,
+// decided by the domain's `acceptAppend`; a stale `If-Match` writes nothing.
 
 import { createHash } from "node:crypto";
 import { gunzipSync } from "node:zlib";
-import { newDevice, serializeDeviceObject } from "@atlas/domain/access";
 import { EMPTY_ETAG } from "@atlas/domain/sync";
 import { describe, expect, it } from "vitest";
 import { account, deposit, lineOf } from "../../../packages/adapters/test/fixtures.js";
 import { utf8Of } from "../src/sync.js";
-import { consoleLogin, errorOf, SELF, setup } from "./harness.js";
+import { errorOf, SELF, setup } from "./harness.js";
 
 type Api = ReturnType<typeof setup>;
 const LEDGER = "ledger/ledger.jsonl";
@@ -18,37 +16,21 @@ const sha = (bytes: Uint8Array | string): string =>
   createHash("sha256").update(bytes).digest("hex");
 const textOf = (lines: readonly string[]): string => lines.map((line) => `${line}\n`).join("");
 
-/** The two credentials, each with the headers a write of its own carries. */
-const credentials = async (api: Api): Promise<{ token: Credential; session: Credential }> => {
-  const console = await consoleLogin(api);
-  await api.signIn();
-  const session = JSON.parse((await api.call("GET", "/api/session")).body) as {
-    device_id: string;
-  };
-  return {
-    token: {
-      deviceId: console.device_id,
-      headers: { "x-atlas-device-token": console.token },
-      jar: false,
-    },
-    session: {
-      deviceId: session.device_id,
-      headers: { origin: SELF },
-      jar: true,
-    },
-  };
-};
-
 interface Credential {
-  readonly deviceId: string;
   readonly headers: Readonly<Record<string, string>>;
   readonly jar: boolean;
 }
 
+/** The session of the web, with the Origin a write of its own carries. */
+const signedIn = async (api: Api): Promise<Credential> => {
+  await api.signIn();
+  return { headers: { origin: SELF }, jar: true };
+};
+
 const write = (
   api: Api,
   as: Credential,
-  method: "POST" | "PUT",
+  method: "POST",
   path: string,
   body: unknown,
   headers: Record<string, string> = {},
@@ -63,19 +45,17 @@ const read = (api: Api, as: Credential, path: string, headers: Record<string, st
   api.call("GET", path, { headers: { ...as.headers, ...headers }, jar: as.jar });
 
 describe("GET /api/ledger (§5.1)", () => {
-  it("gives the exact bytes and their SHA-256, to either credential", async () => {
+  it("gives the exact bytes and their SHA-256", async () => {
     const api = setup();
-    const both = await credentials(api);
-    for (const as of [both.token, both.session]) {
-      const empty = await read(api, as, "/api/ledger");
-      expect(empty.statusCode).toBe(200);
-      expect(empty.body).toBe("");
-      expect(empty.headers.etag).toBe(`"${EMPTY_ETAG}"`);
-      expect(empty.headers["content-type"]).toBe("application/x-ndjson; charset=utf-8");
-    }
+    const session = await signedIn(api);
+    const empty = await read(api, session, "/api/ledger");
+    expect(empty.statusCode).toBe(200);
+    expect(empty.body).toBe("");
+    expect(empty.headers.etag).toBe(`"${EMPTY_ETAG}"`);
+    expect(empty.headers["content-type"]).toBe("application/x-ndjson; charset=utf-8");
     const text = textOf([lineOf(account), lineOf(deposit)]);
     api.s3.seed(LEDGER, text);
-    const full = await read(api, both.token, "/api/ledger");
+    const full = await read(api, session, "/api/ledger");
     expect(full.body).toBe(text);
     expect(full.isBase64Encoded).toBe(false);
     expect(full.headers.etag).toBe(`"${sha(text)}"`);
@@ -83,26 +63,26 @@ describe("GET /api/ledger (§5.1)", () => {
 
   it("compresses a large ledger when the client accepts gzip, with the etag of the plain bytes", async () => {
     const api = setup();
-    const { token } = await credentials(api);
+    const session = await signedIn(api);
     const text = textOf(Array.from({ length: 4000 }, () => lineOf(deposit)));
     expect(text.length).toBeGreaterThan(256 * 1024);
     api.s3.seed(LEDGER, text);
-    const packed = await read(api, token, "/api/ledger", { "accept-encoding": "gzip" });
+    const packed = await read(api, session, "/api/ledger", { "accept-encoding": "gzip" });
     expect(packed.headers["content-encoding"]).toBe("gzip");
     expect(packed.isBase64Encoded).toBe(true);
     expect(gunzipSync(Buffer.from(packed.body, "base64")).toString()).toBe(text);
     expect(packed.headers.etag).toBe(`"${sha(text)}"`);
-    const plain = await read(api, token, "/api/ledger", { "accept-encoding": "identity" });
+    const plain = await read(api, session, "/api/ledger", { "accept-encoding": "identity" });
     expect(plain.headers["content-encoding"]).toBeUndefined();
     expect(plain.body).toBe(text);
   });
 
   it("sends bytes that are not UTF-8 in base64, so not one changes", async () => {
     const api = setup();
-    const { token } = await credentials(api);
+    const session = await signedIn(api);
     const bytes = new Uint8Array([0x7b, 0xff, 0xfe, 0x0a]);
     api.s3.seedBytes(LEDGER, bytes);
-    const answer = await read(api, token, "/api/ledger");
+    const answer = await read(api, session, "/api/ledger");
     expect(answer.isBase64Encoded).toBe(true);
     expect([...Buffer.from(answer.body, "base64")]).toEqual([...bytes]);
     expect(answer.headers.etag).toBe(`"${sha(bytes)}"`);
@@ -110,10 +90,10 @@ describe("GET /api/ledger (§5.1)", () => {
 
   it("keeps a leading byte-order mark, so the ETag still matches the body", async () => {
     const api = setup();
-    const { token } = await credentials(api);
+    const session = await signedIn(api);
     const bytes = new Uint8Array([0xef, 0xbb, 0xbf, ...Buffer.from(textOf([lineOf(account)]))]);
     api.s3.seedBytes(LEDGER, bytes);
-    const answer = await read(api, token, "/api/ledger");
+    const answer = await read(api, session, "/api/ledger");
     const served = answer.isBase64Encoded
       ? Buffer.from(answer.body, "base64")
       : Buffer.from(answer.body);
@@ -121,60 +101,27 @@ describe("GET /api/ledger (§5.1)", () => {
     expect(answer.headers.etag).toBe(`"${sha(bytes)}"`);
   });
 
-  it("logs the public id of the token on a route of the sync, and nothing of the session", async () => {
+  it("asks for a credential", async () => {
     const api = setup();
-    const both = await credentials(api);
-    const record = JSON.parse(
-      api.ssm.history(
-        (api.ssm.writes.find((write) => write.startsWith("putNew ")) as string).slice(7),
-      )[0] as string,
-    );
-    await read(api, both.token, "/api/ledger");
-    expect(JSON.parse(api.logs.at(-1) as string)).toMatchObject({
-      route: "/api/ledger",
-      token_id: record.token_id,
-    });
-    await read(api, both.session, "/api/ledger");
-    expect(JSON.parse(api.logs.at(-1) as string)).not.toHaveProperty("token_id");
-  });
-
-  it("asks for a credential, and refuses a forgotten device", async () => {
-    const api = setup();
-    const { token } = await credentials(api);
+    await signedIn(api);
     expect(errorOf(await api.call("GET", "/api/ledger", { jar: false })).code).toBe(
       "unauthenticated",
     );
-    api.s3.seed(
-      `sync/devices/${token.deviceId}.json`,
-      serializeDeviceObject({
-        ...newDevice({
-          deviceId: token.deviceId,
-          type: "console",
-          createdAt: "2026-09-01T10:00:00Z",
-        }),
-        state: "forgotten",
-        forgotten_at: "2026-09-30T10:00:00Z",
-      }),
-    );
-    expect(errorOf(await read(api, token, "/api/ledger"))).toEqual({
-      code: "device_forgotten",
-      details: { reason: "forgotten" },
-    });
   });
 });
 
 describe("POST /api/ledger/lines (§5.2)", () => {
   const seeded = async () => {
     const api = setup();
-    const both = await credentials(api);
+    const session = await signedIn(api);
     api.s3.seed(LEDGER, textOf([lineOf(account)]));
-    return { api, ...both, etag: sha(textOf([lineOf(account)])) };
+    return { api, session, etag: sha(textOf([lineOf(account)])) };
   };
 
   it("asks for If-Match (428) and writes nothing without it", async () => {
-    const { api, token } = await seeded();
+    const { api, session } = await seeded();
     const before = api.s3.etagOf(LEDGER);
-    const answer = await write(api, token, "POST", "/api/ledger/lines", {
+    const answer = await write(api, session, "POST", "/api/ledger/lines", {
       lines: [{ line: lineOf(deposit) }],
     });
     expect(answer.statusCode).toBe(428);
@@ -201,10 +148,10 @@ describe("POST /api/ledger/lines (§5.2)", () => {
   });
 
   it("appends the lines exactly as the client wrote them, and answers the new etag", async () => {
-    const { api, token, etag } = await seeded();
+    const { api, session, etag } = await seeded();
     const answer = await write(
       api,
-      token,
+      session,
       "POST",
       "/api/ledger/lines",
       { lines: [{ line: lineOf(deposit) }] },
@@ -217,12 +164,12 @@ describe("POST /api/ledger/lines (§5.2)", () => {
   });
 
   it("writes the valid stretch up to the first rejected line, in one conditional write", async () => {
-    const { api, token, etag } = await seeded();
+    const { api, session, etag } = await seeded();
     const again = lineOf({ ...deposit, id: "01ARYZ6S41TSV4RRFFQ69G5FB9" });
     const puts = api.s3.conditions.length;
     const answer = await write(
       api,
-      token,
+      session,
       "POST",
       "/api/ledger/lines",
       // The second repeats the fingerprint of the first without confirming it;
@@ -246,11 +193,11 @@ describe("POST /api/ledger/lines (§5.2)", () => {
   });
 
   it("writes nothing and keeps the etag when the first line is rejected", async () => {
-    const { api, token, etag } = await seeded();
+    const { api, session, etag } = await seeded();
     const before = api.s3.etagOf(LEDGER);
     const answer = await write(
       api,
-      token,
+      session,
       "POST",
       "/api/ledger/lines",
       { lines: [{ line: "{not json" }] },
@@ -267,7 +214,7 @@ describe("POST /api/ledger/lines (§5.2)", () => {
 
   it("loses the race to another writer with 412, and writes nothing of its own", async () => {
     for (const how of ["writer", "409"] as const) {
-      const { api, token, etag } = await seeded();
+      const { api, session, etag } = await seeded();
       const other = textOf([
         lineOf(account),
         lineOf({ ...deposit, id: "01ARYZ6S41TSV4RRFFQ69G5FD0" }),
@@ -284,7 +231,7 @@ describe("POST /api/ledger/lines (§5.2)", () => {
       }
       const answer = await write(
         api,
-        token,
+        session,
         "POST",
         "/api/ledger/lines",
         { lines: [{ line: lineOf(deposit) }] },
@@ -298,7 +245,7 @@ describe("POST /api/ledger/lines (§5.2)", () => {
   it("refuses a device_id in the body, and any other shape, as body_invalid", async () => {
     const { api, session, etag } = await seeded();
     for (const body of [
-      { lines: [{ line: lineOf(deposit) }], device_id: session.deviceId },
+      { lines: [{ line: lineOf(deposit) }], device_id: "A".repeat(22) },
       { lines: [{ line: `${lineOf(deposit)}\n` }] },
       { lines: "no" },
     ]) {
@@ -331,17 +278,16 @@ describe("text that is not Unicode, and keys twice (review of PR #96, security B
 
   it("refuses an append with a lone surrogate with 400, and the remote keeps its bytes", async () => {
     const api = setup();
-    const { token } = await credentials(api);
+    const session = await signedIn(api);
     const text = textOf([lineOf(account)]);
     api.s3.seed(LEDGER, text);
     const answer = await api.call("POST", "/api/ledger/lines", {
       headers: {
-        ...token.headers,
+        ...session.headers,
         "content-type": "application/json",
         "if-match": `"${sha(text)}"`,
       },
       body: loneBody(named, "lines"),
-      jar: false,
     });
     expect(answer.statusCode).toBe(400);
     expect(errorOf(answer)).toEqual({
@@ -352,7 +298,7 @@ describe("text that is not Unicode, and keys twice (review of PR #96, security B
     // And the remote is still readable and writable by everyone.
     const again = await write(
       api,
-      token,
+      session,
       "POST",
       "/api/ledger/lines",
       { lines: [{ line: lineOf(deposit) }] },
@@ -361,35 +307,15 @@ describe("text that is not Unicode, and keys twice (review of PR #96, security B
     expect(again.statusCode).toBe(200);
   });
 
-  it("refuses an initialisation with one with 422, and writes nothing", async () => {
-    const api = setup();
-    const { token } = await credentials(api);
-    const answer = await api.call("PUT", "/api/ledger", {
-      headers: {
-        ...token.headers,
-        "content-type": "application/json",
-        "if-match": `"${EMPTY_ETAG}"`,
-      },
-      body: loneBody(named, "content"),
-      jar: false,
-    });
-    expect(answer.statusCode).toBe(422);
-    expect(errorOf(answer)).toEqual({
-      code: "init_rejected",
-      details: { code: "lone_surrogate", line: 1 },
-    });
-    expect(api.s3.text(LEDGER)).toBeUndefined();
-  });
-
   it("refuses a key twice in a line with 400, and the remote keeps its bytes", async () => {
     const api = setup();
-    const { token } = await credentials(api);
+    const session = await signedIn(api);
     const text = textOf([lineOf(account)]);
     api.s3.seed(LEDGER, text);
     const twice = lineOf(deposit).replace('"amount":', '"amount":"1000.00","amount":');
     const answer = await write(
       api,
-      token,
+      session,
       "POST",
       "/api/ledger/lines",
       { lines: [{ line: twice }] },
@@ -406,201 +332,40 @@ describe("text that is not Unicode, and keys twice (review of PR #96, security B
   });
 });
 
-describe("the retired device binding (ADR-0035, E4; §5.4)", () => {
-  const seeded = async () => {
-    const api = setup();
-    const both = await credentials(api);
-    api.s3.seed(LEDGER, textOf([lineOf(account)]));
-    return { api, ...both, etag: sha(textOf([lineOf(account)])) };
-  };
-  const naming = (as: Credential, device: string): Credential => ({
-    ...as,
-    headers: { ...as.headers, "x-atlas-expected-device": device },
-  });
-
-  it("serves the cookie of the web without the header, on the reads and the appends of the ledger", async () => {
-    const { api, session, etag } = await seeded();
-    expect((await read(api, session, "/api/ledger")).statusCode).toBe(200);
-    const appended = await write(
-      api,
-      session,
-      "POST",
-      "/api/ledger/lines",
-      { lines: [{ line: lineOf(deposit) }] },
-      { "if-match": `"${etag}"` },
-    );
-    expect(appended.statusCode).toBe(200);
-    expect(JSON.parse(appended.body).accepted).toBe(1);
-  });
-
-  it("ignores the header when it is sent: it neither refuses nor binds anything", async () => {
-    const { api, session, token } = await seeded();
-    for (const as of [session, token]) {
-      const answer = await read(api, naming(as, "A".repeat(22)), "/api/ledger");
-      expect(answer.statusCode).toBe(200);
-    }
-  });
-
-  it("does not answer PUT /api/sync/devices/self any more, and writes nothing", async () => {
-    const { api, session, token } = await seeded();
-    const objects = [session, token].map((as) => api.s3.text(`sync/devices/${as.deviceId}.json`));
-    for (const as of [session, token]) {
-      const answer = await write(api, as, "PUT", "/api/sync/devices/self", {
-        last_sync_at: "2026-10-01T09:00:00Z",
-      });
-      expect(answer.statusCode).toBe(404);
-      expect(errorOf(answer).code).toBe("not_found");
-    }
-    expect([session, token].map((as) => api.s3.text(`sync/devices/${as.deviceId}.json`))).toEqual(
-      objects,
-    );
-  });
-});
-
-describe("PUT /api/ledger (§5.5)", () => {
-  it("initialises an empty remote with the whole bytes, with If-None-Match", async () => {
-    const api = setup();
-    const { token } = await credentials(api);
-    const content = textOf([lineOf(account), lineOf(deposit)]);
-    const answer = await write(
-      api,
-      token,
-      "PUT",
-      "/api/ledger",
-      { content, confirm_duplicate_ids: [] },
-      { "if-match": `"${EMPTY_ETAG}"` },
-    );
-    expect(answer.statusCode).toBe(200);
-    expect(JSON.parse(answer.body)).toEqual({ etag: sha(content), lines: 2 });
-    expect(api.s3.text(LEDGER)).toBe(content);
-    expect(api.s3.conditions.at(-1)).toEqual({ key: LEDGER, ifNoneMatch: "*" });
-  });
-
-  it("asks for If-Match, and refuses any other etag or a remote that is not empty", async () => {
-    const api = setup();
-    const { session } = await credentials(api);
-    const body = { content: textOf([lineOf(account)]), confirm_duplicate_ids: [] };
-    expect((await write(api, session, "PUT", "/api/ledger", body)).statusCode).toBe(428);
-    expect(
-      (await write(api, session, "PUT", "/api/ledger", body, { "if-match": `"${"b".repeat(64)}"` }))
-        .statusCode,
-    ).toBe(412);
-    api.s3.seed(LEDGER, textOf([lineOf(account)]));
-    const taken = await write(api, session, "PUT", "/api/ledger", body, {
-      "if-match": `"${EMPTY_ETAG}"`,
-    });
-    expect(taken.statusCode).toBe(412);
-    expect(api.s3.text(LEDGER)).toBe(textOf([lineOf(account)]));
-  });
-
-  it("refuses content that does not load or project valid with init_rejected, writing nothing", async () => {
-    const api = setup();
-    const { token } = await credentials(api);
-    const answer = await write(
-      api,
-      token,
-      "PUT",
-      "/api/ledger",
-      { content: `${lineOf(account)}\r\n`, confirm_duplicate_ids: [] },
-      { "if-match": `"${EMPTY_ETAG}"` },
-    );
-    expect(answer.statusCode).toBe(422);
-    expect(errorOf(answer)).toEqual({
-      code: "init_rejected",
-      details: { code: "raw_line_break", line: 1 },
-    });
-    expect(api.s3.text(LEDGER)).toBeUndefined();
-  });
-
-  it("loses the race to create the remote with 412", async () => {
-    const api = setup();
-    const { token } = await credentials(api);
-    api.s3.beforePut = (key) => {
-      if (key === LEDGER) {
-        api.s3.beforePut = undefined;
-        api.s3.seed(LEDGER, textOf([lineOf(deposit)]));
-      }
-    };
-    const answer = await write(
-      api,
-      token,
-      "PUT",
-      "/api/ledger",
-      { content: textOf([lineOf(account)]), confirm_duplicate_ids: [] },
-      { "if-match": `"${EMPTY_ETAG}"` },
-    );
-    expect(answer.statusCode).toBe(412);
-    expect(api.s3.text(LEDGER)).toBe(textOf([lineOf(deposit)]));
-  });
-});
-
-describe("GET /api/sync/devices (§5.3, session only)", () => {
-  it("lists every device with its type and state, to the session and never to a token", async () => {
-    const api = setup();
-    const both = await credentials(api);
-    api.s3.seed("sync/devices/unreadable-not-an-id.json", "{");
-    // A device whose object cannot be read is listed as such, never left out: compact and the
-    // restore must see it.
-    const broken = "BROKENBROKENBROKENBROK";
-    api.s3.seed(`sync/devices/${broken}.json`, "{");
-    const answer = await read(api, both.session, "/api/sync/devices");
-    expect(answer.statusCode).toBe(200);
-    const rows = JSON.parse(answer.body).devices as Record<string, unknown>[];
-    expect(rows.map((row) => [row.device_id, row.type, row.state]).sort()).toEqual(
-      [
-        [both.token.deviceId, "console", "active"],
-        [both.session.deviceId, "web", "active"],
-        [broken, undefined, "unreadable"],
-      ].sort(),
-    );
-    expect(rows.find((row) => row.device_id === broken)).toEqual({
-      device_id: broken,
-      state: "unreadable",
-    });
-    expect(errorOf(await read(api, both.token, "/api/sync/devices")).code).toBe(
-      "forbidden_for_credential",
-    );
-  });
-});
-
 describe("the reference data (§6)", () => {
-  it("indexes the first level of each prefix, with an opaque version, to either credential", async () => {
+  it("indexes the first level of each prefix, with an opaque version", async () => {
     const api = setup();
-    const both = await credentials(api);
+    const session = await signedIn(api);
     api.s3.seed("reference/ecb/eurofxref-hist.csv", "Date,USD\n");
     api.s3.seed("reference/ecb/previous/eurofxref-hist.csv", "old");
     api.s3.seed("prices/IE00B4L5Y983.jsonl", "{}\n");
     api.s3.seed("documents/secret.pdf", "no");
-    for (const as of [both.token, both.session]) {
-      const answer = await read(api, as, "/api/reference/index");
-      expect(answer.statusCode).toBe(200);
-      const index = JSON.parse(answer.body);
-      expect(index.ecb.map((entry: { name: string }) => entry.name)).toEqual([
-        "eurofxref-hist.csv",
-      ]);
-      expect(index.prices).toEqual([
-        {
-          name: "IE00B4L5Y983.jsonl",
-          version: (api.s3.etagOf("prices/IE00B4L5Y983.jsonl") as string).replaceAll('"', ""),
-          size: 3,
-        },
-      ]);
-      expect(answer.body).not.toContain("secret");
-    }
+    const answer = await read(api, session, "/api/reference/index");
+    expect(answer.statusCode).toBe(200);
+    const index = JSON.parse(answer.body);
+    expect(index.ecb.map((entry: { name: string }) => entry.name)).toEqual(["eurofxref-hist.csv"]);
+    expect(index.prices).toEqual([
+      {
+        name: "IE00B4L5Y983.jsonl",
+        version: (api.s3.etagOf("prices/IE00B4L5Y983.jsonl") as string).replaceAll('"', ""),
+        size: 3,
+      },
+    ]);
+    expect(answer.body).not.toContain("secret");
   });
 
   it("serves a file with its type and version, and 304 to the version held, strong or weak", async () => {
     const api = setup();
-    const { token } = await credentials(api);
+    const session = await signedIn(api);
     api.s3.seed("reference/ecb/eurofxref-hist.csv", "Date,USD\n2026-09-25,1.1\n");
-    const answer = await read(api, token, "/api/reference/ecb/eurofxref-hist.csv");
+    const answer = await read(api, session, "/api/reference/ecb/eurofxref-hist.csv");
     expect(answer.statusCode).toBe(200);
     expect(answer.body).toBe("Date,USD\n2026-09-25,1.1\n");
     expect(answer.headers["content-type"]).toBe("text/csv; charset=utf-8");
     const etag = answer.headers.etag as string;
     expect(etag).toBe(api.s3.etagOf("reference/ecb/eurofxref-hist.csv"));
     for (const held of [etag, `W/${etag}`]) {
-      const again = await read(api, token, "/api/reference/ecb/eurofxref-hist.csv", {
+      const again = await read(api, session, "/api/reference/ecb/eurofxref-hist.csv", {
         "if-none-match": held,
       });
       expect(again.statusCode).toBe(304);
@@ -610,7 +375,7 @@ describe("the reference data (§6)", () => {
 
   it("compresses a large history for a client that accepts gzip, with the same version", async () => {
     const api = setup();
-    const { token } = await credentials(api);
+    const session = await signedIn(api);
     // Rates that do not repeat, as the real history does: a repeated line would compress to nothing.
     let seed = 12345;
     const next = () => {
@@ -623,8 +388,8 @@ describe("the reference data (§6)", () => {
     );
     const csv = `Date,USD,JPY\n${rows.join("")}`;
     api.s3.seed("reference/ecb/api-exr.csv", csv);
-    const plain = await read(api, token, "/api/reference/ecb/api-exr.csv");
-    const packed = await read(api, token, "/api/reference/ecb/api-exr.csv", {
+    const plain = await read(api, session, "/api/reference/ecb/api-exr.csv");
+    const packed = await read(api, session, "/api/reference/ecb/api-exr.csv", {
       "accept-encoding": "gzip, deflate, br",
     });
     expect(packed.statusCode).toBe(200);
@@ -642,15 +407,15 @@ describe("the reference data (§6)", () => {
 
   it("does not compress for a client that refuses or does not name gzip", async () => {
     const api = setup();
-    const { token } = await credentials(api);
+    const session = await signedIn(api);
     api.s3.seed("reference/ecb/api-exr.csv", "x".repeat(300_000));
     for (const header of ["gzip;q=0", "x-gzip", "br, deflate", "identity"]) {
-      const answer = await read(api, token, "/api/reference/ecb/api-exr.csv", {
+      const answer = await read(api, session, "/api/reference/ecb/api-exr.csv", {
         "accept-encoding": header,
       });
       expect(answer.headers["content-encoding"], header).toBeUndefined();
     }
-    const weighted = await read(api, token, "/api/reference/ecb/api-exr.csv", {
+    const weighted = await read(api, session, "/api/reference/ecb/api-exr.csv", {
       "accept-encoding": "br;q=1.0, gzip;q=0.5",
     });
     expect(weighted.headers["content-encoding"]).toBe("gzip");
@@ -658,9 +423,9 @@ describe("the reference data (§6)", () => {
 
   it("does not compress a small file even when gzip is accepted", async () => {
     const api = setup();
-    const { token } = await credentials(api);
+    const session = await signedIn(api);
     api.s3.seed("reference/ecb/eurofxref-hist.csv", "Date,USD\n");
-    const answer = await read(api, token, "/api/reference/ecb/eurofxref-hist.csv", {
+    const answer = await read(api, session, "/api/reference/ecb/eurofxref-hist.csv", {
       "accept-encoding": "gzip",
     });
     expect(answer.headers["content-encoding"]).toBeUndefined();
@@ -669,7 +434,7 @@ describe("the reference data (§6)", () => {
 
   it("refuses a name outside its prefix before touching S3, and nothing else is reachable", async () => {
     const api = setup();
-    const { session } = await credentials(api);
+    const session = await signedIn(api);
     api.s3.seed("documents/secret.pdf", "no");
     const calls = api.s3.calls.length;
     for (const name of ["..", "..%2Fdocuments%2Fsecret.pdf", ".env", "a..b.csv"]) {
@@ -677,9 +442,7 @@ describe("the reference data (§6)", () => {
       expect(answer.statusCode, name).toBe(400);
       expect(errorOf(answer).code).toBe("reference_name_invalid");
     }
-    const touched = api.s3.calls
-      .slice(calls)
-      .filter((call) => !call.startsWith("get sync/devices/"));
+    const touched = api.s3.calls.slice(calls).filter((call) => !call.startsWith("get access/"));
     expect(touched).toEqual([]);
     for (const path of [
       "/api/reference/ecb/../../documents/secret.pdf",
@@ -692,9 +455,9 @@ describe("the reference data (§6)", () => {
 
   it("answers 404 to a type it does not serve and to a file that is not there", async () => {
     const api = setup();
-    const { token } = await credentials(api);
+    const session = await signedIn(api);
     api.s3.seed("reference/ecb/notes.txt", "x");
-    expect(errorOf(await read(api, token, "/api/reference/ecb/notes.txt"))).toEqual({
+    expect(errorOf(await read(api, session, "/api/reference/ecb/notes.txt"))).toEqual({
       code: "not_found",
       details: { reason: "type" },
     });
@@ -702,12 +465,12 @@ describe("the reference data (§6)", () => {
     api.s3.seed("prices/notes.txt", "x");
     api.s3.seed("prices/_status.json", "{}");
     for (const name of ["notes.txt", "_status.json", "config.json"]) {
-      expect(errorOf(await read(api, token, `/api/reference/prices/${name}`)), name).toEqual({
+      expect(errorOf(await read(api, session, `/api/reference/prices/${name}`)), name).toEqual({
         code: "reference_name_invalid",
         details: {},
       });
     }
-    expect(errorOf(await read(api, token, "/api/reference/prices/none.jsonl"))).toEqual({
+    expect(errorOf(await read(api, session, "/api/reference/prices/none.jsonl"))).toEqual({
       code: "not_found",
       details: { reason: "missing" },
     });
@@ -715,10 +478,10 @@ describe("the reference data (§6)", () => {
 
   it("never serves a symbols.json with a top-level key it does not know (review of PR #106, B1)", async () => {
     const api = setup();
-    const { token } = await credentials(api);
+    const session = await signedIn(api);
     const good = JSON.stringify({ symbols_format: 2, assets: {} });
     api.s3.seed("prices/symbols.json", good);
-    const served = await read(api, token, "/api/reference/prices/symbols.json");
+    const served = await read(api, session, "/api/reference/prices/symbols.json");
     expect(served.statusCode).toBe(200);
     expect(Buffer.from(served.body, served.isBase64Encoded ? "base64" : "utf8").toString()).toBe(
       good,
@@ -727,7 +490,7 @@ describe("the reference data (§6)", () => {
       "prices/symbols.json",
       JSON.stringify({ symbols_format: 2, assets: {}, api_key: "sentinel-secret-of-the-api" }),
     );
-    const refused = await read(api, token, "/api/reference/prices/symbols.json");
+    const refused = await read(api, session, "/api/reference/prices/symbols.json");
     expect(errorOf(refused)).toEqual({ code: "not_found", details: { reason: "unknown_key" } });
     expect(JSON.stringify(refused)).not.toContain("sentinel-secret-of-the-api");
     expect(api.logs.join("\n")).not.toContain("sentinel-secret-of-the-api");
@@ -735,12 +498,12 @@ describe("the reference data (§6)", () => {
 
   it("never serves a symbols.json that repeats a key (review of PR #106, R2-B1)", async () => {
     const api = setup();
-    const { token } = await credentials(api);
+    const session = await signedIn(api);
     api.s3.seed(
       "prices/symbols.json",
       '{"symbols_format":2,"assets":{"LEAK":{"note":"sentinel-secret-of-the-api"}},"assets":{}}',
     );
-    const refused = await read(api, token, "/api/reference/prices/symbols.json");
+    const refused = await read(api, session, "/api/reference/prices/symbols.json");
     expect(errorOf(refused)).toEqual({ code: "not_found", details: { reason: "repeated_key" } });
     expect(JSON.stringify(refused)).not.toContain("sentinel-secret-of-the-api");
     expect(api.logs.join("\n")).not.toContain("sentinel-secret-of-the-api");

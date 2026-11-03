@@ -17,7 +17,7 @@ export interface AdminClients {
   readonly parameters: ParameterStore;
   /** The parameters `atlas admin secrets` writes: exists, create, rotate. */
   readonly secrets: SecretStore;
-  /** `/atlas/<env>/`, where the records of the tokens live. */
+  /** `/atlas/<env>/`, the parameters `atlas admin secrets` writes. */
   readonly ssmPrefix: string;
 }
 

@@ -152,7 +152,7 @@ describe("the log of the jobs (G7, R15)", () => {
 
   it("carries none of them when a task throws with a message full of them", async () => {
     const jobs = setupJobs();
-    jobs.ssm.listByPath = async () => {
+    jobs.ssm.get = async () => {
       throw new Error(FOREIGN);
     };
     jobs.s3.list = async () => {
@@ -185,7 +185,6 @@ describe("the log of the jobs (G7, R15)", () => {
         ATLAS_JOBS: "prices_update",
         ATLAS_PRICE_SOURCES: "eodhd",
         ATLAS_PRICES_EODHD_DAILY_CALLS: "18",
-        ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS: "0",
         ATLAS_PRICES_FAILURE_THRESHOLD: "3",
       },
     ];

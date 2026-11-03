@@ -161,12 +161,12 @@ export const WARNINGS_TAX: Record<string, Entry> = {
     "Las acciones de mercados de fuera de la UE (NYSE, Nasdaq…) van a «otros elementos patrimoniales» con la clave 2, como dice la ayuda del Modelo 100; ninguna fuente leída extiende a la declaración la equivalencia de esos mercados, así que el apartado es dudoso.",
   tax_box_market_unknown: {
     say: (d, v) =>
-      `Estas acciones no tienen mercado anotado o Atlas no lo conoce (${v.many(d.assets)}): se dejan en «acciones negociadas», pero si cotizan fuera de la UE van a «otros elementos patrimoniales» (clave 2). Anota el mercado.`,
-    cli: () => "`atlas asset update <asset_id> --market <MIC>`.",
+      `Atlas no sabe si estas acciones están admitidas en un mercado regulado de la UE (${v.many(d.assets)}): no tienen mercado anotado, tienen uno que Atlas no conoce, o se compraron en Xetra, Fráncfort, Euronext o BME sin un ISIN de la UE en euros. Se dejan en «acciones negociadas». Compruébalo antes de presentar: si el valor no está admitido en un mercado regulado de la UE (lo normal en una acción de EE. UU. comprada en Xetra), va a «otros elementos patrimoniales» con la clave 2. Si es de la UE, anota su mercado, su ISIN y su divisa y el aviso desaparece; si no lo es, Atlas todavía no tiene cómo marcarlo: teclea esa venta en la clave 2 a mano y el aviso se queda.`,
+    cli: () => "`atlas asset update <asset_id> --market <MIC> --isin <ISIN>`.",
     web: () => "Se anota en Catálogo.",
   },
   tax_box_other_inferred: () =>
-    "Las diferencias de cambio de la divisa (y un ETC o ETP configurado como ganancia) no tienen apartado propio en el impreso: por exclusión irían a «otros elementos patrimoniales», clave 4 («otros elementos patrimoniales no afectos a actividades económicas»). Es una inferencia, no está escrita en ninguna fuente; por eso no llevan casilla.",
+    "Las diferencias de cambio de la divisa (y un ETC o ETP configurado como ganancia) no tienen apartado propio en el impreso: van a «otros elementos patrimoniales» con la clave 4, que la ayuda del Modelo 100 de 2025 reserva para «cualesquiera otros bienes o derechos no incluidos en los apartados anteriores». El apartado se elige por exclusión: ninguna fuente nombra la divisa.",
   tax_box_repurchase_has_no_number: () =>
     "La parte de una pérdida que no es computable por recompra se marca en la ventana de captura de Renta WEB: no tiene casilla con número.",
 
@@ -196,6 +196,8 @@ export const WARNINGS_TAX: Record<string, Entry> = {
   },
   informative_crypto_custody_unknown: () =>
     "Se cuenta todo lo que hay en cuentas extranjeras; si alguna es de autocustodia, no entraría. Tus datos no distinguen las dos cosas.",
+  informative_iic_net_asset_value: (d, v) =>
+    `Los fondos, ETF y monetarios (${v.many(d.assets)}) se declaran por su valor liquidativo a 31 de diciembre (artículo 42 ter.2 del reglamento de gestión tributaria), no por su cotización: anota como valoración de ese día el liquidativo que publica la gestora.`,
   informative_criteria_not_numbered: {
     say: () =>
       "El método del saldo medio del trimestre y la clasificación de ETF, ETC y ETP se apoyan en criterios todavía sin numerar.",

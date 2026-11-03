@@ -1,7 +1,7 @@
 // The cryptographic primitives of the API, with `node:crypto`
 // and nothing else: HKDF subkeys per purpose, HMAC-SHA256 signatures compared
 // in constant time, PKCE S256 and RS256 over a JWK. **The rules** — which
-// purpose, which `typ`, in which order — are the domain's (`@atlas/domain/access`);
+// purpose, which `typ`, in which order — are `@atlas/access`;
 // this file only computes. Node only: the web never reaches it.
 
 import {
@@ -13,7 +13,7 @@ import {
   timingSafeEqual,
   verify,
 } from "node:crypto";
-import { SIGNING, type SigningPurpose, splitSigned } from "@atlas/domain/access";
+import { SIGNING, type SigningPurpose, splitSigned } from "@atlas/access";
 
 export const base64url = (bytes: Uint8Array): string => Buffer.from(bytes).toString("base64url");
 
@@ -21,20 +21,6 @@ export const base64url = (bytes: Uint8Array): string => Buffer.from(bytes).toStr
 export const fromBase64url = (text: string): Buffer | undefined => {
   const bytes = Buffer.from(text, "base64url");
   return base64url(bytes) === text ? bytes : undefined;
-};
-
-/** The SHA-256 of a text in lower-case hex: what the record of a token keeps of its secret. */
-export const sha256Hex = (text: string): string =>
-  createHash("sha256").update(text, "utf8").digest("hex");
-
-/**
- * Whether a secret is the one a record keeps the hash of, **in constant time**
- * (`docs/api.md` §2.2, step 3; `timingSafeEqual`).
- */
-export const sameSecret = (secret: string, secretSha256: string): boolean => {
-  const given = Buffer.from(sha256Hex(secret), "ascii");
-  const kept = Buffer.from(secretSha256, "ascii");
-  return given.length === kept.length && timingSafeEqual(given, kept);
 };
 
 /** PKCE S256 (RFC 7636, §4.2): base64url of the SHA-256 of the ASCII verifier. */

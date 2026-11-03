@@ -8,7 +8,7 @@ Personal investment portfolio manager, single user, 20+ year horizon. It records
 
 **It never executes orders.** Every trade is placed manually on the platform and recorded here.
 
-**The web is the main surface.** The `atlas` console (`apps/cli`) is the maintenance tool: data entry and correction, `check`, backups and restore, export, `remote`, `admin`, `synth`, and a few JSON reports (`positions`, `lots`, `tax`, `m720`, `m721`, …) so that Claude can diagnose a ledger without the web. New views and simulations go in the web, not in the console (`docs/cli.md`).
+**The web is the main surface.** The `atlas` console (`apps/cli`) is the maintenance tool: data entry and correction, `check`, backups and restore, export, `admin`, `synth`, and a few JSON reports (`positions`, `lots`, `tax`, `m720`, `m721`, …) so that Claude can diagnose a ledger without the web. New views and simulations go in the web, not in the console (`docs/cli.md`).
 
 User: Spanish tax resident. Planned integrations: MyInvestor (fund statements) and Interactive Brokers (Flex Query). Cash is recorded by hand.
 
@@ -59,7 +59,7 @@ Target weights apply **across the whole core**. The bucket is a *budget* (a fixe
 | Frontend | Static SPA with Vite (Solid), served from S3 through CloudFront. Cloud-only (ADR-0035): signs in with Google, reads the ledger from the API and writes directly with `If-Match`; no local queue and no ledger on the device; nothing is shown offline |
 | Backend | Lambda (Node) with Function URL (no API Gateway). TypeScript everywhere, domain in a shared package. ADR-0001 |
 | Data | S3 only. One `ledger/ledger.jsonl` event log (transactions + account/asset catalogue + `settings_changed`), `schema_version` per line, migrated on load, explicit `compact`. Loaded whole into memory; conditional writes (`If-Match`). ECB FX history stored verbatim. The S3 ledger is the single source of truth (ADR-0035). ADR-0002, ADR-0006, `docs/data-schema.md` |
-| Auth | Sign-in with Google, verified by our own Lambda; no Cognito. Authorization-code flow with PKCE, with the Lambda as the OAuth client; session is our own signed cookie. Allow-list of `{sub, email}` in SSM. ADR-0027. The console authenticates with its own device token (`x-atlas-device-token`), issued only at the end of a Google sign-in the console itself opens (loopback + PKCE, manual variant), 90-day absolute expiry under a 120-day hard ceiling, stored in `~/.config/atlas/credentials.json` (`600`), hash registered in SSM; never issued from the web. ADR-0033, contract in `docs/api.md` |
+| Auth | Sign-in with Google, verified by our own Lambda; no Cognito. Authorization-code flow with PKCE, with the Lambda as the OAuth client; session is our own signed cookie. Allow-list of `{sub, email}` in SSM. ADR-0027. The console has no access of its own to the API (only administration with short-lived AWS credentials and MFA), and every session can be closed at once from Ajustes (ADR-0037). Contract in `docs/api.md` |
 | Scheduling | EventBridge Scheduler |
 | Email | SES in `eu-west-1`. The shared account may already be out of the sandbox, so the sending role is restricted by IAM to Atlas's sender and the user's address. The recipient has one source, `terraform.tfvars` (outside the repo), from which Terraform writes the SSM parameter the Lambda reads and the IAM condition; never in the repo or `Settings`. No amounts by default, with an opt-in switch in SSM. ADR-0028, ADR-0034 |
 | Secrets | SSM Parameter Store standard tier (free), not Secrets Manager |
@@ -74,15 +74,16 @@ Monorepo with npm workspaces, **hexagonal architecture** with a pure functional 
 
 ```
 packages/domain    pure core: types, money, events, projections, FIFO, tax, use cases, PORTS (interfaces). No I/O, no runtime npm deps.
+packages/access    pure rules of the access to the API: allow list, signed payloads, ID token checks, the sessions mark. Imports only domain.
 packages/adapters  port implementations: S3/file/memory LedgerStore, price sources, ECB FxRateSource, SES Notifier. AWS SDK lives only here.
-apps/cli           Maintenance console over a local file or S3 (the web is the main surface).
+apps/cli           Maintenance console over a local file; reaches S3 only as administration (the web is the main surface).
 apps/api           Lambda Function URL behind CloudFront (/api/*): verifies the Google token at sign-in, issues its own session, composes domain + adapters.
 apps/web           Vite SPA; uses domain to project/simulate the ledger it reads from the API.
 apps/jobs          Scheduled Lambdas run by EventBridge Scheduler (ECB, prices, email, backups, integrity); compose domain + adapters. Nothing imports apps/jobs.
 infra/             Terraform.
 ```
 
-Dependency rule: `domain` imports nothing; `adapters` imports `domain`; apps import both (enforced by an architecture test). Ports: `LedgerStore`, `PriceSource`, `FxRateSource`, `Notifier`, `Clock`, `RandomSource`; `StatementSource` and `DocumentStore` are planned (importers) and do not exist yet. New integrations (banks, broker APIs) are new adapters, never domain changes. Use cases live in `domain/usecases` and receive ports as parameters.
+Dependency rule: `domain` imports nothing; `access` imports only `domain`; `adapters` imports `domain` and `access`; apps import them; neither `domain` nor the web reaches `access` (enforced by architecture tests). Ports: `LedgerStore`, `PriceSource`, `FxRateSource`, `Notifier`, `Clock`, `RandomSource`; `StatementSource` and `DocumentStore` are planned (importers) and do not exist yet. New integrations (banks, broker APIs) are new adapters, never domain changes. Use cases live in `domain/usecases` and receive ports as parameters.
 
 Messages: the domain speaks English; one catalogue `code → sentence` for errors, warnings, findings and remote failures lives in `packages/domain/src/messages/` behind `@atlas/domain/messages` (off the web boot path). Each surface hands it its `Voice` (`apps/cli/src/output/voice.ts`, `apps/web/src/format/messages/voice.ts`: names, figures, dates, privacy mask) and an entry may carry a remedy per surface. A new code needs one entry; `tests/messages.test.ts` fails until it has one, and no entry formats a figure itself.
 
@@ -94,8 +95,8 @@ The user directs the project with a high-level assistant that writes decision ro
 2. **Decisions are already taken.** Do not re-open an accepted ADR, change the data schema, or pick a different library "because it is better". If the docs are ambiguous, contradictory, or block you: **stop, write the questions in `specs/NNN-<name>/questions.md`, and report** — do not guess on anything fiscal or structural.
 3. **Follow Spec Kit**: `/speckit-specify` → `/speckit-clarify` (if needed) → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`, artefacts in `specs/NNN-<name>/` (Spanish prose, English identifiers). Show `spec.md` and `plan.md` to the user before writing code.
 4. **Branch** `feature/NNN-<name>` from `develop`; enable hooks with `git config core.hooksPath .githooks`; Conventional Commits in English, one subject line, atomic; open a PR to `develop` using the template; never push to `develop` or `main`.
-5. **Package names**: `@atlas/domain`, `@atlas/adapters`, `@atlas/cli`, `@atlas/api`, `@atlas/web`, `@atlas/jobs`. Node 22+ (`.nvmrc`), ESM, strict `tsconfig` (ADR-0007). Dependencies only from `docs/dependencies.md`.
-6. **Definition of done**: tests green (`npm run test`; the full battery is `npm run test:all`, which adds `test:infra` — run it on the last commit under `flock -o ~/.cache/desbaste-gradle.lock`, the lock shared by the machine so only one heavy battery runs at a time, and always for changes under `infra/`), `packages/domain` at 100% line and branch coverage in `money/`, `projections/`, `tax/`, `informative/` and `dates/` (where a bug moves money or tax) and ~90% elsewhere (constitution VII), Biome clean, architecture test green (`domain` imports nothing), docs updated where behaviour changed, PR checklist honestly filled.
+5. **Package names**: `@atlas/domain`, `@atlas/access`, `@atlas/adapters`, `@atlas/cli`, `@atlas/api`, `@atlas/web`, `@atlas/jobs`. Node 22+ (`.nvmrc`), ESM, strict `tsconfig` (ADR-0007). Dependencies only from `docs/dependencies.md`.
+6. **Definition of done**: tests green (`npm run test`; the full battery is `npm run test:all`, which adds `test:infra` — run it on the last commit under `flock -o ~/.cache/desbaste-gradle.lock`, the lock shared by the machine so only one heavy battery runs at a time, and always for changes under `infra/`), `packages/domain` at 100% line and branch coverage in `money/`, `projections/`, `tax/`, `informative/` and `dates/` (where a bug moves money or tax) and ~90% elsewhere (constitution VII), `packages/access` and `apps/api/src/access` at 100% (security), Biome clean, architecture test green (`domain` imports nothing), docs updated where behaviour changed, PR checklist honestly filled.
 7. **Fixtures** live in `tests/fixtures/<source>/` and are **synthetic**: real file format, fake values (invented ISINs, account ids like `U0000000`, round amounts). Real statements never enter the repo.
 8. **ADRs**: an implementer may propose one (status `Propuesta`, via `/adr`) but never accept it; the user decides.
 
@@ -106,7 +107,7 @@ The user directs the project with a high-level assistant that writes decision ro
 | Repository | `~/personal/atlas/atlas-portfolio-tracker`. The main folder always stays on `develop`; nobody runs `git switch` in it. |
 | Worktrees | `.claude/worktrees/<branch-or-task>`, inside the clone and git-ignored. None outside the clone: `../atlas-wt-*` and `../atlas-portfolio-tracker-NNN` are retired. |
 | Private inputs | `~/personal/atlas/privado/` (`statements/`, `ui-refs/`, `capturas/`, `reviews/`). A sibling of the repository, never inside it, never committed. |
-| Secrets and credentials | `~/.config/atlas/` (or `$XDG_CONFIG_HOME/atlas/`), directory `700`; `secrets.json` and `credentials.json` `600` (ADR-0031, ADR-0033). |
+| Secrets and credentials | `~/.config/atlas/` (or `$XDG_CONFIG_HOME/atlas/`), directory `700`; `secrets.json` `600` (ADR-0031); `admin.json` names each environment for administration. |
 | Local Terraform files | `~/personal/atlas/privado/terraform/<env>/terraform.tfvars` per environment; bootstrap state at `~/personal/atlas/privado/terraform/bootstrap/<part>/terraform.tfstate`, one per part (`account`, `dev`, `prod`) (ADR-0034). |
 | Agent scratch files | The session scratchpad, with the branch or task name in the file name. |
 
@@ -131,7 +132,7 @@ Errors that go unnoticed for years. Details in `docs/business-rules.md`.
 6. **Corporate actions are first-class transactions** with their own lot-transformation logic. No manual patches on the database.
 7. **The own ledger is the source of truth.** Broker statements are for reconciliation, not for feeding the system.
 8. **The ledger is append-only.** Transactions are never edited or deleted; "edit" = `reversal` + corrected transaction (ADR-0003). Reversing an event that later events consumed is **rejected** (rectify the dependants first). Amounts are serialised as strings in JSON, never as JSON numbers.
-9. **Fiscal date depends on asset type** (`trade_date` for listed securities, `value_date` for funds, configurable, ADR-0013); the wash-sale window is **two months for securities admitted to trading — funds among them, money-market funds included** (criterion #2, default `2:fund_2m` since 2026-09-22, medium certainty, aggressive direction), **one year for those not admitted**, and **one year after the sale only (never before it) for direct crypto**, art. 33.5.e) read literally (criterion #2, medium certainty; the user has yet to confirm it). All of it is per-asset-type configuration (`wash_sale_window`), never a constant; certainty per criterion in `docs/fiscal-questions.md`.
+9. **Fiscal date depends on asset type** (`trade_date` for listed securities, `value_date` for funds, configurable, ADR-0013); the wash-sale window is **two months for securities admitted to trading**, **one year for those not admitted**, **one year by default for funds and money-market funds** (criterion #2, `2:fund_1y` since 2026-11-03, the prudent reading; two months stays a setting, `2:fund_2m`, measured in the doubtful section), and **one year after the sale only (never before it) for direct crypto**, art. 33.5.e) read literally (criterion #2, medium certainty; the user has yet to confirm it). All of it is per-asset-type configuration (`wash_sale_window`), never a constant; certainty per criterion in `docs/fiscal-questions.md`.
 10. **Loader rejects newer schema versions; `append` never re-serialises existing lines.** An old client must never rewrite a newer ledger.
 
 ## Design principles
@@ -188,12 +189,12 @@ Mandatory edge cases: several lots with the same date, fractions, reverse split 
 | `DEBUG` | Execution detail, disabled in production |
 
 - Structured JSON logs with `request_id` to correlate across Lambdas.
-- **Never log amounts, positions, balances or account identifiers**, nor tokens (device tokens included, and their hashes), email addresses or Google `sub` identifiers (ADR-0028, row 16; ADR-0027; ADR-0033: at most the public id of a device token). CloudWatch is less protected than the database.
+- **Never log amounts, positions, balances or account identifiers**, nor tokens, email addresses or Google `sub` identifiers (ADR-0028, row 16; ADR-0027). CloudWatch is less protected than the database.
 - Retention: 30 days in production, 7 in dev.
 
 ### Security
 
-- **Never store broker credentials.** Secrets in SSM Parameter Store as `SecureString`: the read-only IBKR Flex token, the Google OAuth client secret and the session signing key (ADR-0027). The console's device tokens are registered in SSM as one `SecureString` per token under `/atlas/<env>/device-tokens/`, hash only, written only on creation and revocation; the console keeps its token in `~/.config/atlas/credentials.json` (`600`, outside the ledger folder, written only by the console, never read by the web, a copy, an export or a sync) (ADR-0033). Price source API keys (ADR-0031): locally, in a configuration file outside the repository; in the cloud, in SSM. Secret values never pass through Terraform: a versioned script run with the environment's admin role creates and rotates them; Terraform only references their ARNs, and the plan and deploy roles cannot read them (ADR-0034).
+- **Never store broker credentials.** Secrets in SSM Parameter Store as `SecureString`: the read-only IBKR Flex token, the Google OAuth client secret and the session signing key (ADR-0027). Price source API keys (ADR-0031): locally, in a configuration file outside the repository; in the cloud, in SSM. Secret values never pass through Terraform: a versioned script run with the environment's admin role creates and rotates them; Terraform only references their ARNs, and the plan and deploy roles cannot read them (ADR-0034).
 - Private S3. Atlas has an SPA bucket and a data bucket per environment, plus one Terraform state bucket for the account; **Atlas creates no CloudTrail bucket** (it uses the account's trail, if any, or the 90-day event history, ADR-0034). The one that matters here is the **data bucket, which is never a CloudFront origin**. Its bucket policy denies object access and listing to every principal except that environment's Atlas roles (API, jobs, admin); it is reachable only by them and, always with short-lived credentials and MFA independent of Google, by the administration operations defined in ADR-0026, ADR-0027, ADR-0032 and ADR-0034. Only the SPA bucket is served, through CloudFront with Origin Access Control. The API Lambda itself is reached only through CloudFront, under `/api/*` (ADR-0028).
 - Least-privilege IAM: one role per Lambda.
 - **No third-party analytics, no external CDNs, no remote fonts.** Everything from the own origin. Strict CSP.

@@ -23,7 +23,7 @@ import { type Core, exchangesOfYear, tryComputeCore } from "./core.js";
 import { CRITERION_IDS, type CriterionId, categoryCriterion, FISCAL_CRITERIA } from "./criteria.js";
 import type { CriterionStake, TransmissionLine } from "./report.js";
 import { linesByKey } from "./shared.js";
-import type { WashSaleOutcome } from "./wash-sale.js";
+import type { DeferralOrder, WashSaleOutcome } from "./wash-sale.js";
 
 // --- What each criterion puts at stake -----------------------------------------
 
@@ -70,7 +70,14 @@ const item = (
 });
 
 /** The settings of the other reading of each configurable criterion. */
-const alternatives = (settings: Settings): { criterion: CriterionId; settings: Settings }[] => {
+interface Alternative {
+  criterion: CriterionId;
+  settings: Settings;
+  /** A reading that is not a setting: only the measure of #19b runs it. */
+  deferralOrder?: DeferralOrder;
+}
+
+const alternatives = (settings: Settings): Alternative[] => {
   const flipped = Object.fromEntries(
     ASSET_TYPES.map((type) => [
       type,
@@ -139,9 +146,9 @@ const alternatives = (settings: Settings): { criterion: CriterionId; settings: S
     ...windows("2:listed_1y", listed, "1y", "2m"),
     ...windows("2:crypto", ["crypto"], "1y", "2m"),
     ...windows("2:crypto_2m", ["crypto"], "2m", "1y"),
-    // Funds, since the correction of 2026-09-22: a criterion that is doubtful
-    // and offers no figure is of no use to anybody, so the other reading is
-    // computed like the one of listed securities.
+    // Funds: a criterion that is doubtful and offers no figure is of no use to
+    // anybody, so the other reading is computed like the one of listed
+    // securities, whichever of the two is the default.
     ...windows("2:fund_2m", ["fund", "money_market"], "2m", "1y"),
     ...windows("2:fund_1y", ["fund", "money_market"], "1y", "2m"),
     {
@@ -153,6 +160,8 @@ const alternatives = (settings: Settings): { criterion: CriterionId; settings: S
     },
     category("etc"),
     category("etp"),
+    // #19b: the same settings, the deferred loss carried by the oldest units.
+    { criterion: "19b", settings, deferralOrder: "oldest" },
   ];
 };
 
@@ -190,7 +199,18 @@ export const criterionStakes = (
       continue;
     }
     const lines = declaring(alternative.criterion);
-    const other = tryComputeCore(events, year, options, alternative.settings);
+    // Running the chain again is not free: #19b only when a figure applies it.
+    if (alternative.criterion === "19b" && lines.length === 0) {
+      continue;
+    }
+    const other = tryComputeCore(
+      events,
+      year,
+      alternative.deferralOrder === undefined
+        ? options
+        : { ...options, deferralOrder: alternative.deferralOrder },
+      alternative.settings,
+    );
     // The other reading reaches below the first supported year: it cannot be
     // measured, and the reason is not the same as "it leaves invalid events" —
     // that one is repaired by fixing the ledger and this one cannot be

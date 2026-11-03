@@ -9,9 +9,8 @@
 // (`npm run dev` proxies `/api` here): `--port 8787 --origin http://localhost:5173 --account
 // allowed --ledger tests/fixtures/ledger/synthetic-v1.jsonl`. The fake provider lives under `/api/`
 // (the service worker leaves those navigations alone) and shows three synthetic accounts to choose
-// from, or chooses the one of `--account` by itself. Two hooks of the test move the world from
-// outside, as an admin would: `/__test/forget-this-device?id=` and `/__test/advance?ms=` (the
-// clock).
+// from, or chooses the one of `--account` by itself. A hook of the test moves the clock from
+// outside: `/__test/advance?ms=`.
 
 import { randomBytes } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
@@ -21,13 +20,13 @@ import { fileURLToPath } from "node:url";
 import { base64url } from "@atlas/adapters/access";
 import { parameterNames } from "@atlas/adapters/aws";
 import { createHandler } from "@atlas/api";
-import type { ApiConfig } from "@atlas/domain/access";
 import { TestOnlyFakeS3 } from "../../../../packages/adapters/test/aws/test-only-fake-s3.js";
 import { TestOnlyFakeSsm } from "../../../../packages/adapters/test/aws/test-only-fake-ssm.js";
 import {
   type FakeAccount,
   TestOnlyFakeGoogle,
 } from "../../../../packages/adapters/test/identity/test-only-fake-google.js";
+import type { ApiConfig } from "../../src/access/config.js";
 
 const ACCOUNTS: Record<string, FakeAccount> = {
   allowed: { sub: "108000000000000000001", email: "usuario@ejemplo.test" },
@@ -97,9 +96,6 @@ server.listen(Number(argument("port") ?? 0), "127.0.0.1", () => {
     dataBucket: "local",
     sessionTtlSeconds: 28_800,
     loginTtlSeconds: 600,
-    consoleCodeTtlSeconds: 300,
-    tokenLifetimeDays: 90,
-    recentIssueDays: 7,
     clockToleranceSeconds: 600,
     allowListCacheSeconds: 120,
     secretsCacheSeconds: 300,
@@ -148,22 +144,6 @@ server.listen(Number(argument("port") ?? 0), "127.0.0.1", () => {
         }
         if (url.pathname === "/__test/advance") {
           now += Number(url.searchParams.get("ms") ?? 0);
-          response.writeHead(204).end();
-          return;
-        }
-        if (url.pathname === "/__test/forget-this-device") {
-          const key = `sync/devices/${url.searchParams.get("id")}.json`;
-          const current = s3.text(key);
-          if (current !== undefined) {
-            s3.seed(
-              key,
-              JSON.stringify({
-                ...JSON.parse(current),
-                state: "forgotten",
-                forgotten_at: new Date(now).toISOString(),
-              }),
-            );
-          }
           response.writeHead(204).end();
           return;
         }

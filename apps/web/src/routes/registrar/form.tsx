@@ -61,11 +61,17 @@ const EventFormRoute = (): JSX.Element => {
     importe?: string;
   }>();
   /** «Repetir la compra del mes»: what the plan proposes, carried in the address. */
-  const prefill = (): Record<string, string> => ({
-    ...(search.cuenta === undefined ? {} : { account_id: search.cuenta }),
-    ...(search.activo === undefined ? {} : { asset_id: search.activo }),
-    ...(search.importe === undefined ? {} : { amount: search.importe }),
-  });
+  // Only plain strings: a repeated parameter arrives as a list, and is ignored.
+  const one = (value: unknown): string | undefined =>
+    typeof value === "string" ? value : undefined;
+  const prefill = (): Record<string, string> => {
+    const [account, asset, amount] = [one(search.cuenta), one(search.activo), one(search.importe)];
+    return {
+      ...(account === undefined ? {} : { account_id: account }),
+      ...(asset === undefined ? {} : { asset_id: asset }),
+      ...(amount === undefined ? {} : { amount }),
+    };
+  };
   const spec = () => formSpec(params.tipo);
   const [fromDraft] = createResource(
     () => [search.borrador, spec()] as const,

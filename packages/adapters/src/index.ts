@@ -17,7 +17,6 @@ export {
   readFolderLock,
   sweepOrphanTemporaries,
 } from "./ledger-store/folder-lock.js";
-export { AlphaVantagePriceSource } from "./prices/alpha-vantage.js";
 export { EodhdPriceSource } from "./prices/eodhd.js";
 export { ExactJsonUnsupported } from "./prices/exact-json.js";
 export { FilePriceStore, PRICES_DIR } from "./prices/file-store.js";

@@ -22,6 +22,7 @@ export { madridDateOf, todayInMadrid } from "./dates/madrid.js";
 // boot for a screen that is opened a handful of times a year.
 export * from "./errors.js";
 export { fingerprintOfEvents } from "./filings/fingerprint.js";
+export { isInstant, isRecord } from "./guards.js";
 export { sha256Hex, utf8Encode } from "./ids/sha256.js";
 export { createUlidGenerator, isUlid, type Ulid, type UlidGenerator } from "./ids/ulid.js";
 export * from "./money/index.js";
@@ -146,6 +147,7 @@ export {
 export * from "./schema/envelope.js";
 export * from "./schema/events.js";
 export { fingerprintOf } from "./schema/fingerprint.js";
+export { repeatsKey } from "./schema/json-keys.js";
 export {
   canonicalLine,
   type DecodedLine,

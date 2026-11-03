@@ -22,6 +22,7 @@ import {
   until,
   withGoldenLedger,
 } from "./helpers/render.jsx";
+import { withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
 
@@ -102,5 +103,21 @@ describe("the ECB rate in the form", () => {
     await press(host, "Ver el efecto");
     await until(() => host.querySelector("section.effect") !== null);
     expect(text(host)).not.toContain("El tipo no es el oficial");
+  });
+});
+
+describe("the effect beside the form, in a foreign currency", () => {
+  it("still comes when the form fills the ECB rate on its own after the last key", async () => {
+    withStyles(1440, 900);
+    try {
+      const host = await goldBuy("2026-01-02");
+      await until(() => value(host, "f-fx_rate") === "1,1169");
+      await until(
+        () => text(host.querySelector(".effect")).includes("Registrar"),
+        "el efecto en vivo",
+      );
+    } finally {
+      withoutStyles();
+    }
   });
 });

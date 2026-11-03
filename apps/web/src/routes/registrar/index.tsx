@@ -61,22 +61,29 @@ const repeatOf = async (
   snapshot: { state: LedgerState; events: readonly LedgerEvent[] },
   date: string,
 ): Promise<Repeat | undefined> => {
-  const { accountHolding, monthPlan } = await import("@atlas/domain/portfolio");
-  const plan = monthPlan(snapshot.events, date);
-  if (plan.status !== "ready") {
+  try {
+    const { accountHolding, monthPlan } = await import("@atlas/domain/portfolio");
+    const plan = monthPlan(snapshot.events, date);
+    if (plan.status !== "ready") {
+      return undefined;
+    }
+    // The first purchase still pending that an account holds: one that none holds is skipped.
+    for (const row of plan.assets.filter((one) => one.done_on === undefined)) {
+      const account = accountHolding(snapshot.state, row.asset_id);
+      if (account !== undefined) {
+        const amount = row.proposed_eur.amount.toString();
+        return {
+          href: `/registrar/buy?cuenta=${encodeURIComponent(account)}&activo=${encodeURIComponent(row.asset_id)}&importe=${encodeURIComponent(amount)}`,
+          name: displayName(nameIndex(snapshot.state), row.asset_id),
+          amount: row.proposed_eur,
+        };
+      }
+    }
+    return undefined;
+  } catch {
+    // The tile is a shortcut: if the plan cannot be had, the day to day is still there.
     return undefined;
   }
-  const next = plan.assets.find((row) => row.done_on === undefined);
-  const account = next === undefined ? undefined : accountHolding(snapshot.state, next.asset_id);
-  if (next === undefined || account === undefined) {
-    return undefined;
-  }
-  const amount = next.proposed_eur.amount.toString();
-  return {
-    href: `/registrar/buy?cuenta=${encodeURIComponent(account)}&activo=${encodeURIComponent(next.asset_id)}&importe=${encodeURIComponent(amount)}`,
-    name: displayName(nameIndex(snapshot.state), next.asset_id),
-    amount: next.proposed_eur,
-  };
 };
 
 const Tiles = (props: { repeat: Repeat | undefined }): JSX.Element => (
@@ -86,7 +93,7 @@ const Tiles = (props: { repeat: Repeat | undefined }): JSX.Element => (
         <li class="is-repeat">
           <A href={repeat().href} class="tile">
             <span class="lead" aria-hidden="true">
-              <Icon name="transfer" />
+              <Icon name="buy" />
             </span>
             <span class="tile-title">Repetir la compra del mes</span>
             <span class="tile-when">

@@ -897,7 +897,6 @@
           "actions": ["s3:GetObject"],
           "resources": [
             "arn:aws:s3:::atlas-{env}-data-{suffix}/ledger/ledger.jsonl",
-            "arn:aws:s3:::atlas-{env}-data-{suffix}/sync/devices/*",
             "arn:aws:s3:::atlas-{env}-data-{suffix}/reference/ecb/*",
             "arn:aws:s3:::atlas-{env}-data-{suffix}/prices/*",
             "arn:aws:s3:::atlas-{env}-data-{suffix}/drafts/*"
@@ -910,7 +909,6 @@
           "actions": ["s3:PutObject"],
           "resources": [
             "arn:aws:s3:::atlas-{env}-data-{suffix}/ledger/ledger.jsonl",
-            "arn:aws:s3:::atlas-{env}-data-{suffix}/sync/devices/*",
             "arn:aws:s3:::atlas-{env}-data-{suffix}/drafts/*"
           ],
           "contract": "C15"
@@ -919,7 +917,10 @@
           "sid": "AccessMarker",
           "effect": "Allow",
           "actions": ["s3:GetObject", "s3:PutObject"],
-          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}/access/last-web-sign-in.json"],
+          "resources": [
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/access/last-web-sign-in.json",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/access/sessions-valid-from.json"
+          ],
           "contract": "C16-6"
         },
         {
@@ -929,14 +930,7 @@
           "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}"],
           "condition": {
             "StringLike": {
-              "s3:prefix": [
-                "ledger/*",
-                "sync/devices/*",
-                "reference/ecb/*",
-                "prices/*",
-                "access/*",
-                "drafts/*"
-              ]
+              "s3:prefix": ["ledger/*", "reference/ecb/*", "prices/*", "access/*", "drafts/*"]
             }
           },
           "contract": "C15; P12-B5"
@@ -945,25 +939,8 @@
           "sid": "SsmRead",
           "effect": "Allow",
           "actions": ["ssm:GetParameter"],
-          "resources": [
-            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/auth/*",
-            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/device-tokens/*"
-          ],
+          "resources": ["arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/auth/*"],
           "contract": "C15"
-        },
-        {
-          "sid": "SsmByPath",
-          "effect": "Allow",
-          "actions": ["ssm:GetParametersByPath"],
-          "resources": ["arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/device-tokens"],
-          "contract": "C15"
-        },
-        {
-          "sid": "SsmTokens",
-          "effect": "Allow",
-          "actions": ["ssm:AddTagsToResource", "ssm:PutParameter"],
-          "resources": ["arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/device-tokens/*"],
-          "contract": "C15; A34-9"
         },
         {
           "sid": "KmsSsm",
@@ -1087,10 +1064,7 @@
           "sid": "Keys",
           "effect": "Allow",
           "actions": ["ssm:GetParameter"],
-          "resources": [
-            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/prices/eodhd-key",
-            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/prices/alpha-vantage-key"
-          ],
+          "resources": ["arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/prices/eodhd-key"],
           "contract": "C16-n2; A34-21"
         },
         {
@@ -1161,18 +1135,6 @@
             "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/mail/recipient",
             "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/mail/amounts"
           ],
-          "contract": "C16-n3"
-        },
-        {
-          "sid": "Tokens",
-          "effect": "Allow",
-          "actions": ["ssm:GetParametersByPath"],
-          "resources": ["arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/device-tokens"],
-          "condition": {
-            "StringEquals": {
-              "ssm:Recursive": "false"
-            }
-          },
           "contract": "C16-n3"
         },
         {
@@ -1383,16 +1345,6 @@
           "actions": ["s3:ListBucket", "s3:ListBucketVersions"],
           "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}"],
           "contract": "C15; C16-n8"
-        },
-        {
-          "sid": "Tokens",
-          "effect": "Allow",
-          "actions": ["ssm:GetParametersByPath", "ssm:PutParameter"],
-          "resources": [
-            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/device-tokens",
-            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/device-tokens/*"
-          ],
-          "contract": "C15"
         },
         {
           "sid": "EcbDelete",

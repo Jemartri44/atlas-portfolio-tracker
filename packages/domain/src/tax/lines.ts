@@ -345,6 +345,9 @@ const deferralCriteria = (ctx: LineContext, outcome: WashSaleOutcome): Criterion
   if (outcome.reapplied) {
     ids.push("21");
   }
+  if (outcome.chose_carriers) {
+    ids.push("19b");
+  }
   if (outcome.deferral?.candidates.some((candidate) => candidate.via_transfer) === true) {
     ids.push("2b");
   }

@@ -66,7 +66,7 @@ export type LoadPhase =
 export const blocksTheApp = (phase: LoadPhase): boolean =>
   phase.phase === "signed_out" || phase.phase === "offline" || phase.phase === "cloud_failed";
 
-export type SignedOutReason = "signed_out" | "expired" | "not_allowed" | "forgotten";
+export type SignedOutReason = "signed_out" | "expired" | "not_allowed" | "closed";
 
 const createStore = () => {
   // It starts **loading**: the boot is async (session, then ledger), and while

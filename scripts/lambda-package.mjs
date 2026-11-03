@@ -21,8 +21,8 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const workspaceSources = {
   name: "atlas-workspace-sources",
   setup(esbuild) {
-    esbuild.onResolve({ filter: /^@atlas\/(domain|adapters)(\/.*)?$/ }, async (args) => {
-      const [, pkg, door] = /^@atlas\/(domain|adapters)(\/.*)?$/.exec(args.path);
+    esbuild.onResolve({ filter: /^@atlas\/(domain|access|adapters)(\/.*)?$/ }, async (args) => {
+      const [, pkg, door] = /^@atlas\/(domain|access|adapters)(\/.*)?$/.exec(args.path);
       const root = join(repoRoot, "packages", pkg);
       const manifest = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
       const entry = manifest.exports[door === undefined ? "." : `.${door}`];

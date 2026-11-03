@@ -2,7 +2,7 @@
 // page's own origin, with the cookie of a web sign-in and `Origin` on a write, as the browser sends
 // them; a browser on the double of IndexedDB; and what the cloud holds.
 
-import { SESSION_COOKIE } from "@atlas/domain/access";
+import { SESSION_COOKIE } from "../../../api/src/access/cookies.js";
 import { ALLOWED, SELF, setup } from "../../../api/test/harness.js";
 
 export type Api = ReturnType<typeof setup>;
@@ -47,15 +47,10 @@ export const sameOrigin = (api: Api, cookie: () => string | undefined): typeof f
     return new Response(body, { status: result.statusCode, headers: result.headers });
   }) as typeof fetch;
 
-/** A sign-in of the web from scratch: its cookie, and the device the API assigned it. */
-export const signedIn = async (api: Api): Promise<{ cookie: string; device: string }> => {
+/** A sign-in of the web from scratch: its cookie. */
+export const signedIn = async (api: Api): Promise<{ cookie: string }> => {
   await api.signIn(ALLOWED);
-  const cookie = api.session() as string;
-  const view = await api.call("GET", "/api/session", {
-    jar: false,
-    cookies: [`${SESSION_COOKIE}=${cookie}`],
-  });
-  return { cookie, device: (JSON.parse(view.body) as { device_id: string }).device_id };
+  return { cookie: api.session() as string };
 };
 
 /** What the cloud holds, read off the double of S3. */

@@ -158,8 +158,8 @@ describe("the mail of a streak", () => {
       subject: "[Atlas] Aviso: fuente de precios eodhd",
     });
     expect(
-      mail("source_failing", "alpha_vantage", { consecutive_failures: 3, threshold: 3 })?.body,
-    ).toContain("Alpha Vantage lleva 3 fallos seguidos (umbral 3), desde el 2026-10-02.");
+      mail("source_failing", "eodhd", { consecutive_failures: 3, threshold: 3 })?.body,
+    ).toContain("EODHD lleva 3 fallos seguidos (umbral 3), desde el 2026-10-02.");
     expect(mail("currency_unchecked", "eodhd", { assets: 2 })?.body).toContain(
       "2 correspondencias de EODHD no están contrastadas y la nube no las descarga",
     );
@@ -195,7 +195,7 @@ describe("the mail of a streak", () => {
       ["ecb_update_rejected", "ecb"],
       ["source_failing", "eodhd"],
       ["thesis_horizon_exceeded", "bucket"],
-      ["currency_unchecked", "alpha_vantage"],
+      ["currency_unchecked", "eodhd"],
       ["ecb_calendar_mismatch", "ecb"],
       ["ecb_history_damaged", "ecb"],
       ["ecb_history_rebuilt", "ecb"],

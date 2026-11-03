@@ -288,6 +288,11 @@ describe("the 2025 return by box, worked out by hand", () => {
     expect(limit.amount_eur?.amount.toString()).toBe("6");
     expect(limit.box).toBeUndefined();
     expect(box(boxes, "0588")).toBe("sin importe");
+    // Renta WEB asks the window for the **net** foreign income: the 40,00 of
+    // the US dividend less its share of the 10,00 of custody (0037), split by
+    // the gross of dividends and interest: 10 × 40 / 140 = 2,857 → 2,86.
+    const income = boxes.entries.find((entry) => entry.concept === "ddi.income") as BoxEntry;
+    expect(income.amount_eur?.centsText()).toBe("37.14");
     expect(box(boxes, "0597")).toBe("19.00");
     expect(box(boxes, "0603")).toBe("11.40");
   });

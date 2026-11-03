@@ -36,10 +36,14 @@ describe("the patrimony of the summary", () => {
     today("2027-01-10");
     setPrivacy(true);
     const host = await show("/", Resumen);
-    const parts = text(hero(host)?.querySelector(".parts"));
-    expect(parts).toContain("48 %");
-    expect(parts).toContain("••••");
-    expect(parts.replace(/\d+ %/g, "")).not.toMatch(/\d/);
+    // The figures of each book: its share and its value. The line under them says percentages
+    // and how many accounts, never an amount.
+    const figures = [...(hero(host)?.querySelectorAll(".part-figs") ?? [])].map(text).join(" ");
+    expect(figures).toContain("48 %");
+    expect(figures).toContain("••••");
+    expect(figures.replace(/\d+ %/g, "")).not.toMatch(/\d/);
+    const metrics = [...(hero(host)?.querySelectorAll(".part-metric") ?? [])].map(text).join(" ");
+    expect(metrics.replace(/[+−-]?\d+(,\d+)? %|en \d+ cuentas?|12 meses/g, "")).not.toMatch(/\d/);
   });
 
   it("draws no bar and no percentage on a partial total", async () => {
@@ -60,7 +64,7 @@ describe("the recent movements of the summary", () => {
     const host = await show("/", Resumen);
     const card = host.querySelector('[aria-label="Últimos movimientos"]');
     // Five entries, a gathered day of valuations counting as one.
-    expect(card?.querySelector(".rows")?.children).toHaveLength(5);
+    expect(card?.querySelectorAll(".day > .rows > li")).toHaveLength(5);
     const dates = [...text(card).matchAll(/(\d{2}\/\d{2}\/\d{4})/g)].map((match) =>
       iso(match[1] as string),
     );

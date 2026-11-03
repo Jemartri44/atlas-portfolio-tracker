@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assertKnownFlags,
-  BOOLEAN_FLAGS,
   booleanFlag,
-  ID_FLAGS,
   parseArgs,
   REPEATABLE_FLAGS,
   requireFlag,
@@ -115,57 +113,29 @@ describe("parseArgs: a boolean flag given a yes or a no", () => {
   });
 });
 
-/**
- * A device id is 22 characters of base64url and may begin with `-`: one in
- * 4,096 begins with `--`, and `atlas admin forget-device <id>` read it as an
- * option and left with 64 (the intermittent failure of the admin tests).
- */
+/** A positional that begins with a dash: after `--`, which ends the options, POSIX style. */
 describe("parseArgs: a value that begins with a dash", () => {
   const ids = ["--Kq3Zp0aX9c-LmN4rT7uVw", "-Kq3Zp0aX9c-LmN4rT7uVw_", "---q3Zp0aX9c-LmN4rT7uV"];
 
   it("is a positional after `--`, which ends the options, and after `--` nothing is a flag", () => {
     for (const id of ids) {
-      const parsed = parseArgs(["admin", "forget-device", "--env", "test", "--", id, "--yes"]);
-      expect(parsed.positionals).toEqual(["admin", "forget-device", id, "--yes"]);
-      expect([...parsed.flags]).toEqual([["env", "test"]]);
+      const parsed = parseArgs(["lots", "--date", "2026-01-01", "--", id, "--yes"]);
+      expect(parsed.positionals).toEqual(["lots", id, "--yes"]);
+      expect([...parsed.flags]).toEqual([["date", "2026-01-01"]]);
     }
   });
 
   it("is a positional when it begins with a single dash, even with no `--`", () => {
     const id = ids[1] as string;
-    expect(parseArgs(["admin", "forget-device", id, "--env", "test"]).positionals).toEqual([
-      "admin",
-      "forget-device",
-      id,
-    ]);
-  });
-
-  it("is the value of a flag of an id, which always takes the next word", () => {
-    for (const id of ids) {
-      for (const flag of ID_FLAGS) {
-        const parsed = parseArgs(["remote", "logout", `--${flag}`, id, "--local-only"]);
-        expect(parsed.positionals).toEqual(["remote", "logout"]);
-        expect(parsed.flags.get(flag)).toBe(id);
-        expect(parsed.flags.get("local-only")).toBe(true);
-      }
-    }
-    // With nothing after it, it still asks for its value.
-    expect(() => stringFlag(parseArgs(["remote", "logout", "--device"]).flags, "device")).toThrow(
-      "--device necesita un valor",
-    );
-  });
-
-  it("names the flags of an id, none of them a flag with no value", () => {
-    expect([...ID_FLAGS]).toEqual(["device"]);
-    expect([...ID_FLAGS].filter((flag) => BOOLEAN_FLAGS.has(flag))).toEqual([]);
+    expect(parseArgs(["lots", id, "--date", "2026-01-01"]).positionals).toEqual(["lots", id]);
   });
 
   it("read as an unknown option, says to write it after `--`", () => {
-    const flags = parseArgs(["admin", "forget-device", ids[0] as string, "--env", "test"]).flags;
-    expect(() => assertKnownFlags(flags, ["env"])).toThrow(
+    const flags = parseArgs(["lots", ids[0] as string, "--date", "2026-01-01"]).flags;
+    expect(() => assertKnownFlags(flags, ["date"])).toThrow(
       "opción desconocida: --Kq3Zp0aX9c-LmN4rT7uVw. Si es un valor que empieza por guion, como un identificador, escríbelo detrás de «--», que termina las opciones: atlas … -- <valor>",
     );
-    expect(() => parseArgs(["admin", "forget-device", ids[2] as string])).toThrow(
+    expect(() => parseArgs(["lots", ids[2] as string])).toThrow(
       "opción no válida: ---q3Zp0aX9c-LmN4rT7uV. Si es un valor que empieza por guion, como un identificador, escríbelo detrás de «--», que termina las opciones: atlas … -- <valor>",
     );
   });

@@ -14,10 +14,10 @@
 Después de cualquiera de estas órdenes en la carpeta del libro:
 - `atlas prices symbols set <activo> …`: una correspondencia nueva o cambiada;
 - `atlas prices symbols remove <activo>`;
-- `atlas prices purge <activo> --source …`;
-- la primera descarga de una fuente nueva, que es la que la **contrasta**. En una carpeta sincronizada, `atlas prices update` baja de la nube y no llama a las fuentes, así que el contraste se hace con `atlas prices update --from-sources`.
+- `atlas prices purge <activo>`;
+- la primera descarga de una fuente nueva con `atlas prices update`, que es la que la **contrasta**.
 
-`--from-sources` gasta el cupo que la consola comparte con la nube. Por defecto son 2 llamadas de EODHD y 2 de Alpha Vantage al día, salvo que tu `prices/config.json` diga otra cosa.
+`atlas prices update` gasta el cupo de la clave, que la consola comparte con la nube si usan la misma (§3).
 
 Y siempre que llegue el correo de correspondencias sin contrastar.
 
@@ -43,10 +43,9 @@ atlas admin prices push --env prod
 
 Los presupuestos de la nube son **variables de la función de precios**, que escribe Terraform desde `terraform.tfvars` (§8.2 M5):
 - `ATLAS_PRICES_EODHD_DAILY_CALLS`: 18 por defecto, 20 como mucho;
-- `ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS`: 23 por defecto, 25 como mucho;
 - `ATLAS_PRICES_FAILURE_THRESHOLD`, el umbral de fallos seguidos: 3 por defecto.
 
-La suma de la nube y de la consola **no debe pasar del cupo del plan gratuito**: 20 llamadas de EODHD y 25 de Alpha Vantage al día, con una sola clave (ADR-0031). Por eso la consola se queda con 2 y 2 por defecto.
+La suma de la nube y de la consola **no debe pasar del cupo del plan gratuito**: 20 llamadas de EODHD al día, con una sola clave (ADR-0031). La consola gasta por defecto hasta 20 (`DEFAULT_PRICE_CONFIG`): si comparte la clave con la nube, baja `daily_calls` en su `prices/config.json` (con 2, la suma no pasa de 20).
 
 1. Abre `~/personal/atlas/privado/terraform/prod/terraform.tfvars` con tu editor y cambia el valor. Los nombres de las variables de Terraform son una propuesta que fija la 017.
 2. Revisa el plan con `terraform plan`: tiene que cambiar **solo** la variable de entorno de la función de precios.

@@ -1,21 +1,13 @@
-// "¿Qué tengo que declarar?" — the fiscal screen.
-//
-// It is opened a handful of times a year, so it is **not** a sixth destination
-// of the navigation: it has its own address and is reached from a card of
-// the summary and from Ajustes. Everything it shows comes from the domain —
-// the base, the boxes, the informative returns and what each figure leans on —
-// and the whole of it is a lazily loaded chunk: the tax engine never reaches
-// the boot path.
-//
-// Reading order: which year, what the base is and where it comes from, what is
-// not settled, what is pending, the boxes, the informative returns and what
-// was filed.
+// "¿Qué tengo que declarar?" — the fiscal screen (docs/design/system.md §7.8): a destination of
+// the bar on a computer, reached from the summary on a phone. Everything comes from the domain, in
+// a lazily loaded chunk: the tax engine never reaches the boot path. A computer reads the return of
+// the year first; a phone, the deadlines and the informative models, then the return.
 
 import { yearOf } from "@atlas/domain";
 import { informativeReturn, taxBoxes, taxYear } from "@atlas/domain/fiscal";
 import { A } from "@solidjs/router";
 import { createMemo, createResource, For, type JSX, Show } from "solid-js";
-import { Disclosure, EmptyState, Notice, Section } from "../../components/index.js";
+import { EmptyState, Notice, Section } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
 import { toAppError } from "../../ledger/errors.js";
 import { attempt } from "../../ledger/query.js";
@@ -135,7 +127,6 @@ export default function FiscalRoute(): JSX.Element {
           const computed = report();
           return computed.ok ? computed.value.filing : undefined;
         };
-
         /** Nothing has ever been recorded: no purchase, no cash, no return. */
         const untouched = snapshot.events.every((event) => SETUP.has(event.type));
         /** The return of the year: the base, the criteria, the losses, the boxes, what was filed. */
@@ -174,7 +165,6 @@ export default function FiscalRoute(): JSX.Element {
             )}
           </Show>
         );
-        /** The informative models, 720 and 721. */
         const models = (): JSX.Element => (
           <Show when={store.invalidCount() === 0}>
             <For each={informative()}>
@@ -245,19 +235,9 @@ export default function FiscalRoute(): JSX.Element {
                   names={names}
                   privacy={privacy()}
                 />
-                <Show when={wide()}>
+                <Show when={wide()} fallback={[models(), renta()]}>
                   {renta()}
                   {models()}
-                </Show>
-                <Show when={!wide()}>
-                  {/* A phone: the state of the models and the deadlines first; the return of the
-                      year, folded, is prepared at the computer beside the form of the AEAT. */}
-                  {models()}
-                  <div class="span-12">
-                    <Disclosure label="La Renta del ejercicio · mejor en el ordenador">
-                      <div class="grid">{renta()}</div>
-                    </Disclosure>
-                  </div>
                 </Show>
               </div>
             </Show>

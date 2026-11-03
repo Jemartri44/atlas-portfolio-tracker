@@ -33,8 +33,8 @@ const consoleWith = (
   typed: string | undefined = "prod",
 ) => harness({ events: seed(), admin: adminOf(secrets), secretLines, confirm: true, typed });
 const run = ["admin", "secrets", "--env", "prod"];
-// allow-list entry, client id, client secret, (session key asks via `ask`), two keys.
-const ALL = ["1081", "me@example.test", "", "client-id", "CSV-77", SENTINEL, "AKV-88"];
+// allow-list entry, client id, client secret, (session key asks via `ask`), one key.
+const ALL = ["1081", "me@example.test", "", "client-id", "CSV-77", SENTINEL];
 
 describe("atlas admin secrets", () => {
   it("creates each parameter with its kind and its three tags, and prints no value", async () => {
@@ -46,7 +46,6 @@ describe("atlas admin secrets", () => {
       `${PREFIX}auth/google-client-id`,
       `${PREFIX}auth/google-client-secret`,
       `${PREFIX}auth/session-key`,
-      `${PREFIX}prices/alpha-vantage-key`,
       `${PREFIX}prices/eodhd-key`,
     ]);
     expect(secrets.kindOf(`${PREFIX}auth/google-client-id`)).toBe("String");
@@ -61,7 +60,7 @@ describe("atlas admin secrets", () => {
       entries: [{ sub: "1081", email: "me@example.test" }],
     });
     expect(secrets.valueOf(`${PREFIX}auth/session-key`)).toMatch(/^[A-Za-z0-9_-]{43}$/);
-    for (const value of ["CSV-77", SENTINEL, "AKV-88", "me@example.test"]) {
+    for (const value of ["CSV-77", SENTINEL, "me@example.test"]) {
       expect(c.text()).not.toContain(value);
     }
     expect(c.text()).not.toContain(secrets.valueOf(`${PREFIX}auth/session-key`) as string);
@@ -72,10 +71,10 @@ describe("atlas admin secrets", () => {
   it("asks existence only (no read of a value), and overwrites only with the environment typed", async () => {
     const secrets = new TestOnlyFakeSecrets();
     secrets.preset(`${PREFIX}prices/eodhd-key`, "OLD");
-    const wrong = consoleWith(secrets, ["", "", "", SENTINEL, ""], "dev");
+    const wrong = consoleWith(secrets, ["", "", "", SENTINEL], "dev");
     expect(await wrong.exec(run)).toBe(EXIT.ok);
     expect(secrets.valueOf(`${PREFIX}prices/eodhd-key`)).toBe("OLD");
-    const right = consoleWith(secrets, ["", "", "", SENTINEL, ""], "prod");
+    const right = consoleWith(secrets, ["", "", "", SENTINEL], "prod");
     expect(await right.exec(run)).toBe(EXIT.ok);
     expect(secrets.valueOf(`${PREFIX}prices/eodhd-key`)).toBe(SENTINEL);
     expect(secrets.calls.filter((call) => call.operation === "rotate")).toHaveLength(1);

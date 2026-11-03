@@ -162,36 +162,39 @@ export const FormFields = (props: FormFieldsProps): JSX.Element => {
       );
     }
     if (field.kind === "select" && field.name === "asset_id") {
-      // The assets the chosen account allows, as chips a tap away (piece 3 of direction B); the
-      // list stays under them for the rest and for the keyboard.
+      // Once an account is chosen, the assets it allows as chips a tap away under the list (piece 3
+      // of direction B); the list keeps the rest and the keyboard.
       const chips = (): Option[] =>
         optionsOf(field, props.state, props.values, props.events)
           .filter((option) => option.value !== "")
           .slice(0, CHIPS);
       return (
         <>
-          <Show when={chips().length > 1}>
-            <div class="picks full" role="group" aria-label={`${field.label}: los más a mano`}>
-              <For each={chips()}>
-                {(option) => (
-                  <button
-                    type="button"
-                    class="pick secondary"
-                    aria-pressed={value() === option.value}
-                    onClick={() => set(field.name, option.value)}
-                  >
-                    {option.label}
-                  </button>
-                )}
-              </For>
-            </div>
-          </Show>
           <SelectField
             {...common}
             class={field.full === true ? "full" : field.pair === true ? "pair" : undefined}
             options={optionsOf(field, props.state, props.values, props.events)}
             {...(field.required === true ? {} : { placeholder: "Sin indicar" })}
           />
+          <Show when={(props.values.account_id ?? "") !== "" && chips().length > 1}>
+            <fieldset class="picks full">
+              <legend class="sr-only">{`${field.label}: los más a mano`}</legend>
+              {/* Keyed by value, not by option: the options are new objects on every change, and a
+                  button made again would drop the focus of the keyboard. */}
+              <For each={chips().map((option) => option.value)}>
+                {(id) => (
+                  <button
+                    type="button"
+                    class="pick secondary"
+                    aria-pressed={value() === id}
+                    onClick={() => set(field.name, id)}
+                  >
+                    {chips().find((option) => option.value === id)?.label}
+                  </button>
+                )}
+              </For>
+            </fieldset>
+          </Show>
         </>
       );
     }

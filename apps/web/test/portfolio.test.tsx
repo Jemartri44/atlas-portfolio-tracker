@@ -80,7 +80,8 @@ describe("the portfolio", () => {
     // 10/01/2027, threshold 5 pp: five of the six assets are further than that.
     const host = await show("/cartera?fecha=2027-01-10", Cartera);
     const weights = card(host, "Pesos frente al objetivo");
-    expect(text(weights?.querySelector(".card-head"))).toContain("umbral ±5 pp");
+    // The threshold is one of the figures at the head of the card.
+    expect(text(weights?.querySelector(".kpis"))).toMatch(/Umbral\s*±5 pp/);
     expect(weights?.querySelectorAll("svg.gauge")).toHaveLength(6);
     expect(weights?.querySelectorAll("svg.gauge.is-off")).toHaveLength(5);
   });

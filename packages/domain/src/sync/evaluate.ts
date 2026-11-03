@@ -17,7 +17,7 @@ import { projectLedger } from "../projections/project-ledger.js";
 import type { LedgerState } from "../projections/state.js";
 import type { LedgerEvent, SupportedEvent } from "../schema/events.js";
 import { newlyInvalid } from "../usecases/invalid-events.js";
-import { checkIsinUnique } from "../usecases/record-event.js";
+import { checkOnWrite } from "../usecases/record-event.js";
 
 /** A third event a unit leaves invalid, with the code it now fails with. */
 export interface AffectedByUnit {
@@ -101,7 +101,7 @@ export const evaluateUnit = (
   }
   for (const [index, event] of unit.entries()) {
     try {
-      checkIsinUnique(check.state, event as SupportedEvent, () =>
+      checkOnWrite(check.state, event as SupportedEvent, () =>
         projectLedger(base, { collectErrors: true }),
       );
     } catch (error) {

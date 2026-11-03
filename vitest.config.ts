@@ -4,6 +4,32 @@ import { defineConfig } from "vitest/config";
 
 const local = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
 
+const FULL = { lines: 100, branches: 100, functions: 100, statements: 100 };
+const MOST = { lines: 90, branches: 90, functions: 90, statements: 90 };
+
+/**
+ * What each pass of coverage measures: 100 % where a wrong figure costs money or tax, and in the
+ * access, which is security; ~90 % in the rest of the domain (constitution VII).
+ */
+const COVERAGE: Record<string, { include: string[]; thresholds: Record<string, unknown> }> = {
+  domain: {
+    include: ["packages/domain/src/**"],
+    thresholds: {
+      ...MOST,
+      ...Object.fromEntries(
+        ["money", "projections", "tax", "informative", "dates"].map((area) => [
+          `packages/domain/src/${area}/**`,
+          FULL,
+        ]),
+      ),
+    },
+  },
+  access: { include: ["packages/access/src/**"], thresholds: FULL },
+  // The HTTP plumbing of the access, measured with the tests of the API: 100 % when it left the
+  // domain, and it must not go down.
+  "api-access": { include: ["apps/api/src/access/**"], thresholds: FULL },
+};
+
 export default defineConfig({
   resolve: {
     // The subpaths go first: aliases are matched by prefix, so the barrel
@@ -39,10 +65,10 @@ export default defineConfig({
       "@atlas/domain/quotes": local("./packages/domain/src/quotes.ts"),
       "@atlas/domain/sync": local("./packages/domain/src/sync.ts"),
       "@atlas/domain/remote-answers": local("./packages/domain/src/remote-answers.ts"),
-      "@atlas/domain/access": local("./packages/domain/src/access.ts"),
       "@atlas/domain/admin": local("./packages/domain/src/admin.ts"),
       "@atlas/domain/jobs": local("./packages/domain/src/jobs.ts"),
       "@atlas/domain": local("./packages/domain/src/index.ts"),
+      "@atlas/access": local("./packages/access/src/index.ts"),
       "@atlas/api": local("./apps/api/src/index.ts"),
     },
   },
@@ -55,6 +81,7 @@ export default defineConfig({
     exclude: ["**/node_modules/**", "**/dist/**", "**/dist-test/**", "**/dist-test-browser/**"],
     projects: [
       { extends: true, test: { name: "domain", root: "packages/domain" } },
+      { extends: true, test: { name: "access", root: "packages/access" } },
       { extends: true, test: { name: "adapters", root: "packages/adapters" } },
       { extends: true, test: { name: "cli", root: "apps/cli" } },
       { extends: true, test: { name: "api", root: "apps/api" } },
@@ -131,28 +158,15 @@ export default defineConfig({
         },
       },
     ],
-    // Measured in a pass of the domain alone (`npm run test:coverage:domain`;
-    // feature 015, E5, §34): the merge of several projects once lost the hits
-    // of a whole test file, and the 100 % depended on tests of other projects.
+    // One pass per measured area, each with only its own tests (`npm run test:coverage:<area>`;
+    // feature 015, E5, §34): the merge of several projects once lost the hits of a whole test
+    // file, and the 100 % depended on tests of other projects. `ATLAS_COVERAGE` picks the area.
     coverage: {
       provider: "v8",
-      include: ["packages/domain/src/**"],
       // `json` writes coverage/coverage-final.json, which the CI keeps when the
       // coverage fails (review of PR #90, CI-1).
       reporter: ["text", "html", "json"],
-      // 100 % where a wrong figure costs money or tax; ~90 % in the rest (constitution VII).
-      thresholds: {
-        lines: 90,
-        branches: 90,
-        functions: 90,
-        statements: 90,
-        ...Object.fromEntries(
-          ["money", "projections", "tax", "informative", "dates"].map((area) => [
-            `packages/domain/src/${area}/**`,
-            { lines: 100, branches: 100, functions: 100, statements: 100 },
-          ]),
-        ),
-      },
+      ...COVERAGE[process.env.ATLAS_COVERAGE ?? "domain"],
     },
   },
 });

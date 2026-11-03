@@ -41,13 +41,9 @@ export const BOOLEAN_FLAGS: ReadonlySet<string> = new Set([
   "draft",
   "history",
   "inactive",
-  "local-only",
-  // `atlas prices update --from-sources`.
-  "from-sources",
   // `atlas backup`.
   "from-bucket",
   "lots",
-  "manual",
   "neutrality-regime",
   "no-neutrality-regime",
   "not-transferable",
@@ -81,14 +77,6 @@ export const REPEATABLE_FLAGS: ReadonlySet<string> = new Set([
   // `--force` would not.
   "accept-unverified",
 ]);
-
-/**
- * The flags of an identifier that may begin with a dash (a device id is 22
- * characters of base64url): they always take the next word as their value,
- * as an option with a required argument does in POSIX `getopt`. Without this,
- * `--device --Kq3…` left `--device` with no value and read the id as a flag.
- */
-export const ID_FLAGS: ReadonlySet<string> = new Set(["device"]);
 
 /**
  * What a word that looked like an option and was not one may have been: a
@@ -155,11 +143,6 @@ export const parseArgs = (
       continue;
     }
     const next = argv[i + 1];
-    if (ID_FLAGS.has(body) && next !== undefined) {
-      add(body, next);
-      i += 1;
-      continue;
-    }
     if (booleans.has(body) && next !== undefined && YES_OR_NO.has(next.toLowerCase())) {
       throw booleanWithValue(body, next);
     }

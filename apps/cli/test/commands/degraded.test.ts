@@ -82,8 +82,6 @@ const INVOCATIONS: {
 }[] = [
   { command: "positions", argv: ["positions"], readOnly: true },
   { command: "lots", argv: ["lots"], readOnly: true },
-  { command: "cash", argv: ["cash"], readOnly: true },
-  { command: "valuations", argv: ["valuations"], readOnly: true },
   { command: "account", argv: ["account", "list"], readOnly: true },
   { command: "asset", argv: ["asset", "list"], readOnly: true },
   { command: "settings", argv: ["settings", "show"], readOnly: true },
@@ -159,6 +157,14 @@ const INVOCATIONS: {
   { command: "compact", argv: ["compact", "--yes"], readOnly: false },
   { command: "synth", argv: ["synth", "--out", "/dev/null"], readOnly: false },
   { command: "backup", argv: ["backup", "--to", "/dev/null"], readOnly: false },
+  // Reads a dump file and the ledger, writes nothing; it judges the ledger itself (a restore has
+  // to match what the projection gives), so it has no degraded header to answer with.
+  {
+    command: "rehearse",
+    argv: ["rehearse", "--dump", "/dev/null"],
+    readOnly: true,
+    folderOnly: true,
+  },
   { command: "lock", argv: ["lock", "show"], readOnly: true, folderOnly: true },
   { command: "fx", argv: ["fx", "status"], readOnly: true, folderOnly: true },
   // The drafts live in the folder, outside the ledger; the ledger is read only
@@ -167,14 +173,11 @@ const INVOCATIONS: {
   // The prices live in the folder, outside the ledger; the ledger is read only for the list of
   // assets whose last close is shown.
   { command: "prices", argv: ["prices", "symbols"], readOnly: true, folderOnly: true },
-  // The sessions of the console live in credentials.json, outside the folder; the ledger is never
-  // read nor written by them.
-  { command: "remote", argv: ["remote", "status"], readOnly: true, folderOnly: true },
   // The administration works on the remote with the role of administration, never on the figures of
   // the local ledger.
   {
     command: "admin",
-    argv: ["admin", "devices", "--env", "test"],
+    argv: ["admin", "pull", "--env", "test", "--to", "pulled"],
     readOnly: true,
     folderOnly: true,
   },

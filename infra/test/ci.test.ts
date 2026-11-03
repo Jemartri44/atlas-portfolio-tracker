@@ -55,20 +55,23 @@ describe("the infra job of the CI", () => {
     expect(job("verify")).not.toContain("terraform");
   });
 
-  it("lists in test:others every project of vitest.config.ts but domain and infra", () => {
+  it("runs every project of vitest.config.ts but infra once: in a pass of coverage or in test:others", () => {
     const config = readFileSync(join(repoRoot, "vitest.config.ts"), "utf8");
     const projects = [...config.matchAll(/^\s+name: "(\w+)",?$|test: \{ name: "(\w+)"/gm)].map(
       (match) => match[1] ?? match[2] ?? "",
     );
     const scripts = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8"))
       .scripts as Record<string, string>;
-    const listed = [...(scripts["test:others"] ?? "").matchAll(/--project (\w+)/g)].map(
-      (match) => match[1],
+    const passes = Object.keys(scripts).filter((name) => name.startsWith("test:coverage:"));
+    const listed = [...passes, "test:others"].flatMap((name) =>
+      [...(scripts[name] ?? "").matchAll(/--project (\w+)/g)].map((match) => match[1]),
     );
     expect(projects.length).toBeGreaterThan(5);
-    expect(listed.sort()).toEqual(
-      projects.filter((name) => !["domain", "infra"].includes(name)).sort(),
-    );
+    expect(listed.sort()).toEqual(projects.filter((name) => name !== "infra").sort());
+    // The CI runs every pass, not only the script that chains them.
+    for (const pass of passes) {
+      expect(job("verify")).toContain(`npm run ${pass}`);
+    }
   });
 
   it("holds no credential: no secret, no AWS variable, no role", () => {
