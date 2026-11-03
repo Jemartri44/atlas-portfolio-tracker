@@ -31,7 +31,7 @@ export const AfterTaxLines = (props: {
           <Show when={after().tax}>
             {(tax) => (
               <StatLine label="Impuestos estimados de la cartera principal">
-                <Amount value={tax()} signed />
+                <Amount value={tax()} />
               </StatLine>
             )}
           </Show>
