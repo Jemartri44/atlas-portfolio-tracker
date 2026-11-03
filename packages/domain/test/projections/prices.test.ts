@@ -181,17 +181,17 @@ describe("priceAt: the single gate", () => {
         unit_value: Decimal.parse("120"),
         currency: "EUR",
         fx_rate: Decimal.ONE,
-        source: "alpha_vantage",
+        source: "eodhd",
       }),
     };
     expect(priceAt(state, "ast_world", "2027-12-31", DEFAULT_SETTINGS, newer)).toMatchObject({
       origin: "external",
-      source: "alpha_vantage",
+      source: "eodhd",
       unit_value: Decimal.parse("120"),
     });
     expect(
       manualPrices(state, "2027-12-31", DEFAULT_SETTINGS, newer).get("ast_world"),
-    ).toMatchObject({ origin: "external", source: "alpha_vantage" });
+    ).toMatchObject({ origin: "external", source: "eodhd" });
     const older: ExternalPrices = {
       at: () => ({
         date: "2027-12-20",

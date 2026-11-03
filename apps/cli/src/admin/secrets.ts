@@ -54,13 +54,6 @@ export const SECRETS: readonly SecretSpec[] = [
     never: "dev",
     label: "la clave de EODHD",
   },
-  {
-    path: "prices/alpha-vantage-key",
-    kind: "SecureString",
-    source: "typed",
-    never: "dev",
-    label: "la clave de Alpha Vantage",
-  },
 ];
 
 /** The tags of every parameter this order writes (ADR-0034, row 3). */

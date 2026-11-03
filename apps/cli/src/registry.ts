@@ -16,13 +16,7 @@ import { fxCommand } from "./commands/fx.js";
 import { m720Command, m721Command } from "./commands/informative.js";
 import { lockCommand } from "./commands/lock.js";
 import { pricesCommand } from "./commands/prices.js";
-import {
-  cashCommand,
-  checkCommand,
-  lotsCommand,
-  positionsCommand,
-  valuationsCommand,
-} from "./commands/query.js";
+import { checkCommand, lotsCommand, positionsCommand } from "./commands/query.js";
 import { deleteCommand, editCommand } from "./commands/rectify.js";
 import { remoteCommand } from "./commands/remote.js";
 import { synthCommand } from "./commands/synth.js";
@@ -58,12 +52,10 @@ export const COMMANDS: Readonly<Record<string, CommandSpec>> = {
   transfer: { run: transferCommand, arity: { request: 2, update: 3, pending: 2 } },
   ca: { run: corporateActionCommand, arity: 2 },
   thesis: { run: thesisCommand, arity: { open: 2, close: 3, show: 3 } },
-  valuations: { run: valuationsCommand, arity: 1 },
   edit: { run: editCommand, arity: 2 },
   delete: { run: deleteCommand, arity: 2 },
   positions: { run: positionsCommand, arity: 1 },
   lots: { run: lotsCommand, arity: 2 },
-  cash: { run: cashCommand, arity: 1 },
   tax: { run: taxCommand, arity: 2 },
   filed: { run: filedCommand, arity: 3 },
   m720: { run: m720Command, arity: 2 },

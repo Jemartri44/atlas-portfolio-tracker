@@ -12,55 +12,47 @@ import {
   parseCloudPull,
   serializeCloudPull,
 } from "../../src/quotes/cloud.js";
-import { DEFAULT_PRICE_CONFIG, parsePriceConfig } from "../../src/quotes/config.js";
+import { parsePriceConfig } from "../../src/quotes/config.js";
 import type { CloseLine } from "../../src/quotes/line.js";
 
-const line = (
-  date: string,
-  close: string,
-  source: "eodhd" | "alpha_vantage" = "eodhd",
-  fetched_at = "2026-10-01T05:00:00.000Z",
-): CloseLine => ({ schema_version: 1, date, close, currency: "EUR", source, fetched_at });
+const line = (date: string, close: string, fetched_at = "2026-10-01T05:00:00.000Z"): CloseLine => ({
+  schema_version: 1,
+  date,
+  close,
+  currency: "EUR",
+  source: "eodhd",
+  fetched_at,
+});
 
-const ORDER = ["eodhd", "alpha_vantage"] as const;
 const TODAY = "2026-10-01";
 
 describe("the closes the console takes from the cloud", () => {
   it("adds a date it does not have, keeping the source and the time of the cloud", () => {
     expect(
-      cloudLinesToAppend([line("2026-09-29", "10")], [line("2026-09-30", "11")], ORDER, {
-        today: TODAY,
-      }).added,
+      cloudLinesToAppend([line("2026-09-29", "10")], [line("2026-09-30", "11")], { today: TODAY })
+        .added,
     ).toEqual([line("2026-09-30", "11")]);
   });
 
-  it("follows the rules of the daily download: a correction of the same source, a source before, never after", () => {
-    const local = [
-      line("2026-09-28", "10", "eodhd"),
-      line("2026-09-29", "10", "alpha_vantage"),
-      line("2026-09-30", "10", "eodhd"),
-    ];
+  it("follows the rules of the daily download: only a new date or a correction", () => {
+    const local = [line("2026-09-28", "10"), line("2026-09-30", "10")];
     const cloud = [
-      line("2026-09-28", "10.0", "eodhd"), // the same value as a number: nothing
-      line("2026-09-29", "12", "eodhd"), // a source before the one in force: added
-      line("2026-09-30", "13", "alpha_vantage"), // a source after: never
-      line("2026-09-30", "14", "eodhd"), // a correction of the same source: added
+      line("2026-09-28", "10.0"), // the same value as a number: nothing
+      line("2026-09-29", "12"), // a date it does not have: added
+      line("2026-09-30", "14"), // a correction: added
     ];
-    expect(cloudLinesToAppend(local, cloud, ORDER, { today: TODAY }).added).toEqual([
-      line("2026-09-29", "12", "eodhd"),
-      line("2026-09-30", "14", "eodhd"),
+    expect(cloudLinesToAppend(local, cloud, { today: TODAY }).added).toEqual([
+      line("2026-09-29", "12"),
+      line("2026-09-30", "14"),
     ]);
   });
 
   it("decides each line of the cloud against what it added before it", () => {
     expect(
-      cloudLinesToAppend(
-        [],
-        [line("2026-09-30", "10", "alpha_vantage"), line("2026-09-30", "10", "alpha_vantage")],
-        ORDER,
-        { today: TODAY },
-      ).added,
-    ).toEqual([line("2026-09-30", "10", "alpha_vantage")]);
+      cloudLinesToAppend([], [line("2026-09-30", "10"), line("2026-09-30", "10")], {
+        today: TODAY,
+      }).added,
+    ).toEqual([line("2026-09-30", "10")]);
   });
 });
 
@@ -70,35 +62,31 @@ describe("what the console never takes from the cloud", () => {
       cloudLinesToAppend(
         [],
         [line("2026-09-30", "10"), line("2026-10-01", "11"), line("2099-01-01", "12")],
-        ORDER,
         { today: TODAY },
       ),
     ).toEqual({ added: [line("2026-09-30", "10")], future: 2, mismatched: 0 });
   });
 
   it("never a close taken on the day of its own session, not even the day after (R2-B1)", () => {
-    const at = (date: string, close: string, fetched: string) =>
-      line(date, close, "eodhd", fetched);
     expect(
       cloudLinesToAppend(
         [],
         [
           // Taken at mid-session, 11:00 in Madrid of the same day: never.
-          at("2026-10-01", "11", "2026-10-01T09:00:00.000Z"),
+          line("2026-10-01", "11", "2026-10-01T09:00:00.000Z"),
           // Its close, taken the day after: taken.
-          at("2026-10-01", "12", "2026-10-02T05:00:00.000Z"),
+          line("2026-10-01", "12", "2026-10-02T05:00:00.000Z"),
           // 23:59:59 in Madrid of its own day (summer time): never.
-          at("2026-09-28", "9", "2026-09-28T21:59:59.000Z"),
+          line("2026-09-28", "9", "2026-09-28T21:59:59.000Z"),
           // 00:00 in Madrid of the day after, still its day in UTC: taken.
-          at("2026-09-29", "10", "2026-09-29T22:00:00.000Z"),
+          line("2026-09-29", "10", "2026-09-29T22:00:00.000Z"),
         ],
-        ORDER,
         { today: "2026-10-02" },
       ),
     ).toEqual({
       added: [
-        at("2026-10-01", "12", "2026-10-02T05:00:00.000Z"),
-        at("2026-09-29", "10", "2026-09-29T22:00:00.000Z"),
+        line("2026-10-01", "12", "2026-10-02T05:00:00.000Z"),
+        line("2026-09-29", "10", "2026-09-29T22:00:00.000Z"),
       ],
       future: 2,
       mismatched: 0,
@@ -107,13 +95,12 @@ describe("what the console never takes from the cloud", () => {
 
   it("never a close in another currency than the one the folder declares for its source (N5)", () => {
     const gbp = { ...line("2026-09-29", "900"), currency: "GBP" };
-    const alpha = { ...line("2026-09-28", "9", "alpha_vantage"), currency: "GBP" };
     expect(
-      cloudLinesToAppend([], [gbp, line("2026-09-30", "10"), alpha], ORDER, {
+      cloudLinesToAppend([], [gbp, line("2026-09-30", "10")], {
         today: TODAY,
         declared: { eodhd: "EUR" },
       }),
-    ).toEqual({ added: [line("2026-09-30", "10"), alpha], future: 0, mismatched: 1 });
+    ).toEqual({ added: [line("2026-09-30", "10")], future: 0, mismatched: 1 });
   });
 });
 
@@ -186,22 +173,18 @@ describe("which files of the cloud the console asks for", () => {
   });
 });
 
-describe("the budget of a console that shares the free plans with the cloud (N2 of §15)", () => {
-  it("is the leftover of the plans, 2 and 2, unless config.json says otherwise", () => {
-    expect(parsePriceConfig(undefined).daily_calls).toEqual({ eodhd: 20, alpha_vantage: 25 });
+describe("the budget of a console that shares the free plan with the cloud (N2 of §15)", () => {
+  it("is the leftover of the plan, 2, unless config.json says otherwise", () => {
+    expect(parsePriceConfig(undefined).daily_calls).toEqual({ eodhd: 20 });
     expect(parsePriceConfig(undefined, { sharedWithCloud: true }).daily_calls).toEqual({
       eodhd: 2,
-      alpha_vantage: 2,
     });
     expect(
       parsePriceConfig('{"failure_threshold":4}', { sharedWithCloud: true }).daily_calls,
-    ).toEqual({ eodhd: 2, alpha_vantage: 2 });
+    ).toEqual({ eodhd: 2 });
     expect(
       parsePriceConfig('{"daily_calls":{"eodhd":5}}', { sharedWithCloud: true }).daily_calls,
-    ).toEqual({ eodhd: 5, alpha_vantage: 2 });
-    expect(parsePriceConfig('{"daily_calls":{"eodhd":5}}').daily_calls).toEqual({
-      eodhd: 5,
-      alpha_vantage: DEFAULT_PRICE_CONFIG.daily_calls.alpha_vantage,
-    });
+    ).toEqual({ eodhd: 5 });
+    expect(parsePriceConfig('{"daily_calls":{"eodhd":5}}').daily_calls).toEqual({ eodhd: 5 });
   });
 });

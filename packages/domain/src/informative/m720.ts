@@ -26,7 +26,8 @@ import { EUR, Money } from "../money/money.js";
 import type { Filing } from "../projections/filings.js";
 import { filingInForce } from "../projections/filings.js";
 import { settingsAt } from "../projections/settings-at.js";
-import type { LedgerState, Warning } from "../projections/state.js";
+import type { Asset, LedgerState, Warning } from "../projections/state.js";
+import type { AssetType } from "../schema/events.js";
 import {
   type AccountId,
   type AssetId,
@@ -286,6 +287,9 @@ const comparisonOf = (
   };
 };
 
+/** The collective investment undertakings of the catalogue (criterion #11). */
+const IIC_TYPES: ReadonlySet<AssetType> = new Set(["fund", "etf", "money_market"]);
+
 const CATEGORIES: Record<InformativeModel, FilingCategory[]> = {
   "720": ["accounts", "securities"],
   "721": ["crypto"],
@@ -411,6 +415,29 @@ export const informativeReturn = (
         "informative_crypto_custody_unknown",
         "everything held in foreign accounts is counted; anything in self-custody would not be, and the ledger cannot tell the two apart",
         {},
+      ),
+    );
+  }
+  // Art. 42 ter.2 RGAT: collective investment undertakings are declared at their
+  // net asset value on 31 December, not at the market price an ETF also has.
+  const iic = [
+    ...new Set(
+      categories
+        .flatMap((entry) => entry.items)
+        .flatMap((item) =>
+          item.asset_id !== undefined &&
+          IIC_TYPES.has((state.assets.get(item.asset_id) as Asset).asset_type)
+            ? [item.asset_id]
+            : [],
+        ),
+    ),
+  ].sort();
+  if (iic.length > 0) {
+    notes.push(
+      note(
+        "informative_iic_net_asset_value",
+        "funds, ETFs and money market funds are declared at their net asset value on 31 December (art. 42 ter.2 RGAT), not at their market price",
+        { assets: iic },
       ),
     );
   }

@@ -282,7 +282,7 @@ export default defineConfig(({ command }) => ({
           groups: [
             {
               name: "domain",
-              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|quotes[\\/]|quotes\.ts|charts[\\/]|charts\.ts|messages[\\/]|messages\.ts|sync[\\/]|sync\.ts|remote[\\/]|remote-answers\.ts|tools\.ts|rebalance\.ts|projections[\\/](?:corporate-action-draft|deep-check|simulate-transfer|bucket-theses|bucket-stats|costs|contribution|platform-plan|rebalance|sale-tax)\.ts|portfolio\.ts|ports[\\/]remote-ledger\.ts|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/]idb\.ts))/,
+              test: /packages[\\/](?:domain[\\/](?:vendor|src[\\/](?!tax[\\/]|informative[\\/]|fiscal\.ts|ecb[\\/]|ecb\.ts|config[\\/]|quotes[\\/]|quotes\.ts|charts[\\/]|charts\.ts|messages[\\/]|messages\.ts|sync[\\/]|sync\.ts|remote[\\/]|remote-answers\.ts|tools\.ts|rebalance\.ts|projections[\\/](?:corporate-action-draft|deep-check|simulate-transfer|bucket-theses|bucket-stats|costs|contribution|month-plan|platform-plan|rebalance|sale-tax)\.ts|portfolio\.ts|ports[\\/]remote-ledger\.ts|filings[\\/](?:closed-years|comparison|proposal)))|adapters[\\/]src[\\/]ledger-store[\\/](?:blob\.ts|browser[\\/]idb\.ts))/,
             },
           ],
         },

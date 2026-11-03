@@ -2,7 +2,7 @@
 
 Guía de la consola `atlas`: la herramienta de mantenimiento (alta y corrección de datos, `check`, copias, exportación, nube y administración). La aplicación principal es la web; las vistas de cartera, cubo y patrimonio ya no están en la consola. Para arrancar el proyecto en local, véase el [`README`](../README.md); el contrato con la API en la nube está en [`api.md`](api.md).
 
-Tras `npm run build`, el ejecutable es `node apps/cli/dist/main.js` (o `npm run atlas --`). Todos los comandos aceptan `--ledger <ruta>` (por defecto `./ledger.jsonl`), `--yes` (omite la confirmación), `--confirm-duplicate` y `--json`. En `add` (también con `--draft`), `edit`, `delete`, `ca`, `settings set`, `fx correct`, `draft confirm` y `draft discard` (y los comandos que registran con la misma confirmación), `--json` deja en stdout un único objeto (`{"status": "recorded"|"cancelled"|"discarded"|"draft_saved"|"already_recorded"|"nothing_to_correct", …}`) y lo que se lee antes del sí, preguntas incluidas, va a stderr; un error (código de salida distinto de 0, como un tipo del BCE aún sin publicar) deja como único objeto `{"status": "error", "code": …, "exit_code": …, "message": …}` y la frase, como sin `--json`, también en stderr; una orden que ya imprimió su propio resultado (p. ej. `prices update` con una fuente caída) conserva ese objeto y no añade otro. `remote login|logout|status`, `lock break` y `export --out` responden también con un solo objeto. Las consultas sobre el libro (`positions`, `lots`, `cash`, `valuations`, `settings show`, `thesis show`, `order list`, `transfer pending`) dejan `{"invalid_count": n, "data": …}`, donde `invalid_count` son las líneas que no se han podido leer (modo degradado); `tax`, `m720`, `m721`, `check` y los estados de `fx`, `prices`, `lock` y `draft` dejan directamente su propio objeto. Importes, cantidades y tipos salen siempre como cadenas. Ejemplo completo con datos inventados:
+Tras `npm run build`, el ejecutable es `node apps/cli/dist/main.js` (o `npm run atlas --`). Todos los comandos aceptan `--ledger <ruta>` (por defecto `./ledger.jsonl`), `--yes` (omite la confirmación), `--confirm-duplicate` y `--json`. En `add` (también con `--draft`), `edit`, `delete`, `ca`, `settings set`, `fx correct`, `draft confirm` y `draft discard` (y los comandos que registran con la misma confirmación), `--json` deja en stdout un único objeto (`{"status": "recorded"|"cancelled"|"discarded"|"draft_saved"|"already_recorded"|"nothing_to_correct", …}`) y lo que se lee antes del sí, preguntas incluidas, va a stderr; un error (código de salida distinto de 0, como un tipo del BCE aún sin publicar) deja como único objeto `{"status": "error", "code": …, "exit_code": …, "message": …}` y la frase, como sin `--json`, también en stderr; una orden que ya imprimió su propio resultado (p. ej. `prices update` con una fuente caída) conserva ese objeto y no añade otro. `remote login|logout|status`, `lock break` y `export --out` responden también con un solo objeto. Las consultas sobre el libro (`positions`, `lots`, `settings show`, `thesis show`, `order list`, `transfer pending`) dejan `{"invalid_count": n, "data": …}`, donde `invalid_count` son las líneas que no se han podido leer (modo degradado); `tax`, `m720`, `m721`, `check` y los estados de `fx`, `prices`, `lock` y `draft` dejan directamente su propio objeto. Importes, cantidades y tipos salen siempre como cadenas. Ejemplo completo con datos inventados:
 
 ```bash
 alias atlas='node apps/cli/dist/main.js --ledger ./demo.jsonl'
@@ -19,7 +19,6 @@ atlas add buy --account acc_fund --asset ast_world --trade-date 2026-09-01 --val
 # Consultas
 atlas positions          # posición física por cuenta y activo, a hoy (--date AAAA-MM-DD para otra fecha)
 atlas lots               # lotes fiscales (FIFO global por activo), con fecha y coste en EUR
-atlas cash               # efectivo por cuenta y divisa
 atlas tax 2028           # la base imponible del ahorro del ejercicio (JSON)
 atlas thesis show th_delta        # la ficha de una tesis: hipótesis, plazo, operaciones y resultado
 atlas check              # integridad del libro (proyección)
@@ -37,7 +36,7 @@ atlas export --format csv --out ledger.csv
 
 ## El ciclo mensual (Fase 2)
 
-Los precios se registran a mano como `valuation`, y desde la feature 013 la consola puede además descargar cierres diarios de EODHD y Alpha Vantage (más abajo, «Precios de cierre diarios»). Para enseñar un valor gana el dato más reciente que tenga valor en euros, y la aplicación siempre muestra de cuándo es y de dónde viene. Ninguna cifra de la Renta los mira; la única ruta fiscal que lee un precio es la valoración a 31/12 de los Modelos 720 y 721, y solo la registrada a mano. El ciclo sigue sobre el libro del ejemplo anterior.
+Los precios se registran a mano como `valuation`, y desde la feature 013 la consola puede además descargar cierres diarios de EODHD (más abajo, «Precios de cierre diarios»). Para enseñar un valor gana el dato más reciente que tenga valor en euros, y la aplicación siempre muestra de cuándo es y de dónde viene. Ninguna cifra de la Renta los mira; la única ruta fiscal que lee un precio es la valoración a 31/12 de los Modelos 720 y 721, y solo la registrada a mano. El ciclo sigue sobre el libro del ejemplo anterior.
 
 ```bash
 # 0. Una vez: el resto del núcleo, los pesos objetivo por activo (suman 100) y qué parte de la aportación va al cubo
@@ -63,18 +62,18 @@ El reparto de la aportación, el rebalanceo y el simulador de traspasos viven en
 
 ## Precios de cierre diarios (feature 013)
 
-La consola descarga los cierres diarios de los activos **de su libro** desde dos APIs gratuitas con clave, EODHD (principal) y Alpha Vantage (respaldo), y los guarda junto al libro en `prices/`, nunca en el libro. Son **informativos**: ninguna cifra de la Renta ni del Modelo 720 los lee. Sin claves, todo funciona igual con las valoraciones manuales. La web no descarga nada: en el escritorio lee `prices/` de la carpeta enlazada, y en el móvil, hasta que exista la nube, solo hay la importación a mano desde Ajustes. Al importar a mano, conviene incluir `prices/symbols.json` junto a los ficheros de precios: sin él, la web no puede comprobar la divisa de los cierres, y lo avisa.
+La consola descarga los cierres diarios de los activos **de su libro** desde EODHD, una API gratuita con clave, y los guarda junto al libro en `prices/`, nunca en el libro. Son **informativos**: ninguna cifra de la Renta ni del Modelo 720 los lee. Sin claves, todo funciona igual con las valoraciones manuales. La web no descarga nada: en el escritorio lee `prices/` de la carpeta enlazada, y en el móvil, hasta que exista la nube, solo hay la importación a mano desde Ajustes. Al importar a mano, conviene incluir `prices/symbols.json` junto a los ficheros de precios: sin él, la web no puede comprobar la divisa de los cierres, y lo avisa.
 
 ```bash
 # Las claves van fuera de la carpeta del libro, solo legibles por ti; la aplicación nunca las escribe
-mkdir -p ~/.config/atlas && printf '{"eodhd":"…","alpha_vantage":"…"}\n' > ~/.config/atlas/secrets.json && chmod 600 ~/.config/atlas/secrets.json
+mkdir -p ~/.config/atlas && printf '{"eodhd":"…"}\n' > ~/.config/atlas/secrets.json && chmod 600 ~/.config/atlas/secrets.json
 
 atlas prices symbols set ast_world --currency EUR --eodhd XX0000000001.EUFUND   # el símbolo y la divisa de la cotización, contrastada con la fuente
-atlas prices symbols set ast_tsco --eodhd TSCO.LSE --eodhd-currency GBP --alpha-vantage TSCO.LON --alpha-vantage-currency GBX   # la divisa es de cada fuente: Londres cotiza en libras en una y en peniques en la otra
+atlas prices symbols set ast_tsco --eodhd TSCO.LSE --currency GBX   # Londres cotiza en peniques (GBX), no en libras: la divisa se declara
 atlas prices update      # los cierres de días anteriores a hoy, por prioridad (cubo, referencias, núcleo) y dentro del cupo; en una carpeta de nube, los baja de la nube (feature 016)
-atlas prices update --from-sources   # en una carpeta de nube, llama a las fuentes en vez de bajar de la nube: gasta el cupo que comparte con la nube (2 y 2 al día por defecto, ADR-0031)
+atlas prices update --from-sources   # en una carpeta de nube, llama a las fuentes en vez de bajar de la nube: gasta el cupo que comparte con la nube (2 al día por defecto, ADR-0031)
 atlas prices status      # cada fuente con su cupo de hoy y sus fallos, y la antigüedad del último cierre de cada activo
-atlas prices purge ast_tsco --source alpha_vantage   # borra los cierres de esa fuente guardados en una divisa que no es la que ahora declara; la próxima descarga vuelve a pedir esos días una vez, y los que ninguna fuente sirva quedan como hueco (lo dice «prices status»)
+atlas prices purge ast_tsco   # borra los cierres guardados en una divisa que no es la que ahora declara; la próxima descarga vuelve a pedir esos días una vez, y los que la fuente no sirva quedan como hueco (lo dice «prices status»)
 ```
 
 En la nube, los cierres los descarga cada día la tarea de precios con la correspondencia de `prices/symbols.json` **del bucket**, que solo sube `atlas admin prices push --env <entorno>` (con el rol de administración; procedimiento en [`docs/runbooks/cloud-symbols-and-budgets.md`](runbooks/cloud-symbols-and-budgets.md)).
@@ -105,7 +104,7 @@ atlas thesis show th_delta --date 2028-12-31
 
 El cubo entero (posiciones con su condición de invalidación a la vista, tesis frente al índice, estadísticas, comisiones sobre el capital operado y avisos de las reglas 17 y 18) y el patrimonio total, siempre desglosado, se ven en la web (Cubo y Resumen). Todo avisa y nada bloquea: el libro nunca rechaza un hecho que ya ocurrió.
 
-Y al registrar una compra o una venta con pérdida, la aplicación avisa si cae dentro de la **ventana de recompra** (por defecto dos meses para cotizados y fondos, monetarios incluidos, y un año para la cripto, contados de fecha a fecha y configurables por tipo de activo): es el error fiscal más común en operativa activa. Avisa en las dos direcciones y **antes** de confirmar, y el motor fiscal **calcula el diferimiento**: la pérdida queda asociada a los lotes recomprados, viaja con ellos si se traspasan o se canjean, y se libera cuando se transmiten.
+Y al registrar una compra o una venta con pérdida, la aplicación avisa si cae dentro de la **ventana de recompra** (por defecto dos meses para cotizados, y un año para fondos, monetarios y cripto, contados de fecha a fecha y configurables por tipo de activo): es el error fiscal más común en operativa activa. Avisa en las dos direcciones y **antes** de confirmar, y el motor fiscal **calcula el diferimiento**: la pérdida queda asociada a los lotes recomprados, viaja con ellos si se traspasan o se canjean, y se libera cuando se transmiten.
 
 ## La Renta (Fase 5)
 
@@ -183,7 +182,6 @@ atlas thesis open --id th_spec_1 --account acc_bucket --asset ast_spec --hypothe
 atlas add buy --account acc_bucket --asset ast_spec --trade-date 2027-07-01 --value-date 2027-07-03 --quantity 10 --unit-price 50 --fee 1 --currency USD --fx-rate 1.1 --fx-rate-date 2027-07-01 --thesis th_spec_1 --yes
 atlas add sell --account acc_bucket --asset ast_spec --trade-date 2027-09-01 --value-date 2027-09-03 --quantity 10 --unit-price 60 --fee 1 --currency USD --fx-rate 1.1 --fx-rate-date 2027-09-01 --thesis th_spec_1 --yes
 atlas thesis close th_spec_1 --notes "Cumplida" --yes
-atlas valuations --date 2027-12-31   # última foto de valoración por cuenta y activo (Modelo 720)
 ```
 
 Códigos de salida: `0` OK · `1` error de validación o de proyección · `2` conflicto de escritura (repite) · `3` huella repetida sin `--confirm-duplicate` · `4` falta confirmación sin terminal (añade `--yes`) · `5` libro escrito por una versión más nueva · `64` uso incorrecto (una línea de error y la pista de `atlas --help`, no el uso entero).

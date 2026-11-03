@@ -10,7 +10,6 @@
 //
 // Nothing here reads the ledger or decides an amount: it is a vocabulary.
 
-import { euRegulatedMarket } from "../../projections/markets.js";
 import type { AssetType } from "../../schema/events.js";
 import type { IncomeCategory } from "../../settings/settings.js";
 
@@ -26,10 +25,15 @@ import type { IncomeCategory } from "../../settings/settings.js";
  *   elementos patrimoniales" with key 2. A share of NYSE or Nasdaq lands here;
  *   the output says the section is doubtful (no source has been read that
  *   extends the equivalence of those markets to the form).
- * - `other`: "otros elementos patrimoniales" with **no box**: an exchange
+ * - `other`: "otros elementos patrimoniales" with key 4: an exchange
  *   difference of currency and an ETC or an ETP the user configured as a
- *   capital gain. No official text says where they go; key 4 ("otros elementos
- *   no afectos") is an inference by exclusion, and the output says so.
+ *   capital gain. The form has no section for them, and the help of 2025 sends
+ *   to key 4 "cualesquiera otros bienes o derechos no incluidos en los
+ *   apartados anteriores": the section is chosen by exclusion, and the output
+ *   says so.
+ *
+ * `other_shares` and `other` are rows of the same part of the form, told apart
+ * by their key, so they share one block and one pair of totals (0385/0386).
  */
 export const SECTIONS = [
   "iic",
@@ -167,7 +171,17 @@ export const SECTION_FIELDS: Record<SectionId, readonly RowFieldId[]> = {
     "loss",
     "loss_imputable",
   ],
-  other: ["name", "key", "transmission", "acquisition", "gain", "loss", "loss_imputable"],
+  other: [
+    "name",
+    "key",
+    "transmission",
+    "acquisition",
+    "gain",
+    "gain_net",
+    "gain_imputable",
+    "loss",
+    "loss_imputable",
+  ],
 };
 
 /** "Tipo de elemento patrimonial. Clave" (box 1626 of 2025) of each section of "otros elementos". */
@@ -175,8 +189,8 @@ export const OTHER_ELEMENT_KEYS: Partial<Record<SectionId, string>> = {
   // «Transmisión de participaciones y acciones no admitidas a negociación en
   // mercados regulados de valores definidos en la Directiva 2014/65/UE».
   other_shares: "2",
-  // «Otros elementos patrimoniales no afectos a actividades económicas»: an
-  // inference by exclusion, not read in any source.
+  // «Otros elementos patrimoniales no afectos a actividades económicas»: chosen
+  // by exclusion, as the help of 2025 words key 4.
   other: "4",
 };
 
@@ -259,7 +273,8 @@ export const CONCEPT_NAMES: Record<Exclude<ConceptId, RowConceptId>, string> = {
   "annex.movable_capital.new": "Saldo negativo de este ejercicio (rendimientos)",
   "base.savings": "Base imponible del ahorro",
   "base.savings_taxable": "Base liquidable del ahorro",
-  "ddi.income": "Rendimiento obtenido en el extranjero",
+  "ddi.income":
+    "Rendimiento neto obtenido en el extranjero (el íntegro menos su parte de los gastos de la casilla 0037)",
   "ddi.foreign_tax": "Impuesto satisfecho en el extranjero (limitado al convenio)",
   "ddi.withheld":
     "Retenido en origen, solo detalle: el exceso sobre el convenio se reclama en el país de origen",
@@ -312,16 +327,17 @@ export const SIGNED_CONCEPTS: ReadonlySet<ConceptId> = new Set<ConceptId>([
  * `movable_capital` is not a capital gain at all and is declared as income from
  * the transfer of financial assets. By default that is an ETC and an ETP
  * (criterion #24, binding ruling V0267-25). Only if the user configures one of
- * them back as a capital gain does it reach `other`, which has no box.
+ * them back as a capital gain does it reach `other`, key 4 of "otros elementos".
  *
  * Two facts of the disposal refine it: subscription rights (`rights`) have a
  * section of their own, and a share whose market is known to be outside the
- * regulated markets of the EU goes to `other_shares`.
+ * regulated markets of the EU goes to `other_shares` (`eu` is what
+ * `euRegulatedAdmission` answered for it).
  */
 export const transmissionSection = (
   assetType: AssetType,
   category: IncomeCategory,
-  facts: { rights?: boolean; market?: string } = {},
+  facts: { rights?: boolean; eu?: boolean | undefined } = {},
 ): SectionId | "movable_capital" => {
   if (category === "movable_capital") {
     return "movable_capital";
@@ -329,7 +345,7 @@ export const transmissionSection = (
   if (facts.rights === true) {
     return "rights";
   }
-  if (assetType === "stock" && euRegulatedMarket(facts.market) === false) {
+  if (assetType === "stock" && facts.eu === false) {
     return "other_shares";
   }
   switch (assetType) {
@@ -362,7 +378,6 @@ export const BOX_BLOCKS = [
   "etf",
   "listed_shares",
   "rights",
-  "other_shares",
   "crypto",
   "other",
   "prior_years",
@@ -385,6 +400,9 @@ export const blockOfConcept = (concept: ConceptId): BoxBlockId => {
   }
   if (concept.startsWith("gp.")) {
     const section = concept.slice("gp.".length).split(".")[0] as string;
+    if (section === "other_shares") {
+      return "other";
+    }
     if ((SECTIONS as readonly string[]).includes(section)) {
       return section as BoxBlockId;
     }
