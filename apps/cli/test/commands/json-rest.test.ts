@@ -72,7 +72,7 @@ const ratedBuy = [
 ];
 const draftBuy = buy("2026-04-01", "2026-04-03");
 
-const laterCsv = async (): Promise<Buffer> => {
+const _laterCsv = async (): Promise<Buffer> => {
   const [header, newest, ...rest] = (
     await readFile(join(ECB_FIXTURES, "eurofxref-hist.csv"), "utf8")
   ).split("\n");
@@ -159,53 +159,14 @@ describe("fx correct --json", () => {
   });
 });
 
-describe("drafts with --json", () => {
-  const idOf = (object: Record<string, unknown>) => String(object.draft_id);
-
-  it("add --draft: one draft_saved object", async () => {
+describe("an operation whose ECB rate is not yet published, with --json", () => {
+  it("is refused as ecb_rate_pending and nothing is recorded: no rate is estimated", async () => {
     const { atlas, only } = await setup();
-    const saved = await atlas(undefined, [...draftBuy, "--draft", "--json"]);
-    expect(saved.code).toBe(0);
-    expect(only(saved.out)).toMatchObject({ status: "draft_saved", draft_id: expect.any(String) });
-    expect(saved.err).toContain("Borrador a guardar");
-  });
-
-  it("confirm: cancelled, then recorded with the removal of the draft", async () => {
-    const { atlas, only } = await setup();
-    const id = idOf(only((await atlas(undefined, [...draftBuy, "--draft", "--json"])).out));
-    const waiting = await atlas(undefined, ["draft", "confirm", id, "--yes", "--json"]);
+    const before = only((await atlas(undefined, ["check", "--json"])).out);
+    const waiting = await atlas(true, [...draftBuy, "--json"]);
     expect(waiting.code).toBe(1);
-    expect(only(waiting.out)).toMatchObject({ status: "error", code: "draft_not_confirmable" });
-    const bytes = await laterCsv();
-    await atlas(undefined, ["fx", "update"], () => ({
-      download: async () => ({
-        source: "zip" as const,
-        url: "https://example.invalid/h.zip",
-        fetched_at: "2026-04-02T10:00:00.000Z",
-        bytes,
-      }),
-    }));
-    const no = await atlas(false, ["draft", "confirm", id, "--json"]);
-    expect(only(no.out)).toEqual({ status: "cancelled" });
-    const yes = await atlas(true, ["draft", "confirm", id, "--json"]);
-    expect(only(yes.out)).toMatchObject({
-      status: "recorded",
-      event: { type: "buy" },
-      draft_id: id,
-      draft_removed: true,
-    });
-    expect(yes.err).toContain("Tipo del BCE propuesto");
-  });
-
-  it("discard: discarded or cancelled", async () => {
-    const { atlas, only } = await setup();
-    const id = idOf(only((await atlas(undefined, [...draftBuy, "--draft", "--json"])).out));
-    expect(only((await atlas(false, ["draft", "discard", id, "--json"])).out)).toEqual({
-      status: "cancelled",
-    });
-    expect(only((await atlas(true, ["draft", "discard", id, "--json"])).out)).toEqual({
-      status: "discarded",
-      draft_id: id,
-    });
+    expect(only(waiting.out)).toMatchObject({ status: "error", code: "ecb_rate_pending" });
+    expect(waiting.err).toContain("Repite el comando cuando se publique");
+    expect(only((await atlas(undefined, ["check", "--json"])).out)).toEqual(before);
   });
 });

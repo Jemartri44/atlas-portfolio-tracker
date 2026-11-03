@@ -91,7 +91,7 @@ export const rateDraft = async (
       waiting ||= point.rate === undefined;
       notes.push(
         point.rate === undefined
-          ? `El BCE todavía no ha publicado el tipo de ${point.currency} del ${day(point.reference)} (el último publicado es del ${day(resolution.latest)}). Se puede guardar como borrador hasta que se publique, o teclear el tipo con --fx-rate y --fx-rate-date.`
+          ? `El BCE todavía no ha publicado el tipo de ${point.currency} del ${day(point.reference)} (el último publicado es del ${day(resolution.latest)}). Repite el comando cuando se publique (hacia las 16:00 CET) o teclea el tipo con --fx-rate y --fx-rate-date.`
           : `El tipo de ${point.currency} del ${day(point.reference)} aún no está en el histórico (llega hasta el ${day(resolution.latest)}): el tecleado no se puede comprobar contra el oficial.`,
       );
     }
