@@ -16,7 +16,7 @@ import type {
 const Row = (props: { row: PlatformRowView }): JSX.Element => (
   <div class="platform" data-testid="platform">
     <h4 class="block-title">
-      {props.row.platform} <span class="meta">({props.row.accountId})</span>
+      {props.row.accountName} <span class="meta">· {props.row.platform}</span>
     </h4>
     <dl class="kpis">
       <div class="kpi">
@@ -40,7 +40,7 @@ const Row = (props: { row: PlatformRowView }): JSX.Element => (
         </dd>
       </div>
     </dl>
-    <ul class="rows" aria-label={`Órdenes en ${props.row.platform}`}>
+    <ul class="rows" aria-label={`Órdenes en ${props.row.accountName}`}>
       <For each={props.row.lines}>
         {(line) => (
           <li>
@@ -53,16 +53,20 @@ const Row = (props: { row: PlatformRowView }): JSX.Element => (
                   <Show when={line.fee} fallback="comisión desconocida">
                     {(fee) => (
                       <>
-                        comisión <Amount value={fee()} />
-                        <Show when={line.feePct}>
-                          {(share) => (
-                            <>
-                              {" "}
-                              (<Figure value={share()} unit="percent" decimals="auto" />)
-                            </>
-                          )}
-                        </Show>{" "}
-                        · {line.feeNote}
+                        {/* One element for the figure and its percentage: a flex row would
+                            otherwise split the parenthesis from the number inside it. */}
+                        <span>
+                          comisión <Amount value={fee()} />
+                          <Show when={line.feePct}>
+                            {(share) => (
+                              <>
+                                {" "}
+                                (<Figure value={share()} unit="percent" decimals="auto" />)
+                              </>
+                            )}
+                          </Show>
+                        </span>
+                        <span>· {line.feeNote}</span>
                       </>
                     )}
                   </Show>
@@ -104,8 +108,8 @@ export const PlatformsBlock = (props: { view: PlatformsView }): JSX.Element => (
     <For each={props.view.unassigned}>
       {(order) => (
         <Notice severity="caution" title={`${order.name} no está en ninguna cuenta`}>
-          Hay <Amount value={order.amount} /> para comprarlo y ninguna cuenta activa del núcleo lo
-          tiene. Elige dónde en {order.candidates.join(", ") || "tus cuentas"} y regístralo allí.
+          Hay <Amount value={order.amount} /> para comprarlo y ninguna cuenta activa de la cartera
+          lo tiene. Elige dónde en {order.candidates.join(", ") || "tus cuentas"} y regístralo allí.
         </Notice>
       )}
     </For>
