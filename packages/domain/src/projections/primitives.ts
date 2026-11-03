@@ -7,7 +7,7 @@ import { type CivilDate, yearOf } from "../dates/civil-date.js";
 import { ProjectionError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
 import { Decimal } from "../money/decimal.js";
-import { Money } from "../money/money.js";
+import { EUR, Money } from "../money/money.js";
 import { Price } from "../money/price.js";
 import { Quantity } from "../money/quantity.js";
 import { Ratio, scaleQuantities } from "../money/ratio.js";
@@ -28,7 +28,7 @@ import {
   warnHolders,
 } from "./operations.js";
 import { accountsHolding, adjustPosition, positionOf } from "./positions.js";
-import type { Asset, FiscalLot, LedgerState } from "./state.js";
+import { type Asset, addWarning, type FiscalLot, type LedgerState } from "./state.js";
 import { noteAcquisition, warnPriorBuys, warnRepurchase } from "./wash-sale.js";
 
 export interface EffectContext {
@@ -467,8 +467,8 @@ const adjustedLots = (state: LedgerState, assetId: AssetId, eventId: Ulid): Fisc
 
 /**
  * Cash that lowers the acquisition value of the lots instead of selling them
- * (arts. 80.3 and 81.2 LIS; arts. 25.1.e and 33.3.a LIRPF). The euros received
- * are shared among the lots by units —every unit received the same— and each
+ * (arts. 80.3 and 81.2 LIS; arts. 25.1.e and 33.3.a LIRPF). The cash received
+ * is shared among the lots by units —every unit received the same— and each
  * lot keeps its quantity and its date. What exceeds a lot's cost leaves it at
  * zero and is movable capital income in a `capital_return`; in an exchange the
  * law only says the value «se disminuirá», so an excess is refused rather than
@@ -501,16 +501,46 @@ export const applyCostAdjustment = (
   const totalEur = fx.toEur(total);
   const units = lots.reduce((sum, lot) => sum.add(lot.quantity), Quantity.ZERO);
 
-  let left = totalEur;
+  let left = total;
   let excess = Money.zero(totalEur.currency);
+  const mismatched = new Set<string>();
   const plan = lots.map((lot, index) => {
-    // The last lot takes the exact remainder: the lots lower by the euros received, to the digit.
-    const share =
-      index === lots.length - 1 ? left : totalEur.mul(lot.quantity.value).div(units.value);
+    // The last lot takes the exact remainder: the lots lower by the cash received, to the digit.
+    const share = index === lots.length - 1 ? left : total.mul(lot.quantity.value).div(units.value);
     left = left.sub(share);
-    const lowered = share.cmp(lot.cost_eur) > 0 ? lot.cost_eur : share;
-    excess = excess.add(share.sub(lowered));
-    return { lot, lowered };
+    // First in the currency (criterion #4): cash in the lot's own currency
+    // lowers its cost in that currency by the amount received, and its cost
+    // in euros by the equivalent at the rate of the cash.
+    if (effect.currency !== EUR && lot.cost.currency === effect.currency) {
+      const lowered = share.cmp(lot.cost) > 0 ? lot.cost : share;
+      excess = excess.add(fx.toEur(share.sub(lowered)));
+      const cost = lot.cost.sub(lowered);
+      const costEur = cost.isZero() ? Money.zero(EUR) : lot.cost_eur.sub(fx.toEur(lowered));
+      return {
+        lot,
+        cost,
+        costEur: costEur.isNegative() ? Money.zero(EUR) : costEur,
+        // Some cost left means there was some before: never a division by zero.
+        factor: cost.isZero() ? undefined : cost.amount.div(lot.cost.amount),
+      };
+    }
+    if (lot.cost.currency !== EUR && lot.cost.currency !== effect.currency) {
+      mismatched.add(lot.cost.currency);
+    }
+    // Otherwise by the euros: `cost` and `funding_eur` split like `cost_eur`
+    // (as in a carve-out). A lot left with some cost had some before, so the
+    // division is never by zero.
+    const shareEur = fx.toEur(share);
+    const lowered = shareEur.cmp(lot.cost_eur) > 0 ? lot.cost_eur : shareEur;
+    excess = excess.add(shareEur.sub(lowered));
+    const costEur = lot.cost_eur.sub(lowered);
+    const factor = costEur.isZero() ? undefined : costEur.amount.div(lot.cost_eur.amount);
+    return {
+      lot,
+      cost: factor === undefined ? Money.zero(lot.cost.currency) : lot.cost.mul(factor),
+      costEur,
+      factor,
+    };
   });
   if (excess.amount.isPositive() && ctx.kind !== "capital_return") {
     throw new ProjectionError(
@@ -521,25 +551,26 @@ export const applyCostAdjustment = (
     );
   }
 
-  for (const { lot, lowered } of plan) {
-    const remaining = lot.cost_eur.sub(lowered);
-    // `cost` and `funding_eur` split like `cost_eur` (as in a carve-out). A lot
-    // left with some cost had some before, so the division is never by zero.
-    if (remaining.isZero()) {
-      lot.cost = Money.zero(lot.cost.currency);
-      lot.funding_eur = Money.zero(lot.funding_eur.currency);
-    } else {
-      const factor = remaining.amount.div(lot.cost_eur.amount);
-      lot.cost = lot.cost.mul(factor);
-      lot.funding_eur = lot.funding_eur.mul(factor);
-    }
-    lot.cost_eur = remaining;
+  for (const { lot, cost, costEur, factor } of plan) {
+    lot.funding_eur =
+      factor === undefined ? Money.zero(lot.funding_eur.currency) : lot.funding_eur.mul(factor);
     state.lotJournal.push({
       kind: "adjust",
       lot_id: lot.id,
       event_id: ctx.eventId,
-      cost_eur: lowered,
+      cost_eur: lot.cost_eur.sub(costEur),
     });
+    lot.cost = cost;
+    lot.cost_eur = costEur;
+  }
+  for (const lotCurrency of mismatched) {
+    addWarning(
+      state,
+      "cost_adjustment_currency_mismatch",
+      ctx.eventId,
+      `cash in ${effect.currency} lowers lots of ${asset.asset_id} bought in ${lotCurrency} by its euros: no source says at which rate`,
+      { asset_id: asset.asset_id, currency: effect.currency, lot_currency: lotCurrency },
+    );
   }
 
   for (const entry of entries) {

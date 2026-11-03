@@ -92,6 +92,44 @@ const warnUncoveredHolders = (
 const resolveEffects = (event: CorporateActionEvent): ResolvedEffect[] =>
   event.effects.map((effect) => ({ ...effect, asset_id: effect.asset_id ?? event.asset_id }));
 
+/** An effect that opens lots of `assetId`. */
+const opensLotsOf = (effect: ResolvedEffect, assetId: AssetId): boolean =>
+  (effect.op === "convert" || effect.op === "carve_out" || effect.op === "grant") &&
+  targetOf(effect) === assetId;
+
+/**
+ * The cash of an exchange lowers the value of everything received (art. 80.3
+ * LIS), the fractions the depositary then sells included. So a
+ * `cost_adjustment` applies before the `forced_sale` of the same asset that
+ * the array lists ahead of it —but after whatever opened the lots it lowers—:
+ * the same event, written in either order, gives the same figures.
+ */
+const costAdjustmentsFirst = (effects: readonly ResolvedEffect[]): ResolvedEffect[] => {
+  const ordered = [...effects];
+  for (const effect of effects) {
+    if (effect.op !== "cost_adjustment") {
+      continue;
+    }
+    const at = ordered.indexOf(effect);
+    const opened = ordered.reduce(
+      (last, other, index) => (index < at && opensLotsOf(other, effect.asset_id) ? index : last),
+      -1,
+    );
+    const sale = ordered.findIndex(
+      (other, index) =>
+        index > opened &&
+        index < at &&
+        other.op === "forced_sale" &&
+        other.asset_id === effect.asset_id,
+    );
+    if (sale !== -1) {
+      ordered.splice(at, 1);
+      ordered.splice(sale, 0, effect);
+    }
+  }
+  return ordered;
+};
+
 /** `fund_liquidation` / `issuer_liquidation`: `"all"` in exactly the accounts holding the asset. */
 const requireFullCoverage = (
   state: LedgerState,
@@ -261,7 +299,7 @@ export const applyCorporateAction = (
   const saved = snapshot(state, touched);
   warnUncoveredHolders(state, event, effects);
   try {
-    for (const effect of effects) {
+    for (const effect of costAdjustmentsFirst(effects)) {
       applyEffect(state, effect, ctx);
     }
   } catch (error) {

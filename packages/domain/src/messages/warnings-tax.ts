@@ -54,6 +54,11 @@ const FX_FINDING_CORRECTION =
   "La cifra se calcula con el tipo de tus datos; si está mal, corrige el movimiento (anular y registrar de nuevo) y compruébalo antes de declarar.";
 
 export const WARNINGS_TAX: Record<string, Entry> = {
+  cost_adjustment_currency_mismatch: {
+    say: (d, v) =>
+      `El dinero en ${v.text(d.currency)} rebaja compras de ${v.one(d.asset_id)} hechas en ${v.text(d.lot_currency)}: Atlas lo reparte en proporción al coste en euros, lo que equivale a convertirlo al tipo de la compra, y ninguna fuente dice qué tipo de cambio usar. Es un criterio abierto.`,
+    cli: () => "(fiscal-questions.md #13)",
+  },
   capital_return_partial_accounts: (d, v) =>
     `La devolución no da importe a todas las cuentas que tienen ${v.one(d.asset_id)} (faltan: ${v.many(d.accounts)}): como el FIFO es global, el dinero rebaja también los lotes de esas cuentas. Revisa si falta alguna.`,
   tax_quota_not_computed: () =>
