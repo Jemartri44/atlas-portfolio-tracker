@@ -127,6 +127,7 @@ describe("atlas tax --boxes", () => {
   it("gives another year by concept, with no box number at all", async () => {
     const report = await boxes("2026", "2027-06-01T10:00:00.000Z");
     expect(report.mapping).not.toBe("checked");
+    expect(report.entries.length).toBeGreaterThan(0);
     expect(report.entries.every((entry) => entry.box === undefined)).toBe(true);
     expect(JSON.stringify(report)).not.toContain("0460");
   });
