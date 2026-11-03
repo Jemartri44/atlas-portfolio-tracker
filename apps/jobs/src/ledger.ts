@@ -54,7 +54,7 @@ export const ledgerOfBytes = (bytes: Uint8Array, today: CivilDate): JobLedger =>
     return { ok: false, code: "ledger_absent" };
   }
   try {
-    const events = decodeLines(linesOfText(decodeUtf8Strict(bytes, true)), CURRENT_LEDGER_SCHEMA);
+    const events = decodeLines(linesOfText(decodeUtf8Strict(bytes, false)), CURRENT_LEDGER_SCHEMA);
     const state = projectLedger(events, { collectErrors: true, asOf: today });
     if (state.invalid.length > 0) {
       return { ok: false, code: "ledger_invalid" };

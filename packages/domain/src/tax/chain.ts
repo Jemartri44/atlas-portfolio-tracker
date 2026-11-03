@@ -287,12 +287,19 @@ export const taxChain = (
       carved.add(entry.into_lot_id);
     }
   }
+  const adjusted = new Map<string, Ulid[]>();
+  for (const entry of state.lotJournal) {
+    if (entry.kind === "adjust") {
+      adjusted.set(entry.lot_id, [...(adjusted.get(entry.lot_id) ?? []), entry.event_id]);
+    }
+  }
   const ctx: LineContext = {
     state,
     settings: state.fiscalSettings,
     events: byId,
     lots,
     carved,
+    adjusted,
     walk,
     currencyWalk,
   };

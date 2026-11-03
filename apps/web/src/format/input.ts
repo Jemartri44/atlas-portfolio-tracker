@@ -1,18 +1,14 @@
 // Reading what the user **types**, the way a Spanish keyboard writes it.
 //
-// The ledger stores `1200.50`; the user writes `1.200,50`. Replacing the first
-// comma by a point turned that into `1.200.50`, which the domain refused with
-// "el campo amount de buy no es válido" — so the most natural way of writing an
-// amount in Spanish was the one the application did not accept. The rule, all
-// of it here and nowhere else:
+// The decimal separator is the comma, and the dot is never accepted, thousands
+// included. A dot is read two ways (`1.234` is one thousand two hundred and
+// thirty-four or one and a bit) and the wrong reading is recorded without
+// complaint: with quantities of three decimals it is an error of a factor of a
+// thousand (`0.500` units became `500`). So a dot is refused, with a sentence
+// that says how to write it:
 //
-//   1. With a comma, the comma is the decimal separator and the dots group
-//      thousands: `1.200,50`, `12.345.678,9`, `0,5`.
-//   2. Without a comma, dots in groups of three are thousands: `1.200`,
-//      `12.345.678`.
-//   3. Anything else with a dot (`1.5`, `1234.5`) is **ambiguous** and refused
-//      with a sentence that says how to write it. Guessing would be worse: an
-//      amount read a thousand times too big is recorded without complaint.
+//   - `1234`, `1234,5`, `0,500`, `12345678,9` are numbers.
+//   - `1.234`, `0.500`, `1.200,50` are refused.
 //
 // Pure functions, no DOM: the forms, the configuration screen, the corporate
 // actions and the transfer simulator all read numbers through here.
@@ -20,17 +16,20 @@
 type ParsedNumber = { ok: true; value: string } | { ok: false; message: string };
 
 /** How a number is written, said once so every message says it the same way. */
-export const HOW_TO_WRITE =
-  "Escríbelo con coma decimal, y los miles con punto si quieres: 1.200,50.";
+export const HOW_TO_WRITE = "Escríbelo con coma decimal y sin puntos de miles: 1200,50.";
 
 const DIGITS = /^\d+$/;
-const THOUSANDS = /^\d{1,3}(?:\.\d{3})+$/;
 
 /** Spaces of any kind go: a pasted "1 200,50" is still a number. */
 const compact = (raw: string): string => raw.replace(/[\s\u00a0\u202f]/g, "");
 
 /** `007` is `7`: the domain's decimal pattern is strict and a zero pad is noise. */
 const unpadded = (digits: string): string => digits.replace(/^0+(?=\d)/, "");
+
+const notANumber = (body: string): string =>
+  body.includes(".")
+    ? `No es un número: el punto no se admite, el decimal es la coma. ${HOW_TO_WRITE}`
+    : `No es un número. ${HOW_TO_WRITE}`;
 
 const refused = (message: string): ParsedNumber => ({ ok: false, message });
 
@@ -44,32 +43,27 @@ export const parseDecimalInput = (raw: string): ParsedNumber => {
   if (extra !== undefined) {
     return refused(`No es un número: tiene más de una coma. ${HOW_TO_WRITE}`);
   }
-  const plainWhole = DIGITS.test(whole)
-    ? whole
-    : THOUSANDS.test(whole)
-      ? whole.replaceAll(".", "")
-      : undefined;
   if (fraction !== undefined) {
-    return plainWhole !== undefined && DIGITS.test(fraction)
-      ? { ok: true, value: `${sign}${unpadded(plainWhole)}.${fraction}` }
-      : refused(`No es un número. ${HOW_TO_WRITE}`);
+    return DIGITS.test(whole) && DIGITS.test(fraction)
+      ? { ok: true, value: `${sign}${unpadded(whole)}.${fraction}` }
+      : refused(notANumber(body));
   }
-  if (plainWhole !== undefined) {
-    return { ok: true, value: `${sign}${unpadded(plainWhole)}` };
+  if (DIGITS.test(whole)) {
+    return { ok: true, value: `${sign}${unpadded(whole)}` };
   }
   if (/^\d+\.\d+$/.test(body)) {
     return refused(
-      `Con un punto no se sabe si son decimales o miles. Si son decimales, escribe ${body.replace(".", ",")}; si son miles, agrúpalos de tres en tres: 1.500.`,
+      `Con un punto no se sabe si son decimales o miles, y aquí no se admite: el decimal es la coma. Si son decimales, escribe ${body.replace(".", ",")}; si son miles, escribe ${body.replace(".", "")}, sin punto.`,
     );
   }
-  return refused(`No es un número. ${HOW_TO_WRITE}`);
+  return refused(notANumber(body));
 };
 
-/** A whole number (days of a horizon): digits, thousands allowed, nothing else. */
+/** A whole number (days of a horizon): digits, nothing else. */
 export const parseIntegerInput = (raw: string): ParsedNumber => {
   const text = compact(raw);
-  if (DIGITS.test(text) || THOUSANDS.test(text)) {
-    return { ok: true, value: unpadded(text.replaceAll(".", "")) };
+  if (DIGITS.test(text)) {
+    return { ok: true, value: unpadded(text) };
   }
   return refused("Tiene que ser un número entero, sin decimales: por ejemplo, 90.");
 };

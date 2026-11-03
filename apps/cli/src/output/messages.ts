@@ -143,6 +143,12 @@ export const describeError = (error: DomainError): string => {
       return `Una tesis exige cuenta y activo del cubo (${text(d.account_id)}, ${text(d.asset_id)}).`;
     case "effects_not_allowed_for_kind":
       return `El kind ${text(d.kind)} no admite la secuencia de efectos ${text(d.effects)}; admitidas: ${text(d.allowed)}.`;
+    case "cost_adjustment_requires_neutrality":
+      return `El dinero de un ${text(d.kind)} solo rebaja el coste de lo recibido si la operación se acoge al régimen de neutralidad: indícalo con --neutrality-regime. Sin régimen, el canje es una permuta sujeta y el dinero es parte de lo transmitido.`;
+    case "capital_return_needs_stock":
+      return `La devolución de prima o de aportaciones solo se registra sobre acciones, y ${text(d.asset_id)} es de tipo ${text(d.asset_type)}: en un fondo, un ETF o una SICAV la ley la trata de otra forma (art. 94.1 LIRPF) y Atlas no la modela.`;
+    case "cost_adjustment_exceeds_cost":
+      return `El dinero del ${text(d.kind)} supera el coste de los títulos de ${text(d.asset_id)} (exceso: ${text(d.excess_eur)} €): la ley solo dice que el valor disminuye; revisa el importe o consulta cómo declararlo.`;
     case "liquidation_must_cover_all_accounts":
       return `Una liquidación vende "all" en exactamente las cuentas con posición de ${text(d.asset_id)} (faltan: ${text(d.missing)}; sobran: ${text(d.extra)}; parciales: ${text(d.partial)}).`;
     case "no_open_lots":
