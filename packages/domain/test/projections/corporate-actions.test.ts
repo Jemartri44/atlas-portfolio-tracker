@@ -40,13 +40,14 @@ const sale = (
   per_account: { account_id: string; quantity: string; fee?: string }[],
   unit_price: string,
   asset_id?: string,
+  foreign?: { currency: string; fx_rate: string },
 ): Effect => ({
   op: "forced_sale",
   ...(asset_id === undefined ? {} : { asset_id }),
   per_account,
   unit_price,
-  currency: "EUR",
-  fx_rate: "1",
+  currency: foreign?.currency ?? "EUR",
+  fx_rate: foreign?.fx_rate ?? "1",
   fx_rate_date: "2027-03-01",
 });
 
@@ -658,11 +659,10 @@ describe("mandatory edge cases (prompt §3.7)", () => {
       kind: "issuer_restructuring",
       asset_id: "ast_old",
       effects: [
-        {
-          ...sale([{ account_id: "acc_a", quantity: "2" }], "130"),
+        sale([{ account_id: "acc_a", quantity: "2" }], "130", undefined, {
           currency: "USD",
           fx_rate: "1.3",
-        },
+        }),
         { op: "convert", to_asset_id: "ast_new", ratio: "1" },
         { op: "convert", asset_id: "ast_new", to_asset_id: "ast_spec", ratio: "1" },
       ],
