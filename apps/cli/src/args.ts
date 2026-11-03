@@ -23,7 +23,7 @@ export class UsageError extends Error {
  * value of `--json` and answered «comando desconocido: 2027», and
  * `atlas --yes asset add` answered «--yes no admite valor» — in exactly the
  * order the usage line suggests. Every `booleanFlag`
- * of the CLI has to be here; `test/args.test.ts` reads the sources to check it.
+ * of the CLI has to be here; `booleanFlag` refuses a name that is not.
  */
 export const BOOLEAN_FLAGS: ReadonlySet<string> = new Set([
   // Global.
@@ -216,6 +216,10 @@ export const requireFlag = (flags: Flags, name: string): string => {
 };
 
 export const booleanFlag = (flags: Flags, name: string): boolean => {
+  // A boolean that the parser does not know would swallow the word after it as its value.
+  if (!BOOLEAN_FLAGS.has(name)) {
+    throw new Error(`--${name} is read as a boolean but is not in BOOLEAN_FLAGS`);
+  }
   const value = flags.get(name);
   if (value === undefined) {
     return false;
