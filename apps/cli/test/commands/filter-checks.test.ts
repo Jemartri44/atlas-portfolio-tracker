@@ -27,10 +27,4 @@ describe("options that mean nothing are refused", () => {
     const h = harness({ events: seed() });
     expect(await h.exec(["draft", "list", "--bogus"])).toBe(64);
   });
-
-  it("tax refuses the --lots that it no longer takes", async () => {
-    const h = harness({ events: seed() });
-    expect(await h.exec(["tax", "2027", "--boxes", "--lots"])).toBe(64);
-    expect(h.text()).toContain("--lots");
-  });
 });

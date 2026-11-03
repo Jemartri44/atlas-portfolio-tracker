@@ -47,17 +47,17 @@ Documento de trabajo para decidir qué órdenes de `apps/cli` se quedan. Decisi�
 
 Por la regla «ninguna información se pierde», esto se queda o se decide antes de quitar:
 
-1. **`lots`** — lotes fiscales (FIFO global por activo, fecha y coste en EUR). La web no tiene vista de lotes; `tax --lots` (linaje de lotes por operación) tampoco tiene equivalente en `routes/fiscal/`. Propuesta: **`lots` se queda**, y `tax --lots` se queda con ella (diagnóstico de una cifra fiscal). `tax` sin `--lots` sale.
+1. **`lots`** — lotes fiscales (FIFO global por activo, fecha y coste en EUR). La web no tiene vista de lotes; `tax --lots` (linaje de lotes por operación) tampoco tiene equivalente en `routes/fiscal/`. Decisión: `lots` se queda, y `tax` pasa a dar solo JSON, que ya lleva los lotes y su linaje (`--lots` desaparece).
 2. **`positions`, `cash`** — la web enseña posiciones y efectivo valorados y agrupados para leer, no el desglose crudo por cuenta y activo que sirve para diagnosticar. Propuesta: `positions` se queda; `cash` sale solo si el efectivo por cuenta y divisa de Resumen basta (lo hace: `CashLine`), lo confirmo al retirarla.
 3. **`order list`, `transfer pending`, `thesis show <id>`** — la web los enseña como avisos (`view-models/attention.ts`, con enlace a Movimientos filtrado por tipo) y como fila de tesis, no la ficha (hipótesis, plazo, operaciones). Propuesta: `order list`, `transfer pending` y `thesis show` **se quedan** salvo que digas que la lista de Movimientos basta.
-4. **Salida de diagnóstico en JSON.** `export` da el libro crudo; no da proyecciones. Con `positions`, `lots`, `check` y `tax --lots` en `--json` (ya existe), Claude diagnostica sin web. No hace falta una orden nueva.
+4. **Salida de diagnóstico en JSON.** `export` da el libro crudo; no da proyecciones. Con `positions`, `lots`, `check` y `tax` (que ya es JSON) (ya existe), Claude diagnostica sin web. No hace falta una orden nueva.
 
 Nota sobre `valuations` (1): la web enseña las valoraciones como movimientos, no la «última foto por cuenta y activo» que usa el Modelo 720; el 720 ya sale en Fiscal. Propuesta: sale.
 
 ## Qué saldría, en el peor y el mejor caso
 
 - Sale (15): `networth`, `weights`, `contribute`, `rebalance`, `transfer simulate`, `costs`, `bucket`, `thesis list`, `tax` (texto y `--boxes`), `gains`, `income`, `m720`, `m721`, `valuations`, `cash`.
-- Se queda: `tax --json`, `lots`, `tax --lots`, `positions`, `order list`, `transfer pending`, `thesis show`.
+- Se queda: `tax` (JSON), `lots`, `positions`, `order list`, `transfer pending`, `thesis show`.
 
 ## Orden propuesto de la retirada
 
