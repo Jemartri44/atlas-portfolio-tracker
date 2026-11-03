@@ -211,7 +211,8 @@ export const optionsFor = (
         context.state,
         context.date,
         context.values.account_id,
-        context.values.asset_id,
+        // A swap has no `asset_id`: its thesis is about what it receives.
+        context.values.asset_id ?? context.values.to_asset_id,
       );
     case "books":
       return [
@@ -235,11 +236,11 @@ export const isBucketAccount = (state: LedgerState, accountId: string | undefine
 /** Currency of an asset or an account, to prefill the field (the domain still validates). */
 export const derivedCurrency = (
   state: LedgerState,
-  derive: "assetCurrency" | "accountCurrency",
+  derive: "assetCurrency" | "fromAssetCurrency" | "accountCurrency",
   values: Record<string, string>,
 ): string | undefined => {
-  if (derive === "assetCurrency") {
-    const assetId = values.asset_id;
+  if (derive !== "accountCurrency") {
+    const assetId = derive === "assetCurrency" ? values.asset_id : values.from_asset_id;
     return assetId === undefined ? undefined : state.assets.get(assetId)?.currency;
   }
   const accountId = values.account_id;
