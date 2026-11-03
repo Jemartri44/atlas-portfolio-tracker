@@ -50,6 +50,11 @@ export {
 export { FILING_DEADLINES, type FilingDeadline } from "./informative/deadlines.js";
 export { informativeReturn, model720, model721 } from "./informative/m720.js";
 export type * from "./informative/report.js";
+export {
+  type SaleOrder,
+  type SaleSimulation,
+  simulateSale,
+} from "./projections/sale-tax.js";
 export { taxBoxes } from "./tax/boxes/boxes.js";
 export {
   BOX_BLOCKS,
@@ -104,7 +109,6 @@ export {
   SCALES_CHECKED_AT,
   savingsScaleOf,
 } from "./tax/savings-scale.js";
-
 export {
   FIRST_SUPPORTED_YEAR,
   type MovedTaxYear,
