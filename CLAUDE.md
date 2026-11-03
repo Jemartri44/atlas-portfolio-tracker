@@ -8,6 +8,8 @@ Personal investment portfolio manager, single user, 20+ year horizon. It records
 
 **It never executes orders.** Every trade is placed manually on the platform and recorded here.
 
+**The web is the main surface.** The `atlas` console (`apps/cli`) is the maintenance tool: data entry and correction, `check`, backups and restore, export, `remote`, `admin`, `synth`, and a few JSON reports (`positions`, `lots`, `tax`, `m720`, `m721`, …) so that Claude can diagnose a ledger without the web. New views and simulations go in the web, not in the console (`docs/cli.md`).
+
 User: Spanish tax resident. Planned integrations: MyInvestor (fund statements) and Interactive Brokers (Flex Query). Cash is recorded by hand.
 
 ## Documents
@@ -73,7 +75,7 @@ Monorepo with npm workspaces, **hexagonal architecture** with a pure functional 
 ```
 packages/domain    pure core: types, money, events, projections, FIFO, tax, use cases, PORTS (interfaces). No I/O, no runtime npm deps.
 packages/adapters  port implementations: S3/file/memory LedgerStore, price sources, ECB FxRateSource, SES Notifier. AWS SDK lives only here.
-apps/cli           Phase-1 interface over a local file or S3.
+apps/cli           Maintenance console over a local file or S3 (the web is the main surface).
 apps/api           Lambda Function URL behind CloudFront (/api/*): verifies the Google token at sign-in, issues its own session, composes domain + adapters.
 apps/web           Vite SPA; uses domain to project/simulate the ledger it reads from the API.
 apps/jobs          Scheduled Lambdas run by EventBridge Scheduler (ECB, prices, email, backups, integrity); compose domain + adapters. Nothing imports apps/jobs.
