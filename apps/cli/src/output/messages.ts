@@ -33,6 +33,10 @@ const describeRejection = (
       return "La nube ha rechazado la petición: una línea declaraba ser una anulación con corrección, o parte de una cadena, sin serlo.";
     case "line_unreadable":
       return `La nube no ha podido leer una línea${d.line === undefined ? "" : ` (la ${text(d.line)})`}.`;
+    case "line_too_large":
+      return `La nube ha rechazado una línea por su tamaño (${text(d.bytes)} bytes; el tope es ${text(d.limit)}). Acorta el texto libre, por ejemplo las notas.`;
+    case "ledger_too_large":
+      return `Con esto el libro de la nube pasaría de su tamaño máximo (${text(d.limit)} bytes). No se ha escrito nada más.`;
     case "line_invalid":
       return `La nube ha rechazado una línea por su forma (${text(d.domain_code)}).`;
     case "schema_version_unsupported":
@@ -439,6 +443,8 @@ export const describeError = (error: DomainError): string => {
       return "--broker-settled-eur no puede ser cero en una compra, una venta o una comisión: si el extracto no da la cifra, no lo indiques (sin él, la cifra queda como desconocida).";
     case "ecb_history_unreadable":
       return `El histórico del BCE no tiene el formato esperado${d.line === undefined ? "" : ` (línea ${text(d.line)})`}: no se ha usado. Vuelve a descargarlo con \`atlas fx update\`.`;
+    case "ecb_history_future":
+      return `El histórico del BCE trae un día posterior a hoy (${text(d.latest)}): no se ha usado. Comprueba la fecha del equipo y vuelve a descargarlo con \`atlas fx update\`.`;
     case "draft_not_needed":
       return "Ningún tipo de esta operación está esperando al BCE: regístrala como siempre, sin --draft.";
     case "draft_changed":

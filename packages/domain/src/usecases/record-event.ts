@@ -13,6 +13,7 @@ import {
 import { type ClosedYear, closedYearsTouched, unfiledPastYears } from "../filings/touched.js";
 import type { UlidGenerator } from "../ids/ulid.js";
 import { createUlidGenerator } from "../ids/ulid.js";
+import { hasOverlongDecimal, MAX_DECIMAL_DIGITS } from "../money/decimal.js";
 import { normalizeIsin } from "../projections/isin.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import type { LedgerState, Warning } from "../projections/state.js";
@@ -240,6 +241,11 @@ export const recordEvent = async <E extends SupportedEvent>(
 ): Promise<RecordResult<E>> => {
   const { events, etag } = await deps.store.load();
   const event = completeDraft<E>(deps, draft, options.id ?? createUlidGenerator(deps).next());
+  if (hasOverlongDecimal(event)) {
+    throw new ValidationError("invalid_decimal", "a decimal has more digits than a ledger takes", {
+      max: MAX_DECIMAL_DIGITS,
+    });
+  }
   if (options.acceptInvalid === true && event.type !== "settings_changed") {
     throw new ValidationError(
       "accept_invalid_not_allowed",

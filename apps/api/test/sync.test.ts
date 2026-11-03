@@ -81,6 +81,22 @@ describe("GET /api/ledger (§5.1)", () => {
     expect(full.headers.etag).toBe(`"${sha(text)}"`);
   });
 
+  it("compresses a large ledger when the client accepts gzip, with the etag of the plain bytes", async () => {
+    const api = setup();
+    const { token } = await credentials(api);
+    const text = textOf(Array.from({ length: 4000 }, () => lineOf(deposit)));
+    expect(text.length).toBeGreaterThan(256 * 1024);
+    api.s3.seed(LEDGER, text);
+    const packed = await read(api, token, "/api/ledger", { "accept-encoding": "gzip" });
+    expect(packed.headers["content-encoding"]).toBe("gzip");
+    expect(packed.isBase64Encoded).toBe(true);
+    expect(gunzipSync(Buffer.from(packed.body, "base64")).toString()).toBe(text);
+    expect(packed.headers.etag).toBe(`"${sha(text)}"`);
+    const plain = await read(api, token, "/api/ledger", { "accept-encoding": "identity" });
+    expect(plain.headers["content-encoding"]).toBeUndefined();
+    expect(plain.body).toBe(text);
+  });
+
   it("sends bytes that are not UTF-8 in base64, so not one changes", async () => {
     const api = setup();
     const { token } = await credentials(api);

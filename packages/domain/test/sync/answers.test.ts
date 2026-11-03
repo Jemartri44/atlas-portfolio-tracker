@@ -16,7 +16,7 @@ import {
 const SHA = "c".repeat(64);
 
 describe("the codes of a line (§7)", () => {
-  it("are the twelve of the table, closed", () => {
+  it("are the fourteen of the table, closed", () => {
     expect([...LINE_REJECTION_CODES]).toEqual([
       "line_unreadable",
       "schema_version_unsupported",
@@ -30,6 +30,8 @@ describe("the codes of a line (§7)", () => {
       "pair_rejected",
       "seal_mismatch",
       "waiver_not_appendable",
+      "line_too_large",
+      "ledger_too_large",
     ]);
   });
 });
