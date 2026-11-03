@@ -64,6 +64,13 @@ export {
   type SectionId,
   transmissionSection,
 } from "./tax/boxes/concepts.js";
+export {
+  CODE_WORDS,
+  PACKAGE_COLUMNS,
+  type PackageWords,
+  packageCsv,
+  rentaPackage,
+} from "./tax/boxes/package.js";
 export type * from "./tax/boxes/report.js";
 export { BOX_YEARS } from "./tax/boxes/years/index.js";
 export {
