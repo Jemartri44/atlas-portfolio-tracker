@@ -83,8 +83,6 @@ const INVOCATIONS: {
   { command: "positions", argv: ["positions"], readOnly: true },
   { command: "lots", argv: ["lots"], readOnly: true },
   { command: "cash", argv: ["cash"], readOnly: true },
-  { command: "gains", argv: ["gains", "2027"], readOnly: true },
-  { command: "income", argv: ["income", "2027"], readOnly: true },
   { command: "valuations", argv: ["valuations"], readOnly: true },
   { command: "account", argv: ["account", "list"], readOnly: true },
   { command: "asset", argv: ["asset", "list"], readOnly: true },
@@ -103,9 +101,8 @@ const INVOCATIONS: {
   // computed over a skipped event is approximate, and the answer to that is the list of what to
   // repair.
   { command: "tax", argv: ["tax", "2027"], readOnly: false },
-  // The informative returns refuse for the same reason: they value the
-  // quantities of one day, and a projection that skipped an event holds the
-  // wrong ones.
+  // The informative returns refuse for the same reason: they value the quantities of one day, and a
+  // projection that skipped an event holds the wrong ones.
   { command: "m720", argv: ["m720", "2027"], readOnly: false },
   { command: "m721", argv: ["m721", "2027"], readOnly: false },
   // `filed` writes, and it computes what to propose with the same engine: on a
@@ -338,7 +335,7 @@ describe("a line with a key twice", () => {
 
   // The remedy the message gives, walked whole: annulled, the line stops being invalid, and every
   // output that refused the ledger answers again.
-  it("is remedied by annulling it: check, compact, the renta and the 720 answer again", async () => {
+  it("is remedied by annulling it: check, compact, the tax report and the 720 answer again", async () => {
     const h = twice();
     expect(await h.exec(["tax", "2027"])).not.toBe(0);
     expect(h.text()).toContain("tax_ledger_invalid");

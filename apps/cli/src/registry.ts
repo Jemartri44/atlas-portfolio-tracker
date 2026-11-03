@@ -19,8 +19,6 @@ import { pricesCommand } from "./commands/prices.js";
 import {
   cashCommand,
   checkCommand,
-  gainsCommand,
-  incomeCommand,
   lotsCommand,
   positionsCommand,
   valuationsCommand,
@@ -67,8 +65,6 @@ export const COMMANDS: Readonly<Record<string, CommandSpec>> = {
   positions: { run: positionsCommand, arity: 1 },
   lots: { run: lotsCommand, arity: 2 },
   cash: { run: cashCommand, arity: 1 },
-  gains: { run: gainsCommand, arity: 2 },
-  income: { run: incomeCommand, arity: 2 },
   tax: { run: taxCommand, arity: 2 },
   filed: { run: filedCommand, arity: 3 },
   m720: { run: m720Command, arity: 2 },

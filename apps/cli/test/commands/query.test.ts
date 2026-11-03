@@ -51,7 +51,7 @@ const populated = async () => {
 };
 
 describe("atlas queries", () => {
-  it("shows positions, lots, cash, gains, income and a clean check", async () => {
+  it("shows positions, lots, cash, the savings base and a clean check", async () => {
     const h = await populated();
     expect(await h.exec(["positions"])).toBe(0);
     expect(h.text()).toContain("acc_fund  ast_world  10.123456");
@@ -85,28 +85,20 @@ describe("atlas queries", () => {
       "USD",
     ]);
     h.reset();
-    expect(await h.exec(["gains", "2026", "--lots"])).toBe(0);
+    expect(await h.exec(["tax", "2026"])).toBe(0);
     // First in dollars (criterion #4): 419 − 2/5 of 1,001.5 = 18.4 USD at 1.09.
-    expect(h.text()).toContain("16.88");
-    expect(h.text()).toContain("Total 2026: 16.88 EUR");
+    expect(JSON.parse(h.text()).compensation.movable_capital_eur).toBe("16.88");
     h.reset();
-    expect(await h.exec(["gains", "2027", "--json"])).toBe(0);
-    expect(h.json()).toEqual([]);
-    h.reset();
-    expect(await h.exec(["income", "2027"])).toBe(0);
-    expect(h.text()).toContain("interest");
-    expect(h.text()).toContain("4.05");
-    h.reset();
-    expect(await h.exec(["income", "2027", "--json"])).toBe(0);
-    expect((h.json() as { net_eur: string }[])[0]?.net_eur).toBe("4.05");
+    expect(await h.exec(["tax", "2027"])).toBe(0);
+    expect(JSON.parse(h.text()).movable_capital.interest).toHaveLength(1);
     h.reset();
     expect(await h.exec(["check"])).toBe(0);
     expect(h.text()).toContain("Libro íntegro");
     h.reset();
     expect(await h.exec(["check", "--json"])).toBe(0);
     expect(JSON.parse(h.out.join("\n")).findings).toEqual([]);
-    expect(await h.exec(["gains", "abc"])).toBe(64);
-    expect(await h.exec(["income"])).toBe(64);
+    expect(await h.exec(["tax", "abc"])).toBe(64);
+    expect(await h.exec(["tax"])).toBe(64);
   });
 
   it("moves the gain to the settlement year after a settings change", async () => {
@@ -115,8 +107,12 @@ describe("atlas queries", () => {
       0,
     );
     h.reset();
-    expect(await h.exec(["gains", "2027"])).toBe(0);
-    expect(h.text()).toContain("16.88");
+    expect(await h.exec(["tax", "2026"])).toBe(0);
+    expect(JSON.parse(h.text()).compensation.movable_capital_eur).toBe("0");
+    h.reset();
+    expect(await h.exec(["tax", "2027"])).toBe(0);
+    // The 16.88 of the gold sale, plus the 5 of interest of the same year.
+    expect(JSON.parse(h.text()).compensation.movable_capital_eur).toBe("21.88");
   });
 
   it("lists valuations at a date and shows corporate action origins in lots and gains", async () => {
