@@ -10,7 +10,7 @@ El contrato HTTP de la Lambda de la API (`apps/api`), que se alcanza **solo a tr
 
 - **Un solo origen.** La SPA y la API comparten distribución de CloudFront: la cookie es del mismo sitio y **la API no responde a CORS** (ADR-0028, fila 6). El navegador nunca llama a la Function URL directamente.
 - **`Authorization` no se usa nunca.** CloudFront la sobrescribe para firmar con OAC (ADR-0027, hecho 1). La única credencial es la cookie (§2).
-- **Todo `POST` lleva `x-amz-content-sha256`** con el SHA-256 hexadecimal del cuerpo exacto (ADR-0027, hecho 2). Si falta o no cuadra, la petición la rechaza AWS **antes** de llegar a la Lambda, con una respuesta que **no** tiene el formato de error de §7: el cliente la trata como `transport_rejected` y nunca como un rechazo de sus líneas.
+- **Todo `POST` y todo `PUT` lleva `x-amz-content-sha256`** con el SHA-256 hexadecimal del cuerpo exacto (ADR-0027, hecho 2). Si falta o no cuadra, la petición la rechaza AWS **antes** de llegar a la Lambda, con una respuesta que **no** tiene el formato de error de §7: el cliente la trata como `transport_rejected` y nunca como un rechazo de sus líneas.
 - **Cuerpo JSON obligatorio** en toda petición que escribe (`Content-Type: application/json`), incluso vacío (`{}`): es una de las defensas contra la falsificación de peticiones de ADR-0027.
 - **Fechas** en ISO 8601; instantes en UTC con `Z`. **Importes**, si alguna vez viajan fuera de una línea del libro, como cadenas (ADR-0005).
 - **Ninguna ruta de datos redirige.** Solo las del inicio de sesión (§3) responden con `302`.
@@ -236,6 +236,22 @@ Decidido el 2026-10-06 (ADR-0035, pregunta 1, y ADR-0029, punto 9, opción B). U
 - **No se comprime, no se cachea y no se versiona en el cliente:** como todo `/api/*`, `Cache-Control: no-store`; la web no guarda ningún borrador en el dispositivo (ADR-0035, §3).
 
 
+### 6.2 La exposición por activo
+
+Decidido el 2026-11-03. La exposición **por divisa y por región** de cada activo la teclea el dueño y no se puede rehacer desde nada, así que no es un dato de referencia ni va en el libro (cambiaría `schema_version`, `docs/data-schema.md` §5, enmienda de ADR-0018): es **un objeto del bucket de datos**, `settings/exposure.json` (`docs/data-schema.md` §1), que solo escribe la API. Con la cookie (§2.3); toda escritura comprueba `Origin` y lleva `x-amz-content-sha256` (§1). La consola no lo toca.
+
+| Ruta | Qué hace |
+|---|---|
+| `GET /api/exposure` | `200` con los bytes guardados, **sin leerlos ni juzgarlos**, y `ETag: "<sha256 de los bytes>"` (el mismo ETag que el libro, §5.1). `404 not_found` (`details.reason = "missing"`) si el objeto no existe. `Cache-Control: no-store` |
+| `PUT /api/exposure` | Cuerpo: **el objeto entero** (`{ "exposure_format": 1, "assets": { … } }`). Exige `If-Match: "<ETag leído>"` o, si no existía, `If-None-Match: *`. `200 { "etag" }` (y la cabecera `ETag`) con el del objeto nuevo. Se guarda en su forma canónica (JSON compacto y salto de línea final), validado |
+
+- **Un solo validador, `validateExposure`** (`@atlas/domain/portfolio`), para quien escribe (la API) y para quien lee (`exposure()`): cada dimensión presente no vacía; porcentajes como cadenas decimales, sin negativos y que suman **exactamente 100**; divisa = tres letras mayúsculas, región = `snake_case` en minúsculas de hasta 40 caracteres; sin claves repetidas ni claves de primer nivel distintas de `exposure_format` y `assets`; `exposure_format` = 1; como mucho **200** activos y **65.536 bytes**; el `asset_id` con la forma `^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$` (no se comprueba contra el libro: un activo que aún no existe se puede declarar).
+- **Errores:** sin `If-Match` ni `If-None-Match: *`, `428 precondition_required`; con las dos, `400 body_invalid` (`reason = "preconditions"`); más de 64 KiB, `413 body_too_large` (`details.limit`); un objeto que no valida, `400 body_invalid` con `details.reason` (`json`, `repeated_key`, `format`, `top_level_key`, `too_many_assets`, `asset_id`, `asset`, `dimension`, `empty`, `key`, `percent`, `negative` o `total`) y, para el reparto que no suma 100, `details.asset_id`, `details.dimension` y `details.total` (lo que suma). Un `If-Match` que no es el ETag actual, uno sobre un objeto que no existe, o `If-None-Match: *` sobre uno que existe: `412 precondition_failed` (el mismo código que el libro); nada escrito. Si el objeto cambia entre la lectura y la escritura, S3 lo rechaza y también es `412`.
+- **Leer un objeto inválido es «sin dato»**, nunca una estimación y nunca un fallo de la ruta: el `GET` devuelve los bytes tal cual y quien los usa (`exposureOrNone`, dominio) trata como ausente lo que no valida. Un objeto escrito a mano en el bucket puede estar así.
+- **Permisos:** el rol de la API tiene `GetObject` y `PutObject` **solo** sobre esa clave, y `settings/*` en el prefijo de su `ListBucket` (para que una ausente sea `404` y no `403`); ningún borrado (ADR-0034, nota del 2026-11-03). El objeto lo copian `atlas backup --from-bucket` y el volcado mensual (ADR-0032).
+- **Registros de la Lambda:** solo el código (`exposure_read`, `exposure_written` o el del error). Nunca un activo ni un porcentaje.
+
+
 ## 7. Errores
 
 Todo error de la Lambda tiene esta forma, sin mensaje en lenguaje natural (lo ponen las interfaces, que traducen cada código, `tests/messages.test.ts`):
@@ -252,8 +268,8 @@ Todo error de la Lambda tiene esta forma, sin mensaje en lenguaje natural (lo po
 | `origin_rejected` | 403 | Escritura con cookie y `Origin` ajeno |
 | `body_invalid` | 400 | Cuerpo que no cumple el de la ruta (campo desconocido, `device_id`, salto de línea en `line`, un cuerpo que no es `{}` en `logout-all`…) |
 | `body_not_json` | 415 | Cuerpo que no es JSON en una ruta que escribe |
-| `precondition_required` | 428 | `POST /api/ledger/lines` sin `If-Match` |
-| `precondition_failed` | 412 | `If-Match` distinto del etag actual; nada escrito |
+| `precondition_required` | 428 | `POST /api/ledger/lines` sin `If-Match`; `PUT /api/exposure` sin `If-Match` ni `If-None-Match: *` (§6.2) |
+| `precondition_failed` | 412 | `If-Match` distinto del etag actual (también en `PUT /api/exposure`, §6.2); nada escrito |
 | `not_found` | 404 | Ruta que no existe; y en §6.1, un borrador que no existe (`details.reason`: `draft_missing`) |
 | `internal` | 500 | Cualquier otro fallo; nada escrito |
 | `remote_unavailable` | 503 | Fallo transitorio de SSM o de S3; se puede reintentar (`Retry-After: 5`, `details.dependency`: `ssm` \| `s3`). Nunca deja pasar una credencial |
@@ -284,6 +300,7 @@ Fuera de la Lambda: `transport_rejected` es el nombre que da **el cliente** a un
 | El prefijo de SSM y sus permisos, y la política de origen que reenvía `Origin` a `/api/*` (sin él, toda escritura se rechaza con `origin_rejected`, §2; revisión de la PR #90, ronda 2) | **017** |
 | `POST /api/auth/logout-all` y su marca (§3), y la retirada del token de la consola | ADR-0037 |
 | Los borradores en la nube: §6.1, el prefijo `drafts/` del rol de la API sin permiso de borrado, el puerto sobre la API y el cliente de la web | **027** (E6 de ADR-0035) |
+| La exposición por activo: §6.2, `settings/exposure.json`, `validateExposure` y las rutas `GET`/`PUT /api/exposure` (la pantalla, aparte) | exposición en la nube |
 
 ## 9. Parámetros de SSM y configuración de la Lambda
 
