@@ -51,7 +51,6 @@ const Refusal = (props: { error: AppError }): JSX.Element => (
 const Split = (props: { view: ContributionView }): JSX.Element => {
   const wide = mediaQuery(GRID);
   const active = (): ContributionRowView[] => props.view.rows.filter((row) => !row.idle);
-  const _idle = (): string[] => props.view.rows.filter((row) => row.idle).map((row) => row.name);
   return (
     <>
       <dl class="kpis">
