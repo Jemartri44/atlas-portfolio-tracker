@@ -154,6 +154,9 @@ export const FISCAL_CRITERIA = {
   "18:single_purchase": { doc: "18", certainty: "high", risk: "aggressive" },
   "18:single_purchase_etc": { doc: "18", certainty: "medium", risk: "aggressive" },
   "19": { doc: "19", certainty: "high", risk: "aggressive" },
+  // The deferred loss rides the repurchased units closest to the sale; the
+  // other reading, the oldest, releases it sooner.
+  "19b": { doc: "19b", certainty: "medium", risk: "conservative" },
   "20": { doc: "20", certainty: "medium", risk: "aggressive" },
   "21": { doc: "21", certainty: "medium", risk: "both" },
   "22": { doc: "22", certainty: "medium", risk: "neutral" },
@@ -213,6 +216,7 @@ export const CRITERION_IDS: readonly CriterionId[] = [
   "18:single_purchase",
   "18:single_purchase_etc",
   "19",
+  "19b",
   "20",
   "21",
   "22",

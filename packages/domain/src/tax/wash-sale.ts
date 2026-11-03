@@ -109,6 +109,13 @@ export interface WindowSpan {
   end: CivilDate;
 }
 
+/**
+ * Which repurchased units carry a deferred loss when more are inside the
+ * window than the loss needs (#19b): the closest in date to the sale, or the
+ * oldest. Only the first is applied; the second is the other reading.
+ */
+export type DeferralOrder = "nearest" | "oldest";
+
 /** The rule applied to one transmission (one entry of `state.gains`). */
 export interface WashSaleOutcome {
   gain_index: number;
@@ -148,6 +155,8 @@ export interface WashSaleOutcome {
   mixed_lots: boolean;
   /** The release changed what the rule looked at (#21). */
   reapplied: boolean;
+  /** More units were inside the window than the loss needed, so some carry it and some do not (#19b). */
+  chose_carriers: boolean;
   /** Deferral with the alternative reading minus the current one, per criterion. */
   alternatives: { "18": Money; "19": Money; "21": Money };
   /**
@@ -226,6 +235,40 @@ const share = (total: Money, part: Quantity, whole: Quantity): Money =>
 const unitShare = (total: Quantity, part: Quantity, whole: Quantity): Quantity =>
   part.eq(whole) ? total : Quantity.of(total.value.mul(part.value).div(whole.value));
 
+/**
+ * The candidates in the order that loads them (#19b): the closest in date to
+ * the sale first, or the oldest; at equal rank, the order of pass B.
+ */
+const ordered = (found: Candidate[], sale: CivilDate, order: DeferralOrder): Candidate[] => {
+  const distance = (candidate: Candidate): number =>
+    Math.abs(daysBetween(sale, candidate.acquisition.fiscal_date));
+  const first = (a: Candidate, b: Candidate): number =>
+    order === "oldest"
+      ? a.acquisition.fiscal_date.localeCompare(b.acquisition.fiscal_date)
+      : distance(a) - distance(b);
+  return found.sort((a, b) => first(a, b) || a.position - b.position);
+};
+
+/** The units each candidate takes when `units` are loaded in this order, by position. */
+const carriers = (list: readonly Candidate[], units: Quantity): Map<number, string> => {
+  const taken = new Map<number, string>();
+  let left = units;
+  for (const candidate of list) {
+    if (!left.isPositive()) {
+      break;
+    }
+    if (candidate.available.isPositive()) {
+      const take = candidate.available.gt(left) ? left : candidate.available;
+      taken.set(candidate.position, take.toString());
+      left = left.sub(take);
+    }
+  }
+  return taken;
+};
+
+const sameCarriers = (a: Map<number, string>, b: Map<number, string>): boolean =>
+  a.size === b.size && [...a].every(([position, units]) => b.get(position) === units);
+
 class Walker {
   private readonly quantity = new Map<string, Quantity>();
   private readonly assetOf = new Map<string, AssetId>();
@@ -257,6 +300,7 @@ class Walker {
     private readonly firstOpen: Map<string, number>,
     private readonly scales: Map<AssetId, ScaleMark[]>,
     private readonly yearOf: ((eventId: Ulid) => number) | undefined,
+    private readonly order: DeferralOrder,
   ) {
     for (const list of acquired.values()) {
       for (const entry of list) {
@@ -464,6 +508,7 @@ class Walker {
       used_before: false,
       mixed_lots: signs.size > 1,
       reapplied: false,
+      chose_carriers: false,
       alternatives: { "18": zero(), "19": zero(), "21": zero() },
       single_purchase_eur: zero(),
     };
@@ -497,6 +542,20 @@ class Walker {
     const candidates = this.candidates(gain, start, end, journalIndex, outcome);
     const available = candidates.reduce((sum, c) => sum.add(c.available), Quantity.ZERO);
     const units = available.gt(sold) ? sold : available;
+    // #19b only matters when the two readings load different units.
+    outcome.chose_carriers =
+      available.gt(sold) &&
+      !sameCarriers(
+        carriers(candidates, units),
+        carriers(
+          ordered(
+            [...candidates],
+            gain.fiscal_date,
+            this.order === "oldest" ? "nearest" : "oldest",
+          ),
+          units,
+        ),
+      );
     const deferred = units.isZero() ? zero() : share(outcome.deferrable_eur, units, sold);
     if (this.exemptUnits.isPositive()) {
       // What the exception kept from deferring, once the posterior purchases
@@ -667,11 +726,10 @@ class Walker {
     if (found.some((c) => c.usedBefore.isPositive())) {
       outcome.used_before = true;
     }
-    // The closest in date first (data-schema.md §8.4); at equal distance, the
-    // order of pass B.
-    const distance = (candidate: Candidate): number =>
-      Math.abs(daysBetween(gain.fiscal_date, candidate.acquisition.fiscal_date));
-    return found.sort((a, b) => distance(a) - distance(b) || a.position - b.position);
+    // The closest in date first (data-schema.md §8.4, criterion #19b); at
+    // equal distance, the order of pass B. The other reading, the oldest first,
+    // only when it is measured.
+    return ordered(found, gain.fiscal_date, this.order);
   }
 
   private allocate(
@@ -871,6 +929,7 @@ export const walkWashSales = (
   eventTypes: Map<Ulid, string>,
   /** The tax year an event belongs to; without it no year is closed on the way. */
   yearOf?: (eventId: Ulid) => number,
+  order: DeferralOrder = "nearest",
 ): WashSaleResult => {
   const firstOpen = new Map<string, number>();
   const scales = new Map<AssetId, ScaleMark[]>();
@@ -903,6 +962,7 @@ export const walkWashSales = (
     firstOpen,
     scales,
     yearOf,
+    order,
   );
   walker.walk();
   return {
