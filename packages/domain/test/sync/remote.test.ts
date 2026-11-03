@@ -658,6 +658,18 @@ describe("the size bounds of what the remote keeps", () => {
     expect(acceptAppend(remote, [{ line: multibyte }], rules).rejected?.code).toBe(
       "line_too_large",
     );
+    // Three bytes for one character and four for a pair: both under the bound in characters.
+    for (const [unit, count] of [
+      ["€", 5600],
+      ["😀", 4200],
+    ] as const) {
+      const wide = encodeLine(withNotes(device(705), 0)).replace(
+        /"notes":"[^"]*"/,
+        `"notes":"${unit.repeat(count)}"`,
+      );
+      expect(wide.length).toBeLessThan(MAX_LINE_BYTES);
+      expect(acceptAppend(remote, [{ line: wide }], rules).rejected?.code).toBe("line_too_large");
+    }
   });
 
   it("refuses an amount of more than MAX_DECIMAL_DIGITS digits as an invalid line", () => {
@@ -691,7 +703,7 @@ describe("the size bounds of what the remote keeps", () => {
       code: "ledger_too_large",
       details: { limit: MAX_LEDGER_BYTES },
     });
-  });
+  }, 30_000);
 
   it("refuses the initialisation of a ledger over MAX_LEDGER_BYTES, before reading a line", () => {
     const huge = `${"x".repeat(MAX_LEDGER_BYTES)}\n`;

@@ -52,7 +52,10 @@ export const MAX_LINE_BYTES = 16 * 1024;
  */
 export const MAX_LEDGER_BYTES = 8 * 1024 * 1024;
 
-/** The bytes of `text` in UTF-8, counted without building them (a lone surrogate counts as 3, as `utf8Encode`). */
+/**
+ * The bytes of `text` in UTF-8, counted without building them. A surrogate pair is 4 bytes; a lone
+ * surrogate never gets here (`textRefusal` refuses it, and the remote holds none).
+ */
 const byteLength = (text: string): number => {
   let bytes = 0;
   for (let i = 0; i < text.length; i += 1) {
@@ -61,7 +64,7 @@ const byteLength = (text: string): number => {
       bytes += 1;
     } else if (unit < 0x800) {
       bytes += 2;
-    } else if (unit >= 0xd800 && unit <= 0xdbff && (text.charCodeAt(i + 1) & 0xfc00) === 0xdc00) {
+    } else if (unit >= 0xd800 && unit <= 0xdbff) {
       bytes += 4;
       i += 1;
     } else {
