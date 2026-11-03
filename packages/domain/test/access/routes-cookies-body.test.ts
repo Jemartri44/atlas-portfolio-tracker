@@ -77,7 +77,11 @@ describe("the routes and what each admits (api §2.3)", () => {
       "POST /api/drafts",
       "POST /api/drafts/{id}/stamp",
       "POST /api/drafts/{id}/end",
+      "PUT /api/exposure",
     ]);
+    expect(findRoute("PUT", "/api/exposure")?.policy).toBe("session");
+    expect(findRoute("GET", "/api/exposure")?.writes).toBe(false);
+    expect(findRoute("POST", "/api/exposure")).toBeUndefined();
   });
 
   it("gives every route but the sign-in and the logout to the session cookie alone", () => {
