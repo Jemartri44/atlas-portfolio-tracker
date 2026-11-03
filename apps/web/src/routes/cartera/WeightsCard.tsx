@@ -131,15 +131,7 @@ interface WeightsCardProps {
 
 export const WeightsCard = (props: WeightsCardProps): JSX.Element => {
   return (
-    <Section
-      title="Pesos frente al objetivo"
-      class="span-7 is-natural"
-      aside={
-        <Show when={props.threshold}>
-          {(threshold) => <span>umbral ±{formatDecimalString(threshold())} pp</span>}
-        </Show>
-      }
-    >
+    <Section title="Pesos frente al objetivo" class="span-7 is-natural">
       <Show
         when={props.view.classes.length > 0}
         fallback={<p class="meta">Todavía no hay nada en la cartera principal.</p>}
@@ -149,6 +141,11 @@ export const WeightsCard = (props: WeightsCardProps): JSX.Element => {
             <dt>Cartera principal</dt>
             <dd class="kpi-lead">
               <Amount value={props.view.total} decimals={0} missingReason="sin precio" />
+              <Show when={props.view.partial}>
+                <Tag icon="half" title={`Faltan: ${props.view.missing.join(", ")}`}>
+                  parcial
+                </Tag>
+              </Show>
             </dd>
           </div>
           <Show when={props.threshold}>

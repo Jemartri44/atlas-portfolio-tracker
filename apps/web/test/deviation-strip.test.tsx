@@ -2,7 +2,8 @@
 //
 // The deviation of each asset class as a strip, in ink and without a band, with «N activos fuera de
 // umbral» taken from the warnings of the domain and never from comparing figures; the full strip,
-// with its band and its coloured dot, stays per asset (the `Gauge`).
+// with its band and its coloured dot, stays per asset (the `Gauge`). The table of a computer says the
+// deviation in figures only: the bullet bars above it draw it already.
 
 import { describe, expect, it } from "vitest";
 import Cartera from "../src/routes/cartera/index.jsx";
@@ -50,10 +51,11 @@ describe("the strip of each class", () => {
     }
   });
 
-  it("is in the table too, beside the figure, and the full gauge stays per asset", async () => {
+  it("leaves the table with its figure only (the bullet bar says it), and the gauge per asset", async () => {
     const host = await show("/cartera?fecha=2027-01-10", Cartera);
     const table = weights(host)?.querySelector('table[aria-label="Pesos por tipo de activo"]');
-    expect(table?.querySelectorAll("svg.strip")).toHaveLength(4);
+    expect(table?.querySelectorAll("svg.strip")).toHaveLength(0);
+    expect(text(table)).toMatch(/[+−-]\d+,\d+\spp/);
     expect(weights(host)?.querySelectorAll("svg.gauge")).toHaveLength(6);
     expect(weights(host)?.querySelectorAll("svg.gauge.is-off")).toHaveLength(5);
   });

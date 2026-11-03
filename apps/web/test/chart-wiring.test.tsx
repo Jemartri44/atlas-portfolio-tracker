@@ -311,4 +311,13 @@ describe("the bullet bar of a class", () => {
   it("keeps a weight far above its target inside the bar", () => {
     expect(bulletScale({ value: 90, target: 10, assetClass: "crypto" })).toBeGreaterThan(90);
   });
+
+  it("puts the weight where its scale says, and never a figure of money", () => {
+    const host = mount(() => <Bullet value={60} target={55} threshold={5} assetClass="equity" />);
+    const scale = bulletScale({ value: 60, target: 55, threshold: 5, assetClass: "equity" });
+    expect(
+      Number.parseFloat(host.querySelector(".bullet-bar")?.getAttribute("width") ?? ""),
+    ).toBeCloseTo((60 / scale) * 100, 1);
+    expect(host.textContent ?? "").not.toMatch(/€|EUR/);
+  });
 });

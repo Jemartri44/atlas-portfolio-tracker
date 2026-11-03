@@ -9,6 +9,7 @@
 import { describe, expect, it } from "vitest";
 import Cartera from "../src/routes/cartera/index.jsx";
 import { press, settle, show, text, type, until, withGoldenLedger } from "./helpers/render.jsx";
+import { withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
 
@@ -93,5 +94,41 @@ describe("the rebalance card", () => {
     expect(host.querySelector<HTMLButtonElement>("button[disabled]")?.textContent ?? "").toContain(
       "Calcular rebalanceo",
     );
+  });
+});
+
+describe("the cards of the portfolio by device", () => {
+  it("fold the rebalance on a phone, «mejor en el ordenador», and keep its field there", async () => {
+    withStyles(390);
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    const rebalance = card(host, "Rebalancear");
+    const fold = rebalance?.querySelector("details");
+    expect(text(fold?.querySelector("summary"))).toContain("mejor en el ordenador");
+    expect(fold?.querySelector("input")).not.toBeNull();
+  });
+
+  it("show the rebalance and the calculation of the split whole on a computer", async () => {
+    withStyles(1440, 900);
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    expect(card(host, "Rebalancear")?.querySelector("details")).toBeNull();
+    const split = card(host, "Aportación de");
+    expect(
+      split?.querySelector('table[aria-label="Cálculo del reparto"]')?.closest("details"),
+    ).toBeNull();
+    // The note that nothing was recorded is in sight on every device.
+    expect(text(split)).toContain("nada se ha registrado");
+  });
+
+  it("fold the calculation on a phone and keep the note in sight", async () => {
+    withStyles(390);
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    const split = card(host, "Aportación de");
+    expect(
+      split?.querySelector('table[aria-label="Cálculo del reparto"]')?.closest("details"),
+    ).not.toBeNull();
+    const note = [...(split?.querySelectorAll(".note-line") ?? [])].find((line) =>
+      text(line).includes("nada se ha registrado"),
+    );
+    expect(note?.closest("details")).toBeNull();
   });
 });
