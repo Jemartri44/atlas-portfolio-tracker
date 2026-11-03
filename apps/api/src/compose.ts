@@ -21,6 +21,15 @@ export interface ProductionParts {
   readonly log: (line: string) => void;
 }
 
+/** Google answers in well under a second; past this the request becomes `503`, not a CloudFront 504. */
+export const IDENTITY_TIMEOUT_MS = 10_000;
+
+/** `fetch` that gives up after `ms` unless the caller brought its own signal. */
+export const withTimeout =
+  (inner: typeof fetch, ms: number): typeof fetch =>
+  (input, init) =>
+    inner(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(ms) });
+
 export const compose = async (
   env: Readonly<Record<string, string | undefined>>,
   parts: ProductionParts,
@@ -37,7 +46,10 @@ export const compose = async (
     config,
     objects: parts.objects(config.dataBucket),
     parameters,
-    identity: new GoogleIdentity({ fetch: parts.fetch, now: () => Date.now() }),
+    identity: new GoogleIdentity({
+      fetch: withTimeout(parts.fetch, IDENTITY_TIMEOUT_MS),
+      now: () => Date.now(),
+    }),
     now: () => new Date(),
     random: (bytes) => new Uint8Array(randomBytes(bytes)),
     log: parts.log,
