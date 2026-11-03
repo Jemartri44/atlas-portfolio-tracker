@@ -1,6 +1,6 @@
 # ADR-0032 — Copias de seguridad y restauración del libro
 
-**Estado:** Aceptada (2026-09-24). **La capa 1 (réplicas de dispositivos) y el paso 6 (que cada dispositivo detecte la reescritura) quedan reemplazados por [ADR-0035](0035-cloud-ledger-single-source.md)**: los dispositivos no guardan réplica, y tras una restauración el siguiente `412` recarga el libro; ver la sección final. **Enmendada el mismo día** tras la revisión de la PR #72 (ver al final). **Nota del cierre de la feature 013** (2026-09-25): los precios del volcado no necesitan ninguna exclusión (ver al final). Ronda 8. Las capas de copia las fija la dirección (versionado de S3, volcado periódico y la exportación local que ya existe); este documento diseña **cómo se restaura** y cómo se comprueba que se puede, porque una copia que nunca se ha restaurado no es una copia. Responde a la pregunta de la Ronda 8 original sobre la copia fuera de AWS.
+**Estado:** Aceptada (2026-09-24); la capa 1 y el paso 6 los reemplaza ADR-0035.
 
 ## Contexto
 
@@ -66,9 +66,9 @@ Decidida por la dirección el mismo día. El paso 5 se apoyaba en `LedgerStore.r
 
 La segunda enmienda de ADR-0031 pedía excluir `cache/` de los volcados mensuales, porque allí iban a vivir los datos de CoinGecko, cuyas condiciones desaconsejan acumularlos. **Esa exclusión ya no hace falta**: CoinGecko salió de la feature 013 (ADR-0031, tercera enmienda) y **`cache/` no existe**. Lo que el paso 3 llama «los precios» es `prices/` entero —los cierres, `symbols.json`, `_status.json` y `config.json`—, y **ninguno guarda claves ni direcciones**: las claves viven fuera de la carpeta del libro, en `~/.config/atlas/secrets.json`, y en la nube en SSM (`docs/data-schema.md` §1). Hoy `atlas backup` copia solo el libro; el volcado mensual con precios llegará con las tareas programadas.
 
-## Nota del 2026-09-25 (decisión del usuario; ADR-0034 propuesta)
+## Nota del 2026-09-25 (decisión del usuario; ADR-0034 aceptada)
 
-No habrá cuentas miembro dedicadas: Atlas se despliega en una cuenta de AWS que el usuario comparte con otros proyectos, con `dev` y `prod` en ella (ADR-0028, nota del mismo día; ADR-0034, propuesta). Dos cosas cambian aquí:
+No habrá cuentas miembro dedicadas: Atlas se despliega en una cuenta de AWS que el usuario comparte con otros proyectos, con `dev` y `prod` en ella (ADR-0028, nota del mismo día; ADR-0034, aceptada). Dos cosas cambian aquí:
 
 - **«Si se pierde la cuenta de producción»** deja de ser un caso aparte: la cuenta de `prod` es la de los otros proyectos del usuario. Perderla (cierre, suspensión o compromiso) se recupera igual —Terraform levanta la pila en otra cuenta, el libro vuelve desde una réplica o el disco, y `documents/` e `imports/` desde el disco—, pero **esa otra cuenta no existe todavía** y habría que crearla entonces. Las capas 1 y 4 (réplicas y disco) son las que no dependen de la cuenta, y ahora pesan más.
 - **El ensayo de la etapa de despliegue** no puede perder una cuenta compartida para ensayar. Pasa a ser: **vaciar el bucket de `dev` con su rol de administración** (el de despliegue no puede, porque la política del bucket le niega los objetos), cancelar el plan Free de `dev` si lo tiene, **destruir `dev` y levantarlo restaurando el libro sintético desde la copia fuera de AWS**, y comprobar que vuelve entero. La regla de no ensayar nunca con datos reales en `dev` no cambia.
@@ -88,7 +88,7 @@ El paso 5 lee además la copia como UTF-8 estricto: un byte que no lo es se nieg
 
 ## Nota del 2026-09-28 (cierre de la feature 016): el volcado y la prueba trimestral, construidos
 
-Decidida por la dirección en la revisión de la PR #109 (`specs/016-scheduled-jobs/questions.md (en el historial de git)` §20 a §22). El detalle del formato está en `docs/data-schema.md` §1 y en `specs/016-scheduled-jobs/data-model.md` §1 y §4; qué hacer con cada aviso, en [`docs/runbooks/scheduled-warnings.md`](../runbooks/scheduled-warnings.md).
+Decidida por la dirección en la revisión de la PR #109 (`specs/016-scheduled-jobs/questions.md (en el historial de git)` §20 a §22). El detalle del formato está en `docs/data-schema.md` §1 y en `specs/016-scheduled-jobs/data-model.md` (retirada; en git) §1 y §4; qué hacer con cada aviso, en [`docs/runbooks/scheduled-warnings.md`](../runbooks/scheduled-warnings.md).
 
 - **Qué vuelca la capa 3**, en `backups/<YYYY-MM>/` del mes de Madrid y en este orden: el libro byte a byte; `positions.json`, del libro **del mismo volcado**; el histórico del BCE en vigor, `eurofxref-hist.csv` o `api-exr.csv`, y después su manifiesto; y el primer nivel de `prices/`. **`previous/` no se vuelca.** Sin histórico que cuadre con su manifiesto va sin BCE, y lo dice `backup_ecb_missing`; con un libro que no se proyecta va sin `positions.json` (`backup_positions_missing`).
 - **Un volcado nunca se sobrescribe.** Cada objeto se escribe con `If-None-Match: *`, y la política del bucket lo impone (ADR-0034, nota del 2026-09-28). Un reintento del mismo mes solo guarda como suyo (`kept_from_earlier_attempt`) un objeto con los bytes que un intento anterior **anotó en su registro antes de escribirlo**; cualquier otro es `backup_object_differs`, el volcado para y se trata como un incidente.
@@ -106,3 +106,7 @@ Con [ADR-0035](0035-cloud-ledger-single-source.md), sin cola ni réplicas en los
 - **Se conserva:** `compact` y la restauración como operaciones de administración sobre el remoto (pasos 1 a 5), y la prueba anual de restauración. Si la nube desaparece, la consola trabaja en local sobre la última copia y después se usa `atlas admin restore`.
 
 Lo que ADR-0035 retira del código se retira en sus entregas E1 a E5; hasta entonces, el código sigue como está.
+
+## Notas de estado
+
+Aceptada (2026-09-24). **La capa 1 (réplicas de dispositivos) y el paso 6 (que cada dispositivo detecte la reescritura) quedan reemplazados por [ADR-0035](0035-cloud-ledger-single-source.md)**: los dispositivos no guardan réplica, y tras una restauración el siguiente `412` recarga el libro; ver la sección final. **Enmendada el mismo día** tras la revisión de la PR #72 (ver al final). **Nota del cierre de la feature 013** (2026-09-25): los precios del volcado no necesitan ninguna exclusión (ver al final). Ronda 8. Las capas de copia las fija la dirección (versionado de S3, volcado periódico y la exportación local que ya existe); este documento diseña **cómo se restaura** y cómo se comprueba que se puede, porque una copia que nunca se ha restaurado no es una copia. Responde a la pregunta de la Ronda 8 original sobre la copia fuera de AWS.

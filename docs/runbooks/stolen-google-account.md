@@ -15,7 +15,7 @@ Las órdenes que reescriben la nube u olvidan un dispositivo **no admiten `--yes
 ## 1. Quitar tu cuenta de la lista permitida
 
 - La lista vive en SSM, en `/atlas/<entorno>/auth/allow-list`, y la escribe el guion de secretos (ADR-0034, fila 21). Es `{"allow_list_format":1,"entries":[{"sub":"…","email":"…"}]}`.
-- Quita el par `{sub, email}` de la cuenta. La API consulta la lista **en cada petición**, con una caché de como mucho 120 s (`specs/015-api-access/plan.md` §6 (a)).
+- Quita el par `{sub, email}` de la cuenta. La API consulta la lista **en cada petición**, con una caché de como mucho 120 s (`docs/api.md` §2).
 - Desde ahí, **ninguna** sesión ni token de esa cuenta pasa (`not_allowed`).
 - Si el guion no está disponible, con la CLI de AWS y el rol de administración. **El par no se escribe nunca en la línea de órdenes**, que lo dejaría en el historial del shell: la lista va por un fichero con permisos `600` en `~/.config/atlas/`, que se borra en el paso 6.
   ```sh
@@ -52,7 +52,7 @@ Es el procedimiento [Revocar todos los tokens](revoke-all-tokens.md), que tiene 
     --value="$(head -c 32 /dev/urandom | basenc --base64url -w 0 | tr -d '=')"
   ```
   `--value=` va pegado: una clave que empezara por `-` se tomaría por una opción y no se escribiría nada.
-- **Espera 5 minutos**, que es la caché de los secretos (`specs/015-api-access/plan.md` §6 (c): 300 s).
+- **Espera 5 minutos**, que es la caché de los secretos (`docs/api.md` §9: 300 s).
 - A partir de ahí, **toda cookie firmada con la clave anterior da `session_invalid`**. Eso cierra las sesiones web del intruso e invalida los códigos de consola pendientes.
 
 *Probado con los dobles*: tras rotar la clave y vencer la caché, una cookie anterior da `session_invalid` (`apps/api/test/sign-in.test.ts`, «closes every session when the session key is rotated and its cache expires»). *Sin probar*: contra AWS real (018).

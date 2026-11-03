@@ -1,6 +1,6 @@
 # ADR-0009 — Ámbito del FIFO y activos compartidos entre libros
 
-**Estado:** Aceptada (2026-08-30). *Verificar con asesor fiscal.* **Enmendada el 2026-09-24** (feature 012): el lote de una corrección conserva el sitio de su raíz; ver al final.
+**Estado:** Aceptada (2026-08-30); criterio de Atlas; enmendada el 2026-09-24.
 
 ## Contexto
 

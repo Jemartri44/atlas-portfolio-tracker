@@ -1,6 +1,6 @@
 # ADR-0030 — Importe en euros liquidado por el bróker, como dato informativo
 
-**Estado:** Aceptada (2026-09-24). **Enmendada el mismo día** al contestar las preguntas del prompt 012 (ver al final). Ronda 8. Decisión de la dirección: **guardar el dato para que exista**. Qué cifra manda en la fiscalidad **no se decide aquí**: es parte de la disputa del criterio #4 de `docs/fiscal-questions.md`. *Verificar con asesor* lo que se haga con él.
+**Estado:** Aceptada (2026-09-24); enmendada el mismo día; acotada por ADR-0036.
 
 ## Contexto
 
@@ -46,3 +46,7 @@ Decidida por la dirección al contestar las preguntas del prompt 012 (`docs/prom
 ## Nota del 2026-10-27 (spec 029, ADR-0036 Aceptada)
 
 ADR-0036 decide que `broker_settled_eur` **valore lo que convirtió el bróker**: si una operación lo trae, la compra se financia con esos euros, y una venta, un dividendo o una comisión imputan ese día la diferencia de cambio (`4:auto_conversion`). Lo lee un solo módulo más (`projections/currency-lots.ts`), en la lista cerrada del test de arquitectura. La pregunta de este ADR sobre `cashBalances` y la conversión automática **sigue abierta** hasta ver un extracto real de IBKR. Con ADR-0036 aceptada, el punto «Qué no hace» de la decisión deja de valer para las cifras de la divisa.
+
+## Notas de estado
+
+Aceptada (2026-09-24). **Enmendada el mismo día** al contestar las preguntas del prompt 012 (ver al final). Ronda 8. Decisión de la dirección: **guardar el dato para que exista**. Qué cifra manda en la fiscalidad **no se decide aquí**: es parte de la disputa del criterio #4 de `docs/fiscal-questions.md`. Lo que se haga con él es criterio de Atlas.

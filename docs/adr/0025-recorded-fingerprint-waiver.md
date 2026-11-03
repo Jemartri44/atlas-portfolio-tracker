@@ -1,6 +1,6 @@
 # ADR-0025 — La salida de `compact` ante una huella no verificable queda registrada en el libro
 
-**Estado:** Aceptada (2026-09-23), por decisión de la dirección, que añade la condición de atomicidad de la sección «La renuncia y la compactación son todo o nada». **Enmendada el mismo día** tras la revisión adversarial de la feature 011 (ver «Enmienda del 2026-09-23» al final), con la enmienda aceptada por la dirección. Nace de la pendiente 3 de `docs/pendientes-post-010.md` y del bloque 8 del prompt 011, cuyas decisiones (a), (b) y (d) fija la dirección.
+**Estado:** Aceptada (2026-09-23); enmendada el mismo día.
 
 ## Contexto
 
@@ -71,3 +71,7 @@ Aceptada por la dirección el mismo día. La revisión reprodujo tres huecos en 
 3. **Nadie queda encerrado por ningún motivo, tampoco por `lines`.** Con la presentación en vigor, un caso `lines` no tenía salida: resellar mueve el recuento de líneas que la instantánea lleva de esa presentación, y la compactación fallaba siempre con `projection_changed`. La lectura **anterior** a la reescritura se toma con ese recuento ya puesto, **solo para las presentaciones con renuncia y solo en ese campo**; la comparación sigue siendo exacta en todo lo demás, que es la red de `compact` y no se afloja.
 
 Y dos precisiones que salen de lo mismo: una renuncia que nombra una presentación **que no está en el fichero** es una renuncia a nada y es inválida (`waiver_filing_unknown`); la de una presentación **anulada** sigue siendo válida, porque `compact` sigue comprobando esa huella y la renuncia es su única salida. Y la consola solo dice «queda registrado» **después** de que la compactación termine, nunca antes: antes no se sabe.
+
+## Notas de estado
+
+Aceptada (2026-09-23), por decisión de la dirección, que añade la condición de atomicidad de la sección «La renuncia y la compactación son todo o nada». **Enmendada el mismo día** tras la revisión adversarial de la feature 011 (ver «Enmienda del 2026-09-23» al final), con la enmienda aceptada por la dirección. Nace de la pendiente 3 de `docs/pendientes-post-010.md` (retirado; en git) y del bloque 8 del prompt 011, cuyas decisiones (a), (b) y (d) fija la dirección.
