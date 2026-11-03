@@ -7,7 +7,7 @@
 # section 10, `infra/test/contract/iam-permissions.md` section 8 and
 # the answer P-3 (the secrets script reads only to know whether a parameter exists,
 # never with decryption). No `kms:` action: with `aws/ssm` the key policy decides
-# (E2 block 0, point 4); with C2 the policy of the key names this role.
+# (E2 block 0, point 4); there is no key of our own (ADR-0034, rows 7-8).
 
 locals {
   admin_secret_parameters = ["${local.ssm_base}/auth/*", "${local.ssm_base}/prices/*"]

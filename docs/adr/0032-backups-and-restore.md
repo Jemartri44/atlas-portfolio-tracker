@@ -55,7 +55,7 @@ Una observación ordena todo lo demás: **en un libro append-only, un error de r
 - `atlas backup` se amplía (documentos y extractos) y aparece un comando de restauración de administración; el procedimiento completo se escribe en `docs/` en la etapa de despliegue, con los seis pasos de arriba.
 - `docs/data-schema.md` §1 amplía el contenido de `backups/` (histórico del BCE y precios); las retenciones de ADR-0006 no cambian.
 - La copia fuera de AWS de `documents/` e `imports/` depende de que el usuario la haga: es la única capa manual, y por eso la recuerda el correo.
-- No se propone ahora bloquear los objetos de `backups/` contra el borrado (S3 Object Lock): cubriría un compromiso de la administración, pero su coste y su encaje con Terraform están **SIN VERIFICAR**. Queda anotado.
+- Los objetos de `backups/` se bloquean contra el borrado con S3 Object Lock (enmienda del 2026-11-03, abajo).
 - Relacionadas: ADR-0002, ADR-0003, ADR-0006, ADR-0025 (el contrato de `replace`), ADR-0026, ADR-0027 y ADR-0028.
 
 ## Enmienda del 2026-09-24 (revisión de la PR #72)
@@ -110,3 +110,14 @@ Lo que ADR-0035 retira del código se retira en sus entregas E1 a E5; hasta ento
 ## Notas de estado
 
 Aceptada (2026-09-24). **La capa 1 (réplicas de dispositivos) y el paso 6 (que cada dispositivo detecte la reescritura) quedan reemplazados por [ADR-0035](0035-cloud-ledger-single-source.md)**: los dispositivos no guardan réplica, y tras una restauración el siguiente `412` recarga el libro; ver la sección final. **Enmendada el mismo día** tras la revisión de la PR #72 (ver al final). **Nota del cierre de la feature 013** (2026-09-25): los precios del volcado no necesitan ninguna exclusión (ver al final). Ronda 8. Las capas de copia las fija la dirección (versionado de S3, volcado periódico y la exportación local que ya existe); este documento diseña **cómo se restaura** y cómo se comprueba que se puede, porque una copia que nunca se ha restaurado no es una copia. Responde a la pregunta de la Ronda 8 original sobre la copia fuera de AWS.
+
+## Enmienda del 2026-11-03 (auditoría de seguridad, hallazgo 2): copias bloqueadas contra el borrado
+
+El dueño aprobó proteger las copias contra el borrado. Sustituye a la frase de «Consecuencias» que descartaba Object Lock.
+
+- **Dónde**: el mismo bucket de datos, con Object Lock activado en el *bootstrap* (`aws_s3_bucket_object_lock_configuration`, sin reemplazar el bucket) y **sin retención por defecto** (bloquearía cada versión del libro). Un bucket aparte obligaría a tocar tareas, adaptadores y permisos de lectura.
+- **Modo y retención**: **gobernanza**, 365 días como mínimo por copia (la ventana de las versiones, ADR-0006). La tarea de copia mensual pide 366 (`BACKUP_LOCK_DAYS`) para que el redondeo no rechace ninguna; la política del bucket **niega** cualquier `PutObject` en `backups/*` sin modo `GOVERNANCE` o con menos de 365 días, así que ninguna copia entra sin bloqueo, la escriba quien la escriba. Solo `admin_principal_arn` puede saltarse un bloqueo (`s3:BypassGovernanceRetention`), y además tendría que cambiar antes la política que limita los objetos a los roles de Atlas. No se usa el modo cumplimiento: es irreversible incluso para *root* y, en una cuenta compartida, no se justifica para copias de unos KB.
+- **Copias para siempre, bloqueadas los 12 primeros meses**: no hay regla de caducidad sobre `backups/`. Al vencer el bloqueo la copia sigue ahí, solo que ya se podría borrar; la copia del mes siguiente tiene su propio bloqueo.
+- **Coste**: ninguno por el bloqueo; las copias son unos KB al mes.
+- **Irreversible**: una vez activado, **Object Lock no se desactiva y el versionado del bucket no puede suspenderse**. Es lo único irreversible de este cambio; por eso se aplica con el *bootstrap* a mano (`dev` primero), ver [`first-deploy-checks.md`](../first-deploy-checks.md).
+- **Restaurar no cambia**: leer una copia o restaurar desde ella no toca el bloqueo.

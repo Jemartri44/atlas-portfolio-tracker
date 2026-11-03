@@ -14,11 +14,10 @@ const POLICY_ATTRIBUTES: Record<string, { attribute: string; kind: PolicyKind }[
   aws_iam_role_policy: [{ attribute: "policy", kind: "identity" }],
   aws_iam_role: [{ attribute: "assume_role_policy", kind: "trust" }],
   aws_s3_bucket_policy: [{ attribute: "policy", kind: "resource" }],
-  aws_kms_key: [{ attribute: "policy", kind: "key" }],
   aws_lambda_permission: [],
 };
 
-export type PolicyKind = "identity" | "trust" | "resource" | "key";
+export type PolicyKind = "identity" | "trust" | "resource";
 
 export interface PolicyDocument {
   address: string;
@@ -115,7 +114,7 @@ export const wildcards = (
           violations.push({ rule: "wildcard", address: where, detail: `action ${action}` });
         }
       }
-      if (policy.kind === "key" || policy.kind === "trust") {
+      if (policy.kind === "trust") {
         continue;
       }
       if (asArray(statement.Resource).some((resource) => resource === "*")) {

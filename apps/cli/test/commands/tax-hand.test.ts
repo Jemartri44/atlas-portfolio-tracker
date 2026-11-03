@@ -47,7 +47,12 @@ interface Report {
     }[];
   };
   movable_capital: {
-    dividends: { event_id: string; gross: Proceeds }[];
+    dividends: {
+      event_id: string;
+      gross: Proceeds;
+      source_country: string;
+      withholding_origin: string;
+    }[];
     transmissions: { corporate_action_kind?: string; computable_eur_rounded: string }[];
     expenses: unknown[];
     balance_eur: string;
@@ -98,6 +103,13 @@ const ID = {
   SX2: "01ARYZ6S41TSV4RRFFQ6900016",
   Y2: "01ARYZ6S41TSV4RRFFQ690001B",
   C2: "01ARYZ6S41TSV4RRFFQ690001K",
+  SX1: "01ARYZ6S41TSV4RRFFQ690000X",
+  S3: "01ARYZ6S41TSV4RRFFQ690000W",
+  S5: "01ARYZ6S41TSV4RRFFQ690000Y",
+  RS: "01ARYZ6S41TSV4RRFFQ6900010",
+  D1: "01ARYZ6S41TSV4RRFFQ690001J",
+  FX: "01ARYZ6S41TSV4RRFFQ690001M",
+  FE: "01ARYZ6S41TSV4RRFFQ690001R",
 } as const;
 
 describe("atlas tax over the hand-worked ledger", () => {
@@ -121,7 +133,35 @@ describe("atlas tax over the hand-worked ledger", () => {
       cost_eur: "17.5",
     });
     expect(cover(ID.U3)).toMatchObject({ kind: "cover", amount: "981", proceeds_eur: "817.5" });
+    expect(cover(ID.U3)?.cost_eur).toBe("829.658901199");
+    // What each sale brought in and cost, line by line.
+    expect([byEvent(report, ID.SX1).proceeds.eur, byEvent(report, ID.SX1).cost_eur]).toEqual([
+      "84",
+      "124",
+    ]);
+    expect([byEvent(report, ID.RS).proceeds.eur, byEvent(report, ID.RS).cost_eur]).toEqual([
+      "20",
+      "24",
+    ]);
+    expect(byEvent(report, ID.RS).corporate_action_kind).toBe("reverse_split");
+    // The deferral of SX1: its window, the units it covers and the purchases that cause it.
+    const deferral = report.wash_sale.deferred.find((d) => d.event_id === ID.SX1);
+    expect(deferral).toMatchObject({
+      window: "2m",
+      window_start: "2021-05-01",
+      window_end: "2021-09-01",
+      units: "6",
+      sold: "12",
+    });
+    expect(deferral?.acquisitions.map((a) => [a.event_id, a.units])).toEqual([
+      [ID.S3, "4"],
+      [ID.S5, "2"],
+    ]);
     const dividend = report.movable_capital.dividends.find((d) => d.event_id === ID.U2);
+    expect(dividend).toMatchObject({
+      source_country: "US",
+      withholding_origin: "9",
+    });
     expect(dividend?.gross).toMatchObject({
       amount: "30",
       currency: "USD",
@@ -141,6 +181,20 @@ describe("atlas tax over the hand-worked ledger", () => {
     const y2023 = await hand(2023);
     expect(byEvent(y2023, ID.C2).proceeds.eur).toBe("1285");
     expect(byEvent(y2023, ID.C2).cost_eur).toBe("1000");
+    expect([byEvent(y2023, ID.D1).proceeds.eur, byEvent(y2023, ID.D1).cost_eur]).toEqual([
+      "340",
+      "300",
+    ]);
+    expect([byEvent(y2023, ID.FX).proceeds.eur, byEvent(y2023, ID.FX).cost_eur]).toEqual([
+      "423",
+      "363",
+    ]);
+  });
+
+  it("2024: the custody fee in dollars at its own rate", async () => {
+    const report = await hand(2024);
+    const fee = report.capital_gains.currency_lines.find((line) => line.event_id === ID.FE);
+    expect(fee).toMatchObject({ amount: "12.5", proceeds_eur: "10", cost_eur: "10.5715966004" });
   });
 });
 

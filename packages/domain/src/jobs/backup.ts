@@ -24,6 +24,17 @@ export const dumpPrefix = (period: string): string => {
   return `backups/${period}/`;
 };
 
+/**
+ * How long a copy is locked against deletion (S3 Object Lock, governance mode; ADR-0032). The
+ * policy of the data bucket refuses a copy locked for less than 365 days; this asks for one more
+ * so that rounding of the remaining days never rejects it.
+ */
+export const BACKUP_LOCK_DAYS = 366;
+
+/** Until when a copy written at `now` is locked. */
+export const backupRetainUntil = (now: Date): Date =>
+  new Date(now.getTime() + BACKUP_LOCK_DAYS * 86_400_000);
+
 /** The bytes of the remote ledger, as they are. */
 export const DUMP_LEDGER = "ledger.jsonl";
 /** The valued projection of that ledger (`positions.ts`). */
