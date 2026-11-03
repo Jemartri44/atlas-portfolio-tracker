@@ -36,9 +36,9 @@ locals {
     ecb    = {}
     backup = {}
     prices = {
-      ATLAS_PRICE_SOURCES                    = join(",", var.price_sources)
-      ATLAS_PRICES_EODHD_DAILY_CALLS         = tostring(var.prices_eodhd_daily_calls)
-      ATLAS_PRICES_FAILURE_THRESHOLD         = tostring(var.prices_failure_threshold)
+      ATLAS_PRICE_SOURCES            = join(",", var.price_sources)
+      ATLAS_PRICES_EODHD_DAILY_CALLS = tostring(var.prices_eodhd_daily_calls)
+      ATLAS_PRICES_FAILURE_THRESHOLD = tostring(var.prices_failure_threshold)
     }
     mail = {
       ATLAS_MAIL_FROM               = var.mail_sender
