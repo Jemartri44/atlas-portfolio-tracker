@@ -23,7 +23,6 @@ import { type AssetType, Decimal, HUNDRED, mergeSettings, type Settings } from "
 import { decimalForInput, parseDecimalInput } from "../format/input.js";
 
 /** What the weights of the core have to add up to (rule 3 of the plan). */
-
 export interface WeightTotal {
   /** The exact sum of what is written, as a decimal string; the screen rounds it. */
   total: string;

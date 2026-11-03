@@ -14,7 +14,8 @@ const invalidOf = (events: readonly LedgerEvent[]): { id: string; code: string }
       code: entry.error.code,
     }));
   } catch (error) {
-    return [{ id: String(asDomainError(error).details.event_id), code: asDomainError(error).code }];
+    const failure = asDomainError(error);
+    return [{ id: String(failure.details.event_id), code: failure.code }];
   }
 };
 

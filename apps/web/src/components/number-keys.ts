@@ -3,7 +3,8 @@
 /**
  * The dot is never part of a number typed here (`format/input.ts`). It is stopped at `beforeinput`,
  * which phone keyboards do report (their `keydown` is often an anonymous 229), for plain typing
- * and for the composition many Android keyboards use; the dot of the
+ * and, where the platform allows cancelling it, for composition (the event is often not
+ * cancelable there; the parser is the net); the dot of the
  * numeric keypad writes the comma in a decimal field and nothing in an integer one. A pasted dot is
  * not touched: the parser refuses the whole text, because dropping the dot would turn `0.500`
  * into `500`.
