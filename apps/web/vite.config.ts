@@ -151,7 +151,7 @@ const DEVELOPMENT_CSP = PRODUCTION_CSP.replace(
  * with `index.html`. Exported for `test/pwa-cache.test.ts`.
  */
 /** The web manifest: what the installed application is called, looks like and offers. */
-export const MANIFEST: NonNullable<VitePWAOptions["manifest"]> = {
+export const MANIFEST: Exclude<VitePWAOptions["manifest"], false | undefined> = {
   name: "Atlas",
   short_name: "Atlas",
   description: "Gestión de la cartera de inversión: movimientos, lotes FIFO y Renta.",
