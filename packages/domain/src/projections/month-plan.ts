@@ -127,12 +127,9 @@ export const monthPlan = (
       continue;
     }
     const eur = fxOf(event).toEur(basisOf(event));
-    if (book === "bucket") {
-      record(bucket, day, eur);
-      continue;
-    }
     // A core purchase of an asset the plan sends nothing to is not a task of the month.
-    const row = byAsset.get(event.asset_id);
+    const row =
+      book === "bucket" ? bucket : book === "core" ? byAsset.get(event.asset_id) : undefined;
     if (row !== undefined) {
       record(row, day, eur);
     }

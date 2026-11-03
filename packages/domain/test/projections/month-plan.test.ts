@@ -94,6 +94,13 @@ describe("monthPlan: the plan of the month", () => {
     expect(plan.deposit.proposed_eur.amount.toString()).toBe("600");
     expect(proposed(plan)).toEqual({ ast_world: "324", ast_bonds: "162", ast_gold: "54" });
   });
+
+  it("takes the settings in force on the plan date, changed before it", () => {
+    const b = december();
+    b.recordedAt("2027-12-15");
+    b.settings(settings({ monthly_contribution_eur: "900" }));
+    expect(read(b).deposit.proposed_eur.amount.toString()).toBe("900");
+  });
 });
 
 describe("monthPlan: what is done", () => {

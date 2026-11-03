@@ -49,13 +49,24 @@ describe("coreReturn: the figure", () => {
 
   it("takes money moved to the bucket as a withdrawal of the core", () => {
     // V0 1000 + 200 of cash, V1 1100, F −200 with w = 13/28:
-    // (1100 − 1200 + 200) / (1200 − 200 × 13/28) = 2800 / 31000.
+    // 100 / (1200 − 200 × 13/28) = 9,032258 %.
     const b = core("1200");
     valueAt(b, "2027-01-31", "100");
     b.withdrawal({ account_id: "acc_fund", amount: "200", value_date: "2027-02-15" });
     b.deposit({ account_id: "acc_bucket", amount: "200", value_date: "2027-02-15" });
     valueAt(b, "2027-02-28", "110");
     expect(pctOf(b)).toBe("9.032258");
+  });
+
+  it("leaves a flow of the first day in the start value and weighs one of the last day at zero", () => {
+    // 100 on the 31st of January is in V0 (1100); 200 on the 28th of February is in F with w = 0:
+    // (1400 − 1100 − 200) / 1100.
+    const b = core();
+    b.deposit({ account_id: "acc_fund", amount: "100", value_date: "2027-01-31" });
+    valueAt(b, "2027-01-31", "100");
+    b.deposit({ account_id: "acc_fund", amount: "200", value_date: "2027-02-28" });
+    valueAt(b, "2027-02-28", "110");
+    expect(pctOf(b)).toBe("9.090909");
   });
 
   it("counts a dividend as return, not as a flow", () => {
@@ -87,6 +98,28 @@ describe("coreReturn: no figure, and why", () => {
       unit_price: undefined,
     });
     expect(coreReturn(b.build(), FEB)).toEqual({ ...FEB, gap: "partial" });
+  });
+
+  it("with a price missing at the start, even when the end has it", () => {
+    const b = core();
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_bonds",
+      trade_date: "2027-01-20",
+      amount: "0.01",
+      quantity: "1",
+      unit_price: undefined,
+    });
+    valueAt(b, "2027-01-31", "100");
+    valueAt(b, "2027-02-28", "110");
+    b.valuation({
+      account_id: "acc_fund",
+      asset_id: "ast_bonds",
+      date: "2027-02-28",
+      quantity: "1",
+      unit_value: "1",
+    });
+    expect(coreReturn(b.build(), FEB).gap).toBe("partial");
   });
 
   it("with less history than the period, instead of measuring from the first day", () => {
