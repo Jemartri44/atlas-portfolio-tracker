@@ -197,7 +197,7 @@ export const removeSymbols = (store: PriceStore, assetId: AssetId): Promise<bool
 
 /**
  * Purges the closes of `assetId` from `source` whose currency is not the one
- * that source declares now: e.g. the pence of Alpha Vantage stored as pounds.
+ * that source declares now: e.g. pence stored as pounds.
  * Only on an explicit request of the user, under the lock, and only those
  * lines. **The next download asks for their days again, once**: they are
  * written down for that source (`refetch_days`), because the last close of the

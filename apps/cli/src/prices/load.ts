@@ -11,7 +11,6 @@
 import { homedir } from "node:os";
 import { dirname } from "node:path";
 import {
-  AlphaVantagePriceSource,
   EodhdPriceSource,
   FilePriceStore,
   type Keys,
@@ -51,9 +50,6 @@ export const sourcesFor = (ctx: Context, keys: Keys): Partial<Record<QuoteSource
   }
   return {
     ...(keys.eodhd === undefined ? {} : { eodhd: new EodhdPriceSource(keys.eodhd) }),
-    ...(keys.alpha_vantage === undefined
-      ? {}
-      : { alpha_vantage: new AlphaVantagePriceSource(keys.alpha_vantage) }),
   };
 };
 

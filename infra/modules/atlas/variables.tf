@@ -178,12 +178,12 @@ variable "reserve_jobs_concurrency" {
 }
 
 variable "price_sources" {
-  description = "ATLAS_PRICE_SOURCES of the prices function, in the order of the cascade. `simulated` stands alone and only in the development environment (ssm-and-config.md section 2)."
+  description = "ATLAS_PRICE_SOURCES of the prices function: [\"eodhd\"], the one source (ADR-0031). `simulated` stands alone and only in the development environment (ssm-and-config.md section 2)."
   type        = list(string)
 
   validation {
-    condition     = length(var.price_sources) >= 1 && length(distinct(var.price_sources)) == length(var.price_sources) && ((length(var.price_sources) == 1 && contains(var.price_sources, "simulated")) || alltrue([for s in var.price_sources : contains(["eodhd", "alpha_vantage"], s)]))
-    error_message = "price_sources is eodhd and/or alpha_vantage without repeats, or [\"simulated\"] alone."
+    condition     = length(var.price_sources) >= 1 && length(distinct(var.price_sources)) == length(var.price_sources) && ((length(var.price_sources) == 1 && contains(var.price_sources, "simulated")) || alltrue([for s in var.price_sources : contains(["eodhd"], s)]))
+    error_message = "price_sources is [\"eodhd\"], or [\"simulated\"] alone."
   }
 
   validation {
@@ -198,15 +198,6 @@ variable "prices_eodhd_daily_calls" {
   validation {
     condition     = var.prices_eodhd_daily_calls >= 0 && var.prices_eodhd_daily_calls <= 20 && var.prices_eodhd_daily_calls == floor(var.prices_eodhd_daily_calls)
     error_message = "prices_eodhd_daily_calls is a whole number from 0 to 20."
-  }
-}
-
-variable "prices_alpha_vantage_daily_calls" {
-  type = number
-
-  validation {
-    condition     = var.prices_alpha_vantage_daily_calls >= 0 && var.prices_alpha_vantage_daily_calls <= 25 && var.prices_alpha_vantage_daily_calls == floor(var.prices_alpha_vantage_daily_calls)
-    error_message = "prices_alpha_vantage_daily_calls is a whole number from 0 to 25."
   }
 }
 
