@@ -88,12 +88,66 @@ describe("subscription rights (H5)", () => {
     expect(boxes.entries.some((item) => item.section === "rights")).toBe(false);
     expect(shown(boxes, "0339")).toBe("100.00");
   });
+
+  // 100 S; a scrip hands over 100 rights R. 60 are sold in the event at 0,20
+  // (12,00). The other 40 convert into 2 T (0,05), sold at 12: the shares of T
+  // are shares, not rights, though their lots descend from the grant.
+  it("leaves shares that come from converted rights among the shares", () => {
+    const b = taxBuilder(HAND_SETTINGS);
+    b.asset("stock_v", { asset_type: "stock", transferable: false, market: "XMAD" });
+    buy(b, "stock_s", "2025-01-10", "100", "10");
+    const grant = {
+      op: "grant" as const,
+      asset_id: "stock_t",
+      per_account: [{ account_id: "acc_a", quantity: "100" }],
+      unit_cost: "0",
+      currency: "EUR",
+      fx_rate: "1",
+      fx_rate_date: "2025-05-05",
+      acquisition_date: "2025-05-05",
+    };
+    b.corporateAction({
+      kind: "stock_dividend",
+      asset_id: "stock_s",
+      effective_date: "2025-05-05",
+      effects: [
+        grant,
+        {
+          op: "forced_sale",
+          asset_id: "stock_t",
+          per_account: [{ account_id: "acc_a", quantity: "60" }],
+          unit_price: "0.2",
+          currency: "EUR",
+          fx_rate: "1",
+          fx_rate_date: "2025-05-05",
+        },
+      ],
+    });
+    b.corporateAction({
+      kind: "share_class_change",
+      asset_id: "stock_t",
+      effective_date: "2025-05-20",
+      effects: [{ op: "convert", to_asset_id: "stock_v", ratio: "0.05" }],
+    });
+    sell(b, "stock_v", "2025-09-01", "2", "12");
+    const boxes = taxBoxes(b.build(), 2025, { today: TODAY });
+    const rows = (section: string) =>
+      boxes.entries
+        .filter((item) => item.section === section && item.concept.endsWith(".transmission"))
+        .map((item) => [item.row?.asset_id, item.amount_eur?.centsText()]);
+    expect(rows("rights")).toEqual([["stock_t", "12.00"]]);
+    expect(rows("listed_shares")).toEqual([["stock_v", "24.00"]]);
+  });
 });
 
 describe("a share outside the EU regulated markets (H4)", () => {
-  const sale = (market: string) => {
+  const sale = (market: string | undefined) => {
     const b = taxBuilder(HAND_SETTINGS);
-    b.asset("stock_us", { asset_type: "stock", transferable: false, market });
+    b.asset("stock_us", {
+      asset_type: "stock",
+      transferable: false,
+      ...(market === undefined ? {} : { market }),
+    });
     buy(b, "stock_us", "2025-01-10", "10", "100");
     sell(b, "stock_us", "2025-09-01", "10", "80");
     return taxBoxes(b.build(), 2025, { today: TODAY });
@@ -113,7 +167,7 @@ describe("a share outside the EU regulated markets (H4)", () => {
   });
 
   it("stays among the shares on an EU market, or when the market is unknown", () => {
-    for (const market of ["XMAD", "somewhere"]) {
+    for (const market of ["XMAD", "somewhere", undefined]) {
       const boxes = sale(market);
       expect(shown(boxes, "0337")).toBe("200.00");
       expect(codes(boxes)).not.toContain("tax_box_section_doubtful");
@@ -123,6 +177,17 @@ describe("a share outside the EU regulated markets (H4)", () => {
       "other_shares",
     );
     expect(transmissionSection("etf", "capital_gain", { market: "XNYS" })).toBe("etf");
+  });
+
+  // Without a market Atlas knows, a share stays among "acciones negociadas",
+  // which is wrong if it trades outside the EU: the output says so.
+  it.each([
+    ["with no market", undefined, true],
+    ["with an unknown market", "somewhere", true],
+    ["on an EU market", "XMAD", false],
+  ])("notes a share %s", (_name, market, noted) => {
+    const found = sale(market).notes.filter((entry) => entry.code === "tax_box_market_unknown");
+    expect(found.map((entry) => entry.details)).toEqual(noted ? [{ assets: ["stock_us"] }] : []);
   });
 });
 

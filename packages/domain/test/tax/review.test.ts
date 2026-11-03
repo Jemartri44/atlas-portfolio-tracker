@@ -57,6 +57,35 @@ describe("pending at 31/12 includes what waits for a repurchase of the next year
     expect(text(report.wash_sale.pending[0]?.amount_eur)).toBe("-200");
   });
 
+  it("keeps the asset of a pending deferral whose id carries the key separator", () => {
+    const asset_id = "stock|s%1";
+    const b = taxBuilder();
+    b.asset(asset_id, { asset_type: "stock", transferable: false });
+    b.buy({
+      account_id: "acc_a",
+      asset_id,
+      value_date: "2021-03-01",
+      quantity: "10",
+      unit_price: "100",
+    });
+    b.sell({
+      account_id: "acc_a",
+      asset_id,
+      value_date: "2021-12-20",
+      quantity: "10",
+      unit_price: "80",
+    });
+    const january = b.buy({
+      account_id: "acc_a",
+      asset_id,
+      value_date: "2022-01-10",
+      quantity: "10",
+      unit_price: "79",
+    });
+    const [pending] = reportOf(b.build(), 2021).wash_sale.pending;
+    expect(pending).toMatchObject({ awaiting_event_id: january.id, asset_id });
+  });
+
   it("has nothing pending once the repurchased lot is sold, and releases it there", () => {
     const { events, june } = december();
     const report = reportOf(events, 2022);

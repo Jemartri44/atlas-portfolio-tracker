@@ -13,7 +13,7 @@ import { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
 import type { AssetClass, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
-import { manualPrices, type PriceLookup } from "./prices.js";
+import { manualPrices, type PriceLookup, positionValueOf } from "./prices.js";
 import type { Asset, LedgerState, Warning } from "./state.js";
 import { transferBlock } from "./transfer-rule.js";
 import {
@@ -154,8 +154,7 @@ export const simulateTransfer = (
 
   // Manual prices only (the call above passes no external source), and a
   // `valuation` always carries its ECB rate: its value in euros is always there.
-  const unit = (from.price as PriceLookup).unit_value_eur as Money;
-  const moved = Money.of(unit.amount.mul(quantity.value), "EUR");
+  const moved = positionValueOf(from.price as PriceLookup, quantity) as Money;
   const warnings: Warning[] = [];
   const rows = before.rows.map((row) => {
     const value = row.value_eur as Money;

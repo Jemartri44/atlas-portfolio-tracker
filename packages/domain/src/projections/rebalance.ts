@@ -33,7 +33,7 @@ import {
   type PlatformPlan,
   platformPlan,
 } from "./platform-plan.js";
-import type { ExternalPrices } from "./prices.js";
+import { type ExternalPrices, type PriceLookup, positionValueOf } from "./prices.js";
 import { estimateSale, type HypotheticalSale, type SaleEstimate } from "./sale-tax.js";
 import type { Account, LedgerState, Warning } from "./state.js";
 import { transferBlock } from "./transfer-rule.js";
@@ -161,7 +161,8 @@ interface Item {
   asset_class: AssetClass;
   target_pct: Decimal;
   value: Money;
-  unit_eur: Money | undefined;
+  /** Its price: units and amounts are converted with one division, not through a rounded unit. */
+  price: PriceLookup | undefined;
 }
 
 const fail = (code: string, message: string, details: Record<string, unknown> = {}): never => {
@@ -244,9 +245,12 @@ const pair = (
 const optional = <K extends string, V>(key: K, value: V | undefined): { [P in K]?: V } =>
   (value === undefined ? {} : { [key]: value }) as { [P in K]?: V };
 
-/** Units that `amount` buys at `unit`; both come from a priced position, so the price is positive. */
-const quantityOf = (amount: Money, unit: Money): Quantity =>
-  Quantity.of(amount.amount.div(unit.amount));
+/**
+ * Units that `amount` buys at `price`; it comes from a priced position, so the price is positive
+ * and has its rate. One division, at the end: the unit value in euros is rounded.
+ */
+const quantityOf = (amount: Money, price: PriceLookup): Quantity =>
+  Quantity.of(amount.amount.mul(price.fx_rate as Decimal).div(price.unit_value));
 
 export const rebalancePlan = (
   state: LedgerState,
@@ -285,7 +289,7 @@ export const rebalancePlan = (
     asset_class: row.asset_class,
     target_pct: row.target_pct,
     value: row.value_eur as Money,
-    unit_eur: row.price?.unit_value_eur,
+    price: row.price,
   }));
   const whole = weights.total_eur.add(newMoney);
   const diagnosis: DiagnosisRow[] = items.map((item) => {
@@ -414,7 +418,7 @@ export const rebalancePlan = (
           from_asset_id: leg.from.asset_id,
           to_asset_id: leg.to.asset_id,
           amount_eur: leg.amount,
-          quantity: quantityOf(leg.amount, leg.from.unit_eur as Money),
+          quantity: quantityOf(leg.amount, leg.from.price as PriceLookup),
           ...optional("from_account_id", holdersOf(state, leg.from.asset_id)[0]?.account_id),
           ...optional("to_account_id", holdersOf(state, leg.to.asset_id)[0]?.account_id),
         });
@@ -533,9 +537,9 @@ const saleStep = (
 ): SaleStep => {
   const assetId = leg.item.asset_id;
   const price = weights.rows.find((row) => row.asset_id === assetId)?.price;
-  const unit = leg.item.unit_eur as Money;
+  const priced = leg.item.price as PriceLookup;
   const holders = holdersOf(state, assetId);
-  let remaining = quantityOf(leg.amount, unit);
+  let remaining = quantityOf(leg.amount, priced);
   let amountLeft = leg.amount;
   const orders: SaleOrder[] = [];
   const estimates: (SaleEstimate | { code: string })[] = [];
@@ -545,9 +549,7 @@ const saleStep = (
     }
     const quantity = remaining.lt(holder.quantity) ? remaining : holder.quantity;
     const last = index === holders.length - 1 || !remaining.gt(holder.quantity);
-    const amount = last
-      ? amountLeft
-      : Money.of(quantity.value.mul(unit.amount), EUR).roundToCents();
+    const amount = last ? amountLeft : (positionValueOf(priced, quantity) as Money).roundToCents();
     const fee = feeEstimate(state, events, date, {
       side: "sell",
       account_id: holder.account_id,

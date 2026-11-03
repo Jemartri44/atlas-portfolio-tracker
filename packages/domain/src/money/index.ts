@@ -1,4 +1,4 @@
-export { Decimal, type DecimalString, isDecimalString } from "./decimal.js";
+export { Decimal, type DecimalString, HUNDRED, isDecimalString } from "./decimal.js";
 export { FxRate } from "./fx-rate.js";
 export { type Currency, EUR, isCurrency, Money } from "./money.js";
 export { Price } from "./price.js";

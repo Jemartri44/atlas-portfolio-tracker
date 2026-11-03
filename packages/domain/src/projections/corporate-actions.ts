@@ -16,6 +16,7 @@ import {
   type ResolvedEffect,
   targetOf,
 } from "./kind-rules.js";
+import { euRegulatedMarket } from "./markets.js";
 import { accountsHolding } from "./positions.js";
 import {
   applyCarveOut,
@@ -27,21 +28,63 @@ import {
   type EffectContext,
   type Resolved,
 } from "./primitives.js";
-import type { AssetLots, FiscalLot, LedgerState } from "./state.js";
+import { type AssetLots, addWarning, type FiscalLot, type LedgerState } from "./state.js";
 
 /**
- * Arts. 25.1.e and 33.3.a LIRPF are for shares: in a collective investment
- * undertaking the premium is income whole and a return of contributions has
- * its own limit (art. 94.1.c and d), which this does not model.
+ * Arts. 25.1.e and 33.3.a LIRPF lower the cost only for shares of an EU
+ * regulated market. In a collective investment undertaking the premium is
+ * income whole and a return of contributions has its own limit (art. 94.1.c
+ * and d); for any other share the premium is income up to the difference in
+ * equity, a figure the ledger does not hold. Neither is modelled.
  */
-const requireShareForCapitalReturn = (state: LedgerState, event: CorporateActionEvent): void => {
+const requireEuShareForCapitalReturn = (state: LedgerState, event: CorporateActionEvent): void => {
   const asset = requireAsset(state, event.asset_id, event.id);
-  if (event.kind === "capital_return" && asset.asset_type !== "stock") {
+  if (event.kind !== "capital_return") {
+    return;
+  }
+  if (asset.asset_type !== "stock") {
     throw new ProjectionError(
       "capital_return_needs_stock",
       event.id,
       `a capital_return applies to shares, not to a ${asset.asset_type}`,
       { asset_id: asset.asset_id, asset_type: asset.asset_type },
+    );
+  }
+  const eu = euRegulatedMarket(asset.market);
+  if (eu !== true) {
+    const written = (asset.market ?? "").trim() !== "";
+    const reason = eu === false ? "not_eu" : written ? "market_unknown" : "market_missing";
+    throw new ProjectionError(
+      "capital_return_needs_eu_listed",
+      event.id,
+      "a capital_return lowers the cost only of shares listed on an EU regulated market",
+      { asset_id: asset.asset_id, market: asset.market ?? null, reason },
+    );
+  }
+};
+
+/** Every account holding the asset should get its cash: the FIFO is global. */
+const warnUncoveredHolders = (
+  state: LedgerState,
+  event: CorporateActionEvent,
+  effects: readonly ResolvedEffect[],
+): void => {
+  if (event.kind !== "capital_return") {
+    return;
+  }
+  // The kind's row admits a single cost_adjustment.
+  const [effect] = effects as [Resolved<"cost_adjustment">];
+  const listed = new Set(effect.per_account.map((entry) => entry.account_id));
+  const uncovered = accountsHolding(state, event.asset_id).filter(
+    (account) => !listed.has(account),
+  );
+  if (uncovered.length > 0) {
+    addWarning(
+      state,
+      "capital_return_partial_accounts",
+      event.id,
+      `the capital_return names no cash for every account holding ${event.asset_id}`,
+      { asset_id: event.asset_id, accounts: uncovered },
     );
   }
 };
@@ -241,7 +284,7 @@ export const applyCorporateAction = (
   }
   checkEffectsAgainstKind(event.kind, effects, event.asset_id, event.id);
   checkCostAdjustmentRegime(event.kind, effects, event.neutrality_regime, event.id);
-  requireShareForCapitalReturn(state, event);
+  requireEuShareForCapitalReturn(state, event);
   if (isLiquidation(event.kind)) {
     requireFullCoverage(state, effects[0] as Resolved<"forced_sale">, event.id);
   }
@@ -254,6 +297,7 @@ export const applyCorporateAction = (
   };
   const touched = [...new Set(effects.flatMap((effect) => [effect.asset_id, targetOf(effect)]))];
   const saved = snapshot(state, touched);
+  warnUncoveredHolders(state, event, effects);
   try {
     for (const effect of costAdjustmentsFirst(effects)) {
       applyEffect(state, effect, ctx);
