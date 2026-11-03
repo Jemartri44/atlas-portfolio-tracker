@@ -126,6 +126,7 @@ describe("the income tax of January (Q10)", () => {
     expect(mail?.body.split("\n")[2]).toMatch(
       /^Los datos de la Renta de 2026 están listos: \d+ notas y \d+ criterios en disputa\.$/,
     );
+    expect(mail?.body).toContain("Falta el IPC de 2026");
     for (const sentinel of [...SENTINELS.amounts, ...SENTINELS.ids, "€"]) {
       expect(mail?.body, sentinel).not.toContain(sentinel);
     }
