@@ -33,6 +33,10 @@ const describeRejection = (
       return "La nube ha rechazado la petición: una línea declaraba ser una anulación con corrección, o parte de una cadena, sin serlo.";
     case "line_unreadable":
       return `La nube no ha podido leer una línea${d.line === undefined ? "" : ` (la ${text(d.line)})`}.`;
+    case "line_too_large":
+      return `La nube ha rechazado una línea por su tamaño (${text(d.bytes)} bytes; el tope es ${text(d.limit)}). Acorta el texto libre, por ejemplo las notas.`;
+    case "ledger_too_large":
+      return `Con esto el libro de la nube pasaría de su tamaño máximo (${text(d.limit)} bytes). No se ha escrito nada más.`;
     case "line_invalid":
       return `La nube ha rechazado una línea por su forma (${text(d.domain_code)}).`;
     case "schema_version_unsupported":
