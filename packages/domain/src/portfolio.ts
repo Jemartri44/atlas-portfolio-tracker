@@ -5,8 +5,7 @@
 // `charts.ts` and `tools.ts`: the barrel is the module the browser downloads at
 // boot, and these four serve two screens opened on demand (about 25 KB of
 // source on the boot path). Imported from here, `@atlas/domain/portfolio`, by
-// whoever needs them; the barrel never exports them
-// (`tests/architecture/barrels-and-doors.test.ts`).
+// whoever needs them; the barrel never exports them.
 //
 // Their types are also in the barrel: nothing is downloaded for a type.
 
