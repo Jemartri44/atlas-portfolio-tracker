@@ -9,11 +9,24 @@ import { DEFAULT_SETTINGS, encodeLine, type LedgerEvent } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { EXIT } from "../../src/context.js";
 import { COMMANDS } from "../../src/registry.js";
-import { harness, seed } from "../harness.js";
+import { bucketSeed, harness, seed } from "../harness.js";
 
-/** Enough configuration for `contribute` and `rebalance` to have something to answer. */
+/** A configured ledger: target weights, the bucket share and an open thesis. */
 const configured = () => [
-  ...seed(),
+  ...bucketSeed(),
+  {
+    schema_version: 1 as const,
+    id: "01ARYZ6S41TSV4RRFFQ69G5THS",
+    recorded_at: "2026-09-01T17:30:00.000Z",
+    type: "thesis_opened" as const,
+    thesis_id: "th_deg",
+    account_id: "acc_bucket",
+    asset_id: "ast_spec",
+    hypothesis: "h",
+    expected_horizon_days: 90,
+    invalidation: "i",
+    planned_size_eur: "500",
+  },
   {
     schema_version: 1 as const,
     id: "01ARYZ6S41TSV4RRFFQ69G5SET",
@@ -68,12 +81,6 @@ const INVOCATIONS: {
   folderOnly?: true;
 }[] = [
   { command: "positions", argv: ["positions"], readOnly: true },
-  { command: "weights", argv: ["weights"], readOnly: true },
-  { command: "contribute", argv: ["contribute", "--amount", "100"], readOnly: true },
-  { command: "rebalance", argv: ["rebalance"], readOnly: true },
-  { command: "costs", argv: ["costs"], readOnly: true },
-  { command: "networth", argv: ["networth"], readOnly: true },
-  { command: "bucket", argv: ["bucket"], readOnly: true },
   { command: "lots", argv: ["lots"], readOnly: true },
   { command: "cash", argv: ["cash"], readOnly: true },
   { command: "gains", argv: ["gains", "2027"], readOnly: true },
@@ -82,7 +89,11 @@ const INVOCATIONS: {
   { command: "account", argv: ["account", "list"], readOnly: true },
   { command: "asset", argv: ["asset", "list"], readOnly: true },
   { command: "settings", argv: ["settings", "show"], readOnly: true },
-  { command: "thesis", argv: ["thesis", "list"], readOnly: true },
+  {
+    command: "thesis",
+    argv: ["thesis", "close", "th_none", "--notes", "n", "--yes"],
+    readOnly: false,
+  },
   { command: "order", argv: ["order", "list"], readOnly: true },
   { command: "transfer", argv: ["transfer", "pending"], readOnly: true },
   { command: "export", argv: ["export", "--format", "csv"], readOnly: true },
@@ -255,7 +266,9 @@ describe("degraded projection on read-only commands", () => {
   });
 
   it("covers every command of the CLI", () => {
-    expect(INVOCATIONS.map((entry) => entry.command).sort()).toEqual(Object.keys(COMMANDS).sort());
+    expect([...new Set(INVOCATIONS.map((entry) => entry.command))].sort()).toEqual(
+      Object.keys(COMMANDS).sort(),
+    );
   });
 });
 

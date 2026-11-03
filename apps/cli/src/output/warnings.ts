@@ -1,13 +1,9 @@
 // What a warning of the domain says to the person, in Spanish.
 
 import type { Warning } from "@atlas/domain";
-import { fxMissingReason, say, windowText as windowName } from "@atlas/domain/messages";
+import { say, windowText as windowName } from "@atlas/domain/messages";
 import { text } from "./format.js";
 import { CLI_VOICE } from "./voice.js";
-
-/** Why a quote has no value in euros. */
-export const fxMissingText = (reason: unknown): string =>
-  fxMissingReason(reason) ?? "no hay histórico del BCE; descárgalo con «atlas fx update»";
 
 /**
  * Spanish text of a projection warning. The domain speaks English and the CLI

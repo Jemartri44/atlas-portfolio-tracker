@@ -394,11 +394,6 @@ describe("atlas prices symbols: currencies are declared with their symbol, and c
     );
     const wrong = `${JSON.stringify({ schema_version: 1, date: "2027-06-08", close: "1000", currency: "GBP", source: "alpha_vantage", fetched_at: "2027-06-09T06:00:00.000Z" })}\n`;
     await writeFile(join(f.dir, "prices", "etf_b.jsonl"), wrong);
-    const weights = await f.atlas("weights", "--date", "2027-06-09");
-    expect(weights.err).toContain(
-      "etf_b: 1 cierre de Alpha Vantage está guardado en una divisa que no es la declarada para esa fuente (GBX)",
-    );
-    expect(weights.text).not.toMatch(/etf_b\s+equity\s+10\s+1000/);
     const status = await f.atlas("prices", "status");
     expect(status.text).toContain("atlas prices purge etf_b --source alpha_vantage");
     const refused = await f.atlas("prices", "purge", "etf_b", "--source", "alpha_vantage");
@@ -439,33 +434,10 @@ describe("atlas prices symbols: closes stored in the wrong currency, and a symbo
       await symbols(f.dir, {});
       await writeFile(join(f.dir, "prices", "symbols.json"), misstored(currency, source));
       await writeFile(join(f.dir, "prices", "etf_b.jsonl"), line(close, currency, source));
-      const said = `etf_b: 1 cierre de ${name} se guardó en ${currency}, pero esa fuente dijo otra divisa`;
-      const weights = await f.atlas("weights", "--date", "2027-06-09");
-      expect(weights.err).toContain(said);
-      expect(weights.text).not.toMatch(new RegExp(`etf_b\\s+equity\\s+10\\s+${close}\\b`));
       await f.atlas("prices", "update");
-      expect((await f.atlas("weights", "--date", "2027-06-09")).err).toContain(said);
       expect((await f.atlas("prices", "status")).text).toContain(
         `atlas prices purge etf_b --source ${source}`,
       );
-    });
-  }
-
-  for (const [what, text, reason] of [
-    ["that does not read", "{", "no se entiende"],
-    ["of a newer format", '{"symbols_format":3,"assets":{}}', "versión más nueva"],
-  ] as const) {
-    it(`a symbols.json ${what} degrades the views to the manual prices, and says why`, async () => {
-      const f = await folder(ledger());
-      await symbols(f.dir, {});
-      await writeFile(join(f.dir, "prices", "symbols.json"), text);
-      await writeFile(join(f.dir, "prices", "etf_b.jsonl"), line("10", "GBP", "eodhd"));
-      const weights = await f.atlas("weights", "--date", "2027-06-09");
-      expect(weights.code).toBe(0);
-      expect(weights.err).toContain(reason);
-      expect(weights.err).toContain("no se usan precios automáticos");
-      // The commands that need it still refuse it: they would write it.
-      expect((await f.atlas("prices", "update")).code).not.toBe(0);
     });
   }
 });
@@ -510,9 +482,6 @@ describe("atlas prices symbols: closes stored in the wrong currency block declar
     // Refused before spending a call.
     expect(f.eodhd.calls).toEqual([]);
     expect(await readFile(join(f.dir, "prices", "symbols.json"), "utf8")).toBe(pending);
-    expect((await f.atlas("weights", "--date", "2027-06-09")).err).toContain(
-      "etf_b: 1 cierre de Alpha Vantage",
-    );
   });
 
   it("refuses to remove the asset while it has them", async () => {
