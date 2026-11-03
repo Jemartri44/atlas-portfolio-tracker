@@ -240,7 +240,7 @@ export const classReturns = (events: readonly LedgerEvent[], to: CivilDate): Cla
         for (const effect of event.effects) {
           const assetId = effect.asset_id ?? event.asset_id;
           const here = classOf(assetId);
-          const note = (reason: UnsupportedReason, side: AssetClass | undefined, ids: string[]) =>
+          const leave = (reason: UnsupportedReason, side: AssetClass | undefined, ids: string[]) =>
             flag(side, {
               reason,
               event_id: event.id,
@@ -278,13 +278,13 @@ export const classReturns = (events: readonly LedgerEvent[], to: CivilDate): Cla
                 .neg(),
             );
           } else if (effect.op === "grant") {
-            note("corporate_action_grant", here, [assetId]);
+            leave("corporate_action_grant", here, [assetId]);
           } else if (effect.op !== "scale") {
             // convert / carve_out: no money moves while the value stays in the class and the book.
             const there = classOf(effect.to_asset_id);
             if (here !== there) {
-              note("corporate_action_reclassifies", here, [assetId, effect.to_asset_id]);
-              note("corporate_action_reclassifies", there, [assetId, effect.to_asset_id]);
+              leave("corporate_action_reclassifies", here, [assetId, effect.to_asset_id]);
+              leave("corporate_action_reclassifies", there, [assetId, effect.to_asset_id]);
             }
           }
         }
