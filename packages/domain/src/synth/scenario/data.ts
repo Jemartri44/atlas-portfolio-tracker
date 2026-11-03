@@ -359,7 +359,6 @@ export const settingsWith = (weights: Record<string, string>, contribution: stri
     { rate_pct: "30" },
   ],
   tax_residence: "ES",
-  notification_email: "atlas@example.invalid",
   job_frequencies: { prices: "daily", reminder: "monthly", reconciliation: "quarterly" },
   transfer_max_days: 15,
 });

@@ -267,7 +267,6 @@ export const SETTING_LABELS: Record<string, string> = {
   renta_season_end: "Fin de la temporada de Renta",
   savings_tax_brackets: "Tramos de la base del ahorro",
   tax_residence: "Residencia fiscal",
-  notification_email: "Correo de avisos",
   job_frequencies: "Frecuencia de los avisos automáticos",
   transfer_max_days: "Días máximos de un traspaso",
 };
