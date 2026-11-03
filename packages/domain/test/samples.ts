@@ -33,6 +33,7 @@ export const ID = {
   taxReturnFiled: "01ARYZ6S41TSV4RRFFQ69G5FAR",
   filingWaived: "01ARYZ6S41TSV4RRFFQ69G5FAT",
   externalIncome: "01ARYZ6S41TSV4RRFFQ69G5FAV",
+  taxPayment: "01ARYZ6S41TSV4RRFFQ69G5FAW",
 } as const;
 
 export const envelope = (id: string, type: LedgerEvent["type"]): Envelope => ({
@@ -200,6 +201,16 @@ export const SAMPLES: { [T in SupportedEvent["type"]]: Extract<SupportedEvent, {
     withholding_eur: "190",
     payer: "Mi empresa SL",
     fingerprint: "sha256:ext",
+  },
+  tax_payment: {
+    ...envelope(ID.taxPayment, "tax_payment"),
+    type: "tax_payment",
+    tax_year: 2027,
+    date: "2028-06-30",
+    amount_eur: "600",
+    kind: "payment",
+    instalment: "first",
+    fingerprint: "sha256:pay",
   },
   fx_exchange: {
     ...envelope(ID.fx, "fx_exchange"),

@@ -266,6 +266,17 @@ export const snapshotOf = (state: LedgerState): Snapshot => {
             withholding_eur: text(entry.withholding_eur),
           })),
         }),
+    ...(state.taxPayments.length === 0
+      ? {}
+      : {
+          tax_payments: state.taxPayments.map((entry) => ({
+            event_id: entry.event_id,
+            tax_year: entry.tax_year,
+            date: entry.date,
+            instalment: entry.instalment,
+            amount_eur: text(entry.amount_eur),
+          })),
+        }),
     valuations: state.valuations.map((event) => ({
       event_id: event.id,
       account_id: event.account_id,

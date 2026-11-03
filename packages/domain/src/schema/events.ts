@@ -349,6 +349,25 @@ export interface ExternalIncomeEvent extends Envelope {
   notes?: string;
 }
 
+/**
+ * A payment of the income tax return (or the refund of one), of the **whole**
+ * return: Atlas only estimates its savings part, so the two are compared,
+ * never subtracted. No account: the money comes from the bank (ADR-0004); a
+ * payment made from an investment account is recorded there as a withdrawal
+ * too. A split payment is two events, `first` (60 %, when filing) and
+ * `second` (40 %, by the date the order of each campaign sets).
+ */
+export interface TaxPaymentEvent extends Envelope {
+  type: "tax_payment";
+  tax_year: number;
+  date: CivilDate;
+  amount_eur: DecimalString;
+  kind: "payment" | "refund";
+  instalment: "single" | "first" | "second";
+  fingerprint: string;
+  notes?: string;
+}
+
 export interface FxExchangeEvent extends Envelope {
   type: "fx_exchange";
   account_id: AccountId;
@@ -892,6 +911,7 @@ export type SupportedEvent =
   | DividendEvent
   | InterestEvent
   | ExternalIncomeEvent
+  | TaxPaymentEvent
   | FxExchangeEvent
   | CashDepositEvent
   | CashWithdrawalEvent

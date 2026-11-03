@@ -2,7 +2,7 @@
 // part of the ledger: the quota with the brackets in force, and the package
 // of the return worded as the screen words it.
 
-import { type LedgerEvent, type LedgerState, settingsAt } from "@atlas/domain";
+import { type LedgerEvent, type LedgerState, Money, settingsAt } from "@atlas/domain";
 import {
   rentaPackage,
   savingsQuota,
@@ -19,6 +19,8 @@ import { type QuotaView, quotaView } from "../../view-models/fiscal/quota.js";
 
 export interface Estimate {
   quota: QuotaView;
+  /** What was paid (positive) or refunded (negative) for the whole return of the year, if recorded. */
+  paid_eur?: Money;
   /** The income from outside the portfolio of the year, when there is some. */
   external?: ExternalIncomeView;
 }
@@ -42,8 +44,14 @@ export const quotaOf = (
   const outside = state.externalIncome.some((entry) => entry.year <= report.year);
   const read = outside ? taxYear(events, report.year, { ...options, external: true }) : report;
   const external = externalIncomeView(read);
+  const payments = state.taxPayments.filter((entry) => entry.tax_year === report.year);
   return {
     quota: quotaView(savingsQuota(read, brackets)),
+    ...(payments.length === 0
+      ? {}
+      : {
+          paid_eur: payments.reduce((sum, entry) => sum.add(entry.amount_eur), Money.zero("EUR")),
+        }),
     ...(external === undefined ? {} : { external }),
   };
 };

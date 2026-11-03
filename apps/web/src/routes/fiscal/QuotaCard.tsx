@@ -3,6 +3,7 @@
 // its first line, every time: it does not know the rest of the return, and a
 // figure that looks like the liquidation would be read as one.
 
+import type { Money } from "@atlas/domain";
 import { For, type JSX, Show } from "solid-js";
 import {
   Amount,
@@ -45,7 +46,24 @@ const COLUMNS: DataColumn<QuotaBracketView>[] = [
   },
 ];
 
-export const QuotaCard = (props: { view: QuotaView }): JSX.Element => (
+/**
+ * What was paid for the whole return beside the estimate of its savings part: compared, never
+ * subtracted, and the note that says why is always in sight.
+ */
+const Paid = (props: { year: number; paid: Money }): JSX.Element => (
+  <>
+    <StatLine
+      label={`${props.paid.isNegative() ? "Devuelto" : "Pagado"} por la Renta de ${props.year}`}
+    >
+      <Amount value={props.paid} signed />
+    </StatLine>
+    <p class="card-note">
+      El pago es el de toda tu Renta (trabajo, actividad…); Atlas estima solo la parte del ahorro.
+    </p>
+  </>
+);
+
+export const QuotaCard = (props: { view: QuotaView; paid?: Money | undefined }): JSX.Element => (
   <Section
     title="Cuota estimada del ahorro"
     class="span-12"
@@ -122,6 +140,7 @@ export const QuotaCard = (props: { view: QuotaView }): JSX.Element => (
       <TotalLine label="Resultado estimado de esta parte">
         <Amount value={props.view.result_eur} signed />
       </TotalLine>
+      <Show when={props.paid}>{(paid) => <Paid year={props.view.year} paid={paid()} />}</Show>
       <p class="card-note">
         Positivo, a pagar; negativo, a devolver. Las retenciones se restan en la Renta de toda la
         cuota, no solo de esta parte.
@@ -137,7 +156,7 @@ export const QuotaCard = (props: { view: QuotaView }): JSX.Element => (
 /** The quota and, beside it, the income from outside the portfolio it counts. */
 export const EstimateCards = (props: { estimate: Estimate }): JSX.Element => (
   <>
-    <QuotaCard view={props.estimate.quota} />
+    <QuotaCard view={props.estimate.quota} paid={props.estimate.paid_eur} />
     <ExternalIncomeCard view={props.estimate.external} />
   </>
 );
