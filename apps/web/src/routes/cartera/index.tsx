@@ -170,7 +170,7 @@ export default function CarteraRoute(): JSX.Element {
               />
               <CostsCard view={costs()} />
               <TotalCostCard summary={summary()} settings={settings()} />
-              <ProjectionCard weights={projection()} settings={settings()} />
+              <ProjectionCard weights={projection()} settings={settings()} asOf={date()} />
             </div>
           </>
         );
