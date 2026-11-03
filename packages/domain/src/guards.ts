@@ -16,7 +16,7 @@ export const onlyKeys = (
 /** A SHA-256 as lower-case hexadecimal. */
 export const SHA256_HEX = /^[0-9a-f]{64}$/;
 
-const INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
+export const INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
 
 /**
  * An ISO 8601 UTC instant, with up to three decimals of second, that exists:

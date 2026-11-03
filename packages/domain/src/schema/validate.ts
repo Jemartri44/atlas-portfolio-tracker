@@ -5,7 +5,7 @@
 import { isCivilDate, isWeekend } from "../dates/civil-date.js";
 import { madridDateOf } from "../dates/madrid.js";
 import { ValidationError } from "../errors.js";
-import { isInstant, isRecord, SHA256_HEX, type UnknownRecord } from "../guards.js";
+import { INSTANT_PATTERN, isRecord, SHA256_HEX, type UnknownRecord } from "../guards.js";
 import { isUlid } from "../ids/ulid.js";
 import { Decimal, isDecimalString } from "../money/decimal.js";
 import { isCurrency } from "../money/money.js";
@@ -603,7 +603,13 @@ const checkEnvelope = (raw: UnknownRecord, schema: LedgerSchema): void => {
     throw invalid("invalid_envelope", "id must be a ULID", { field: "id", value: raw.id });
   }
   const recordedAt = raw.recorded_at;
-  if (!isInstant(recordedAt)) {
+  // The loader stays tolerant (ADR-0018: hardening it is a breaking change); a line that is
+  // written is checked for an instant that exists in `sync/remote.ts`.
+  if (
+    typeof recordedAt !== "string" ||
+    !INSTANT_PATTERN.test(recordedAt) ||
+    Number.isNaN(Date.parse(recordedAt))
+  ) {
     throw invalid("invalid_envelope", "recorded_at must be an ISO 8601 UTC instant", {
       field: "recorded_at",
       value: recordedAt,

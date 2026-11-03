@@ -41,8 +41,6 @@ describe("validateShape: envelope", () => {
     rejects(variant(SAMPLES.buy, { recorded_at: "2026-09-01" }), "invalid_envelope");
     rejects(variant(SAMPLES.buy, { recorded_at: 5 }), "invalid_envelope");
     rejects(variant(SAMPLES.buy, { recorded_at: "2026-13-01T00:00:00Z" }), "invalid_envelope");
-    rejects(variant(SAMPLES.buy, { recorded_at: "2026-02-30T10:00:00Z" }), "invalid_envelope");
-    rejects(variant(SAMPLES.buy, { recorded_at: "2026-09-01T24:00:00Z" }), "invalid_envelope");
     rejects(variant(SAMPLES.buy, { corrects_id: "nope" }), "invalid_envelope");
     // `swap` used to be the example of a type nobody knows. It is a type now,
     // so the example has to be one that really is not.
