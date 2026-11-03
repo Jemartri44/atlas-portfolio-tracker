@@ -62,7 +62,7 @@ export const ERRORS_SETTINGS: Record<string, Entry> = {
       }.`,
     web: () => "Revísalos en Ajustes → Configuración.",
     cli: () =>
-      "Es casi seguro un asset_id mal escrito en target_weights: mira el aviso unknown_target_weight de `atlas weights` y corrígelo con `atlas settings set --target-weights …`.",
+      "Es casi seguro un asset_id mal escrito en target_weights: mira el aviso unknown_target_weight en la web (Cartera) y corrígelo con `atlas settings set --target-weights …`.",
   },
   split_not_exact: (d, v) =>
     `El reparto de la aportación no cuadra (${v.money(d.distributed)} repartidos de ${v.money(d.core)}): es un fallo interno de la calculadora, no registres nada.`,
