@@ -1,10 +1,12 @@
 // What the Cartera reads from what the owner types for the long-run questions, and the sentence of
 // whatever is missing.
 
+import { EUR, Money } from "@atlas/domain";
+import type { TotalCost } from "@atlas/domain/portfolio";
 import { describe, expect, it } from "vitest";
 import { missingSentence } from "../src/view-models/core/long-run.js";
 import { emptyProjectionInputs, readProjection } from "../src/view-models/core/projection.js";
-import { emptyCostInputs, readCost } from "../src/view-models/core/total-cost.js";
+import { emptyCostInputs, readCost, totalCostView } from "../src/view-models/core/total-cost.js";
 
 describe("readProjection", () => {
   it("reads a Spanish keyboard and names an unnamed scenario", () => {
@@ -47,6 +49,17 @@ describe("readCost", () => {
     expect(read.assumptions?.exitTaxPct?.toString()).toBe("19");
   });
 
+  it("reads a Spanish decimal comma and keeps a negative gross return as a scenario", () => {
+    const read = readCost({ ...emptyCostInputs(), grossReturn: "-2,5" });
+    expect(read.assumptions?.grossReturnPct.toString()).toBe("-2.5");
+  });
+
+  it.each(["0", "101", "99999"])("refuses a horizon of %s years", (years) => {
+    const read = readCost({ ...emptyCostInputs(), grossReturn: "5", years });
+    expect(read.assumptions).toBeUndefined();
+    expect(read.errors.years).toBe("Entre 1 y 100 años.");
+  });
+
   it.each([
     ["commission", { commission: "-1" }],
     ["exitTax", { exitTax: "-2" }],
@@ -66,5 +79,48 @@ describe("missingSentence", () => {
       "Falta la aportación mensual y el tipo de salida en Configuración.",
     );
     expect(missingSentence(["commission"])).toBe("Falta la comisión por aportación.");
+  });
+});
+
+describe("totalCostView", () => {
+  const eur = (text: string): Money => Money.parse(text, EUR);
+  const result = (patch: Partial<TotalCost>): TotalCost => ({
+    years: 20,
+    missing: [],
+    ter_partial: false,
+    ter_missing_eur: eur("0"),
+    monthly_core_eur: eur("500"),
+    end_without_costs_eur: eur("100000"),
+    end_net_eur: eur("98000"),
+    ter_cost_eur: eur("1000"),
+    total_eur: eur("2000"),
+    ...patch,
+  });
+
+  it("shows the figures when nothing blocks them", () => {
+    const view = totalCostView(result({}));
+    expect(view.gap).toBeUndefined();
+    expect(view.total).toEqual(eur("2000"));
+  });
+
+  it("says what is missing instead of showing a total that counts the contribution as zero", () => {
+    const view = totalCostView(result({ missing: ["monthly_contribution", "bucket_pct"] }));
+    expect(view.gap).toBe("falta la aportación mensual y el porcentaje del cubo en Configuración");
+  });
+
+  it("adds the missing contribution to the reason of the domain, and keeps what only trims the total", () => {
+    const both = totalCostView(result({ gap: "partial", missing: ["bucket_pct"] }));
+    expect(both.gap).toBe(
+      "falta un precio de la cartera principal; falta el porcentaje del cubo en Configuración",
+    );
+    const optional = totalCostView(result({ missing: ["commission", "exit_tax"] }));
+    expect(optional.gap).toBeUndefined();
+    expect(optional.missing).toBe("Falta la comisión por aportación y el tipo de salida.");
+  });
+
+  it("says how much priced value has no TER", () => {
+    expect(
+      totalCostView(result({ ter_partial: true, ter_missing_eur: eur("300") })).terMissing,
+    ).toEqual(eur("300"));
   });
 });
