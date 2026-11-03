@@ -306,6 +306,10 @@ export const MISSING_FIELDS: ReadonlySet<RowFieldId> = new Set(["nif"]);
  * into two boxes —gains and losses, 0424 and 0425— and the number of the box
  * is what says which of the two it is.
  *
+ * The data dictionary of the Modelo 100 of 2025 (`diccionarioXSD_2025` and
+ * `Renta2025.xsd`, read on 2026-11-03) types each box as positive only (`P102`)
+ * or signed (`N102`); the signed ones are exactly the movable capital income.
+ *
  * It decides **which box**, and nothing else: the amount shown always carries
  * its own sign, with or without a table, because a year with no checked table
  * has no box number to say it instead.
