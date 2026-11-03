@@ -261,7 +261,7 @@ export default defineConfig(({ command }) => ({
          * everything of the ECB (`ecb/`, the `ecb.ts` door and the local configuration in
          * `config/`), the automatic daily closes (`quotes/` and the `quotes.ts` door), the sync of
          * the ledger (`sync/`, the `sync.ts` door and its two ports) and the indicators of the Cubo
-         * (`charts/` and the `charts.ts` door) and the analysis of the Cartera and the Cubo (the `portfolio.ts` door and the modules behind it) the exposure (`exposure`, `exposure-file`, `index-profiles`: the tables of the indexes) and the rebalance (the `rebalance.ts` door, which carries the tax engine), none of which may be on the boot path. **The store
+         * (`charts/` and the `charts.ts` door) and the analysis of the Cartera and the Cubo (the `portfolio.ts` door and the modules behind it), the exposure (`exposure`, `exposure-file`, `index-profiles`: the tables of the indexes) and the rebalance (the `rebalance.ts` door, which carries the tax engine), none of which may be on the boot path. **The store
          * of the browser rides in the same chunk** (`blob.ts` and `idb.ts`): it is boot too —
          * opening the ledger is the boot. Without the group the bundler splits the store into a
          * boot chunk of its own (0,5 KB gzip, measured). `scripts/check-bundle.mjs` fails the build

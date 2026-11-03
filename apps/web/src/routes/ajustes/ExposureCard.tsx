@@ -44,6 +44,7 @@ const TITLES: Record<Dimension, string> = { currency: "Divisa", region: "Región
 const DimensionLine = (props: {
   dimension: Dimension;
   view: DimensionRowView;
+  busy: boolean;
   onEdit: () => void;
 }): JSX.Element => (
   <div class="exposure-line">
@@ -63,7 +64,7 @@ const DimensionLine = (props: {
         </>
       )}
     </Show>
-    <button type="button" class="secondary" onClick={props.onEdit}>
+    <button type="button" class="secondary" disabled={props.busy} onClick={props.onEdit}>
       Editar {TITLES[props.dimension].toLowerCase()}
     </button>
   </div>
@@ -108,14 +109,19 @@ export const ExposureCard = (props: { assets: readonly Asset[] }): JSX.Element =
   };
 
   /** Saves the change and keeps its error, if any, where the owner reads it. */
-  const change = async (next: (exposures: Exposures) => Exposures): Promise<string | undefined> => {
+  const change = async (
+    next: (exposures: Exposures) => Exposures,
+    report = true,
+  ): Promise<string | undefined> => {
     const state = ready();
     if (state === undefined) {
       return "La exposición todavía no se ha leído.";
     }
     setProblem(undefined);
     const said = await declared.save(next(state.exposures));
-    setProblem(said);
+    if (report) {
+      setProblem(said);
+    }
     return said;
   };
 
@@ -151,9 +157,13 @@ export const ExposureCard = (props: { assets: readonly Asset[] }): JSX.Element =
                   </Notice>
                 </Show>
                 <div class="exposure-counts">
-                  <StatLine label="Con porcentajes por defecto">{counts().default}</StatLine>
-                  <StatLine label="Con tus porcentajes">{counts().owner}</StatLine>
-                  <StatLine label="Sin propuesta">{counts().none}</StatLine>
+                  <StatLine label="Activos del núcleo con porcentajes por defecto">
+                    {counts().default}
+                  </StatLine>
+                  <StatLine label="Activos del núcleo con tus porcentajes">
+                    {counts().owner}
+                  </StatLine>
+                  <StatLine label="Activos del núcleo sin propuesta">{counts().none}</StatLine>
                 </div>
                 <ul class="exposure-rows">
                   <For each={rows()}>
@@ -186,15 +196,22 @@ export const ExposureCard = (props: { assets: readonly Asset[] }): JSX.Element =
                         <DimensionLine
                           dimension="currency"
                           view={row.currency}
+                          busy={declared.busy()}
                           onEdit={() => setEditing({ row, dimension: "currency" })}
                         />
                         <DimensionLine
                           dimension="region"
                           view={row.region}
+                          busy={declared.busy()}
                           onEdit={() => setEditing({ row, dimension: "region" })}
                         />
                         <Show when={row.hasOwn}>
-                          <button type="button" class="secondary" onClick={() => setResetting(row)}>
+                          <button
+                            type="button"
+                            class="secondary"
+                            disabled={declared.busy()}
+                            onClick={() => setResetting(row)}
+                          >
                             Restablecer a los de por defecto
                           </button>
                         </Show>
@@ -216,8 +233,9 @@ export const ExposureCard = (props: { assets: readonly Asset[] }): JSX.Element =
             const target = editing();
             return target === undefined
               ? Promise.resolve("No hay nada que guardar.")
-              : change((exposures) =>
-                  withSplit(exposures, target.row.assetId, target.dimension, split),
+              : change(
+                  (exposures) => withSplit(exposures, target.row.assetId, target.dimension, split),
+                  false,
                 );
           }}
           onClose={() => setEditing(undefined)}

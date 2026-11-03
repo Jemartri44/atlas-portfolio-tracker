@@ -15,7 +15,7 @@ import {
 } from "../src/view-models/core/exposure.js";
 
 describe("barOf", () => {
-  it("keeps the four largest parts in colour and groups the rest, always with the figure in text", () => {
+  it("keeps the three largest parts in colour and groups the rest, always with the figure in text", () => {
     const view = barOf("currency", [
       { key: "JPY", pct: "6" },
       { key: "USD", pct: "70" },
@@ -25,8 +25,8 @@ describe("barOf", () => {
       { key: "CAD", pct: "3" },
       { key: "AUD", pct: "0" },
     ]);
-    expect(view.segments.map((s) => s.key)).toEqual(["a", "b", "c", "d", "rest"]);
-    expect(view.legend.map((e) => e.label)).toEqual(["USD", "EUR", "JPY", "GBP", "Otras (2)"]);
+    expect(view.segments.map((s) => s.key)).toEqual(["a", "b", "c", "rest"]);
+    expect(view.legend.map((e) => e.label)).toEqual(["USD", "EUR", "JPY", "Otras (3)"]);
     expect(view.legend.map((e) => e.figure.replace(/\u00a0/g, " "))).toEqual([
       "70 %",
       "10 %",

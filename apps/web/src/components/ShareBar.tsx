@@ -4,7 +4,8 @@
 // on because a percentage is not an amount.
 //
 // The patrimony uses it with the three books (`core`, `bucket`, `cash`); the exposure with the parts
-// in order of weight (`a`…`d`, and `rest` for what does not fit), which `shareParts` prepares.
+// in order of weight (`a`…`c`, and `rest` for what does not fit), which `barOf` prepares
+// (`view-models/core/exposure.ts`).
 
 import { For, type JSX } from "solid-js";
 

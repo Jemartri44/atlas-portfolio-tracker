@@ -4,7 +4,7 @@
 
 import { Decimal, HUNDRED } from "@atlas/domain";
 import type { Split } from "@atlas/domain/portfolio";
-import { createEffect, createSignal, For, type JSX, Show } from "solid-js";
+import { createEffect, createSignal, Index, type JSX, Show } from "solid-js";
 import { Dialog, Field, Icon, SelectField } from "../../components/index.js";
 import { decimalForInput, parseDecimalInput } from "../../format/input.js";
 import { formatDecimalString } from "../../format/number.js";
@@ -136,50 +136,50 @@ export const SplitDialog = (props: Props): JSX.Element => {
       }
     >
       <p class="card-note">Con la coma como decimal (62,5). Tienen que sumar exactamente 100.</p>
-      <For each={rows()}>
+      <Index each={rows()}>
         {(row, index) => (
           <div class="split-row">
             <Show
               when={props.dimension === "currency"}
               fallback={
                 <SelectField
-                  id={`split-key-${index()}`}
+                  id={`split-key-${index}`}
                   label="Región"
                   placeholder="Elige"
-                  value={row.key}
+                  value={row().key}
                   options={regionOptions()}
-                  onInput={(key) => patch(index(), { key })}
+                  onInput={(key) => patch(index, { key })}
                 />
               }
             >
               <Field
-                id={`split-key-${index()}`}
+                id={`split-key-${index}`}
                 kind="text"
                 label="Divisa"
-                value={row.key}
-                onInput={(key) => patch(index(), { key: key.toUpperCase() })}
+                value={row().key}
+                onInput={(key) => patch(index, { key: key.toUpperCase() })}
               />
             </Show>
             <Field
-              id={`split-pct-${index()}`}
+              id={`split-pct-${index}`}
               kind="decimal"
               label="Porcentaje"
               unit="%"
-              value={row.pct}
-              error={row.pct === "" ? undefined : read().rowErrors[index()]}
-              onInput={(pct) => patch(index(), { pct })}
+              value={row().pct}
+              error={row().pct === "" ? undefined : read().rowErrors[index]}
+              onInput={(pct) => patch(index, { pct })}
             />
             <button
               type="button"
               class="secondary"
-              aria-label={`Quitar la fila ${row.key === "" ? index() + 1 : row.key}`}
-              onClick={() => setRows(rows().filter((_, at) => at !== index()))}
+              aria-label={`Quitar la fila ${row().key === "" ? index + 1 : row().key}`}
+              onClick={() => setRows(rows().filter((_, at) => at !== index))}
             >
               <Icon name="close" class="icon-sm" />
             </button>
           </div>
         )}
-      </For>
+      </Index>
       <button
         type="button"
         class="secondary"

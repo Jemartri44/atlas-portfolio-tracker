@@ -133,7 +133,11 @@ describe("the exposure card of the configuration", () => {
     await press(host, "Añadir fila");
     await press(host, "Añadir fila");
     type(host, "split-key-0", "usd");
+    const field = host.querySelector("#split-pct-0");
+    type(host, "split-pct-0", "6");
     type(host, "split-pct-0", "60,5");
+    // The row is not rebuilt on each key: a phone keyboard would lose the focus.
+    expect(host.querySelector("#split-pct-0")).toBe(field);
     type(host, "split-key-1", "EUR");
     type(host, "split-pct-1", "30");
     await settle();

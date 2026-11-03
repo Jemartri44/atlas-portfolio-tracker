@@ -45,7 +45,7 @@ export const regionOptions = (): { value: string; label: string }[] =>
   Object.entries(REGIONS).map(([value, label]) => ({ value, label }));
 
 /** The parts, from the largest, in the colours `a`…`d`; what does not fit goes together to `rest`. */
-const PARTS = ["a", "b", "c", "d"] as const;
+const PARTS = ["a", "b", "c"] as const;
 
 export interface BarView {
   segments: BarSegment[];
