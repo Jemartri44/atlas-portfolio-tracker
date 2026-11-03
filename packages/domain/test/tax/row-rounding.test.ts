@@ -58,3 +58,26 @@ describe("a row is its two legs rounded and then subtracted", () => {
     expect(text(line?.computable_eur_rounded)).toBe("-5");
   });
 });
+
+describe("a deferral never turns a loss into a gain by rounding", () => {
+  // Transmission 100,0050 and acquisition 100,0149: −0,0099 of its own, and
+  // 100,01 − 100,01 = 0,00 by its legs. A repurchase defers all of it, which
+  // rounds to −0,01 on its own: 0,00 + 0,01 would be a gain of a cent on a
+  // loss. What is computable stays 0,00.
+  it("leaves 0,00 computable, in the line and in the base", () => {
+    const b = taxBuilder(HAND_SETTINGS);
+    buy(b, "stock_s", "2025-01-10", "1", "100.0149");
+    sell(b, "stock_s", "2025-03-10", "1", "100.005");
+    buy(b, "stock_s", "2025-03-20", "1", "100");
+    const report = reportOf(b.build(), 2025);
+    const [line] = report.capital_gains.lines;
+    expect(text(line?.own_eur)).toBe("-0.0099");
+    expect(text(line?.computable_eur_rounded)).toBe("0");
+    expect(text(report.base_eur)).toBe("0");
+    const boxes = taxBoxes(b.build(), 2025, { today: TODAY });
+    const imputable = boxes.entries.find(
+      (entry) => entry.concept === "gp.listed_shares.loss_imputable",
+    );
+    expect(text(imputable?.amount_eur)).toBe("0");
+  });
+});

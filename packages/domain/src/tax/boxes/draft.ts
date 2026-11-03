@@ -40,6 +40,9 @@ import {
 import type { BoxRow, PartialReason } from "./report.js";
 import { deferredByOrigin, gainIndexOf, gainOf } from "./rows.js";
 
+/** What a loss keeps after its deferral, which never turns it into a gain. */
+const negativeOrZero = (amount: Money): Money => (amount.isNegative() ? amount : zero());
+
 /** One figure, with everything the layout knows about it except its box. */
 export interface Draft {
   concept: ConceptId;
@@ -155,7 +158,8 @@ const disposalRows = (
         : { loss: own, loss_imputable: own.sub(deferred) }),
     };
     const legs = legsRounded(line.proceeds.eur, line.cost_eur);
-    const imputable = legs.sub(deferred.roundToCents());
+    // Never above zero: a deferral cannot turn a loss into a gain (`computableRounded`).
+    const imputable = negativeOrZero(legs.sub(deferred.roundToCents()));
     const rounded: Partial<Record<RowFieldId, Money>> = gain
       ? { gain: legs, gain_net: legs, gain_imputable: legs }
       : { loss: legs, loss_imputable: imputable };
@@ -213,7 +217,7 @@ const disposalRows = (
         ...(field === "gain" || field === "loss"
           ? { rounded: line.gain_eur_rounded }
           : field === "loss_imputable"
-            ? { rounded: line.gain_eur_rounded.sub(deferred.roundToCents()) }
+            ? { rounded: negativeOrZero(line.gain_eur_rounded.sub(deferred.roundToCents())) }
             : {}),
       });
     }
@@ -224,7 +228,9 @@ const disposalRows = (
         ? { ...current, gains: current.gains.add(line.gain_eur_rounded) }
         : {
             ...current,
-            losses: current.losses.add(line.gain_eur_rounded.sub(deferred.roundToCents())),
+            losses: current.losses.add(
+              negativeOrZero(line.gain_eur_rounded.sub(deferred.roundToCents())),
+            ),
           },
     );
   }

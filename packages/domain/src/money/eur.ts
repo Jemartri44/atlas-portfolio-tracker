@@ -21,9 +21,14 @@ export const legsRounded = (proceeds: Money, cost: Money): Money =>
 /**
  * What an operation computes, rounded: its own result as the form computes it
  * plus what the wash-sale rule adds or holds back (`computable − own`), which
- * the form takes in boxes of their own and is rounded on its own.
+ * the form takes in boxes of their own and is rounded on its own. On a loss
+ * the two roundings could leave a cent of gain (a loss of 0,0099 is 0,00 by
+ * its legs and its whole deferral is −0,01): a loss never computes above zero.
  */
 export const computableRounded = (
   gain: { gain_eur: Money; gain_eur_rounded: Money },
   computable: Money,
-): Money => gain.gain_eur_rounded.add(computable.sub(gain.gain_eur).roundToCents());
+): Money => {
+  const rounded = gain.gain_eur_rounded.add(computable.sub(gain.gain_eur).roundToCents());
+  return gain.gain_eur.isNegative() && rounded.amount.isPositive() ? zero() : rounded;
+};
