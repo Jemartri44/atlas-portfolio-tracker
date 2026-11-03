@@ -4,7 +4,8 @@
 import { SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { describe, expect, it } from "vitest";
 import { MailRefused, MailUnknown, recipientParameter, sesNotifier } from "../../src/aws/mail.js";
-import { SdkMailSender } from "../../src/aws/sdk-ses.js";
+import { SDK_MAX_ATTEMPTS } from "../../src/aws/sdk-errors.js";
+import { productionMailSender, SdkMailSender } from "../../src/aws/sdk-ses.js";
 import { TestOnlyFakeSes } from "./test-only-fake-ses.js";
 import { TestOnlyFakeSsm } from "./test-only-fake-ssm.js";
 
@@ -137,5 +138,14 @@ describe("the thin adapter of SES v2", () => {
       expect(String(thrown.message)).not.toContain("user@example.test");
       expect(String(thrown.message)).not.toContain("arn:");
     }
+  });
+});
+
+describe("the production SES client", () => {
+  it("carries the same timeouts and attempts as the S3 and SSM clients", async () => {
+    const sender = productionMailSender() as unknown as {
+      client: { config: { maxAttempts: () => Promise<number> } };
+    };
+    expect(await sender.client.config.maxAttempts()).toBe(SDK_MAX_ATTEMPTS);
   });
 });
