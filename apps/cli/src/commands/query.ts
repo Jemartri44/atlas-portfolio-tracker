@@ -19,11 +19,11 @@ import {
 } from "@atlas/domain";
 import { foreignRatesOf, type RateCheck } from "@atlas/domain/ecb";
 import { deepCheck } from "@atlas/domain/tools";
-import { assertKnownFlags, booleanFlag, type Flags, stringFlag, UsageError } from "../args.js";
+import { assertKnownFlags, booleanFlag, type Flags, stringFlag } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { day, describeEcbFinding } from "../output/ecb.js";
 import { table } from "../output/table.js";
-import { describeWarning } from "../output/warnings.js";
+import { warningLines } from "../output/warnings.js";
 import { ratesOf } from "./rates.js";
 import {
   assertExists,
@@ -32,25 +32,18 @@ import {
   originOf,
   render,
   renderQuery,
+  reportYear,
   warnIfLedgerMissing,
-  yearArgument,
 } from "./shared.js";
-
-const yearOf = (positionals: string[], usage: string): number => {
-  const year = yearArgument(positionals[1]);
-  if (year === undefined || year < 1900) {
-    throw new UsageError(usage);
-  }
-  return year;
-};
 
 export const positionsCommand = async (
   ctx: Context,
   _positionals: string[],
   flags: Flags,
 ): Promise<number> => {
-  assertKnownFlags(flags, ["account", "asset", ...GLOBAL_FLAGS]);
-  const { state } = await loadForQuery(ctx);
+  assertKnownFlags(flags, ["account", "asset", "date", ...GLOBAL_FLAGS]);
+  const date = dateFlag(ctx, flags);
+  const { state } = await loadForQuery(ctx, date);
   const account = stringFlag(flags, "account");
   const asset = stringFlag(flags, "asset");
   assertExists(state, "account", account);
@@ -64,10 +57,10 @@ export const positionsCommand = async (
     ctx,
     state,
     rows.map((p) => ({ ...p, quantity: p.quantity.toString() })),
-    table(
+    `Posiciones a ${date} (--date para otra fecha).\n${table(
       ["cuenta", "activo", "cantidad"],
       rows.map((p) => [p.account_id, p.asset_id, p.quantity.toString()]),
-    ),
+    )}`,
   );
   return 0;
 };
@@ -191,7 +184,13 @@ export const gainsCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["lots", ...GLOBAL_FLAGS]);
-  const year = yearOf(positionals, "uso: atlas gains <año> [--lots]");
+  const year = reportYear(
+    ctx,
+    positionals[1],
+    "uso: atlas gains <año> [--lots]",
+    "atlas gains",
+    1900,
+  );
   const { events, state } = await loadForQuery(ctx);
   const gains = realizedGains(state, year);
   const total = gains.reduce((sum, g) => sum.add(g.gain_eur_rounded), Money.zero("EUR"));
@@ -269,7 +268,7 @@ export const incomeCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, GLOBAL_FLAGS);
-  const year = yearOf(positionals, "uso: atlas income <año>");
+  const year = reportYear(ctx, positionals[1], "uso: atlas income <año>", "atlas income", 1900);
   const { state } = await loadForQuery(ctx);
   const rows = investmentIncome(state, year);
   renderQuery(
@@ -478,7 +477,12 @@ export const checkCommand = async (
               // (the contract of `errors.ts`): `check` was still printing the raw
               // message, so the only place that lists every warning of the ledger
               // spoke a different language from the rest of the application.
-              ...warnings.map((w) => ["warning", w.code, describeWarning(w), w.event_id]),
+              ...warningLines(warnings).map((w) => [
+                "warning",
+                w.code,
+                w.text,
+                w.event_ids.join(", "),
+              ]),
             ],
           ),
       ...ratesLine(rates, deep),

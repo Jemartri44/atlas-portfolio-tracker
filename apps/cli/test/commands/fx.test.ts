@@ -221,7 +221,7 @@ describe("atlas fx", () => {
     const report = await atlas(
       sourceOf(async () => ({ bytes: csv })),
       "tax",
-      "2027",
+      "2026",
     );
     expect(report.code).toBe(0);
     expect(report.text()).toContain("no se ha comprobado el histórico del BCE");
