@@ -1,6 +1,6 @@
-# Sistema de diseño de Atlas: «papel y tinta»
+# Sistema de diseño de Atlas: «papel y tinta», dirección A «Cuaderno vivo»
 
-> **Estado.** Aprobado por la dirección el 2026-09-19, con las decisiones D1–D13 de §8 y la barra de proporción del patrimonio. El encargo de partida es [`brief.md`](brief.md), hoy reducido a los requisitos que siguen vigentes tras ADR-0035. La referencia visual exacta fue un prototipo estático (HTML y CSS con los datos de ejemplo de la sección 9 del encargo), retirado del árbol y recuperable en el historial de git (`git log -- docs/design/prototype`); hoy la referencia es `apps/web/src/styles/`. Las capturas de referencia se guardan fuera del repositorio.
+> **Estado.** Aprobado por la dirección el 2026-09-19, con las decisiones D1–D13 de §8 y la barra de proporción del patrimonio. El 2026-11-03 el dueño eligió la dirección A, «Cuaderno vivo», de la auditoría visual, con tres piezas de la B (D14 y siguientes de §8): misma paleta y componentes, con más presencia visual. El encargo de partida es [`brief.md`](brief.md), hoy reducido a los requisitos que siguen vigentes tras ADR-0035. La referencia visual exacta fue un prototipo estático (HTML y CSS con los datos de ejemplo de la sección 9 del encargo), retirado del árbol y recuperable en el historial de git (`git log -- docs/design/prototype`); hoy la referencia es `apps/web/src/styles/`. Las capturas de referencia se guardan fuera del repositorio.
 >
 > **Cómo leerlo.** §1 es el diagnóstico de la base anterior y por qué se quitó Pico (ADR-0023). §2 a §5 son el sistema: dirección, variables, maquetación y componentes. §6 es el vocabulario. §7 describe la composición de cada pantalla. §8 recoge las decisiones tomadas. §9 dice dónde vive cada cosa en el código.
 
@@ -47,7 +47,7 @@ Pico está pensado para que una página de contenido quede bien sin clases, y un
 - **Nada de estética de *trading*.** Ganancias y pérdidas llevan signo y etiqueta, con color apagado. El rojo solo aparece ante un problema de verdad (un aviso crítico, una acción destructiva). «Parcial» y «sin dato» son neutros, porque son lo normal.
 - **La privacidad como estado principal.** Con las cifras ocultas la pantalla sigue teniendo estructura: la máscara es discreta (cuatro puntos pequeños y la unidad) y el ojo va a lo que sí se ve: porcentajes, desviaciones, fechas, avisos y la forma de las gráficas.
 
-Tipografía: la del sistema (Segoe UI en Windows, Roboto en Android, SF en Apple), con cifras tabulares en columnas. Ninguna fuente alojada.
+Tipografía (D14): **Inter** para la interfaz, con cifras tabulares, y **Fraunces 600**, una serifa editorial, para el título de cada pantalla y su cifra protagonista. Las dos se alojan con la aplicación (`apps/web/public/fonts/`, recorte latino, licencia OFL): nada se descarga de fuera. Detrás quedan las del sistema para un carácter fuera del recorte.
 
 ---
 
@@ -57,32 +57,32 @@ Todas viven en `apps/web/src/styles/tokens.css`. **Fuera de ese fichero no se es
 
 ### 3.1 Color: interfaz
 
-Contraste medido con la fórmula WCAG sobre la superficie en la que se usa cada color.
+Contraste medido con la fórmula WCAG; el mínimo entre el papel y la hoja de cada tema (remedido el 2026-11-03 con la hoja `#fffdf8`). `test/contrast.test.ts` y `test/palette.test.ts` leen `tokens.css` y vuelven a medir los pares que importan.
 
 | Variable | Claro | Oscuro | Uso | Contraste mínimo medido |
 |---|---|---|---|---|
-| `--c-canvas` | `#f3f2ee` | `#161615` | Fondo de página (papel) | — |
-| `--c-surface` | `#ffffff` | `#1f1f1d` | Tarjetas, barras, diálogos | — |
-| `--c-raised` | `#ffffff` | `#3a3a36` | Pestaña actual sobre su carril | — |
-| `--c-fill` | `#f0efea` | `#2a2a27` | Pozos: bloque «pendiente», esqueleto, carril de pestañas | — |
-| `--c-border` | `#e3e1db` | `#30302d` | Separadores de 1 px | — |
-| `--c-border-control` | `#8a877f` | `#76746d` | Borde de campos y botón secundario | 3,2:1 sobre el papel, 3,6:1 sobre la tarjeta / 3,5:1 (≥ 3:1, WCAG 1.4.11) |
-| `--c-text` | `#1c1b18` | `#edece8` | Texto principal (tinta) | 15,4:1 / 15,3:1 |
-| `--c-text-2` | `#54524c` | `#bdbbb4` | Segunda línea, etiquetas | 6,8:1 / 8,6:1 |
-| `--c-text-3` | `#66645d` | `#9e9c95` | Meta, leyendas, la máscara | 5,1:1 / 5,2:1 (sobre `--c-fill`) |
-| `--c-accent` | `#1f4f7c` | `#8fb6e3` | **El único acento**: enlaces, botón principal, pestaña actual, foco | 7,4:1 / 6,8:1 como texto |
+| `--c-canvas` | `#f3f1ea` | `#141412` | Fondo de página (papel) | — |
+| `--c-surface` | `#fffdf8` | `#1d1c19` | Tarjetas, barras, diálogos (hoja cálida) | — |
+| `--c-raised` | `#fffdf8` | `#3a3a36` | Segmento actual de un selector | — |
+| `--c-fill` | `#efece4` | `#2a2a27` | Pozos: bloque «pendiente», esqueleto, placa de un aviso neutro | — |
+| `--c-border` | `#e2ded3` | `#30302d` | Separadores de 1 px | — |
+| `--c-border-control` | `#8a877f` | `#76746d` | Borde de campos y botón secundario | 3,2:1 sobre el papel, 3,5:1 sobre la hoja / 3,6:1 (≥ 3:1, WCAG 1.4.11) |
+| `--c-text` | `#1c1b18` | `#edece8` | Texto principal (tinta) | 15,2:1 / 14,4:1 |
+| `--c-text-2` | `#54524c` | `#bdbbb4` | Segunda línea, etiquetas | 6,9:1 / 8,9:1 |
+| `--c-text-3` | `#66645d` | `#9e9c95` | Meta, leyendas, la máscara | 5,0:1 / 5,2:1 (sobre `--c-fill`) |
+| `--c-accent` | `#1f4f7c` | `#8fb6e3` | **El único acento**: enlaces, botón principal, pestaña actual, foco | 7,5:1 / 8,1:1 como texto |
 | `--c-on-accent` | `#ffffff` | `#0f1c2c` | Texto sobre el acento | **8,5:1 / 8,2:1** |
 | `--c-accent-soft` / `-text` | `#e4ecf5` / `#1f4f7c` | `#223246` / `#a9c8ec` | Indicador de pestaña, privacidad activa, «Propuesta» | 7,1:1 / 7,5:1 |
-| `--c-positive` | `#1b6a44` | `#6fc79a` | Ganancia, siempre con «+» | 5,9:1 / 8,1:1 |
-| `--c-negative` | `#a2392b` | `#f0917e` | Pérdida, siempre con «−» | 5,9:1 / 7,1:1 |
-| `--c-caution` / `-icon` / `-soft` | `#80530a` / `#a8700f` / `#faf0dc` | `#e8b659` / `#d9a441` / `#352a14` | Aviso: «hay que mirarlo» | 5,9:1 / 7,6:1 |
-| `--c-danger` / `-soft` / `-border` | `#9e2f27` / `#fbe9e5` / `#e3aca3` | `#f29a8a` / `#3b1f1b` / `#7a3a30` | Problema real; acción destructiva | 6,2:1 / 7,0:1 |
+| `--c-gain` | `#0f6b5c` | `#5cc6b0` | Ganancia, siempre con «+» | 5,7:1 / 8,2:1 |
+| `--c-loss` | `#b04a12` | `#f49a44` | Pérdida, siempre con «−» | 4,8:1 / 7,8:1 |
+| `--c-caution` / `-icon` / `-soft` | `#80530a` / `#a8700f` / `#faf0dc` | `#e8b659` / `#d9a441` / `#352a14` | Aviso: «hay que mirarlo» | 5,9:1 / 9,1:1 |
+| `--c-danger` / `-soft` / `-border` | `#9e2f27` / `#fbe9e5` / `#e3aca3` | `#f29a8a` / `#3b1f1b` / `#7a3a30` | Problema real; acción destructiva | 6,4:1 / 7,9:1 |
 | `--c-on-danger` | `#ffffff` | `#2a0f0b` | Texto del botón destructivo confirmado | 7,3:1 / 8,3:1 |
 | `--c-done` | `#1b6a44` | `#6fc79a` | Paso completado | — |
 
 **El color nunca va solo**: ganancia y pérdida llevan signo; los avisos, un icono con forma distinta por gravedad; «parcial», «anulado» y «fuera de umbral» son palabras; la pestaña actual lleva peso y un indicador.
 
-Fuera de la hoja de estilos, la aplicación instalada pinta con la misma paleta: el manifiesto lleva `background_color` `#f3f2ee` (el papel) y `theme_color` `#ffffff` (la barra), y `index.html` declara un `theme-color` por tema (`#ffffff` en claro, `#1f1f1d` en oscuro), para que ni el arranque ni la barra del sistema salgan del azul marino anterior. Un tema forzado en Ajustes pone su color en las dos etiquetas (`shell/theme.ts`), y «Sistema» devuelve a cada una el suyo.
+Fuera de la hoja de estilos, la aplicación instalada pinta con la misma paleta: el manifiesto lleva `background_color` `#f3f1ea` (el papel) y `theme_color` `#fffdf8` (la barra), y `index.html` declara un `theme-color` por tema (`#fffdf8` en claro, `#1d1c19` en oscuro), para que ni el arranque ni la barra del sistema salgan del azul marino anterior. Un tema forzado en Ajustes pone su color en las dos etiquetas (`shell/theme.ts`), y «Sistema» devuelve a cada una el suyo.
 
 ### 3.2 Color: datos
 
@@ -105,7 +105,7 @@ El texto nunca lleva el color de una serie: la identidad la pone la marca (líne
 
 ### 3.3 Tipografía
 
-Familia: `"Segoe UI Variable Text", "Segoe UI", Roboto, -apple-system, BlinkMacSystemFont, "Ubuntu Sans", "Noto Sans", "Helvetica Neue", Arial, system-ui, sans-serif`.
+Familias: `--font-sans` es `"Inter"` seguida de las del sistema; `--font-serif` es `"Fraunces"`, Georgia. Las dos con `font-display: swap` (se pinta primero la del sistema, nunca en blanco) y precargadas por el *service worker* con el resto del armazón. Pesan 48 KB (Inter variable, latín) y 18 KB (Fraunces 600, latín); no cuentan en el techo de JS + CSS de `check-bundle.mjs`.
 
 | Paso | Móvil | Escritorio (≥ 1024) | Uso |
 |---|---|---|---|
@@ -113,9 +113,9 @@ Familia: `"Segoe UI Variable Text", "Segoe UI", Roboto, -apple-system, BlinkMacS
 | `--text-sm` | 14 | 14 | Segunda línea de una fila, pistas, meta |
 | `--text-md` | 16 | 15 | Cuerpo, primera línea de fila, controles (los campos, siempre a 16 px para que el móvil no haga zoom) |
 | `--text-lg` | 18 | 17 | Títulos de tarjeta (`h2`) |
-| `--text-xl` | 22 | 26 | Título de pantalla (`h1`) |
+| `--text-xl` | 28 | 34 (36 desde 1800) | Título de pantalla (`h1`), en la serifa |
 | `--text-2xl` | 26 | 28 | La cifra que responde a una tarjeta |
-| `--text-display` | 36 | 44 | La única cifra protagonista de la pantalla |
+| `--text-display` | 40 | 60 (64 desde 1800) | La única cifra protagonista de la pantalla, en la serifa |
 
 Pesos 400, 500 y 600. Interlineado 1,15 en cifras grandes, 1,3 en filas y títulos, 1,5 en el cuerpo. Cifras tabulares en columnas y filas; la protagonista, proporcional. El euro de la cifra protagonista va a 0,55 em y en `--c-text-3`.
 
@@ -125,9 +125,9 @@ Rejilla de 4 px: `--space-0` 2 · `-1` 4 · `-2` 8 · `-3` 12 · `-4` 16 · `-5`
 
 ### 3.5 Radios, bordes y elevación
 
-- Radios: `--radius-sm` 6, `-md` 8 (botones, campos), `-lg` 12 (tarjetas, bloques), `-xl` 16 (diálogos), `-pill`.
+- Radios: `--radius-sm` 6, `-md` 8 (campos, placas), `-lg` 14 (tarjetas, bloques), `-xl` 16 (diálogos), `-pill` (botones, pestañas, selectores de rango, etiquetas).
 - Bordes: `--border` 1 px; `--border-strong` 2 px (anillo de foco y paso actual).
-- Elevación casi nula a propósito: `--shadow-1` (tarjetas), `--shadow-2` (pestaña actual), `--shadow-3` (diálogo), `--shadow-bar` (barra inferior). En oscuro las tarjetas se separan por el tono de la superficie.
+- Elevación casi nula a propósito: `--shadow-1` (tarjetas), `--shadow-2` (relieve de un segmento), `--shadow-3` (diálogo), `--shadow-bar` (barra inferior). En oscuro las tarjetas se separan por el tono de la superficie.
 
 ### 3.6 Tamaños y movimiento
 
@@ -151,10 +151,10 @@ El armazón y la rejilla tienen puntos de corte distintos a propósito: responde
 
 ### 4.2 El armazón: una sola navegación
 
-Un `<header>` y dentro **un** `<nav>`, **antes que `<main>` en el DOM**. El orden de tabulación sigue el visual: en escritorio, Resumen, Movimientos, Cartera, Cubo y Registrar; en la barra inferior, Registrar va en el centro también en el DOM de su lista. **Nunca hay dos destinos marcados como actuales**: Ajustes no es un destino de la barra y no se marca en ella. Una subpágina (el detalle de un movimiento, su corrección, un formulario de Registrar) marca su sección con `aria-current="page"`, y las páginas de Ajustes marcan su botón.
+Un `<header>` y dentro **un** `<nav>`, **antes que `<main>` en el DOM**. El orden de tabulación sigue el visual: en escritorio, Resumen, Movimientos, Cartera, Cubo, Declaración y Registrar; en la barra inferior, Registrar va en el centro también en el DOM de su lista. **Nunca hay dos destinos marcados como actuales**: Ajustes no es un destino de la barra y no se marca en ella. Una subpágina (el detalle de un movimiento, su corrección, un formulario de Registrar) marca su sección con `aria-current="page"`, y las páginas de Ajustes marcan su botón.
 
 - **Móvil y tableta** (< 1200): el `<header>` es una barra de estado de 52 px pegada arriba, con la marca a la izquierda y la privacidad y Ajustes a la derecha. El `<nav>` se fija abajo (64 px más la zona segura) como barra de cinco huecos, con **Registrar en el centro**. Cada destino es un icono de 24 px con su etiqueta a 13 px; el actual lleva un indicador en píldora de acento suave y la etiqueta en seminegrita. Registrar es una placa llena del acento con el «+». Por debajo de 380 px se estrecha la placa: ninguna palabra desaparece.
-- **Escritorio** (≥ 1200): una sola barra de 64 px con la marca, los cuatro destinos **agrupados en un carril** (la pestaña actual en relieve), **Registrar** como botón principal a continuación del grupo y, a la derecha, la privacidad y Ajustes.
+- **Escritorio** (≥ 1200): una sola barra de 64 px con la marca, los destinos como **píldoras** (la actual en acento suave), **la Declaración entre ellos** (D16: en el ordenador es donde se prepara la Renta; en el móvil se llega desde su tarjeta del Resumen), **Registrar** como botón principal en píldora a continuación y, a la derecha, la privacidad y Ajustes.
 - **Origen de los datos**: la web solo funciona contra la nube (ADR-0035), así que la barra no lleva indicador de origen. Dónde están los datos y «Descargar copia» (la copia descargada, JSONL y CSV) viven en Ajustes, en *Tus datos*.
 - **Privacidad**: un botón con `aria-pressed` y forma de píldora (ojo tachado y «Oculto» o «Importes ocultos» cuando está activa; ojo y «Visible» cuando no). El objetivo táctil es el botón entero.
 - **Sin sesión o sin libro cargado** (la pantalla de entrada del §7.1) no se muestra la navegación: nada funciona sin datos. **Con un libro vacío sí**, porque los primeros pasos llevan a Registrar y a Ajustes (D8).
@@ -174,7 +174,7 @@ La hoja visual de componentes estaba en el prototipo retirado; hoy son los estil
 
 ### 5.1 Tarjeta (`.card`)
 
-Superficie blanca, borde de 1 px, radio 12, sombra mínima. Cabecera (`.card-head`): `h2` a la izquierda y, a la derecha, un dato de contexto (`--text-sm`, `--c-text-3`) o una etiqueta. **Sin franja gris.** Pie (`.card-foot`): fila de 44 px de borde a borde con un enlace, pulsable entera.
+Hoja cálida (`--c-surface`), borde de 1 px, radio 14, sombra mínima. Cabecera (`.card-head`): `h2` a la izquierda y, a la derecha, un dato de contexto (`--text-sm`, `--c-text-3`) o una etiqueta. **Sin franja gris.** Pie (`.card-foot`): fila de 44 px de borde a borde con un enlace, pulsable entera.
 
 ### 5.2 Cifra protagonista, proporción y partes (`.hero-figure`, `.shares`, `.parts`)
 
@@ -194,7 +194,7 @@ Píldora de 24 px, texto a 13 px y un icono de 14 px. Variantes: **neutra** («�
 
 ### 5.6 Aviso: un único componente (`.notice`)
 
-Igual en el Resumen, el Cubo, la Cartera, la Verificación y en cualquier otro sitio. Icono de 20 px con **forma distinta por gravedad**: triángulo (aviso), octógono (crítico) o círculo con «i» (información). El texto va a tamaño de cuerpo, con la cifra clave de un grupo en seminegrita, y la acción en acento con flecha: debajo del texto en el móvil y a la derecha en escritorio. El aviso entero es el enlace. **Solo el crítico lleva fondo.** En lista se separan con líneas, no con cajas. Se enseñan **4 grupos** y el resto va en «Ver N avisos más». La agrupación y el orden (el riesgo de perder datos, primero) los decide `view-models/attention.ts`. Los precios caducados, los tipos de cambio caducados y las desviaciones van **en un solo aviso cada uno**, con los activos nombrados («3 precios con más de 15 días · A, B y C»). Las compras dentro de la ventana de una misma venta con pérdida van en una frase con cuántas son («… con 10 compras en cartera dentro de la ventana …»), y cada una plegada debajo. **La vista previa de Registrar agrupa sus avisos con el mismo agrupador**, sin enlaces: salir perdería lo escrito. Un aviso que una tarjeta ya dice en su sitio no se repite en una lista: en el Cubo, cada aviso que queda va en la tarjeta de la que trata.
+Igual en el Resumen, el Cubo, la Cartera, la Verificación y en cualquier otro sitio. Icono de 20 px con **forma distinta por gravedad**: triángulo (aviso), octógono (crítico) o círculo con «i» (información), **dentro de una placa** de 32 px del color suave de su gravedad (D15). El texto va a tamaño de cuerpo, con la cifra clave de un grupo en seminegrita, y la acción en acento con flecha: debajo del texto en el móvil y a la derecha en escritorio. El aviso entero es el enlace. **Solo el crítico lleva fondo.** En lista se separan con líneas, no con cajas. Se enseñan **4 grupos** y el resto va en «Ver N avisos más». La agrupación y el orden (el riesgo de perder datos, primero) los decide `view-models/attention.ts`. Los precios caducados, los tipos de cambio caducados y las desviaciones van **en un solo aviso cada uno**, con los activos nombrados («3 precios con más de 15 días · A, B y C»). Las compras dentro de la ventana de una misma venta con pérdida van en una frase con cuántas son («… con 10 compras en cartera dentro de la ventana …»), y cada una plegada debajo. **La vista previa de Registrar agrupa sus avisos con el mismo agrupador**, sin enlaces: salir perdería lo escrito. Un aviso que una tarjeta ya dice en su sitio no se repite en una lista: en el Cubo, cada aviso que queda va en la tarjeta de la que trata.
 
 ### 5.7 «No se puede calcular todavía» (`.pending`)
 
@@ -206,7 +206,7 @@ Un glifo en un círculo de 44 px, un título a 18 px, **una frase** y **un botó
 
 ### 5.9 Botones (`.btn`)
 
-De 44 px de alto, radio 8, seminegrita e icono opcional de 16.
+De 44 px de alto, en píldora, seminegrita e icono opcional de 16.
 
 | Variante | Aspecto | Uso |
 |---|---|---|
@@ -352,6 +352,14 @@ Aprobadas por la dirección el 2026-09-19.
 | D13 | Barra inferior hasta 1199 px | — |
 | — | Barra de proporción del patrimonio | Son porcentajes: se ven con la privacidad activa |
 
+Dirección A «Cuaderno vivo», elegida por el dueño el 2026-11-03 sobre la auditoría visual de ese día (informe y maquetas, fuera del repositorio):
+
+| # | Decisión | Matiz |
+|---|---|---|
+| D14 | Inter y Fraunces 600 alojadas; serifa en el título y la cifra protagonista | Recorte latino, OFL, sin nada de fuera |
+| D15 | Avisos con placa, botones y pestañas en píldora, hoja cálida | Los tokens de color, casi sin tocar |
+| D16 | La Declaración, destino de la barra en escritorio | Pieza tomada de la dirección B; en el móvil sigue desde su tarjeta |
+
 ---
 
 ## 9. Dónde vive cada cosa
@@ -360,6 +368,7 @@ Aprobadas por la dirección el 2026-09-19.
 |---|---|
 | Variables | `apps/web/src/styles/tokens.css` |
 | Base y elementos (sustituye a Pico) | `styles/base.css` |
+| Las dos fuentes alojadas | `styles/fonts.css` |
 | Controles: botones, campos, desplegable, rango, etiquetas, diálogo | `styles/controls.css` |
 | Tarjetas, pie de tarjeta, líneas de panel y de total | `styles/cards.css` |
 | Filas en dos líneas y tablas | `styles/lists.css` |

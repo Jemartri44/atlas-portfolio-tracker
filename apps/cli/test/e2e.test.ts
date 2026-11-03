@@ -313,8 +313,11 @@ describe("atlas over a ledger file", () => {
           random: webCryptoRandom,
         }),
       });
-    expect(await in2028("gains", "2027")).toBe(0);
-    expect(lines.join("\n")).toContain("corporate_action:reverse_split");
+    expect(await in2028("tax", "2027")).toBe(0);
+    const gains = JSON.parse(lines.join("\n")).capital_gains.lines as {
+      corporate_action_kind?: string;
+    }[];
+    expect(gains.map((line) => line.corporate_action_kind)).toContain("reverse_split");
 
     expect(await account("acc_bucket", "bucket")).toBe(0);
     expect(await stock("ast_spec", "bucket")).toBe(0);

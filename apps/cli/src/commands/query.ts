@@ -1,20 +1,15 @@
-// atlas positions · lots · cash · gains · income · valuations · check
+// atlas positions · lots · check
 
 import {
-  cashBalances,
   currencyLots,
   type FingerprintWaiver,
   fiscalLots,
   type IntegrityFinding,
   integrity,
-  investmentIncome,
   type LedgerState,
   loadAndProject,
-  Money,
   ProjectionError,
   physicalPositions,
-  realizedGains,
-  valuations,
   type Warning,
 } from "@atlas/domain";
 import { foreignRatesOf, type RateCheck } from "@atlas/domain/ecb";
@@ -32,7 +27,6 @@ import {
   originOf,
   render,
   renderQuery,
-  reportYear,
   warnIfLedgerMissing,
 } from "./shared.js";
 
@@ -152,213 +146,6 @@ export const lotsCommand = async (
           ]),
         ),
     ),
-  );
-  return 0;
-};
-
-export const cashCommand = async (
-  ctx: Context,
-  _positionals: string[],
-  flags: Flags,
-): Promise<number> => {
-  assertKnownFlags(flags, ["account", ...GLOBAL_FLAGS]);
-  const { state } = await loadForQuery(ctx);
-  const account = stringFlag(flags, "account");
-  assertExists(state, "account", account);
-  const rows = cashBalances(state).filter((c) => account === undefined || c.account_id === account);
-  renderQuery(
-    ctx,
-    state,
-    rows.map((c) => ({ ...c, balance: c.balance.amount.toString() })),
-    table(
-      ["cuenta", "divisa", "saldo"],
-      rows.map((c) => [c.account_id, c.currency, c.balance.amount.toString()]),
-    ),
-  );
-  return 0;
-};
-
-export const gainsCommand = async (
-  ctx: Context,
-  positionals: string[],
-  flags: Flags,
-): Promise<number> => {
-  assertKnownFlags(flags, ["lots", ...GLOBAL_FLAGS]);
-  const year = reportYear(
-    ctx,
-    positionals[1],
-    "uso: atlas gains <año> [--lots]",
-    "atlas gains",
-    1900,
-  );
-  const { events, state } = await loadForQuery(ctx);
-  const gains = realizedGains(state, year);
-  const total = gains.reduce((sum, g) => sum.add(g.gain_eur_rounded), Money.zero("EUR"));
-  const lines = [
-    table(
-      [
-        "fecha fiscal",
-        "activo",
-        "cuenta",
-        "cantidad",
-        "transmisión EUR",
-        "coste EUR",
-        "ganancia EUR",
-        "origen",
-        "evento",
-      ],
-      gains.map((g) => [
-        g.fiscal_date,
-        g.asset_id,
-        g.account_id,
-        g.quantity.toString(),
-        g.proceeds_eur.amount.toString(),
-        g.cost_eur.amount.toString(),
-        g.gain_eur_rounded.amount.toString(),
-        originOf(events, state, g.event_id),
-        g.event_id,
-      ]),
-    ),
-    `Total ${year}: ${total.amount.toString()} EUR (suma de las ventas tal cual, sin diferir pérdidas ni compensar; el saldo del ejercicio es el de \`atlas tax ${year}\`)`,
-  ];
-  if (booleanFlag(flags, "lots")) {
-    lines.push(
-      table(
-        ["evento", "lote", "cantidad", "transmisión EUR", "coste EUR", "ganancia EUR"],
-        gains.flatMap((g) =>
-          g.by_lot.map((l) => [
-            g.event_id,
-            l.lot_id,
-            l.quantity.toString(),
-            l.proceeds_eur.amount.toString(),
-            l.cost_eur.amount.toString(),
-            l.gain_eur.amount.toString(),
-          ]),
-        ),
-      ),
-    );
-  }
-  renderQuery(
-    ctx,
-    state,
-    gains.map((g) => ({
-      ...g,
-      origin: originOf(events, state, g.event_id),
-      quantity: g.quantity.toString(),
-      proceeds_eur: g.proceeds_eur.amount.toString(),
-      cost_eur: g.cost_eur.amount.toString(),
-      gain_eur: g.gain_eur.amount.toString(),
-      gain_eur_rounded: g.gain_eur_rounded.amount.toString(),
-      by_lot: g.by_lot.map((l) => ({
-        ...l,
-        quantity: l.quantity.toString(),
-        proceeds_eur: l.proceeds_eur.amount.toString(),
-        cost_eur: l.cost_eur.amount.toString(),
-        gain_eur: l.gain_eur.amount.toString(),
-      })),
-    })),
-    lines.join("\n"),
-  );
-  return 0;
-};
-
-export const incomeCommand = async (
-  ctx: Context,
-  positionals: string[],
-  flags: Flags,
-): Promise<number> => {
-  assertKnownFlags(flags, GLOBAL_FLAGS);
-  const year = reportYear(ctx, positionals[1], "uso: atlas income <año>", "atlas income", 1900);
-  const { state } = await loadForQuery(ctx);
-  const rows = investmentIncome(state, year);
-  renderQuery(
-    ctx,
-    state,
-    rows.map((i) => ({
-      ...i,
-      gross: i.gross.toString(),
-      withholding_origin: i.withholding_origin.toString(),
-      withholding_spain: i.withholding_spain.toString(),
-      net: i.net.toString(),
-      gross_eur: i.gross_eur.amount.toString(),
-      withholding_origin_eur: i.withholding_origin_eur.amount.toString(),
-      withholding_spain_eur: i.withholding_spain_eur.amount.toString(),
-      net_eur: i.net_eur.amount.toString(),
-    })),
-    table(
-      [
-        "fecha",
-        "tipo",
-        "cuenta",
-        "activo",
-        "bruto",
-        "ret. origen",
-        "ret. España",
-        "neto",
-        "bruto EUR",
-        "neto EUR",
-      ],
-      rows.map((i) => [
-        i.fiscal_date,
-        i.kind,
-        i.account_id,
-        i.asset_id ?? "",
-        i.gross.toString(),
-        i.withholding_origin.toString(),
-        i.withholding_spain.toString(),
-        i.net.toString(),
-        i.gross_eur.amount.toString(),
-        i.net_eur.amount.toString(),
-      ]),
-    ),
-  );
-  return 0;
-};
-
-export const valuationsCommand = async (
-  ctx: Context,
-  _positionals: string[],
-  flags: Flags,
-): Promise<number> => {
-  assertKnownFlags(flags, ["date", ...GLOBAL_FLAGS]);
-  const date = dateFlag(ctx, flags);
-  const { state } = await loadForQuery(ctx, date);
-  const rows = valuations(state, date);
-  renderQuery(
-    ctx,
-    state,
-    rows.map((v) => ({
-      ...v,
-      quantity: v.quantity.toString(),
-      unit_value: v.unit_value.toString(),
-      fx_rate: v.fx_rate.toString(),
-      value_eur: v.value_eur.amount.toString(),
-    })),
-    [
-      `Valoraciones a ${date} (última foto por cuenta y activo; informativo, Modelo 720):`,
-      table(
-        [
-          "cuenta",
-          "activo",
-          "fecha",
-          "cantidad",
-          "valor unitario",
-          "divisa",
-          "tipo BCE",
-          "valor EUR",
-        ],
-        rows.map((v) => [
-          v.account_id,
-          v.asset_id,
-          v.date,
-          v.quantity.toString(),
-          v.unit_value.toString(),
-          v.currency,
-          v.fx_rate.toString(),
-          v.value_eur.amount.toString(),
-        ]),
-      ),
-    ].join("\n"),
   );
   return 0;
 };

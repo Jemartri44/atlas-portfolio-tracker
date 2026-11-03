@@ -103,7 +103,7 @@ export const aside = (ctx: Context, text: string): void =>
  * What `--json` writes: amounts, quantities, prices and rates as strings (data-schema.md), never as
  * the object that wraps the decimal.
  */
-const jsonText = (data: unknown): string =>
+export const jsonText = (data: unknown): string =>
   JSON.stringify(
     data,
     (_key, value: unknown) => {
@@ -325,11 +325,9 @@ export const reportYear = (
   raw: string | undefined,
   usage: string,
   command: string,
-  /** The first year the command can be asked for; `tax` and the models say their own regime. */
-  floor = 1,
 ): number => {
   const year = yearArgument(raw);
-  if (year === undefined || year < floor) {
+  if (year === undefined) {
     throw new UsageError(usage);
   }
   if (year > Number(todayInMadrid(ctx.deps.clock).slice(0, 4))) {
