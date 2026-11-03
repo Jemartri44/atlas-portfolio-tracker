@@ -4,8 +4,7 @@
 // **exactly**: normalising it would be recognising
 // by resemblance.
 
-import { ValidationError } from "../errors.js";
-import { isRecord } from "../guards.js";
+import { isRecord, ValidationError } from "@atlas/domain";
 import { isSubject } from "./signed.js";
 
 export interface AllowEntry {

@@ -5,7 +5,7 @@
 // parameter is a failure of the dependency — nobody passes — and is never
 // cached: the next request asks again.
 
-import { type AllowEntry, parseAllowList } from "@atlas/domain/access";
+import { type AllowEntry, parseAllowList } from "@atlas/access";
 import { DependencyUnavailable } from "./errors.js";
 import type { ParameterStore } from "./parameter-store.js";
 

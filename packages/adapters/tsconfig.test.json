@@ -13,6 +13,9 @@
     },
     {
       "path": "../domain"
+    },
+    {
+      "path": "../access"
     }
   ],
   "exclude": ["test/idb.test.ts", "test/fake-idb.ts", "test/fake-idb.test.ts"]

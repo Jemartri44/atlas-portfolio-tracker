@@ -7,8 +7,7 @@
 // nothing. Google counts a pass through it as the use of the OAuth client
 // (ADR-0027, «Riesgo»); the console counts by the issue of its tokens.
 
-import { type CivilDate, isCivilDate } from "../dates/civil-date.js";
-import { repeatsKey } from "../schema/json-keys.js";
+import { type CivilDate, isCivilDate, repeatsKey } from "@atlas/domain";
 
 export const WEB_SIGN_IN_KEY = "access/last-web-sign-in.json";
 

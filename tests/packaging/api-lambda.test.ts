@@ -36,7 +36,7 @@ describe("the package of the API Lambda", () => {
     expect(
       ours.filter(
         (input) =>
-          !/^(apps\/api\/src|packages\/(domain|adapters)\/src|packages\/domain\/vendor)\//.test(
+          !/^(apps\/api\/src|packages\/(domain|access|adapters)\/src|packages\/domain\/vendor)\//.test(
             input,
           ),
       ),
