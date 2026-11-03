@@ -43,8 +43,12 @@ export {
 export {
   type AssetExposure,
   type Exposure,
+  type ExposureAsset,
+  type ExposureCatalogue,
   type ExposureDimension,
+  type ExposureIndex,
   type ExposureShare,
+  type ExposureState,
   type Exposures,
   exposure,
   type Split,
@@ -60,6 +64,12 @@ export {
   parseExposureText,
   validateExposure,
 } from "./projections/exposure-file.js";
+export {
+  DEFAULT_INDEX_TABLES,
+  type IndexProfile,
+  type IndexTables,
+  type KnownFund,
+} from "./projections/index-profiles.js";
 export {
   type MonthAssetTask,
   type MonthPlan,
