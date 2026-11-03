@@ -114,6 +114,8 @@ export const describeWarning = (warning: Warning): string => {
       return `fx_rate_date (${text(d.fx_rate_date)}) es posterior a la fecha fiscal (${text(d.fiscal_date)}).`;
     case "same_asset_two_accounts":
       return `El activo ${text(d.asset_id)} está ahora en ${(d.accounts as string[]).length} cuentas; el FIFO sigue siendo global.`;
+    case "cost_adjustment_currency_mismatch":
+      return `El dinero en ${text(d.currency)} rebaja lotes de ${text(d.asset_id)} comprados en ${text(d.lot_currency)}: Atlas reparte los euros cobrados en proporción al coste, lo que equivale a convertirlos al tipo de la compra, y ninguna fuente dice qué tipo usar. Criterio abierto (fiscal-questions #13).`;
     case "transfer_not_between_funds":
       return `Un traspaso entre ${text(d.from_asset_id)} y ${text(d.to_asset_id)} no difiere impuestos: ${text(d.asset_id)} no es un fondo. Hacienda lo trata como una venta y una compra; regístralo así (transfer_not_between_funds).`;
     case "transfer_not_resident":
