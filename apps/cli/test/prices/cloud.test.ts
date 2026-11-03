@@ -49,7 +49,7 @@ const synced = async (assets: readonly string[] = ["ast_a"]) => {
     sources: () => ({ eodhd, alpha_vantage: alpha }),
   } as never);
   holder.secrets = join(c.config, "atlas", "secrets.json");
-  await mkdir(join(c.config, "atlas"), { recursive: true });
+  await mkdir(join(c.config, "atlas"), { recursive: true, mode: 0o700 });
   await writeFile(holder.secrets, JSON.stringify({ eodhd: "k", alpha_vantage: "k" }));
   await chmod(holder.secrets, 0o600);
   const b = new Events();
