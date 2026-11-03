@@ -72,7 +72,7 @@ const abroad = (): string => {
 };
 
 const firstLines = (sent: readonly { body: string }[]) =>
-  sent.map((mail) => mail.body.split("\n")[0]);
+  sent.map((mail) => mail.body.split("\n")[2]);
 
 describe("a warning of a period gone is closed, never sent (avisos B1 and N4)", () => {
   it("sends the income tax once in January, closing the year before as expired", async () => {
@@ -100,7 +100,7 @@ describe("a warning of a period gone is closed, never sent (avisos B1 and N4)", 
     const jobs = run({ jobs: "weekly_review", now: "2026-10-05T06:00:00Z", s3 });
     await jobs.run(["weekly_review"]);
     expect(jobs.ses.sent.map((mail) => mail.subject)).toEqual([
-      "[Atlas] Revision semanal 2026-W41",
+      "[Atlas] Revision de la semana 41 de 2026",
     ]);
     expect(record(s3, "weekly_review", "2026-W40").state).toBe("expired");
   });
@@ -245,7 +245,7 @@ describe("a passing failure is retried, and said on the last day (avisos B2 and 
     jobs.setNow("2026-10-11T06:00:00Z");
     await jobs.run(["weekly_review"]);
     expect(firstLines(jobs.ses.sent)).toEqual([
-      "No se ha podido hacer la revisión de 2026-W41 (código reference_unavailable): no se ha podido leer lo que necesita en toda la semana.",
+      "No se ha podido hacer la revisión de la semana 41 de 2026 (código reference_unavailable): no se ha podido leer lo que necesita en toda la semana.",
     ]);
   });
 
@@ -272,10 +272,10 @@ describe("a passing failure is retried, and said on the last day (avisos B2 and 
     jobs.setNow("2026-10-11T06:00:00Z");
     monday.failNext(1);
     await jobs.run(["weekly_review"]);
-    expect(jobs.ses.sent.map((mail) => [mail.subject, mail.body.split("\n")[0]])).toEqual([
+    expect(jobs.ses.sent.map((mail) => [mail.subject, mail.body.split("\n")[2]])).toEqual([
       [
-        "[Atlas] Revision semanal 2026-W41",
-        "No se ha podido hacer la revisión de 2026-W41 (código ledger_unavailable): no se ha podido leer lo que necesita en toda la semana.",
+        "[Atlas] Revision de la semana 41 de 2026",
+        "No se ha podido hacer la revisión de la semana 41 de 2026 (código ledger_unavailable): no se ha podido leer lo que necesita en toda la semana.",
       ],
     ]);
   });

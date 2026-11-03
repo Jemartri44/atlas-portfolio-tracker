@@ -35,9 +35,9 @@ describe("the monthly reminder, end to end", () => {
     const [mail] = jobs.ses.sent;
     expect(mail?.from).toBe(SENDER);
     expect(mail?.to).toBe(RECIPIENT);
-    expect(mail?.subject).toBe("[Atlas] Recordatorio mensual 2026-10");
-    expect(mail?.body).toContain(`Abre Atlas: ${ORIGIN}`);
-    expect(mail?.body).toContain("  Renta variable");
+    expect(mail?.subject).toBe("[Atlas] Recordatorio de octubre de 2026");
+    expect(mail?.body).toContain(`Abrir Atlas: ${ORIGIN}`);
+    expect(mail?.body).toContain("- Renta variable");
     expect(mail?.body).not.toContain("No se ha podido calcular");
     expect(records(jobs.s3)).toEqual(["jobs/mail/monthly_reminder/2026-10.json"]);
     const record = JSON.parse(jobs.s3.text("jobs/mail/monthly_reminder/2026-10.json") as string);
@@ -64,7 +64,7 @@ describe("the monthly reminder, end to end", () => {
     const on = setupJobs();
     on.ssm.set("/atlas/prod/mail/amounts", "on");
     await on.run(["monthly_reminder"]);
-    expect(on.ses.sent[0]?.body).toContain("  Importes: total 1.234,56 €;");
+    expect(on.ses.sent[0]?.body).toContain("Total 1.234,56 €: núcleo");
     for (const sentinel of SENTINELS.ids) {
       expect(on.ses.sent[0]?.body, sentinel).not.toContain(sentinel);
     }
@@ -133,8 +133,8 @@ describe("the monthly reminder, end to end", () => {
     jobs.setNow("2026-10-01T06:15:00Z");
     await jobs.run(["monthly_reminder"], "req-3");
     expect(jobs.ses.sent.map((mail) => mail.subject)).toEqual([
-      "[Atlas] Recordatorio mensual 2026-10",
-      "[Atlas] Recordatorio mensual 2026-10",
+      "[Atlas] Recordatorio de octubre de 2026",
+      "[Atlas] Recordatorio de octubre de 2026",
     ]);
     expect(
       JSON.parse(jobs.s3.text("jobs/mail/monthly_reminder/2026-10.json") as string),
@@ -193,7 +193,7 @@ describe("the monthly reminder, end to end", () => {
     jobs.setNow("2026-10-03T06:00:00Z");
     await jobs.run(["monthly_reminder"], "req-3");
     expect(jobs.ses.sent.map((mail) => mail.subject)).toEqual([
-      "[Atlas] Recordatorio mensual 2026-10",
+      "[Atlas] Recordatorio de octubre de 2026",
     ]);
     expect(
       JSON.parse(jobs.s3.text("jobs/mail/monthly_reminder/2026-10.json") as string),
@@ -207,8 +207,8 @@ describe("the monthly reminder, end to end", () => {
     jobs.setNow("2026-11-01T07:00:00Z");
     await jobs.run(["monthly_reminder"], "req-2");
     expect(jobs.ses.sent.map((mail) => mail.subject)).toEqual([
-      "[Atlas] Recordatorio mensual 2026-10",
-      "[Atlas] Recordatorio mensual 2026-11",
+      "[Atlas] Recordatorio de octubre de 2026",
+      "[Atlas] Recordatorio de noviembre de 2026",
     ]);
   });
 
@@ -217,13 +217,13 @@ describe("the monthly reminder, end to end", () => {
     const november = setupJobs({ now: "2026-10-31T23:30:00Z" });
     await november.run(["monthly_reminder"]);
     expect(november.ses.sent.map((mail) => mail.subject)).toEqual([
-      "[Atlas] Recordatorio mensual 2026-11",
+      "[Atlas] Recordatorio de noviembre de 2026",
     ]);
     // 22:30 UTC of the 31st of December is still the old year in Madrid.
     const december = setupJobs({ now: "2026-12-31T22:30:00Z" });
     await december.run(["monthly_reminder"]);
     expect(december.ses.sent.map((mail) => mail.subject)).toEqual([
-      "[Atlas] Recordatorio mensual 2026-12",
+      "[Atlas] Recordatorio de diciembre de 2026",
     ]);
   });
 
@@ -231,7 +231,7 @@ describe("the monthly reminder, end to end", () => {
     const jobs = setupJobs({ now: "2026-11-01T07:00:00Z" });
     await jobs.run(["monthly_reminder"]);
     expect(jobs.ses.sent.map((mail) => mail.subject)).toEqual([
-      "[Atlas] Recordatorio mensual 2026-11",
+      "[Atlas] Recordatorio de noviembre de 2026",
     ]);
   });
 
@@ -252,7 +252,7 @@ describe("the monthly reminder, end to end", () => {
     jobs.s3.seed("jobs/mail/monthly_reminder/2026-10.json", "{}\n");
     await jobs.run(["monthly_reminder"]);
     expect(jobs.ses.sent.map((mail) => mail.subject)).toEqual([
-      "[Atlas] Recordatorio mensual 2026-10",
+      "[Atlas] Recordatorio de octubre de 2026",
     ]);
     expect(jobs.logs.map((line) => JSON.parse(line))).toContainEqual(
       expect.objectContaining({

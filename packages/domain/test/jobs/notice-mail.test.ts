@@ -4,6 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 import { NOTICE_CODES, noticeMail } from "../../src/jobs/mail/notice.js";
+import { wholeBody } from "./mail-text.js";
 
 const FACTS = { since: "2026-10-02", period: "2026-10", outcome: "task_error" };
 
@@ -33,16 +34,18 @@ describe("the mail of a streak", () => {
     ]);
     expect(
       noticeMail({ code: "task_failed", subject: "monthly_backup" }, FACTS, "https://a.example"),
-    ).toEqual({
-      subject: "[Atlas] Aviso: tarea monthly_backup",
-      body: [
-        "Ha fallado el volcado mensual en el periodo 2026-10 (código task_error), desde el 2026-10-02.",
-        "Se volverá a intentar en su próxima ejecución. Si el aviso se repite, mira el registro de la tarea en jobs/.",
-        "",
-        "Abre Atlas: https://a.example",
-        "",
-      ].join("\n"),
-    });
+    ).toEqual(
+      expect.objectContaining({
+        subject: "[Atlas] Aviso: tarea monthly_backup",
+        body: wholeBody(
+          [
+            "Ha fallado el volcado mensual en octubre de 2026 (código task_error), desde el 02/10/2026.",
+            "Se volverá a intentar en su próxima ejecución. Si el aviso se repite, mira el registro de la tarea en jobs/.",
+          ],
+          "https://a.example",
+        ),
+      }),
+    );
   });
 
   it("says why a task failed, by the fixed code of its outcome", () => {
@@ -64,7 +67,7 @@ describe("the mail of a streak", () => {
         "https://a.example",
       );
       expect(mail?.body).toContain(
-        `Ha fallado la descarga de los precios de cierre en el periodo 2026-10 (código ${outcome})`,
+        `Ha fallado la descarga de los precios de cierre en octubre de 2026 (código ${outcome})`,
       );
     }
   });
@@ -76,7 +79,7 @@ describe("the mail of a streak", () => {
       "https://a.example",
     );
     expect(mail?.body).toContain(
-      "Ha fallado la descarga del histórico del BCE en el periodo 2026-10 (código desconocido)",
+      "Ha fallado la descarga del histórico del BCE en octubre de 2026 (código desconocido)",
     );
     expect(mail?.body).not.toContain("ie00b4l5y983");
     const noPeriod = noticeMail(
@@ -95,16 +98,18 @@ describe("the mail of a streak", () => {
         { since: "2026-10-02", period: "2026-10-02", outcome: "job_record_unreadable" },
         "https://a.example",
       ),
-    ).toEqual({
-      subject: "[Atlas] Aviso: registro de prices_update",
-      body: [
-        "El registro de prices_update (la descarga de los precios de cierre) del periodo 2026-10-02 no se puede leer (código job_record_unreadable), desde el 2026-10-02.",
-        "La tarea no lo toma por libre; hay que mirarlo en jobs/ y repararlo.",
-        "",
-        "Abre Atlas: https://a.example",
-        "",
-      ].join("\n"),
-    });
+    ).toEqual(
+      expect.objectContaining({
+        subject: "[Atlas] Aviso: registro de prices_update",
+        body: wholeBody(
+          [
+            "El registro de prices_update (la descarga de los precios de cierre) del 02/10/2026 no se puede leer (código job_record_unreadable), desde el 02/10/2026.",
+            "La tarea no lo toma por libre; hay que mirarlo en jobs/ y repararlo.",
+          ],
+          "https://a.example",
+        ),
+      }),
+    );
   });
 
   it("says a period or a code it cannot vouch for as unknown, in a record that cannot be read", () => {
@@ -160,7 +165,7 @@ describe("the mail of a streak", () => {
     });
     expect(
       mail("source_failing", "eodhd", { consecutive_failures: 3, threshold: 3 })?.body,
-    ).toContain("EODHD lleva 3 fallos seguidos (umbral 3), desde el 2026-10-02.");
+    ).toContain("EODHD lleva 3 fallos seguidos (umbral 3), desde el 02/10/2026.");
     expect(mail("currency_unchecked", "eodhd", { assets: 2 })?.body).toContain(
       "2 correspondencias de EODHD no están contrastadas y la nube no las descarga",
     );
@@ -168,7 +173,7 @@ describe("the mail of a streak", () => {
       "1 tesis del cubo han superado su horizonte previsto",
     );
     expect(mail("ecb_update_rejected", "ecb", { conflicts: 3 })?.body).toContain(
-      "La descarga del histórico del BCE del periodo 2026-10 cambiaba 3 tipos ya publicados y no se ha activado",
+      "La descarga del histórico del BCE de octubre de 2026 cambiaba 3 tipos ya publicados y no se ha activado",
     );
     expect(mail("ecb_calendar_mismatch", "ecb", { days: 2 })?.body).toContain(
       "2 días del histórico del BCE no cuadran con el calendario TARGET",
@@ -192,7 +197,7 @@ describe("the mail of a streak", () => {
     expect(mail("ecb_history_rebuilt", "ecb", { days: 7100 })).toMatchObject({
       subject: "[Atlas] Aviso: historico del BCE reconstruido",
       body: expect.stringContaining(
-        "se ha reconstruido entero desde el ZIP oficial del BCE (7100 días), desde el 2026-10-02.",
+        "se ha reconstruido entero desde el ZIP oficial del BCE (7100 días), desde el 02/10/2026.",
       ),
     });
     for (const [code, subject] of [
@@ -254,22 +259,24 @@ describe("an update of the ECB cut and undone (review of PR #109, round 2, R2-N1
         { since: "2026-10-02", period: "2026-10-02" },
         "https://a.example",
       ),
-    ).toEqual({
-      subject: "[Atlas] Aviso: historico del BCE deshecho",
-      body: [
-        "Una actualización del histórico del BCE se cortó a medias y se ha deshecho, desde el 2026-10-02: el fichero en vigor no cuadraba con su manifiesto y vuelve a ser el anterior.",
-        "La descarga del día se ha vuelto a hacer después. Si se repite, mira reference/ecb/ con el procedimiento del histórico del BCE.",
-        "",
-        "Abre Atlas: https://a.example",
-        "",
-      ].join("\n"),
-    });
+    ).toEqual(
+      expect.objectContaining({
+        subject: "[Atlas] Aviso: historico del BCE deshecho",
+        body: wholeBody(
+          [
+            "Una actualización del histórico del BCE se cortó a medias y se ha deshecho, desde el 02/10/2026: el fichero en vigor no cuadraba con su manifiesto y vuelve a ser el anterior.",
+            "La descarga del día se ha vuelto a hacer después. Si se repite, mira reference/ecb/ con el procedimiento del histórico del BCE.",
+          ],
+          "https://a.example",
+        ),
+      }),
+    );
   });
 });
 
 describe("the warnings of the dump and of the integrity (016, E4)", () => {
   const ORIGIN = "https://a.example";
-  const body = (lines: string[]) => [...lines, "", `Abre Atlas: ${ORIGIN}`, ""].join("\n");
+  const body = (lines: string[]) => wholeBody(lines, ORIGIN);
 
   it("says a dump that found other bytes, and one that could not keep the ECB with its manifest", () => {
     expect(
@@ -278,26 +285,30 @@ describe("the warnings of the dump and of the integrity (016, E4)", () => {
         { since: "2026-10-01", period: "2026-10", counts: { objects: 2 } },
         ORIGIN,
       ),
-    ).toEqual({
-      subject: "[Atlas] Aviso: volcado 2026-10",
-      body: body([
-        "El volcado mensual del periodo 2026-10 encontró 2 objetos ya escritos con otros bytes y no ha escrito nada más, desde el 2026-10-01.",
-        "Un volcado no se sobrescribe nunca: mira backups/2026-10/ antes de nada, con el procedimiento de los avisos.",
-      ]),
-    });
+    ).toEqual(
+      expect.objectContaining({
+        subject: "[Atlas] Aviso: volcado de octubre de 2026",
+        body: body([
+          "El volcado mensual de octubre de 2026 encontró 2 objetos ya escritos con otros bytes y no ha escrito nada más, desde el 01/10/2026.",
+          "Un volcado no se sobrescribe nunca: mira backups/2026-10/ antes de nada, con el procedimiento de los avisos.",
+        ]),
+      }),
+    );
     expect(
       noticeMail(
         { code: "backup_ecb_inconsistent", subject: "backup" },
         { since: "2026-10-01", period: "2026-10" },
         ORIGIN,
       ),
-    ).toEqual({
-      subject: "[Atlas] Aviso: volcado 2026-10",
-      body: body([
-        "El volcado mensual del periodo 2026-10 no ha guardado el manifiesto del histórico del BCE, desde el 2026-10-01: el fichero del volcado no es el que nombra el manifiesto en vigor.",
-        "El resto del volcado está completo. El histórico del BCE se puede volver a bajar del BCE cuando haga falta.",
-      ]),
-    });
+    ).toEqual(
+      expect.objectContaining({
+        subject: "[Atlas] Aviso: volcado de octubre de 2026",
+        body: body([
+          "El volcado mensual de octubre de 2026 no ha guardado el manifiesto del histórico del BCE, desde el 01/10/2026: el fichero del volcado no es el que nombra el manifiesto en vigor.",
+          "El resto del volcado está completo. El histórico del BCE se puede volver a bajar del BCE cuando haga falta.",
+        ]),
+      }),
+    );
   });
 
   it("says a dump left without its positions, and why to look at the ledger", () => {
@@ -307,13 +318,15 @@ describe("the warnings of the dump and of the integrity (016, E4)", () => {
         { since: "2026-10-01", period: "2026-10" },
         ORIGIN,
       ),
-    ).toEqual({
-      subject: "[Atlas] Aviso: volcado 2026-10",
-      body: body([
-        "El volcado mensual del periodo 2026-10 no lleva positions.json, desde el 2026-10-01: el libro no se proyecta sin errores.",
-        "El libro, los precios y el histórico del BCE sí están. Mira el libro con «atlas check --deep».",
-      ]),
-    });
+    ).toEqual(
+      expect.objectContaining({
+        subject: "[Atlas] Aviso: volcado de octubre de 2026",
+        body: body([
+          "El volcado mensual de octubre de 2026 no lleva positions.json, desde el 01/10/2026: el libro no se proyecta sin errores.",
+          "El libro, los precios y el histórico del BCE sí están. Mira el libro con «atlas check --deep».",
+        ]),
+      }),
+    );
   });
 
   it("says a dump without the history of the ECB (copias N1)", () => {
@@ -323,13 +336,15 @@ describe("the warnings of the dump and of the integrity (016, E4)", () => {
         { since: "2026-10-01", period: "2026-10" },
         ORIGIN,
       ),
-    ).toEqual({
-      subject: "[Atlas] Aviso: volcado 2026-10",
-      body: body([
-        "El volcado mensual del periodo 2026-10 no lleva el histórico del BCE, desde el 2026-10-01: no había ninguno en vigor que cuadrara con su manifiesto.",
-        "El resto del volcado está completo. Mira reference/ecb/ con el procedimiento del histórico del BCE.",
-      ]),
-    });
+    ).toEqual(
+      expect.objectContaining({
+        subject: "[Atlas] Aviso: volcado de octubre de 2026",
+        body: body([
+          "El volcado mensual de octubre de 2026 no lleva el histórico del BCE, desde el 01/10/2026: no había ninguno en vigor que cuadrara con su manifiesto.",
+          "El resto del volcado está completo. Mira reference/ecb/ con el procedimiento del histórico del BCE.",
+        ]),
+      }),
+    );
   });
 
   it("says the errors of the check and the differences of the rehearsal by code, from their lists", () => {
@@ -343,13 +358,15 @@ describe("the warnings of the dump and of the integrity (016, E4)", () => {
         },
         ORIGIN,
       ),
-    ).toEqual({
-      subject: "[Atlas] Aviso: integridad 2026-Q4",
-      body: body([
-        "La comprobación de integridad del periodo 2026-Q4 encontró 4 errores (lots_mismatch: 2, negative_position: 1, otros: 1), desde el 2026-10-01.",
-        "Míralos en la consola con «atlas check --deep»; se rectifican con el libro, nunca restaurando.",
-      ]),
-    });
+    ).toEqual(
+      expect.objectContaining({
+        subject: "[Atlas] Aviso: integridad del cuarto trimestre de 2026",
+        body: body([
+          "La comprobación de integridad del cuarto trimestre de 2026 encontró 4 errores (lots_mismatch: 2, negative_position: 1, otros: 1), desde el 01/10/2026.",
+          "Míralos en la consola con «atlas check --deep»; se rectifican con el libro, nunca restaurando.",
+        ]),
+      }),
+    );
     expect(
       noticeMail(
         { code: "restore_rehearsal_differs", subject: "integrity" },
@@ -360,13 +377,15 @@ describe("the warnings of the dump and of the integrity (016, E4)", () => {
         },
         ORIGIN,
       ),
-    ).toEqual({
-      subject: "[Atlas] Aviso: integridad 2026-Q4",
-      body: body([
-        "El ensayo de restauración del periodo 2026-Q4 no reproduce el libro con el último volcado (event_differs: 1, cash_differ: 1), desde el 2026-10-01.",
-        "No restaures desde ese volcado sin mirarlo antes: sigue el procedimiento de los avisos.",
-      ]),
-    });
+    ).toEqual(
+      expect.objectContaining({
+        subject: "[Atlas] Aviso: integridad del cuarto trimestre de 2026",
+        body: body([
+          "El ensayo de restauración del cuarto trimestre de 2026 no reproduce el libro con el último volcado (event_differs: 1, cash_differ: 1), desde el 01/10/2026.",
+          "No restaures desde ese volcado sin mirarlo antes: sigue el procedimiento de los avisos.",
+        ]),
+      }),
+    );
   });
 
   it("says the size of the ledger and its threshold, in bytes", () => {
@@ -380,13 +399,15 @@ describe("the warnings of the dump and of the integrity (016, E4)", () => {
         },
         ORIGIN,
       ),
-    ).toEqual({
-      subject: "[Atlas] Aviso: integridad 2026-Q4",
-      body: body([
-        "El libro ocupa 1.100.000 bytes (umbral 1.048.576), desde el 2026-10-01.",
-        "Revisa el plazo de expiración de las versiones no vigentes del bucket (ADR-0006).",
-      ]),
-    });
+    ).toEqual(
+      expect.objectContaining({
+        subject: "[Atlas] Aviso: integridad del cuarto trimestre de 2026",
+        body: body([
+          "El libro ocupa 1.100.000 bytes (umbral 1.048.576), desde el 01/10/2026.",
+          "Revisa el plazo de expiración de las versiones no vigentes del bucket (ADR-0006).",
+        ]),
+      }),
+    );
   });
 
   it("never says a period it cannot vouch for, and never a subject outside its list", () => {
@@ -428,6 +449,35 @@ describe("the warnings of the dump and of the integrity (016, E4)", () => {
         { since: "2026-10-01", period: "2026-10", outcome: "ledger_absent" },
         ORIGIN,
       )?.body,
-    ).toContain("Ha fallado el volcado mensual en el periodo 2026-10 (código ledger_absent)");
+    ).toContain("Ha fallado el volcado mensual en octubre de 2026 (código ledger_absent)");
+  });
+});
+
+describe("the title of each warning", () => {
+  it.each([
+    ["task_failed", "monthly_backup", "Ha fallado el volcado mensual"],
+    ["record_unreadable", "ecb_update", "Un registro de tarea no se lee"],
+    ["source_failing", "eodhd", "EODHD falla"],
+    ["currency_unchecked", "eodhd", "Correspondencias sin contrastar"],
+    ["thesis_horizon_exceeded", "bucket", "Tesis del cubo fuera de plazo"],
+    ["prices_file_unreadable", "prices", "Ficheros de precios ilegibles"],
+    ["ecb_update_rejected", "ecb", "Descarga del BCE rechazada"],
+    ["ecb_update_undone", "ecb", "Actualización del BCE deshecha"],
+    ["ecb_history_backfilled", "ecb", "Histórico del BCE con días rellenados"],
+    ["ecb_calendar_mismatch", "ecb", "Calendario del BCE descuadrado"],
+    ["ecb_history_damaged", "ecb", "Histórico del BCE dañado"],
+    ["ecb_history_rebuilt", "ecb", "Histórico del BCE reconstruido"],
+    ["ecb_rebuilt_unverified", "ecb", "Histórico del BCE sin comparar"],
+    ["backup_object_differs", "backup", "Volcado con objetos distintos"],
+    ["backup_ecb_inconsistent", "backup", "Volcado sin manifiesto del BCE"],
+    ["backup_positions_missing", "backup", "Volcado sin posiciones"],
+    ["backup_ecb_missing", "backup", "Volcado sin histórico del BCE"],
+    ["integrity_errors", "integrity", "Errores de integridad"],
+    ["restore_rehearsal_differs", "integrity", "El ensayo de restauración no cuadra"],
+    ["ledger_size_above_threshold", "integrity", "El libro crece de la cuenta"],
+  ])("%s", (code, subject, title) => {
+    const mail = noticeMail({ code, subject }, { since: "2026-10-01" }, "https://a.example");
+    expect(mail?.body.split("\n")[0]).toBe(title.toLocaleUpperCase("es"));
+    expect(mail?.html).toContain(`>${title}</h1>`);
   });
 });
