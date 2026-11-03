@@ -112,6 +112,10 @@ export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options =
         font: axisFont(),
         grid: { show: false },
         ticks: { show: false },
+        // Clear of the lowest label of the vertical axis, which hangs half its height below the
+        // plot: at uPlot's 5 px «−10 %» sat on top of «sept 2026».
+        gap: 12,
+        size: 40,
         // The least room between two dates: «sept 2026» is wider than «2026»,
         // and at uPlot's default of 50 px the months ran into each other.
         space: SPACE[span],

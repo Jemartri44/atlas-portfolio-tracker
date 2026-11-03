@@ -7,11 +7,12 @@
 
 import { BlobLedgerStore } from "@atlas/adapters/blob";
 import type { UseCaseDeps } from "@atlas/domain";
+import { createMemo } from "solid-js";
 import { render } from "solid-js/web";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { loadInto } from "../src/ledger/actions.js";
 import { type LedgerSnapshot, store } from "../src/ledger/state.js";
-import { RequireLedger } from "../src/routes/guard.jsx";
+import { liveLedger, RequireLedger } from "../src/routes/guard.jsx";
 import { goldenLines, goldenText } from "./helpers/golden.js";
 import { MemoryBlob } from "./helpers/memory-blob.js";
 
@@ -81,6 +82,34 @@ describe("the gate while a write is in flight", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(screen.mounts()).toBe(1);
     screen.stop();
+  });
+
+  // The held view is the same object, so a memo over `snapshot.events` never learned that the
+  // ledger moved under it (the figures of a filing, a corporate action draft, a settings screen).
+  it("makes what is computed from the view compute again with the ledger that arrived", async () => {
+    now = new Date("2029-07-01T10:00:00.000Z");
+    await loadInto({ deps: depsOf(goldenText()), source });
+    await vi.advanceTimersByTimeAsync(60_000);
+    const host = document.createElement("div");
+    const stop = render(
+      () => (
+        <RequireLedger>
+          {(snapshot) => {
+            const live = createMemo(() => liveLedger(snapshot).events.length);
+            return <p>{live()}</p>;
+          }}
+        </RequireLedger>
+      ),
+      host,
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    store.setWriting(true);
+    await loadInto({ deps: depsOf(other()), source }, undefined, undefined, true);
+    await vi.advanceTimersByTimeAsync(0);
+    const fewer = goldenLines().length - 1;
+    expect(host.textContent).toBe(String(fewer));
+    store.setWriting(false);
+    stop();
   });
 
   it("paints the new day once the write is over", async () => {

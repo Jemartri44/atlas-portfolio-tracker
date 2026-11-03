@@ -6,7 +6,7 @@ import { base64url } from "@atlas/adapters/access";
 import { describe, expect, it } from "vitest";
 import { TestOnlyFakeS3 } from "../../../packages/adapters/test/aws/test-only-fake-s3.js";
 import { TestOnlyFakeSsm } from "../../../packages/adapters/test/aws/test-only-fake-ssm.js";
-import { compose, composeOrFail } from "../src/compose.js";
+import { compose, composeOrFail, withTimeout } from "../src/compose.js";
 import { NAMES, SESSION_KEY } from "./harness.js";
 
 const ENV = {
@@ -119,5 +119,23 @@ describe("compose (the Lambda of production)", () => {
     ]) {
       await expect(compose(env, parts(SESSION_KEY).make)).rejects.toThrow();
     }
+  });
+});
+
+describe("withTimeout", () => {
+  it("adds a signal that aborts, and respects the one the caller brought", async () => {
+    const seen: (AbortSignal | undefined)[] = [];
+    const inner = (async (_input: unknown, init?: RequestInit) => {
+      seen.push(init?.signal ?? undefined);
+      return new Response("");
+    }) as unknown as typeof fetch;
+    await withTimeout(inner, 1)("https://example.test");
+    const own = new AbortController();
+    await withTimeout(inner, 1)("https://example.test", { signal: own.signal });
+    expect(seen[0]).toBeInstanceOf(AbortSignal);
+    await expect(
+      new Promise((resolve) => seen[0]?.addEventListener("abort", () => resolve("aborted"))),
+    ).resolves.toBe("aborted");
+    expect(seen[1]).toBe(own.signal);
   });
 });

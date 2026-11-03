@@ -3,7 +3,7 @@
 
 import { Money } from "../money/money.js";
 import type { AccountId } from "../schema/events.js";
-import { cashKey, type LedgerState } from "./state.js";
+import { cashKey, type LedgerState, splitCashKey } from "./state.js";
 
 export interface CashBalance {
   account_id: AccountId;
@@ -22,7 +22,7 @@ export const cashBalances = (state: LedgerState): CashBalance[] => {
   const result: CashBalance[] = [];
   for (const [key, balance] of state.cash) {
     if (!balance.isZero()) {
-      const [account_id, currency] = key.split("|") as [AccountId, string];
+      const [account_id, currency] = splitCashKey(key);
       result.push({ account_id, currency, balance });
     }
   }

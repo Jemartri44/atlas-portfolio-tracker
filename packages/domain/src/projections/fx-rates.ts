@@ -78,9 +78,14 @@ export const noteFxRates = (
     if (pair.currency === undefined || pair.currency === EUR || pair.rate === undefined) {
       continue;
     }
+    const date = pair.date ?? businessDate;
+    // An event recorded late with an older rate must not displace a newer one.
+    if ((state.fxRates.get(pair.currency)?.date ?? date) > date) {
+      continue;
+    }
     state.fxRates.set(pair.currency, {
       rate: Decimal.parse(pair.rate),
-      date: pair.date ?? businessDate,
+      date,
       event_id: event.id,
       dated: pair.date !== undefined,
     });

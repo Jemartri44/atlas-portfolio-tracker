@@ -2,10 +2,10 @@
 // Google, SSM and S3 (`apps/api/test/harness.ts`). The browser of the user is a function that walks
 // the start, the provider and the return; the loopback is a real socket on 127.0.0.1.
 
-import { chmod, readFile, stat, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { chmod, readFile, rename, stat, symlink, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { PassThrough } from "node:stream";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { SELF, setup } from "../../../api/test/harness.js";
 import { run } from "../../src/main.js";
 import { readHiddenLine } from "../../src/remote/environment.js";
@@ -190,6 +190,43 @@ describe("the file of the credentials", () => {
   });
 });
 
+describe("the file of the credentials: what it is and who owns it (audit of 03/11, finding 13)", () => {
+  it("is not used when it is a link, whatever it points to", async () => {
+    const c = await setupConsole();
+    expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
+    const real = `${c.credentials}.real`;
+    await rename(c.credentials, real);
+    await symlink(real, c.credentials);
+    expect(await c.exec(["remote", "status"])).toBe(1);
+    expect(c.err.join("\n")).toContain("credentials_unreadable");
+  });
+
+  it("is not used when it is owned by someone else", async () => {
+    const c = await setupConsole();
+    expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
+    const uid = vi.spyOn(process, "getuid").mockReturnValue((process.getuid?.() ?? 0) + 1);
+    try {
+      expect(await c.exec(["remote", "status"])).toBe(1);
+      expect(c.err.join("\n")).toContain("credentials_not_yours");
+    } finally {
+      uid.mockRestore();
+    }
+  });
+
+  it("is not used, and nothing is written, when its folder is open to others", async () => {
+    const c = await setupConsole();
+    expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
+    await chmod(dirname(c.credentials), 0o755);
+    c.seen.length = 0;
+    expect(await c.exec(["remote", "status"])).toBe(1);
+    expect(c.err.join("\n")).toContain("credentials_folder_open");
+    expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(1);
+    expect(c.seen).toEqual([]);
+    await chmod(dirname(c.credentials), 0o700);
+    expect(await c.exec(["remote", "status"])).toBe(0);
+  });
+});
+
 describe("atlas remote status", () => {
   it("says the sessions of the folder and warns inside the threshold, never showing the token", async () => {
     const c = await setupConsole();
@@ -248,15 +285,14 @@ describe("the sign-in files of the console: expiry, renewal and what is kept", (
     expect(entries.OTHERTERMINALOTHERTERM).toBeDefined();
   });
 
-  it("warns when the folder of the credentials is open to others", async () => {
+  it("refuses to use the folder of the credentials when it is open to the group or to the others", async () => {
     const c = await setupConsole();
     expect(await c.exec(["remote", "login", "--origin", SELF])).toBe(0);
     expect(c.err.join("\n")).not.toContain("700");
-    // Open to the group only, or to the others only: both warn.
     for (const mode of [0o750, 0o705]) {
       await chmod(join(c.config, "atlas"), mode);
       c.err.length = 0;
-      expect(await c.exec(["remote", "status"])).toBe(0);
+      expect(await c.exec(["remote", "status"])).toBe(1);
       expect(c.err.join("\n")).toContain("chmod 700");
     }
     await chmod(join(c.config, "atlas"), 0o700);

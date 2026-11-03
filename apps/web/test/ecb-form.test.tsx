@@ -12,7 +12,16 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { FakeIdbFactory } from "../../../packages/adapters/test/fake-idb.js";
 import { reloadWebHistory } from "../src/ecb/history.js";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
-import { choose, press, settle, show, text, type, withGoldenLedger } from "./helpers/render.jsx";
+import {
+  choose,
+  press,
+  settle,
+  show,
+  text,
+  type,
+  until,
+  withGoldenLedger,
+} from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -37,16 +46,6 @@ beforeAll(async () => {
 afterAll(() => {
   holder.indexedDB = before;
 });
-
-const until = async (condition: () => boolean, ms = 3000): Promise<void> => {
-  const deadline = Date.now() + ms;
-  while (!condition()) {
-    if (Date.now() > deadline) {
-      throw new Error("no llegó a pasar");
-    }
-    await settle(5);
-  }
-};
 
 const value = (host: HTMLElement, id: string): string =>
   (host.querySelector(`#${id}`) as HTMLInputElement | null)?.value ?? "";

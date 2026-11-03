@@ -312,6 +312,21 @@ describe("acceptAppend: the table of §5.2, in its order", () => {
     ).toBe(1);
   });
 
+  it.each(["2026-02-30T10:00:00Z", "2026-09-01T24:00:00Z"])(
+    "row 5: a recorded_at that does not exist (%s) is line_invalid when written",
+    (instant) => {
+      const b = device(0);
+      const line = encodeLine(b.deposit({ account_id: "acc_fund" })).replace(
+        /"recorded_at":"[^"]*"/,
+        `"recorded_at":"${instant}"`,
+      );
+      expect(acceptAppend(remote, [{ line }], rules).rejected).toMatchObject({
+        code: "line_invalid",
+        details: { domain_code: "invalid_envelope" },
+      });
+    },
+  );
+
   it("row 6: a repeated id is domain_rejected, never line_invalid (V8)", () => {
     const twin = { ...(events[0] as LedgerEvent), recorded_at: "2026-09-02T00:00:00.000Z" };
     expect(acceptAppend(remote, plain([twin]), rules).rejected).toMatchObject({

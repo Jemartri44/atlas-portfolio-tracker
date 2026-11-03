@@ -49,9 +49,16 @@ export const compareCivilDates = (left: CivilDate, right: CivilDate): number => 
 export const yearOf = (date: CivilDate): number => Number(date.slice(0, 4));
 
 /** Days since the epoch for a civil date: UTC midnight, so no zone can shift the day. */
-const epochDayOf = (date: CivilDate): number =>
-  Date.UTC(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8, 10))) /
-  86_400_000;
+const epochDayOf = (date: CivilDate): number => {
+  // `Date.UTC` reads years 0-99 as 19xx; `setUTCFullYear` does not.
+  const moment = new Date(0);
+  moment.setUTCFullYear(
+    Number(date.slice(0, 4)),
+    Number(date.slice(5, 7)) - 1,
+    Number(date.slice(8, 10)),
+  );
+  return moment.getTime() / 86_400_000;
+};
 
 /** `to − from`, in whole days; negative when `to` precedes `from`. */
 export const daysBetween = (from: CivilDate, to: CivilDate): number =>

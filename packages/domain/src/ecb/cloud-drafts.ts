@@ -13,7 +13,7 @@
 // fold of the objects into the logical draft of ADR-0029,
 // `{ draft_format, id, saved_at, event, pending_event_id? }`.
 
-import { INSTANT_PATTERN, isRecord } from "../guards.js";
+import { isInstant, isRecord } from "../guards.js";
 import { isUlid, type Ulid } from "../ids/ulid.js";
 import type { DraftEnd } from "../ports/draft-store.js";
 import { DRAFT_FORMAT, type PendingDraft, parsePendingDraft } from "./drafts.js";
@@ -52,9 +52,6 @@ export const parseDraftName = (name: string): { id: Ulid; kind: DraftObjectKind 
   const kind = match[2] === ".stamp" ? "stamp" : match[2] === ".end" ? "end" : "draft";
   return { id: match[1] as Ulid, kind };
 };
-
-const isInstant = (value: unknown): value is string =>
-  typeof value === "string" && INSTANT_PATTERN.test(value) && !Number.isNaN(Date.parse(value));
 
 const hasOnly = (value: Readonly<Record<string, unknown>>, keys: readonly string[]): boolean =>
   Object.keys(value).every((key) => keys.includes(key));

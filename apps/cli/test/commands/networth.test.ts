@@ -224,9 +224,10 @@ describe("atlas networth", () => {
     };
     expect(payload.invalid_count).toBe(0);
     expect(payload.data.total_eur).toBe("1076");
-    expect(payload.data.core).toBeDefined();
-    expect(payload.data.bucket).toBeDefined();
-    expect(payload.data.cash).toBeDefined();
+    // The three blocks apart, and the total the sum of them (660 + 96 + 320).
+    expect(payload.data.core).toMatchObject({ total_eur: "660", partial: false });
+    expect(payload.data.bucket).toMatchObject({ total_eur: "96", partial: false });
+    expect(payload.data.cash).toMatchObject({ total_eur: "320", partial: false });
   });
 
   it("prints a total that is the sum of the figures it prints", async () => {
@@ -247,7 +248,7 @@ describe("atlas networth", () => {
     // The exact value, unrounded, is still the one in --json.
     expect(await h.exec(["networth", "--date", "2028-12-31", "--json"])).toBe(0);
     const data = h.json() as { core: { total_eur: string } };
-    expect(data.core.total_eur).toBe("22326.6773692756");
+    expect(data.core.total_eur).toBe("22326.6773692757");
   });
 
   it("rejects a date that is not a date instead of answering something plausible", async () => {

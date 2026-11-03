@@ -127,14 +127,18 @@ export interface PriceLookup {
   stale: boolean;
 }
 
-/** Value in euros of a position at its price; nothing without a price or without its value in euros. */
+/**
+ * Value in euros of a position at its price; nothing without a price or without its value in
+ * euros. One division, at the end: rounding the unit value in euros first would multiply its
+ * error by the quantity.
+ */
 export const positionValueOf = (
   price: PriceLookup | undefined,
   quantity: Quantity,
 ): Money | undefined =>
-  price?.unit_value_eur === undefined
+  price?.unit_value_eur === undefined || price.fx_rate === undefined
     ? undefined
-    : Money.of(price.unit_value_eur.amount.mul(quantity.value), "EUR");
+    : Money.of(price.unit_value.mul(quantity.value).div(price.fx_rate), "EUR");
 
 const lookupOf = (
   assetId: AssetId,

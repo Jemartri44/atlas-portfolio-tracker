@@ -71,7 +71,7 @@ export const settle = async (ms = 0): Promise<void> => {
  */
 export const until = async (
   condition: () => boolean,
-  what: string,
+  what = "the condition",
   boundMs = 10_000,
 ): Promise<void> => {
   const start = Date.now();

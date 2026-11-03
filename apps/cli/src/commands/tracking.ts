@@ -13,8 +13,14 @@ import {
 import { type Context, describeWarnings, GLOBAL_FLAGS } from "../context.js";
 import { eur, pct, pp } from "../output/format.js";
 import { table } from "../output/table.js";
-import { requireId } from "./catalogue.js";
-import { confirmAndRecord, dateFlag, draftFromFlags, loadForQuery, renderQuery } from "./shared.js";
+import {
+  confirmAndRecord,
+  dateFlag,
+  draftFromFlags,
+  loadForQuery,
+  renderQuery,
+  requireId,
+} from "./shared.js";
 
 export const orderCommand = async (
   ctx: Context,

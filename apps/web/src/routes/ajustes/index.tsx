@@ -93,7 +93,7 @@ export default function AjustesRoute(): JSX.Element {
       </Show>
 
       <div class="grid">
-        <Section title="Tus datos" class="span-6">
+        <Section title="Tus datos" class="span-6 is-natural">
           <Show
             when={store.source() !== undefined}
             fallback={<p class="meta">No hay datos abiertos.</p>}
