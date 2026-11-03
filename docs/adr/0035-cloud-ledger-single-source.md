@@ -256,7 +256,7 @@ Respuestas de la persona (2026-10-06, transmitidas por la coordinadora de DESBAS
 4. **La copia pública del BCE en la web.** **Resuelta:** se conserva en IndexedDB.
 5. **Las copias de referencia de la consola en modo de nube** (`reference/ecb/` y `prices/`). **Resuelta:** se conservan, como ya hace la 016.
 6. **La sesión de la web** (`docs/api.md` §3). **Resuelta:** **24 h**, y antes de abrir un formulario la web avisa si quedan menos de 15 minutos. Esto cambia las 8 h de ADR-0027 y de `docs/api.md` §3 (E0).
-7. **Comprimir `GET /api/ledger`.** **Resuelta:** sin comprimir hasta que el tamaño del libro lo pida (aviso de ADR-0028).
+7. **Comprimir `GET /api/ledger`.** **Resuelta:** sin comprimir hasta que el tamaño del libro lo pida (aviso de ADR-0028). *Nota del 2026-11-03: la lectura se comprime desde hoy (gzip desde 256 KiB, `docs/api.md` §5.1): la cuenta de un libro de veinte años (2,7 a 6,5 MB) rozaba los 6 MB de la respuesta en el caso alto.*
 8. **Importaciones de extractos futuras** (Ronda 6). **Resuelta:** se aplazan a la ADR de la importación automática, que decidirá si una importación es «todo o nada». Hoy la API escribe el tramo válido hasta el primer rechazo.
 
 ## Notas de estado

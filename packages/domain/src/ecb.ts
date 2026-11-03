@@ -22,6 +22,7 @@ export {
   endObjectText,
   listDraftNames,
   MAX_DRAFT_BYTES,
+  MAX_PENDING_DRAFTS,
   type Parsed,
   parseCreateDraftBody,
   parseDraftName,

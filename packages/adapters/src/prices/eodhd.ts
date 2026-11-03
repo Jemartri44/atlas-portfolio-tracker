@@ -20,7 +20,7 @@ import { JsonNumber, parseExactJson } from "./exact-json.js";
 import { type Answer, ask, type Fetch, failure } from "./fetch.js";
 import { closeOf, saidCurrency } from "./shape.js";
 
-export const EODHD_API = "https://eodhd.com/api";
+const EODHD_API = "https://eodhd.com/api";
 
 /**
  * Each status to its kind, one to one: a 403 is `not_found`

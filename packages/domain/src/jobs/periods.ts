@@ -11,26 +11,15 @@
 //   yearly     YYYY       (and only in January: the income tax of the past
 //                          year and the thresholds of 720 and 721)
 
-import { addDays, type CivilDate, yearOf } from "../dates/civil-date.js";
+import { addDays, type CivilDate, daysBetween, isoWeekday, yearOf } from "../dates/civil-date.js";
 import type { JobFrequency } from "../settings/job-frequencies.js";
-
-const DAY_MS = 86_400_000;
-
-const msOf = (date: CivilDate): number =>
-  Date.UTC(yearOf(date), Number(date.slice(5, 7)) - 1, Number(date.slice(8, 10)));
-
-/** ISO day of the week: 1 Monday … 7 Sunday. */
-export const isoWeekday = (date: CivilDate): number => {
-  const day = new Date(msOf(date)).getUTCDay();
-  return day === 0 ? 7 : day;
-};
 
 const pad = (value: number): string => String(value).padStart(2, "0");
 
 const isoWeek = (date: CivilDate): string => {
   const thursday = addDays(date, 4 - isoWeekday(date));
   const year = yearOf(thursday);
-  const week = Math.floor((msOf(thursday) - Date.UTC(year, 0, 1)) / DAY_MS / 7) + 1;
+  const week = Math.floor(daysBetween(`${year}-01-01`, thursday) / 7) + 1;
   return `${year}-W${pad(week)}`;
 };
 

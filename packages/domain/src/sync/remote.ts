@@ -6,6 +6,7 @@
 
 import { asDomainError } from "../errors.js";
 import { isInstant, isRecord, type UnknownRecord } from "../guards.js";
+import { hasOverlongDecimal } from "../money/decimal.js";
 import type { AppendEntry, LineRejection } from "../ports/remote-ledger.js";
 import { RemoteError } from "../ports/remote-ledger.js";
 import { projectLedger } from "../projections/project-ledger.js";
@@ -25,6 +26,8 @@ export interface RemoteRules {
   readonly now: Date;
   /** How far ahead of the remote's clock a `recorded_at` may be (the value is the API's). */
   readonly clockToleranceMs: number;
+  /** Only for tests that need a small ledger bound; absent, `MAX_LEDGER_BYTES`. */
+  readonly maxLedgerBytes?: number;
 }
 
 /**
@@ -36,6 +39,47 @@ export interface RemoteRules {
  * of the protocol, not a setting of the user.
  */
 export const MAX_APPEND_UNITS = 100;
+
+/**
+ * The most a single line of the ledger may take, in bytes of UTF-8. A real line takes some
+ * 300 to 600 (the widest of the synthetic ledger, a `settings_changed`, 1,232); the bound only
+ * stops a free text that fills the ledger. A bound of the protocol, not a setting of the user.
+ */
+export const MAX_LINE_BYTES = 16 * 1024;
+
+/**
+ * The ledger the remote keeps, in bytes, as a guard well under what the Function URL answers
+ * (6 MB, base64 of the gzip included; the ledger compresses about 5:1). A real ledger of twenty
+ * years takes 2.7 to 6.5 MB (`docs/api.md` §5.1): this bound is not met by one, it only stops
+ * the ledger that would stop being served. A bound of the protocol, not a setting of the user.
+ */
+export const MAX_LEDGER_BYTES = 16 * 1024 * 1024;
+
+/**
+ * The bytes of `text` in UTF-8, counted without building them. A surrogate pair is 4 bytes; a lone
+ * surrogate never gets here (`textRefusal` refuses it, and the remote holds none).
+ */
+const byteLength = (text: string): number => {
+  let bytes = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const unit = text.charCodeAt(i);
+    if (unit < 0x80) {
+      bytes += 1;
+    } else if (unit < 0x800) {
+      bytes += 2;
+    } else if (unit >= 0xd800 && unit <= 0xdbff) {
+      bytes += 4;
+      i += 1;
+    } else {
+      bytes += 3;
+    }
+  }
+  return bytes;
+};
+
+/** The bytes of a ledger made of `lines`, each with its newline. */
+const ledgerBytes = (lines: readonly string[]): number =>
+  lines.reduce((sum, line) => sum + byteLength(line) + 1, 0);
 
 const bodyInvalid = (reason: string): RemoteError =>
   new RemoteError("body_invalid", 400, { reason });
@@ -129,6 +173,10 @@ const readLine = (
   rules: RemoteRules,
   entry?: AppendEntry,
 ): { event: LedgerEvent; raw: UnknownRecord } | Rejection => {
+  const bytes = byteLength(line);
+  if (bytes > MAX_LINE_BYTES) {
+    return { code: "line_too_large", details: { limit: MAX_LINE_BYTES, bytes } };
+  }
   let raw: unknown;
   try {
     raw = JSON.parse(line);
@@ -152,6 +200,9 @@ const readLine = (
     (entry?.chain_continues === true && raw.corrects_id === undefined)
   ) {
     return { code: "pair_declaration_invalid", details: {} };
+  }
+  if (hasOverlongDecimal(raw)) {
+    return { code: "line_invalid", details: { domain_code: "invalid_decimal" } };
   }
   let event: LedgerEvent;
   try {
@@ -356,8 +407,22 @@ export const acceptAppend = (
       },
     };
   }
-  const outcome = reapplyUnits({ lines: remoteLines, events: remoteEvents }, units, (unit, base) =>
-    judgeUnit(unit, base, rules),
+  let size = ledgerBytes(remoteLines);
+  const outcome = reapplyUnits(
+    { lines: remoteLines, events: remoteEvents },
+    units,
+    (unit, base) => {
+      const bytes = size + ledgerBytes(unit.lines);
+      const limit = rules.maxLedgerBytes ?? MAX_LEDGER_BYTES;
+      if (bytes > limit) {
+        return { code: "ledger_too_large", details: { limit, bytes } };
+      }
+      const rejection = judgeUnit(unit, base, rules);
+      if (rejection === undefined) {
+        size = bytes;
+      }
+      return rejection;
+    },
   );
   const accepted = outcome.accepted.reduce((sum, unit) => sum + unit.entries.length, 0);
   const lines = outcome.accepted.flatMap((unit) => unit.lines);
@@ -418,6 +483,10 @@ export const acceptInit = (
   confirmDuplicateIds: readonly string[],
   rules: RemoteRules,
 ): string[] => {
+  const bytes = byteLength(content);
+  if (bytes > MAX_LEDGER_BYTES) {
+    throw initRejected("ledger_too_large", { limit: MAX_LEDGER_BYTES, bytes });
+  }
   const lines = linesOfText(content);
   const events: LedgerEvent[] = [];
   for (const [index, line] of lines.entries()) {

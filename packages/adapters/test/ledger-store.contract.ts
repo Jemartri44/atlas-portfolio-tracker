@@ -1,4 +1,4 @@
-// Contract every LedgerStore must honour (specs/001-ledger-core/contracts/ports.md §2),
+// Contract every LedgerStore must honour (contract of the port, spec 001, retired from the tree; in git history),
 // raw-line operations and `replace` included.
 
 import {

@@ -16,9 +16,8 @@ import { ValidationError } from "../errors.js";
 import { isRecord } from "../guards.js";
 import type { QuoteSource } from "../projections/prices.js";
 import type { AssetId } from "../schema/events.js";
-import { repeatedKey } from "../schema/json-keys.js";
 import { type CloseLine, linesToAppend, priceFileName } from "./line.js";
-import { repeatedKeyError } from "./repeated-key.js";
+import { parseStrictJson } from "./repeated-key.js";
 
 export const CLOUD_PULL_FILE = "_cloud.json";
 const CLOUD_PULL_FORMAT = 1;
@@ -46,16 +45,7 @@ export const parseCloudPull = (text: string | undefined): CloudPull | undefined 
   if (text === undefined) {
     return undefined;
   }
-  let raw: unknown;
-  try {
-    raw = JSON.parse(text);
-  } catch {
-    throw wrongPull("json");
-  }
-  const repeated = repeatedKey(text);
-  if (repeated !== undefined) {
-    throw repeatedKeyError(`prices/${CLOUD_PULL_FILE}`, repeated);
-  }
+  const raw = parseStrictJson(text, `prices/${CLOUD_PULL_FILE}`, () => wrongPull("json"));
   if (!isRecord(raw) || raw.cloud_format !== CLOUD_PULL_FORMAT) {
     throw wrongPull("cloud_format");
   }

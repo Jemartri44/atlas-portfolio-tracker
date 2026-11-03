@@ -77,6 +77,7 @@ export const REMOTE_FAILURE_CODES = [
   // or that is no longer as it was read (closed, or stamped with another id).
   "draft_exists",
   "draft_changed",
+  "too_many_drafts",
   "transport_rejected",
   "network_failed",
 ] as const;
@@ -100,6 +101,8 @@ export const LINE_REJECTION_CODES = [
   "pair_rejected",
   "seal_mismatch",
   "waiver_not_appendable",
+  "line_too_large",
+  "ledger_too_large",
 ] as const;
 
 /**

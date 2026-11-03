@@ -9,6 +9,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { importedPrices, saveImportedPrices } from "@atlas/adapters/prices";
 import { IMPORTED_HISTORY_KEY, saveImportedHistory } from "@atlas/adapters/reference";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { FakeIdbFactory } from "../../../../packages/adapters/test/fake-idb.js";
@@ -16,6 +17,7 @@ import { reloadWebHistory } from "../../src/ecb/history.js";
 import { bootCloud } from "../../src/ledger/cloud.js";
 import { store } from "../../src/ledger/state.js";
 import Ajustes from "../../src/routes/ajustes/index.jsx";
+import { SessionCard } from "../../src/routes/ajustes/SessionCard.jsx";
 import Movimientos from "../../src/routes/movimientos/index.jsx";
 import Borradores from "../../src/routes/registrar/borradores.jsx";
 import RegistrarForm from "../../src/routes/registrar/form.jsx";
@@ -216,6 +218,29 @@ describe("what stays on the device after a session of the cloud", () => {
     expect(onDevice().entries).toEqual([]);
     // Reading the public prices opens the database, but no store of the ledger holds anything (checked above).
     expect(cachesOpened).toEqual([]);
+  });
+
+  it("forgets the prices imported by hand when the session is closed, and only then", async () => {
+    // Only the answers the card asks for: a close that is refused, then one that works, and a
+    // signed-out session for the boot that follows. No ledger is needed to prove what is forgotten.
+    const closing = (logout: number): typeof fetch =>
+      (async (input: string | URL | Request) =>
+        String(input).endsWith("/api/auth/logout")
+          ? new Response(null, { status: logout })
+          : new Response(JSON.stringify({ error: { code: "unauthenticated", details: {} } }), {
+              status: 401,
+            })) as typeof fetch;
+    await saveImportedPrices({
+      files: { ast_gold: '{"date":"2026-10-01","close":"100"}\n' },
+      imported_at: "2026-10-01T10:00:00.000Z",
+    });
+    const refused = await show("/ajustes", () => <SessionCard request={closing(500)} />);
+    await press(refused, "Cerrar sesión");
+    expect(await importedPrices()).toBeDefined();
+    document.body.innerHTML = "";
+    const closed = await show("/ajustes", () => <SessionCard request={closing(204)} />);
+    await press(closed, "Cerrar sesión");
+    await expect.poll(() => importedPrices()).toBeUndefined();
   });
 
   it("control: the walker would see a ledger, a remembered source or a cache entry", async () => {

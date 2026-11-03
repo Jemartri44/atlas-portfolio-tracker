@@ -15,7 +15,7 @@ export const PAGE_CSP =
  */
 export const CODE_PAGE_CSP = `${PAGE_CSP}; sandbox`;
 
-export const escapeHtml = (text: string): string =>
+const escapeHtml = (text: string): string =>
   text
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")

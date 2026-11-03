@@ -51,7 +51,7 @@ export const updateEcbHistory = async (
   const current = await deps.store.active();
   const previous =
     current === undefined ? undefined : readEcbHistory(current.text, current.meta.source);
-  const check = checkHistoryUpdate(previous, next);
+  const check = checkHistoryUpdate(previous, next, options.today);
   const failure =
     downloaded.zip_failure === undefined ? {} : { zip_failure: downloaded.zip_failure };
   if (check.kind === "rejected") {
@@ -159,7 +159,7 @@ export const rebuildEcbHistory = async (
   }
   const next = read(downloaded);
   const previous = lastReadable(await deps.store.generations());
-  const check = checkHistoryUpdate(previous, next);
+  const check = checkHistoryUpdate(previous, next, options.today);
   if (check.kind === "rejected") {
     return { kind: "rejected", conflicts: check.conflicts, total: check.total };
   }

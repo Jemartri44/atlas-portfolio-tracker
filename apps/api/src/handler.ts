@@ -84,7 +84,7 @@ export const createHandler = (deps: HandlerDeps): Handler => {
     switch (path) {
       case "/api/ledger":
         return request.method === "GET"
-          ? sync.readLedger()
+          ? sync.readLedger(request.headers.get("accept-encoding"))
           : sync.initialise(request.headers.get("if-match"), body);
       case "/api/ledger/lines":
         return sync.appendLines(request.headers.get("if-match"), body);

@@ -102,7 +102,7 @@ resource "aws_s3_bucket_ownership_controls" "artifacts" {
   }
 }
 
-# What is old expires (specs/017 cost.md): the artifact of a commit is promoted
+# What is old expires (infra/test/contract/cost.md): the artifact of a commit is promoted
 # within days, never months.
 resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
   bucket = aws_s3_bucket.artifacts.id

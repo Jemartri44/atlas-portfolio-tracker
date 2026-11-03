@@ -56,6 +56,16 @@ describe("recordEvent", () => {
     expect(physicalPositions(state)[0]?.quantity.toString()).toBe("10");
   });
 
+  it("refuses a decimal of more digits than a ledger takes, and writes nothing", async () => {
+    const store = seeded();
+    const deps = testDeps(store);
+    const before = (await store.load()).events.length;
+    await expect(
+      recordEvent<BuyEvent>(deps, { ...buyDraft, quantity: "1".repeat(41) }),
+    ).rejects.toMatchObject({ code: "invalid_decimal", details: { max: 40 } });
+    expect((await store.load()).events.length).toBe(before);
+  });
+
   it("keeps an explicit fingerprint and reports warnings of the new event only", async () => {
     const store = seeded();
     const deps = testDeps(store);
