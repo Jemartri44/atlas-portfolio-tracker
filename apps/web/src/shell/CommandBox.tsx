@@ -109,7 +109,6 @@ export const CommandBox = (): JSX.Element => {
         ref={dialog}
         class="command-dialog"
         aria-label="Buscar o registrar"
-        title="Buscar o registrar (/)"
         onCancel={(event) => {
           event.preventDefault();
           close();
@@ -122,7 +121,6 @@ export const CommandBox = (): JSX.Element => {
             type="text"
             role="combobox"
             aria-label="Buscar o registrar"
-            title="Buscar o registrar (/)"
             aria-expanded="true"
             aria-controls={`cmd-list-${id}`}
             aria-activedescendant={`cmd-${id}-${active()}`}
