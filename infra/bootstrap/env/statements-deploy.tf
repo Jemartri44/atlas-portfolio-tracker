@@ -1,7 +1,7 @@
 # What the deploy role adds to the reads (ADR-0034, row 5; prompt 017, E1 block 3).
 # Names scope what the ARN names; the `env` tag scopes CloudFront, ACM and WAF, which
 # carry a generated identifier (`aws:RequestTag` when creating, `aws:ResourceTag` when
-# changing). It never has an object action on the data bucket, a change action on the
+# changing). It never has an object action on the data bucket, nor a write on its configuration (the bootstrap owns it), a change action on the
 # OAC or the CloudFront policies, a `GetParameter` on a secret or any `kms:Decrypt`.
 
 locals {
@@ -109,13 +109,6 @@ locals {
       resources = ["${local.s3_spa}/*"]
     },
     {
-      # Bucket actions only (prompt 017, §12.2 B1): never GetObject or PutObject.
-      sid       = "DataBucketConfigurationWrite"
-      effect    = "Allow"
-      actions   = local.bucket_config_actions
-      resources = [local.s3_data]
-    },
-    {
       sid       = "StateReadWrite"
       effect    = "Allow"
       actions   = ["s3:DeleteObject", "s3:GetObject", "s3:PutObject"]
@@ -175,28 +168,6 @@ locals {
         "cloudfront:UpdateFunction",
       ]
       resources = [local.cf_distribution, local.cf_function]
-      condition = local.tag_env_equals
-    },
-    {
-      # SAR: RequestCertificate takes no resource type (same reasoning as CloudFront).
-      sid       = "AcmCreate"
-      effect    = "Allow"
-      actions   = ["acm:RequestCertificate"]
-      resources = ["*"]
-      condition = local.request_tag_env
-    },
-    {
-      sid       = "AcmTagOnCreate"
-      effect    = "Allow"
-      actions   = ["acm:AddTagsToCertificate"]
-      resources = [local.acm_certificate]
-      condition = local.request_tag_env
-    },
-    {
-      sid       = "AcmChange"
-      effect    = "Allow"
-      actions   = ["acm:AddTagsToCertificate", "acm:DeleteCertificate", "acm:RemoveTagsFromCertificate"]
-      resources = [local.acm_certificate]
       condition = local.tag_env_equals
     },
     {

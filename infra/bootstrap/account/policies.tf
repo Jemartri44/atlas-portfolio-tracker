@@ -124,6 +124,25 @@ locals {
         Condition = { ArnNotLike = { "aws:PrincipalArn" = [local.role_arn["dev-deploy"], var.admin_principal_arn] } }
       },
       {
+        # A published set is immutable (security audit 03/11, finding 3): created once, never
+        # overwritten, so prod promotes what was built for that tree and nothing a later run of
+        # dev wrote. Same form as the backups of the data bucket.
+        Sid       = "BuildsOnlyIfAbsent"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:PutObject"
+        Resource  = "${local.artifacts_arn}/builds/*"
+        Condition = { Null = { "s3:if-none-match" = "true" }, Bool = { "s3:ObjectCreationOperation" = "true" } }
+      },
+      {
+        Sid       = "BuildsNeverDeleted"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = ["s3:DeleteObject", "s3:DeleteObjectVersion"]
+        Resource  = "${local.artifacts_arn}/builds/*"
+        Condition = { ArnNotLike = { "aws:PrincipalArn" = var.admin_principal_arn } }
+      },
+      {
         Sid       = "DenyReadsExceptDeploys"
         Effect    = "Deny"
         Principal = "*"

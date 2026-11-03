@@ -21,14 +21,11 @@ const resources = (text: string): { type: string; name: string; provider: boolea
   }));
 
 describe("regions of the stack", () => {
-  const all = ["api.tf", "data.tf", "edge.tf", "spa.tf", "ssm.tf"].flatMap((file) =>
-    resources(code(file)),
-  );
+  const all = ["api.tf", "edge.tf", "spa.tf", "ssm.tf"].flatMap((file) => resources(code(file)));
 
   it("puts exactly the global types in us-east-1, through the aliased provider", () => {
     const edge = all.filter((entry) => entry.provider).map((entry) => entry.type);
     expect(edge.sort()).toEqual([
-      "aws_acm_certificate",
       "aws_acm_certificate_validation",
       "aws_cloudfront_distribution",
       "aws_cloudfront_function", // spa_routes
@@ -38,6 +35,14 @@ describe("regions of the stack", () => {
     expect(
       all.filter((entry) => !entry.provider && /acm|cloudfront|wafv2/.test(entry.type)),
     ).toEqual([]);
+  });
+
+  it("the certificate is requested by the bootstrap, in us-east-1, and the stack only waits for it", () => {
+    const bootstrap = readFileSync(join(infraRoot, "bootstrap", "env", "certificate.tf"), "utf8");
+    expect(bootstrap).toMatch(
+      /resource "aws_acm_certificate" "edge" \{\s+provider\s+=\s+aws\.us_east_1/,
+    );
+    expect(code("edge.tf")).not.toMatch(/resource "aws_acm_certificate" /);
   });
 
   it("the roots wire the two providers into the module", () => {

@@ -82,6 +82,8 @@ infra/             Terraform.
 
 Dependency rule: `domain` imports nothing; `adapters` imports `domain`; apps import both (enforced by an architecture test). Ports: `LedgerStore`, `PriceSource`, `FxRateSource`, `Notifier`, `Clock`, `RandomSource`; `StatementSource` and `DocumentStore` are planned (importers) and do not exist yet. New integrations (banks, broker APIs) are new adapters, never domain changes. Use cases live in `domain/usecases` and receive ports as parameters.
 
+Messages: the domain speaks English; one catalogue `code → sentence` for errors, warnings, findings and remote failures lives in `packages/domain/src/messages/` behind `@atlas/domain/messages` (off the web boot path). Each surface hands it its `Voice` (`apps/cli/src/output/voice.ts`, `apps/web/src/format/messages/voice.ts`: names, figures, dates, privacy mask) and an entry may carry a remedy per surface. A new code needs one entry; `tests/messages.test.ts` fails until it has one, and no entry formats a figure itself.
+
 ## Working on a feature (for implementing assistants)
 
 The user directs the project with a high-level assistant that writes decision rounds, ADRs and the handoff prompts in `docs/prompts/`. **Implementing assistants build features from those prompts.** Rules:

@@ -6,30 +6,15 @@
 // del núcleo", and an import error that did not say which line was wrong.
 
 import { describe, expect, it } from "vitest";
-import { ERROR_MESSAGES } from "../src/format/messages/errors.js";
-import { WARNING_MESSAGES } from "../src/format/messages/warnings.js";
-import { namingOf } from "../src/format/names.js";
-import { figuresOf } from "../src/format/privacy.js";
 import { messageWithLine } from "../src/ledger/state.js";
 import { ContributionCard } from "../src/routes/cartera/ContributionCard.jsx";
 import Cartera from "../src/routes/cartera/index.jsx";
 import Movimientos from "../src/routes/movimientos/index.jsx";
 import { SETTINGS_NUMBERS } from "../src/view-models/index.js";
+import { sayError, sayWarning } from "./helpers/messages.js";
 import { openLedger, show, text, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
-
-const messageNames = {
-  ast_world: "World Index Fund",
-  acc_mi: "Fondos indexados",
-  "tesis:th_alpha": "sobre Alpha Robotics (abierta el 01/09/2026)",
-};
-const render = (catalogue: typeof ERROR_MESSAGES, code: string, details: Record<string, unknown>) =>
-  (catalogue[code] as (d: unknown, n: unknown, f: unknown) => string)(
-    details,
-    namingOf(messageNames),
-    figuresOf(false),
-  );
 
 describe("the words", () => {
   /**
@@ -44,15 +29,15 @@ describe("the words", () => {
   });
 
   it("makes the nouns agree with their count", () => {
-    const one = render(WARNING_MESSAGES, "bucket_contaminated_theses", { theses: ["th_alpha"] });
+    const one = sayWarning("bucket_contaminated_theses", { theses: ["th_alpha"] });
     expect(one).toMatch(/^Una tesis queda fuera/);
-    const sample = render(WARNING_MESSAGES, "bucket_sample_too_small", {
+    const sample = sayWarning("bucket_sample_too_small", {
       closed_theses: 1,
       realized_operations: 1,
       sample: 30,
     });
     expect(sample).toContain("1 tesis cerrada y 1 operación realizada");
-    const invalid = render(ERROR_MESSAGES, "newly_invalid_events", { affected: [1] });
+    const invalid = sayError("newly_invalid_events", { affected: [1] });
     expect(invalid).toContain("1 evento ya registrado.");
   });
 

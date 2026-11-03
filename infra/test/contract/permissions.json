@@ -59,49 +59,6 @@
           "contract": "A34-5; NB4"
         },
         {
-          "sid": "AcmCreate",
-          "effect": "Allow",
-          "actions": ["acm:RequestCertificate"],
-          "resources": ["*"],
-          "condition": {
-            "StringEquals": {
-              "aws:RequestTag/env": "{env}",
-              "aws:RequestTag/project": "atlas"
-            }
-          },
-          "contract": "A34-5; SAR (no resource type)"
-        },
-        {
-          "sid": "AcmTagOnCreate",
-          "effect": "Allow",
-          "actions": ["acm:AddTagsToCertificate"],
-          "resources": ["arn:aws:acm:us-east-1:{account}:certificate/*"],
-          "condition": {
-            "StringEquals": {
-              "aws:RequestTag/env": "{env}",
-              "aws:RequestTag/project": "atlas"
-            }
-          },
-          "contract": "A34-5"
-        },
-        {
-          "sid": "AcmChange",
-          "effect": "Allow",
-          "actions": [
-            "acm:AddTagsToCertificate",
-            "acm:DeleteCertificate",
-            "acm:RemoveTagsFromCertificate"
-          ],
-          "resources": ["arn:aws:acm:us-east-1:{account}:certificate/*"],
-          "condition": {
-            "StringEquals": {
-              "aws:ResourceTag/env": "{env}",
-              "aws:ResourceTag/project": "atlas"
-            }
-          },
-          "contract": "A34-5"
-        },
-        {
           "sid": "WafCreate",
           "effect": "Allow",
           "actions": ["wafv2:CreateWebACL", "wafv2:TagResource"],
@@ -658,22 +615,6 @@
           "actions": ["s3:DeleteObject", "s3:PutObject"],
           "resources": ["arn:aws:s3:::atlas-{env}-spa-{suffix}/*"],
           "contract": "E4 (P11)"
-        },
-        {
-          "sid": "DataBucketConfigurationWrite",
-          "effect": "Allow",
-          "actions": [
-            "s3:CreateBucket",
-            "s3:PutBucketOwnershipControls",
-            "s3:PutBucketPolicy",
-            "s3:PutBucketPublicAccessBlock",
-            "s3:PutBucketTagging",
-            "s3:PutBucketVersioning",
-            "s3:PutEncryptionConfiguration",
-            "s3:PutLifecycleConfiguration"
-          ],
-          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}"],
-          "contract": "P12-B1; A34-6"
         },
         {
           "sid": "StateReadWrite",

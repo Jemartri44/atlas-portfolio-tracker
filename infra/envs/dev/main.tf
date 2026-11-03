@@ -1,13 +1,7 @@
-# The stack of dev. The data bucket comes from the module that carries (or not)
-# `prevent_destroy`, chosen here because that attribute takes no variable.
+# The stack of dev. The data bucket, its configuration and its policy are made by the
+# bootstrap (`bootstrap/env`, applied by hand), not here: the deploy role cannot change them.
 locals {
   data_bucket_name = "atlas-dev-data-${var.bucket_suffix}"
-}
-
-module "data_bucket" {
-  source = "../../modules/data-bucket"
-
-  name = local.data_bucket_name
 }
 
 module "atlas" {
@@ -22,7 +16,7 @@ module "atlas" {
   region                   = var.region
   account_id               = var.account_id
   bucket_suffix            = var.bucket_suffix
-  data_bucket_name         = module.data_bucket.name
+  data_bucket_name         = local.data_bucket_name
   domain                   = var.domain
   mail_recipient           = var.mail_recipient
   mail_amounts             = var.mail_amounts
@@ -32,6 +26,7 @@ module "atlas" {
   api_reserved_concurrency = var.reserve_api_concurrency ? var.api_reserved_concurrency : null
   oac_spa_id               = var.oac_spa_id
   oac_api_id               = var.oac_api_id
+  certificate_arn          = var.certificate_arn
   artifact_key             = var.artifact_key
   artifact_sha256_base64   = var.artifact_sha256_base64
 
