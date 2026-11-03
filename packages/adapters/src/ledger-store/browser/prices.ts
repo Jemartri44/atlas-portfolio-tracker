@@ -7,7 +7,7 @@ import type { AssetId } from "@atlas/domain";
 import { idbGet, idbPut, LEDGER_STORE } from "./idb.js";
 
 /** The key of the prices imported by hand, in the `ledger` store. */
-export const IMPORTED_PRICES_KEY = "prices:imported";
+const IMPORTED_PRICES_KEY = "prices:imported";
 const KEY = IMPORTED_PRICES_KEY;
 
 export interface ImportedPrices {

@@ -212,7 +212,7 @@ interface CashFlows {
  * `costSummary`: accumulating this in the projection would change `snapshotOf`
  * and the golden file for no reason.
  */
-export const cashFlowsOf = (
+const cashFlowsOf = (
   state: LedgerState,
   events: readonly LedgerEvent[],
   accounts: ReadonlySet<string>,

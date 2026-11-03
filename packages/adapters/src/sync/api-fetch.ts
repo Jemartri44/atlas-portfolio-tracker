@@ -13,7 +13,7 @@ export interface ApiFetchOptions {
 }
 
 /** `cache` is a DOM-only member of `RequestInit`. */
-export const NO_STORE = { cache: "no-store" } as const;
+const NO_STORE = { cache: "no-store" } as const;
 
 export const hex = async (bytes: Uint8Array): Promise<string> =>
   [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes as Uint8Array<ArrayBuffer>))]

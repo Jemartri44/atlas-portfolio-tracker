@@ -98,7 +98,7 @@ const planOf = async (context: TaskContext) => {
   }
 };
 
-export const monthlyReminder: TaskRunner = async (context): Promise<TaskResult> => {
+const monthlyReminder: TaskRunner = async (context): Promise<TaskResult> => {
   const { deps } = context;
   const [planned, webSignIn, tokens, amounts] = await Promise.all([
     planOf(context),
@@ -182,7 +182,7 @@ const latestOf = async (
   return undefined;
 };
 
-export const dispatchFindings: TaskRunner = async (context): Promise<TaskResult> => {
+const dispatchFindings: TaskRunner = async (context): Promise<TaskResult> => {
   const { deps, store } = context;
   const at = () => deps.now().toISOString();
   const counts = { sent: 0, closed: 0, refused: 0, unknown: 0, ignored: 0 };
@@ -274,7 +274,7 @@ export const dispatchFindings: TaskRunner = async (context): Promise<TaskResult>
  * it is said, with its code. A ledger that is wrong sends nothing here: the monthly reminder and
  * the integrity say it.
  */
-export const weeklyReview: TaskRunner = async (context): Promise<TaskResult> => {
+const weeklyReview: TaskRunner = async (context): Promise<TaskResult> => {
   const last = lastDayOfWindow(
     frequencyOf(context.task, context.frequencies.frequencies),
     context.today,

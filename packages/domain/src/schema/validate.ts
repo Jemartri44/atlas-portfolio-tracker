@@ -635,12 +635,6 @@ export const FX_FIELDS = {
   effectDates: FX_EFFECT_DATES,
 } as const;
 
-/** The fields an effect of `op` may carry. */
-export const knownEffectFieldsOf = (op: EffectOp): readonly string[] => [
-  ...Object.keys(EFFECT_COMMON),
-  ...Object.keys(EFFECT_RULES[op]),
-];
-
 /** Top-level fields a line of `type` may carry: envelope plus the type's rules (`settings` for settings_changed). */
 export const knownFieldsOf = (type: SupportedEventType): readonly string[] => [
   ...ENVELOPE_FIELDS,

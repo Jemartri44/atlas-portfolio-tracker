@@ -180,7 +180,7 @@ const residueOrder = (slices: readonly Slice[]): Slice[] =>
  * tests: a proposal that does not add up, or that asks for a negative amount,
  * must never reach the user (constitution V).
  */
-export const assertSplit = (
+const assertSplit = (
   rows: readonly { asset_id: AssetId; allocation_eur: Money }[],
   core: Money,
 ): void => {

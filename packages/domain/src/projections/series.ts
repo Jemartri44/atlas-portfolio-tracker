@@ -72,7 +72,7 @@ export interface NetWorthSeries {
  *
  * With `limit` of 1 it keeps the last, which is the one the user asked about.
  */
-export const sampleEvenly = <T>(values: readonly T[], limit: number): T[] => {
+const sampleEvenly = <T>(values: readonly T[], limit: number): T[] => {
   if (limit <= 0) {
     return [];
   }

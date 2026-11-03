@@ -5,7 +5,7 @@
 // (operations recorded before their ECB rate, outside the ledger). No
 // dependency: it is thirty lines of callbacks.
 
-export const DB_NAME = "atlas";
+const DB_NAME = "atlas";
 export const DB_VERSION = 2;
 export const LEDGER_STORE = "ledger";
 export const HANDLE_STORE = "handles";
