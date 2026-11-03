@@ -17,6 +17,7 @@
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { daysBetween } from "../dates/civil-date.js";
+import { madridDateOf } from "../dates/madrid.js";
 import { type Decimal, HUNDRED } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
 import { basisOf, fxOf, money } from "../projections/operations.js";
@@ -84,6 +85,30 @@ export const classReturns = (events: readonly LedgerEvent[], to: CivilDate): Cla
       (unsupported.get(assetClass) as Set<string>).add(kind);
     }
   };
+
+  // The class and the book of an asset are read at their latest, so a change of either would send
+  // the whole history to the new one: both classes come out without figure.
+  const seen = new Map<string, { book: string; assetClass: AssetClass | undefined }>();
+  for (const event of events) {
+    if (
+      (event.type !== "asset_created" && event.type !== "asset_updated") ||
+      state.reversed.has(event.id)
+    ) {
+      continue;
+    }
+    const now = { book: event.book, assetClass: event.asset_class as AssetClass | undefined };
+    const before = seen.get(event.asset_id);
+    seen.set(event.asset_id, now);
+    if (
+      before !== undefined &&
+      (before.book !== now.book || before.assetClass !== now.assetClass) &&
+      madridDateOf(event.recorded_at) <= to
+    ) {
+      for (const side of [before, now]) {
+        flag(side.book === "core" ? side.assetClass : undefined, "asset_updated");
+      }
+    }
+  }
 
   for (const event of liveOperations(state, events)) {
     if (event.type === "buy" || event.type === "sell") {

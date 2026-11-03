@@ -275,4 +275,66 @@ describe("classReturns", () => {
     });
     expect(of(b, "equity")?.gap).toBe("no_flows");
   });
+
+  it("flags the old and the new class when an asset changes class or book, once it happened", () => {
+    const b = bought();
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_bonds",
+      value_date: "2027-01-05",
+      quantity: "10",
+    });
+    b.assetUpdated({
+      asset_id: "ast_world",
+      asset_type: "fund",
+      book: "core",
+      asset_class: "fixed_income",
+      name: "ast_world",
+      currency: "EUR",
+      transferable: true,
+      active: true,
+    });
+    expect(of(b, "equity")?.unsupported_events).toEqual(["asset_updated"]);
+    expect(of(b, "fixed_income")?.unsupported_events).toEqual(["asset_updated"]);
+
+    const later = bought();
+    worth(later, "ast_world", "10", "110");
+    later.recordedAt("2029-01-01");
+    later.assetUpdated({
+      asset_id: "ast_world",
+      asset_type: "fund",
+      book: "bucket",
+      name: "ast_world",
+      currency: "EUR",
+      transferable: true,
+      active: true,
+    });
+    expect(of(later, "equity")?.gap).toBeUndefined();
+
+    const toBucket = bought();
+    toBucket.assetUpdated({
+      asset_id: "ast_world",
+      asset_type: "fund",
+      book: "bucket",
+      name: "ast_world",
+      currency: "EUR",
+      transferable: true,
+      active: true,
+    });
+    expect(of(toBucket, "equity")?.unsupported_events).toEqual(["asset_updated"]);
+
+    const renamed = bought();
+    worth(renamed, "ast_world", "10", "110");
+    renamed.assetUpdated({
+      asset_id: "ast_world",
+      asset_type: "fund",
+      book: "core",
+      asset_class: "equity",
+      name: "A new name",
+      currency: "EUR",
+      transferable: true,
+      active: true,
+    });
+    expect(of(renamed, "equity")?.gap).toBeUndefined();
+  });
 });
