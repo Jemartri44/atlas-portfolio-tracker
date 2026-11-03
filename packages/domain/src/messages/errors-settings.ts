@@ -23,6 +23,9 @@ const recordedOn = (v: Voice, value: unknown): string =>
   value === undefined ? "" : ` (${v.date(value)})`;
 
 export const ERRORS_SETTINGS: Record<string, Entry> = {
+  invalid_horizon: {
+    say: () => "El horizonte de la proyección tiene que ser un número entero de años, 0 o más.",
+  },
   missing_manual_prices: {
     say: (d, v) =>
       `${v.count(d.assets) === 1 ? "Falta un precio en euros" : "Faltan precios en euros"} a ${v.date(d.date)}: ${v.many(d.assets)}. Registra una valoración o, si ${v.count(d.assets) === 1 ? "tiene una cotización" : "tienen una cotización"} en otra divisa, trae el histórico del BCE.`,
