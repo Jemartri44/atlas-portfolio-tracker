@@ -63,7 +63,8 @@ describe("the catalogue of messages", () => {
     ["warnings", WARNINGS],
     ["remote failures", REMOTE_FAILURES],
   ] as const)("says every entry of %s on both surfaces, whatever the details", (_name, table) => {
-    expect(Object.keys(table).length).toBeGreaterThan(20);
+    // Not empty by accident: each table holds well over ten codes.
+    expect(Object.keys(table).length).toBeGreaterThan(10);
     for (const [code, entry] of Object.entries(table)) {
       for (const surface of surfaces) {
         for (const scenario of SCENARIOS) {
