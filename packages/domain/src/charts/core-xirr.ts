@@ -29,7 +29,10 @@ export type CoreXirrGap =
   | "uncovered_buys"
   /** No money has been put into the core by that date. */
   | "no_flows"
-  /** The flows admit no rate (for instance, only withdrawals). */
+  /**
+   * No rate within the bounds: beyond about −99 % / +1000 % a year (also what a first flow of a
+   * few days ago gives), or flows of mixed sign whose equation has an even number of roots.
+   */
   | "no_rate";
 
 export interface CoreXirr {
@@ -53,7 +56,8 @@ const GRID = 14;
 /** Daily rate bounds: about −99 % and +1000 % a year. */
 const LOW = Decimal.parse("-0.0125");
 const HIGH = Decimal.parse("0.0066");
-const ITERATIONS = 60;
+// Decimal division keeps 10 places, so the interval stops shrinking after about 40 halvings.
+const ITERATIONS = 40;
 const DAYS_IN_YEAR = 365;
 
 /** `base^exponent` for a whole exponent by squaring, rounded as it goes so it stays small. */

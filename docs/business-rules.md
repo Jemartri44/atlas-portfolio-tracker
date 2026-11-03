@@ -65,7 +65,7 @@ Ejemplo: 1.000 € el 31/01, 300 € ingresados el 15/02 y 1.400 € el 28/02 da
 1. **Solo la cartera principal**, con los mismos flujos y el mismo valor que la variación de arriba (`coreCashFlows`, `bookCashSeries`); dividendos, intereses y comisiones son rendimiento, no flujo. El cubo no entra.
 2. **Aportado** = ingresos menos retiradas hasta la fecha; **vale** = núcleo con el efectivo de sus cuentas; **ganado** = vale − aportado, y `ganado / aportado` en porcentaje (sin cifra si lo aportado neto no es positivo).
 3. **Tasa**: la que hace que cada flujo, capitalizado día a día hasta la fecha, sume el valor. Se resuelve por bisección en decimal con exponente entero, sin coma flotante, y se da con 4 decimales.
-4. **Sin cifra, con su motivo**: falta un precio o un tipo (`partial`); compra anterior al dinero que la pagó (`uncovered_buys`); ningún flujo (`no_flows`); tasa fuera de −99 %…+1000 % anual (`no_rate`).
+4. **Sin cifra, con su motivo**: falta un precio o un tipo (`partial`); compra anterior al dinero que la pagó (`uncovered_buys`); ningún flujo (`no_flows`); tasa fuera de −99 %…+1000 % anual (`no_rate`; también la da un primer ingreso de hace pocos días, cuya anualización se dispara). Con flujos de signo mixto la ecuación puede tener varias raíces: se da la que encuentra la bisección, o `no_rate` si el número de raíces es par.
 
 ### Este mes: el plan de la aportación como lista de tareas
 

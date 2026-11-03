@@ -66,6 +66,9 @@ describe("coreXirr", () => {
     const result = coreXirr(b.build(), END);
     expect(result.contributed_eur?.amount.toString()).toBe("900");
     expect(result.gain_eur?.amount.toString()).toBe("100");
+    // 1000 in for 365 days, 100 out for 184 days, 1000 left: 1000·(1+r) − 100·(1+r)^(184/365) = 1000.
+    const rate = Number(result.xirr_pct?.toString()) / 100;
+    expect(1000 * (1 + rate) - 100 * (1 + rate) ** (184 / 365)).toBeCloseTo(1000, 2);
   });
 
   it("gives no gain percentage when nothing net was contributed", () => {
