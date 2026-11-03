@@ -7,7 +7,8 @@ Feature 017, E4. **Ninguno de estos pasos se ejecuta en la 017**; los hace la pe
 1. Cuenta, luego `dev`, y `prod` solo cuando `dev` funciona: `terraform -chdir=infra/bootstrap/<account|env> init` y `apply -var-file=<ruta privada>/terraform.tfvars` (`env` con `env=dev` o `env=prod`). Los `tfvars` y el estado viven en `~/personal/atlas/privado/terraform/bootstrap/<account|dev|prod>/`, nunca en el repositorio.
 2. **Respalda el estado local tras cada `apply`**, en el mismo disco que la copia fuera de AWS.
 3. **La segunda pasada de la etiqueta**: la clave `project` tarda hasta 24 horas en aparecer en *Cost Allocation Tags*; pasado ese plazo, `cost_tag_activation = "terraform"` y otro `apply` de la cuenta.
-4. Si cambia `infra/bootstrap/`, la casilla de la plantilla de PR dice qué partes se aplicaron y cuándo.
+4. La parte `env` crea el bucket de datos con su versionado, ciclo de vida y política, y pide el certificado de la distribución (hace falta `domain` en su `tfvars`). Tras el `apply`: el registro DNS de validación sale en `terraform output certificate_validation_records` (sensible), y `certificate_arn` va al `tfvars` del *stack* del entorno junto a los identificadores de los OAC. El rol de despliegue ya no puede cambiar nada de esto: cualquier cambio de retención, de versionado o de política del bucket de datos es un `apply` a mano del bootstrap.
+5. Si cambia `infra/bootstrap/`, la casilla de la plantilla de PR dice qué partes se aplicaron y cuándo.
 
 ## Reconstruir el estado local del *bootstrap* si se pierde
 

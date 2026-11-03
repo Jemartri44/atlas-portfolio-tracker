@@ -159,3 +159,8 @@ variable "prices_sources" {
     error_message = "prices_sources is eodhd and/or alpha_vantage, without repeats."
   }
 }
+
+variable "certificate_arn" {
+  description = "Output certificate_arn of the bootstrap of this environment."
+  type        = string
+}

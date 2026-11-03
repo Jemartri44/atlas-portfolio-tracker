@@ -26,7 +26,8 @@ locals {
   # The roles of the bootstrap: the deploy role may touch none of them (row 5).
   bootstrap_role_arns = [local.role_arn.admin, local.role_arn.deploy, local.role_arn.plan]
 
-  s3_data      = "arn:aws:s3:::${local.prefix}-data-${var.bucket_suffix}"
+  data_name    = "${local.prefix}-data-${var.bucket_suffix}"
+  s3_data      = "arn:aws:s3:::${local.data_name}"
   s3_spa       = "arn:aws:s3:::${local.prefix}-spa-${var.bucket_suffix}"
   s3_tfstate   = "arn:aws:s3:::atlas-account-tfstate-${var.bucket_suffix}"
   s3_artifacts = "arn:aws:s3:::atlas-account-artifacts-${var.bucket_suffix}"

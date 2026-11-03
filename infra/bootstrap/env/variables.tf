@@ -91,3 +91,14 @@ variable "mail_sender" {
     error_message = "mail_sender must be one plain address."
   }
 }
+
+variable "domain" {
+  description = "The subdomain of the environment (sensitive, ADR-0034 row 1): the certificate of its distribution is requested here."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = can(regex("^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,}$", var.domain))
+    error_message = "domain must be a plain host name, lowercase, with no wildcard."
+  }
+}

@@ -1,22 +1,11 @@
-# The edge of one environment: certificate, web ACL, the two CloudFront functions (SPA routes and CSP) and distribution.
+# The edge of one environment: validation of the certificate (requested by the bootstrap), web ACL, the two CloudFront functions (SPA routes and CSP) and distribution.
 # CloudFront, ACM and the web ACL are global: provider `aws.us_east_1`.
-
-resource "aws_acm_certificate" "this" {
-  provider = aws.us_east_1
-
-  domain_name       = var.domain
-  validation_method = "DNS"
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
 
 # Waits for the DNS record the user creates by hand (a documented manual step).
 resource "aws_acm_certificate_validation" "this" {
   provider = aws.us_east_1
 
-  certificate_arn = aws_acm_certificate.this.arn
+  certificate_arn = var.certificate_arn
 }
 
 # Free flat-rate plan: the web ACL is mandatory with it, and carries at most 5 rules

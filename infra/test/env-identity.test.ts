@@ -285,7 +285,9 @@ describe.each(ENVS)("the creations that take no resource type, in %s", (env) => 
   it("the deploy role allows them only on `*` and only with the request tag of its environment", () => {
     const plan = plans[env] as Plan;
     const own = roleStatements(plan, `atlas-${env}-deploy`);
-    for (const action of NO_RESOURCE) {
+    // The certificate is requested by the bootstrap: the deploy role has no line for it.
+    expect(statementsWith(own, "acm:RequestCertificate")).toEqual([]);
+    for (const action of NO_RESOURCE.filter((entry) => !entry.startsWith("acm:"))) {
       const found = statementsWith(own, action);
       expect(found, action).toHaveLength(1);
       expect([found[0]?.Resource].flat(), action).toEqual(["*"]);

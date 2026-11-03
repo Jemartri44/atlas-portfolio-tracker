@@ -166,3 +166,8 @@ variable "dev_active_jobs" {
     error_message = "dev_active_jobs may only name ecb, prices, mail, backup or integrity."
   }
 }
+
+variable "certificate_arn" {
+  description = "Output certificate_arn of the bootstrap of this environment."
+  type        = string
+}

@@ -7,7 +7,7 @@ import { UNTAGGABLE } from "./lib/exempt.js";
 import { costTypes as costTypesGuardian, secrets, tags, wildcards } from "./lib/guardians.js";
 import { parsePolicy, type Statement } from "./lib/iam.js";
 import { changes, ofType, only, type Plan } from "./lib/plan.js";
-import { ACCOUNT, renderStack, SUFFIX } from "./lib/renders.js";
+import { ACCOUNT, ADMIN, renderEnv, renderStack, SUFFIX } from "./lib/renders.js";
 import { type Contract, contractStatements, lineSet, roleOf, roleStatements } from "./lib/roles.js";
 import { infraRoot, repoRoot } from "./lib/terraform.js";
 
@@ -71,7 +71,7 @@ describe.each(ENVS)("the data bucket of %s", (env) => {
     );
 
   it("is private, versioned Enabled, SSE-S3, never force-destroyed and expires old versions at 365 days", () => {
-    const plan = stack(env);
+    const plan = renderEnv(env);
     expect(attrs(plan, "aws_s3_bucket", "this").force_destroy).toBe(false);
     expect(attrs(plan, "aws_s3_bucket", "this").bucket).toBe(bucket);
     const versioning = ofType(plan, "aws_s3_bucket_versioning").find((c) =>
@@ -111,7 +111,7 @@ describe.each(ENVS)("the data bucket of %s", (env) => {
   ].map(role);
 
   it("denies every action on objects to whoever is not a role of this environment (resource lock)", () => {
-    const statement = policyOf(stack(env)).find(
+    const statement = policyOf(renderEnv(env)).find(
       (s) => s.Sid === "DenyObjectActionsOutsideTheEnvironment",
     );
     expect(statement).toMatchObject({
@@ -124,7 +124,7 @@ describe.each(ENVS)("the data bucket of %s", (env) => {
   });
 
   it("denies the listings: ListBucket except to deploy and plan, versions and uploads to the roles only", () => {
-    const statements = policyOf(stack(env));
+    const statements = policyOf(renderEnv(env));
     const listing = statements.find((s) => s.Sid === "DenyListOutsideTheEnvironment");
     expect(listing).toMatchObject({
       Effect: "Deny",
@@ -148,9 +148,9 @@ describe.each(ENVS)("the data bucket of %s", (env) => {
     expect([...principals(versions)].sort()).toEqual([...ENV_ROLES].sort());
   });
 
-  it("denies every write of the configuration to everyone but deploy and admin, inventory, logging, notification and replication included", () => {
-    const statement = policyOf(stack(env)).find(
-      (s) => s.Sid === "DenyConfigurationChangesExceptDeployAndAdmin",
+  it("denies every write of the configuration to everyone but the principal that applies the bootstrap, inventory, logging, notification and replication included", () => {
+    const statement = policyOf(renderEnv(env)).find(
+      (s) => s.Sid === "DenyConfigurationChangesExceptTheBootstrap",
     );
     expect(statement).toMatchObject({
       Effect: "Deny",
@@ -164,7 +164,7 @@ describe.each(ENVS)("the data bucket of %s", (env) => {
       "s3:PutBucket*",
       "s3:UpdateBucketMetadata*",
     ]);
-    expect(principals(statement)).toEqual([role("deploy"), role("admin")]);
+    expect(principals(statement)).toEqual([ADMIN]);
     // The three patterns cover what a stranger could use to take names or contents out.
     const covers = (action: string): boolean =>
       [statement?.Action]
@@ -193,7 +193,7 @@ describe.each(ENVS)("the data bucket of %s", (env) => {
   });
 
   it("denies backups/ without If-None-Match, and every request without TLS", () => {
-    const statements = policyOf(stack(env));
+    const statements = policyOf(renderEnv(env));
     expect(statements.find((s) => s.Sid === "BackupsOnlyIfAbsent")).toMatchObject({
       Effect: "Deny",
       Principal: "*",
@@ -211,7 +211,7 @@ describe.each(ENVS)("the data bucket of %s", (env) => {
   });
 
   it("denies drafts/ without If-None-Match, so a draft object is created once and never overwritten", () => {
-    expect(policyOf(stack(env)).find((s) => s.Sid === "DraftsOnlyIfAbsent")).toMatchObject({
+    expect(policyOf(renderEnv(env)).find((s) => s.Sid === "DraftsOnlyIfAbsent")).toMatchObject({
       Effect: "Deny",
       Principal: "*",
       Action: "s3:PutObject",
@@ -234,7 +234,7 @@ describe.each(ENVS)("the data bucket of %s", (env) => {
   });
 
   it("has no Allow at all: the identity policies grant, the bucket policy only denies", () => {
-    expect(policyOf(stack(env)).filter((s) => s.Effect !== "Deny")).toEqual([]);
+    expect(policyOf(renderEnv(env)).filter((s) => s.Effect !== "Deny")).toEqual([]);
   });
 
   it("is the origin of no distribution, and the SPA bucket is the only S3 origin", () => {
@@ -432,11 +432,21 @@ describe("the edge (Z4)", () => {
 describe("the protection of the data bucket (static)", () => {
   const read = (path: string): string => code(path);
 
-  it("only the protected module carries prevent_destroy, and only the production root uses it", () => {
+  it("only the protected module carries prevent_destroy, and only the prod bootstrap uses it", () => {
     expect(read("modules/data-bucket-protected/main.tf")).toMatch(/prevent_destroy\s*=\s*true/);
     expect(read("modules/data-bucket/main.tf")).not.toMatch(/prevent_destroy/);
-    expect(read("envs/prod/main.tf")).toContain("modules/data-bucket-protected");
-    expect(read("envs/dev/main.tf")).toContain('modules/data-bucket"');
-    expect(read("envs/dev/main.tf")).not.toContain("protected");
+    const bootstrap = read("bootstrap/env/data-bucket.tf");
+    expect(bootstrap).toMatch(
+      /count\s*=\s*var\.env == "prod" \? 1 : 0\s*\n\s*source\s*=\s*"..\/..\/modules\/data-bucket-protected"/,
+    );
+    expect(bootstrap).toMatch(
+      /count\s*=\s*var\.env == "prod" \? 0 : 1\s*\n\s*source\s*=\s*"..\/..\/modules\/data-bucket"/,
+    );
+  });
+
+  it("the stacks neither create the bucket nor configure it: the deploy role cannot reach it", () => {
+    for (const env of ENVS) {
+      expect(read(`envs/${env}/main.tf`)).not.toContain("data-bucket");
+    }
   });
 });
