@@ -59,7 +59,7 @@ export const COMMANDS: Readonly<Record<string, CommandSpec>> = {
   order: { run: orderCommand, arity: { place: 2, cancel: 3, note: 3, list: 2 } },
   transfer: { run: transferCommand, arity: { request: 2, update: 3, pending: 2 } },
   ca: { run: corporateActionCommand, arity: 2 },
-  thesis: { run: thesisCommand, arity: { open: 2, close: 3, show: 3, list: 2 } },
+  thesis: { run: thesisCommand, arity: { open: 2, close: 3, show: 3 } },
   valuations: { run: valuationsCommand, arity: 1 },
   edit: { run: editCommand, arity: 2 },
   delete: { run: deleteCommand, arity: 2 },

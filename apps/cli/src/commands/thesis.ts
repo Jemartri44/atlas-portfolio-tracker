@@ -16,7 +16,7 @@ import { loadQuotes, sayNotes } from "../prices/load.js";
 import { confirmAndRecord, dateFlag, loadForQuery, renderQuery, requireId } from "./shared.js";
 
 /** A thesis as `--json` shows it, index comparison included. */
-export const jsonThesis = (thesis: BucketThesisView) => ({
+const jsonThesis = (thesis: BucketThesisView) => ({
   thesis_id: thesis.thesis_id,
   account_id: thesis.account_id,
   asset_id: thesis.asset_id,

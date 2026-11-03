@@ -101,7 +101,7 @@ atlas add buy --account acc_bucket --asset ast_delta --thesis th_delta \
   --trade-date 2027-12-20 --value-date 2027-12-22 --quantity 25 --unit-price 18.20 \
   --currency EUR --fx-rate 1 --fx-rate-date 2027-12-20 --fee 1 --yes
 
-# 3. El cubo entero en un comando
+# 3. La ficha de la tesis (el cubo entero está en la web)
 atlas thesis show th_delta --date 2028-12-31
 ```
 

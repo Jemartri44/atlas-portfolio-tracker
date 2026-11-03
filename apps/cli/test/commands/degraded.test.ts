@@ -9,11 +9,24 @@ import { DEFAULT_SETTINGS, encodeLine, type LedgerEvent } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
 import { EXIT } from "../../src/context.js";
 import { COMMANDS } from "../../src/registry.js";
-import { harness, seed } from "../harness.js";
+import { bucketSeed, harness, seed } from "../harness.js";
 
-/** A configured ledger: target weights and the bucket share. */
+/** A configured ledger: target weights, the bucket share and an open thesis. */
 const configured = () => [
-  ...seed(),
+  ...bucketSeed(),
+  {
+    schema_version: 1 as const,
+    id: "01ARYZ6S41TSV4RRFFQ69G5THS",
+    recorded_at: "2026-09-01T17:30:00.000Z",
+    type: "thesis_opened" as const,
+    thesis_id: "th_deg",
+    account_id: "acc_bucket",
+    asset_id: "ast_spec",
+    hypothesis: "h",
+    expected_horizon_days: 90,
+    invalidation: "i",
+    planned_size_eur: "500",
+  },
   {
     schema_version: 1 as const,
     id: "01ARYZ6S41TSV4RRFFQ69G5SET",
@@ -253,7 +266,9 @@ describe("degraded projection on read-only commands", () => {
   });
 
   it("covers every command of the CLI", () => {
-    expect(INVOCATIONS.map((entry) => entry.command).sort()).toEqual(Object.keys(COMMANDS).sort());
+    expect([...new Set(INVOCATIONS.map((entry) => entry.command))].sort()).toEqual(
+      Object.keys(COMMANDS).sort(),
+    );
   });
 });
 

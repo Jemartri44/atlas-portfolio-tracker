@@ -343,7 +343,7 @@ describe("atlas over a ledger file", () => {
     expect(await atlas("thesis", "close", "th1", "--notes", "done")).toBe(0);
     lines.length = 0;
     expect(await atlas("thesis", "show", "th1")).toBe(0);
-    expect(lines.join("\n")).toMatch(/th1/);
+    expect(lines.join("\n")).toMatch(/Tesis th1 \(cerrada\)/);
     expect(await atlas("check")).toBe(0);
     expect((await readFile(ledger, "utf8")).trim().split("\n")).toHaveLength(11);
   });
