@@ -72,7 +72,7 @@ Se elige la **opción 2**.
 - **En el dispositivo, solo lo que no es dato personal:**
   - el *shell* de la aplicación, en la caché del *service worker*;
   - las preferencias de la interfaz, como el modo privacidad;
-  - la copia del histórico del BCE en IndexedDB, que es pública e igual para cualquiera (se conserva, pregunta 4).
+  - ~~la copia del histórico del BCE en IndexedDB, que es pública e igual para cualquiera (se conserva, pregunta 4)~~ (retirada el 2026-11-03, pregunta 4).
 
 ### 2. Leer y escribir en la web
 
@@ -259,7 +259,7 @@ Respuestas de la persona (2026-10-06, transmitidas por la coordinadora de DESBAS
 1. **Borradores (ADR-0029).** Hoy viven en el dispositivo (`drafts/` en la carpeta y el almacén `drafts` de IndexedDB), lo que choca con «nada en el dispositivo para registrarlo después». **Resuelta:** (a) **en la nube**, por la API, como objetos que nunca se borran (el rol de la API no tiene permiso de borrado) y se marcan confirmados o descartados; y (b) **sin borradores en los clientes de nube mientras no esté la entrega E6**. Descartada la opción de dejarlos en el dispositivo como excepción.
 2. **¿Dónde está hoy el libro real?** **Resuelta:** no existe todavía ningún libro real, ni en los navegadores ni en la consola. Por eso se ha retirado de esta ADR cualquier migración desde el navegador (§3 y plan de entregas, E2b incluida). `PUT /api/ledger` queda solo para la subida inicial y la restauración. *(Retirada el 2026-11-03 por [ADR-0037](0037-web-only-access.md): la subida inicial es `atlas admin restore`.)*
 3. **Versión de la enmienda constitucional.** **Resuelta:** **2.0.0**. El texto propuesto sigue en §6 y se aplica en E0 con `/speckit-constitution`, no con esta ADR.
-4. **La copia pública del BCE en la web.** **Resuelta:** se conserva en IndexedDB.
+4. **La copia pública del BCE en la web.** **Resuelta:** ~~se conserva en IndexedDB~~ **enmendada el 2026-11-03**: no se guarda nada; la web lee el BCE y los precios de la API a memoria (decisión del dueño: «el resto en la nube»).
 5. **Las copias de referencia de la consola en modo de nube** (`reference/ecb/` y `prices/`). **Resuelta:** se conservan, como ya hace la 016.
 6. **La sesión de la web** (`docs/api.md` §3). **Resuelta:** **24 h**, y antes de abrir un formulario la web avisa si quedan menos de 15 minutos. Esto cambia las 8 h de ADR-0027 y de `docs/api.md` §3 (E0).
 7. **Comprimir `GET /api/ledger`.** **Resuelta:** sin comprimir hasta que el tamaño del libro lo pida (aviso de ADR-0028). *Nota del 2026-11-03: la lectura se comprime desde hoy (gzip desde 256 KiB, `docs/api.md` §5.1): la cuenta de un libro de veinte años (2,7 a 6,5 MB) rozaba los 6 MB de la respuesta en el caso alto.*
