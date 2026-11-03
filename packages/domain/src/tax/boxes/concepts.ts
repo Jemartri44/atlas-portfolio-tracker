@@ -10,7 +10,6 @@
 //
 // Nothing here reads the ledger or decides an amount: it is a vocabulary.
 
-import { euRegulatedMarket } from "../../projections/markets.js";
 import type { AssetType } from "../../schema/events.js";
 import type { IncomeCategory } from "../../settings/settings.js";
 
@@ -331,12 +330,13 @@ export const SIGNED_CONCEPTS: ReadonlySet<ConceptId> = new Set<ConceptId>([
  *
  * Two facts of the disposal refine it: subscription rights (`rights`) have a
  * section of their own, and a share whose market is known to be outside the
- * regulated markets of the EU goes to `other_shares`.
+ * regulated markets of the EU goes to `other_shares` (`eu` is what
+ * `euRegulatedAdmission` answered for it).
  */
 export const transmissionSection = (
   assetType: AssetType,
   category: IncomeCategory,
-  facts: { rights?: boolean; market?: string } = {},
+  facts: { rights?: boolean; eu?: boolean | undefined } = {},
 ): SectionId | "movable_capital" => {
   if (category === "movable_capital") {
     return "movable_capital";
@@ -344,7 +344,7 @@ export const transmissionSection = (
   if (facts.rights === true) {
     return "rights";
   }
-  if (assetType === "stock" && euRegulatedMarket(facts.market) === false) {
+  if (assetType === "stock" && facts.eu === false) {
     return "other_shares";
   }
   switch (assetType) {

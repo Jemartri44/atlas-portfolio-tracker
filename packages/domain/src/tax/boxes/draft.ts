@@ -14,7 +14,8 @@
 import { imputableRounded, legsRounded, positive, sum, zero } from "../../money/eur.js";
 import type { Money } from "../../money/money.js";
 import type { CurrencyGain } from "../../projections/currency-lots.js";
-import type { LedgerState } from "../../projections/state.js";
+import { euRegulatedAdmission } from "../../projections/markets.js";
+import type { Asset, LedgerState } from "../../projections/state.js";
 import type { AssetId, CorporateActionEvent } from "../../schema/events.js";
 import type { IncomeCategory } from "../../settings/settings.js";
 import { type ChainCore, categoryOf } from "../chain.js";
@@ -105,7 +106,7 @@ const totalOf = (section: SectionId): SectionId => (section === "other_shares" ?
 const sectionOf = (line: TransmissionLine, chain: ChainCore): SectionId =>
   transmissionSection(line.asset_type, "capital_gain", {
     rights: isRights(line, chain),
-    ...(line.market === undefined ? {} : { market: line.market }),
+    eu: euRegulatedAdmission(chain.state.assets.get(line.asset_id) as Asset),
   }) as SectionId;
 
 /**
