@@ -34,6 +34,7 @@ describe("atlas backup of a local ledger", () => {
     expect(await run(["--ledger", ledger, "backup", "--to", target, "--yes"], io)).toBe(EXIT.ok);
     const copy = /Copia verificada: (\S+\.jsonl)/.exec(lines.join("\n"))?.[1] as string;
     expect(await modeOf(copy)).toBe(0o400);
+    expect(await modeOf(join(dir, "backups"))).toBe(0o700);
     expect(await modeOf(target)).toBe(0o700);
     expect(await modeOf(join(target, "documents"))).toBe(0o700);
     expect(await modeOf(join(target, "documents", "01ARYZ6S41TSV4RRFFQ69G5FAV"))).toBe(0o700);

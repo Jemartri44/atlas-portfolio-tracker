@@ -6,7 +6,7 @@
 // `imports/` of the data bucket with the role of administration, only reading.
 // In a cloud folder (ADR-0035, §4) the ledger comes down by the API
 // with the device token, is checked against its etag, and is written dated,
-// never over another, read-only (`0444`).
+// never over another, read-only for its owner (`0400`).
 
 import { chmod, constants, copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -147,7 +147,7 @@ export const backupCommand = async (
       ...(cloud === undefined
         ? []
         : [
-            "La copia es de solo lectura (0444): si la quieres como libro local, copia el fichero a otra carpeta.",
+            "La copia es de solo lectura (0400): si la quieres como libro local, copia el fichero a otra carpeta.",
           ]),
       `documents/ de la carpeta del libro: ${describeCopied(documents)}.`,
       ...(bucket === undefined
