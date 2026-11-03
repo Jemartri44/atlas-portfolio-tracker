@@ -28,7 +28,7 @@ import { eur } from "../output/format.js";
 import { table } from "../output/table.js";
 import { describeWarning } from "../output/warnings.js";
 import { rateFindingsOf } from "./rates.js";
-import { render, warnIfLedgerMissing, yearArgument } from "./shared.js";
+import { render, reportYear, warnIfLedgerMissing } from "./shared.js";
 import { renderBoxes } from "./tax-boxes.js";
 
 const USAGE = "uso: atlas tax <año> [--lots] [--boxes] [--json]";
@@ -569,10 +569,7 @@ export const taxCommand = async (
   flags: Flags,
 ): Promise<number> => {
   assertKnownFlags(flags, ["lots", "boxes", ...GLOBAL_FLAGS]);
-  const year = yearArgument(positionals[1]);
-  if (year === undefined) {
-    throw new UsageError(USAGE);
-  }
+  const year = reportYear(ctx, positionals[1], USAGE, "atlas tax");
   await warnIfLedgerMissing(ctx);
   const { events } = await ctx.deps.store.load();
   const today = todayInMadrid(ctx.deps.clock);

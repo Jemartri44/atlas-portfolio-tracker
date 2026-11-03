@@ -14,13 +14,13 @@ import type {
   VerdictReason,
 } from "@atlas/domain/fiscal";
 import { informativeReturn } from "@atlas/domain/fiscal";
-import { assertKnownFlags, type Flags, UsageError } from "../args.js";
+import { assertKnownFlags, type Flags } from "../args.js";
 import { type Context, GLOBAL_FLAGS } from "../context.js";
 import { CRITERION_LABELS } from "../output/criteria.js";
 import { eur } from "../output/format.js";
 import { table } from "../output/table.js";
 import { describeWarning } from "../output/warnings.js";
-import { loadForQuery, renderQuery, yearArgument } from "./shared.js";
+import { loadForQuery, renderQuery, reportYear } from "./shared.js";
 
 const USAGE = "uso: atlas m720 <año> [--json] · atlas m721 <año> [--json]";
 
@@ -220,17 +220,8 @@ const informativeCommand =
   (model: "720" | "721") =>
   async (ctx: Context, positionals: string[], flags: Flags): Promise<number> => {
     assertKnownFlags(flags, [...GLOBAL_FLAGS]);
-    const year = yearArgument(positionals[1]);
-    if (year === undefined) {
-      throw new UsageError(USAGE);
-    }
+    const year = reportYear(ctx, positionals[1], USAGE, `el modelo ${model}`);
     const today = todayInMadrid(ctx.deps.clock);
-    // A year that has not begun is not «the current year» with nothing in it: it is a typo.
-    if (year > Number(today.slice(0, 4))) {
-      throw new UsageError(
-        `el año ${year} aún no ha empezado: el modelo ${model} se calcula para el año en curso o uno ya cerrado`,
-      );
-    }
     const { events, state } = await loadForQuery(ctx);
     const report = informativeReturn(events, model, year, { today });
     renderQuery(ctx, state, report, renderInformative(report));
