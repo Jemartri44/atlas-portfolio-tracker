@@ -58,6 +58,15 @@ Cuánto ha variado la cartera principal en un periodo, **descontado el dinero qu
 
 Ejemplo: 1.000 € el 31/01, 300 € ingresados el 15/02 y 1.400 € el 28/02 dan `(1.400 − 1.000 − 300) / (1.000 + 300 × 13/28)` = **+8,8 %**.
 
+### Lo ganado desde el primer ingreso y la rentabilidad ponderada por dinero
+
+`coreXirr` (`charts/core-xirr.ts`): «he aportado X, vale Y, he ganado Z %» y la tasa anual que dan los flujos con sus fechas (XIRR, días reales / 365). Informativa; nada fiscal la lee.
+
+1. **Solo la cartera principal**, con los mismos flujos y el mismo valor que la variación de arriba (`coreCashFlows`, `bookCashSeries`); dividendos, intereses y comisiones son rendimiento, no flujo. El cubo no entra.
+2. **Aportado** = ingresos menos retiradas hasta la fecha; **vale** = núcleo con el efectivo de sus cuentas; **ganado** = vale − aportado, y `ganado / aportado` en porcentaje (sin cifra si lo aportado neto no es positivo).
+3. **Tasa**: la que hace que cada flujo, capitalizado día a día hasta la fecha, sume el valor. Se resuelve por bisección en decimal con exponente entero, sin coma flotante, y se da con 4 decimales.
+4. **Sin cifra, con su motivo**: falta un precio o un tipo (`partial`); compra anterior al dinero que la pagó (`uncovered_buys`); ningún flujo (`no_flows`); tasa fuera de −99 %…+1000 % anual (`no_rate`).
+
 ### Este mes: el plan de la aportación como lista de tareas
 
 `monthPlan` (`projections/month-plan.ts`) dice qué compras del plan del mes ya están registradas. Definición aprobada el 2026-11-03.

@@ -32,5 +32,6 @@ export {
   monthPeriod,
   yearPeriod,
 } from "./charts/core-return.js";
+export { type CoreXirr, type CoreXirrGap, coreXirr } from "./charts/core-xirr.js";
 export { type BucketGauges, bucketGauges } from "./charts/gauges.js";
 export { type ThesisPct, thesisVsIndexPct } from "./charts/theses.js";
