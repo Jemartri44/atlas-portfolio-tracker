@@ -26,6 +26,33 @@ const MONTHS = [
 export const monthName = (period: string): string =>
   `${MONTHS[Number(period.slice(5, 7)) - 1]} de ${period.slice(0, 4)}`;
 
+/** `2026-10-20` → `20/10/2026`: no ISO date reaches the text a person reads. */
+export const day = (date: string): string =>
+  `${date.slice(8, 10)}/${date.slice(5, 7)}/${date.slice(0, 4)}`;
+
+const QUARTERS = ["primer", "segundo", "tercer", "cuarto"];
+
+/**
+ * A period of a job as a person says it: `2026-10-20` → `20/10/2026`,
+ * `2026-W45` → `la semana 45 de 2026`, `2026-10` → `octubre de 2026`,
+ * `2026-Q3` → `el tercer trimestre de 2026`, `2026` → `2026`.
+ */
+export const periodName = (period: string): string => {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(period)) {
+    return day(period);
+  }
+  if (/^\d{4}-W\d{2}$/.test(period)) {
+    return `la semana ${Number(period.slice(6))} de ${period.slice(0, 4)}`;
+  }
+  if (/^\d{4}-\d{2}$/.test(period)) {
+    return monthName(period);
+  }
+  if (/^\d{4}-Q[1-4]$/.test(period)) {
+    return `el ${QUARTERS[Number(period.slice(6)) - 1]} trimestre de ${period.slice(0, 4)}`;
+  }
+  return period;
+};
+
 const grouped = (digits: string): string => digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
 /** A decimal with exactly `decimals` digits after the comma, Spanish style, with its sign. */

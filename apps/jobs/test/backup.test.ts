@@ -197,7 +197,9 @@ describe("the monthly dump (E4, plan §8)", () => {
     const mail = setupJobs({ env: MAIL_ENV, now: "2026-10-01T06:00:00Z", s3, ssm });
     await mail.run(["dispatch_findings"]);
     await mail.run(["dispatch_findings"]);
-    expect(mail.ses.sent.map((sent) => sent.subject)).toEqual(["[Atlas] Aviso: volcado 2026-10"]);
+    expect(mail.ses.sent.map((sent) => sent.subject)).toEqual([
+      "[Atlas] Aviso: volcado de octubre de 2026",
+    ]);
   });
 
   it("never writes a manifest of the ECB over a file of another generation", async () => {

@@ -31,7 +31,7 @@ export class TestOnlyFakeSes implements MailSender {
     this.next.push("lose-after-send");
   }
 
-  async sendText(mail: OutgoingMail): Promise<void> {
+  async sendMail(mail: OutgoingMail): Promise<void> {
     this.attempts.push(mail);
     this.beforeSend?.(mail);
     const what = this.next.shift();
