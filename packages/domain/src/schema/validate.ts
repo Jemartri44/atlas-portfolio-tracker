@@ -223,11 +223,13 @@ const FX_DATE_FIELDS: Partial<Record<SupportedEventType, readonly string[]>> = {
 const FX_EFFECT_PAIRS: Partial<Record<EffectOp, readonly (readonly [string, string])[]>> = {
   forced_sale: [["currency", "fx_rate"]],
   grant: [["currency", "fx_rate"]],
+  cost_adjustment: [["currency", "fx_rate"]],
 };
 
 const FX_EFFECT_DATES: Partial<Record<EffectOp, readonly string[]>> = {
   forced_sale: ["fx_rate_date"],
   grant: ["fx_rate_date"],
+  cost_adjustment: ["fx_rate_date"],
 };
 
 /** The euro is its own reference: the ECB publishes 1, not 1.0000. */

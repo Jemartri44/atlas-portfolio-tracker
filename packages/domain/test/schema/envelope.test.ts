@@ -41,10 +41,17 @@ describe("event type discriminator", () => {
     expect(ASSET_CLASSES).toEqual(["equity", "fixed_income", "gold", "crypto"]);
   });
 
-  it("exposes the corporate action kinds of data-schema.md §8.5 and the five primitives", () => {
-    expect(CORPORATE_ACTION_KINDS).toHaveLength(13);
+  it("exposes the corporate action kinds of data-schema.md §8.5 and the six primitives", () => {
+    expect(CORPORATE_ACTION_KINDS).toHaveLength(14);
     expect(CORPORATE_ACTION_KINDS[0]).toBe("split");
-    expect(CORPORATE_ACTION_KINDS[12]).toBe("issuer_restructuring");
-    expect(EFFECT_OPS).toEqual(["scale", "convert", "carve_out", "forced_sale", "grant"]);
+    expect(CORPORATE_ACTION_KINDS[13]).toBe("capital_return");
+    expect(EFFECT_OPS).toEqual([
+      "scale",
+      "convert",
+      "carve_out",
+      "forced_sale",
+      "grant",
+      "cost_adjustment",
+    ]);
   });
 });
