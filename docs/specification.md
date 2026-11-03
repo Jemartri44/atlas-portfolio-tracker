@@ -43,10 +43,10 @@ Dos libros (`book`) independientes. Cada uno con sus reglas, sus métricas y su 
 
 | `book` | Nombre | Contenido | Plataforma | Métrica principal |
 |---|---|---|---|---|
-| `core` | **Cartera principal / núcleo** | Cuatro clases de activo: renta variable, renta fija, oro y cripto | MyInvestor (fondos), IBKR (ETC y ETP de oro y de bitcoin, ETF) | Desviación frente a pesos objetivo |
+| `core` | **Cartera principal / núcleo** | Cuatro clases de activo: renta variable, renta fija, oro y cripto | MyInvestor (fondos), IBKR (ETC/ETP) | Desviación frente a pesos objetivo |
 | `bucket` | **Cubo especulativo** | Acciones al contado, operativa corta. Pequeña parte para especular, trastear y aprender | IBKR (cuenta separada) | Rendimiento frente al índice |
 
-**Uso previsto** (el dueño, 2026-11-04: «Yo quiero bitcoin y acciones a través de ibkr o myinvestor»): el bitcoin vive en el **núcleo** (`crypto`), como **ETP en IBKR** —un valor admitido a negociación: Modelo 720, ventana de recompra de dos meses— o como tenencia directa anotada a mano (permutas como hecho imponible, Modelo 721, recompra de un año hacia delante); Atlas cubre las dos vías y no hace falta decidirlo para empezar. Las **acciones sueltas** son el **cubo**, en la cuenta separada de IBKR. Las acciones nunca llevan traspaso, y un ETP de bitcoin tampoco.
+**Uso previsto.** El dueño (2026-11-04): «Voy a usar myinvestor y ibkr con inversiones comunes» y «Yo quiero bitcoin y acciones a través de ibkr o myinvestor». Lo que sigue es lectura de los documentos, no decisión suya: el bitcoin cabe en el núcleo (`crypto`) como ETP o como tenencia directa anotada a mano, y las acciones sueltas en el cubo. Atlas cubre las dos vías del bitcoin (ETP: Modelo 720 y, por defecto, rendimiento del capital mobiliario, criterio #24; directo: permutas, Modelo 721, recompra de un año hacia delante), así que no hace falta decidirlo para empezar. En qué plataforma va cada cosa queda por confirmar con el dueño.
 
 ### 3.1 Clases de activo del núcleo (`asset_class`)
 

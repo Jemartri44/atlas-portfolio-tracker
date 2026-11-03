@@ -98,7 +98,7 @@ npm ci && npm run build
 echo "salida $?"
 ```
 
-**Cuenta como «sí»:** la última línea es `salida 0`. 
+**Cuenta como «sí»:** la última línea es `salida 0`.
 
 ### El libro de prueba
 
