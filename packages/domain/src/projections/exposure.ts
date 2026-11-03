@@ -53,7 +53,7 @@ export interface Exposure {
 const USD_BY_DEFAULT: ReadonlySet<AssetClass> = new Set(["gold", "crypto"]);
 const USD: Split = { USD: "100" };
 
-const validSplit = (assetId: AssetId, dimension: string, split: Split): Split => {
+const validSplit = (assetId: AssetId, dimension: string, split: Split): void => {
   const parts = Object.values(split).map((pct) => Decimal.parse(pct));
   const total = parts.reduce((sum, pct) => sum.add(pct), Decimal.ZERO);
   if (parts.length === 0 || parts.some((pct) => pct.isNegative()) || !total.eq(HUNDRED)) {
@@ -63,7 +63,6 @@ const validSplit = (assetId: AssetId, dimension: string, split: Split): Split =>
       { asset_id: assetId, dimension },
     );
   }
-  return split;
 };
 
 const dimensionOf = (
@@ -90,7 +89,7 @@ const dimensionOf = (
       missing.push(row.asset_id);
       continue;
     }
-    for (const [key, pct] of Object.entries(validSplit(row.asset_id, dimension, split))) {
+    for (const [key, pct] of Object.entries(split)) {
       sums.set(
         key,
         (sums.get(key) ?? Money.zero(EUR)).add(value.mul(Decimal.parse(pct)).div(HUNDRED)),
@@ -111,6 +110,15 @@ const dimensionOf = (
 };
 
 export const exposure = (weights: CoreWeights, exposures: Exposures): Exposure => {
+  // Everything declared is checked, valued or not: a bad split must not wait for the purchase.
+  for (const [assetId, declared] of Object.entries(exposures)) {
+    for (const dimension of ["currency", "region"] as const) {
+      const split = declared[dimension];
+      if (split !== undefined) {
+        validSplit(assetId, dimension, split);
+      }
+    }
+  }
   const empty: ExposureDimension = { missing_assets: [], defaulted: [] };
   if (weights.partial) {
     return { gap: "partial", total_eur: weights.total_eur, currency: empty, region: empty };

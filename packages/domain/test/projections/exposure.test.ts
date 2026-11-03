@@ -98,6 +98,12 @@ describe("exposure", () => {
     expect(shares(result.currency)).toEqual(["USD 60", "EUR 40"]);
   });
 
+  it("checks a declared split even for an asset with no value", () => {
+    expect(() => run(ledger(), { ...declared, ast_spec: { currency: { USD: "60" } } })).toThrow(
+      "add up to 100",
+    );
+  });
+
   it("gives no figure with an unpriced asset held", () => {
     const result = run(ledger({ priced: false }), declared);
     expect(result.gap).toBe("partial");
