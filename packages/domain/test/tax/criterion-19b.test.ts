@@ -17,7 +17,7 @@ import { describe, expect, it } from "vitest";
 import { taxYear } from "../../src/tax/year.js";
 import { c20 } from "./cases/cases.js";
 import { ledgerOf, TODAY } from "./cases/short-form.js";
-import { text } from "./helpers.js";
+import { buy, HAND_SETTINGS, sell, taxBuilder, text } from "./helpers.js";
 
 describe("criterion #19b, the units that carry a deferred loss (case C20)", () => {
   const report = taxYear(ledgerOf(c20), 2025, { today: TODAY });
@@ -37,5 +37,56 @@ describe("criterion #19b, the units that carry a deferred loss (case C20)", () =
     expect(text(stake?.base_difference_eur)).toBe("-26.67");
     expect(text(stake?.pending_difference_eur)).toBe("-46.67");
     expect(text(stake?.deferred_difference_eur)).toBe("73.34");
+  });
+});
+
+// The criterion is only marked when the two readings load different units.
+// A share at 10, sold at 8 (two months, HAND_SETTINGS).
+describe("criterion #19b is marked only when there was a choice", () => {
+  const marked = (purchases: [string, string][], sale: [string, string]): boolean => {
+    const b = taxBuilder(HAND_SETTINGS);
+    buy(b, "stock_s", "2027-01-04", "10", "10");
+    for (const [date, quantity] of purchases.filter(([date]) => date < sale[0])) {
+      buy(b, "stock_s", date, quantity, "10");
+    }
+    sell(b, "stock_s", sale[0], sale[1], "8");
+    for (const [date, quantity] of purchases.filter(([date]) => date > sale[0])) {
+      buy(b, "stock_s", date, quantity, "8");
+    }
+    const line = taxYear(b.build(), 2027, { today: TODAY }).capital_gains.lines[0];
+    return line?.criteria.includes("19b") === true;
+  };
+
+  it.each([
+    ["a single partial repurchase", [["2027-04-05", "5"]], false],
+    [
+      "repurchases that cover the sale exactly",
+      [
+        ["2027-04-05", "5"],
+        ["2027-04-20", "5"],
+      ],
+      false,
+    ],
+    // Both after the sale: the closest are also the oldest.
+    [
+      "two later repurchases, more than needed",
+      [
+        ["2027-04-05", "6"],
+        ["2027-04-20", "6"],
+      ],
+      false,
+    ],
+    // 10 of 01/02 stay after the sale; 10 more on 05/03. The closest is 05/03,
+    // the oldest 01/02: the readings differ.
+    [
+      "one before and one after, the later closer",
+      [
+        ["2027-02-01", "10"],
+        ["2027-03-05", "10"],
+      ],
+      true,
+    ],
+  ] as [string, [string, string][], boolean][])("%s", (_name, purchases, expected) => {
+    expect(marked(purchases, ["2027-03-01", "10"])).toBe(expected);
   });
 });
