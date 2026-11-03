@@ -13,51 +13,42 @@ const sources = (store: MemoryPriceStore, eodhd: string | undefined | Error = "G
     store,
     () => (eodhd instanceof Error ? eodhd : { ok: true, value: eodhd }),
   ),
-  alpha_vantage: new FakeSource(
-    "alpha_vantage",
-    () => closes(),
-    store,
-    () => ({ ok: true, value: "GBX" }),
-  ),
 });
 
 describe("declaring the symbols of an asset (D-Q2, D-Q6)", () => {
-  it("asks each source for its currency, one reserved call each", async () => {
+  it("asks the source for its currency, one reserved call", async () => {
     const store = new MemoryPriceStore();
     const result = await checkSymbols({
-      declaration: declared("GBX", { eodhd: "CSPX.LSE", alpha_vantage: "CSPX.LON" }),
+      declaration: declared("GBX", { eodhd: "CSPX.LSE" }),
       store,
       sources: sources(store),
       now,
     });
-    expect(result).toEqual({
-      ok: true,
-      checks: { eodhd: "GBP", alpha_vantage: "GBX" },
-      unchecked: [],
-    });
+    expect(result).toEqual({ ok: true, checks: { eodhd: "GBP" }, unchecked: [] });
     const status = parseStatus(store.files.get("_status.json"));
     expect(status.sources.eodhd?.calls_at).toHaveLength(1);
-    expect(status.sources.alpha_vantage?.calls_at).toHaveLength(1);
   });
 
   it("leaves unchecked, and says so, a source without a key or without budget", async () => {
     const store = new MemoryPriceStore();
-    store.files.set("config.json", '{"daily_calls":{"alpha_vantage":0}}');
-    const result = await checkSymbols({
-      declaration: declared("EUR", { eodhd: "X.EUFUND", alpha_vantage: "X" }),
-      store,
-      sources: { alpha_vantage: sources(store).alpha_vantage },
-      now,
+    const declaration = declared("EUR", { eodhd: "X.EUFUND" });
+    // Without a source built (no key)…
+    expect(await checkSymbols({ declaration, store, sources: {}, now })).toEqual({
+      ok: true,
+      checks: {},
+      unchecked: ["eodhd"],
     });
-    expect(result).toEqual({ ok: true, checks: {}, unchecked: ["eodhd", "alpha_vantage"] });
-    // A source without a symbol in the declaration is not asked at all.
-    const only = await checkSymbols({
-      declaration: declared("GBX", { alpha_vantage: "X.LON" }),
-      store,
-      sources: sources(store),
-      now,
+    // …or with a budget of zero.
+    store.files.set("config.json", '{"daily_calls":{"eodhd":0}}');
+    expect(await checkSymbols({ declaration, store, sources: sources(store), now })).toEqual({
+      ok: true,
+      checks: {},
+      unchecked: ["eodhd"],
     });
-    expect(only).toEqual({ ok: true, checks: {}, unchecked: ["alpha_vantage"] });
+    // A declaration without a symbol asks nothing.
+    expect(
+      await checkSymbols({ declaration: declared("EUR", {}), store, sources: sources(store), now }),
+    ).toEqual({ ok: true, checks: {}, unchecked: [] });
   });
 
   it("stops at the first source that fails, and writes nothing", async () => {
@@ -110,10 +101,10 @@ describe("declaring the symbols of an asset (D-Q2, D-Q6)", () => {
       }),
     ).rejects.toThrow("no exact JSON numbers here");
     expect(store.transactions).toBe(0);
-    // A source without a symbol in the declaration is not asked whether it can run.
+    // A declaration without a symbol does not ask whether the source can run.
     expect(
       await checkSymbols({
-        declaration: declared("EUR", { alpha_vantage: "X" }),
+        declaration: declared("EUR", {}),
         store,
         sources: { ...s, eodhd },
         now,

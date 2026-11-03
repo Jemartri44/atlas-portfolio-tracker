@@ -114,20 +114,19 @@ describe("a view that reads prices when they do not load", () => {
       assets: {
         etf_b: {
           eodhd: "TSCO.LSE",
-          alpha_vantage: "TSCO.LON",
-          currencies: { eodhd: "GBP", alpha_vantage: "GBX" },
+          currencies: { eodhd: "GBX" },
           confirmed_at: "x",
-          currency_check: { eodhd: { at: "x" }, alpha_vantage: { at: "x" } },
+          currency_check: { eodhd: { at: "x" } },
         },
       },
     });
     await withPrices(f, {
       "symbols.json": symbols,
-      "etf_b.jsonl": line("1000", "GBP", "alpha_vantage"),
+      "etf_b.jsonl": line("1000", "GBP", "eodhd"),
     });
     const result = await show(f);
     expect(result.err).toContain(
-      "etf_b: 1 cierre de Alpha Vantage está guardado en una divisa que no es la declarada para esa fuente (GBX)",
+      "etf_b: 1 cierre de EODHD está guardado en una divisa que no es la declarada para esa fuente (GBX)",
     );
     expect(result.unrealized).toBe("50");
   });

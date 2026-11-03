@@ -138,9 +138,9 @@ describe("the file of the keys", () => {
     expect(await readSecrets(join(config(), "secrets.json"), ledger)).toEqual({});
   });
 
-  it("reads the keys of the two sources", async () => {
-    const path = await write(JSON.stringify({ eodhd: KEY, alpha_vantage: "OTHER" }));
-    expect(await readSecrets(path, ledger)).toEqual({ eodhd: KEY, alpha_vantage: "OTHER" });
+  it("reads the key of the source", async () => {
+    const path = await write(JSON.stringify({ eodhd: KEY }));
+    expect(await readSecrets(path, ledger)).toEqual({ eodhd: KEY });
   });
 
   /** Every error, whatever it is: never the content and never a value. */
@@ -184,10 +184,13 @@ describe("the file of the keys", () => {
       "secrets_invalid_value",
       "eodhd",
     );
+    await refused(await write(JSON.stringify({ eodhd: " " })), "secrets_invalid_value", "eodhd");
+    // The retired second source is an unknown key, not a tolerated one.
     await refused(
-      await write(JSON.stringify({ alpha_vantage: " " })),
-      "secrets_invalid_value",
-      "alpha_vantage",
+      await write(JSON.stringify({ alpha_vantage: KEY })),
+      "secrets_unknown_key",
+      undefined,
+      1,
     );
   });
 
@@ -225,10 +228,7 @@ describe("two consoles downloading at once, on the disk", () => {
       positions: new Map(ids.map((id) => [`acc|${id}`, Quantity.parse("1")])),
     } as never;
     await mkdir(join(ledger, "prices"));
-    await writeFile(
-      join(ledger, "prices", "config.json"),
-      '{"daily_calls":{"eodhd":2,"alpha_vantage":0}}',
-    );
+    await writeFile(join(ledger, "prices", "config.json"), '{"daily_calls":{"eodhd":2}}');
     await writeFile(
       join(ledger, "prices", "symbols.json"),
       JSON.stringify({

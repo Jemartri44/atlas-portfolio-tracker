@@ -315,7 +315,7 @@ export const SCENARIO_FISCAL_DATE_RULE: Settings["fiscal_date_rule"] = {
  * merged**, and a generator that read
  * `DEFAULT_WASH_SALE_WINDOW` would rewrite it every time the code changed its
  * mind about a criterion: moving the fund from a year to two months
- * (criterion #2, 2026-09-22) would have rewritten the settings line of a file
+ * and back (criterion #2, 2026-09-22 and 2026-11-03) would have rewritten the settings line of a file
  * whose whole purpose is not to move. The scenario is **data**, and data says
  * what it says; the default is **what the code believes today**. A fixture
  * that follows the code proves nothing about the code.

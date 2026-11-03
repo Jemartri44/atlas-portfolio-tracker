@@ -1,7 +1,6 @@
-// atlas positions · lots · cash · valuations · check
+// atlas positions · lots · check
 
 import {
-  cashBalances,
   currencyLots,
   type FingerprintWaiver,
   fiscalLots,
@@ -11,7 +10,6 @@ import {
   loadAndProject,
   ProjectionError,
   physicalPositions,
-  valuations,
   type Warning,
 } from "@atlas/domain";
 import { foreignRatesOf, type RateCheck } from "@atlas/domain/ecb";
@@ -148,76 +146,6 @@ export const lotsCommand = async (
           ]),
         ),
     ),
-  );
-  return 0;
-};
-
-export const cashCommand = async (
-  ctx: Context,
-  _positionals: string[],
-  flags: Flags,
-): Promise<number> => {
-  assertKnownFlags(flags, ["account", ...GLOBAL_FLAGS]);
-  const { state } = await loadForQuery(ctx);
-  const account = stringFlag(flags, "account");
-  assertExists(state, "account", account);
-  const rows = cashBalances(state).filter((c) => account === undefined || c.account_id === account);
-  renderQuery(
-    ctx,
-    state,
-    rows.map((c) => ({ ...c, balance: c.balance.amount.toString() })),
-    table(
-      ["cuenta", "divisa", "saldo"],
-      rows.map((c) => [c.account_id, c.currency, c.balance.amount.toString()]),
-    ),
-  );
-  return 0;
-};
-
-export const valuationsCommand = async (
-  ctx: Context,
-  _positionals: string[],
-  flags: Flags,
-): Promise<number> => {
-  assertKnownFlags(flags, ["date", ...GLOBAL_FLAGS]);
-  const date = dateFlag(ctx, flags);
-  const { state } = await loadForQuery(ctx, date);
-  const rows = valuations(state, date);
-  renderQuery(
-    ctx,
-    state,
-    rows.map((v) => ({
-      ...v,
-      quantity: v.quantity.toString(),
-      unit_value: v.unit_value.toString(),
-      fx_rate: v.fx_rate.toString(),
-      value_eur: v.value_eur.amount.toString(),
-    })),
-    [
-      `Valoraciones a ${date} (última foto por cuenta y activo; informativo, Modelo 720):`,
-      table(
-        [
-          "cuenta",
-          "activo",
-          "fecha",
-          "cantidad",
-          "valor unitario",
-          "divisa",
-          "tipo BCE",
-          "valor EUR",
-        ],
-        rows.map((v) => [
-          v.account_id,
-          v.asset_id,
-          v.date,
-          v.quantity.toString(),
-          v.unit_value.toString(),
-          v.currency,
-          v.fx_rate.toString(),
-          v.value_eur.amount.toString(),
-        ]),
-      ),
-    ].join("\n"),
   );
   return 0;
 };

@@ -66,8 +66,9 @@ describe("fiscalCalendar: the end of a wash-sale window", () => {
     const b = spanishOnly();
     cycle(b, "50", "2027-06-10");
     const calendar = fiscalCalendar(b.build(), "2027-07-01");
+    // A fund takes a year by default (criterion #2, `2:fund_1y`).
     const [end] = of(calendar, "wash_sale_end");
-    expect(end?.date).toBe("2027-08-10");
+    expect(end?.date).toBe("2028-06-10");
     expect(end?.year).toBe(2027);
     expect(end?.sources).toContain("ast_world");
     expect(end?.sources).toHaveLength(2);
@@ -76,8 +77,8 @@ describe("fiscalCalendar: the end of a wash-sale window", () => {
   it("keeps the window on its last day and drops it the day after", () => {
     const b = spanishOnly();
     cycle(b, "50", "2027-06-10");
-    expect(of(fiscalCalendar(b.build(), "2027-08-10"), "wash_sale_end")).toHaveLength(1);
-    expect(of(fiscalCalendar(b.build(), "2027-08-11"), "wash_sale_end")).toHaveLength(0);
+    expect(of(fiscalCalendar(b.build(), "2028-06-10"), "wash_sale_end")).toHaveLength(1);
+    expect(of(fiscalCalendar(b.build(), "2028-06-11"), "wash_sale_end")).toHaveLength(0);
   });
 
   it("ignores a sale that made a gain", () => {
@@ -86,14 +87,14 @@ describe("fiscalCalendar: the end of a wash-sale window", () => {
     expect(of(fiscalCalendar(b.build(), "2027-07-01"), "wash_sale_end")).toHaveLength(0);
   });
 
-  it("uses the window configured for the type of asset, and may fall outside the year", () => {
+  it("uses the window configured for the type of asset", () => {
     const b = spanishOnly();
     b.settings(
-      settingsOf({ wash_sale_window: { ...DEFAULT_SETTINGS.wash_sale_window, fund: "1y" } }),
+      settingsOf({ wash_sale_window: { ...DEFAULT_SETTINGS.wash_sale_window, fund: "2m" } }),
     );
     cycle(b, "50", "2027-06-10");
     const calendar = fiscalCalendar(b.build(), "2027-07-01");
-    expect(of(calendar, "wash_sale_end")[0]?.date).toBe("2028-06-10");
+    expect(of(calendar, "wash_sale_end")[0]?.date).toBe("2027-08-10");
     expect(calendar.year).toBe(2027);
   });
 

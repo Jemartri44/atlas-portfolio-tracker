@@ -11,6 +11,10 @@
 // more than a guess: the abbreviated version of a label is how box 0031 loses
 // the clause that tells you when the figure belongs in 0034 instead.
 //
+// The numbers are also in the data dictionary of the form, a text source, whose
+// labels are shorter than these:
+// `https://sede.agenciatributaria.gob.es/static_files/Sede/Disenyo_registro/DR_100_199/diccionarioXSD_2025.properties`.
+//
 // The certainty of every entry is `high` for the same reason: seen in the
 // official form of this very year. Anything that was not seen there is simply
 // not in this table, and the layout says so rather than filling it in:
@@ -20,11 +24,12 @@
 //   - the fields of the double-taxation capture window have no number, so
 //     only the total 0588 is here, and the engine says it computes just the
 //     first limit of it (#16);
-//   - "otros elementos patrimoniales" (1624 and following) is mapped only for
-//     shares outside the EU regulated markets (key 2, which the help of the
-//     form names); an exchange difference of currency and an ETC or an ETP the
-//     user configured as a capital gain keep no box, because no official text
-//     says they go there (key 4 is an inference the output names);
+//   - "otros elementos patrimoniales" (1624 and following) holds shares not
+//     admitted on an EU regulated market (key 2) and, by exclusion, an
+//     exchange difference of currency and an ETC or an ETP the user configured
+//     as a capital gain (key 4, "cualesquiera otros bienes o derechos no
+//     incluidos en los apartados anteriores", help of the Modelo 100 of 2025);
+//     both keys share the same row boxes and the sums 0385/0386;
 //   - the annex C.3 has **no "pending in future years" box for 2021**: a
 //     balance of 2021 that is not offset in this return expires;
 //   - boxes 0392 and 0393, the **gains** of earlier years imputable to this
@@ -75,6 +80,32 @@ const byYear = (
       page(box, label(Number(year), pair[Number(year)] ?? ""), image),
     ]),
   );
+
+/** The row boxes of "otros elementos patrimoniales", the same for every key. */
+const otherElements = (
+  section: "other_shares" | "other",
+): Partial<Record<ConceptId, YearBoxMapping>> => ({
+  [`gp.${section}.key`]: page("1626", "Tipo de elemento patrimonial. Clave", 17),
+  [`gp.${section}.transmission`]: page("1633", "Valor de transmisión", 17),
+  [`gp.${section}.acquisition`]: page("1637", "Valor de adquisición", 17),
+  [`gp.${section}.loss`]: page(
+    "1638",
+    "Pérdida patrimonial obtenida: diferencia ([1633] – [1637]) negativa",
+    17,
+  ),
+  [`gp.${section}.loss_imputable`]: page("1639", "Pérdida patrimonial imputable a 2025", 17),
+  [`gp.${section}.gain`]: page(
+    "1640",
+    "Ganancia patrimonial obtenida: diferencia ([1633] – [1637]) positiva",
+    17,
+  ),
+  [`gp.${section}.gain_net`]: page("1645", "Ganancia no exenta ([1640] – [1642] – [1644])", 17),
+  [`gp.${section}.gain_imputable`]: page(
+    "1650",
+    "Ganancia patrimonial reducida no exenta imputable a 2025",
+    17,
+  ),
+});
 
 const conceptTable = (): Partial<Record<ConceptId, YearBoxMapping>> => ({
   // --- Movable capital income, page 5 ---------------------------------------
@@ -280,35 +311,19 @@ const conceptTable = (): Partial<Record<ConceptId, YearBoxMapping>> => ({
     15,
   ),
 
-  // --- Other elements, key 2 (shares outside the EU regulated markets), page 17
-  // (read off the image on 2026-11-03). Only the section `other_shares`: the
-  // currency and the ETC configured as a gain (`other`) keep no box (H7).
-  "gp.other_shares.key": page("1626", "Tipo de elemento patrimonial. Clave", 17),
-  "gp.other_shares.transmission": page("1633", "Valor de transmisión", 17),
-  "gp.other_shares.acquisition": page("1637", "Valor de adquisición", 17),
-  "gp.other_shares.loss": page(
-    "1638",
-    "Pérdida patrimonial obtenida: diferencia ([1633] – [1637]) negativa",
-    17,
-  ),
-  "gp.other_shares.loss_imputable": page("1639", "Pérdida patrimonial imputable a 2025", 17),
-  "gp.other_shares.gain": page(
-    "1640",
-    "Ganancia patrimonial obtenida: diferencia ([1633] – [1637]) positiva",
-    17,
-  ),
-  "gp.other_shares.gain_net": page("1645", "Ganancia no exenta ([1640] – [1642] – [1644])", 17),
-  "gp.other_shares.gain_imputable": page(
-    "1650",
-    "Ganancia patrimonial reducida no exenta imputable a 2025",
-    17,
-  ),
-  "gp.other_shares.losses": page(
+  // --- Other elements, page 17 (read off the image on 2026-11-03; labels and
+  // numbers confirmed in the data dictionary of 2025, `diccionarioXSD_2025`).
+  // One run of row boxes, the key telling the rows apart: key 2 for shares not
+  // admitted on an EU regulated market, key 4 for the rest (currency, an ETC
+  // or ETP configured as a gain).
+  ...otherElements("other_shares"),
+  ...otherElements("other"),
+  "gp.other.losses": page(
     "0385",
     "Suma de pérdidas patrimoniales derivadas de transmisiones de otros elementos patrimoniales (suma de las casillas [1639])",
     17,
   ),
-  "gp.other_shares.gains": page(
+  "gp.other.gains": page(
     "0386",
     "Suma de ganancias patrimoniales derivadas de transmisiones de otros elementos patrimoniales no afectos a actividades económicas (suma de las casillas [1650])",
     17,
