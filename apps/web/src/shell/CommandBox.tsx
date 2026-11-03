@@ -86,6 +86,7 @@ export const CommandBox = (): JSX.Element => {
       <button
         type="button"
         class="command-button secondary"
+        aria-label="Buscar o registrar"
         aria-haspopup="dialog"
         aria-keyshortcuts={openKey()}
         onClick={show}

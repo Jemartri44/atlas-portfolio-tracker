@@ -24,7 +24,10 @@ describe("«Buscar o registrar»", () => {
   it("opens with «/» on a computer and follows the command chosen with the arrows", async () => {
     withStyles(1440, 900);
     const host = await showInShell("/", ROUTES);
-    expect(host.querySelector(".command-button")?.getAttribute("aria-keyshortcuts")).toBe("/");
+    const button = host.querySelector(".command-button");
+    expect(button?.getAttribute("aria-keyshortcuts")).toBe("/");
+    // Named in words, also in the compact bar, where only the icon and the key are seen.
+    expect(button?.getAttribute("aria-label")).toBe("Buscar o registrar");
     press("/");
     await settle();
     const field = host.querySelector(".command-field") as HTMLInputElement;
