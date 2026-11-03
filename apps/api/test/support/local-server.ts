@@ -99,6 +99,7 @@ server.listen(Number(argument("port") ?? 0), "127.0.0.1", () => {
     clockToleranceSeconds: 600,
     allowListCacheSeconds: 120,
     secretsCacheSeconds: 300,
+    activeJobFamilies: ["ecb", "prices", "mail", "backup", "integrity"],
   };
   const handler = createHandler({
     config,

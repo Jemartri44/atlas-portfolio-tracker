@@ -21,6 +21,7 @@ import {
   theme,
 } from "../../shell/preferences.js";
 import { EcbCard } from "./EcbCard.jsx";
+import { JobsCard } from "./JobsCard.jsx";
 import { PricesCard } from "./PricesCard.jsx";
 import { SessionCard } from "./SessionCard.jsx";
 
@@ -183,6 +184,9 @@ export default function AjustesRoute(): JSX.Element {
         <div class="stack span-6">
           <EcbCard />
           <PricesCard />
+          <div id="tareas">
+            <JobsCard />
+          </div>
           <Section title="Configuración y verificación">
             <ul class="rows">
               {/* The fiscal screen has no place in the bottom bar (it is reached from the summary and from here. */}
