@@ -25,7 +25,7 @@ const recordedOn = (v: Voice, value: unknown): string =>
 export const ERRORS_SETTINGS: Record<string, Entry> = {
   invalid_exposure: {
     say: (d, v) =>
-      `La exposición ${v.text(d.dimension)} de ${v.text(d.asset_id)} tiene que sumar 100 y no llevar porcentajes negativos.`,
+      `La exposición ${d.dimension === "region" ? "por región" : "por divisa"} de ${v.one(d.asset_id)} tiene que sumar 100 y no llevar porcentajes negativos.`,
   },
   missing_manual_prices: {
     say: (d, v) =>
