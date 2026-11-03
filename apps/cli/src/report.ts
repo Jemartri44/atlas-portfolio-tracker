@@ -18,27 +18,13 @@ import {
   DomainError,
   DuplicateFingerprintError,
   SchemaTooNewError,
-  WriteOutcomeUnknownError,
 } from "@atlas/domain";
-import { RemoteError } from "@atlas/domain/sync";
 import { UsageError } from "./args.js";
 import { CommandFailure, ConfirmationRequired, EXIT, type Io } from "./context.js";
-import { type CloudLedgerStore, CloudSessionError } from "./folder-mode.js";
-import {
-  describeCloudSession,
-  describeOffline,
-  describeRemoteOther,
-  describeSession,
-  OFFLINE_CODES,
-  SESSION_CODES,
-  UNKNOWN_OUTCOME,
-} from "./output/cloud.js";
 import { describeEcbDamage } from "./output/ecb.js";
 import { describeLock, LOCK_LOST, remedyFor } from "./output/lock.js";
 import { describeDependants, describeDuplicate, describeError } from "./output/messages.js";
 import { describeSecretsError } from "./output/prices.js";
-import { describeCredentialsError } from "./output/remote.js";
-import { CredentialsError } from "./remote/credentials-file.js";
 import { USAGE_HINT } from "./usage.js";
 
 /** An order that did not do what was asked: the exit code, a stable code and the lines for stderr. */
@@ -50,11 +36,6 @@ interface Failure {
   readonly hint?: string;
   /** The stack of an error nobody expected: for stderr, never in the object a script reads. */
   readonly trace?: string;
-}
-
-/** The connection broke after the write was sent and a reload found it recorded. */
-interface Recovered {
-  readonly recovered: true;
 }
 
 const failure = (exit: number, code: string, ...lines: string[]): Failure => ({
@@ -74,60 +55,6 @@ const lockedFailure = async (error: LedgerLockedError): Promise<Failure> => {
     `Error: ${describeLock(error.info, new Date(), lock_stale_minutes ?? Number.POSITIVE_INFINITY)}`,
     remedyFor(error.info),
   );
-};
-
-/**
- * A write was sent and the connection broke: the ids were fixed before sending,
- * so one reload says whether it was recorded (`ApiLedgerStore.findOutcome`).
- */
-const unknownOutcome = async (
-  cloud: CloudLedgerStore,
-  error: WriteOutcomeUnknownError,
-): Promise<Failure | Recovered> => {
-  try {
-    const found = await cloud.findOutcome(error.ids);
-    if (found.outcome === "written") {
-      return { recovered: true };
-    }
-    if (found.outcome === "partial") {
-      return failure(
-        EXIT.domain,
-        "partial_write",
-        "Error (partial_write): la conexión se cortó y la operación quedó escrita solo en parte. Ejecuta `atlas check` y rectifícala.",
-      );
-    }
-    return failure(
-      EXIT.offline,
-      "write_not_recorded",
-      "La conexión se cortó al guardar, pero se ha comprobado: la operación NO quedó registrada. Repite la orden.",
-    );
-  } catch (again) {
-    if (again instanceof RemoteError || again instanceof CloudSessionError) {
-      return failure(
-        EXIT.outcomeUnknown,
-        "write_outcome_unknown",
-        `Error (write_outcome_unknown): ${UNKNOWN_OUTCOME}`,
-      );
-    }
-    throw again;
-  }
-};
-
-/** What went wrong talking to the cloud of a cloud folder, said as it is, with its own exit code. */
-const cloudFailure = (error: unknown): Failure | undefined => {
-  if (error instanceof CloudSessionError) {
-    return failure(EXIT.session, error.code, describeCloudSession(error));
-  }
-  if (error instanceof RemoteError && SESSION_CODES.has(error.code)) {
-    return failure(EXIT.session, error.code, describeSession(error.code));
-  }
-  if (error instanceof RemoteError && OFFLINE_CODES.has(error.code)) {
-    return failure(EXIT.offline, error.code, describeOffline(error.code));
-  }
-  if (error instanceof RemoteError) {
-    return failure(EXIT.domain, error.code, describeRemoteOther(error.code));
-  }
-  return undefined;
 };
 
 const SYSTEM_CODE = /^E[A-Z0-9]+$/;
@@ -162,22 +89,12 @@ const isSystemError = (error: unknown): error is Error & { code: string; path?: 
   SYSTEM_CODE.test((error as unknown as { code: string }).code);
 
 /** The failure a thrown error stands for; an error nobody expected is reported, never rethrown. */
-const failureOf = async (
-  error: unknown,
-  cloud: CloudLedgerStore | undefined,
-): Promise<Failure | Recovered> => {
+const failureOf = async (error: unknown): Promise<Failure> => {
   if (error instanceof CommandFailure) {
     return failure(error.exit, error.code, ...error.lines);
   }
   if (error instanceof LedgerLockedError) {
     return lockedFailure(error);
-  }
-  if (error instanceof WriteOutcomeUnknownError && cloud !== undefined) {
-    return unknownOutcome(cloud, error);
-  }
-  const fromCloud = cloudFailure(error);
-  if (fromCloud !== undefined) {
-    return fromCloud;
   }
   if (error instanceof UsageError) {
     // A message that is itself a usage line («uso: atlas …») would read «Error de uso: uso: …».
@@ -190,10 +107,8 @@ const failureOf = async (
   if (error instanceof DuplicateFingerprintError) {
     return failure(EXIT.duplicate, error.code, describeDuplicate(error));
   }
-  // The refusal of `--accept-invalid` on a cloud folder is not a list of dependants to rectify:
-  // it has its own sentence.
-  if (error instanceof DependentEventsError && error.code !== "accept_invalid_while_synced") {
-    return failure(EXIT.domain, error.code, describeDependants(error, cloud === undefined));
+  if (error instanceof DependentEventsError) {
+    return failure(EXIT.domain, error.code, describeDependants(error));
   }
   if (error instanceof ConflictError) {
     return failure(EXIT.conflict, error.code, describeError(error));
@@ -203,13 +118,6 @@ const failureOf = async (
   }
   if (error instanceof DomainError) {
     return failure(EXIT.domain, error.code, `Error (${error.code}): ${describeError(error)}`);
-  }
-  if (error instanceof CredentialsError) {
-    return failure(
-      EXIT.domain,
-      error.code,
-      `Error (${error.code}): ${describeCredentialsError(error.code)}`,
-    );
   }
   if (error instanceof SecretsError) {
     return failure(EXIT.domain, "secrets_unusable", `Error: ${describeSecretsError(error)}`);
@@ -259,7 +167,7 @@ const sentence = (lines: readonly string[]): string =>
 /**
  * Says what a thrown error was and returns the exit code. With `--json` and nothing yet on stdout,
  * the failure is the one object stdout carries; an order that already printed its own result keeps
- * it (a source that failed after the report, a repetition that finds the write recorded).
+ * it (a source that failed after the report).
  */
 export const reportError = async (
   io: Io,
@@ -267,20 +175,9 @@ export const reportError = async (
   options: {
     readonly json: boolean;
     readonly wroteStdout: () => boolean;
-    readonly cloud?: CloudLedgerStore;
   },
 ): Promise<number> => {
-  const reported = await failureOf(error, options.cloud);
-  if ("recovered" in reported) {
-    if (options.json) {
-      if (!options.wroteStdout()) {
-        io.out(JSON.stringify({ status: "recorded", after_connection_loss: true }, null, 2));
-      }
-    } else {
-      io.out("La conexión se cortó al guardar, pero la operación SÍ quedó registrada en la nube.");
-    }
-    return EXIT.ok;
-  }
+  const reported = await failureOf(error);
   for (const line of reported.lines) {
     io.err(line);
   }

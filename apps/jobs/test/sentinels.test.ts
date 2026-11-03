@@ -152,7 +152,7 @@ describe("the log of the jobs (G7, R15)", () => {
 
   it("carries none of them when a task throws with a message full of them", async () => {
     const jobs = setupJobs();
-    jobs.ssm.listByPath = async () => {
+    jobs.ssm.get = async () => {
       throw new Error(FOREIGN);
     };
     jobs.s3.list = async () => {

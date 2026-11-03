@@ -5,37 +5,18 @@
 
 export const API_ERRORS = {
   unauthenticated: 401,
-  credentials_ambiguous: 400,
   session_invalid: 401,
-  device_token_invalid: 401,
-  device_token_revoked: 401,
-  device_token_expired: 401,
   not_allowed: 403,
-  forbidden_for_credential: 403,
   origin_rejected: 403,
-  device_forgotten: 403,
   body_invalid: 400,
   body_not_json: 415,
   body_too_large: 413,
   not_found: 404,
   internal: 500,
   remote_unavailable: 503,
-  // The token of the console (`docs/api.md` §4 and §7).
-  console_start_invalid: 400,
-  console_code_invalid: 400,
-  console_code_expired: 400,
-  console_code_used: 409,
-  console_renewal_conflict: 409,
-  pkce_mismatch: 400,
-  reissue_device_missing: 403,
-  reissue_device_forgotten: 403,
-  reissue_device_not_console: 403,
-  /** An object that exists but cannot be read strictly: never folded into `missing`. */
-  reissue_device_unreadable: 403,
   // The sync and the reference data (`docs/api.md` §5, §6 and §7).
   precondition_required: 428,
   precondition_failed: 412,
-  init_rejected: 422,
   append_too_many_units: 413,
   reference_name_invalid: 400,
   // The drafts in the cloud (`docs/api.md` §6.1 and §7).
@@ -80,11 +61,6 @@ export const LOGIN_PAGE_ERRORS = {
   remote_unavailable: 503,
   /** Anything nobody expected, on the start or the return of a sign-in. */
   internal: 500,
-  // The return of a sign-in of the console that asks to reissue.
-  reissue_device_missing: 403,
-  reissue_device_forgotten: 403,
-  reissue_device_not_console: 403,
-  reissue_device_unreadable: 403,
 } as const;
 
 export type LoginPageError = keyof typeof LOGIN_PAGE_ERRORS;

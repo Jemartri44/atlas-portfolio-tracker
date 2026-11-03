@@ -6,7 +6,29 @@
 - **Restaurar nunca borra nada**: lo que hay se archiva antes en `archive/pre-restore-…`, que nunca se sobrescribe.
 - La copia se escribe **línea a línea, tal cual** (`replaceLines`): nunca se vuelve a serializar.
 
-**Lo que necesitas**: el rol y `admin.json`, como en [Revocar todos los tokens](revoke-all-tokens.md), apartado «Lo que necesitas».
+**También es la subida inicial**: con la nube vacía, `atlas admin restore --env <e> --from <ledger.jsonl>` escribe el libro tal cual (ADR-0037).
+
+## Lo que necesitas
+
+Vale para toda orden `atlas admin …` y para `atlas backup --from-bucket`: las credenciales de vida corta del rol `atlas-<entorno>-admin`, con MFA (ADR-0034, fila 16). La consola las toma de la **cadena estándar del SDK de AWS** y no guarda nada. Tienen que venir **de una sesión ya abierta**, según quién asuma el rol (la comprobación **C5 de ADR-0034, SIN VERIFICAR, de la 018**):
+
+- **Con IAM Identity Center**: abre la sesión con `aws sso login --profile atlas-prod-admin`, que pide el MFA, y usa `AWS_PROFILE=atlas-prod-admin` en cada orden.
+- **Con un usuario IAM con MFA**: el perfil de `~/.aws/config` lleva `role_arn`, `source_profile` y `mfa_serial`. La CLI de AWS pide el código al usar ese perfil (*AWS CLI User Guide*, «Using an IAM role in the AWS CLI»). Exporta la sesión **en una subshell**, para que las credenciales mueran con ella:
+  ```sh
+  ( eval "$(aws configure export-credentials --profile atlas-prod-admin --format env)"
+    atlas admin pull --env prod --to ~/personal/atlas/privado/revision )
+  ```
+  **No basta con `AWS_PROFILE=atlas-prod-admin` para `atlas`**: el SDK de JavaScript no sabe pedir el código y se niega con `admin_aws_refused (CredentialsProviderError)` antes de llamar a AWS (`apps/cli/test/admin/environment.test.ts`).
+
+En los ejemplos, `AWS_PROFILE=atlas-prod-admin` vale tal cual con IAM Identity Center; con un usuario IAM, quítalo y ejecuta la orden dentro de la subshell.
+
+Y `~/.config/atlas/admin.json`, que escribes tú y la aplicación nunca escribe (`docs/data-schema.md` §1):
+
+```json
+{ "admin_format": 1, "environments": { "prod": { "region": "eu-west-1", "data_bucket": "atlas-prod-data-<sufijo>", "ssm_prefix": "/atlas/prod/" } } }
+```
+
+**El *root* de AWS no puede asumir el rol** (*IAM User Guide*, «Compare AWS STS credentials»: `AssumeRole` lo llama un usuario o rol IAM, no el *root*). Solo sirve para desbloquear, por ejemplo reescribir la política de un bucket que deja fuera a todos los principales de Atlas (ADR-0034, fila 16).
 
 Los dispositivos no guardan ninguna copia del libro (ADR-0035), así que no hay nada que esperar de ellos: la restauración no se niega por nada de lo que ellos tengan.
 
@@ -40,7 +62,7 @@ La orden recorre los seis pasos de ADR-0032 **en orden y sin saltarse ninguno**,
 
 ## Después
 
-No hay nada que hacer en los dispositivos: quien tenga Atlas abierto lo notará en su siguiente escritura: la web recarga el libro restaurado y pide confirmar otra vez, y la consola pide repetir la orden. Lo que se registró en la nube después de la copia y que la restauración quita **no vuelve solo**: está en `archive/pre-restore-…`, y decides línea a línea qué vuelves a registrar.
+No hay nada que hacer en los dispositivos: quien tenga la web abierta lo notará en su siguiente escritura, que recarga el libro restaurado y pide confirmar otra vez. Lo que se registró en la nube después de la copia y que la restauración quita **no vuelve solo**: está en `archive/pre-restore-…`, y decides línea a línea qué vuelves a registrar.
 
 ## La prueba anual (constitución VI)
 
@@ -62,7 +84,7 @@ La cuenta de `prod` es la que compartes con otros proyectos (ADR-0034; ADR-0032,
 Las copias de tu disco son la capa que no depende de la cuenta: mantenlas al día (el correo mensual lo recuerda).
 
 *Probado* contra los dobles de S3 (`apps/cli/test/admin/rewrite.test.ts`):
-- que un objeto de dispositivo ilegible no frena `compact` ni `restore`;
+- la subida inicial, sobre una nube vacía;
 - la copia que no pasa la comprobación, que se niega antes del paso 3;
 - un «no» en el paso 4, que no toca nada;
 - un prefijo, con su cola perdida, y una versión anterior del objeto;

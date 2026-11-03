@@ -48,42 +48,16 @@ describe("the cookies of a request", () => {
   });
 });
 
-describe("presentedCredential: exactly one credential (api §2)", () => {
-  it("is ambiguous with a session cookie and a token, whatever they hold (R02)", () => {
-    expect(presentedCredential([[SESSION_COOKIE, "garbage"]], "not-a-token")).toEqual({
-      kind: "ambiguous",
-    });
+describe("presentedCredential: the session cookie, once (api §2)", () => {
+  it("is the session, none, or a repeated session — never the first of two", () => {
+    expect(presentedCredential([[LOGIN_COOKIE, "x"]])).toEqual({ kind: "none" });
+    expect(presentedCredential([[SESSION_COOKIE, "s"]])).toEqual({ kind: "session", value: "s" });
     expect(
-      presentedCredential(
-        [
-          [SESSION_COOKIE, "a"],
-          [SESSION_COOKIE, "b"],
-        ],
-        "",
-      ),
-    ).toEqual({
-      kind: "ambiguous",
-    });
-  });
-
-  it("is the token, the session, none, or a repeated session — never the first of two", () => {
-    expect(presentedCredential([[LOGIN_COOKIE, "x"]], "t")).toEqual({ kind: "token", value: "t" });
-    expect(presentedCredential([[LOGIN_COOKIE, "x"]], undefined)).toEqual({ kind: "none" });
-    expect(presentedCredential([[SESSION_COOKIE, "s"]], undefined)).toEqual({
-      kind: "session",
-      value: "s",
-    });
-    expect(
-      presentedCredential(
-        [
-          [SESSION_COOKIE, "s"],
-          [SESSION_COOKIE, "s"],
-        ],
-        undefined,
-      ),
-    ).toEqual({
-      kind: "session_repeated",
-    });
+      presentedCredential([
+        [SESSION_COOKIE, "s"],
+        [SESSION_COOKIE, "s"],
+      ]),
+    ).toEqual({ kind: "session_repeated" });
   });
 });
 
@@ -98,59 +72,34 @@ describe("the routes and what each admits (api §2.3)", () => {
       ROUTES.filter((spec) => spec.writes).map((spec) => `${spec.method} ${spec.path}`),
     ).toEqual([
       "POST /api/auth/logout",
-      "POST /api/auth/console/token",
-      "POST /api/auth/console/revoke",
-      "POST /api/devices/tokens/{token_id}/revoke",
+      "POST /api/auth/logout-all",
       "POST /api/ledger/lines",
-      "PUT /api/ledger",
-      // The drafts in the cloud.
       "POST /api/drafts",
       "POST /api/drafts/{id}/stamp",
       "POST /api/drafts/{id}/end",
     ]);
   });
 
-  it("gives the drafts of the cloud to both credentials, with an id in the path (E6)", () => {
-    for (const [method, path] of [
-      ["GET", "/api/drafts"],
-      ["POST", "/api/drafts"],
-      ["POST", "/api/drafts/{id}/stamp"],
-      ["POST", "/api/drafts/{id}/end"],
-    ] as const) {
-      expect(findRoute(method, path)?.policy, path).toBe("sync");
-    }
+  it("gives every route but the sign-in and the logout to the session cookie alone", () => {
+    expect(ROUTES.filter((spec) => spec.policy !== "session").map((spec) => spec.path)).toEqual([
+      "/api/auth/login",
+      "/api/auth/callback",
+      "/api/auth/logout",
+    ]);
     expect(matchRoute("POST", "/api/drafts/01J0000000000000000000000A/end")?.params).toEqual({
       id: "01J0000000000000000000000A",
     });
     expect(findRoute("DELETE", "/api/drafts/01J0000000000000000000000A")).toBeUndefined();
     expect(findRoute("POST", "/api/drafts/a/b/end")).toBeUndefined();
-  });
-
-  it("gives the sync and the reference data to both credentials, and the devices to the session (E3)", () => {
-    const sync = [
-      ["GET", "/api/ledger"],
-      ["POST", "/api/ledger/lines"],
-      ["PUT", "/api/ledger"],
-      ["GET", "/api/reference/index"],
-      ["GET", "/api/reference/ecb/{name}"],
-      ["GET", "/api/reference/prices/{name}"],
-    ] as const;
-    for (const [method, path] of sync) {
-      expect(findRoute(method, path)?.policy, path).toBe("sync");
-    }
-    expect(findRoute("GET", "/api/sync/devices")?.policy).toBe("session");
-    // Retired (ADR-0035): no queue to publish.
-    expect(findRoute("PUT", "/api/sync/devices/self")).toBeUndefined();
     expect(findRoute("GET", "/api/reference/ecb/a/b")).toBeUndefined();
+    // Retired: the first upload is `atlas admin restore`, and there is no console to sign in.
+    expect(findRoute("PUT", "/api/ledger")).toBeUndefined();
+    expect(findRoute("GET", "/api/auth/console/start")).toBeUndefined();
   });
 
-  it("admits a token or a session on a sync route; with the cookie, a write needs our Origin", () => {
+  it("admits the session; with it, a write needs our Origin", () => {
     const lines = route("/api/ledger/lines", "POST");
     const read = route("/api/ledger");
-    expect(admit(lines, { kind: "token", value: "t" }, undefined, SELF)).toEqual({
-      kind: "token",
-      value: "t",
-    });
     expect(admit(lines, { kind: "session", value: "v" }, SELF, SELF)).toEqual({
       kind: "session",
       value: "v",
@@ -167,49 +116,18 @@ describe("the routes and what each admits (api §2.3)", () => {
       kind: "refused",
       refusal: refusal("unauthenticated"),
     });
-    expect(admit(read, { kind: "ambiguous" }, undefined, SELF)).toEqual({
+    expect(admit(read, { kind: "session_repeated" }, undefined, SELF)).toEqual({
       kind: "refused",
-      refusal: refusal("credentials_ambiguous"),
-    });
-    expect(admit(route("/api/sync/devices"), { kind: "token", value: "t" }, SELF, SELF)).toEqual({
-      kind: "refused",
-      refusal: refusal("forbidden_for_credential"),
+      refusal: refusal("session_invalid", { reason: "repeated" }),
     });
   });
 
   it("looks at no credential on the start and the return of a sign-in", () => {
     for (const path of ["/api/auth/login", "/api/auth/callback"]) {
-      expect(admit(route(path), { kind: "ambiguous" }, undefined, SELF)).toEqual({
-        kind: "anonymous",
-      });
-      expect(admit(route(path), { kind: "token", value: "t" }, undefined, SELF)).toEqual({
+      expect(admit(route(path), { kind: "session_repeated" }, undefined, SELF)).toEqual({
         kind: "anonymous",
       });
     }
-  });
-
-  it("refuses ambiguity, a token and no credential on a session route, each with its code", () => {
-    const session = route("/api/session");
-    expect(admit(session, { kind: "ambiguous" }, SELF, SELF)).toEqual({
-      kind: "refused",
-      refusal: refusal("credentials_ambiguous"),
-    });
-    expect(admit(session, { kind: "token", value: "t" }, SELF, SELF)).toEqual({
-      kind: "refused",
-      refusal: refusal("forbidden_for_credential"),
-    });
-    expect(admit(session, { kind: "none" }, SELF, SELF)).toEqual({
-      kind: "refused",
-      refusal: refusal("unauthenticated"),
-    });
-    expect(admit(session, { kind: "session_repeated" }, undefined, SELF)).toEqual({
-      kind: "refused",
-      refusal: refusal("session_invalid", { reason: "repeated" }),
-    });
-    expect(admit(session, { kind: "session", value: "v" }, undefined, SELF)).toEqual({
-      kind: "session",
-      value: "v",
-    });
   });
 
   it("checks Origin on a write with the cookie: foreign **and absent** are refused (R04, N6)", () => {
@@ -227,19 +145,20 @@ describe("the routes and what each admits (api §2.3)", () => {
       kind: "clear_session",
     });
     expect(originAccepted(`${SELF}/`, SELF)).toBe(false);
+    // Closing every session is a session route: from our own origin, with a valid cookie.
+    expect(
+      admit(
+        route("/api/auth/logout-all", "POST"),
+        { kind: "session", value: "v" },
+        undefined,
+        SELF,
+      ),
+    ).toEqual(rejected);
   });
 
-  it("closes no session on logout without a cookie, and refuses a token there", () => {
+  it("closes no session on logout without a cookie", () => {
     const logout = route("/api/auth/logout", "POST");
     expect(admit(logout, { kind: "none" }, undefined, SELF)).toEqual({ kind: "anonymous" });
-    expect(admit(logout, { kind: "token", value: "t" }, SELF, SELF)).toEqual({
-      kind: "refused",
-      refusal: refusal("forbidden_for_credential"),
-    });
-    expect(admit(logout, { kind: "ambiguous" }, SELF, SELF)).toEqual({
-      kind: "refused",
-      refusal: refusal("credentials_ambiguous"),
-    });
   });
 });
 

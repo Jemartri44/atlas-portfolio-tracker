@@ -1,13 +1,13 @@
 // «Sesión» in Ajustes (ADR-0035): until when the session of this browser lasts,
-// the button to close it and the devices of the console. Nothing is kept on the
-// device: the session is the cookie the API set, and this page only reads it.
+// the button to close it, and the one to close it on every device at once — for a
+// lost phone. Nothing is kept on the device: the session is the cookie the API
+// set, and this page only reads it.
 
 import { createSignal, type JSX, Show } from "solid-js";
-import { signOut } from "../../auth/session.js";
+import { signOut, signOutEverywhere } from "../../auth/session.js";
 import { Notice, Section } from "../../components/index.js";
 import { formatInstantDate } from "../../format/date.js";
 import { store } from "../../ledger/state.js";
-import { DevicesCard } from "./DevicesCard.jsx";
 
 const when = (instant: string): string => {
   const time = new Date(instant).toLocaleTimeString("es-ES", {
@@ -23,10 +23,10 @@ export const SessionCard = (props: { readonly request?: typeof fetch }): JSX.Ele
   const [busy, setBusy] = createSignal(false);
   const [failed, setFailed] = createSignal(false);
 
-  const onSignOut = async (): Promise<void> => {
+  const onSignOut = async (everywhere: boolean): Promise<void> => {
     setBusy(true);
     setFailed(false);
-    const outcome = await signOut(request);
+    const outcome = await (everywhere ? signOutEverywhere : signOut)(request);
     setBusy(false);
     if (outcome !== "signed_out") {
       setFailed(true);
@@ -54,17 +54,33 @@ export const SessionCard = (props: { readonly request?: typeof fetch }): JSX.Ele
         )}
       </Show>
       <div class="button-row">
-        <button type="button" class="secondary" disabled={busy()} onClick={() => void onSignOut()}>
+        <button
+          type="button"
+          class="secondary"
+          disabled={busy()}
+          onClick={() => void onSignOut(false)}
+        >
           Cerrar sesión
         </button>
+        <button
+          type="button"
+          class="secondary"
+          disabled={busy()}
+          onClick={() => void onSignOut(true)}
+        >
+          Cerrar sesión en todos los dispositivos
+        </button>
       </div>
+      <p>
+        Si pierdes el móvil o entraste en un ordenador ajeno: cierra la sesión en todos los
+        dispositivos a la vez, también en este. Después vuelves a entrar con Google.
+      </p>
       <Show when={failed()}>
         <Notice severity="danger" title="No se ha podido cerrar la sesión">
           La nube no ha respondido como se esperaba y la sesión puede seguir abierta. Inténtalo otra
-          vez con «Cerrar sesión».
+          vez.
         </Notice>
       </Show>
-      <DevicesCard request={request} />
     </Section>
   );
 };

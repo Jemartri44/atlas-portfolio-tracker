@@ -1,6 +1,6 @@
 // The drafts of the cloud, from a client (ADR-0035, `docs/api.md` §6.1):
-// `PendingDraftStore` over the four routes of the API, the credential injected
-// like `httpRemote` (the token of the console, or the cookie of the web). No
+// `PendingDraftStore` over the four routes of the API, with the cookie of the
+// web like `httpRemote`. No
 // rule lives here; no copy is kept anywhere: **nothing of a draft stays on the
 // device**. Every request goes with `redirect: "error"` and `no-store`, and
 // every POST with the SHA-256 of its exact body (ADR-0027, fact 2).
@@ -19,11 +19,9 @@ import { parseErrorAnswer, RemoteError } from "@atlas/domain/sync";
 import { apiFetch } from "../sync/api-fetch.js";
 
 export interface ApiDraftStoreOptions {
-  /** `https://…` of the console's entry, or the web's own origin. */
+  /** The web's own origin. */
   readonly origin: string;
   readonly fetch: typeof fetch;
-  /** The device token of the console; without it, the cookie of the web travels. */
-  readonly token?: string;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

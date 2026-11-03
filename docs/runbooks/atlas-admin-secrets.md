@@ -4,7 +4,7 @@ Feature 017, E4 (ADR-0034, fila 21). **Los valores de los secretos nunca pasan p
 
 ## Antes
 
-- Una sesión ya abierta del rol de administración del entorno, con MFA (`docs/runbooks/revoke-all-tokens.md`, «Antes de empezar»), y `~/.config/atlas/admin.json` con el entorno.
+- Una sesión ya abierta del rol de administración del entorno, con MFA ([Restaurar el libro](restore-the-ledger.md), «Lo que necesitas»), y `~/.config/atlas/admin.json` con el entorno.
 - Una terminal interactiva. **Sin terminal la orden sale sin tocar nada** (código 4).
 
 ## Pasos
@@ -17,8 +17,8 @@ Feature 017, E4 (ADR-0034, fila 21). **Los valores de los secretos nunca pasan p
 
 ## Lo que no hace
 
-Nunca crea `mail/recipient` ni `mail/amounts` (son de Terraform), ni los registros de `device-tokens/` (son de la API). El token Flex de IBKR no tiene todavía nombre de parámetro en ningún contrato: no está en la orden.
+Nunca crea `mail/recipient` ni `mail/amounts` (son de Terraform). El token Flex de IBKR no tiene todavía nombre de parámetro en ningún contrato: no está en la orden.
 
 ## Si no hay terminal o la orden no está
 
-Los procedimientos `stolen-google-account.md` y `revoke-all-tokens.md` conservan su alternativa con la CLI de AWS; el valor va por un fichero `600` que se borra, nunca en la línea de órdenes.
+El procedimiento [stolen-google-account.md](stolen-google-account.md) conserva su alternativa con la CLI de AWS; el valor va por un fichero `600` que se borra, nunca en la línea de órdenes.

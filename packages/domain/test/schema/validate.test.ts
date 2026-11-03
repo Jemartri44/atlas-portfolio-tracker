@@ -405,6 +405,9 @@ describe("validateShape: consistency rules", () => {
   });
 });
 
+/** A line in dollars, where the rate date must be a working day. */
+const USD = { currency: "USD", fx_rate: "1.1" } as const;
+
 describe("ECB rate rules (data-schema.md §4)", () => {
   /**
    * **The guardian of the one enumeration, pair by pair.** It used to gather
@@ -496,21 +499,43 @@ describe("ECB rate rules (data-schema.md §4)", () => {
     ]) {
       expect(validateShape(sample)).toBeTruthy(); // without the field, as before
       expect(validateShape(variant(sample, { fx_rate_date: "2027-04-30" }))).toBeTruthy();
-      rejects(variant(sample, { fx_rate_date: "2027-05-01" }), "fx_rate_date_weekend");
+      rejects(variant(sample, { ...USD, fx_rate_date: "2027-05-01" }), "fx_rate_date_weekend");
       rejects(variant(sample, { fx_rate_date: "yesterday" }), "invalid_field");
     }
   });
 
   it("rejects a rate dated on a weekend and accepts the working days around it", () => {
     // 2027-05-01 is a Saturday and 2027-05-02 a Sunday.
-    rejects(variant(SAMPLES.buy, { fx_rate_date: "2027-05-01" }), "fx_rate_date_weekend");
-    rejects(variant(SAMPLES.buy, { fx_rate_date: "2027-05-02" }), "fx_rate_date_weekend");
-    expect(validateShape(variant(SAMPLES.buy, { fx_rate_date: "2027-04-30" }))).toBeTruthy();
-    expect(validateShape(variant(SAMPLES.buy, { fx_rate_date: "2027-05-03" }))).toBeTruthy();
-    rejects(variant(SAMPLES.sell, { fx_rate_date: "2027-05-01" }), "fx_rate_date_weekend");
-    rejects(variant(SAMPLES.dividend, { fx_rate_date: "2027-05-01" }), "fx_rate_date_weekend");
-    rejects(variant(SAMPLES.interest, { fx_rate_date: "2027-05-01" }), "fx_rate_date_weekend");
+    rejects(variant(SAMPLES.buy, { ...USD, fx_rate_date: "2027-05-01" }), "fx_rate_date_weekend");
+    rejects(variant(SAMPLES.buy, { ...USD, fx_rate_date: "2027-05-02" }), "fx_rate_date_weekend");
+    expect(
+      validateShape(variant(SAMPLES.buy, { ...USD, fx_rate_date: "2027-04-30" })),
+    ).toBeTruthy();
+    expect(
+      validateShape(variant(SAMPLES.buy, { ...USD, fx_rate_date: "2027-05-03" })),
+    ).toBeTruthy();
+    rejects(variant(SAMPLES.sell, { ...USD, fx_rate_date: "2027-05-01" }), "fx_rate_date_weekend");
+    rejects(
+      variant(SAMPLES.dividend, { ...USD, fx_rate_date: "2027-05-01" }),
+      "fx_rate_date_weekend",
+    );
+    rejects(
+      variant(SAMPLES.interest, { ...USD, fx_rate_date: "2027-05-01" }),
+      "fx_rate_date_weekend",
+    );
+    // One leg in euros is not enough: the other has a rate to look up.
     rejects(variant(SAMPLES.fx_exchange, { fx_rate_date: "2027-05-01" }), "fx_rate_date_weekend");
+  });
+
+  // In euros there is no rate to look up ("1"): the date may be any day.
+  it("accepts a weekend date when every currency of the line is the euro", () => {
+    for (const sample of [SAMPLES.buy, SAMPLES.dividend, SAMPLES.cash_deposit]) {
+      expect(
+        validateShape(
+          variant(sample, { currency: "EUR", fx_rate: "1", fx_rate_date: "2027-05-01" }),
+        ),
+      ).toBeTruthy();
+    }
   });
 
   it("applies both rules to the forced_sale and grant effects", () => {
@@ -541,8 +566,20 @@ describe("ECB rate rules (data-schema.md §4)", () => {
       ],
     };
     rejects(grant, "eur_fx_rate_not_one");
+    // A grant in euros dated on a Sunday is accepted; in dollars it is not.
+    expect(
+      validateShape({
+        ...grant,
+        effects: [{ ...grant.effects[0], fx_rate: "1", fx_rate_date: "2027-05-02" }],
+      }),
+    ).toBeTruthy();
     rejects(
-      { ...grant, effects: [{ ...grant.effects[0], fx_rate: "1", fx_rate_date: "2027-05-02" }] },
+      {
+        ...grant,
+        effects: [
+          { ...grant.effects[0], currency: "USD", fx_rate: "1.1", fx_rate_date: "2027-05-02" },
+        ],
+      },
       "fx_rate_date_weekend",
     );
   });

@@ -1,6 +1,8 @@
 # ADR-0033 — Acceso de la consola a la API: token de dispositivo emitido al final de un inicio de sesión que abre la propia consola
 
-**Estado:** Aceptada (2026-09-25); completa ADR-0027.
+**Estado:** Reemplazada por [ADR-0037](0037-web-only-access.md) (2026-11-03). Aceptada el 2026-09-25; completaba ADR-0027.
+
+> **Reemplazada (2026-11-03).** La consola ya no tiene acceso propio a la API: el token, su inicio de sesión, `credentials.json`, los objetos de dispositivo y las rutas de este ADR se retiraron sin llegar a desplegarse. Lo que sigue es historia; lo vigente está en [ADR-0037](0037-web-only-access.md) y en `docs/api.md`.
 
 ## Contexto
 

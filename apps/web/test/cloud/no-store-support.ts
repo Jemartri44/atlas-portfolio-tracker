@@ -1,5 +1,4 @@
-import { readTokens, revokeToken } from "../../src/auth/devices.js";
-import { readSession, signOut } from "../../src/auth/session.js";
+import { readSession, signOut, signOutEverywhere } from "../../src/auth/session.js";
 
 /** Drives the web's callers of the API (but the boot, which has its own test) and reports how each asked. */
 export const listCalls = async (): Promise<{ url: string; cache: RequestCache | undefined }[]> => {
@@ -10,7 +9,6 @@ export const listCalls = async (): Promise<{ url: string; cache: RequestCache | 
   }) as typeof fetch;
   await readSession(request);
   await signOut(request);
-  await readTokens(request);
-  await revokeToken(request, "AAAAAAAAAAAAAAAAAAAAAA");
+  await signOutEverywhere(request);
   return calls;
 };

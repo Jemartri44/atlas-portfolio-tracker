@@ -11,7 +11,6 @@ describe("readLocalConfig", () => {
     expect(await readLocalConfig(dir)).toEqual({
       ecb_stale_currency_days: 30,
       lock_stale_minutes: 10,
-      token_expiry_warning_days: 14,
     });
     await writeFile(join(dir, "atlas.config.json"), '{"ecb_stale_currency_days": 60}');
     expect((await readLocalConfig(dir)).ecb_stale_currency_days).toBe(60);

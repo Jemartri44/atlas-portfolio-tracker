@@ -9,7 +9,6 @@ import { describe, expect, it } from "vitest";
 import { httpRemote } from "../src/sync/http-remote.js";
 
 const ORIGIN = "https://atlas.example";
-const TOKEN = `atlasdt1.${"T".repeat(22)}.${"s".repeat(43)}`;
 const sha = (bytes: Uint8Array | string) => createHash("sha256").update(bytes).digest("hex");
 
 interface Sent {
@@ -42,25 +41,17 @@ const failureOf = async (promise: Promise<unknown>): Promise<RemoteError> => {
 };
 
 describe("httpRemote: what it sends", () => {
-  it("sends the token of the console, never follows a redirect, and no cookie", async () => {
-    const text = "a\n";
-    const { fetch, calls } = scripted(
-      () => new Response(text, { status: 200, headers: { etag: `"${sha(text)}"` } }),
-    );
-    await httpRemote({ origin: ORIGIN, fetch, token: TOKEN }).read();
-    expect(calls[0]?.url).toBe(`${ORIGIN}/api/ledger`);
-    expect(calls[0]?.init).toMatchObject({ method: "GET", redirect: "error", credentials: "omit" });
-    expect(headersOf(calls[0] as Sent)["x-atlas-device-token"]).toBe(TOKEN);
-  });
-
-  it("sends the cookie of the web, same origin, and no token", async () => {
+  it("sends the cookie of the web, same origin, and never follows a redirect", async () => {
     const { fetch, calls } = scripted(
       () => new Response("", { status: 200, headers: { etag: `"${sha("")}"` } }),
     );
     await httpRemote({ origin: "", fetch }).read();
     expect(calls[0]?.url).toBe("/api/ledger");
-    expect(calls[0]?.init).toMatchObject({ redirect: "error", credentials: "same-origin" });
-    expect(headersOf(calls[0] as Sent)).not.toHaveProperty("x-atlas-device-token");
+    expect(calls[0]?.init).toMatchObject({
+      method: "GET",
+      redirect: "error",
+      credentials: "same-origin",
+    });
   });
 
   it("never names a device: the credential alone says which one speaks (ADR-0035, E4)", async () => {
@@ -71,7 +62,7 @@ describe("httpRemote: what it sends", () => {
     );
     const remote = httpRemote({ origin: "", fetch });
     await remote.read();
-    await remote.init("x\n", [], "0".repeat(64)).catch(() => undefined);
+    await remote.append([{ line: "x" }], "0".repeat(64)).catch(() => undefined);
     expect(calls.length).toBeGreaterThanOrEqual(2);
     for (const sent of calls) {
       expect(headersOf(sent), sent.url).not.toHaveProperty("x-atlas-expected-device");
@@ -80,17 +71,11 @@ describe("httpRemote: what it sends", () => {
 
   it("hashes the exact bytes of every body it sends, and quotes the etag it writes on", async () => {
     const etag = "e".repeat(64);
-    const { fetch, calls } = scripted((sent) =>
-      sent.url.endsWith("/lines")
-        ? jsonAnswer(200, { etag, lines: 1, accepted: 1 })
-        : jsonAnswer(200, { etag, lines: 1 }),
-    );
-    const remote = httpRemote({ origin: ORIGIN, fetch, token: TOKEN });
+    const { fetch, calls } = scripted(() => jsonAnswer(200, { etag, lines: 1, accepted: 1 }));
+    const remote = httpRemote({ origin: ORIGIN, fetch });
     await remote.append([{ line: '{"é":1}', confirm_duplicate: true }], "f".repeat(64));
-    await remote.init("x\n", ["id1"], "0".repeat(64));
     expect(calls.map((sent) => `${sent.init.method} ${sent.url}`)).toEqual([
       `POST ${ORIGIN}/api/ledger/lines`,
-      `PUT ${ORIGIN}/api/ledger`,
     ]);
     for (const sent of calls) {
       const body = sent.init.body as Uint8Array;
@@ -102,11 +87,6 @@ describe("httpRemote: what it sends", () => {
       lines: [{ line: '{"é":1}', confirm_duplicate: true }],
     });
     expect(headersOf(calls[0] as Sent)["if-match"]).toBe(`"${"f".repeat(64)}"`);
-    expect(headersOf(calls[1] as Sent)["if-match"]).toBe(`"${"0".repeat(64)}"`);
-    expect(JSON.parse(new TextDecoder().decode(calls[1]?.init.body as Uint8Array))).toEqual({
-      content: "x\n",
-      confirm_duplicate_ids: ["id1"],
-    });
   });
 });
 
@@ -117,7 +97,7 @@ describe("httpRemote: reading the remote (§5.1)", () => {
       const { fetch } = scripted(
         () => new Response(text, { status: 200, headers: { etag: header } }),
       );
-      expect(await httpRemote({ origin: ORIGIN, fetch, token: TOKEN }).read()).toEqual({
+      expect(await httpRemote({ origin: ORIGIN, fetch }).read()).toEqual({
         text,
         etag: sha(text),
       });
@@ -136,7 +116,7 @@ describe("httpRemote: reading the remote (§5.1)", () => {
     ];
     for (const [body, headers, reason] of cases) {
       const { fetch } = scripted(() => new Response(body, { status: 200, headers }));
-      const error = await failureOf(httpRemote({ origin: ORIGIN, fetch, token: TOKEN }).read());
+      const error = await failureOf(httpRemote({ origin: ORIGIN, fetch }).read());
       expect(error.code).toBe("transport_rejected");
       expect(error.details).toEqual({ reason });
     }
@@ -146,10 +126,7 @@ describe("httpRemote: reading the remote (§5.1)", () => {
 describe("httpRemote: each answer, as §7 says", () => {
   const appendWith = async (answer: () => Response | Promise<Response>) => {
     const { fetch } = scripted(answer);
-    return httpRemote({ origin: ORIGIN, fetch, token: TOKEN }).append(
-      [{ line: "x" }],
-      "a".repeat(64),
-    );
+    return httpRemote({ origin: ORIGIN, fetch }).append([{ line: "x" }], "a".repeat(64));
   };
 
   it("holds a line only for a rejected.code of the list", async () => {
@@ -175,9 +152,8 @@ describe("httpRemote: each answer, as §7 says", () => {
   it("stops with the code of the API for an error of the closed list, 412 included", async () => {
     for (const [status, code] of [
       [412, "precondition_failed"],
-      [401, "device_token_expired"],
-      [401, "device_token_revoked"],
-      [403, "device_forgotten"],
+      [401, "session_invalid"],
+      [403, "not_allowed"],
       [503, "remote_unavailable"],
       [500, "internal"],
     ] as const) {

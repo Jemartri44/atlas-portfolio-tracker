@@ -65,6 +65,8 @@ Decidida por la dirección el mismo día. La verificación compara también `sta
 
 ## Nota del 2026-09-25 (ADR-0033 aceptada)
 
+> **Historia (2026-11-03).** [ADR-0037](0037-web-only-access.md) reemplaza a ADR-0033: esta nota ya no rige.
+
 **La consola entra por ADR-0033**, que completa esta ADR para el cliente que no es un navegador. Lo que cambia aquí:
 
 - **«No hay *refresh token*» vale para la web.** La consola tiene una credencial de larga duración propia, acotada por ADR-0033: 90 días absolutos, con un techo fijo de 120 en el código, revocable uno a uno y comprobada contra la lista permitida en cada petición.
@@ -87,6 +89,10 @@ Con Atlas en una cuenta de AWS compartida con otros proyectos (ADR-0028, nota de
 - **La salida de emergencia «sobre la réplica local»** pasa a ser la **consola en local sobre una copia** (`atlas backup`, «Descargar copia» o el volcado mensual), porque los dispositivos ya no guardan réplica. Además, el cliente OAuth se usa a diario, lo que reduce el riesgo de borrado por seis meses sin uso que esta ADR recoge.
 
 Lo que ADR-0035 retira del código se retira en sus entregas E1 a E5; hasta entonces, el código sigue como está (sesión de 8 h).
+
+## Enmienda del 2026-11-03 (ADR-0037)
+
+[ADR-0037](0037-web-only-access.md) retira el token de la consola y los objetos de dispositivo. **La cookie de sesión es `{sub, sid, iat, exp}`**, sin `device_id`, y la web es el único cliente de la API. Se añade **cerrar la sesión en todos los dispositivos** (`POST /api/auth/logout-all`): una marca de tiempo en `access/sessions-valid-from.json` invalida toda cookie emitida antes (`docs/api.md` §3). Rotar la clave de sesión sigue cerrando todas las sesiones, con el rol de administración.
 
 ## Notas de estado
 

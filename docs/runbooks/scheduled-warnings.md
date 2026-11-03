@@ -30,8 +30,7 @@ Llega siempre, una vez al mes. Si llega dos veces con el mismo mes en el asunto,
 Si los cierres o el histórico del BCE de la nube no se han podido leer, el recordatorio **no sale ese día**: su registro queda `failed` con el código `reference_unavailable`, y sale en la primera ejecución que pueda leerlos. Nunca sale valorado con menos de lo que hay.
 
 - **La aportación del mes**: el reparto por clase. Si dice que no se pudo calcular, el código dice por qué (por ejemplo `missing_manual_prices`): abre la aplicación.
-- **El último inicio de sesión**: si avisa del cliente OAuth, inicia sesión en la web o con `atlas remote login` antes de la fecha que dice. Google borra un cliente sin uso a los seis meses (ADR-0027).
-- **Los tokens de la consola**: si no reconoces una emisión, sigue [stolen-google-account.md](stolen-google-account.md).
+- **El último inicio de sesión**: si avisa del cliente OAuth, entra en la web antes de la fecha que dice. Google borra un cliente sin uso a los seis meses (ADR-0027).
 - **La copia fuera de AWS**: haz la copia a tu disco con la orden del correo.
 
 ## Una fuente de precios falla
@@ -51,7 +50,7 @@ Si los cierres o el histórico del BCE de la nube no se han podido leer, el reco
 
 ## Ficheros de precios ilegibles
 
-`prices_file_unreadable`: hay ficheros de cierres de la nube que no se leen, y la nube no los toca. Esos activos se quedan sin precio automático. Mira cuáles en la consola, con `atlas prices status`, en una carpeta sincronizada.
+`prices_file_unreadable`: hay ficheros de cierres de la nube que no se leen, y la nube no los toca. Esos activos se quedan sin precio automático. La consola ya no baja precios de la nube (ADR-0037): míralos en el bucket con el rol de administración (`aws s3 ls s3://<bucket de datos>/prices/`).
 
 ## Histórico del BCE
 
