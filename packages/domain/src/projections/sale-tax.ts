@@ -16,7 +16,7 @@
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { yearOf } from "../dates/civil-date.js";
-import { asDomainError, ValidationError } from "../errors.js";
+import { asDomainError, type DomainError, ValidationError } from "../errors.js";
 import { systemUlid } from "../ids/ulid.js";
 import { Decimal, HUNDRED } from "../money/decimal.js";
 import { Money } from "../money/money.js";
@@ -151,6 +151,12 @@ export const estimateSale = (
   };
 };
 
+/** An order the engine refused: its code, and the error itself with its details. */
+export interface RefusedOrder {
+  code: string;
+  error: DomainError;
+}
+
 /** One order of a sale: an order is placed in one account, even though the FIFO is across all (ADR-0009). */
 export interface SaleOrder {
   account_id: AccountId;
@@ -182,7 +188,7 @@ export const estimateOrders = (
     total_eur?: Money;
   },
   hypothetical: LedgerEvent[],
-): { orders: SaleOrder[]; estimates: (SaleEstimate | { code: string })[] } => {
+): { orders: SaleOrder[]; estimates: (SaleEstimate | RefusedOrder)[] } => {
   const { date, asset_id: assetId, price } = input;
   // A held asset has a price in euros, so its rate to the euro is there.
   const rate = price.fx_rate as Decimal;
@@ -190,7 +196,7 @@ export const estimateOrders = (
   let remaining = input.quantity;
   let amountLeft = input.total_eur;
   const orders: SaleOrder[] = [];
-  const estimates: (SaleEstimate | { code: string })[] = [];
+  const estimates: (SaleEstimate | RefusedOrder)[] = [];
   holders.forEach((holder, index) => {
     if (!remaining.isPositive()) {
       return;
@@ -230,7 +236,8 @@ export const estimateOrders = (
       estimates.push(estimate);
     } catch (error) {
       // The engine only refuses with a domain error (an invalid ledger, a year it does not cover).
-      estimates.push({ code: asDomainError(error).code });
+      const refused = asDomainError(error);
+      estimates.push({ code: refused.code, error: refused });
     }
   });
   return { orders, estimates };
@@ -313,9 +320,10 @@ export const simulateSale = (
     },
     hypothetical,
   );
-  const failed = estimates.find((entry): entry is { code: string } => "code" in entry);
+  const failed = estimates.find((entry): entry is RefusedOrder => "code" in entry);
   if (failed !== undefined) {
-    refuse(failed.code, "the tax engine refused the hypothetical sale", { asset_id: assetId });
+    // The engine's own error, with its details: what to repair is in them.
+    throw failed.error;
   }
   const done = estimates as SaleEstimate[];
   const summary = summariseEstimates(done);

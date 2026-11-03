@@ -29,6 +29,7 @@ import { holdersOf, type Order, type PlatformPlan, platformPlan } from "./platfo
 import type { ExternalPrices, PriceLookup } from "./prices.js";
 import {
   estimateOrders,
+  type RefusedOrder,
   type SaleEstimate,
   type SaleOrder,
   summariseEstimates,
@@ -542,7 +543,7 @@ const saleStep = (
     },
     hypothetical,
   );
-  const failed = estimates.find((entry): entry is { code: string } => "code" in entry);
+  const failed = estimates.find((entry): entry is RefusedOrder => "code" in entry);
   const done = estimates.filter((entry): entry is SaleEstimate => !("code" in entry));
   return {
     kind: "sale",
