@@ -193,19 +193,22 @@ export const SaleSimulatorCard = (props: {
                 </StatLine>
               )}
             </Show>
-            <Show
-              when={sale().tax_eur}
-              fallback={
-                <StatLine label="Reduce tu cuota estimada en">
-                  <Amount value={sale().saving_eur} />
-                </StatLine>
-              }
-            >
+            <Show when={sale().tax_eur}>
               {(tax) => (
                 <StatLine label="Sube tu cuota estimada en">
                   <Amount value={tax()} />
                 </StatLine>
               )}
+            </Show>
+            <Show when={sale().saving_eur}>
+              {(saving) => (
+                <StatLine label="Reduce tu cuota estimada en">
+                  <Amount value={saving()} />
+                </StatLine>
+              )}
+            </Show>
+            <Show when={sale().tax_eur === undefined && sale().saving_eur === undefined}>
+              <p class="card-note">No cambia tu cuota estimada del año.</p>
             </Show>
             <Show when={sale().repurchase_until}>
               {(until) => (

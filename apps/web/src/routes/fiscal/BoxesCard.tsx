@@ -34,11 +34,19 @@ const PackageActions = (props: { onDownload: () => void }): JSX.Element => {
     }
     // The print sheet keeps only the card marked as the one being printed (`styles/layout.css`).
     card?.classList.add("is-printing");
+    // On a phone `print()` returns before the sheet is laid out: the page is
+    // put back only when the browser says the printing is over.
+    window.addEventListener(
+      "afterprint",
+      () => {
+        card?.classList.remove("is-printing");
+        for (const block of closed) {
+          block.open = false;
+        }
+      },
+      { once: true },
+    );
     window.print();
-    card?.classList.remove("is-printing");
-    for (const block of closed) {
-      block.open = false;
-    }
   };
   return (
     <div class="button-row no-print" ref={row}>

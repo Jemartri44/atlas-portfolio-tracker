@@ -6,17 +6,19 @@
 // this checks what the screen says with them, and what it must always say:
 // that they are estimates, and that nothing is recorded.
 
-import { Money, projectLedger } from "@atlas/domain";
-import type { CurrencyLine, TaxYearReport } from "@atlas/domain/fiscal";
-import { repurchaseCalendar } from "@atlas/domain/fiscal";
+import { Money, projectLedger, Quantity } from "@atlas/domain";
+import type { CurrencyLine, SaleSimulation, TaxYearReport } from "@atlas/domain/fiscal";
+import { repurchaseCalendar, savingsQuota, taxYear } from "@atlas/domain/fiscal";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NO_NAMES } from "../src/format/names.js";
 import { BaseCard } from "../src/routes/fiscal/BaseCard.jsx";
 import Fiscal from "../src/routes/fiscal/index.jsx";
+import { QuotaCard } from "../src/routes/fiscal/QuotaCard.jsx";
 import { RepurchaseCard } from "../src/routes/fiscal/RepurchaseCard.jsx";
 import { SaleSimulatorCard } from "../src/routes/fiscal/SaleSimulatorCard.jsx";
 import { yearView } from "../src/view-models/fiscal/index.js";
-import { repurchaseView } from "../src/view-models/fiscal/sale.js";
+import { quotaView } from "../src/view-models/fiscal/quota.js";
+import { repurchaseView, saleView } from "../src/view-models/fiscal/sale.js";
 import { goldenEvents } from "./helpers/golden.js";
 import { choose, press, settle, show, text, withGoldenLedger } from "./helpers/render.jsx";
 
@@ -41,9 +43,38 @@ describe("the estimated quota", () => {
     expect(shown).toContain("no conoce el resto de tu Renta");
     expect(shown).toContain("Hasta 6.000 €");
     expect(shown).toContain("18,86");
-    expect(shown).toContain("Retenciones (parte del ahorro, estimación)");
+    // Withholdings are taken off, and what is left is to pay.
+    expect(shown).toMatch(/Retenciones \(parte del ahorro, estimación\)−4,59/);
+    expect(shown).toMatch(/Resultado estimado de esta parte\+14,27/);
     // 2028 is after the day the scales were checked: said, not hidden.
     expect(shown).toContain("una ley podría cambiarla para 2028");
+  });
+});
+
+describe("the estimated quota, when it cannot follow the law", () => {
+  const base = {
+    year: 2026,
+    estimate: true,
+    base_eur: Money.parse("1000", "EUR"),
+    savings_withholdings_eur: Money.zero("EUR"),
+    criteria: ["27"],
+  };
+
+  it("does not compute a year with no checked scale", async () => {
+    const view = quotaView({ ...base, scale_origin: "none", brackets: [], notes: [] } as never);
+    const host = await show("/", () => <QuotaCard view={view} />);
+    expect(text(host)).toContain("No hay escala del ahorro comprobada para 2026");
+    expect(text(host)).not.toContain("Cuota íntegra");
+  });
+
+  it("warns when the brackets of the settings differ from the law", async () => {
+    const quota = savingsQuota(taxYear(events, 2028, { today: "2029-06-01" }), [
+      { up_to: "6000", rate_pct: "20" },
+      { rate_pct: "25" },
+    ]);
+    const host = await show("/", () => <QuotaCard view={quotaView(quota)} />);
+    expect(quota.notes).toContain("settings_differ_from_law");
+    expect(text(host)).toContain("no coinciden con la escala de la ley de 2028");
   });
 });
 
@@ -125,27 +156,61 @@ describe("no recomprar hasta", () => {
 });
 
 describe("¿y si vendo?", () => {
-  it("offers only what is held and prices the sale, recording nothing", async () => {
-    const state = projectLedger(events);
-    const before = events.length;
+  const state = projectLedger(events);
+  const simulate = async (asset: string): Promise<string> => {
     const host = await show("/", () => (
       <SaleSimulatorCard
         state={state}
         events={events}
-        date="2028-12-31"
+        date="2029-01-10"
         settings={state.fiscalSettings}
       />
     ));
     expect(text(host)).toContain("nada registrado");
-    const select = host.querySelector("#sale-asset") as HTMLSelectElement;
-    const offered = [...select.options].map((option) => option.value).filter((id) => id !== "");
-    expect(offered.length).toBeGreaterThan(0);
-    choose(host, "sale-asset", offered[0] as string);
+    choose(host, "sale-asset", asset);
     await settle(30);
-    const shown = text(host);
-    expect(shown).toContain("Ganancia o pérdida de la venta");
-    expect(shown).toMatch(/Sube tu cuota estimada en|Reduce tu cuota estimada en/);
+    return text(host);
+  };
+
+  it("says how much a gain raises the quota, recording nothing", async () => {
+    const before = events.length;
+    // All of World Index Fund at its last price: 1,967.53 € of gain, 356.58 € more quota.
+    const shown = await simulate("ast_world");
+    expect(shown).toMatch(/Ganancia o pérdida de la venta\+?1\.967,53/);
+    expect(shown).toMatch(/Sube tu cuota estimada en356,58/);
+    expect(shown).not.toContain("Reduce tu cuota");
     expect(events).toHaveLength(before);
+  });
+
+  it("says a loss with nothing to offset leaves the quota as it is, and until when not to buy", async () => {
+    const shown = await simulate("ast_gold");
+    expect(shown).toMatch(/−943,00/);
+    expect(shown).toContain("No cambia tu cuota estimada del año");
+    expect(shown).not.toMatch(/Sube tu cuota|Reduce tu cuota/);
+    expect(shown).toContain("No vuelvas a comprar hasta el 10/03/2029");
+  });
+
+  it("says in Spanish why a sale cannot be simulated", async () => {
+    // The spun-off asset has no price on the date.
+    const shown = await simulate("ast_alpha_spin");
+    expect(shown).toContain("No se puede simular esa venta");
+    expect(shown).toContain("No hay precio en euros de");
+    expect(shown).not.toMatch(/the asset has no price/);
+  });
+
+  it("calls a sale that lowers the quota a saving, as a positive amount", () => {
+    const sale = {
+      asset_id: "ast_x",
+      quantity: Quantity.parse("1"),
+      orders: [],
+      lots: [],
+      gain_eur: Money.parse("-100", "EUR"),
+      tax_eur: Money.parse("-19", "EUR"),
+      deferred_eur: Money.zero("EUR"),
+    } as unknown as SaleSimulation;
+    const view = saleView(sale, NO_NAMES);
+    expect(view.tax_eur).toBeUndefined();
+    expect(view.saving_eur?.amount.toString()).toBe("19");
   });
 });
 
@@ -179,6 +244,10 @@ describe("the package of the return", () => {
     const host = await open(2028);
     await press(host, "Imprimir o guardar en PDF");
     expect(printed).toEqual({ card: true, open: true });
+    // A phone returns from print() before laying the sheet out: nothing is put back until afterprint.
+    expect(document.querySelector(".is-printing")).not.toBeNull();
+    window.dispatchEvent(new Event("afterprint"));
     expect(document.querySelector(".is-printing")).toBeNull();
+    expect([...host.querySelectorAll("details")].some((block) => !block.open)).toBe(true);
   });
 });

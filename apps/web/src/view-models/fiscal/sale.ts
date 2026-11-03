@@ -34,7 +34,7 @@ export interface SaleView {
   orders: SaleOrderView[];
   lots: SaleLotView[];
   gain_eur: Money;
-  /** What the sale adds to the quota; absent when it saves tax instead. */
+  /** What the sale adds to the quota; with neither this nor `saving_eur`, it leaves the quota as it is. */
   tax_eur?: Money;
   /** What a loss takes off the quota of the year, as a positive amount. */
   saving_eur?: Money;
@@ -62,7 +62,11 @@ export const saleView = (sale: SaleSimulation, names: NameIndex): SaleView => ({
     gain_eur: lot.gain_eur,
   })),
   gain_eur: sale.gain_eur,
-  ...(sale.tax_eur.isNegative() ? { saving_eur: sale.tax_eur.neg() } : { tax_eur: sale.tax_eur }),
+  ...(sale.tax_eur.isZero()
+    ? {}
+    : sale.tax_eur.isNegative()
+      ? { saving_eur: sale.tax_eur.neg() }
+      : { tax_eur: sale.tax_eur }),
   ...(sale.deferred_eur.isZero() ? {} : { deferred_eur: sale.deferred_eur }),
   ...(sale.deferral_window_end === undefined
     ? {}
