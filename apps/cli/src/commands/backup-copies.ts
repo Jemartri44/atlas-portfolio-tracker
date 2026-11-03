@@ -30,8 +30,8 @@ const copyVerified = async (
       path: destination,
     });
   }
-  await mkdir(dirname(destination), { recursive: true });
-  await writeFile(destination, bytes, { flag: "wx" });
+  await mkdir(dirname(destination), { recursive: true, mode: 0o700 });
+  await writeFile(destination, bytes, { flag: "wx", mode: 0o400 });
   if (sha256(await readFile(destination)) !== sha256(bytes)) {
     throw new DomainError("backup_mismatch", "the copy does not match its source", {
       path: destination,

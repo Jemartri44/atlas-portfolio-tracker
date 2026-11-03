@@ -104,7 +104,7 @@ export class FileEcbHistoryStore implements EcbHistoryStore {
 
   async activate(next: DownloadedHistory): Promise<StoredHistoryMeta> {
     return withFolderLock(this.folder, async (lock) => {
-      await fs.mkdir(join(this.dir, "previous"), { recursive: true });
+      await fs.mkdir(join(this.dir, "previous"), { recursive: true, mode: 0o700 });
       const manifest = await this.manifest();
       const file = fileOfSource(next.source);
       if (manifest !== undefined) {
@@ -133,7 +133,7 @@ export class FileEcbHistoryStore implements EcbHistoryStore {
 
   async keepRejected(next: DownloadedHistory): Promise<StoredHistoryMeta> {
     return withFolderLock(this.folder, async (lock) => {
-      await fs.mkdir(join(this.dir, "rejected"), { recursive: true });
+      await fs.mkdir(join(this.dir, "rejected"), { recursive: true, mode: 0o700 });
       const manifest = await this.manifest();
       if (manifest === undefined) {
         throw new EcbHistoryDamaged(MANIFEST);
