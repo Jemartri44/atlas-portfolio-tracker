@@ -156,7 +156,7 @@ describe("the cards of the portfolio by device", () => {
     phone.remove();
     withStyles(1440, 900);
     const computer = await show(`/cartera?fecha=${DATE}`, Cartera);
-    expect(computer.querySelector(".fold")).toBeNull();
+    expect(computer.querySelector(".fold-card")).toBeNull();
     expect(text(card(computer, "Costes")?.querySelector(":scope > .card-head h2"))).toBe("Costes");
   });
 });

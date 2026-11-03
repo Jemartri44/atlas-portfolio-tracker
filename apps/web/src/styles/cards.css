@@ -205,14 +205,3 @@ a.card-foot:hover {
 .kpi-lead .unit {
   font-size: 0.6em;
 }
-
-/* ---- A card folded on the phone (FoldSection): the disclosure inside a card, title and line in its row ---- */
-
-.fold-title {
-  display: grid;
-  gap: var(--space-1);
-}
-
-.fold-summary {
-  font-weight: var(--fw-regular);
-}

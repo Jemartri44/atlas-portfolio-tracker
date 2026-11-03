@@ -3,6 +3,7 @@
 // grid breakpoint it is the plain `Section`, unchanged. Native `<details>`: it folds without script.
 
 import { createUniqueId, type JSX, Show } from "solid-js";
+import "./fold-section.css";
 import { GRID, mediaQuery } from "../shell/media.js";
 import { Icon } from "./Icon.jsx";
 import { Section } from "./Section.jsx";
@@ -28,15 +29,13 @@ export const FoldSection = (props: FoldSectionProps): JSX.Element => {
         </Section>
       }
     >
-      <section class={`card fold ${props.class ?? ""}`.trimEnd()} aria-labelledby={`h-${id}`}>
+      <section class={`card fold-card ${props.class ?? ""}`.trimEnd()} aria-labelledby={`h-${id}`}>
         {/* The wrapper keeps the card's own rules for a disclosure (a row edge to edge) off it. */}
         <div>
           <details class="disclosure">
             <summary>
-              <span class="fold-title">
-                <h2 id={`h-${id}`}>{props.title}</h2>
-                <span class="fold-summary">{props.summary}</span>
-              </span>
+              <h2 id={`h-${id}`}>{props.title}</h2>
+              <span class="fold-summary">{props.summary}</span>
               <Icon name="chevdown" class="icon-sm chev" />
             </summary>
             <div class="disclosure-body">

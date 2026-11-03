@@ -243,7 +243,7 @@ El contorno de un campo tiene **3:1** sobre el papel y sobre la superficie en lo
 
 `<details>` nativo. El `<summary>` es una fila de **44 px**, etiqueta a 14 px en seminegrita y chevrón a la derecha que gira al abrirse. Dentro de una tarjeta es su última fila, de borde a borde. Es el mismo en toda la aplicación.
 
-**Tarjeta plegada en el móvil (`FoldSection`).** Por debajo del corte de la rejilla, una tarjeta secundaria se pliega entera: el título y una línea de resumen (la cifra principal o el aviso, nunca escondidos) van en el `<summary>`. Desde la rejilla es la `Section` de siempre. Es como se pliegan Exposición, Rebalancear, Costes, Coste total y Proyección en Cartera.
+**Tarjeta plegada en el móvil (`FoldSection`).** Por debajo del corte de la rejilla, una tarjeta secundaria se pliega entera: el título y una línea de resumen (la cifra principal o el aviso, nunca escondidos) van en el `<summary>`. Desde la rejilla es la `Section` de siempre. Lo usan las tarjetas secundarias de Cartera.
 
 ### 5.12 Selector de rango ligero (`.segmented`)
 

@@ -78,9 +78,9 @@ export const CostsCard = (props: { view: CostsView }): JSX.Element => (
     summary={
       <>
         <Amount value={props.view.core.annualCost} missingReason="sin precio" /> al año
-        <Show when={props.view.core.partial}>
+        <Show when={props.view.core.partial || props.view.core.terPartial}>
           {" "}
-          <Tag icon="half">parcial</Tag>
+          <Tag icon="half">{props.view.core.partial ? "parcial" : "TER incompleto"}</Tag>
         </Show>
       </>
     }
