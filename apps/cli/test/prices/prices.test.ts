@@ -3,7 +3,7 @@
 
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { AlphaVantagePriceSource, EodhdPriceSource } from "@atlas/adapters";
+import { EodhdPriceSource } from "@atlas/adapters";
 import { describe, expect, it } from "vitest";
 import { CLI_SETTINGS, Events } from "../events.js";
 import { folder, KEY, leaks, ScriptedSource } from "./folder.js";
@@ -36,10 +36,10 @@ const symbols = async (dir: string, assets: Record<string, Record<string, unknow
     join(dir, "prices", "symbols.json"),
     JSON.stringify({
       symbols_format: 2,
-      // `currency` is a shorthand for the same currency on every source named.
+      // `currency` is a shorthand for the currency of the source named.
       assets: Object.fromEntries(
         Object.entries(assets).map(([id, { currency, ...entry }]) => {
-          const named = ["eodhd", "alpha_vantage"].filter((source) => entry[source] !== undefined);
+          const named = ["eodhd"].filter((source) => entry[source] !== undefined);
           return [
             id,
             {
@@ -72,7 +72,7 @@ describe("atlas prices update", () => {
     const f = await folder(ledger());
     await symbols(f.dir, {
       fund_a: { currency: "EUR", eodhd: "XX0000000013.EUFUND" },
-      etf_b: { currency: "EUR", eodhd: "ETFB.XETRA", alpha_vantage: "ETFB.DEX" },
+      etf_b: { currency: "EUR", eodhd: "ETFB.XETRA" },
       etf_gone: { currency: "EUR", eodhd: "GONE.XETRA" },
     });
     f.eodhd = new ScriptedSource("eodhd", (symbol) =>
@@ -80,31 +80,25 @@ describe("atlas prices update", () => {
         ? { ok: false, kind: "unavailable" }
         : { ok: true, value: [{ date: "2027-06-08", close: "112.5" }] },
     );
-    f.alpha = new ScriptedSource("alpha_vantage", () => ({
-      ok: true,
-      value: [{ date: "2027-06-08", close: "107" }],
-    }));
     const before = await readFile(f.ledger, "utf8");
     const result = await f.atlas("prices", "update");
     expect(result.code).toBe(0);
     expect(f.eodhd.calls).toEqual(["ETFB.XETRA", "XX0000000013.EUFUND"]);
-    expect(f.alpha.calls).toEqual(["ETFB.DEX"]);
-    expect(result.text).toMatch(
-      /etf_b\s+núcleo\s+actualizado\s+Alpha Vantage\s+1\s+EODHD: no responde/,
-    );
-    expect(result.text).toContain("Cupo que queda hoy: EODHD 18, Alpha Vantage 24.");
+    expect(result.text).toMatch(/etf_b\s+núcleo\s+sin respuesta útil.*EODHD: no responde/);
+    expect(result.text).toContain("Cupo que queda hoy: EODHD 18.");
     expect(await readFile(f.ledger, "utf8")).toBe(before);
     expect(await readFile(join(f.dir, "prices", "fund_a.jsonl"), "utf8")).toContain(
       '"close":"112.5"',
     );
-    // Twice in a row: nothing is spent on what is up to date.
+    // Twice in a row: nothing is spent on what is up to date; only the failed asset is asked again.
     const again = await f.atlas("prices", "update");
-    expect(again.text).toContain("Cupo que queda hoy: EODHD 18, Alpha Vantage 24.");
-    expect(f.eodhd.calls).toHaveLength(2);
+    expect(again.text).toContain("ya al día (sin gastar cupo)");
+    expect(again.text).toContain("Cupo que queda hoy: EODHD 17.");
+    expect(f.eodhd.calls).toEqual(["ETFB.XETRA", "XX0000000013.EUFUND", "ETFB.XETRA"]);
     // --json carries the same report.
     const json = JSON.parse((await f.atlas("prices", "update", "--json")).out);
     expect(json.assets.map((a: { outcome: string }) => a.outcome)).toEqual([
-      "up_to_date",
+      "failed",
       "up_to_date",
     ]);
   });
@@ -161,7 +155,7 @@ describe("the key never comes out, with the real adapters and a fetch that fails
     const f = await folder(ledger());
     await symbols(f.dir, {
       fund_a: { currency: "EUR", eodhd: "A.EUFUND" },
-      etf_b: { currency: "EUR", eodhd: "B.XETRA", alpha_vantage: "B.DEX" },
+      etf_b: { currency: "EUR", eodhd: "B.XETRA" },
     });
     const { run } = await import("../../src/main.js");
     const texts: string[] = [];
@@ -182,7 +176,6 @@ describe("the key never comes out, with the real adapters and a fetch that fails
           secretsPath: f.secrets,
           sources: (keys) => ({
             eodhd: new EodhdPriceSource(keys.eodhd as string, fetchUrl),
-            alpha_vantage: new AlphaVantagePriceSource(keys.alpha_vantage as string, fetchUrl),
           }),
         },
       });
@@ -196,7 +189,7 @@ describe("the key never comes out, with the real adapters and a fetch that fails
     }
     // The status says kinds, never an address.
     const status = await readFile(join(f.dir, "prices", "_status.json"), "utf8");
-    expect(status).not.toMatch(/https?:|eodhd\.com|alphavantage/);
+    expect(status).not.toMatch(/https?:|eodhd\.com/);
   });
 });
 
@@ -228,151 +221,29 @@ describe("a Node that cannot read a JSON number by its text", () => {
   });
 });
 
-describe("atlas prices symbols with a currency per source", () => {
-  it("declares London in pounds at EODHD and in pence at Alpha Vantage without asking, and says both", async () => {
+describe("atlas prices symbols: the declaration is complete, and closes in another currency are purged", () => {
+  it("refuses a set without any symbol, writing nothing", async () => {
     const f = await folder(ledger());
-    f.eodhd = new ScriptedSource(
-      "eodhd",
-      () => ({ ok: true, value: [] }),
-      () => ({ ok: true, value: "GBP" }),
-    );
-    f.alpha = new ScriptedSource(
-      "alpha_vantage",
-      () => ({ ok: true, value: [] }),
-      () => ({ ok: true, value: "GBX" }),
-    );
-    const result = await f.atlas(
-      "prices",
-      "symbols",
-      "set",
-      "etf_b",
-      "--eodhd",
-      "TSCO.LSE",
-      "--eodhd-currency",
-      "GBP",
-      "--alpha-vantage",
-      "TSCO.LON",
-      "--alpha-vantage-currency",
-      "GBX",
-    );
-    expect(result.code).toBe(0);
-    expect(result.text).not.toContain("confírmalo");
-    const file = JSON.parse(await readFile(join(f.dir, "prices", "symbols.json"), "utf8"));
-    expect(file.symbols_format).toBe(2);
-    expect(file.assets.etf_b.currencies).toEqual({ eodhd: "GBP", alpha_vantage: "GBX" });
-    const listed = await f.atlas("prices", "symbols", "etf_b");
-    expect(listed.text).toMatch(/etf_b\s+TSCO\.LSE \(GBP\)\s+TSCO\.LON \(GBX\)/);
-    // Declared again the same way: still nothing to confirm — no loop.
-    const again = await f.atlas(
-      "prices",
-      "symbols",
-      "set",
-      "etf_b",
-      "--eodhd",
-      "TSCO.LSE",
-      "--eodhd-currency",
-      "GBP",
-      "--alpha-vantage",
-      "TSCO.LON",
-      "--alpha-vantage-currency",
-      "GBX",
-    );
-    expect(again.code).toBe(0);
-    expect(again.text).not.toContain("confírmalo");
-  });
-
-  it("uses --currency for every source that has no currency of its own, and refuses a source without any", async () => {
-    const f = await folder(ledger());
-    expect(
-      (
-        await f.atlas(
-          "prices",
-          "symbols",
-          "set",
-          "etf_b",
-          "--eodhd",
-          "B.XETRA",
-          "--currency",
-          "EUR",
-        )
-      ).code,
-    ).toBe(0);
-    const file = JSON.parse(await readFile(join(f.dir, "prices", "symbols.json"), "utf8"));
-    expect(file.assets.etf_b.currencies).toEqual({ eodhd: "EUR" });
-    const missing = await f.atlas(
-      "prices",
-      "symbols",
-      "set",
-      "etf_b",
-      "--eodhd",
-      "B.XETRA",
-      "--alpha-vantage",
-      "B.DEX",
-      "--alpha-vantage-currency",
-      "EUR",
-    );
-    expect(missing.code).toBe(64);
-    expect(missing.text).toContain("EODHD");
-  });
-});
-
-describe("atlas prices symbols: currencies are declared with their symbol, and closes in another one are purged", () => {
-  it("refuses a currency of a source without its symbol, and a set without any symbol", async () => {
-    const f = await folder(ledger());
-    const loose = await f.atlas(
-      "prices",
-      "symbols",
-      "set",
-      "etf_b",
-      "--eodhd",
-      "B.XETRA",
-      "--currency",
-      "EUR",
-      "--alpha-vantage-currency",
-      "GBX",
-    );
-    expect(loose.code).toBe(64);
-    expect(loose.text).toContain("--alpha-vantage-currency sin --alpha-vantage");
-    const looseEodhd = await f.atlas(
-      "prices",
-      "symbols",
-      "set",
-      "etf_b",
-      "--alpha-vantage",
-      "B.DEX",
-      "--currency",
-      "EUR",
-      "--eodhd-currency",
-      "GBP",
-    );
-    expect(looseEodhd.code).toBe(64);
-    expect(looseEodhd.text).toContain("--eodhd-currency sin --eodhd");
     const empty = await f.atlas("prices", "symbols", "set", "etf_b", "--currency", "EUR");
     expect(empty.code).toBe(64);
     expect(empty.text).toContain("ningún símbolo");
     await expect(readFile(join(f.dir, "prices", "symbols.json"), "utf8")).rejects.toThrow();
   });
 
-  it("never lets --currency override the currency of a source that brings its own", async () => {
-    const f = await folder(ledger());
-    const result = await f.atlas(
-      "prices",
-      "symbols",
-      "set",
-      "etf_b",
-      "--eodhd",
-      "TSCO.LSE",
-      "--alpha-vantage",
-      "TSCO.LON",
-      "--currency",
-      "GBP",
-      "--alpha-vantage-currency",
-      "GBX",
-    );
-    expect(result.code).toBe(0);
-    const file = JSON.parse(await readFile(join(f.dir, "prices", "symbols.json"), "utf8"));
-    expect(file.assets.etf_b.currencies).toEqual({ eodhd: "GBP", alpha_vantage: "GBX" });
-  });
+  it.each([
+    "symbols set etf_b --eodhd B.XETRA --currency EUR --alpha-vantage B.DEX",
+    "symbols set etf_b --eodhd B.XETRA --currency EUR --alpha-vantage-currency GBX",
+    "symbols set etf_b --eodhd B.XETRA --eodhd-currency EUR",
+    "purge etf_b --source eodhd --yes",
+  ])(
+    "refuses the flags of the retired second source and of per-source currency: %s",
+    async (line) => {
+      const f = await folder(ledger());
+      const result = await f.atlas("prices", ...line.split(" "));
+      expect(result.code).toBe(64);
+      await expect(readFile(join(f.dir, "prices", "symbols.json"), "utf8")).rejects.toThrow();
+    },
+  );
 
   it("leaves out, says and purges the closes stored in the wrong currency", async () => {
     const f = await folder(ledger());
@@ -384,62 +255,51 @@ describe("atlas prices symbols: currencies are declared with their symbol, and c
         assets: {
           etf_b: {
             eodhd: "TSCO.LSE",
-            alpha_vantage: "TSCO.LON",
-            currencies: { eodhd: "GBP", alpha_vantage: "GBX" },
+            currencies: { eodhd: "GBX" },
             confirmed_at: "x",
-            currency_check: { eodhd: { at: "x" }, alpha_vantage: { at: "x" } },
+            currency_check: { eodhd: { at: "x" } },
           },
         },
       }),
     );
-    const wrong = `${JSON.stringify({ schema_version: 1, date: "2027-06-08", close: "1000", currency: "GBP", source: "alpha_vantage", fetched_at: "2027-06-09T06:00:00.000Z" })}\n`;
+    const wrong = `${JSON.stringify({ schema_version: 1, date: "2027-06-08", close: "1000", currency: "GBP", source: "eodhd", fetched_at: "2027-06-09T06:00:00.000Z" })}\n`;
     await writeFile(join(f.dir, "prices", "etf_b.jsonl"), wrong);
     const status = await f.atlas("prices", "status");
-    expect(status.text).toContain("atlas prices purge etf_b --source alpha_vantage");
-    const refused = await f.atlas("prices", "purge", "etf_b", "--source", "alpha_vantage");
+    expect(status.text).toContain("atlas prices purge etf_b");
+    const refused = await f.atlas("prices", "purge", "etf_b");
     expect(refused.code).toBe(4);
-    const purged = await f.atlas("prices", "purge", "etf_b", "--source", "alpha_vantage", "--yes");
+    const purged = await f.atlas("prices", "purge", "etf_b", "--yes");
     expect(purged.code).toBe(0);
     expect(purged.text).toContain("1 cierre");
     expect(await readFile(join(f.dir, "prices", "etf_b.jsonl"), "utf8")).toBe("");
-    expect((await f.atlas("prices", "purge", "etf_b", "--source", "yahoo", "--yes")).code).toBe(64);
-    expect((await f.atlas("prices", "purge", "fund_a", "--source", "eodhd", "--yes")).code).toBe(1);
+    expect((await f.atlas("prices", "purge", "fund_a", "--yes")).code).toBe(1);
   });
 });
 
 describe("atlas prices symbols: closes stored in the wrong currency, and a symbols.json that cannot be read", () => {
   const line = (close: string, currency: string, source: string) =>
     `${JSON.stringify({ schema_version: 1, date: "2027-06-08", close, currency, source, fetched_at: "2027-06-09T06:00:00.000Z" })}\n`;
-  const misstored = (currency: string, source: string) =>
-    JSON.stringify({
-      symbols_format: 2,
-      assets: {
-        etf_b: {
-          currencies: { eodhd: currency, alpha_vantage: currency },
-          eodhd: "TSCO.LSE",
-          alpha_vantage: "TSCO.LON",
-          confirmed_at: "x",
-          currency_check: { eodhd: { at: "x" }, alpha_vantage: { at: "x" } },
-          misstored: { [source]: currency },
-        },
+  const misstored = JSON.stringify({
+    symbols_format: 2,
+    assets: {
+      etf_b: {
+        currencies: { eodhd: "GBX" },
+        eodhd: "TSCO.LSE",
+        confirmed_at: "x",
+        currency_check: { eodhd: { at: "x" } },
+        misstored: { eodhd: "GBX" },
       },
-    });
+    },
+  });
 
-  for (const [currency, source, close, name] of [
-    ["GBP", "alpha_vantage", "1000", "Alpha Vantage"],
-    ["GBX", "eodhd", "10", "EODHD"],
-  ] as const) {
-    it(`leaves out the closes of ${name} stored as ${currency} though it said another one, before and after an update`, async () => {
-      const f = await folder(ledger());
-      await symbols(f.dir, {});
-      await writeFile(join(f.dir, "prices", "symbols.json"), misstored(currency, source));
-      await writeFile(join(f.dir, "prices", "etf_b.jsonl"), line(close, currency, source));
-      await f.atlas("prices", "update");
-      expect((await f.atlas("prices", "status")).text).toContain(
-        `atlas prices purge etf_b --source ${source}`,
-      );
-    });
-  }
+  it("leaves out the closes of EODHD stored as GBX though it said another one, before and after an update", async () => {
+    const f = await folder(ledger());
+    await symbols(f.dir, {});
+    await writeFile(join(f.dir, "prices", "symbols.json"), misstored);
+    await writeFile(join(f.dir, "prices", "etf_b.jsonl"), line("10", "GBX", "eodhd"));
+    await f.atlas("prices", "update");
+    expect((await f.atlas("prices", "status")).text).toContain("atlas prices purge etf_b");
+  });
 });
 
 describe("atlas prices symbols: closes stored in the wrong currency block declaring and removing", () => {
@@ -450,39 +310,13 @@ describe("atlas prices symbols: closes stored in the wrong currency block declar
     assets: {
       etf_b: {
         eodhd: "TSCO.LSE",
-        alpha_vantage: "TSCO.LON",
-        currencies: { eodhd: "GBP", alpha_vantage: "GBP" },
+        currencies: { eodhd: "GBP" },
         confirmed_at: "x",
-        misstored: { alpha_vantage: "GBP" },
+        misstored: { eodhd: "GBP" },
       },
     },
   });
-  const said = "atlas prices purge etf_b --source alpha_vantage";
-
-  it("refuses to declare the asset again without the source with closes stored wrong", async () => {
-    const f = await folder(ledger());
-    await symbols(f.dir, {});
-    await writeFile(join(f.dir, "prices", "symbols.json"), pending);
-    await writeFile(
-      join(f.dir, "prices", "etf_b.jsonl"),
-      line("2027-06-08", "1000", "GBP", "alpha_vantage"),
-    );
-    const set = await f.atlas(
-      "prices",
-      "symbols",
-      "set",
-      "etf_b",
-      "--eodhd",
-      "TSCO.LSE",
-      "--currency",
-      "GBP",
-    );
-    expect(set.code).not.toBe(0);
-    expect(`${set.text}${set.err}`).toContain(said);
-    // Refused before spending a call.
-    expect(f.eodhd.calls).toEqual([]);
-    expect(await readFile(join(f.dir, "prices", "symbols.json"), "utf8")).toBe(pending);
-  });
+  const said = "atlas prices purge etf_b";
 
   it("refuses to remove the asset while it has them", async () => {
     const f = await folder(ledger());
@@ -490,7 +324,7 @@ describe("atlas prices symbols: closes stored in the wrong currency block declar
     await writeFile(join(f.dir, "prices", "symbols.json"), pending);
     await writeFile(
       join(f.dir, "prices", "etf_b.jsonl"),
-      line("2027-06-08", "1000", "GBP", "alpha_vantage"),
+      line("2027-06-08", "1000", "GBP", "eodhd"),
     );
     const removed = await f.atlas("prices", "symbols", "remove", "etf_b", "--yes");
     expect(removed.code).not.toBe(0);
@@ -508,19 +342,18 @@ describe("atlas prices symbols: closes stored in the wrong currency block declar
         assets: {
           etf_b: {
             eodhd: "TSCO.LSE",
-            alpha_vantage: "TSCO.LON",
-            currencies: { eodhd: "GBP", alpha_vantage: "GBX" },
+            currencies: { eodhd: "GBP" },
             confirmed_at: "x",
-            currency_check: { eodhd: { at: "x" }, alpha_vantage: { at: "x" } },
+            currency_check: { eodhd: { at: "x" } },
           },
         },
       }),
     );
     await writeFile(
       join(f.dir, "prices", "etf_b.jsonl"),
-      line("2027-06-04", "1000", "GBP", "alpha_vantage") + line("2027-06-08", "10", "GBP", "eodhd"),
+      line("2027-06-04", "1000", "GBX", "eodhd") + line("2027-06-08", "10", "GBP", "eodhd"),
     );
-    const purged = await f.atlas("prices", "purge", "etf_b", "--source", "alpha_vantage", "--yes");
+    const purged = await f.atlas("prices", "purge", "etf_b", "--yes");
     expect(purged.text).toContain("vuelve a pedir esos días una vez");
     expect(purged.text).toContain("hueco");
     f.eodhd = new ScriptedSource("eodhd", () => ({
@@ -530,7 +363,7 @@ describe("atlas prices symbols: closes stored in the wrong currency block declar
     await f.atlas("prices", "update");
     const status = await f.atlas("prices", "status");
     expect(status.text).toContain(
-      "etf_b: 1 día quitado de Alpha Vantage (2027-06-04) se pidió otra vez y ninguna fuente lo sirvió: queda como hueco",
+      "etf_b: 1 día quitado de EODHD (2027-06-04) se pidió otra vez y ninguna fuente lo sirvió: queda como hueco",
     );
   });
 });
@@ -566,19 +399,17 @@ describe("atlas prices symbols", () => {
       "GBX",
       "--eodhd",
       "ETFB.LSE",
-      "--alpha-vantage",
-      "ETFB.LON",
       "--accept-currency",
     );
     expect(accepted.code).toBe(0);
     expect(accepted.text).toContain("Símbolos de etf_b guardados");
     const file = JSON.parse(await readFile(join(f.dir, "prices", "symbols.json"), "utf8"));
     expect(file.assets.etf_b).toMatchObject({
-      currencies: { eodhd: "GBX", alpha_vantage: "GBX" },
+      currencies: { eodhd: "GBX" },
       currency_confirmed_over: { eodhd: "GBP" },
     });
     const listed = await f.atlas("prices", "symbols");
-    expect(listed.text).toMatch(/etf_b\s+ETFB.LSE \(GBX\)\s+ETFB.LON \(GBX\)\s+EODHD dice GBP/);
+    expect(listed.text).toMatch(/etf_b\s+ETFB.LSE \(GBX\)\s+EODHD dice GBP/);
     expect((await f.atlas("prices", "symbols", "etf_b")).code).toBe(0);
     expect((await f.atlas("prices", "symbols", "fund_a")).text).toContain(
       "no tiene símbolos declarados",
@@ -619,7 +450,7 @@ describe("atlas prices symbols", () => {
   });
 
   it("says what it could not confirm for lack of a key", async () => {
-    const f = await folder(ledger(), { eodhd: KEY });
+    const f = await folder(ledger(), null);
     const result = await f.atlas(
       "prices",
       "symbols",
@@ -627,14 +458,12 @@ describe("atlas prices symbols", () => {
       "etf_b",
       "--currency",
       "EUR",
-      "--alpha-vantage",
-      "B.DEX",
+      "--eodhd",
+      "B.XETRA",
     );
     expect(result.code).toBe(0);
-    expect(result.text).toContain("Sin contrastar con Alpha Vantage");
-    expect((await f.atlas("prices", "symbols", "etf_b")).text).toContain(
-      "Alpha Vantage: sin contrastar",
-    );
+    expect(result.text).toContain("Sin contrastar con EODHD");
+    expect((await f.atlas("prices", "symbols", "etf_b")).text).toContain("EODHD: sin contrastar");
   });
 
   it("refuses a usage it does not know", async () => {

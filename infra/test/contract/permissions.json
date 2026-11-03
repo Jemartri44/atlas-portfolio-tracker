@@ -1087,10 +1087,7 @@
           "sid": "Keys",
           "effect": "Allow",
           "actions": ["ssm:GetParameter"],
-          "resources": [
-            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/prices/eodhd-key",
-            "arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/prices/alpha-vantage-key"
-          ],
+          "resources": ["arn:aws:ssm:eu-west-1:{account}:parameter/atlas/{env}/prices/eodhd-key"],
           "contract": "C16-n2; A34-21"
         },
         {

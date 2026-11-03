@@ -394,7 +394,7 @@ describe("reference/ecb/ in the bucket (R31)", () => {
 
 const CONFIG = cloudPriceConfigText({
   sources: ["eodhd"],
-  dailyCalls: { eodhd: 2, alpha_vantage: 0 },
+  dailyCalls: { eodhd: 2 },
   failureThreshold: 3,
 });
 
@@ -531,20 +531,19 @@ describe("prices/ in the bucket (R22, R23, R32)", () => {
 });
 
 describe("the keys of the sources in SSM", () => {
-  it("reads the two SecureString, a missing one as no key, and says an invalid one by its source only", async () => {
+  it("reads the SecureString, a missing one as no key, and says an invalid one by its source only", async () => {
     const ssm = new TestOnlyFakeSsm();
     const names = priceKeyParameters("/atlas/prod/");
     expect(names).toEqual({
       eodhd: "/atlas/prod/prices/eodhd-key",
-      alpha_vantage: "/atlas/prod/prices/alpha-vantage-key",
     });
     expect(await readPriceKeys(ssm, "/atlas/prod/")).toEqual({});
     ssm.set(names.eodhd, "sentinel-key-of-eodhd");
     expect(await readPriceKeys(ssm, "/atlas/prod/")).toEqual({ eodhd: "sentinel-key-of-eodhd" });
-    ssm.set(names.alpha_vantage, "a key with spaces");
+    ssm.set(names.eodhd, "a key with spaces");
     const error = await readPriceKeys(ssm, "/atlas/prod/").catch((e) => e);
     expect(error).toBeInstanceOf(PriceKeyInvalid);
-    expect(error.source).toBe("alpha_vantage");
+    expect(error.source).toBe("eodhd");
     expect(String(error.message)).not.toContain("spaces");
   });
 });

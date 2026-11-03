@@ -6,9 +6,7 @@
 // (`101.50` and `101.5` are the same close), never by a hash of the line, which
 // carries `fetched_at` and would make every run a new line.
 //
-// **One close in force per asset and date**:
-// the console resolves which source wins when it writes, so a reader never
-// needs the configured order. The file only grows, so the close in force of a
+// **One close in force per asset and date**: the file only grows, so the close in force of a
 // date is **the last line of that date**, and the ones before it are what it
 // replaced — shown, never silently dropped.
 //
@@ -146,7 +144,7 @@ export const effectiveCloses = (lines: readonly CloseLine[]): EffectiveClose[] =
     const before = byDate.get(line.date);
     byDate.set(
       line.date,
-      before === undefined || (sameClose(before, line) && before.source === line.source)
+      before === undefined || sameClose(before, line)
         ? line
         : { ...line, replaced: { close: before.close, source: before.source } },
     );
@@ -183,23 +181,15 @@ export const closeOn = (
  * file holds **now** (the caller reads it inside the lock). For each date:
  *
  * - nothing there yet: append;
- * - the close in force is of the **same** source: append only when the value
- *   differs as a number (a correction of the source), never for the same value;
- * - it is of **another** source: append only when `source` comes **before**
- *   it in the configured order — the primary replaces the fallback, never the
- *   other way round. Nothing is ever averaged.
+ * - otherwise append only when the value differs as a number (a correction of
+ *   the source), never for the same value. Nothing is ever averaged.
  */
 export const linesToAppend = (
   existing: readonly CloseLine[],
   returned: readonly { date: CivilDate; close: DecimalString; currency: string }[],
   source: QuoteSource,
-  order: readonly QuoteSource[],
   fetchedAt: string,
 ): CloseLine[] => {
-  const rank = (name: QuoteSource): number => {
-    const index = order.indexOf(name);
-    return index < 0 ? order.length : index;
-  };
   const inForce = new Map<CivilDate, CloseLine>();
   for (const line of existing) {
     inForce.set(line.date, line);
@@ -207,12 +197,7 @@ export const linesToAppend = (
   const added: CloseLine[] = [];
   for (const close of returned) {
     const current = inForce.get(close.date);
-    const append =
-      current === undefined ||
-      (current.source === source
-        ? !sameClose(current, close)
-        : rank(source) < rank(current.source));
-    if (append) {
+    if (current === undefined || !sameClose(current, close)) {
       const line: CloseLine = {
         schema_version: PRICE_LINE_VERSION,
         date: close.date,
@@ -237,8 +222,8 @@ export interface UnreadableCloses {
 
 /**
  * Closes stored in a currency that is not the one their source declares now:
- * e.g. the pence of Alpha Vantage stored as pounds when one currency was
- * declared for the whole asset.
+ * e.g. pence stored as pounds when one currency was declared for the whole
+ * asset.
  */
 export interface MismatchedCloses {
   readonly asset_id: AssetId;
