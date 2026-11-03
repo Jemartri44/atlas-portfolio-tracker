@@ -402,7 +402,6 @@ describe.each(ENVS)(
       "auth/session-key",
       "auth/allow-list",
       "prices/eodhd-key",
-      "prices/alpha-vantage-key",
       "device-tokens/abc",
       "ibkr/flex-token",
     ];

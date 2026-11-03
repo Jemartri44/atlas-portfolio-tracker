@@ -29,8 +29,8 @@ Por qué `s3:GetObject` sobre lo que se escribe: `If-Match` exige `s3:PutObject`
 | `s3:PutObject` | `B/prices/*` **con denegación explícita** de `B/prices/symbols.json` y `B/prices/config.json` | cierres y `_status.json`; **un solo escritor por objeto** (§8.1 P18, §8.2 M5): IAM impide lo que el código ya no hace |
 | `s3:GetObject`, `s3:PutObject` | `B/jobs/prices/*` | su registro |
 | `s3:ListBucket` | `B`, con `s3:prefix` en `prices/`, `jobs/prices/`, `ledger/` | ídem |
-| `ssm:GetParameter` | `P/prices/eodhd-key`, `P/prices/alpha-vantage-key` | las claves (`SecureString`, `aws/ssm`); `kms:Decrypt` **sin verificar**: comprobación de la 018 (questions §9) |
-| — | red de salida | `eodhd.com`, `www.alphavantage.co` |
+| `ssm:GetParameter` | `P/prices/eodhd-key` | la clave (`SecureString`, `aws/ssm`); `kms:Decrypt` **sin verificar**: comprobación de la 018 (questions §9) |
+| — | red de salida | `eodhd.com` |
 
 ## 3. `atlas-<entorno>-job-mail`
 

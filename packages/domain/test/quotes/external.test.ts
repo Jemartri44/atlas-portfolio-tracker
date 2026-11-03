@@ -20,17 +20,12 @@ const history = readEcbZipCsv(
   ),
 );
 
-const line = (
-  date: string,
-  close: string,
-  currency = "EUR",
-  source: "eodhd" | "alpha_vantage" = "eodhd",
-): CloseLine => ({
+const line = (date: string, close: string, currency = "EUR"): CloseLine => ({
   schema_version: 1,
   date,
   close,
   currency,
-  source,
+  source: "eodhd",
   fetched_at: "2027-01-06T06:00:00.000Z",
 });
 

@@ -14,7 +14,6 @@ import {
   type AssetOutcome,
   assertNothingMisstored,
   checkSymbols,
-  isQuoteSource,
   type PriceStatus,
   type PriceStore,
   parseCloudPull,
@@ -43,7 +42,7 @@ import { folderOf, keysFor, sourcesFor } from "../prices/load.js";
 import { aside, cancelled, confirm, loadForQuery, render } from "./shared.js";
 
 const USAGE_PRICES =
-  "uso: atlas prices update [--from-sources] | atlas prices status | atlas prices symbols [<activo>] | atlas prices symbols set <activo> [--eodhd <símbolo>] [--alpha-vantage <símbolo>] --currency <divisa> [--eodhd-currency <divisa>] [--alpha-vantage-currency <divisa>] [--accept-currency] | atlas prices symbols remove <activo> | atlas prices purge <activo> --source eodhd|alpha_vantage [--yes]";
+  "uso: atlas prices update [--from-sources] | atlas prices status | atlas prices symbols [<activo>] | atlas prices symbols set <activo> --eodhd <símbolo> --currency <divisa> [--accept-currency] | atlas prices symbols remove <activo> | atlas prices purge <activo> [--yes]";
 
 const NO_KEYS =
   "No hay claves de fuentes de precios configuradas: sin precios automáticos. La entrada manual (`atlas add valuation`) sigue funcionando igual.";
@@ -89,7 +88,7 @@ const updateText = (report: UpdateReport, failing: readonly QuoteSource[]): stri
 
 /** Said when a cloud folder calls the sources: they spend the plans it shares with the cloud. */
 const SHARED_QUOTA =
-  "la consola llama a las fuentes y gasta el cupo que comparte con la nube: por defecto, 2 llamadas de EODHD y 2 de Alpha Vantage al día, salvo que prices/config.json diga otra cosa.";
+  "la consola llama a las fuentes y gasta el cupo que comparte con la nube: por defecto, 2 llamadas de EODHD al día, salvo que prices/config.json diga otra cosa.";
 
 const pulledText = (outcome: Extract<PullOutcome, { kind: "pulled" }>, origin: string): string => {
   const added = outcome.files.reduce((sum, file) => sum + file.added, 0);
@@ -254,7 +253,7 @@ const status = async (ctx: Context): Promise<number> => {
       ].join("; ") || "todavía ninguna"
     }.`,
     "",
-    "Fuentes de precios (el cupo de EODHD se cuenta por día GMT; el de Alpha Vantage, en las últimas 24 horas):",
+    "Fuente de precios (el cupo de EODHD se cuenta por día GMT):",
     table(
       [
         "fuente",
@@ -302,11 +301,8 @@ const status = async (ctx: Context): Promise<number> => {
   return EXIT.ok;
 };
 
-const purge = async (ctx: Context, assetId: string, flags: Flags): Promise<number> => {
-  const source = stringFlag(flags, "source");
-  if (source === undefined || !isQuoteSource(source)) {
-    throw new UsageError("uso: atlas prices purge <activo> --source eodhd|alpha_vantage [--yes]");
-  }
+const purge = async (ctx: Context, assetId: string): Promise<number> => {
+  const source: QuoteSource = "eodhd";
   const store = new FilePriceStore(folderOf(ctx));
   const read = readCloses(
     new Map([[assetId, (await store.closes(assetId)) ?? ""]]),
@@ -351,7 +347,7 @@ const listSymbols = async (ctx: Context, assetId: string | undefined): Promise<n
     ctx,
     Object.fromEntries(entries),
     table(
-      ["activo", "EODHD", "Alpha Vantage", "contraste con la fuente"],
+      ["activo", "EODHD", "contraste con la fuente"],
       entries.map(([id, entry]) => [
         id,
         // Each symbol with the currency declared for it.
@@ -376,72 +372,31 @@ const listSymbols = async (ctx: Context, assetId: string | undefined): Promise<n
 /** A symbol of a source is a word of the URL it goes in: no blanks, no delimiters. */
 const SYMBOL = /^[^\s/?#&%\\]+$/;
 
-/**
- * The declaration from the flags: each symbol with **its own** currency
- * (`--eodhd-currency`, `--alpha-vantage-currency`), and `--currency` for every
- * source that has none of its own. A London share quotes in pounds at EODHD
- * and in pence at Alpha Vantage: one currency for both made one
- * of them ask forever, or stored its closes a hundred times too high.
- */
+/** The declaration from the flags: the symbol with the currency of its quote, declared. */
 const declarationOf = (flags: Flags): SymbolDeclaration => {
-  const common = stringFlag(flags, "currency");
-  const symbols = {
-    eodhd: stringFlag(flags, "eodhd"),
-    alpha_vantage: stringFlag(flags, "alpha-vantage"),
-  };
-  const own = {
-    eodhd: stringFlag(flags, "eodhd-currency"),
-    alpha_vantage: stringFlag(flags, "alpha-vantage-currency"),
-  };
-  const flagOf = { eodhd: "eodhd", alpha_vantage: "alpha-vantage" } as const;
+  const symbol = stringFlag(flags, "eodhd");
+  const currency = stringFlag(flags, "currency");
   // What is written to `prices/symbols.json` has to be something the file reads back: a blank
   // symbol, or a currency that is not a code, would leave the file unusable for every order after.
-  for (const source of QUOTE_SOURCES) {
-    const symbol = symbols[source];
-    if (symbol !== undefined && !SYMBOL.test(symbol)) {
-      throw new UsageError(
-        `--${flagOf[source]} necesita un símbolo sin espacios ni «/ ? # & %» (recibido: «${symbol}»)`,
-      );
-    }
-    const currency = own[source] ?? common;
-    if (currency !== undefined && !isCurrency(currency)) {
-      throw new UsageError(
-        `la divisa tiene que ser un código de tres letras mayúsculas, como EUR o GBP (recibido: «${currency}»)`,
-      );
-    }
+  if (symbol === undefined) {
+    throw new UsageError("no se declara ningún símbolo: añade --eodhd <símbolo>");
   }
-  // Nothing is dropped in silence: a currency for a source
-  // without its symbol, or a declaration without any symbol, is a mistake.
-  for (const source of QUOTE_SOURCES) {
-    if (own[source] !== undefined && symbols[source] === undefined) {
-      throw new UsageError(
-        `--${flagOf[source]}-currency sin --${flagOf[source]}: una divisa sin su símbolo no declara nada`,
-      );
-    }
-  }
-  if (symbols.eodhd === undefined && symbols.alpha_vantage === undefined) {
+  if (!SYMBOL.test(symbol)) {
     throw new UsageError(
-      "no se declara ningún símbolo: añade --eodhd <símbolo>, --alpha-vantage <símbolo> o los dos",
+      `--eodhd necesita un símbolo sin espacios ni «/ ? # & %» (recibido: «${symbol}»)`,
     );
   }
-  const currencies: Partial<Record<QuoteSource, string>> = {};
-  for (const source of QUOTE_SOURCES) {
-    if (symbols[source] === undefined) {
-      continue;
-    }
-    const currency = own[source] ?? common;
-    if (currency === undefined) {
-      throw new UsageError(
-        `falta la divisa de ${SOURCE_NAMES[source]} (--currency, o --${source === "eodhd" ? "eodhd" : "alpha-vantage"}-currency): la divisa de la cotización se declara, nunca se supone`,
-      );
-    }
-    currencies[source] = currency;
+  if (currency === undefined) {
+    throw new UsageError(
+      "falta la divisa de EODHD (--currency): la divisa de la cotización se declara, nunca se supone",
+    );
   }
-  return {
-    ...(symbols.eodhd === undefined ? {} : { eodhd: symbols.eodhd }),
-    ...(symbols.alpha_vantage === undefined ? {} : { alpha_vantage: symbols.alpha_vantage }),
-    currencies,
-  };
+  if (!isCurrency(currency)) {
+    throw new UsageError(
+      `la divisa tiene que ser un código de tres letras mayúsculas, como EUR o GBP (recibido: «${currency}»)`,
+    );
+  }
+  return { eodhd: symbol, currencies: { eodhd: currency } };
 };
 
 const setSymbols = async (ctx: Context, assetId: string, flags: Flags): Promise<number> => {
@@ -532,27 +487,19 @@ export const pricesCommand = async (
     return status(ctx);
   }
   if (sub === "purge") {
-    assertKnownFlags(flags, ["source", ...GLOBAL_FLAGS]);
+    assertKnownFlags(flags, [...GLOBAL_FLAGS]);
     const assetId = positionals[2];
     if (assetId === undefined) {
       throw new UsageError(USAGE_PRICES);
     }
-    return purge(ctx, assetId, flags);
+    return purge(ctx, assetId);
   }
   if (sub !== "symbols") {
     throw new UsageError(USAGE_PRICES);
   }
   const action = positionals[2];
   if (action === "set") {
-    assertKnownFlags(flags, [
-      "currency",
-      "eodhd",
-      "eodhd-currency",
-      "alpha-vantage",
-      "alpha-vantage-currency",
-      "accept-currency",
-      ...GLOBAL_FLAGS,
-    ]);
+    assertKnownFlags(flags, ["currency", "eodhd", "accept-currency", ...GLOBAL_FLAGS]);
     const assetId = positionals[3];
     if (assetId === undefined) {
       throw new UsageError(USAGE_PRICES);

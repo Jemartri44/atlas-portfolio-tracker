@@ -36,7 +36,7 @@ atlas export --format csv --out ledger.csv
 
 ## El ciclo mensual (Fase 2)
 
-Los precios se registran a mano como `valuation`, y desde la feature 013 la consola puede además descargar cierres diarios de EODHD y Alpha Vantage (más abajo, «Precios de cierre diarios»). Para enseñar un valor gana el dato más reciente que tenga valor en euros, y la aplicación siempre muestra de cuándo es y de dónde viene. Ninguna cifra de la Renta los mira; la única ruta fiscal que lee un precio es la valoración a 31/12 de los Modelos 720 y 721, y solo la registrada a mano. El ciclo sigue sobre el libro del ejemplo anterior.
+Los precios se registran a mano como `valuation`, y desde la feature 013 la consola puede además descargar cierres diarios de EODHD (más abajo, «Precios de cierre diarios»). Para enseñar un valor gana el dato más reciente que tenga valor en euros, y la aplicación siempre muestra de cuándo es y de dónde viene. Ninguna cifra de la Renta los mira; la única ruta fiscal que lee un precio es la valoración a 31/12 de los Modelos 720 y 721, y solo la registrada a mano. El ciclo sigue sobre el libro del ejemplo anterior.
 
 ```bash
 # 0. Una vez: el resto del núcleo, los pesos objetivo por activo (suman 100) y qué parte de la aportación va al cubo
@@ -62,18 +62,18 @@ El reparto de la aportación, el rebalanceo y el simulador de traspasos viven en
 
 ## Precios de cierre diarios (feature 013)
 
-La consola descarga los cierres diarios de los activos **de su libro** desde dos APIs gratuitas con clave, EODHD (principal) y Alpha Vantage (respaldo), y los guarda junto al libro en `prices/`, nunca en el libro. Son **informativos**: ninguna cifra de la Renta ni del Modelo 720 los lee. Sin claves, todo funciona igual con las valoraciones manuales. La web no descarga nada: en el escritorio lee `prices/` de la carpeta enlazada, y en el móvil, hasta que exista la nube, solo hay la importación a mano desde Ajustes. Al importar a mano, conviene incluir `prices/symbols.json` junto a los ficheros de precios: sin él, la web no puede comprobar la divisa de los cierres, y lo avisa.
+La consola descarga los cierres diarios de los activos **de su libro** desde EODHD, una API gratuita con clave, y los guarda junto al libro en `prices/`, nunca en el libro. Son **informativos**: ninguna cifra de la Renta ni del Modelo 720 los lee. Sin claves, todo funciona igual con las valoraciones manuales. La web no descarga nada: en el escritorio lee `prices/` de la carpeta enlazada, y en el móvil, hasta que exista la nube, solo hay la importación a mano desde Ajustes. Al importar a mano, conviene incluir `prices/symbols.json` junto a los ficheros de precios: sin él, la web no puede comprobar la divisa de los cierres, y lo avisa.
 
 ```bash
 # Las claves van fuera de la carpeta del libro, solo legibles por ti; la aplicación nunca las escribe
-mkdir -p ~/.config/atlas && printf '{"eodhd":"…","alpha_vantage":"…"}\n' > ~/.config/atlas/secrets.json && chmod 600 ~/.config/atlas/secrets.json
+mkdir -p ~/.config/atlas && printf '{"eodhd":"…"}\n' > ~/.config/atlas/secrets.json && chmod 600 ~/.config/atlas/secrets.json
 
 atlas prices symbols set ast_world --currency EUR --eodhd XX0000000001.EUFUND   # el símbolo y la divisa de la cotización, contrastada con la fuente
-atlas prices symbols set ast_tsco --eodhd TSCO.LSE --eodhd-currency GBP --alpha-vantage TSCO.LON --alpha-vantage-currency GBX   # la divisa es de cada fuente: Londres cotiza en libras en una y en peniques en la otra
+atlas prices symbols set ast_tsco --eodhd TSCO.LSE --currency GBX   # Londres cotiza en peniques (GBX), no en libras: la divisa se declara
 atlas prices update      # los cierres de días anteriores a hoy, por prioridad (cubo, referencias, núcleo) y dentro del cupo; en una carpeta de nube, los baja de la nube (feature 016)
-atlas prices update --from-sources   # en una carpeta de nube, llama a las fuentes en vez de bajar de la nube: gasta el cupo que comparte con la nube (2 y 2 al día por defecto, ADR-0031)
+atlas prices update --from-sources   # en una carpeta de nube, llama a las fuentes en vez de bajar de la nube: gasta el cupo que comparte con la nube (2 al día por defecto, ADR-0031)
 atlas prices status      # cada fuente con su cupo de hoy y sus fallos, y la antigüedad del último cierre de cada activo
-atlas prices purge ast_tsco --source alpha_vantage   # borra los cierres de esa fuente guardados en una divisa que no es la que ahora declara; la próxima descarga vuelve a pedir esos días una vez, y los que ninguna fuente sirva quedan como hueco (lo dice «prices status»)
+atlas prices purge ast_tsco   # borra los cierres guardados en una divisa que no es la que ahora declara; la próxima descarga vuelve a pedir esos días una vez, y los que la fuente no sirva quedan como hueco (lo dice «prices status»)
 ```
 
 En la nube, los cierres los descarga cada día la tarea de precios con la correspondencia de `prices/symbols.json` **del bucket**, que solo sube `atlas admin prices push --env <entorno>` (con el rol de administración; procedimiento en [`docs/runbooks/cloud-symbols-and-budgets.md`](runbooks/cloud-symbols-and-budgets.md)).
@@ -104,7 +104,7 @@ atlas thesis show th_delta --date 2028-12-31
 
 El cubo entero (posiciones con su condición de invalidación a la vista, tesis frente al índice, estadísticas, comisiones sobre el capital operado y avisos de las reglas 17 y 18) y el patrimonio total, siempre desglosado, se ven en la web (Cubo y Resumen). Todo avisa y nada bloquea: el libro nunca rechaza un hecho que ya ocurrió.
 
-Y al registrar una compra o una venta con pérdida, la aplicación avisa si cae dentro de la **ventana de recompra** (por defecto dos meses para cotizados y fondos, monetarios incluidos, y un año para la cripto, contados de fecha a fecha y configurables por tipo de activo): es el error fiscal más común en operativa activa. Avisa en las dos direcciones y **antes** de confirmar, y el motor fiscal **calcula el diferimiento**: la pérdida queda asociada a los lotes recomprados, viaja con ellos si se traspasan o se canjean, y se libera cuando se transmiten.
+Y al registrar una compra o una venta con pérdida, la aplicación avisa si cae dentro de la **ventana de recompra** (por defecto dos meses para cotizados, y un año para fondos, monetarios y cripto, contados de fecha a fecha y configurables por tipo de activo): es el error fiscal más común en operativa activa. Avisa en las dos direcciones y **antes** de confirmar, y el motor fiscal **calcula el diferimiento**: la pérdida queda asociada a los lotes recomprados, viaja con ellos si se traspasan o se canjean, y se libera cuando se transmiten.
 
 ## La Renta (Fase 5)
 
@@ -139,6 +139,7 @@ Cuatro grupos de comandos que el ciclo normal no necesita a diario. La lista com
 
 - `atlas fx update|status`: descarga el histórico oficial del BCE junto al libro y dice cuál está en vigor. `atlas fx correct [--reason …]` corrige los tipos que no son los de su fecha fiscal, tras cambiar `fiscal_date_rule`.
 - `atlas add … --draft` y `atlas draft list|confirm <id>|discard <id>`: guardan como borrador una operación cuyo tipo del BCE aún no se ha publicado; un borrador no cuenta en ninguna cifra hasta registrarlo.
+- `atlas rehearse --dump <fichero>`: ensayo de restauración en local. Decodifica el volcado (una copia de `atlas backup` o descargada), lo proyecta y lo compara con el libro cortado en los mismos eventos, con la misma función que la prueba trimestral (`restoreRehearsal`, ADR-0032). Solo lee y nunca toca la nube: compara con un libro local (`--ledger`), el de la carpeta o una copia bajada con `atlas backup`; sobre un libro sintético es un simulacro. Un volcado vacío o ilegible se rechaza. Sale con 1 y dice por código y recuento qué difiere.
 - `atlas lock show|break`: quién tiene el cerrojo de la carpeta del libro, y romperlo a petición.
 - `atlas remote login|logout|status|upload`: la carpeta «de nube» (`sync/remote.json`, sin `ledger.jsonl`). `login` abre el inicio de sesión con Google y guarda el token de este dispositivo; `logout` lo revoca y lo borra; `status` lista las sesiones y su caducidad; `upload --from <ledger.jsonl>` sube un libro entero a una nube vacía. Contrato en [`api.md`](api.md).
 

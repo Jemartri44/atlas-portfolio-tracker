@@ -13,12 +13,7 @@ import type { LedgerState, Warning } from "../projections/state.js";
 import type { Draft, LedgerEvent, ReversalEvent, SupportedEvent } from "../schema/events.js";
 import type { UseCaseDeps } from "./deps.js";
 import { describeAffected, newlyInvalid } from "./invalid-events.js";
-import {
-  checkIsinUnique,
-  completeDraft,
-  duplicatesOf,
-  type RecordOptions,
-} from "./record-event.js";
+import { checkOnWrite, completeDraft, duplicatesOf, type RecordOptions } from "./record-event.js";
 
 export interface ReverseResult {
   reversal: ReversalEvent;
@@ -149,8 +144,8 @@ export const prepareCorrection = <E extends SupportedEvent>(
     [reversal.id, event.id],
     targetId,
   );
-  // A correction introduces an ISIN exactly as a new event does.
-  checkIsinUnique(state, event, () => projectLedger(events, { collectErrors: true }));
+  // A correction introduces its fields exactly as a new event does.
+  checkOnWrite(state, event, () => projectLedger(events, { collectErrors: true }));
   return { target, reversal, event, state };
 };
 
