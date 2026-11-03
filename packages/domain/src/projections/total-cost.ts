@@ -23,8 +23,9 @@ import { ValidationError } from "../errors.js";
 import { Decimal, HUNDRED } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
 import type { Settings } from "../settings/settings.js";
+import { coreMonthlyOf } from "./core-monthly.js";
 import type { CostSummary } from "./costs.js";
-import { coreMonthlyOf, grow } from "./growth.js";
+import { grow } from "./growth.js";
 
 export const DEFAULT_COST_YEARS = 20;
 

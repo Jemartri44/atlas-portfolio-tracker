@@ -5,7 +5,6 @@
 // It is a what-if over assumptions the owner edits. It reads no price and no tax rule.
 
 import { Decimal, HUNDRED } from "../money/decimal.js";
-import type { Settings } from "../settings/settings.js";
 
 export interface GrowthInput {
   start: Decimal;
@@ -28,16 +27,22 @@ export interface GrowthPoint {
 const MONTHS = 12;
 const TWELVE = Decimal.parse("12");
 
-export const grow = (input: GrowthInput): GrowthPoint[] => {
+/** One month of growth, the same for every consumer so they cannot diverge. */
+const stepOf = (input: GrowthInput): ((value: Decimal) => Decimal) => {
   const rate = input.annualReturnPct.div(HUNDRED).div(TWELVE);
   const invested = input.monthly.mul(
     Decimal.ONE.sub((input.entryFeePct ?? Decimal.ZERO).div(HUNDRED)),
   );
+  return (value) => value.add(value.mul(rate)).add(invested);
+};
+
+export const grow = (input: GrowthInput): GrowthPoint[] => {
+  const step = stepOf(input);
   let value = input.start;
   let contributed = input.start;
   const points: GrowthPoint[] = [{ year: 0, value, contributed }];
   for (let month = 1; month <= input.years * MONTHS; month += 1) {
-    value = value.add(value.mul(rate)).add(invested);
+    value = step(value);
     contributed = contributed.add(input.monthly);
     if (month % MONTHS === 0) {
       points.push({ year: month / MONTHS, value, contributed });
@@ -51,38 +56,16 @@ export const grow = (input: GrowthInput): GrowthPoint[] => {
  * does not. Already there today is month 0.
  */
 export const monthsToReach = (input: GrowthInput, goal: Decimal): number | undefined => {
-  const rate = input.annualReturnPct.div(HUNDRED).div(TWELVE);
-  const invested = input.monthly.mul(
-    Decimal.ONE.sub((input.entryFeePct ?? Decimal.ZERO).div(HUNDRED)),
-  );
+  const step = stepOf(input);
   let value = input.start;
   if (!value.lt(goal)) {
     return 0;
   }
   for (let month = 1; month <= input.years * MONTHS; month += 1) {
-    value = value.add(value.mul(rate)).add(invested);
+    value = step(value);
     if (!value.lt(goal)) {
       return month;
     }
   }
   return undefined;
-};
-
-/**
- * What the owner puts into the **core** each month: the contribution of the settings minus the
- * bucket's share. A setting that is absent is said, not assumed (the contribution counts as 0).
- */
-export const coreMonthlyOf = (
-  settings: Settings,
-): { monthly: Decimal; missing: ("monthly_contribution" | "bucket_pct")[] } => {
-  const missing: ("monthly_contribution" | "bucket_pct")[] = [];
-  if (settings.monthly_contribution_eur === undefined) {
-    missing.push("monthly_contribution");
-  }
-  if (settings.bucket_pct_of_contribution === undefined) {
-    missing.push("bucket_pct");
-  }
-  const contribution = Decimal.parse(settings.monthly_contribution_eur ?? "0");
-  const bucketPct = Decimal.parse(settings.bucket_pct_of_contribution ?? "0");
-  return { monthly: contribution.mul(HUNDRED.sub(bucketPct)).div(HUNDRED), missing };
 };

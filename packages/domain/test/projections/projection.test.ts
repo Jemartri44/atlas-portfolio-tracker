@@ -93,16 +93,49 @@ describe("projection", () => {
     expect(run(core(), { ...settings, target_weights: {} }).gap).toBe("no_targets");
   });
 
-  it("says which settings are missing instead of assuming them", () => {
+  it("gives no figure, and says which settings are missing, instead of assuming them", () => {
     const bare = { ...settings } as Settings;
     delete bare.monthly_contribution_eur;
     delete bare.bucket_pct_of_contribution;
     const result = run(core(), bare);
+    expect(result.gap).toBe("missing_settings");
     expect(result.missing).toEqual(["monthly_contribution", "bucket_pct"]);
-    expect(result.monthly_core_eur.amount.isZero()).toBe(true);
+    expect(result.scenarios).toEqual([]);
+  });
+
+  it("refuses target weights that do not add up to 100 instead of renormalising them", () => {
+    const result = run(core(), {
+      ...settings,
+      target_weights: { ast_world: "60", ast_bonds: "20" },
+    });
+    expect(result.gap).toBe("targets_not_100");
+    expect(result.target_total_pct.toString()).toBe("80");
+    expect(result.scenarios).toEqual([]);
+  });
+
+  it("does not show a starting pot that lacks an unpriced asset", () => {
+    expect(run(core(false), settings).start_eur).toBeUndefined();
+  });
+
+  it("finds the goal month with a positive return and with the bucket's share left out", () => {
+    const growing = { name: "g", returnsPct: { equity: d("12"), fixed_income: d("12") } };
+    const result = run(core(), settings, { scenarios: [growing], goalEur: d("1500") });
+    // Independent: 1000 at 1 % a month plus 90 a month first reaches 1500 in month 5.
+    let value = d("1000");
+    let month = 0;
+    while (value.lt(d("1500"))) {
+      value = value.add(value.mul(d("0.01"))).add(d("90"));
+      month += 1;
+    }
+    expect(result.scenarios[0]?.goal_month).toBe(month);
+    expect(
+      run(core(), settings, { years: 0, scenarios: [growing], goalEur: d("1500") }).scenarios[0]
+        ?.goal_month,
+    ).toBeUndefined();
   });
 
   it("refuses a horizon that is not a whole number of years", () => {
     expect(() => run(core(), settings, { years: 1.5 })).toThrow("whole number");
+    expect(run(core(), settings, { years: 0 }).scenarios[0]?.points).toHaveLength(1);
   });
 });
