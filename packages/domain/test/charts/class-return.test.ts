@@ -276,7 +276,7 @@ describe("classReturns", () => {
     expect(of(b, "equity")?.gap).toBe("no_flows");
   });
 
-  it("flags the old and the new class when an asset changes class or book, once it happened", () => {
+  it("flags the old and the new class when an asset changes class or book, whenever recorded", () => {
     const b = bought();
     b.buy({
       account_id: "acc_fund",
@@ -297,19 +297,22 @@ describe("classReturns", () => {
     expect(of(b, "equity")?.unsupported_events).toEqual(["asset_updated"]);
     expect(of(b, "fixed_income")?.unsupported_events).toEqual(["asset_updated"]);
 
+    // Recorded after the date asked: the history is still reassigned, so it is flagged all the same.
     const later = bought();
     worth(later, "ast_world", "10", "110");
     later.recordedAt("2029-01-01");
     later.assetUpdated({
       asset_id: "ast_world",
       asset_type: "fund",
-      book: "bucket",
+      book: "core",
+      asset_class: "fixed_income",
       name: "ast_world",
       currency: "EUR",
       transferable: true,
       active: true,
     });
-    expect(of(later, "equity")?.gap).toBeUndefined();
+    expect(of(later, "equity")?.unsupported_events).toEqual(["asset_updated"]);
+    expect(of(later, "fixed_income")?.unsupported_events).toEqual(["asset_updated"]);
 
     const toBucket = bought();
     toBucket.assetUpdated({
