@@ -8,7 +8,6 @@ import { backupCommand } from "./commands/backup.js";
 import { accountCommand, assetCommand, settingsCommand } from "./commands/catalogue.js";
 import { compactCommand } from "./commands/compact.js";
 import { corporateActionCommand } from "./commands/corporate-actions.js";
-import { draftCommand } from "./commands/draft.js";
 import { exportCommand } from "./commands/export.js";
 import { filedCommand } from "./commands/filed.js";
 import { fxCommand } from "./commands/fx.js";
@@ -60,7 +59,6 @@ export const COMMANDS: Readonly<Record<string, CommandSpec>> = {
   rehearse: { run: rehearseCommand, arity: 1 },
   lock: { run: lockCommand, arity: { show: 2, break: 2 } },
   fx: { run: fxCommand, arity: { update: 2, status: 2, correct: 2 } },
-  draft: { run: draftCommand, arity: { list: 2, confirm: 3, discard: 3 } },
   prices: { run: pricesCommand, arity: { update: 2, status: 2, symbols: 4, purge: 3 } },
   admin: {
     run: adminCommand,

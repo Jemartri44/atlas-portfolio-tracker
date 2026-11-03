@@ -1,9 +1,8 @@
 // The advisory lock of a ledger folder (ADR-0026, Part B).
 //
 // **One lock per ledger folder**, covering every write inside it: the ledger, `archive/`,
-// `drafts/`, `reference/ecb/` and, when it exists, `sync/`. It is built around "write bytes in a
-// folder" and not around `append` and `replace`, so the raw-line operations of the sync take it as
-// they are.
+// `prices/` and `reference/ecb/`. It is built around "write bytes in a folder" and not around
+// `append` and `replace`.
 //
 // What it guarantees, and what it does not, said where it is read:
 //
@@ -210,7 +209,7 @@ export const withFolderLock = async <T>(
 
 /**
  * Removes the temporary files a write of the ledger left behind when it was killed before its
- * rename (`ledger.jsonl.tmp-<pid>-<time>`), and those of `drafts/`, `prices/` and
+ * rename (`ledger.jsonl.tmp-<pid>-<time>`), and those of `prices/` and
  * `reference/ecb/`. Only under the lock: every writer creates its temporary holding it, so while
  * this holds it, any temporary is an orphan. If somebody holds the lock, nothing is touched — their
  * temporary may be the write in progress. Returns the names removed.
@@ -218,12 +217,11 @@ export const withFolderLock = async <T>(
 export const sweepOrphanTemporaries = async (ledgerPath: string): Promise<string[]> => {
   const folder = dirname(ledgerPath);
   const prefix = `${basename(ledgerPath)}.tmp-`;
-  // `drafts/` (it holds the draft), `prices/` and `reference/ecb/` with its
+  // `prices/` and `reference/ecb/` with its
   // `previous/` and `rejected/` are written by `writeFileAtomically` under this
   // same lock: any `<file>.tmp-<pid>-<ms>` there is an orphan.
   const dataTemporary = /\.tmp-\d+-\d+$/;
   const dataDirs = [
-    "drafts",
     "prices",
     join("reference", "ecb"),
     join("reference", "ecb", "previous"),

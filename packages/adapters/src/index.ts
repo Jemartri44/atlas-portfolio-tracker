@@ -2,7 +2,6 @@
 
 export { systemClock } from "./clock/system.js";
 export { readLocalConfig } from "./config/local-config.js";
-export { FileDraftStore } from "./drafts/file-drafts.js";
 export { EcbHistoryDamaged, FileEcbHistoryStore } from "./ecb/history-store.js";
 export { EcbDownloadFailed, EcbFxRateSource } from "./ecb/source.js";
 export { FileLedgerStore } from "./ledger-store/file.js";

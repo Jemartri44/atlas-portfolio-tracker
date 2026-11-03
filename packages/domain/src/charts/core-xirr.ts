@@ -72,7 +72,7 @@ export interface RealReturn {
   gap?: "partial";
 }
 
-type DatedFlow = { days: number; eur: Decimal };
+export type DatedFlow = { days: number; eur: Decimal };
 
 const GRID = 14;
 /** Daily rate bounds: about −99 % and +1000 % a year. */
@@ -167,7 +167,10 @@ const root = (f: (x: Decimal) => Decimal, lowStart: Decimal, highStart: Decimal)
  * The annual rate (percent, 4 decimals) that makes the flows, grown daily, add up to `value`, or
  * undefined when none lies within the bounds. Flows are euros of the end date.
  */
-const annualRateOf = (unsorted: readonly DatedFlow[], value: Decimal): Decimal | undefined => {
+export const annualRateOf = (
+  unsorted: readonly DatedFlow[],
+  value: Decimal,
+): Decimal | undefined => {
   const flows = [...unsorted].sort((a, b) => b.days - a.days);
   const f = (g: Decimal) => surplus(flows, value, g);
   const atLow = f(LOW);

@@ -23,6 +23,10 @@ const recordedOn = (v: Voice, value: unknown): string =>
   value === undefined ? "" : ` (${v.date(value)})`;
 
 export const ERRORS_SETTINGS: Record<string, Entry> = {
+  invalid_exposure: {
+    say: (d, v) =>
+      `La exposición ${d.dimension === "region" ? "por región" : "por divisa"} de ${v.one(d.asset_id)} tiene que sumar 100 y no llevar porcentajes negativos.`,
+  },
   invalid_inflation: {
     say: (d, v) =>
       `La variación de precios de ${v.text(d.year)} está fuera de rango: tiene que estar entre −99 % y 1000 %.`,

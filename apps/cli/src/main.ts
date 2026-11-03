@@ -14,7 +14,6 @@ import { DomainError, type UseCaseDeps } from "@atlas/domain";
 import type { FxRateSource } from "@atlas/domain/ecb";
 import type { AdminAccess } from "./admin/environment.js";
 import { booleanFlag, parseArgs, stringFlag, UsageError } from "./args.js";
-import { pendingDraftsNote } from "./commands/draft.js";
 import { type Context, EXIT, type Io, type PromptOptions } from "./context.js";
 import { askWithoutEcho } from "./output/secret-prompt.js";
 import type { PriceEnvironment } from "./prices/load.js";
@@ -120,12 +119,6 @@ export interface RunOverrides {
   readonly admin?: AdminAccess | undefined;
 }
 
-/** What `dispatch` leaves for `run` to use after a failure. */
-interface Invocation {
-  /** Where the reminder of pending drafts looks, once a command is going to run. */
-  remindAt?: string;
-}
-
 /** `--json` anywhere before a `--`: known even when the arguments do not parse. */
 const wantsJson = (argv: readonly string[]): boolean => {
   const end = argv.indexOf("--");
@@ -148,32 +141,20 @@ export const run = async (
       io.out(text);
     },
   };
-  const invocation: Invocation = {};
-  let code: number;
   try {
-    code = await dispatch(argv, watched, overrides, invocation);
+    return await dispatch(argv, watched, overrides);
   } catch (error) {
-    code = await reportError(watched, error, {
+    return await reportError(watched, error, {
       json: wantsJson(argv),
       wroteStdout: () => wroteStdout,
     });
   }
-  // Said after every command, whatever it did, failures included: a draft
-  // nobody remembers is an operation that never reaches the ledger.
-  if (invocation.remindAt !== undefined) {
-    const note = await pendingDraftsNote(invocation.remindAt);
-    if (note !== undefined) {
-      io.err(note);
-    }
-  }
-  return code;
 };
 
 const dispatch = async (
   argv: readonly string[],
   io: Io,
   { compose = composeDeps, fxSource, prices, admin }: RunOverrides,
-  invocation: Invocation,
 ): Promise<number> => {
   const { positionals, flags } = parseArgs(argv);
   const name = positionals[0];
@@ -209,10 +190,6 @@ const dispatch = async (
     ...(prices === undefined ? {} : { prices }),
     ...(admin === undefined ? {} : { admin }),
   };
-  // The reminder reads the folder's own `drafts/`.
-  if (name !== "draft") {
-    invocation.remindAt = ledgerPath;
-  }
   await sweepTemporaries(io, ledgerPath);
   return await command.run(ctx, positionals, flags);
 };

@@ -1,6 +1,6 @@
 # ADR-0029 — Tipos del BCE: histórico oficial en local, días sin publicación y comprobación de integridad
 
-**Estado:** Aceptada (2026-09-24); enmendada tres veces.
+**Estado:** Aceptada (2026-09-24); enmendada tres veces; nota del 2026-11-03 (la consola ya no guarda borradores).
 
 ## Contexto
 
@@ -134,3 +134,7 @@ Con [ADR-0035](0035-cloud-ledger-single-source.md): (a) **en la web, el históri
 ## Notas de estado
 
 Aceptada (2026-09-24), por decisión de la dirección, que elige la opción B para la operación registrada antes de la publicación y fija qué pasa tras un cambio de `fiscal_date_rule`. **Enmendada el mismo día** tras la revisión de la PR #72 (ver al final), otra vez al contestar las preguntas del prompt 012, y una tercera al cerrar la feature 012 (lo verificado, la procedencia del histórico, los hallazgos añadidos y la confirmación de un borrador). Ronda 8. Las decisiones de fuente, forma canónica y resolución de los días sin publicación son también de la dirección. Recoge lo que la Ronda 6 tenía pendiente del hallazgo 5 del *challenge* 2 (cotejo de `fx_rate` y festivos TARGET).
+
+## Nota del 2026-11-03: la consola ya no guarda borradores
+
+Con [ADR-0037](0037-web-only-access.md) la consola es una herramienta de mantenimiento, y su copia local de los borradores (`drafts/` junto al libro, `atlas add --draft`, `atlas draft list|confirm|discard`) se retira. En la consola, una operación cuyo tipo del BCE aún no se ha publicado **no se registra** (`ecb_rate_pending`): se repite cuando se publique o se teclea el tipo con `--fx-rate` y `--fx-rate-date`. Nada se estima. Los borradores de la web, en la nube (E6 de ADR-0035), no cambian.

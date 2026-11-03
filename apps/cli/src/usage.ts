@@ -23,8 +23,6 @@ comandos:
   prices purge <activo>          quita los cierres guardados en una divisa que su fuente no declara; sus días se vuelven a pedir una vez
   prices symbols [set|remove] <activo> --eodhd S --currency C [--accept-currency]
   fx correct [--reason …]        corrige los tipos que no son los de su fecha fiscal (tras cambiar fiscal_date_rule)
-  add … --draft                  guarda como borrador una operación cuyo tipo del BCE aún no se ha publicado
-  draft list|confirm <id>|discard <id>   los borradores: no cuentan en ninguna cifra hasta registrarlos
   admin pull --to <directorio>|compact|restore --from <copia>|prices push|secrets --env <entorno>
                                  la administración de la nube, con el rol de administración y nunca por la API; pull baja el libro de la nube a una carpeta
   --                             termina las opciones: lo que va detrás es posicional (un id que empiece por guion)`;
