@@ -85,7 +85,12 @@ export const isSinglePurchaseWindow = (
   const opened = new Set<Ulid>();
   let atStart = Quantity.ZERO;
   for (const entry of state.lotJournal.slice(0, upTo)) {
-    if (entry.kind === "gain" || entry.kind === "units" || entry.kind === "carve") {
+    if (
+      entry.kind === "gain" ||
+      entry.kind === "units" ||
+      entry.kind === "carve" ||
+      entry.kind === "adjust"
+    ) {
       continue;
     }
     if (entry.kind === "open") {

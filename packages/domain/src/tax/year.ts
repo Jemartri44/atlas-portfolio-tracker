@@ -219,7 +219,11 @@ export const taxYearWithChain = (
     ...rounded(gains),
     ...core.currency.map((line) => line.computable_eur_rounded),
   ];
-  const dividends = core.income.filter((line) => line.kind === "dividend");
+  // Box 0029 is dividends «y demás rendimientos por la participación en fondos
+  // propios»: the excess of a return of capital goes with them (art. 25.1.e).
+  const dividends = core.income.filter(
+    (line) => line.kind === "dividend" || line.kind === "capital_return",
+  );
   const interest = core.income.filter((line) => line.kind === "interest");
   const withholdings = withholdingLines(core.transmissions, core.income);
   const ddi = doubleTaxation(core);

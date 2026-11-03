@@ -11,10 +11,11 @@ import { Money } from "../money/money.js";
 import { Price } from "../money/price.js";
 import { Quantity } from "../money/quantity.js";
 import { Ratio, scaleQuantities } from "../money/ratio.js";
-import type { AccountId, AssetId } from "../schema/events.js";
+import type { AccountId, AssetId, CorporateActionKind } from "../schema/events.js";
 import { adjustCash } from "./cash.js";
 import { assertSameBook, requireAccount, requireAsset } from "./catalogue.js";
 import { recordGain } from "./gains.js";
+import { recordIncome } from "./income.js";
 import type { ResolvedEffect } from "./kind-rules.js";
 import { consume, openLot, openQuantity } from "./lots.js";
 import {
@@ -32,6 +33,7 @@ import { noteAcquisition, warnPriorBuys, warnRepurchase } from "./wash-sale.js";
 
 export interface EffectContext {
   eventId: Ulid;
+  kind: CorporateActionKind;
   /** Every effect of the action is a `scale`: it may find nothing to scale. */
   scaleOnly: boolean;
   /** File position of the corporate action: FIFO tie-break of the lots a `grant` creates. */
@@ -449,4 +451,126 @@ export const applyGrant = (
   warnCurrency(state, priced, asset);
   warnFxDate(state, priced, effect.acquisition_date);
   warnHolders(state, asset.asset_id, ctx.eventId);
+};
+
+/**
+ * The lots a `cost_adjustment` lowers: the ones this same event created —the
+ * cash of a merger compensates what the merger handed over, not the shares of
+ * the destination the user already held— or, when it created none, every open
+ * lot of the asset.
+ */
+const adjustedLots = (state: LedgerState, assetId: AssetId, eventId: Ulid): FiscalLot[] => {
+  const open = requireOpenLots(state, assetId, eventId);
+  const created = open.filter((lot) => lot.source_event_id === eventId);
+  return created.length > 0 ? created : open;
+};
+
+/**
+ * Cash that lowers the acquisition value of the lots instead of selling them
+ * (arts. 80.3 and 81.2 LIS; arts. 25.1.e and 33.3.a LIRPF). The euros received
+ * are shared among the lots by units —every unit received the same— and each
+ * lot keeps its quantity and its date. What exceeds a lot's cost leaves it at
+ * zero and is movable capital income in a `capital_return`; in an exchange the
+ * law only says the value «se disminuirá», so an excess is refused rather than
+ * given a treatment no source names.
+ */
+export const applyCostAdjustment = (
+  state: LedgerState,
+  effect: Resolved<"cost_adjustment">,
+  ctx: EffectContext,
+): void => {
+  const asset = requireAsset(state, effect.asset_id, ctx.eventId);
+  requireUniqueAccounts(effect.per_account, ctx.eventId);
+  const priced = { id: ctx.eventId, ...effect };
+  const fx = fxOf(priced);
+  const entries = effect.per_account.map((entry) => {
+    const account = requireAccount(state, entry.account_id, ctx.eventId);
+    assertSameBook(account, asset, ctx.eventId);
+    if (!positionOf(state, entry.account_id, asset.asset_id).isPositive()) {
+      throw new ProjectionError(
+        "insufficient_position",
+        ctx.eventId,
+        `account ${entry.account_id} holds nothing of ${asset.asset_id} to receive cash for`,
+        { account_id: entry.account_id, asset_id: asset.asset_id, available: "0" },
+      );
+    }
+    return { account_id: entry.account_id, amount: Money.parse(entry.amount, effect.currency) };
+  });
+  const lots = adjustedLots(state, asset.asset_id, ctx.eventId);
+  const total = entries.reduce((sum, entry) => sum.add(entry.amount), Money.zero(effect.currency));
+  const totalEur = fx.toEur(total);
+  const units = lots.reduce((sum, lot) => sum.add(lot.quantity), Quantity.ZERO);
+
+  let left = totalEur;
+  let excess = Money.zero(totalEur.currency);
+  const plan = lots.map((lot, index) => {
+    // The last lot takes the exact remainder: the lots lower by the euros received, to the digit.
+    const share =
+      index === lots.length - 1 ? left : totalEur.mul(lot.quantity.value).div(units.value);
+    left = left.sub(share);
+    const lowered = share.cmp(lot.cost_eur) > 0 ? lot.cost_eur : share;
+    excess = excess.add(share.sub(lowered));
+    return { lot, lowered };
+  });
+  if (excess.amount.isPositive() && ctx.kind !== "capital_return") {
+    throw new ProjectionError(
+      "cost_adjustment_exceeds_cost",
+      ctx.eventId,
+      `the cash of this ${ctx.kind} exceeds the cost of the lots it lowers`,
+      { kind: ctx.kind, asset_id: asset.asset_id, excess_eur: excess.amount.toString() },
+    );
+  }
+
+  for (const { lot, lowered } of plan) {
+    const remaining = lot.cost_eur.sub(lowered);
+    // `cost` and `funding_eur` split like `cost_eur` (as in a carve-out). A lot
+    // left with some cost had some before, so the division is never by zero.
+    if (remaining.isZero()) {
+      lot.cost = Money.zero(lot.cost.currency);
+      lot.funding_eur = Money.zero(lot.funding_eur.currency);
+    } else {
+      const factor = remaining.amount.div(lot.cost_eur.amount);
+      lot.cost = lot.cost.mul(factor);
+      lot.funding_eur = lot.funding_eur.mul(factor);
+    }
+    lot.cost_eur = remaining;
+    state.lotJournal.push({
+      kind: "adjust",
+      lot_id: lot.id,
+      event_id: ctx.eventId,
+      cost_eur: lowered,
+    });
+  }
+
+  for (const entry of entries) {
+    adjustCash(state, entry.account_id, entry.amount);
+    receiveProceeds(
+      state,
+      {
+        event_id: ctx.eventId,
+        account_id: entry.account_id,
+        amount: entry.amount,
+        date: ctx.effectiveDate,
+      },
+      fx.toEur(entry.amount),
+      undefined,
+    );
+    if (excess.amount.isPositive()) {
+      // Every account's cash carries the same proportion of excess.
+      const gross = entry.amount.mul(excess.amount).div(totalEur.amount);
+      recordIncome(state, {
+        event_id: ctx.eventId,
+        kind: "capital_return",
+        account_id: entry.account_id,
+        asset_id: asset.asset_id,
+        value_date: ctx.effectiveDate,
+        gross,
+        withholding_origin: Money.zero(effect.currency),
+        withholding_spain: Money.zero(effect.currency),
+        fx,
+      });
+    }
+  }
+  warnCurrency(state, priced, asset);
+  warnFxDate(state, priced, ctx.effectiveDate);
 };

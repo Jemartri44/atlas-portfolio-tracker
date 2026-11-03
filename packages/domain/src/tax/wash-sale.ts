@@ -318,6 +318,9 @@ class Walker {
       case "units":
         // No lot to scale; `walkWashSales` read its ratio already.
         return;
+      case "adjust":
+        // A lower cost moves no units and no deferred loss.
+        return;
       case "gain":
         this.gain(entry.gain_index, index);
         return;
