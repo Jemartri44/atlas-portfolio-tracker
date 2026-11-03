@@ -11,7 +11,7 @@ import RegistrarForm from "../src/routes/registrar/form.jsx";
 import Resumen from "../src/routes/resumen/index.jsx";
 import { setLetterKeys } from "../src/shell/preferences.js";
 import { settle, showInShell, text, withGoldenLedger } from "./helpers/render.jsx";
-import { withoutStyles, withStyles } from "./helpers/styles.js";
+import { applied, withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
 afterEach(() => withoutStyles());
@@ -81,6 +81,8 @@ describe("«Buscar o registrar»", () => {
     press("/");
     await settle();
     expect(dialog.open).toBe(true);
+    // The hint and «Cerrar» in one row: the foot keeps its own rule.
+    expect(applied(dialog.querySelector(".command-foot"), "display")).toBe("flex");
     dialog.dispatchEvent(new Event("cancel", { cancelable: true }));
     await settle();
     expect(dialog.open).toBe(false);

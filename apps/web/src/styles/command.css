@@ -55,8 +55,14 @@
   font-size: var(--text-xs);
 }
 
-/* Compact top bar: the icon and its key, the words go. */
-@media (min-width: 75rem) and (max-width: 89.99rem) {
+/* The words only where the bar has room for them beside every destination; below, the icon and
+   its key (the button keeps its name for a screen reader). Never on two lines. */
+.command-button,
+.command-label {
+  white-space: nowrap;
+}
+
+@media (max-width: 99.99rem) {
   .command-label {
     display: none;
   }
