@@ -3,7 +3,7 @@
 // prompt 017 §10 die here.
 
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -285,7 +285,7 @@ describe("the scripts of the CI", () => {
     expect(bad.result.stderr).toContain("no coincide");
   });
 
-  it("publish-set.sh never overwrites a published tree: the stored set replaces the local one", () => {
+  it("publish-set.sh never overwrites a published tree, and a run that died half way can finish it", () => {
     const root = fixture();
     const first = join(root, "first");
     spawnSync("bash", [join(SCRIPTS, "package.sh"), first], { cwd: root });
@@ -303,23 +303,74 @@ describe("the scripts of the CI", () => {
           FAKE_AWS_STATE: join(root, "state.json"),
         },
       });
+    const another = (name: string) => {
+      const dir = join(root, name);
+      mkdirSync(dir);
+      for (const file of ["lambda.zip", "jobs.zip", "spa.tgz"]) {
+        writeFileSync(join(dir, file), `${name} ${file}`);
+      }
+      return dir;
+    };
+    const stored = (file: string) =>
+      readFileSync(join(root, "bucket", "builds", TREE, file), "utf8");
     const published = run(first);
     expect(published.status, published.stderr).toBe(0);
     expect(published.stdout).toContain("set publicado");
+    const kept = stored("lambda.zip");
     // Another run of the same tree, with another build: it cannot replace what is there.
-    const second = join(root, "second");
-    mkdirSync(second);
-    for (const name of ["lambda.zip", "jobs.zip", "spa.tgz"]) {
-      writeFileSync(join(second, name), "hostile");
-    }
-    writeFileSync(join(second, "SHA256SUMS"), "hostile");
+    const second = another("second");
     const again = run(second);
     expect(again.status, again.stderr).toBe(0);
     expect(again.stdout).toContain("ya tenía su set");
-    expect(readFileSync(join(second, "lambda.zip"), "utf8")).not.toBe("hostile");
-    expect(readFileSync(join(root, "bucket", "builds", TREE, "lambda.zip"), "utf8")).not.toBe(
-      "hostile",
-    );
+    expect(readFileSync(join(second, "lambda.zip"), "utf8")).toBe(kept);
+    expect(stored("lambda.zip")).toBe(kept);
+    // A run that died after the first object: the next one keeps it and writes the rest.
+    const half = join(root, "bucket", "builds", TREE);
+    for (const file of ["jobs.zip", "spa.tgz", "SHA256SUMS"]) {
+      rmSync(join(half, file));
+    }
+    const third = another("third");
+    const finished = run(third);
+    expect(finished.status, finished.stderr).toBe(0);
+    expect(finished.stdout).toContain("set publicado");
+    expect(stored("lambda.zip")).toBe(kept);
+    expect(stored("jobs.zip")).toBe("third jobs.zip");
+  });
+
+  it("verify-attestation.sh asks for the signer workflow of dev for each file and fails if one lacks it", () => {
+    const run = (fail: string) => {
+      const root = fixture();
+      writeFileSync(join(root, "gh.log"), "");
+      const result = spawnSync("bash", [join(SCRIPTS, "verify-attestation.sh"), root], {
+        encoding: "utf8",
+        env: {
+          PATH: `${FAKES}:${process.env.PATH}`,
+          GITHUB_REPOSITORY: "owner/repo",
+          FAKE_GH_LOG: join(root, "gh.log"),
+          FAKE_GH_FAIL: fail,
+        },
+      });
+      return { result, log: readFileSync(join(root, "gh.log"), "utf8") };
+    };
+    const good = run("");
+    expect(good.result.status, good.result.stderr).toBe(0);
+    expect(good.log.trim().split("\n")).toHaveLength(3);
+    expect(good.log).toContain("--signer-workflow owner/repo/.github/workflows/deploy-dev.yml");
+    const bad = run("jobs.zip");
+    expect(bad.result.status).toBe(1);
+    expect(bad.result.stderr).toContain("jobs.zip no tiene una atestación");
+  });
+
+  it("dev attests the three files it publishes, and prod verifies before it applies", () => {
+    const dev = flow("deploy-dev.yml");
+    expect(dev).toMatch(/actions\/attest-build-provenance@[0-9a-f]{40}/);
+    expect(dev).toContain("attestations: write");
+    for (const file of ["lambda.zip", "jobs.zip", "spa.tgz"]) {
+      expect(dev).toContain(`artifact/${file}`);
+    }
+    const prod = flow("deploy-prod.yml");
+    expect(prod.indexOf("verify-attestation.sh")).toBeGreaterThan(prod.indexOf("promote.sh"));
+    expect(prod.indexOf("verify-attestation.sh")).toBeLessThan(prod.indexOf("terraform-run.sh"));
   });
 
   it("promote.sh and artifact-env.sh refuse a SHA256SUMS that does not list both ZIPs", () => {

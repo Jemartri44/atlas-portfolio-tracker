@@ -4,7 +4,8 @@ Lo que las features 015, 016 y 017 dejaron **sin verificar contra AWS real**. Ca
 
 ## Antes del primer `apply`
 
-- Reaplicar a mano el *bootstrap* de cada entorno, `dev` primero y `prod` después (cambiaron el límite y las políticas de despliegue; sin ello el primer `apply` recibe `AccessDenied`).
+- Reaplicar a mano el *bootstrap* de **la cuenta y de cada entorno**, `dev` primero y `prod` después (cambiaron el límite y las políticas de despliegue; sin ello el primer `apply` recibe `AccessDenied`). La parte `env` crea ahora el bucket de datos y el certificado: su `terraform.tfvars` lleva `domain` (el mismo que el del *stack*, nada lo comprueba), y de sus salidas `certificate_arn` va al `tfvars` del *stack* y `certificate_validation_records` es el registro DNS que se crea a mano.
+- `gh attestation verify` acepta la atestación de `deploy-dev.yml` en el primer despliegue de `prod` (ADR-0034, nota del 2026-11-03); si el plan de GitHub no la ofrece para este repositorio, queda sin referencia fuera del bucket y se vuelve a decidir.
 - El usuario hace las comprobaciones C1-C19 de ADR-0034 y contesta sus preguntas: C2 decide si `prod` lleva clave KMS propia, C11 si `dev` va con plan Free o CloudFront de pago por uso, C5 la confianza del rol de administración.
 - El **simulador de políticas de IAM** con los tres escenarios de ADR-0034, fila 5: condición para aplicar. Lo que la 017 comprobó por análisis estático lo hizo con un evaluador propio de tests (`infra/test/lib/iam.ts`), solo de tests y con lista cerrada de operadores.
 - Estimación de coste de `specs/017-infrastructure-as-code/cost.md` delante, y visto bueno del usuario al primer `apply`.

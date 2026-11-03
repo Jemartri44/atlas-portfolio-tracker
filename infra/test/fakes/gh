@@ -1,0 +1,10 @@
+#!/usr/bin/env node
+// TEST ONLY: a fake `gh` for `gh attestation verify`. It records its arguments in FAKE_GH_LOG
+// and fails for the file names listed in FAKE_GH_FAIL (comma separated).
+import { appendFileSync } from "node:fs";
+import { basename } from "node:path";
+
+const args = process.argv.slice(2);
+appendFileSync(process.env.FAKE_GH_LOG, `${args.join(" ")}\n`);
+const failing = (process.env.FAKE_GH_FAIL ?? "").split(",").filter(Boolean);
+process.exit(failing.includes(basename(args[2] ?? "")) ? 1 : 0);

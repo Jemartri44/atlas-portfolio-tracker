@@ -85,7 +85,8 @@ locals {
   data_object_roles = concat([local.role_arn.api, local.role_arn.admin], local.job_role_arns)
   # Deploy and plan read the configuration of the bucket and list it, nothing else.
   data_list_roles = concat(local.data_object_roles, [local.role_arn.deploy, local.role_arn.plan])
-  # Only the principal that applies this part writes the configuration. No role of the
+  # Only the principal that applies this part (the user's administration principal) writes the
+  # configuration. No role of the
   # environment does, the deploy role least of all.
   data_config_principals = [var.admin_principal_arn]
 

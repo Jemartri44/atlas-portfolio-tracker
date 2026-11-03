@@ -1,5 +1,6 @@
-# The stack of the environment (E2) reads these; none carries the domain, a bucket
-# suffix or an address, so none is sensitive (prompt 017, §12.2 B3). The account
+# The stack of the environment (E2) reads these; none carries a bucket suffix or an
+# address, so none is sensitive, except the DNS records of the certificate, which carry the
+# domain (prompt 017, §12.2 B3). The account
 # identifier is in every ARN and is not sensitive (ADR-0034, row 1).
 output "boundary_policy_arn" {
   description = "The permissions boundary every role of the environment carries."
