@@ -20,6 +20,7 @@ import { describe, expect, it } from "vitest";
 import { closedYearImpact } from "../../src/filings/closed-years.js";
 import type { LedgerEvent } from "../../src/schema/events.js";
 import type { Settings } from "../../src/settings/settings.js";
+import { repurchaseCalendar } from "../../src/tax/repurchase-calendar.js";
 import { taxYear } from "../../src/tax/year.js";
 import { buy, HAND_SETTINGS, sell, taxBuilder, text } from "./helpers.js";
 
@@ -29,8 +30,8 @@ const BY_DOMICILE: Settings = {
   wash_sale_window: { ...HAND_SETTINGS.wash_sale_window, fund: "by_domicile" },
 };
 
-const ledger = (): LedgerEvent[] => {
-  const b = taxBuilder(BY_DOMICILE);
+const ledger = (settings: Settings = BY_DOMICILE): LedgerEvent[] => {
+  const b = taxBuilder(settings);
   b.asset("fund_es", { isin: "ES0000000011" });
   b.asset("fund_ie", { isin: "IE0000000012" });
   b.deposit({ account_id: "acc_a", value_date: "2026-01-04", amount: "3200" });
@@ -41,6 +42,33 @@ const ledger = (): LedgerEvent[] => {
   }
   return b.build();
 };
+
+describe("the default window of a fund: two months, wherever it is domiciled", () => {
+  const { fund: _fund, money_market: _moneyMarket, ...others } = HAND_SETTINGS.wash_sale_window;
+  const events = ledger({ ...HAND_SETTINGS, wash_sale_window: others } as Settings);
+  const report = taxYear(events, 2026, { today: "2028-01-01" });
+  const irish = report.capital_gains.lines.find((entry) => entry.asset_id === "fund_ie");
+
+  it("computes the loss of the Irish fund, and says it rests on no consultation", () => {
+    expect(text(irish?.own_eur)).toBe("-400");
+    expect(text(irish?.deferred_eur)).toBe("0");
+    expect(irish?.criteria).toContain("2:fund_unlisted_2m");
+  });
+
+  it("still shows the figure of a year in the doubtful section, as an aggressive reading", () => {
+    const stake = report.doubtful.find((entry) => entry.criterion === "2:fund_unlisted_2m");
+    expect(text(stake?.pending_difference_eur)).toBe("400");
+    expect(text(stake?.deferred_difference_eur)).toBe("-400");
+    expect(stake?.direction).toBe("aggressive");
+  });
+
+  it("closes the window the plan and the monthly mail warn about at two months", () => {
+    const sale = repurchaseCalendar(events, "2026-04-01").blocks.find(
+      (block) => block.asset_id === "fund_ie",
+    )?.sales[0];
+    expect(sale?.until).toBe("2026-05-10");
+  });
+});
 
 describe("§6.5 — the window of a fund by its domicile", () => {
   const report = taxYear(ledger(), 2026, { today: "2028-01-01" });

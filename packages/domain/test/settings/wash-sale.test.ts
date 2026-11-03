@@ -40,6 +40,11 @@ const of = (asset_type: AssetType, isin?: string, issuer_country?: string) => ({
   ...(issuer_country === undefined ? {} : { issuer_country }),
 });
 
+/** The frozen rule, written down: a ledger that holds it keeps computing the same. */
+const BY_DOMICILE = mergeSettings(DEFAULT_SETTINGS, {
+  wash_sale_window: { fund: "by_domicile", money_market: "by_domicile" },
+});
+
 describe("washSaleWindowOf", () => {
   it("reads the setting, then the legacy form, then the documented default", () => {
     expect(washSaleWindowOf(DEFAULT_SETTINGS, of("stock"))).toBe("2m");
@@ -70,9 +75,17 @@ describe("washSaleWindowOf", () => {
   ] as const)(
     "a %s with ISIN %s and country %s takes %s by domicile",
     (type, isin, country, window) => {
-      expect(washSaleWindowOf(DEFAULT_SETTINGS, of(type, isin, country))).toBe(window);
+      expect(washSaleWindowOf(BY_DOMICILE, of(type, isin, country))).toBe(window);
     },
   );
+
+  it.each([
+    ["fund", "ES0000000001"],
+    ["fund", "IE0000000001"],
+    ["money_market", undefined],
+  ] as const)("by default a %s with ISIN %s takes two months", (type, isin) => {
+    expect(washSaleWindowOf(DEFAULT_SETTINGS, of(type, isin))).toBe("2m");
+  });
 
   it("lets a window written in the settings replace the domicile", () => {
     const year = mergeSettings(DEFAULT_SETTINGS, { wash_sale_window: { fund: "1y" } });
@@ -135,7 +148,7 @@ describe("fundAdmitted", () => {
       ...(market ? { market } : {}),
     };
     expect(fundAdmitted(asset)).toBe(admitted);
-    expect(washSaleWindowOf(DEFAULT_SETTINGS, asset)).toBe(admitted ? "2m" : "1y");
+    expect(washSaleWindowOf(BY_DOMICILE, asset)).toBe(admitted ? "2m" : "1y");
   });
 
   it("lets the ISIN decide the domicile: issuer_country only counts without one", () => {

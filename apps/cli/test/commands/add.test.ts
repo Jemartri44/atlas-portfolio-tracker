@@ -37,11 +37,11 @@ describe("atlas add buy|sell: the wash-sale warning before confirming", () => {
     // The sale itself warns about the purchase inside the previous window that
     // it leaves in the portfolio, names it by its date and by what of it is
     // still held (10 bought, 5 of it sold), and the window that actually applies: a
-    // fund has **a year** by default (criterion #2, `2:fund_1y`, since 2026-11-03).
+    // fund has **two months** by default (criterion #2).
     expect(h.text()).toContain(
       "cuando en cartera hay todavía 5 títulos de una compra del 2027-01-11",
     );
-    expect(h.text()).toContain("ventana de un año");
+    expect(h.text()).toContain("ventana de dos meses");
     expect(h.text()).toContain("puede no ser computable en 2027");
     h.reset();
     return { h, trade };
@@ -56,20 +56,20 @@ describe("atlas add buy|sell: the wash-sale warning before confirming", () => {
     expect(text).toContain(
       "Compra del 2027-04-01 de 5 títulos de ast_world dentro de la ventana de su venta con pérdida del 2027-02-10",
     );
-    expect(text).toContain("2028-02-10");
+    expect(text).toContain("2027-04-10");
     expect(text).toContain("no sea computable en 2027");
     expect(text).toContain("atlas tax 2027");
     expect(text).not.toMatch(/ventana de la venta 01[0-9A-Z]{24}/);
-    // The window is named by what actually applies (ADR-0014): for a fund, a
-    // year by default (criterion #2).
-    expect(text).toContain("ventana de un año");
+    // The window is named by what actually applies (ADR-0014): for a fund, two
+    // months by default (criterion #2).
+    expect(text).toContain("ventana de dos meses");
     // The warning comes before the confirmation, not after the write.
     expect(text.indexOf("Compra del 2027-04-01")).toBeLessThan(text.indexOf("Registrado"));
   });
 
   it("does not warn when the repurchase is outside the window, and never blocks", async () => {
     const { h, trade } = await cycle();
-    expect(await h.exec(trade("buy", "2028-02-11", "8", "5"))).toBe(0);
+    expect(await h.exec(trade("buy", "2027-04-11", "8", "5"))).toBe(0);
     expect(h.text()).not.toContain("dentro de la ventana de su venta con pérdida");
     expect(h.text()).toContain("Registrado");
     // Even inside the window the purchase is recorded: it is a warning, not a rejection.

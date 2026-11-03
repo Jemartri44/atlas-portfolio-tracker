@@ -48,16 +48,17 @@ export interface FiscalCriterion {
  * - `2:fund_admitted_2m`: two months for a fund whose units count as
  *   admitted (`fundAdmitted`): Spanish, which article 4.9 of RD 1082/2012
  *   deems listed (V0011-00, 1897-01, 0881-02, V2067-06), or a class on an EU
- *   regulated market. The default since 2026-11-03; aggressive, but backed by
- *   binding consultations (art. 179.2.d LGT).
+ *   regulated market. Aggressive, but backed by binding consultations
+ *   (art. 179.2.d LGT).
  * - `2:fund_unlisted_2m`: two months for a fund that is **not** admitted (a
- *   foreign UCITS only on a multilateral facility), only by configuration: what
- *   the CNMV guide and common practice do, without a source. Aggressive. A new
+ *   foreign UCITS only on a multilateral facility): the default since the
+ *   owner's decision of 2026-11-03, what the CNMV guide and common practice do,
+ *   without a source. Aggressive, and no consultation covers it. A new
  *   identifier: `2:fund_2m` meant two months for any fund, and it is no longer
  *   emitted.
- * - `2:fund_1y`: one year for a fund, the default of one not admitted (article
- *   33.5.g, the five steps of `DEFAULT_WASH_SALE_WINDOW`) and the conservative
- *   side for an admitted one.
+ * - `2:fund_1y`: one year for a fund: a fund not admitted under `"by_domicile"`
+ *   (article 33.5.g, the five steps of `DEFAULT_WASH_SALE_WINDOW`) and the
+ *   conservative side of both groups.
  *   The document grades `2:fund_admitted_2m` and `2:fund_1y` medium-high; the
  *   catalogue has no such grade and keeps **medium**, so that the other
  *   reading of each fund still shows its figure in the doubtful section.

@@ -68,11 +68,11 @@ describe("simulateSale", () => {
   });
 
   it("says until when not to buy back a loss, with the default window of a fund", () => {
-    // At 80: a loss of 200, no tax. A fund takes one year by default (`2:fund_1y`).
+    // At 80: a loss of 200, no tax. A fund takes two months by default.
     const simulation = run(twoAccounts("80"));
     expect(simulation.gain_eur.centsText()).toBe("-200.00");
     expect(simulation.tax_eur.isZero()).toBe(true);
-    expect(simulation.repurchase_until).toBe("2028-12-31");
+    expect(simulation.repurchase_until).toBe("2028-02-29");
   });
 
   it("sells an asset of the bucket from the bucket's account", () => {
