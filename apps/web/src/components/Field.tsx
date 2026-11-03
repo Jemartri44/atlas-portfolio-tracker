@@ -85,26 +85,36 @@ interface TextFieldProps extends BaseProps {
 }
 
 /**
- * The dot is never part of a number typed here (`format/input.ts`): it is not written, and the
- * dot of the numeric keypad writes the comma. A pasted dot is not touched: the parser refuses the
- * whole text, because dropping the dot would turn `0.500` into `500`.
+ * The dot is never part of a number typed here (`format/input.ts`). It is stopped at `beforeinput`,
+ * which phone keyboards do report (their `keydown` is often an anonymous 229); the dot of the
+ * numeric keypad writes the comma in a decimal field and nothing in an integer one. A pasted dot is
+ * not touched: the parser refuses the whole text, because dropping the dot would turn `0.500`
+ * into `500`.
  */
-const decimalKey = (event: KeyboardEvent & { currentTarget: HTMLInputElement }): void => {
-  if (event.key !== "." || event.ctrlKey || event.metaKey || event.altKey) {
-    return;
-  }
-  event.preventDefault();
-  if (event.code === "NumpadDecimal") {
-    const input = event.currentTarget;
-    input.setRangeText(
-      ",",
-      input.selectionStart ?? input.value.length,
-      input.selectionEnd ?? input.value.length,
-      "end",
-    );
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+const noDot = (event: InputEvent): void => {
+  if (event.inputType === "insertText" && (event.data ?? "").includes(".")) {
+    event.preventDefault();
   }
 };
+
+const keypadComma =
+  (kind: "decimal" | "integer") =>
+  (event: KeyboardEvent & { currentTarget: HTMLInputElement }): void => {
+    if (event.code !== "NumpadDecimal" || event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
+    event.preventDefault();
+    if (kind === "decimal") {
+      const input = event.currentTarget;
+      input.setRangeText(
+        ",",
+        input.selectionStart ?? input.value.length,
+        input.selectionEnd ?? input.value.length,
+        "end",
+      );
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  };
 
 export const Field = (props: TextFieldProps): JSX.Element => {
   const [focused, setFocused] = createSignal(false);
@@ -137,7 +147,10 @@ export const Field = (props: TextFieldProps): JSX.Element => {
       disabled={props.disabled}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
-      onKeyDown={props.kind === "decimal" || props.kind === "integer" ? decimalKey : undefined}
+      onBeforeInput={props.kind === "decimal" || props.kind === "integer" ? noDot : undefined}
+      onKeyDown={
+        props.kind === "decimal" || props.kind === "integer" ? keypadComma(props.kind) : undefined
+      }
       onInput={(event) => {
         // The value first: marking the field as typed re-renders it, and
         // the control would be read back after that with the old value.

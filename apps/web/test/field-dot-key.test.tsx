@@ -5,6 +5,7 @@
 // refuse whole (dropping it would turn `0.500` into `500`).
 
 import { describe, expect, it } from "vitest";
+import Configuracion from "../src/routes/ajustes/configuracion.jsx";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
 import {
   choose,
@@ -27,15 +28,22 @@ const keyDown = (input: HTMLInputElement, init: KeyboardEventInit): KeyboardEven
   return event;
 };
 
-describe("the dot key in a numeric field", () => {
-  it("is not written", async () => {
+const beforeInput = (input: HTMLInputElement, inputType: string, data: string): InputEvent => {
+  const event = new InputEvent("beforeinput", { bubbles: true, cancelable: true, inputType, data });
+  input.dispatchEvent(event);
+  return event;
+};
+
+describe("the dot in a numeric field", () => {
+  it("is not written, as a phone keyboard reports it (beforeinput, not keydown)", async () => {
     const host = await open();
     const amount = host.querySelector("#f-amount") as HTMLInputElement;
-    expect(keyDown(amount, { key: ".", code: "Period" }).defaultPrevented).toBe(true);
-    expect(keyDown(amount, { key: ",", code: "Comma" }).defaultPrevented).toBe(false);
+    expect(beforeInput(amount, "insertText", ".").defaultPrevented).toBe(true);
+    expect(beforeInput(amount, "insertText", ",").defaultPrevented).toBe(false);
+    expect(beforeInput(amount, "insertText", "5").defaultPrevented).toBe(false);
   });
 
-  it("is a comma on the numeric keypad", async () => {
+  it("is a comma on the numeric keypad of a decimal field", async () => {
     const host = await open();
     const amount = host.querySelector("#f-amount") as HTMLInputElement;
     type(host, "f-amount", "1");
@@ -45,9 +53,25 @@ describe("the dot key in a numeric field", () => {
     expect(amount.value).toBe("1,");
   });
 
+  it("is nothing on the numeric keypad of an integer field", async () => {
+    today("2026-09-18");
+    const host = await show("/ajustes/configuracion", Configuracion);
+    const days = [...host.querySelectorAll("input[inputmode=numeric]")][0] as
+      | HTMLInputElement
+      | undefined;
+    expect(days).toBeDefined();
+    const before = days?.value;
+    expect(
+      keyDown(days as HTMLInputElement, { key: ".", code: "NumpadDecimal" }).defaultPrevented,
+    ).toBe(true);
+    expect(days?.value).toBe(before);
+  });
+
   it("leaves a pasted dot to the parser, which refuses the whole text", async () => {
     today("2026-09-18");
     const host = await open();
+    const amount = host.querySelector("#f-amount") as HTMLInputElement;
+    expect(beforeInput(amount, "insertFromPaste", "0.500").defaultPrevented).toBe(false);
     choose(host, "f-account_id", "acc_mi");
     choose(host, "f-asset_id", "ast_world");
     type(host, "f-quantity", "4,8765");

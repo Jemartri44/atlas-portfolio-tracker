@@ -108,8 +108,8 @@ export default function MovimientoDetalleRoute(): JSX.Element {
             (candidate) => candidate.event.id === params.id,
           );
         });
-        const names = nameIndex(snapshot.state);
-        const refs = eventReferences(snapshot.events, names);
+        const names = createMemo(() => nameIndex(liveLedger(snapshot).state));
+        const refs = createMemo(() => eventReferences(liveLedger(snapshot).events, names()));
 
         return (
           <Show
@@ -126,7 +126,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
             }
           >
             {(found) => {
-              const view = createMemo(() => detailView(found(), names, refs));
+              const view = createMemo(() => detailView(found(), names(), refs()));
               return (
                 <>
                   <PageHeader
@@ -186,7 +186,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                         <For each={dependents()}>
                           {(item) => (
                             <li>
-                              <A href={`/movimientos/${item.id}`}>{refs(item.id)}</A>
+                              <A href={`/movimientos/${item.id}`}>{refs()(item.id)}</A>
                             </li>
                           )}
                         </For>
@@ -197,7 +197,7 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                   <div class="grid">
                     <section class="card span-8" aria-label="El movimiento">
                       <p class="sentence">
-                        <Parts parts={movementSentence(found(), names, refs)} />
+                        <Parts parts={movementSentence(found(), names(), refs())} />
                       </p>
                       <Show when={view().status !== "current"}>
                         <p>
@@ -208,7 +208,9 @@ export default function MovimientoDetalleRoute(): JSX.Element {
                       </Show>
                       <h2 class="block-title">Datos</h2>
                       <Facts fields={view().fields} />
-                      <SaleResult view={saleResult(snapshot.state.gains, view().id, names)} />
+                      <SaleResult
+                        view={saleResult(liveLedger(snapshot).state.gains, view().id, names())}
+                      />
                       <EventEnvelope
                         envelope={view().envelope}
                         technical={view().technical}
