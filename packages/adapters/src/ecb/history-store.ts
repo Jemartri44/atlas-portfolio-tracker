@@ -138,11 +138,14 @@ export class FileEcbHistoryStore implements EcbHistoryStore {
       if (manifest === undefined) {
         throw new EcbHistoryDamaged(MANIFEST);
       }
-      // Only the last rejection is kept, under a name of its source.
+      // Only the last rejection of each source is kept, under a name of it.
       const file = `rejected/${fileOfSource(next.source)}`;
       const meta = this.metaOf(next, file);
       await this.writeAtomically(join(this.dir, file), next.bytes, lock);
-      const updated: EcbManifest = { ...manifest, rejected: [meta] };
+      const updated: EcbManifest = {
+        ...manifest,
+        rejected: [...manifest.rejected.filter((kept) => kept.file !== file), meta],
+      };
       await this.writeAtomically(
         join(this.dir, MANIFEST),
         Buffer.from(`${JSON.stringify(updated, null, 2)}\n`),

@@ -35,6 +35,17 @@ describe("the default fetch of the sources", () => {
     expect(init.redirect).toBe("error");
     expect(init.signal).toBeInstanceOf(AbortSignal);
   });
+
+  it("gives up on a source that hangs", async () => {
+    vi.stubGlobal(
+      "fetch",
+      (_url: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+        }),
+    );
+    await expect(safeFetch(20)("https://example.test/x")).rejects.toThrow("aborted");
+  });
 });
 
 describe("the reason of a failed download", () => {
