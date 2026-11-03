@@ -150,6 +150,7 @@ describe("the deployments (mutants 33, 34, 41, 54)", () => {
   it("reads from the environment prod every secret it needs, and builds with no install script", () => {
     const names = [...flow("deploy-prod.yml").matchAll(/secrets\.([A-Z0-9_]+)/g)].map((m) => m[1]);
     expect(names.length).toBeGreaterThan(0);
+    expect(flow("deploy-prod.yml")).toContain("environment: prod");
     for (const name of names) {
       expect(name, "a secret of the repository must not be read by the prod flow").toMatch(
         /^ATLAS_PROD_/,
