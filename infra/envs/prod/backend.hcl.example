@@ -1,0 +1,5 @@
+# Placeholders only. Real file: secret ATLAS_PROD_BACKEND_B64 (and local copy outside the repository).
+# Partial configuration of the S3 backend (versions.tf); native S3 locking, no DynamoDB.
+bucket = "atlas-account-tfstate-example000"
+key    = "envs/prod/terraform.tfstate"
+region = "eu-west-1"

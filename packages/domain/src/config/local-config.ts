@@ -14,6 +14,7 @@
 // (constitution V).
 
 import { ValidationError } from "../errors.js";
+import { repeatsKey } from "../schema/json-keys.js";
 
 export interface LocalConfig {
   /**
@@ -43,6 +44,9 @@ export const parseLocalConfig = (text: string): LocalConfig => {
     raw = JSON.parse(text);
   } catch {
     throw new ValidationError("invalid_local_config", "atlas.config.json is not valid JSON");
+  }
+  if (repeatsKey(text)) {
+    throw new ValidationError("invalid_local_config", "atlas.config.json repeats a key");
   }
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
     throw new ValidationError("invalid_local_config", "atlas.config.json must be an object");
