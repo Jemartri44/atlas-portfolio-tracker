@@ -89,7 +89,9 @@ const isRights = (line: TransmissionLine, chain: ChainCore): boolean =>
       return false;
     }
     const action = chain.ctx.events.get(lot.root.event_id) as CorporateActionEvent;
-    return action.asset_id !== lot.root.asset_id;
+    // The asset sold must still be the right: shares a right converted into
+    // descend from the grant too, and they are shares.
+    return action.asset_id !== lot.root.asset_id && lot.root.asset_id === line.asset_id;
   });
 
 /** The section of a disposal that the report already classified as a capital gain. */

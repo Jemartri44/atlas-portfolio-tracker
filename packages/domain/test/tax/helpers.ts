@@ -93,7 +93,7 @@ export const taxBuilder = (settings: Settings | null = DEFAULT_SETTINGS): Ledger
   b.asset("fund_g");
   b.asset("fund_h");
   b.asset("fund_i");
-  b.asset("stock_s", { asset_type: "stock", transferable: false });
+  b.asset("stock_s", { asset_type: "stock", transferable: false, market: "XMAD" });
   b.asset("stock_t", { asset_type: "stock", transferable: false });
   b.asset("etc_e", { asset_type: "etc", asset_class: "gold", transferable: false });
   b.asset("coin_c", { asset_type: "crypto", asset_class: "crypto", transferable: false });

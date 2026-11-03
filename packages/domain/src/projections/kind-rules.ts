@@ -46,6 +46,9 @@ export const KIND_RULES: Record<CorporateActionKind, KindRule> = {
       [onEvent("forced_sale"), onEvent("convert")],
       [onEvent("convert"), onPrevious("forced_sale")],
       [onEvent("convert"), onPrevious("cost_adjustment")],
+      // Fractions sold and cash: the cash applies first whatever the order (`costAdjustmentsFirst`).
+      [onEvent("convert"), onPrevious("forced_sale"), onPrevious("cost_adjustment")],
+      [onEvent("convert"), onPrevious("cost_adjustment"), onPrevious("forced_sale")],
     ],
   },
   spin_off: {
@@ -53,6 +56,8 @@ export const KIND_RULES: Record<CorporateActionKind, KindRule> = {
       [onEvent("carve_out")],
       [onEvent("carve_out"), onPrevious("forced_sale")],
       [onEvent("carve_out"), onPrevious("cost_adjustment")],
+      [onEvent("carve_out"), onPrevious("forced_sale"), onPrevious("cost_adjustment")],
+      [onEvent("carve_out"), onPrevious("cost_adjustment"), onPrevious("forced_sale")],
     ],
   },
   fund_merger: { sequences: [[onEvent("convert")]] },

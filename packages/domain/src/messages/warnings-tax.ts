@@ -54,6 +54,13 @@ const FX_FINDING_CORRECTION =
   "La cifra se calcula con el tipo de tus datos; si está mal, corrige el movimiento (anular y registrar de nuevo) y compruébalo antes de declarar.";
 
 export const WARNINGS_TAX: Record<string, Entry> = {
+  cost_adjustment_currency_mismatch: {
+    say: (d, v) =>
+      `El dinero en ${v.text(d.currency)} rebaja compras de ${v.one(d.asset_id)} hechas en ${v.text(d.lot_currency)}: Atlas lo reparte en proporción al coste en euros, lo que equivale a convertirlo al tipo de la compra, y ninguna fuente dice qué tipo de cambio usar. Es un criterio abierto.`,
+    cli: () => "(fiscal-questions.md #13)",
+  },
+  capital_return_partial_accounts: (d, v) =>
+    `La devolución no da importe a todas las cuentas que tienen ${v.one(d.asset_id)} (faltan: ${v.many(d.accounts)}): como el FIFO es global, el dinero rebaja también los lotes de esas cuentas. Revisa si falta alguna.`,
   tax_quota_not_computed: () =>
     "Esto es la base del ahorro, no la cuota ni lo que se paga: el mínimo personal, la base general y el tipo medio efectivo no están en tus datos.",
   tax_filing_prefix_unverified: (d) =>
@@ -152,6 +159,12 @@ export const WARNINGS_TAX: Record<string, Entry> = {
   },
   tax_box_section_doubtful: () =>
     "Las acciones de mercados de fuera de la UE (NYSE, Nasdaq…) van a «otros elementos patrimoniales» con la clave 2, como dice la ayuda del Modelo 100; ninguna fuente leída extiende a la declaración la equivalencia de esos mercados, así que el apartado es dudoso.",
+  tax_box_market_unknown: {
+    say: (d, v) =>
+      `Estas acciones no tienen mercado anotado o Atlas no lo conoce (${v.many(d.assets)}): se dejan en «acciones negociadas», pero si cotizan fuera de la UE van a «otros elementos patrimoniales» (clave 2). Anota el mercado.`,
+    cli: () => "`atlas asset update <asset_id> --market <MIC>`.",
+    web: () => "Se anota en Catálogo.",
+  },
   tax_box_other_inferred: () =>
     "Las diferencias de cambio de la divisa (y un ETC o ETP configurado como ganancia) no tienen apartado propio en el impreso: por exclusión irían a «otros elementos patrimoniales», clave 4 («otros elementos patrimoniales no afectos a actividades económicas»). Es una inferencia, no está escrita en ninguna fuente; por eso no llevan casilla.",
   tax_box_repurchase_has_no_number: () =>

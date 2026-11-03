@@ -1,11 +1,11 @@
 // Whether a market is a regulated market of Directive 2014/65/EU, read off the
 // `market` the user wrote in the catalogue (a MIC code or a name).
 //
-// It decides one thing only: whether a share is declared under "acciones
+// It decides two things: whether a share is declared under "acciones
 // negociadas" or under "otros elementos patrimoniales" (help of the Modelo 100
-// of 2025). It is a short table of the markets this portfolio can reach, not
-// the ESMA register: a market it does not know answers `undefined` and the
-// share stays where it always was.
+// of 2025), and whether a `capital_return` may lower its cost (art. 25.1.e
+// LIRPF). It is a short table of the markets this portfolio can reach, not
+// the ESMA register: a market it does not know answers `undefined`.
 
 /** Regulated markets of the EU, by MIC and by the names people write. */
 const EU = [
