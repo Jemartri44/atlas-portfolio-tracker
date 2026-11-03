@@ -24,7 +24,7 @@ import {
   copyBucketFolders,
   copyLocalDocuments,
 } from "./backup-copies.js";
-import { cancelled, confirmOutsideRepository, render } from "./shared.js";
+import { cancelled, confirmOutsideRepository, IN_REPOSITORY_FLAG, render } from "./shared.js";
 
 const LEDGER_KEY = "ledger/ledger.jsonl";
 
@@ -73,7 +73,7 @@ export const backupCommand = async (
   _positionals: string[],
   flags: Flags,
 ): Promise<number> => {
-  assertKnownFlags(flags, ["to", "from-bucket", "env", ...GLOBAL_FLAGS]);
+  assertKnownFlags(flags, ["to", "from-bucket", "env", IN_REPOSITORY_FLAG, ...GLOBAL_FLAGS]);
   const directory = requireFlag(flags, "to");
   const fromBucket = booleanFlag(flags, "from-bucket");
   if (fromBucket !== flags.has("env")) {
@@ -93,7 +93,7 @@ export const backupCommand = async (
   if (await pathExists(destination)) {
     throw new DomainError("path_exists", `${destination} already exists`, { path: destination });
   }
-  if (!(await confirmOutsideRepository(ctx, destination))) {
+  if (!(await confirmOutsideRepository(ctx, destination, booleanFlag(flags, IN_REPOSITORY_FLAG)))) {
     cancelled(ctx);
     return 0;
   }
@@ -129,15 +129,18 @@ export const backupCommand = async (
       throw translateAwsFailure(error);
     }
   }
-  // The documentary sources the user leaves beside the ledger, verified and never overwritten.
-  const documents = await copyLocalDocuments(dirname(ctx.ledgerPath), directory);
+  // The documentary sources the user leaves beside the ledger, verified and never overwritten. The
+  // copy of the bucket has its own: the folder beside `--ledger` is not its.
+  const documents = fromBucket
+    ? undefined
+    : await copyLocalDocuments(dirname(ctx.ledgerPath), directory);
   render(
     ctx,
     {
       path: destination,
       lines: copy.lines.length,
       etag: copy.etag,
-      documents,
+      ...(documents === undefined ? {} : { documents }),
       ...(bucket === undefined ? {} : { bucket }),
     },
     [
@@ -147,7 +150,9 @@ export const backupCommand = async (
             "Es el libro de la nube, de solo lectura (0400). Para trabajar con él en una carpeta, «atlas admin pull».",
           ]
         : []),
-      `documents/ de la carpeta del libro: ${describeCopied(documents)}.`,
+      ...(documents === undefined
+        ? []
+        : [`documents/ de la carpeta del libro: ${describeCopied(documents)}.`]),
       ...(bucket === undefined
         ? []
         : [
@@ -155,6 +160,12 @@ export const backupCommand = async (
           ]),
     ].join("\n"),
   );
+  if (documents !== undefined && documents.skipped.length > 0) {
+    ctx.io.err(
+      `Error (documents_not_copied): estos ficheros de documents/ no son ficheros normales (enlaces u otros) y no se han copiado; el resto, sí: ${documents.skipped.join(", ")}.`,
+    );
+    return EXIT.domain;
+  }
   if (bucket !== undefined && bucket.skipped.length > 0) {
     ctx.io.err(
       `Error (bucket_key_unsafe): estas claves del bucket no son una ruta sencilla y no se han copiado; el resto, sí: ${bucket.skipped.join(", ")}.`,

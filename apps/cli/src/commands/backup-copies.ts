@@ -6,6 +6,7 @@
 // **nothing is ever overwritten**: a destination that already holds the same bytes is left as it
 // is; one with other bytes is refused.
 
+import type { Dirent } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { DomainError } from "@atlas/domain";
@@ -42,21 +43,45 @@ const copyVerified = async (
   return "written";
 };
 
-/** Every file under a folder, at any depth; none when the folder does not exist. */
-const filesUnder = async (folder: string): Promise<string[]> => {
-  const entries = await readdir(folder, { recursive: true, withFileTypes: true }).catch(() => []);
-  return entries
-    .filter((entry) => entry.isFile())
-    .map((entry) => join(entry.parentPath, entry.name))
-    .sort();
+/**
+ * Every regular file under a folder, at any depth, and the entries that are neither files nor
+ * folders (links and the like), which a copy would silently leave out. No folder is not an error;
+ * a folder that cannot be read is: a copy that says «nothing to copy» over documents it could not
+ * see would be a lie about files that cannot be rebuilt.
+ */
+const filesUnder = async (folder: string): Promise<{ files: string[]; skipped: string[] }> => {
+  let entries: Dirent[];
+  try {
+    entries = await readdir(folder, { recursive: true, withFileTypes: true });
+  } catch (error) {
+    if ((error as { code?: string }).code === "ENOENT") {
+      return { files: [], skipped: [] };
+    }
+    throw new DomainError("documents_unreadable", `${folder} cannot be read`, { path: folder });
+  }
+  const files: string[] = [];
+  const skipped: string[] = [];
+  for (const entry of entries) {
+    const path = join(entry.parentPath, entry.name);
+    if (entry.isFile()) {
+      files.push(path);
+    } else if (!entry.isDirectory()) {
+      skipped.push(relative(folder, path));
+    }
+  }
+  return { files: files.sort(), skipped: skipped.sort() };
 };
 
-/** The local `documents/` beside the ledger, into `<to>/documents/`. */
-export const copyLocalDocuments = async (ledgerFolder: string, to: string): Promise<Copied> => {
+/** The local `documents/` beside the ledger, into `<to>/documents/`; what is not a file is `skipped`. */
+export const copyLocalDocuments = async (
+  ledgerFolder: string,
+  to: string,
+): Promise<CopiedFromBucket> => {
   const source = join(ledgerFolder, "documents");
   let written = 0;
   let unchanged = 0;
-  for (const file of await filesUnder(source)) {
+  const { files, skipped } = await filesUnder(source);
+  for (const file of files) {
     const outcome = await copyVerified(
       await readFile(file),
       join(to, "documents", relative(source, file)),
@@ -67,7 +92,7 @@ export const copyLocalDocuments = async (ledgerFolder: string, to: string): Prom
       unchanged += 1;
     }
   }
-  return { written, unchanged };
+  return { written, unchanged, skipped };
 };
 
 /** A key of the bucket as a relative path of the disk, or nothing: never out of the destination. */

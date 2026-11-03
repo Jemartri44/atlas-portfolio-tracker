@@ -296,6 +296,27 @@ describe("writing inside a git working tree", () => {
     expect(h.text()).toContain("--yes");
   });
 
+  it("is not answered by --yes: only its own flag allows it without a terminal", async () => {
+    const refused = harness({ events: seed() });
+    expect(
+      await refused.exec(["export", "--format", "csv", "--out", "./ledger-copy.csv", "--yes"]),
+    ).toBe(EXIT.noTty);
+    expect(refused.text()).toContain("--allow-in-repository");
+    await expect(access("./ledger-copy.csv")).rejects.toThrow();
+    const allowed = harness({ events: seed() });
+    expect(
+      await allowed.exec([
+        "export",
+        "--format",
+        "csv",
+        "--out",
+        "./ledger-copy.csv",
+        "--allow-in-repository",
+      ]),
+    ).toBe(0);
+    await rm("./ledger-copy.csv", { force: true });
+  });
+
   it("does not ask for a destination outside any repository", async () => {
     await mkdir(outside, { recursive: true });
     const target = join(outside, `atlas-export-${process.pid}.csv`);

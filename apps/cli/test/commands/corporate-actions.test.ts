@@ -507,6 +507,28 @@ describe("atlas ca", () => {
     expect(event.notes).toBe("removed");
   });
 
+  it.each(["[null]", "[1]", "[[]]", '["x"]'])(
+    "raw refuses an effect that is not an object (%s) as a usage error",
+    async (effects) => {
+      const h = harness({ events: seed() });
+      expect(
+        await h.exec([
+          "ca",
+          "raw",
+          "--asset",
+          "ast_gold",
+          "--kind",
+          "split",
+          "--effects-json",
+          effects,
+          ...CA,
+          "--yes",
+        ]),
+      ).toBe(64);
+      expect(h.text()).toContain("debe ser un objeto");
+    },
+  );
+
   it("raw validates the effects against the table and rejects bad input with code 1", async () => {
     const h = harness({ events: seed() });
     expect(await h.exec(BUY_GOLD)).toBe(0);

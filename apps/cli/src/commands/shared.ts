@@ -437,18 +437,33 @@ const insideGitWorktree = async (path: string): Promise<string | undefined> => {
   }
 };
 
-/** Asks before writing `destination` when it falls inside a git working tree. Returns false if the user declines. */
+/** The flag that says «yes, write real data inside a repository»; `--yes` does not. */
+export const IN_REPOSITORY_FLAG = "allow-in-repository";
+
+/**
+ * Asks before writing `destination` when it falls inside a git working tree. Returns false if the
+ * user declines. The question is about privacy (a file with real data could end in a commit), not a
+ * confirmation of the operation, so `--yes` does not answer it: only the flag of its own does, or
+ * the user at a terminal.
+ */
 export const confirmOutsideRepository = async (
   ctx: Context,
   destination: string,
+  allowed: boolean,
 ): Promise<boolean> => {
   const repository = await insideGitWorktree(destination);
-  if (repository === undefined) {
+  if (repository === undefined || allowed) {
     return true;
   }
   aside(
     ctx,
     `El destino está dentro del repositorio ${repository}: un fichero con datos reales podría acabar en un commit.`,
   );
-  return confirm(ctx, "¿Escribir de todas formas? [s/N] ");
+  const reply = await ctx.io.confirm("¿Escribir de todas formas? [s/N] ", { aside: ctx.json });
+  if (reply === undefined) {
+    throw new ConfirmationRequired(
+      `el destino está dentro de un repositorio y no hay terminal para preguntar: --allow-in-repository lo permite (--yes no vale para esto)`,
+    );
+  }
+  return reply;
 };

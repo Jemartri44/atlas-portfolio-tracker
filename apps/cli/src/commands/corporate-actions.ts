@@ -241,6 +241,12 @@ const effectsJson = async (flags: Flags): Promise<Effect[]> => {
   if (!Array.isArray(parsed)) {
     throw new UsageError("--effects-json debe ser un array de efectos");
   }
+  const bad = parsed.findIndex(
+    (effect) => typeof effect !== "object" || effect === null || Array.isArray(effect),
+  );
+  if (bad >= 0) {
+    throw new UsageError(`--effects-json: el efecto número ${bad + 1} debe ser un objeto`);
+  }
   return parsed as Effect[];
 };
 

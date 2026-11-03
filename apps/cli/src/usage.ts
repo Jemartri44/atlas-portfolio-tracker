@@ -13,7 +13,7 @@ comandos:
   tax <año> [--boxes]            la base del ahorro (total fiscal de núcleo y cubo, no la cuota) como JSON; la lectura está en la web
   m720 <año>   m721 <año>        los modelos informativos (obligación, saldos a 31/12 y media del 4T) como JSON
   filed <renta|720|721> <año> [--set <clave>=<importe>]… [--receipt …] [--filed-at …]
-  export --format jsonl|csv [--out <ruta>]
+  export --format jsonl|csv [--out <ruta>]   backup y export: dentro de un repositorio git piden confirmación aunque haya --yes; sin terminal, --allow-in-repository
   synth --out <ruta> [--seed <n>]   backup --to <directorio> [--from-bucket --env <entorno>]   con --from-bucket, el libro y los ficheros de la nube
   rehearse --dump <fichero>   ensayo de restauración: el volcado frente al libro, en local
   compact [--yes] [--accept-unverified <id>]…   la renuncia a comprobar la huella de esa presentación queda registrada

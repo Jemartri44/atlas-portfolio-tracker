@@ -3,7 +3,16 @@
 // administration — against the double of S3, **only reading** there, every file verified and nothing ever
 // overwritten on disk.
 
-import { mkdir, mkdtemp, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { encodeLine } from "@atlas/domain";
@@ -100,6 +109,37 @@ describe("atlas backup copies the local documents/", () => {
   });
 });
 
+describe("atlas backup says what it could not copy of documents/", () => {
+  it("counts a link as not copied, copies the rest and exits with an error", async () => {
+    const f = await folder();
+    await mkdir(join(f.dir, "documents"), { recursive: true });
+    await writeFile(join(f.dir, "documents", "nota.txt"), "nota");
+    await symlink(join(f.dir, "documents", "nota.txt"), join(f.dir, "documents", "enlace.txt"));
+    const target = join(f.dir, "..", `copies-link-${Date.now()}`);
+    expect(await f.atlas("backup", "--to", target)).toBe(EXIT.domain);
+    expect(f.text()).toContain("documents_not_copied");
+    expect(f.text()).toContain("enlace.txt");
+    expect(await readFile(join(target, "documents", "nota.txt"), "utf8")).toBe("nota");
+  });
+
+  it.skipIf(process.getuid?.() === 0)(
+    "is an error, not «nothing to copy», when documents/ cannot be read",
+    async () => {
+      const f = await folder();
+      await mkdir(join(f.dir, "documents", "cerrada"), { recursive: true });
+      await chmod(join(f.dir, "documents", "cerrada"), 0o000);
+      try {
+        const target = join(f.dir, "..", `copies-closed-${Date.now()}`);
+        expect(await f.atlas("backup", "--to", target)).toBe(EXIT.domain);
+        expect(f.text()).toContain("no se puede leer entera");
+        expect(f.text()).not.toContain("no hay nada que copiar");
+      } finally {
+        await chmod(join(f.dir, "documents", "cerrada"), 0o700);
+      }
+    },
+  );
+});
+
 describe("atlas backup --from-bucket", () => {
   it("copies the ledger, documents/ and imports/ of the bucket, only reading there", async () => {
     const api = setup();
@@ -122,6 +162,8 @@ describe("atlas backup --from-bucket", () => {
     );
     expect(f.text()).toContain("2 ficheros copiados y verificados");
     expect(f.text()).toContain("En el bucket no se ha escrito ni borrado nada.");
+    // The local documents/ beside --ledger are not the bucket's: they are not copied here.
+    expect(f.text()).not.toContain("documents/ de la carpeta del libro");
     // The ledger of the cloud, not the one of the folder, dated and read-only.
     const [dated] = (await readdir(target)).filter((name) => name.startsWith("ledger-"));
     expect(await readFile(join(target, dated as string), "utf8")).toBe("el de la nube\n");

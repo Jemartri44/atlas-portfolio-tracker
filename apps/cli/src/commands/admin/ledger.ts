@@ -1,7 +1,7 @@
 // atlas admin pull | compact | restore: the ledger of the cloud, brought down to a folder or
 // rewritten (ADR-0026, Part A; ADR-0032).
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { S3LedgerBlob } from "@atlas/adapters/aws";
 import { BlobLedgerStore } from "@atlas/adapters/blob";
@@ -56,6 +56,13 @@ export const pullOrder = async (
       throw new DomainError("path_exists", `${destination} already exists`, { path: destination });
     }
     throw error;
+  }
+  // Read back, as `backup` does: a copy that is not the bytes of the cloud is not left behind.
+  if (!Buffer.from(stored.body).equals(await readFile(destination))) {
+    await rm(destination, { force: true });
+    throw new DomainError("backup_mismatch", "the copy does not match the ledger of the cloud", {
+      path: destination,
+    });
   }
   const lines = linesOfText(Buffer.from(stored.body).toString("utf8")).length;
   render(
