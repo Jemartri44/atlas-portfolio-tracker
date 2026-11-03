@@ -10,12 +10,10 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ledgerEntries, projectLedger, type Warning } from "@atlas/domain";
+import { CONSOLE_ONLY, ERRORS, WARNINGS } from "@atlas/domain/messages";
 import { describe, expect, it } from "vitest";
 import { eventReferences } from "../src/format/events.js";
-import { ERROR_MESSAGES } from "../src/format/messages/errors.js";
-import { WARNING_MESSAGES } from "../src/format/messages/warnings.js";
-import { nameIndex, namingOf } from "../src/format/names.js";
-import { figuresOf } from "../src/format/privacy.js";
+import { nameIndex } from "../src/format/names.js";
 import Configuracion from "../src/routes/ajustes/configuracion.jsx";
 import Verificacion from "../src/routes/ajustes/verificacion.jsx";
 import Detail from "../src/routes/movimientos/detail.jsx";
@@ -23,6 +21,7 @@ import { detailView } from "../src/view-models/detail.js";
 import { attentionItems, movementRow } from "../src/view-models/index.js";
 import { accountOptions, openThesisOptions } from "../src/view-models/options.js";
 import { goldenEvents } from "./helpers/golden.js";
+import { sayError, sayWarning } from "./helpers/messages.js";
 import {
   choose,
   optionsOf,
@@ -57,18 +56,6 @@ const entries = ledgerEntries(state, events);
 const names = nameIndex(state);
 const references = eventReferences(events);
 
-const messageNames = {
-  ast_world: "World Index Fund",
-  acc_mi: "Fondos indexados",
-  "tesis:th_alpha": "sobre Alpha Robotics (abierta el 01/09/2026)",
-};
-const render = (catalogue: typeof ERROR_MESSAGES, code: string, details: Record<string, unknown>) =>
-  (catalogue[code] as (d: unknown, n: unknown, f: unknown) => string)(
-    details,
-    namingOf(messageNames),
-    figuresOf(false),
-  );
-
 describe("the messages", () => {
   /**
    * Every template, fed with details shaped like the domain's: none may print
@@ -83,6 +70,11 @@ describe("the messages", () => {
         return "2027-01-31";
       }
       if (key === "model") return "720";
+      if (key === "tax_residence" || key === "country") return "ES";
+      if (key === "source") return "ibkr";
+      if (key === "selling") return ["acc_mi"];
+      if (key === "currencies") return ["USD"];
+      if (key === "latest") return "2027-01-31";
       if (key === "category") return "capital_gain";
       if (key === "thesis_id") return "th_alpha";
       if (key === "theses") return ["th_alpha"];
@@ -127,18 +119,23 @@ describe("the messages", () => {
       "ledger_has_invalid_events",
     ]);
     const offenders: string[] = [];
-    for (const [catalogue, codes] of [
-      [ERROR_MESSAGES, Object.keys(ERROR_MESSAGES)],
-      [WARNING_MESSAGES, Object.keys(WARNING_MESSAGES)],
+    for (const [say, codes] of [
+      [sayError, Object.keys(ERRORS)],
+      [sayWarning, Object.keys(WARNINGS)],
     ] as const) {
       for (const code of codes) {
+        // The web never administers the cloud nor drives the console's folders.
+        if (code in CONSOLE_ONLY) {
+          continue;
+        }
         // A weekend is a date, not a number: its one detail says so.
-        const text = render(
-          catalogue,
+        const text = say(
           code,
           code === "fx_rate_date_weekend"
             ? { field: "fx_rate_date", value: "2027-01-30" }
-            : details,
+            : code === "tax_settings_default_used"
+              ? { fields: ["monthly_contribution_eur"] }
+              : details,
         );
         const forbidden = [
           /ADR-|constituci|business-rules|§|append-only|dominio|<n>d/,
@@ -153,7 +150,7 @@ describe("the messages", () => {
         }
       }
     }
-    expect(offenders).toEqual([]);
+    expect(offenders.join("\n")).toBe("");
   });
 
   it("explains an integrity finding in Spanish, without its code or its events", () => {
