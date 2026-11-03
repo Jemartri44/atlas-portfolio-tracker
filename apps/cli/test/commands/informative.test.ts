@@ -82,10 +82,52 @@ describe("the year of the informative returns", () => {
   });
 });
 
+describe("atlas m721 before the model existed", () => {
+  it("has no 2022", async () => {
+    const report = await run(["m721", "2022"]);
+    expect(report).toMatchObject({ period: "before_model" });
+    expect(verdictOf(report, "crypto")).toBe("not_applicable");
+  });
+});
+
 describe("atlas tax --boxes", () => {
-  it("emits the layout by box as JSON", async () => {
-    const h = harness({ events: abroad().build(), instant: "2028-03-01T10:00:00.000Z" });
-    expect(await h.exec(["tax", "2025", "--boxes"])).toBe(0);
-    expect(JSON.parse(h.text())).toMatchObject({ year: 2025 });
+  /** A ledger with a disposal in 2025, which is the year whose boxes are checked. */
+  const withDisposal = (): Events => {
+    const b = new Events();
+    b.settings(CLI_SETTINGS);
+    b.account("acc_ib", "IE");
+    b.asset("etf_a", "etf");
+    b.deposit("acc_ib", "2024-01-04", "10000");
+    b.buy("acc_ib", "etf_a", "2024-02-10", "100", "100");
+    // With a withholding, so the return has a box the engine computes and cannot compute whole.
+    b.sell("acc_ib", "etf_a", "2025-09-01", "100", "120", "2025-09-01", "380");
+    return b;
+  };
+  interface Boxes {
+    year: number;
+    mapping: string;
+    entries: { box?: string; missing?: boolean }[];
+  }
+  const boxes = async (year: string, instant: string): Promise<Boxes> => {
+    const h = harness({ events: withDisposal().build(), instant });
+    expect(await h.exec(["tax", year, "--boxes"])).toBe(0);
+    return JSON.parse(h.text()) as Boxes;
+  };
+
+  it("has the checked boxes of 2025, and says what the ledger does not hold", async () => {
+    const report = await boxes("2025", "2026-06-01T10:00:00.000Z");
+    expect(report.mapping).toBe("checked");
+    expect(report.entries.map((entry) => entry.box)).toEqual(
+      expect.arrayContaining(["0460", "2227"]),
+    );
+    // The NIF is not in the ledger and is not invented.
+    expect(report.entries.find((entry) => entry.box === "2225")?.missing).toBe(true);
+  });
+
+  it("gives another year by concept, with no box number at all", async () => {
+    const report = await boxes("2026", "2027-06-01T10:00:00.000Z");
+    expect(report.mapping).not.toBe("checked");
+    expect(report.entries.every((entry) => entry.box === undefined)).toBe(true);
+    expect(JSON.stringify(report)).not.toContain("0460");
   });
 });

@@ -110,9 +110,21 @@ describe("atlas ca", () => {
     expect(text).toMatch(/acc_fund\s+ast_gold\s+7\s+1/);
     h.reset();
     expect(await h.exec(["tax", "2027"])).toBe(0);
-    // The cash in lieu is a taxable transmission, even when its gain is zero.
-    const lines = JSON.parse(h.text()).capital_gains.currency_lines as { account_id: string }[];
-    expect(lines.map((line) => line.account_id).sort()).toEqual(["acc_etf", "acc_fund"]);
+    // The cash in lieu is a taxable transmission per account (of an ETC: movable capital), even
+    // when its gain is zero, and the dollars it brings in cover the ones the purchase spent.
+    const report = JSON.parse(h.text());
+    const sales = report.movable_capital.transmissions as {
+      account_id: string;
+      corporate_action_kind?: string;
+    }[];
+    expect(
+      sales
+        .filter((sale) => sale.corporate_action_kind === "reverse_split")
+        .map((sale) => sale.account_id)
+        .sort(),
+    ).toEqual(["acc_etf", "acc_fund"]);
+    const covers = report.capital_gains.currency_lines as { account_id: string }[];
+    expect(covers.map((line) => line.account_id).sort()).toEqual(["acc_etf", "acc_fund"]);
     h.reset();
     expect(await h.exec(["positions"])).toBe(0);
     expect(h.text()).toMatch(/acc_etf\s+ast_gold\s+2/);

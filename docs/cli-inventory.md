@@ -56,7 +56,7 @@ Nota sobre `valuations` (1): la web enseña las valoraciones como movimientos, n
 
 ## Qué saldría, en el peor y el mejor caso
 
-- Sale (15): `networth`, `weights`, `contribute`, `rebalance`, `transfer simulate`, `costs`, `bucket`, `thesis list`, `tax` (texto y `--boxes`), `gains`, `income`, `valuations`, `cash`.
+- Sale (13 órdenes; `m720`/`m721` y `tax` pasan a solo JSON): `networth`, `weights`, `contribute`, `rebalance`, `transfer simulate`, `costs`, `bucket`, `thesis list`, `tax` (texto y `--boxes`), `gains`, `income`, `valuations`, `cash`.
 - Se queda: `tax` (JSON), `lots`, `positions`, `order list`, `transfer pending`, `thesis show`.
 
 ## Orden propuesto de la retirada
