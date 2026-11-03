@@ -1,4 +1,4 @@
-// With --json, settings set, fx correct and the draft commands answer with one
+// With --json, settings set, fx correct and an unrated operation answer with one
 // JSON object on stdout; what the person reads goes to stderr (as in json-writes).
 
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
@@ -70,7 +70,7 @@ const ratedBuy = [
   "2026-01-02",
   "--yes",
 ];
-const draftBuy = buy("2026-04-01", "2026-04-03");
+const unratedBuy = buy("2026-04-01", "2026-04-03");
 
 const setup = async () => {
   const dir = await mkdtemp(join(tmpdir(), "atlas-json-rest-"));
@@ -98,7 +98,7 @@ const setup = async () => {
     return JSON.parse(out[0] as string) as Record<string, unknown>;
   };
   expect((await atlas(undefined, ratedBuy)).code).toBe(0);
-  return { atlas, only };
+  return { atlas, only, ledger };
 };
 
 const RULE = ["settings", "set", "--fiscal-date-rule", "etc=value_date"];
@@ -153,12 +153,13 @@ describe("fx correct --json", () => {
 
 describe("an operation whose ECB rate is not yet published, with --json", () => {
   it("is refused as ecb_rate_pending and nothing is recorded: no rate is estimated", async () => {
-    const { atlas, only } = await setup();
-    const before = only((await atlas(undefined, ["check", "--json"])).out);
-    const waiting = await atlas(true, [...draftBuy, "--json"]);
+    const { atlas, only, ledger } = await setup();
+    const before = await readFile(ledger, "utf8");
+    const waiting = await atlas(true, [...unratedBuy, "--json"]);
     expect(waiting.code).toBe(1);
     expect(only(waiting.out)).toMatchObject({ status: "error", code: "ecb_rate_pending" });
     expect(waiting.err).toContain("Repite el comando cuando se publique");
-    expect(only((await atlas(undefined, ["check", "--json"])).out)).toEqual(before);
+    // The ledger is byte for byte what it was: nothing estimated, nothing recorded.
+    expect(await readFile(ledger, "utf8")).toBe(before);
   });
 });
