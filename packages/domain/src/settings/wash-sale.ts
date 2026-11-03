@@ -8,12 +8,12 @@
 // transfers and swaps is the tax engine of phase 5.
 
 import { addDays, addMonths, addYears, type CivilDate } from "../dates/civil-date.js";
-import { euRegulatedAdmission } from "../projections/markets.js";
 import type { AssetFields, AssetType } from "../schema/events.js";
 import {
   ADMITTED_FUND_WINDOW,
   DEFAULT_WASH_SALE_TRANSFER_COUNTS,
   DEFAULT_WASH_SALE_WINDOW,
+  FUND_REGULATED_MARKETS,
   incomeCategoryOf,
   NOT_ADMITTED_FUND_WINDOW,
   type Settings,
@@ -24,18 +24,15 @@ import {
 export type WashSaleAsset = Pick<AssetFields, "asset_type" | "isin" | "issuer_country" | "market">;
 
 /**
- * Whether the units of a fund count as admitted to trading (art. 33.5.f):
- * a Spanish fund (ISIN `ES` or issuer country ES), which article 4.9 of RD
- * 1082/2012 deems listed, or a class whose `market` the user set to an EU
- * regulated market with no open segment. Asked without a currency, the guess
- * of `euRegulatedAdmission` says `true` only for such a market: a mixed venue
- * proves nothing, and a multilateral facility (Euronext Dublin GEM `XEYE`,
- * Euro MTF `EMTF`, Stuttgart) is not a regulated market (DGT V0422-09).
+ * Whether the units of a fund count as admitted to trading (art. 33.5.f): a
+ * Spanish fund, which article 4.9 of RD 1082/2012 deems listed, or a class
+ * whose `market` the user set to one of `FUND_REGULATED_MARKETS`. **The ISIN
+ * decides the domicile**: an `IE…` fund is Irish whatever `issuer_country`
+ * says, which only counts when there is no ISIN.
  */
 export const fundAdmitted = (asset: WashSaleAsset): boolean =>
-  asset.isin?.startsWith("ES") ||
-  asset.issuer_country === "ES" ||
-  euRegulatedAdmission({ ...asset, currency: "" }) === true;
+  (asset.isin === undefined ? asset.issuer_country === "ES" : /^ES/i.test(asset.isin)) ||
+  FUND_REGULATED_MARKETS.includes(asset.market?.toUpperCase() as string);
 
 /**
  * The window in force for an asset (criterion #2): the settings, the legacy

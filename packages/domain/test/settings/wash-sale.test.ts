@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { AssetType } from "../../src/schema/events.js";
-import { DEFAULT_SETTINGS, mergeSettings, type Settings } from "../../src/settings/settings.js";
+import {
+  ADMITTED_FUND_WINDOW,
+  BY_DOMICILE_TYPES,
+  DEFAULT_SETTINGS,
+  FUND_REGULATED_MARKETS,
+  mergeSettings,
+  NOT_ADMITTED_FUND_WINDOW,
+  type Settings,
+} from "../../src/settings/settings.js";
 import {
   fundAdmitted,
   washSaleTransferCounts,
@@ -54,7 +62,7 @@ describe("washSaleWindowOf", () => {
   // under g).
   it.each([
     ["fund", "ES0000000001", undefined, "2m"],
-    ["fund", "IE0000000001", "ES", "2m"],
+    ["fund", "IE0000000001", "ES", "1y"],
     ["money_market", undefined, "ES", "2m"],
     ["fund", "IE0000000001", undefined, "1y"],
     ["fund", "LU0000000001", "LU", "1y"],
@@ -110,11 +118,12 @@ describe("washSaleWindowEnd / washSaleWindowStart", () => {
 });
 
 describe("fundAdmitted", () => {
-  // A foreign class counts as admitted only on an EU regulated market with no
-  // open segment, written by hand in `market` (criterion #2, V0422-09).
+  // A foreign class counts as admitted only on an EU regulated market, by the
+  // MIC of its segment (criterion #2, V0422-09).
   it.each([
-    ["XDUB", true],
+    ["XMSM", true],
     ["xlux", true],
+    ["XDUB", false],
     ["XEYE", false],
     ["EMTF", false],
     ["XETR", false],
@@ -127,5 +136,52 @@ describe("fundAdmitted", () => {
     };
     expect(fundAdmitted(asset)).toBe(admitted);
     expect(washSaleWindowOf(DEFAULT_SETTINGS, asset)).toBe(admitted ? "2m" : "1y");
+  });
+
+  it("lets the ISIN decide the domicile: issuer_country only counts without one", () => {
+    expect(fundAdmitted({ asset_type: "fund", isin: "IE0000000001", issuer_country: "ES" })).toBe(
+      false,
+    );
+    expect(fundAdmitted({ asset_type: "fund", issuer_country: "ES" })).toBe(true);
+    expect(fundAdmitted({ asset_type: "fund", isin: "ES0000000001", issuer_country: "IE" })).toBe(
+      true,
+    );
+  });
+});
+
+/**
+ * **Frozen.** `"by_domicile"` is recorded in the ledger, these are not: a
+ * year computed with it is reproducible only while they stay as they are
+ * (ADR-0022). Changing one is a new criterion —a new value of the enum—, never
+ * a commit that edits these literals.
+ */
+describe("what by_domicile means", () => {
+  it("keeps its two windows and its list of regulated markets", () => {
+    expect([ADMITTED_FUND_WINDOW, NOT_ADMITTED_FUND_WINDOW]).toEqual(["2m", "1y"]);
+    expect(FUND_REGULATED_MARKETS).toEqual([
+      "XMSM",
+      "XLUX",
+      "XAMS",
+      "XPAR",
+      "XBRU",
+      "XLIS",
+      "MTAA",
+      "ETFP",
+      "XETA",
+      "FRAA",
+      "WBAH",
+      "XMAD",
+      "XBAR",
+      "XBIL",
+      "XVAL",
+      "XHEL",
+      "XSTO",
+      "XCSE",
+      "XWAR",
+      "XPRA",
+      "XBUD",
+      "XATH",
+    ]);
+    expect(BY_DOMICILE_TYPES).toEqual(["fund", "money_market"]);
   });
 });

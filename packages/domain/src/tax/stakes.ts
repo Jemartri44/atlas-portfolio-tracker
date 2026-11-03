@@ -12,12 +12,13 @@ import {
   type LedgerEvent,
 } from "../schema/events.js";
 import {
+  BY_DOMICILE_TYPES,
   DEFAULT_SETTINGS,
   fxGainMethodOf,
   incomeCategoryOf,
   type Settings,
 } from "../settings/settings.js";
-import { washSaleWindowOf } from "../settings/wash-sale.js";
+import { fundAdmitted, washSaleWindowOf } from "../settings/wash-sale.js";
 import { isInvalid, isUnsupported, type TaxOptions } from "./chain.js";
 import { type Core, exchangesOfYear, tryComputeCore } from "./core.js";
 import {
@@ -28,6 +29,7 @@ import {
   FUND_CRITERIA,
   type FundCriterion,
 } from "./criteria.js";
+import { windowCriterion } from "./lines.js";
 import type { CriterionStake, TransmissionLine } from "./report.js";
 import { linesByKey } from "./shared.js";
 import type { DeferralOrder, WashSaleOutcome } from "./wash-sale.js";
@@ -200,6 +202,19 @@ export const criterionStakes = (
   const declaring = (id: CriterionId): TransmissionLine[] =>
     all.filter((line) => line.criteria.includes(id));
   const current = figuresOf(core);
+  const settings = core.state.fiscalSettings;
+  const fundCriteria = new Set(
+    [...core.state.assets.values()]
+      .filter((asset) => BY_DOMICILE_TYPES.includes(asset.asset_type))
+      .map((asset) =>
+        windowCriterion(
+          asset.asset_type,
+          washSaleWindowOf(settings, asset),
+          incomeCategoryOf(settings, asset.asset_type),
+          fundAdmitted(asset),
+        ),
+      ),
+  );
 
   // A ledger with nothing in a foreign currency has no other reading of #4 to run.
   const foreign =
@@ -210,11 +225,13 @@ export const criterionStakes = (
       continue;
     }
     const lines = declaring(alternative.criterion);
-    // Running the chain again is not free: #19b and a fund criterion only when
-    // a figure applies them.
+    // Running the chain again is not free: #19b only when a figure applies it,
+    // and a fund criterion only when a fund of the catalogue applies it — a
+    // loss of another year deferred or released into this one moves the year
+    // without any line of it declaring the criterion.
     if (
-      (alternative.criterion === "19b" || alternative.flipFunds !== undefined) &&
-      lines.length === 0
+      (alternative.criterion === "19b" && lines.length === 0) ||
+      (alternative.flipFunds !== undefined && !fundCriteria.has(alternative.flipFunds))
     ) {
       continue;
     }

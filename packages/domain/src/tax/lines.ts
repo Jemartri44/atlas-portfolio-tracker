@@ -94,9 +94,9 @@ export const windowCriterion = (
   }
   // A year is no longer a window nobody supports: it is the conservative side
   // of the same dispute, and it is labelled as such (criterion #2).
-  // Two months is backed by consultations for a Spanish fund only.
+  // Two months is backed only for a fund whose units count as admitted.
   if (window === "2m") {
-    return admittedFund ? "2:fund_admitted_2m" : "2:fund_2m";
+    return admittedFund ? "2:fund_admitted_2m" : "2:fund_unlisted_2m";
   }
   return window === "1y" ? "2:fund_1y" : "2:other";
 };

@@ -61,7 +61,7 @@ describe("the window, counted date to date, at its four edges", () => {
     expect(windowCase("fund_f", "2028-02-29", "2029-03-01")).toBe("0");
   });
 
-  it("two months for a fund when configured (`2:fund_2m`): 29 February plus two is 29 April", () => {
+  it("two months for a fund when configured (`2:fund_unlisted_2m`): 29 February plus two is 29 April", () => {
     expect(windowCase("fund_f", "2028-02-29", "2028-04-29", "2m")).toBe("-100");
     expect(windowCase("fund_f", "2028-02-29", "2028-04-30", "2m")).toBe("0");
   });

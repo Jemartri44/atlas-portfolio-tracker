@@ -104,7 +104,7 @@ const normalise = (text: string): string => text.trim().toUpperCase();
 
 /** What the guess reads off a catalogue asset. */
 export interface ListingFacts {
-  market?: string | undefined;
+  market?: string;
   currency: string;
   isin?: string;
 }

@@ -254,7 +254,7 @@ describe("the screens", () => {
     expect(optionsOf(host, "wsw-fund")).toEqual([
       // By domicile for a fund by default (criterion #2, since 2026-11-03).
       "Por defecto (según domicilio)",
-      "Según domicilio: español 2 meses, extranjero 1 año",
+      "Según domicilio: español o en mercado regulado 2 meses, resto 1 año",
       "2 meses",
       "1 año",
       "Un número de días",

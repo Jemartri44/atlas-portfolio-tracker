@@ -48,13 +48,53 @@ export const isWashSaleWindow = (value: unknown): value is WashSaleWindow =>
  */
 export type WashSaleWindowSetting = WashSaleWindow | "by_domicile";
 
+/** The asset types that take `"by_domicile"`: the domicile decides nothing for the rest. */
+export const BY_DOMICILE_TYPES: readonly AssetType[] = ["fund", "money_market"];
+
 /**
- * The windows `"by_domicile"` gives (criterion #2), the one place to change
- * either reading: a fund whose units count as admitted to trading —Spanish, or
- * its class on an EU regulated market— and any other.
+ * What `"by_domicile"` means, **always** (criterion #2, ADR-0022): two months
+ * for a fund whose units count as admitted to trading —Spanish, or its class
+ * on one of `FUND_REGULATED_MARKETS`— and a year for any other. A
+ * `settings_changed` records the value, not these, so changing one of them
+ * would move every year already computed with it: another reading is a new
+ * value of the enum, never an edit here (`test/settings/wash-sale.test.ts`
+ * freezes them).
  */
 export const ADMITTED_FUND_WINDOW: WashSaleWindow = "2m";
 export const NOT_ADMITTED_FUND_WINDOW: WashSaleWindow = "1y";
+
+/**
+ * The EU regulated markets on which a fund class counts as admitted, by MIC:
+ * every one is of category `RMKT` in ISO 10383 (checked on 2026-11-03), and
+ * the segment, not the operating MIC of a whole exchange (`XDUB`, `XMIL`,
+ * `XETR` also run multilateral facilities). A multilateral facility —Euronext
+ * Dublin GEM `XEYE`, Euro MTF `EMTF`, Stuttgart— is not an official secondary
+ * market (DGT V0422-09). Frozen with the windows above.
+ */
+export const FUND_REGULATED_MARKETS: readonly string[] = [
+  "XMSM",
+  "XLUX",
+  "XAMS",
+  "XPAR",
+  "XBRU",
+  "XLIS",
+  "MTAA",
+  "ETFP",
+  "XETA",
+  "FRAA",
+  "WBAH",
+  "XMAD",
+  "XBAR",
+  "XBIL",
+  "XVAL",
+  "XHEL",
+  "XSTO",
+  "XCSE",
+  "XWAR",
+  "XPRA",
+  "XBUD",
+  "XATH",
+];
 
 export interface TaxBracket {
   up_to?: DecimalString;

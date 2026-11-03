@@ -7,7 +7,7 @@ import { isRecord, type UnknownRecord } from "../guards.js";
 import { Decimal, HUNDRED, isDecimalString } from "../money/decimal.js";
 import { ASSET_TYPES } from "../schema/events.js";
 import {
-  DEFAULT_WASH_SALE_WINDOW,
+  BY_DOMICILE_TYPES,
   FISCAL_DATE_RULES,
   FX_GAIN_METHODS,
   INCOME_CATEGORIES,
@@ -116,11 +116,10 @@ const checkWashSaleWindow = (raw: UnknownRecord): void => {
   }
   for (const assetType of ASSET_TYPES) {
     const value = isRecord(windows) ? windows[assetType] : undefined;
-    // `"by_domicile"` only where it is the default: a fund or a money market fund.
+    // `"by_domicile"` only for the types it is written for, never by the default:
+    // changing a default must not make a line already written unreadable.
     const known =
-      value === "by_domicile"
-        ? DEFAULT_WASH_SALE_WINDOW[assetType] === value
-        : isWashSaleWindow(value);
+      value === "by_domicile" ? BY_DOMICILE_TYPES.includes(assetType) : isWashSaleWindow(value);
     if (value !== undefined && !known) {
       throw new ValidationError(
         "invalid_wash_sale_window",

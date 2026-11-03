@@ -30,7 +30,7 @@ export const CRITERION_NAMES: Record<CriterionId, string> = {
     "Ventana de dos meses posterior a la venta para criptomonedas, la lectura menos prudente",
   "2:fund_admitted_2m":
     "Ventana de dos meses para fondos españoles o con su clase en un mercado regulado",
-  "2:fund_2m": "Ventana de dos meses para fondos extranjeros sin cotización",
+  "2:fund_unlisted_2m": "Ventana de dos meses para fondos extranjeros sin cotización",
   "2:fund_1y": "Ventana de un año para fondos de inversión",
   "2:other": "Ventana a medida, que ninguna lectura conocida de la norma sostiene",
   "2:movable_capital":

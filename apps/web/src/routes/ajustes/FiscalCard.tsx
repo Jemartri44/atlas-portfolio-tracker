@@ -6,6 +6,7 @@ import {
   ADMITTED_FUND_WINDOW,
   ASSET_TYPES,
   type AssetType,
+  BY_DOMICILE_TYPES,
   DEFAULT_FISCAL_DATE_RULE,
   DEFAULT_WASH_SALE_WINDOW,
   NOT_ADMITTED_FUND_WINDOW,
@@ -45,11 +46,11 @@ const WindowField = (props: { draft: SettingsDraft; type: AssetType }): JSX.Elem
         value={byDays() ? "days" : value()}
         placeholder={`Por defecto (${windowLabel(DEFAULT_WASH_SALE_WINDOW[props.type])})`}
         options={[
-          ...(DEFAULT_WASH_SALE_WINDOW[props.type] === "by_domicile"
+          ...(BY_DOMICILE_TYPES.includes(props.type)
             ? [
                 {
                   value: "by_domicile",
-                  label: `Según domicilio: español ${windowLabel(ADMITTED_FUND_WINDOW)}, extranjero ${windowLabel(NOT_ADMITTED_FUND_WINDOW)}`,
+                  label: `Según domicilio: español o en mercado regulado ${windowLabel(ADMITTED_FUND_WINDOW)}, resto ${windowLabel(NOT_ADMITTED_FUND_WINDOW)}`,
                 },
               ]
             : []),
