@@ -19,7 +19,7 @@ import type { AssetId, CorporateActionEvent } from "../../schema/events.js";
 import type { IncomeCategory } from "../../settings/settings.js";
 import { type ChainCore, categoryOf } from "../chain.js";
 import { type CriterionId, sortCriteria } from "../criteria.js";
-import { deferredByOrigin } from "../deferred-origins.js";
+import { deferredByOrigin, releasedBetween } from "../deferred-origins.js";
 import type {
   CurrencyLine,
   IncomeLine,
@@ -283,13 +283,9 @@ const priorYearRows = (
   // Only what was already deferred at the close of the year before: what is
   // held of a given loss never grows, so a loss that appears here appears in
   // `before` first, and the difference is never a gain.
-  for (const origin of [...before.keys()].sort((a, b) => a - b)) {
+  for (const [origin, delta] of releasedBetween(before, now)) {
     const gain = gainOf(chain, origin);
     if (gain.year >= year || categoryOf(chain.state, gain.asset_id) !== "capital_gain") {
-      continue;
-    }
-    const delta = (before.get(origin) as Money).sub(now.get(origin) ?? zero());
-    if (delta.isZero()) {
       continue;
     }
     drafts.push({
@@ -303,15 +299,12 @@ const priorYearRows = (
   }
   // The same for a loss of currency (V1613-25): it is always a capital gain,
   // and what was deferred at the close of the year before is of an earlier year.
-  const fxBefore = chain.currencyWalk.pendingAt(year - 1);
-  const fxNow = chain.currencyWalk.pendingAt(year);
   // In the order the losses were deferred, which is that of their origin.
-  for (const origin of fxBefore.keys()) {
+  for (const [origin, delta] of releasedBetween(
+    chain.currencyWalk.pendingAt(year - 1),
+    chain.currencyWalk.pendingAt(year),
+  )) {
     const gain = chain.state.currencyGains[origin] as CurrencyGain;
-    const delta = (fxBefore.get(origin) as Money).sub(fxNow.get(origin) ?? zero());
-    if (delta.isZero()) {
-      continue;
-    }
     drafts.push({
       concept: "gp.prior_years.loss",
       row: currencyRow(gain),

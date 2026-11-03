@@ -41,7 +41,7 @@ import {
   type CurrencyWashResult,
   walkCurrencyWashSales,
 } from "./currency-wash-sale.js";
-import { deferredAt, deferredByOrigin } from "./deferred-origins.js";
+import { deferredAt, deferredByOrigin, releasedBetween } from "./deferred-origins.js";
 import { expenseLines, type LineContext } from "./lines.js";
 import type {
   AnchorDifference,
@@ -338,10 +338,10 @@ export const taxChain = (
   for (const y of new Set(state.gains.map((gain) => gain.year))) {
     const before = deferredOf(y - 1);
     const now = deferredOf(y);
-    for (const [origin, held] of before) {
+    for (const [origin, released] of releasedBetween(before, now)) {
       const gain = state.gains[origin] as RealizedGain;
       if (categoryOf(state, gain.asset_id) === "capital_gain") {
-        add(y, "capital_gain", held.sub(now.get(origin) ?? zero()).roundToCents());
+        add(y, "capital_gain", released.roundToCents());
       }
     }
   }
@@ -364,9 +364,11 @@ export const taxChain = (
     );
   });
   for (const y of new Set(state.currencyGains.map((gain) => gain.year))) {
-    const now = currencyWalk.pendingAt(y);
-    for (const [origin, held] of currencyWalk.pendingAt(y - 1)) {
-      add(y, "capital_gain", held.sub(now.get(origin) ?? zero()).roundToCents());
+    for (const [, released] of releasedBetween(
+      currencyWalk.pendingAt(y - 1),
+      currencyWalk.pendingAt(y),
+    )) {
+      add(y, "capital_gain", released.roundToCents());
     }
   }
   const expenses = expenseLines(ctx);

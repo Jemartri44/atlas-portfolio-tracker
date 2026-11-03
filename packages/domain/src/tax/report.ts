@@ -369,8 +369,9 @@ export interface TaxYearReport {
     losses_eur: Money;
     /**
      * Rounded as the form does, by origin of each deferred loss (criterion
-     * #6): it may differ by a cent from `gains_eur + losses_eur` when a loss
-     * is released in part, and it is the figure of box 0460.
+     * #6), and the figure of box 0460. It is not the sum of the lines: when a
+     * loss is released in part, `gains_eur + losses_eur` can differ from it by
+     * a few cents, one at most per loss released.
      */
     balance_eur: Money;
     /** Releases of a loss of the other category, integrated where they came from. */

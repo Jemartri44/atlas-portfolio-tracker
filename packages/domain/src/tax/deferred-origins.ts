@@ -137,3 +137,18 @@ export const deferredByOrigin = (walk: WashSaleResult, year: number): Map<number
   }
   return total;
 };
+
+/**
+ * What each loss still deferred at one close stopped having deferred by the
+ * next: exact, negative, by origin in the order of the losses, the zeros
+ * left out. The engine and the row of earlier years round each one on its own
+ * (criterion #6), so both read it from here.
+ */
+export const releasedBetween = (
+  before: ReadonlyMap<number, Money>,
+  now: ReadonlyMap<number, Money>,
+): [number, Money][] =>
+  [...before]
+    .map(([origin, held]): [number, Money] => [origin, held.sub(now.get(origin) ?? zero())])
+    .filter(([, released]) => !released.isZero())
+    .sort(([a], [b]) => a - b);
