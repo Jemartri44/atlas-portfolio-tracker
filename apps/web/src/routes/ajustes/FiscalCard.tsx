@@ -7,6 +7,8 @@ import {
   type AssetType,
   DEFAULT_FISCAL_DATE_RULE,
   DEFAULT_WASH_SALE_WINDOW,
+  FOREIGN_FUND_WINDOW,
+  SPANISH_FUND_WINDOW,
 } from "@atlas/domain";
 import { createSignal, For, type JSX, Show } from "solid-js";
 import { Field, Fold, SelectField } from "../../components/index.js";
@@ -14,7 +16,11 @@ import { valueLabel } from "../../format/labels.js";
 import { perAssetTypeValue } from "../../view-models/index.js";
 import type { SettingsDraft } from "./SettingsCards.jsx";
 
-const WINDOW_LABELS: Record<string, string> = { "2m": "2 meses", "1y": "1 año" };
+const WINDOW_LABELS: Record<string, string> = {
+  "2m": "2 meses",
+  "1y": "1 año",
+  by_domicile: "según domicilio",
+};
 
 /** "2 meses", "1 año", "45 días": a window said, never its syntax. */
 const windowLabel = (window: string): string =>
@@ -39,6 +45,14 @@ const WindowField = (props: { draft: SettingsDraft; type: AssetType }): JSX.Elem
         value={byDays() ? "days" : value()}
         placeholder={`Por defecto (${windowLabel(DEFAULT_WASH_SALE_WINDOW[props.type])})`}
         options={[
+          ...(DEFAULT_WASH_SALE_WINDOW[props.type] === "by_domicile"
+            ? [
+                {
+                  value: "by_domicile",
+                  label: `Según domicilio: español ${windowLabel(SPANISH_FUND_WINDOW)}, extranjero ${windowLabel(FOREIGN_FUND_WINDOW)}`,
+                },
+              ]
+            : []),
           { value: "2m", label: "2 meses" },
           { value: "1y", label: "1 año" },
           { value: "days", label: "Un número de días" },
@@ -91,7 +105,11 @@ export const FiscalCard = (props: { draft: SettingsDraft }): JSX.Element => (
   <Fold class="span-6" title="Fecha fiscal y ventana de recompra">
     <p class="card-note">
       Por tipo de activo. Lo que dejes por defecto toma el valor indicado entre paréntesis, así que
-      añadir un tipo de activo nuevo nunca deja tus datos a medias.
+      añadir un tipo de activo nuevo nunca deja tus datos a medias. Un fondo o un monetario según
+      domicilio lleva {windowLabel(SPANISH_FUND_WINDOW)} si su ISIN empieza por ES o su emisor es
+      español, y {windowLabel(FOREIGN_FUND_WINDOW)} si no. A un ETC o un ETP que tributa como
+      capital mobiliario no se le aplica la ventana de aquí: lleva siempre 2 meses (art. 25.2.b
+      LIRPF).
     </p>
     <div class="fieldset">
       <For each={ASSET_TYPES}>

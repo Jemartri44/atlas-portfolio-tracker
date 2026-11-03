@@ -167,7 +167,13 @@ const PERCENT_SETTINGS = new Set([
 ]);
 
 const windowText = (window: string): string =>
-  window === "2m" ? "dos meses" : window === "1y" ? "un año" : `${window.slice(0, -1)} días`;
+  window === "2m"
+    ? "dos meses"
+    : window === "1y"
+      ? "un año"
+      : window === "by_domicile"
+        ? "según domicilio"
+        : `${window.slice(0, -1)} días`;
 
 /** A map by asset type, as "Fondo: fecha valor · Acción: fecha de contratación". */
 const byType = (map: Record<string, unknown>, show: (value: string) => string): string =>
