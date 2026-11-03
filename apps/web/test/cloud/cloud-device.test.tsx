@@ -228,7 +228,6 @@ describe("what stays on the device after a session of the cloud", () => {
       files: { ast_gold: '{"date":"2026-10-01","close":"100"}\n' },
       imported_at: "2026-10-01T10:00:00.000Z",
     });
-    const host = await show("/ajustes", () => <SessionCard request={request} />);
     // A close that fails leaves them: the session may still be open.
     const refused = (async () => new Response("{}", { status: 500 })) as typeof fetch;
     document.body.innerHTML = "";
@@ -237,7 +236,6 @@ describe("what stays on the device after a session of the cloud", () => {
     expect(await importedPrices()).toBeDefined();
     document.body.innerHTML = "";
     const again = await show("/ajustes", () => <SessionCard request={request} />);
-    expect(host).toBeDefined();
     await press(again, "Cerrar sesión");
     await until(() => store.load().phase !== "ready", "the session closed");
     expect(await importedPrices()).toBeUndefined();
