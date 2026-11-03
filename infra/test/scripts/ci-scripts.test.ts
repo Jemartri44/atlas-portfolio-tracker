@@ -386,7 +386,11 @@ describe("the scripts of the CI", () => {
     it("accepts files signed by the dev workflow on develop from a commit with the tree it deploys", () => {
       const ok = run(["good"]);
       expect(ok.result.status, ok.result.stderr).toBe(0);
-      expect(ok.log.trim().split("\n")).toHaveLength(3);
+      const lines = ok.log.trim().split("\n");
+      expect(lines.filter((line) => line.startsWith("attestation verify"))).toHaveLength(3);
+      expect(
+        lines.filter((line) => line.startsWith("api repos/owner/repo/git/commits/")),
+      ).toHaveLength(3);
       expect(ok.log).toContain("--signer-workflow owner/repo/.github/workflows/deploy-dev.yml");
       expect(ok.log).toContain("--source-ref refs/heads/develop");
       // Several runs signed the same file: one of them is for this tree.
