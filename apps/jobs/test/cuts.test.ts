@@ -23,6 +23,7 @@ const warning =
     const sent = await (context.deps.notifier as NonNullable<typeof context.deps.notifier>).send({
       subject: "[Atlas] Aviso de prueba 2026-W40",
       body: "Prueba\n",
+      html: "<p>Prueba</p>",
     });
     if (options.throwAfter === true) {
       throw new Error("after");

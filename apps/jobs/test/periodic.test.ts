@@ -60,12 +60,12 @@ describe("the weekly review (E4)", () => {
     await run.run(["weekly_review"]);
     expect(run.ses.sent).toHaveLength(1);
     const [mail] = run.ses.sent;
-    expect(mail?.subject).toBe("[Atlas] Revision semanal 2026-W41");
-    expect(mail?.body.split("\n").slice(0, 4)).toEqual([
+    expect(mail?.subject).toBe("[Atlas] Revision de la semana 41 de 2026");
+    expect(mail?.body.split("\n").slice(2, 6)).toEqual([
       "Pesos del núcleo",
-      "  Renta variable: un activo está 28,8 puntos por debajo de su objetivo (umbral 5,0).",
-      "  Renta fija: un activo está 38,3 puntos por encima de su objetivo (umbral 5,0).",
-      "  Oro: un activo está 9,5 puntos por debajo de su objetivo (umbral 5,0).",
+      "Renta variable: un activo está 28,8 puntos por debajo de su objetivo (umbral 5,0).",
+      "Renta fija: un activo está 38,3 puntos por encima de su objetivo (umbral 5,0).",
+      "Oro: un activo está 9,5 puntos por debajo de su objetivo (umbral 5,0).",
     ]);
     for (const sentinel of [...SENTINELS.amounts, ...SENTINELS.ids, "€"]) {
       expect(mail?.body, sentinel).not.toContain(sentinel);
@@ -123,9 +123,10 @@ describe("the income tax of January (Q10)", () => {
     expect(run.ses.sent).toHaveLength(1);
     const [mail] = run.ses.sent;
     expect(mail?.subject).toBe("[Atlas] Renta 2026 lista");
-    expect(mail?.body.split("\n")[0]).toMatch(
+    expect(mail?.body.split("\n")[2]).toMatch(
       /^Los datos de la Renta de 2026 están listos: \d+ notas y \d+ criterios en disputa\.$/,
     );
+    expect(mail?.body).toContain("Falta el IPC de 2026");
     for (const sentinel of [...SENTINELS.amounts, ...SENTINELS.ids, "€"]) {
       expect(mail?.body, sentinel).not.toContain(sentinel);
     }
@@ -145,7 +146,7 @@ describe("the income tax of January (Q10)", () => {
   it("says why the data could not be prepared", async () => {
     const run = jobs({ jobs: "tax_return_ready", now: JANUARY, ledger: '{"not":"an event"}\n' });
     await run.run(["tax_return_ready"]);
-    expect(run.ses.sent.map((mail) => mail.body.split("\n")[0])).toEqual([
+    expect(run.ses.sent.map((mail) => mail.body.split("\n")[2])).toEqual([
       "No se han podido preparar los datos de la Renta de 2026 (código invalid_envelope).",
     ]);
   });
@@ -215,12 +216,9 @@ describe("the thresholds of the 720 and the 721 (mutant 31)", () => {
     expect(run.ses.sent).toEqual([
       expect.objectContaining({
         subject: "[Atlas] Modelos 720 y 721 de 2026",
-        body: [
-          "Revisa si te corresponde presentar el modelo 720 de 2026.",
-          "",
-          "Abre Atlas: https://atlas.example.test",
-          "",
-        ].join("\n"),
+        body: expect.stringContaining(
+          "\n\nRevisa si te corresponde presentar el modelo 720 de 2026.\n\nAbrir Atlas: https://atlas.example.test\n",
+        ),
       }),
     ]);
   });

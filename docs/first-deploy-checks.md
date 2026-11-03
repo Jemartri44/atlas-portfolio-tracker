@@ -27,6 +27,9 @@ Lo que las features 015, 016 y 017 dejaron **sin verificar contra AWS real**. Ca
 **Tareas programadas**
 - **El aviso de tareas con retraso tras el primer despliegue es normal.** Hasta la primera ejecución no hay ningún registro en `jobs/` y Resumen dice que las tareas activas van con retraso: se va solo cuando empiezan a correr. Antes del primer despliegue hay que **aplicar el permiso nuevo del rol de la API** (`GetObject` y `ListBucket` sobre `jobs/*`): sin él, `GET /api/jobs/status` falla y la web lo dice en la tarjeta de Ajustes, sin tocar el resto. En `dev` dormido no hay tareas activas y no sale nada.
 
+**Correo**
+- **El primer correo real, en un cliente real.** Las capturas del repaso de los correos son simuladas (Chromium, con la inversión de Gmail imitada). Abrir un correo en Gmail de móvil y de PC, en claro y en oscuro: se lee, el aviso y el bloque de la orden se distinguen, y **trae «Abrir Atlas»**. Si no lo trae, el origen configurado no es `https://` pelado: el correo sale igualmente sin enlace, a propósito.
+
 **Libro y permisos de S3**
 - **`404` y no `403`:** un `s3:ListBucket` con la condición `s3:prefix` basta para que un `GetObject` de una clave inexistente dé `404` (la condición no existe en el contexto de `GetObject`). Si da `403`, la salida es un `s3:ListBucket` sin condición sobre el bucket de datos. Hay que comprobarlo también en el primer `init`.
 - **Carrera real de dos `PutObject` condicionales** sobre el libro: una escribe y la otra recibe `412` (S3 responde `412` o `409`, la API traduce los dos).

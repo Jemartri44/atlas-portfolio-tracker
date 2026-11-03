@@ -9,7 +9,8 @@
 //   **never a figure, whatever the switch** — this module does not even
 //   read it. The notes of the ECB check are the ones `atlas tax` shows, with
 //   the one staleness of the cloud (`CLOUD_ECB_STALE_DAYS`); they move no
-//   figure (ADR-0029, point 8).
+//   figure (ADR-0029, point 8). It also says what January has to add by hand:
+//   the CPI of the year and the index sheets more than a year old.
 // - `informative_thresholds`: the 720 and the 721 of that year, with the function the models use,
 //   from **manual valuations only**, in a neutral text; only when there is something to do.
 //
@@ -20,6 +21,7 @@
 
 import { checkLedgerRates } from "@atlas/domain/ecb";
 import {
+  annualUpkeep,
   frequencyOf,
   informativeFacts,
   informativeMail,
@@ -59,7 +61,14 @@ const retry = (code: string): TaskResult => ({ state: "failed", outcome: { code 
 const taxReturnReady: TaskRunner = inScope(async (context): Promise<TaskResult> => {
   const year = yearOf(context);
   const cannot = (code: string): Promise<TaskResult> =>
-    sendOnce(context, taxReturnMail({ ok: false, year, code }, originOf(context)));
+    sendOnce(
+      context,
+      taxReturnMail(
+        { ok: false, year, code },
+        annualUpkeep(year, context.today),
+        originOf(context),
+      ),
+    );
   const ledger = await context.ledger();
   if (!ledger.ok) {
     return ledgerFailureKind(ledger.code) === "transient" && !lastDay(context)
@@ -99,7 +108,7 @@ const taxReturnReady: TaskRunner = inScope(async (context): Promise<TaskResult> 
   });
   return sendOnce(
     context,
-    taxReturnMail(facts, originOf(context)),
+    taxReturnMail(facts, annualUpkeep(year, context.today), originOf(context)),
     facts.ok ? { notes: facts.notes, disputed: facts.disputed } : {},
   );
 });

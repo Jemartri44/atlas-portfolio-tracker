@@ -26,12 +26,15 @@ export interface OutgoingMail {
   readonly from: string;
   readonly to: string;
   readonly subject: string;
+  /** Plain text: the fallback. */
   readonly body: string;
+  /** The same mail in HTML, sent with the text as its alternative. */
+  readonly html: string;
 }
 
-/** What sends a plain-text mail: the SDK of SES v2, or a double. */
+/** What sends a mail, text and HTML: the SDK of SES v2, or a double. */
 export interface MailSender {
-  sendText(mail: OutgoingMail): Promise<void>;
+  sendMail(mail: OutgoingMail): Promise<void>;
 }
 
 /** SES answered no: the mail was **not** sent, and sending it again is safe. */
@@ -81,11 +84,12 @@ export const sesNotifier = (deps: SesNotifierDeps): Notifier => ({
       return failure("mail_recipient_invalid");
     }
     try {
-      await deps.sender.sendText({
+      await deps.sender.sendMail({
         from: deps.from,
         to,
         subject: message.subject,
         body: message.body,
+        html: message.html,
       });
     } catch (error) {
       return failure(error instanceof MailRefused ? "mail_send_failed" : "mail_send_unknown");

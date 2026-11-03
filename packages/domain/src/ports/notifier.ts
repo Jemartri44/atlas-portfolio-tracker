@@ -1,5 +1,6 @@
 // The port that sends mail (`CLAUDE.md`, ports). It receives a message
-// **already written** — a subject and a plain-text body — and answers with a
+// **already written** — a subject, a plain-text body and the same mail in
+// HTML (`jobs/mail/layout.ts`) — and answers with a
 // result that has a code. **It never receives the recipient**: the adapter puts
 // it, read from SSM (ADR-0028, row 17; ADR-0034, row 12), so nothing of the
 // domain or of the redaction can ever write to another address. A transient
@@ -8,8 +9,10 @@
 export interface MailMessage {
   /** ASCII, with the period of the job. */
   readonly subject: string;
-  /** Plain text, Spanish, no HTML, nothing remote. */
+  /** Plain text, Spanish: the fallback of the HTML, with the same content. */
   readonly body: string;
+  /** Inline styles only, nothing remote, one link to the origin (`jobs/mail/layout.ts`). */
+  readonly html: string;
 }
 
 export type NotifierFailure =

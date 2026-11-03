@@ -1,6 +1,7 @@
 // The thin adapter of `MailSender` over `@aws-sdk/client-sesv2`. **The only file with the SES
 // client** (architecture test), and it sends **one** command, `SendEmail`, with simple content: a
-// subject and a plain-text body, both in UTF-8, to one recipient. The IAM condition of ADR-0034,
+// subject, a plain-text body and its HTML alternative, all in UTF-8, to one recipient (SES writes the
+// `multipart/alternative`). The IAM condition of ADR-0034,
 // row 12, applies to it (`ses:SendEmail`, `ses:FromAddress`, `ses:Recipients`; §1.1).
 //
 // What an error means, read by its name and status and never by its message
@@ -25,7 +26,7 @@ const reasonOf = (name: string): string => (/^[A-Za-z]{1,64}$/.test(name) ? name
 export class SdkMailSender implements MailSender {
   constructor(private readonly client: SesSender) {}
 
-  async sendText(mail: OutgoingMail): Promise<void> {
+  async sendMail(mail: OutgoingMail): Promise<void> {
     try {
       await this.client.send(
         new SendEmailCommand({
@@ -34,7 +35,10 @@ export class SdkMailSender implements MailSender {
           Content: {
             Simple: {
               Subject: { Data: mail.subject, Charset: "UTF-8" },
-              Body: { Text: { Data: mail.body, Charset: "UTF-8" } },
+              Body: {
+                Text: { Data: mail.body, Charset: "UTF-8" },
+                Html: { Data: mail.html, Charset: "UTF-8" },
+              },
             },
           },
         }),

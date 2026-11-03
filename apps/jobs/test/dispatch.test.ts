@@ -44,7 +44,7 @@ describe("the warnings of the other jobs (R19)", () => {
       "[Atlas] Aviso: tarea monthly_backup",
     ]);
     expect(jobs.ses.sent[0]?.body).toContain(
-      "Ha fallado el volcado mensual en el periodo 2026-10 (código task_error), desde el 2026-10-01.",
+      "Ha fallado el volcado mensual en octubre de 2026 (código task_error), desde el 01/10/2026.",
     );
     expect(JSON.parse(jobs.s3.text(NOTICE) as string)).toMatchObject({
       state: "sent",
@@ -201,7 +201,7 @@ describe("the warnings of the other jobs (R19)", () => {
       "[Atlas] Aviso: registro de monthly_backup",
     ]);
     expect(jobs.ses.sent[0]?.body).toContain(
-      "El registro de monthly_backup (el volcado mensual) del periodo 2026-10 no se puede leer (código job_record_unreadable), desde el 2026-10-01.",
+      "El registro de monthly_backup (el volcado mensual) de octubre de 2026 no se puede leer (código job_record_unreadable), desde el 01/10/2026.",
     );
     jobs.setNow("2026-10-02T06:00:00Z");
     await jobs.run(["dispatch_findings"], "req-2");

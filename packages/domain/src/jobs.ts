@@ -14,6 +14,7 @@ export {
 } from "./ecb/manifest.js";
 export { isMailAddress } from "./jobs/address.js";
 export { type AmountsSwitch, amountsSwitch } from "./jobs/amounts.js";
+export { type AnnualUpkeep, annualUpkeep } from "./jobs/annual-upkeep.js";
 export {
   BACKUP_LOCK_DAYS,
   backupFindings,
@@ -89,7 +90,12 @@ export {
   serializePositions,
 } from "./jobs/positions.js";
 export { type LatestDump, latestDump, type Rehearsal, restoreRehearsal } from "./jobs/rehearsal.js";
-export { type ReminderFacts, type ReminderInput, reminderFacts } from "./jobs/reminder.js";
+export {
+  type ReminderFacts,
+  type ReminderInput,
+  type RepurchaseFacts,
+  reminderFacts,
+} from "./jobs/reminder.js";
 export { type ReviewFacts, reviewDue, reviewFacts } from "./jobs/review.js";
 export {
   claimRecord,
@@ -106,6 +112,7 @@ export {
   runRecordKey,
   serializeRunRecord,
 } from "./jobs/run-record.js";
+export { type TaxDeadlineFacts, taxDeadlineFacts } from "./jobs/tax-deadlines.js";
 export { type TaxReturnFacts, taxReturnFacts } from "./jobs/tax-return.js";
 export type { MailMessage, Notifier, NotifierFailure, NotifierResult } from "./ports/notifier.js";
 export {
