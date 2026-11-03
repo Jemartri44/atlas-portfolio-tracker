@@ -276,7 +276,7 @@ export const savingsQuota = (
       .map((line) => line.computable_eur_rounded)
       .filter((amount) => !amount.isNegative())
       .reduce((sum, amount) => sum.add(amount), zero);
-    const foreign = !netIncome.isPositive()
+    const foreign = !netIncome.amount.isPositive()
       ? zero
       : report.compensation.movable_capital_final_eur
           .mul(gross.mul(netIncome.amount).div(income.amount).amount)
