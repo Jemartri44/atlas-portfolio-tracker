@@ -147,6 +147,17 @@ describe("the projection", () => {
     setPrivacy(false);
   });
 
+  it("shows the goal as an amount next to when it is reached, with the privacy mode off", async () => {
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => host.querySelector("#pj-years") !== null, "the card");
+    for (const input of host.querySelectorAll("input[id^='pj-0-']")) {
+      type(host, input.id, "5");
+    }
+    type(host, "pj-goal", "300000");
+    await settle(30);
+    expect(text(host.querySelector(".projection-card"))).toContain("300.000,00");
+  });
+
   it("says a goal that is not above zero, and removes a scenario", async () => {
     const host = await show(`/cartera?fecha=${DATE}`, Cartera);
     await until(() => host.querySelector("#pj-years") !== null, "the card");
