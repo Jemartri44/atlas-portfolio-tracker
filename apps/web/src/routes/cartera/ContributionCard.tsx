@@ -36,6 +36,7 @@ import type { ContributionRowView, ContributionView } from "../../view-models/co
 import { COLUMNS } from "./contribution-columns.jsx";
 import { PlatformSection } from "./PlatformsBlock.jsx";
 import { REMEDIES } from "./remedies.js";
+import { SplitNotes } from "./SplitNotes.jsx";
 
 /** A refusal with a known remedy is a pending datum, never an error. */
 const Refusal = (props: { error: AppError }): JSX.Element => (
@@ -50,7 +51,7 @@ const Refusal = (props: { error: AppError }): JSX.Element => (
 const Split = (props: { view: ContributionView }): JSX.Element => {
   const wide = mediaQuery(GRID);
   const active = (): ContributionRowView[] => props.view.rows.filter((row) => !row.idle);
-  const idle = (): string[] => props.view.rows.filter((row) => row.idle).map((row) => row.name);
+  const _idle = (): string[] => props.view.rows.filter((row) => row.idle).map((row) => row.name);
   return (
     <>
       <dl class="kpis">
@@ -150,34 +151,7 @@ const Split = (props: { view: ContributionView }): JSX.Element => {
         <span>Registrar estas compras</span>
         <Icon name="arrow" class="icon-sm" />
       </A>
-      <Show when={active().some((row) => row.whole !== undefined)}>
-        <p class="card-note" data-testid="whole-leftover">
-          <Show when={props.view.wholeLeftover}>
-            {(leftover) => (
-              <>
-                Con participaciones enteras sobrarían <Amount value={leftover()} /> en total.{" "}
-              </>
-            )}
-          </Show>
-          Es solo una ayuda: los fondos admiten fracciones y la propuesta en euros es la que vale.
-        </p>
-      </Show>
-      <Show when={idle().length > 0}>
-        <p class="card-note">{idle().join(", ")}: nada este mes.</p>
-      </Show>
-      <Show when={props.view.surplusDistributed}>
-        <p class="card-note">
-          La aportación cubre el déficit de todos los activos: el sobrante se reparte por pesos
-          objetivo.
-        </p>
-      </Show>
-      <p class="note-line">
-        <Icon name="info" class="icon-sm" />
-        <span>
-          Es una propuesta y nada se ha registrado: da las órdenes a mano en tu plataforma y
-          regístralas después desde <A href="/registrar">Registrar</A>.
-        </span>
-      </p>
+      <SplitNotes view={props.view} />
       {/* The calculation, whole on a computer and folded on a phone (the approved report, §4). */}
       <Show
         when={wide()}
