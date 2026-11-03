@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Decimal } from "../../src/money/decimal.js";
+import type { Money } from "../../src/money/money.js";
 import { costSummary } from "../../src/projections/costs.js";
 import { grow } from "../../src/projections/growth.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
