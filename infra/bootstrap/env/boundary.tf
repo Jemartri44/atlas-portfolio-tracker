@@ -101,47 +101,34 @@ locals {
       condition = { StringEquals = { "aws:RequestedRegion" = [local.home], "ses:FromAddress" = var.mail_sender } }
     },
     {
-      # Reads, tags and creation follow the tags when they exist; a resource of another
-      # project of the account (no tags) is only readable.
       sid    = "Edge"
       effect = "Allow"
       actions = [
         "acm:AddTagsToCertificate",
+        "acm:Delete*",
         "acm:Describe*",
         "acm:Get*",
         "acm:ListTagsForCertificate",
         "acm:RemoveTagsFromCertificate",
-        "acm:RequestCertificate",
         "cloudfront:Create*",
+        "cloudfront:Delete*",
         "cloudfront:Describe*",
         "cloudfront:Get*",
         "cloudfront:List*",
         "cloudfront:PublishFunction",
         "cloudfront:TagResource",
         "cloudfront:UntagResource",
+        "cloudfront:Update*",
         "wafv2:Create*",
+        "wafv2:Delete*",
         "wafv2:Get*",
         "wafv2:ListTagsForResource",
         "wafv2:TagResource",
         "wafv2:UntagResource",
-      ]
-      resources = [local.cf_distribution, local.cf_function, local.acm_certificate, local.waf_web_acl]
-      condition = merge(local.boundary_edge, { StringEqualsIfExists = { "aws:ResourceTag/env" = var.env, "aws:ResourceTag/project" = "atlas" } })
-    },
-    {
-      # Changing or deleting needs the tags to exist and to be Atlas's: without
-      # `IfExists`, an untagged resource of another project is out of reach.
-      sid    = "EdgeChange"
-      effect = "Allow"
-      actions = [
-        "acm:Delete*",
-        "cloudfront:Delete*",
-        "cloudfront:Update*",
-        "wafv2:Delete*",
         "wafv2:Update*",
       ]
       resources = [local.cf_distribution, local.cf_function, local.acm_certificate, local.waf_web_acl]
-      condition = { StringEquals = merge(local.boundary_edge.StringEquals, local.tag_env_equals.StringEquals) }
+      condition = merge(local.boundary_edge, { StringEqualsIfExists = { "aws:ResourceTag/env" = var.env, "aws:ResourceTag/project" = "atlas" } })
     },
     {
       # Actions that take no resource type (SAR): only the request tag can scope them.
@@ -173,18 +160,13 @@ locals {
       condition = { StringEquals = { "aws:RequestedRegion" = [local.home, local.edge] } }
     },
     {
-      sid       = "PassToLambda"
+      # Both services in one statement (the 6,144 ceiling); the deploy role's own policy
+      # keeps each role bound to its service.
+      sid       = "PassRole"
       effect    = "Allow"
       actions   = ["iam:PassRole"]
-      resources = concat([local.role_arn.api], local.job_role_arns)
-      condition = { StringEquals = { "aws:RequestedRegion" = [local.home, local.edge], "iam:PassedToService" = "lambda.amazonaws.com" } }
-    },
-    {
-      sid       = "PassToScheduler"
-      effect    = "Allow"
-      actions   = ["iam:PassRole"]
-      resources = [local.role_arn.scheduler]
-      condition = { StringEquals = { "aws:RequestedRegion" = [local.home, local.edge], "iam:PassedToService" = "scheduler.amazonaws.com" } }
+      resources = concat([local.role_arn.api, local.role_arn.scheduler], local.job_role_arns)
+      condition = { StringEquals = { "aws:RequestedRegion" = [local.home, local.edge], "iam:PassedToService" = ["lambda.amazonaws.com", "scheduler.amazonaws.com"] } }
     },
   ]
 
@@ -204,6 +186,16 @@ locals {
       effect    = "Deny"
       actions   = ["iam:Attach*", "iam:Create*", "iam:Delete*", "iam:Detach*", "iam:Put*", "iam:Set*", "iam:Tag*", "iam:Untag*", "iam:Update*"]
       resources = concat(local.bootstrap_role_arns, [local.iam_policies])
+    },
+    {
+      # Edge resources are scoped by tag, and `StringEqualsIfExists` in `Edge` lets an
+      # untagged one through: a resource without the `project` tag (another project of
+      # the account) can be read but never changed nor deleted.
+      sid       = "DenyUntaggedEdgeChange"
+      effect    = "Deny"
+      actions   = ["acm:Delete*", "cloudfront:Delete*", "cloudfront:Update*", "wafv2:Delete*", "wafv2:Update*"]
+      resources = ["*"]
+      condition = { Null = { "aws:ResourceTag/project" = "true" } }
     },
     {
       sid       = "DenyOtherRegions"
