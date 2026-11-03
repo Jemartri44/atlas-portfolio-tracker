@@ -169,11 +169,11 @@ describe("a pending draft", () => {
   it("counts in no figure, and every command reminds it", async () => {
     const { atlas } = await setup();
     const positions = await atlas({}, "positions");
-    const cash = await atlas({}, "cash");
+    const lots = await atlas({}, "lots");
     await atlas({}, ...goldBuy, "--draft");
     const after = await atlas({}, "positions");
     expect(after.out).toBe(positions.out);
-    expect((await atlas({}, "cash")).out).toBe(cash.out);
+    expect((await atlas({}, "lots")).out).toBe(lots.out);
     // Said always, on the error channel so that --json stays clean.
     expect(after.err).toContain("Pendiente: hay un borrador sin registrar en drafts/");
     const json = await atlas({}, "positions", "--json");

@@ -82,8 +82,6 @@ const INVOCATIONS: {
 }[] = [
   { command: "positions", argv: ["positions"], readOnly: true },
   { command: "lots", argv: ["lots"], readOnly: true },
-  { command: "cash", argv: ["cash"], readOnly: true },
-  { command: "valuations", argv: ["valuations"], readOnly: true },
   { command: "account", argv: ["account", "list"], readOnly: true },
   { command: "asset", argv: ["asset", "list"], readOnly: true },
   { command: "settings", argv: ["settings", "show"], readOnly: true },
