@@ -31,11 +31,16 @@ const SUMMARY: Destination = { href: "/", label: "Resumen", icon: "summary", end
 const MOVEMENTS: Destination = { href: "/movimientos", label: "Movimientos", icon: "movements" };
 const PORTFOLIO: Destination = { href: "/cartera", label: "Cartera", icon: "portfolio" };
 const BUCKET: Destination = { href: "/cubo", label: "Cubo", icon: "bucket" };
+/**
+ * The declaration on a wide screen only: it is prepared at the computer, with the form of the AEAT
+ * beside it (system.md §2). On a phone it stays one tap away from its card in the summary.
+ */
+const DECLARATION: Destination = { href: "/fiscal", label: "Declaración", icon: "declaration" };
 const RECORD: Destination = { href: "/registrar", label: "Registrar", icon: "plus", action: true };
 
-/** Narrow: Registrar in the middle. Wide: after the group of four. */
+/** Narrow: Registrar in the middle. Wide: after the destinations, the declaration among them. */
 const NARROW = [SUMMARY, MOVEMENTS, RECORD, PORTFOLIO, BUCKET];
-const WIDE = [SUMMARY, MOVEMENTS, PORTFOLIO, BUCKET, RECORD];
+const WIDE = [SUMMARY, MOVEMENTS, PORTFOLIO, BUCKET, DECLARATION, RECORD];
 
 /** Whether a path is a destination's page or one under it. */
 export const inSection = (path: string, href: string, end = false): boolean => {
