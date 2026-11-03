@@ -22,7 +22,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import type { ListedObject, ObjectStore, StoredObject } from "./object-store.js";
-import { factsOf, transient } from "./sdk-errors.js";
+import { factsOf, SDK_TIMEOUTS, transient } from "./sdk-errors.js";
 
 /** What the adapter sends: the client of the SDK, or a simulated one with the same calls. */
 export interface S3Sender {
@@ -66,8 +66,15 @@ export class SdkObjectStore implements ObjectStore {
     if (output.Body === undefined || output.ETag === undefined) {
       throw new Error("s3 answered an object without a body or an etag");
     }
+    let body: Uint8Array;
+    try {
+      // The body streams after the headers: a cut socket fails here, not in `send`.
+      body = await output.Body.transformToByteArray();
+    } catch (error) {
+      return rethrow(error);
+    }
     return {
-      body: await output.Body.transformToByteArray(),
+      body,
       etag: output.ETag,
       ...(output.VersionId === undefined ? {} : { versionId: output.VersionId }),
     };
@@ -137,4 +144,4 @@ export class SdkObjectStore implements ObjectStore {
 
 /** The store of the data bucket in production, with the default chain of credentials of the Lambda. */
 export const productionObjectStore = (bucket: string): SdkObjectStore =>
-  new SdkObjectStore(new S3Client({}), bucket);
+  new SdkObjectStore(new S3Client({ requestHandler: SDK_TIMEOUTS }), bucket);
