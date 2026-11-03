@@ -97,7 +97,7 @@ export class FileDraftStore implements PendingDraftStore {
   private write(draft: PendingDraft, check?: () => Promise<void>): Promise<void> {
     return withFolderLock(this.folder, async (lock) => {
       await check?.();
-      await fs.mkdir(this.dir, { recursive: true });
+      await fs.mkdir(this.dir, { recursive: true, mode: 0o700 });
       const path = join(this.dir, `${draft.id}.json`);
       await writeFileAtomically(nodeFileOps, path, serializePendingDraft(draft), lock, {
         beforeCommit: this.options.beforeCommit,

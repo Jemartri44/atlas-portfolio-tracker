@@ -17,7 +17,7 @@ atlas add buy --account acc_fund --asset ast_world --trade-date 2026-09-01 --val
   --quantity 10.123456 --amount 1000 --currency EUR --fx-rate 1 --fx-rate-date 2026-09-02 --yes
 
 # Consultas
-atlas positions          # posición física por cuenta y activo
+atlas positions          # posición física por cuenta y activo, a hoy (--date AAAA-MM-DD para otra fecha)
 atlas lots               # lotes fiscales (FIFO global por activo), con fecha y coste en EUR
 atlas cash               # efectivo por cuenta y divisa
 atlas gains 2027         # ganancias realizadas del ejercicio (redondeadas una vez por operación)
@@ -196,7 +196,7 @@ atlas ca split --asset ast_acme --ratio 4 --effective-date 2027-03-01 --source-d
 atlas ca reverse-split --asset ast_acme --ratio 1/4 --effective-date 2027-06-01 --source-document https://acme.example/reverse.pdf \
   --cash-per-share 400 --currency EUR --fx-rate 1 --fx-rate-date 2027-06-01 --fees acc_fund=1 --yes
 
-# Otros asistentes: merger, spin-off, fund-merger, share-class-change, fund-liquidation, delisting; raw para el resto
+# Otros asistentes: merger, spin-off, fund-merger, share-class-change, fund-liquidation, capital-return (devolución de prima o de aportaciones), delisting; raw para el resto
 atlas ca raw --asset ast_acme --kind issuer_liquidation --effects-json '[{"op":"forced_sale","per_account":[{"account_id":"acc_fund","quantity":"all"}],"unit_price":"0","currency":"EUR","fx_rate":"1","fx_rate_date":"2028-01-15"}]' --effective-date 2028-01-15 --source-document documents/acme/liquidation.pdf --yes
 ```
 

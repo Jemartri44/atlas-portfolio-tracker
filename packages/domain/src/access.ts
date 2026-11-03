@@ -89,7 +89,7 @@ export {
   type IdTokenFailure,
   splitJwt,
 } from "./access/id-token.js";
-export { ID22, ID43, instantOf, isId22, isId43, isInstant } from "./access/ids.js";
+export { ID22, ID43, instantOf, isId22, isId43 } from "./access/ids.js";
 export {
   type Admission,
   admit,
@@ -160,3 +160,4 @@ export {
   serializeWebSignIn,
   WEB_SIGN_IN_KEY,
 } from "./access/web-sign-in.js";
+export { isInstant } from "./guards.js";

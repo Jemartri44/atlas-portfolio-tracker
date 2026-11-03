@@ -308,7 +308,7 @@ La aplicación deja constancia de cada declaración **realmente presentada** —
 
 ## 6. Eventos corporativos
 
-Transformaciones que la app debe soportar sin migración de esquema. Se implementan como composición de cinco primitivas de lote (`scale`, `convert`, `carve_out`, `forced_sale`, `grant`; ADR-0011). El dividendo en efectivo no es un evento corporativo sino un `dividend`. El cambio puro de ISIN/ticker es un `asset_updated`, no un evento corporativo.
+Transformaciones que la app debe soportar sin migración de esquema. Se implementan como composición de seis primitivas de lote (`scale`, `convert`, `carve_out`, `forced_sale`, `grant`, `cost_adjustment`; ADR-0011, `docs/data-schema.md` §6.5). El dividendo en efectivo no es un evento corporativo sino un `dividend`. El cambio puro de ISIN/ticker es un `asset_updated`, no un evento corporativo.
 
 | Evento (`corporate_action.kind`) | Efecto sobre los lotes |
 |---|---|
@@ -316,7 +316,7 @@ Transformaciones que la app debe soportar sin migración de esquema. Se implemen
 | **Contrasplit** (`reverse_split`) | Inverso. Las fracciones sobrantes suelen liquidarse en efectivo: **hecho imponible**. |
 | **Dividendo en efectivo** (`cash_dividend`) | No toca lotes. Rendimiento del capital mobiliario. |
 | **Dividendo en acciones** (`stock_dividend`) | Lotes nuevos. Fecha y valoración según normativa. |
-| **Fusión / absorción** (`merger`) | Los lotes se transforman en el valor nuevo por canje. Conserva antigüedad. |
+| **Fusión / absorción** (`merger`) | Los lotes se transforman en el valor nuevo por canje. Conserva antigüedad. Con régimen de neutralidad, el dinero del canje **rebaja el coste** de lo recibido (arts. 80.3 y 81.2 LIS, criterio #13); los picos que vende el depositario son una transmisión. |
 | **Escisión** (`spin_off`) | El coste original se reparte entre matriz y escindida según la proporción publicada. |
 | **Fusión de fondos** (`fund_merger`) | Frecuente en indexados. Como el traspaso: conserva antigüedad y coste. |
 | **Cambio de clase de participación** (`share_class_change`) | Muy frecuente. Mismo fondo, otro ISIN, otro TER. Conserva antigüedad. |
@@ -326,6 +326,7 @@ Transformaciones que la app debe soportar sin migración de esquema. Se implemen
 | **Fork de cripto** (`crypto_fork`) | Activo nuevo con **coste de adquisición cero** y fecha del fork (criterio conservador, *verificar*). Se documenta en el evento. |
 | **Migración de token** (`token_migration`) | Canje. Documentar el criterio aplicado. |
 | **Reestructuración de emisor de ETC/ETP** (`issuer_restructuring`) | Puede implicar canje o reembolso forzoso. |
+| **Devolución de prima de emisión o de aportaciones** (`capital_return`) | No vende nada: el importe **rebaja el valor de adquisición** de cada lote, por títulos, hasta cero, y el exceso es rendimiento del capital mobiliario (arts. 25.1.e y 33.3.a LIRPF, criterio #26). Solo acciones cotizadas (en una IIC rige el art. 94.1 LIRPF); la reducción con cargo a beneficios es un dividendo. |
 
 Cada evento registrado guarda su **fuente documental** (URL o PDF del emisor).
 

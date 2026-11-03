@@ -77,7 +77,7 @@ export class FilePriceStore implements PriceStore {
   closes = (assetId: AssetId) => readOrUndefined(this.fileOf(assetId));
 
   private async writeAtomically(path: string, text: string, lock: HeldLock): Promise<void> {
-    await fs.mkdir(this.dir, { recursive: true });
+    await fs.mkdir(this.dir, { recursive: true, mode: 0o700 });
     await writeFileAtomically(nodeFileOps, path, text, lock);
   }
 

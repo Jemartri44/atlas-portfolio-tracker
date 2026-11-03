@@ -482,10 +482,18 @@ export const CORPORATE_ACTION_KINDS = [
   "crypto_fork",
   "token_migration",
   "issuer_restructuring",
+  "capital_return",
 ] as const;
 export type CorporateActionKind = (typeof CORPORATE_ACTION_KINDS)[number];
 
-export const EFFECT_OPS = ["scale", "convert", "carve_out", "forced_sale", "grant"] as const;
+export const EFFECT_OPS = [
+  "scale",
+  "convert",
+  "carve_out",
+  "forced_sale",
+  "grant",
+  "cost_adjustment",
+] as const;
 export type EffectOp = (typeof EFFECT_OPS)[number];
 
 /** A decimal string (`"4"`, `"0.25"`) or a fraction of positive integers `"new/old"` (`"4/3"`). */
@@ -571,7 +579,43 @@ export interface GrantEffect extends EffectBase {
   income_base?: IncomeBase;
 }
 
-export type Effect = ScaleEffect | ConvertEffect | CarveOutEffect | ForcedSaleEffect | GrantEffect;
+export interface CostAdjustmentEntry {
+  account_id: AccountId;
+  /** Cash that account received, in the effect's `currency`. */
+  amount: DecimalString;
+}
+
+/**
+ * Cash received for the asset that **lowers its acquisition value** instead of
+ * selling anything: the lots keep their quantity and their date, and their cost
+ * goes down by the euros received, shared by units. Two uses:
+ *
+ * - the cash compensation of a merger, an exchange or a spin-off under the
+ *   neutrality regime (arts. 80.3 and 81.2 LIS: the value of what is received
+ *   «se aumentará o disminuirá en el importe de la compensación complementaria
+ *   en dinero»), which may never take a lot below zero;
+ * - `capital_return`: a distribution of share premium or a capital reduction
+ *   returning contributions (arts. 25.1.e and 33.3.a LIRPF), where what exceeds
+ *   a lot's cost is movable capital income.
+ *
+ * The fractions the depositary sells in the market are a transmission and stay
+ * a `forced_sale`.
+ */
+export interface CostAdjustmentEffect extends EffectBase {
+  op: "cost_adjustment";
+  per_account: CostAdjustmentEntry[];
+  currency: Currency;
+  fx_rate: DecimalString;
+  fx_rate_date: CivilDate;
+}
+
+export type Effect =
+  | ScaleEffect
+  | ConvertEffect
+  | CarveOutEffect
+  | ForcedSaleEffect
+  | GrantEffect
+  | CostAdjustmentEffect;
 
 export interface CorporateActionEvent extends Envelope {
   type: "corporate_action";
@@ -583,18 +627,18 @@ export interface CorporateActionEvent extends Envelope {
   effects: Effect[];
   /**
    * Whether the operation takes the neutrality regime, i.e. the tax deferral of
-   * a merger, exchange or spin-off (ADR-0021). Optional. It does not decide
-   * which primitives an exchange composes into —that is still the user's
-   * choice, and `KIND_RULES` does not look at this field— but the tax engine
-   * **reads it**: an exchange that says nothing about the regime
+   * a merger, exchange or spin-off (ADR-0021). Optional. Which primitives an
+   * exchange composes into is still the user's choice, except that a
+   * `cost_adjustment` outside `capital_return` requires it to be `true`
+   * (`checkCostAdjustmentRegime`). The tax engine **reads it**: an exchange that says nothing about the regime
    * is exposed as doubtful under criteria #7 and #13, and one that says the
    * regime does **not** apply while keeping date and cost gets its own note,
    * `tax_neutrality_contradiction`.
    *
-   * It exists because the deferral is conditional —the AEAT manual requires the
-   * acquiring entity to be Spanish or within Directive 2009/133/EC— so a merger
-   * between two US companies does not qualify, and without the regime the
-   * exchange is a fully taxable swap under article 37.1.h. The project models
+   * It exists because the deferral is conditional (arts. 80.1 and 81.1 LIS:
+   * where the shareholder or, in an exchange of securities, the acquiring
+   * entity resides), and without the regime the exchange is a fully taxable
+   * swap under article 37.1.h. The project models
    * it as `convert`, which keeps date and cost and declares nothing: if the
    * regime did not apply, that omits the whole gain of the exchange. It is the
    * largest single figure that can be wrong in the system

@@ -1,7 +1,7 @@
 // Tracking events (ADR-0010, ADR-0012): orders and transfer requests. They
 // never touch lots or cash; a later buy/sell/transfer closes them.
 
-import type { CivilDate } from "../dates/civil-date.js";
+import { type CivilDate, daysBetween } from "../dates/civil-date.js";
 import { ProjectionError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
 import type {
@@ -17,11 +17,6 @@ import type { Settings } from "../settings/settings.js";
 import { assertSameBook, requireAccount, requireAsset } from "./catalogue.js";
 import type { LedgerState, PendingOrder, PendingTransfer, Warning } from "./state.js";
 import { enforceTransfer } from "./transfer-rule.js";
-
-const DAY_MS = 86_400_000;
-
-export const daysBetween = (from: CivilDate, to: CivilDate): number =>
-  Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS);
 
 // --- Orders ---------------------------------------------------------------
 

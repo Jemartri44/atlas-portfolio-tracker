@@ -109,6 +109,8 @@ export type ConsumePurpose = "transmission" | "transfer" | "convert";
  * - `units`: an asset **nobody held** was split or reverse split by `ratio`.
  *   There was no lot to scale, but units bought after it are not the units
  *   sold before it, and the tax engine needs the ratio to compare them.
+ * - `adjust`: a `cost_adjustment` lowered the lot's cost by `cost_eur`; quantity
+ *   and date stay.
  * - `gain`: `state.gains[gain_index]` was booked; the `transmission` consumptions
  *   right before it are the lots it disposed of.
  */
@@ -132,6 +134,7 @@ export type LotJournalEntry =
   | { kind: "carve"; lot_id: string; into_lot_id: string; event_id: Ulid; cost_share: Decimal }
   | { kind: "scale"; lot_id: string; event_id: Ulid; quantity_after: Quantity; ratio: string }
   | { kind: "units"; asset_id: AssetId; event_id: Ulid; ratio: string }
+  | { kind: "adjust"; lot_id: string; event_id: Ulid; cost_eur: Money }
   | { kind: "gain"; gain_index: number };
 
 export interface GainByLot {
@@ -164,9 +167,16 @@ export interface RealizedGain {
   fx_method?: "currency_first" | "each_leg" | "iic" | "mixed";
 }
 
+/**
+ * `capital_return`: what a distribution of share premium or a return of
+ * contributions paid beyond the cost of the lots (arts. 25.1.e and 33.3.a
+ * LIRPF), income from holding shares like a dividend.
+ */
+export type IncomeKind = "dividend" | "interest" | "capital_return";
+
 export interface InvestmentIncome {
   event_id: Ulid;
-  kind: "dividend" | "interest";
+  kind: IncomeKind;
   account_id: AccountId;
   asset_id?: AssetId;
   fiscal_date: CivilDate;
@@ -380,11 +390,27 @@ export interface LedgerState {
   usage: { accounts: Set<AccountId>; assets: Set<AssetId> };
 }
 
+// The key of a position or a balance is `<account>|<other>`. Nothing restricts an id, so
+// the two parts are escaped (`%` and `|`) and the first `|` is always the separator: the
+// ids that have neither character, which is all of them in practice, produce the same keys.
+const escaped = (part: string): string => part.replaceAll("%", "%25").replaceAll("|", "%7C");
+const unescaped = (part: string): string => part.replaceAll("%7C", "|").replaceAll("%25", "%");
+const splitKey = (key: string): [string, string] => {
+  const at = key.indexOf("|");
+  return [unescaped(key.slice(0, at)), unescaped(key.slice(at + 1))];
+};
+
 export const positionKey = (accountId: AccountId, assetId: AssetId): string =>
-  `${accountId}|${assetId}`;
+  `${escaped(accountId)}|${escaped(assetId)}`;
 
 export const cashKey = (accountId: AccountId, currency: string): string =>
-  `${accountId}|${currency}`;
+  `${escaped(accountId)}|${escaped(currency)}`;
+
+export const splitPositionKey = (key: string): [AccountId, AssetId] =>
+  splitKey(key) as [AccountId, AssetId];
+
+export const splitCashKey = (key: string): [AccountId, string] =>
+  splitKey(key) as [AccountId, string];
 
 export const createEmptyState = (fiscalSettings: Settings): LedgerState => ({
   accounts: new Map(),

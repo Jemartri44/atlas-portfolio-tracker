@@ -88,7 +88,8 @@ export interface CorporateActionParams {
   /**
    * Cash for the leftovers. Present on a reverse split, a merger or a spin-off
    * means "settle the fractions"; on a liquidation it is the price of the whole
-   * position. Absent means no forced sale is generated.
+   * position, and on a `capital_return` the amount paid per unit. Absent means
+   * no forced sale is generated.
    */
   cash?: CashSettlement;
   /** Fee the broker charged, per account taking part in the forced sale. */
@@ -406,6 +407,27 @@ const compose = (
       }));
       return plain(params, [
         { op: "forced_sale", per_account: withAmounts(entries, params), ...priceOf(cash) },
+      ]);
+    }
+    case "capital_return": {
+      // What each account received: its units on the day times the amount per unit.
+      const cash = required(params.cash, "cash", kind);
+      const perUnit = Decimal.parse(cash.unit_price);
+      const onTheDay = projectLedger(events, { asOf: params.effective_date, collectErrors: true });
+      const per_account = physicalPositions(onTheDay)
+        .filter((row) => row.asset_id === params.asset_id && row.quantity.isPositive())
+        .map((row) => ({
+          account_id: row.account_id,
+          amount: row.quantity.value.mul(perUnit).toString(),
+        }));
+      return plain(params, [
+        {
+          op: "cost_adjustment",
+          per_account,
+          currency: cash.currency,
+          fx_rate: cash.fx_rate,
+          fx_rate_date: cash.fx_rate_date,
+        },
       ]);
     }
     case "delisting":

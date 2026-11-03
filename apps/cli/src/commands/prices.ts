@@ -183,9 +183,17 @@ const statusOf = async (store: PriceStore): Promise<PriceStatus> =>
 /** The assets with a `prices/<id>.jsonl` in the folder: the inverse of `priceFileName`. */
 const assetsWithPriceFiles = async (ctx: Context): Promise<AssetId[]> => {
   const names = await readdir(join(folderOf(ctx), PRICES_DIR)).catch(() => []);
-  return names
-    .filter((name) => name.endsWith(".jsonl"))
-    .map((name) => decodeURIComponent(name.slice(0, -".jsonl".length)) as AssetId);
+  // A name that does not decode is not one of ours: it is skipped, not a reason to fail.
+  return names.flatMap((name) => {
+    if (!name.endsWith(".jsonl")) {
+      return [];
+    }
+    try {
+      return [decodeURIComponent(name.slice(0, -".jsonl".length)) as AssetId];
+    } catch {
+      return [];
+    }
+  });
 };
 
 const status = async (ctx: Context): Promise<number> => {

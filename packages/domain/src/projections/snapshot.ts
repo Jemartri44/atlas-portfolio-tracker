@@ -19,6 +19,7 @@ import type {
   Thesis,
   Warning,
 } from "./state.js";
+import { splitCashKey, splitPositionKey } from "./state.js";
 
 export type Snapshot = Record<string, unknown>;
 
@@ -214,8 +215,6 @@ const invalidOf = (entry: InvalidEvent) => ({
 const byId = <T>(entries: Iterable<T>, id: (entry: T) => string): T[] =>
   [...entries].sort((a, b) => (id(a) < id(b) ? -1 : 1));
 
-const split = (key: string): [string, string] => key.split("|") as [string, string];
-
 export const snapshotOf = (state: LedgerState): Snapshot => {
   const lots: Record<string, unknown> = {};
   for (const [assetId, entry] of state.lots) {
@@ -231,13 +230,13 @@ export const snapshotOf = (state: LedgerState): Snapshot => {
   const positions = [...state.positions]
     .filter(([, quantity]) => !quantity.isZero())
     .map(([key, quantity]) => {
-      const [account_id, asset_id] = split(key);
+      const [account_id, asset_id] = splitPositionKey(key);
       return { account_id, asset_id, quantity: text(quantity) };
     });
   const cash = [...state.cash]
     .filter(([, balance]) => !balance.isZero())
     .map(([key, balance]) => {
-      const [account_id, currency] = split(key);
+      const [account_id, currency] = splitCashKey(key);
       return { account_id, currency, balance: text(balance) };
     });
   return sortKeysDeep({
