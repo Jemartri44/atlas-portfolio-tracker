@@ -21,7 +21,7 @@ import {
 import { Route, Router } from "@solidjs/router";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { formatMoney, MASK } from "../src/format/money.js";
+import { formatMoneyNumber, MASK } from "../src/format/money.js";
 import { loadInto } from "../src/ledger/actions.js";
 import Cartera from "../src/routes/cartera/index.jsx";
 import Cubo from "../src/routes/cubo/index.jsx";
@@ -82,7 +82,7 @@ afterEach(() => {
 const coreTotalAt = (date: string): string => {
   const state = projectLedger(goldenEvents(), { collectErrors: true, asOf: date });
   const total = coreWeights(state, date, settingsAt(state, date).settings).total_eur;
-  return formatMoney(total, { currency: false });
+  return formatMoneyNumber(total);
 };
 
 describe("Núcleo cuts the ledger by the date asked", () => {

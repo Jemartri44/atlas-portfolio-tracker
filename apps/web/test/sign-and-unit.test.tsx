@@ -10,7 +10,7 @@
 
 import { Money } from "@atlas/domain";
 import { describe, expect, it } from "vitest";
-import { formatMoney } from "../src/format/money.js";
+import { formatMoneyNumber } from "../src/format/money.js";
 import { formatDecimalString, formatPercent, formatPoints, NBSP } from "../src/format/number.js";
 import Cartera from "../src/routes/cartera/index.jsx";
 import Cubo from "../src/routes/cubo/index.jsx";
@@ -26,7 +26,7 @@ describe("the sign of a figure", () => {
       formatPoints("-1.5"),
       formatPercent("-12.3", { signed: true }),
       formatDecimalString("-7", { decimals: 0 }),
-      formatMoney(Money.parse("-10", "EUR"), { signed: true }),
+      formatMoneyNumber(Money.parse("-10", "EUR"), { signed: true }),
     ]) {
       expect(shown.codePointAt(0)).toBe(0x2212);
       expect(shown).not.toContain("-");

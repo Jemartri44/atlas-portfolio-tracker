@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 import { listSourceFiles, repoRoot, specifiersOf, webSrc } from "./support.js";
 
@@ -196,18 +196,11 @@ describe("architecture: apps/web", () => {
   });
 
   /**
-   * Importing the browser store must not drag `node:fs` into the bundle. The barrel of
-   * `@atlas/adapters` exports `FileLedgerStore`, so the web imports subpaths only.
-   * `scripts/check-bundle.mjs` verifies the same thing on the built output; this one says it in the
-   * source, where the fix is.
-   */
-  /**
    * **The browser never writes in a folder of the disk.** The File System Access API cannot create
    * a file exclusively, so the web cannot take the lock of the console's folder; without the lock,
    * a write of the web there could overwrite a line of the console in silence. So the web keeps its
    * ledger in its own storage and only **reads** from the folder, and every writing primitive of
-   * the API is forbidden here, in the web and in the browser adapters. IndexedDB's own
-   * `"readwrite"` transactions are not this: they are positional, never a `mode:` option.
+   * the API is forbidden in the web.
    */
   it("never writes in a folder of the disk from the browser", () => {
     const writing = [
@@ -219,15 +212,7 @@ describe("architecture: apps/web", () => {
       /\bmode\s*:\s*["'`]readwrite["'`]/,
       /showSaveFilePicker/,
     ];
-    const browserAdapters = join(
-      repoRoot,
-      "packages",
-      "adapters",
-      "src",
-      "ledger-store",
-      "browser",
-    );
-    const violations = [...listSourceFiles(webSrc), ...listSourceFiles(browserAdapters)]
+    const violations = listSourceFiles(webSrc)
       .filter((file) => {
         const code = readFileSync(file, "utf8")
           .replace(/\/\*[\s\S]*?\*\//g, " ")
@@ -236,6 +221,43 @@ describe("architecture: apps/web", () => {
       })
       .map((file) => relative(repoRoot, file));
     expect(violations).toEqual([]);
+  });
+
+  /**
+   * **The device keeps three preferences and nothing else** (ADR-0035; the owner, 2026-11-03: «solo
+   * privacidad, tema y atajos en el navegador, el resto en la nube»). Prices and the ECB history are
+   * read from the API into memory. So no source of the web — nor any adapter the web may import —
+   * touches IndexedDB, `sessionStorage`, cookies or the Cache API, and `localStorage` is reached
+   * only from `shell/preferences.ts`, under exactly the three keys it declares. The service worker
+   * is generated (it precaches the shell only; `scripts/check-bundle.mjs`).
+   */
+  it("keeps on the device only the three preferences of shell/preferences.ts", () => {
+    const code = (file: string): string =>
+      readFileSync(file, "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, " ")
+        .replace(/\/\/[^\n]*/g, " ");
+    const sources = [
+      ...listSourceFiles(webSrc),
+      ...listSourceFiles(join(repoRoot, "packages", "adapters", "src")).filter(
+        (file) => !file.includes(`${join("adapters", "src")}${sep}aws${sep}`),
+      ),
+    ];
+    const storages =
+      /\b(?:indexedDB|sessionStorage|openDatabase|caches|CacheStorage)\b|document\s*\.\s*cookie/;
+    const touching = sources
+      .filter((file) => storages.test(code(file)))
+      .map((file) => relative(repoRoot, file));
+    expect(touching).toEqual([]);
+
+    const preferences = join(webSrc, "shell", "preferences.ts");
+    const local = sources
+      .filter((file) => /\blocalStorage\b/.test(code(file)))
+      .map((file) => relative(repoRoot, file));
+    expect(local).toEqual([relative(repoRoot, preferences)]);
+    const keys = [...code(preferences).matchAll(/const \w+_KEY = "([^"]+)"/g)].map(
+      (match) => match[1],
+    );
+    expect(keys.sort()).toEqual(["atlas.letters", "atlas.privacy", "atlas.theme"]);
   });
 
   it("never imports node builtins or the adapters barrel", () => {

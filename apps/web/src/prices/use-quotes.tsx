@@ -1,5 +1,5 @@
 // The automatic prices of a screen: loaded after the
-// first paint, from what was imported by hand, and passed to the
+// first paint, from our own cloud, and passed to the
 // domain through the one gate. Until they arrive — or without any — every
 // screen works exactly as before, with the manual prices.
 
@@ -9,7 +9,7 @@ import { Notice } from "../components/index.js";
 import type { WebQuotes } from "./quotes.js";
 
 // Imported when the screen asks, not with it: a static import made every
-// screen that shows prices name the chunks of the import store, the ECB and the
+// screen that shows prices name the chunks of the ECB and the
 // quotes in the table of preloads of the entry, which is on the boot path
 // (+33 bytes measured).
 const quotesModule = () => import("./quotes.js");
@@ -50,8 +50,8 @@ export const useQuotes = (state: LedgerState): ScreenQuotes => {
 };
 
 const PROBLEMS = {
-  storage:
-    "Este navegador no permite leer datos guardados del sitio: no hay precios automáticos importados.",
+  unavailable:
+    "La nube no ha respondido: no se han podido leer los precios automáticos. Recarga la página para intentarlo otra vez.",
 } as const;
 
 /** What a screen says about its automatic prices when something is wrong: never silent. */
@@ -83,7 +83,7 @@ export const QuotesNotice = (props: { prices: ScreenQuotes }): JSX.Element => (
           </Show>
           <Show when={quotes().unreadable.length > 0}>
             <Notice severity="caution">
-              {`Los precios automáticos de ${quotes().unreadable.length === 1 ? "un activo no se pueden leer" : `${quotes().unreadable.length} activos no se pueden leer`}: esos activos se quedan sin precio automático, porque nunca se leen a medias. Descárgalos otra vez con la consola.`}
+              {`Los precios automáticos de ${quotes().unreadable.length === 1 ? "un activo no se pueden leer" : `${quotes().unreadable.length} activos no se pueden leer`}: esos activos se quedan sin precio automático, porque nunca se leen a medias. Los vuelve a bajar la tarea diaria de la nube.`}
             </Notice>
           </Show>
         </>

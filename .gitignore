@@ -43,7 +43,6 @@ plan-financiero.md
 # Build and test output
 coverage/
 dist-test/
-dist-test-browser/
 dist-lambda/
 *.tsbuildinfo
 

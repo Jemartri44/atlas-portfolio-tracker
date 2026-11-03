@@ -23,7 +23,14 @@ import {
 } from "../src/format/labels.js";
 import { describeError } from "../src/format/messages/errors.js";
 import { describeWarning } from "../src/format/messages/warnings.js";
-import { amountDisplay, formatMoney, formatQuantity, MASK, NO_DATA } from "../src/format/money.js";
+import {
+  amountDisplay,
+  currencyUnit,
+  formatMoneyNumber,
+  formatQuantity,
+  MASK,
+  NO_DATA,
+} from "../src/format/money.js";
 import {
   displayName,
   displayNames,
@@ -115,11 +122,11 @@ describe("signOf", () => {
 
 describe("the privacy gate", () => {
   it("formats an amount with its currency, to the cent", () => {
-    expect(formatMoney(Money.parse("1234.567", "EUR"))).toBe("1.234,57\u00a0€");
+    expect(formatMoneyNumber(Money.parse("1234.567", "EUR"))).toBe("1.234,57");
+    expect(currencyUnit("EUR")).toBe("€");
     // Any other currency keeps its code, which no two countries share.
-    expect(formatMoney(Money.parse("1234.567", "USD"))).toBe("1.234,57\u00a0USD");
-    expect(formatMoney(Money.parse("1234.567", "USD"), { currency: false })).toBe("1.234,57");
-    expect(formatMoney(Money.parse("-10", "EUR"), { signed: true })).toBe("−10,00\u00a0€");
+    expect(currencyUnit("USD")).toBe("USD");
+    expect(formatMoneyNumber(Money.parse("-10", "EUR"), { signed: true })).toBe("−10,00");
   });
 
   it("formats a quantity trimming the trailing zeros, because fractions are real", () => {

@@ -9,11 +9,10 @@
 //
 // The whole ledger is downloaded with `ApiLedgerStore.load()` (`GET /api/ledger`,
 // `no-store`, the etag checked against the bytes) and projected once on the
-// client. Nothing is written to the device: no `localStorage` key, no IndexedDB
-// store, no cache entry (`test/cloud-device.test.tsx`), with one exception:
-// the prices the user imports by hand in the browser
-// (`prices/quotes.ts`) stay in the browser's storage, because they are not part
-// of the ledger and nothing fiscal depends on them.
+// client. Nothing is written to the device but the three interface preferences
+// (`shell/preferences.ts`): no IndexedDB store, no cache entry
+// (`test/cloud/cloud-device.test.tsx`). The prices and the ECB history are read from the API into
+// memory (`prices/quotes.ts`, `ecb/history.ts`).
 //
 // Lazy: the boot only holds the `import()` of this file.
 
