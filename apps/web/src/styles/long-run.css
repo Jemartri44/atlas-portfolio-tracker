@@ -1,0 +1,12 @@
+/*
+ * The assumptions of the projection and of the total cost: a column on the phone, as many as fit
+ * on a wide screen (a field is never stretched across the whole card).
+ */
+.fieldset.assumptions {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+  max-width: none;
+}
+
+.fieldset.assumptions > * {
+  grid-column: auto;
+}
