@@ -37,24 +37,26 @@ export const readReference = async (
     return { counts };
   }
   const stored = await reader.get("prices/symbols.json");
+  let read: ReturnType<typeof readCloses>;
+  // Only the reading is allowed to degrade: a bug in the valuation below must not pass as «no
+  // automatic prices».
   try {
     const text = stored === undefined ? undefined : textOf(stored.body);
     if (stored !== undefined && text === undefined) {
       throw new RangeError("prices/symbols.json is not UTF-8");
     }
-    const symbols = parseSymbols(text);
-    const read = readCloses(files, symbols);
-    return {
-      external: externalPricesOf(state, {
-        closes: read.closes,
-        ...(history === undefined ? {} : { history }),
-        staleDays: CLOUD_ECB_STALE_DAYS,
-      }),
-      counts,
-    };
+    read = readCloses(files, parseSymbols(text));
   } catch {
     // A correspondence that does not read cannot say which closes are in the
     // wrong currency: no automatic prices, as in the console.
     return { counts: { ...counts, price_files: 0 } };
   }
+  return {
+    external: externalPricesOf(state, {
+      closes: read.closes,
+      ...(history === undefined ? {} : { history }),
+      staleDays: CLOUD_ECB_STALE_DAYS,
+    }),
+    counts,
+  };
 };

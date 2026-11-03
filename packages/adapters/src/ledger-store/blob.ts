@@ -14,7 +14,6 @@ import {
   ArchiveExistsError,
   CURRENT_LEDGER_SCHEMA,
   decodeLines,
-  encodeLine,
   type LedgerEvent,
   type LedgerSchema,
   type LedgerStore,
@@ -22,10 +21,8 @@ import {
   rawLinesText,
   sha256Hex,
   utf8Encode,
-  ValidationError,
 } from "@atlas/domain";
-
-const NEWLINE = 0x0a;
+import { checkArchiveName, ledgerLinesOf, separatorFor, serialise } from "./text.js";
 
 /**
  * Access to the bytes of the ledger and of its archives. Implemented by the
@@ -69,24 +66,11 @@ export class BlobArchiveExists extends Error {
   }
 }
 
-const decoder = new TextDecoder();
-
 const concat = (left: Uint8Array, right: Uint8Array): Uint8Array => {
   const out = new Uint8Array(left.length + right.length);
   out.set(left, 0);
   out.set(right, left.length);
   return out;
-};
-
-const serialise = (events: readonly LedgerEvent[]): string =>
-  events.map((event) => `${encodeLine(event)}\n`).join("");
-
-const linesOf = (bytes: Uint8Array): string[] => {
-  const lines = decoder.decode(bytes).split("\n");
-  if (lines[lines.length - 1] === "") {
-    lines.pop();
-  }
-  return lines;
 };
 
 export class BlobLedgerStore implements LedgerStore {
@@ -102,7 +86,7 @@ export class BlobLedgerStore implements LedgerStore {
 
   async load(): Promise<LoadedLedger> {
     const bytes = await this.blob.read();
-    const lines = linesOf(bytes);
+    const lines = ledgerLinesOf(bytes);
     const events = decodeLines(lines, this.schema);
     return { events, etag: sha256Hex(bytes), lines };
   }
@@ -110,19 +94,14 @@ export class BlobLedgerStore implements LedgerStore {
   /** Adds `text` at the end, on `etag`, in the one atomic step of the medium. */
   private async add(text: string, etag: string): Promise<{ etag: string }> {
     const next = await this.blob.update(etag, (bytes) => {
-      const separator = bytes.length > 0 && bytes[bytes.length - 1] !== NEWLINE ? "\n" : "";
-      return concat(bytes, utf8Encode(separator + text));
+      return concat(bytes, utf8Encode(separatorFor(bytes) + text));
     });
     return { etag: sha256Hex(next) };
   }
 
   /** Replaces the whole text by `text`, archiving the current bytes first. */
   private async put(text: string, etag: string, archiveName: string): Promise<{ etag: string }> {
-    if (archiveName.length === 0 || /[/\\]/.test(archiveName)) {
-      throw new ValidationError("invalid_archive_name", "archive name must be a plain file name", {
-        archive_name: archiveName,
-      });
-    }
+    checkArchiveName(archiveName);
     const content = utf8Encode(text);
     let next: Uint8Array;
     try {

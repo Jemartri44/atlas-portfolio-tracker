@@ -6,7 +6,7 @@
 // domain (`corporateActionDraft`), and this file only says **which fields to ask for** for each
 // kind, exactly like `specs.ts` does for the flat events.
 //
-// The eight forms mirror the eight wizards of `atlas ca`. The ninth escape
+// The nine forms mirror the nine wizards of `atlas ca`. The tenth escape
 // hatch (`raw`, effects written by hand as JSON) stays CLI-only on purpose:
 // typing a JSON array of effects on a phone is not an interface, it is a trap.
 
@@ -181,6 +181,19 @@ export const CORPORATE_FORMS: readonly CorporateForm[] = [
     when: "El fondo se ha liquidado y te han pagado en efectivo.",
     fields: cash("Precio de liquidación por participación", "Lo que pagaron por participación."),
     effect: "Vende toda la posición en todas las cuentas que la tenían. Genera ganancia.",
+  },
+  {
+    slug: "devolucion-prima",
+    kind: "capital_return",
+    title: "Devolución de prima o de aportaciones",
+    when: "El emisor ha repartido prima de emisión o ha reducido capital devolviendo aportaciones.",
+    // No fee: nothing is sold, and a fee here would land nowhere.
+    fields: cash(
+      "Importe por título",
+      "Lo que pagó por título. Si sale de beneficios no distribuidos es un dividendo: regístralo como tal.",
+    ).filter((field) => field.name !== "cash_fees"),
+    effect:
+      "Rebaja el coste de cada lote, por títulos, hasta cero, sin vender nada. Lo que exceda del coste tributa como rendimiento del capital mobiliario.",
   },
   {
     slug: "exclusion",

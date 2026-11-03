@@ -16,5 +16,16 @@ export const onlyKeys = (
 /** A SHA-256 as lower-case hexadecimal. */
 export const SHA256_HEX = /^[0-9a-f]{64}$/;
 
-/** An ISO 8601 UTC instant, with up to three decimals of second. */
 export const INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
+
+/**
+ * An ISO 8601 UTC instant, with up to three decimals of second, that exists:
+ * `Date.parse` rolls `02-30` and `24:00` over instead of refusing them.
+ */
+export const isInstant = (value: unknown): value is string => {
+  if (typeof value !== "string" || !INSTANT_PATTERN.test(value)) {
+    return false;
+  }
+  const ms = Date.parse(value);
+  return !Number.isNaN(ms) && new Date(ms).toISOString().slice(0, 19) === value.slice(0, 19);
+};

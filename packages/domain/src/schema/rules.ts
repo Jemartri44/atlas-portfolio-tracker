@@ -144,6 +144,7 @@ export const EFFECT_RULES: Record<EffectOp, Rules> = {
     income_eur: opt("decimal"),
     income_base: { kind: "enum", optional: true, values: INCOME_BASES },
   },
+  cost_adjustment: { ...EFFECT_COMMON, per_account: req("non_empty_array"), ...PRICED },
 };
 
 export const PER_ACCOUNT_RULES: Partial<Record<EffectOp, Rules>> = {
@@ -154,6 +155,7 @@ export const PER_ACCOUNT_RULES: Partial<Record<EffectOp, Rules>> = {
     withholding: opt("decimal"),
   },
   grant: { account_id: req("string"), quantity: req("positive_decimal") },
+  cost_adjustment: { account_id: req("string"), amount: req("positive_decimal") },
 };
 
 /** Why a fingerprint could not be verified (ADR-0025, as amended): three reasons, never folded into one another. */

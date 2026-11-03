@@ -5,12 +5,12 @@
 // adapter's, and so is every read.
 
 import { ValidationError } from "../errors.js";
-import { isRecord, SHA256_HEX } from "../guards.js";
+import { isInstant, isRecord, SHA256_HEX } from "../guards.js";
 import type { AllowEntry } from "./allow-list.js";
 import { isAllowed } from "./allow-list.js";
 import { type ApiRefusal, refusal } from "./codes.js";
 import { TOKEN_CEILING_DAYS } from "./config.js";
-import { isId22, isInstant } from "./ids.js";
+import { isId22 } from "./ids.js";
 import { isSubject } from "./signed.js";
 
 const DAY_MS = 86_400_000;

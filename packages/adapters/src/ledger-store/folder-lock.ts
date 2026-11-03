@@ -141,10 +141,10 @@ export const acquireFolderLock = async (
     pid: process.pid,
     host: hostname(),
   };
-  await fs.mkdir(folder, { recursive: true });
+  await fs.mkdir(folder, { recursive: true, mode: 0o700 });
   let handle: fs.FileHandle;
   try {
-    handle = await fs.open(path, "wx");
+    handle = await fs.open(path, "wx", 0o600);
   } catch (error) {
     if (hasCode(error, "EEXIST")) {
       throw new LedgerLockedError(folder, (await readFolderLock(folder)) ?? undefined);

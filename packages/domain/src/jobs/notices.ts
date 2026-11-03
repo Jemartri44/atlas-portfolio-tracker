@@ -11,9 +11,10 @@
 // sending again** (at most once).
 
 import { type CivilDate, isCivilDate } from "../dates/civil-date.js";
+import { isInstant } from "../guards.js";
 import { type JobTask, PRODUCER_TASKS } from "./catalog.js";
 import { type Finding, type RunRecord, SUBJECT_SHAPE } from "./run-record.js";
-import { CODE_SHAPE, hasKeys, isInstantText, strictJsonObject } from "./strict.js";
+import { CODE_SHAPE, hasKeys, strictJsonObject } from "./strict.js";
 
 export const NOTICE_FORMAT = 1;
 export const NOTICES_PREFIX = "jobs/mail/notices/";
@@ -57,7 +58,7 @@ export const parseNotice = (text: string, code: string, subject: string): ReadNo
     value.subject === subject &&
     isCivilDate(value.streak_since) &&
     (NOTICE_STATES as readonly unknown[]).includes(value.state) &&
-    isInstantText(value.at);
+    isInstant(value.at);
   return readable
     ? { ok: true, notice: value as unknown as Notice }
     : { ok: false, code: "notice_unreadable" };
