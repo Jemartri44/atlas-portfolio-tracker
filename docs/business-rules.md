@@ -152,7 +152,7 @@ Antes: 28 % por encima de 300.000 € en 2023-2024, 26 % por encima de 200.000 �
 
 **Cuota estimada** (`savingsQuota`, criterio #27 de `fiscal-questions.md`): la escala sobre la base del ahorro, la deducción por doble imposición con sus dos límites y las retenciones del ahorro. Es una estimación: no conoce el resto de la Renta y supone que el mínimo personal y familiar se agota en la base general.
 
-Los tramos se aplican a la **ganancia realizada en el ejercicio**, no al patrimonio ni al importe retirado. Solo tributa la plusvalía, no el capital aportado.
+Los tramos se aplican a la **base del ahorro del ejercicio** (ganancias realizadas y rendimientos del capital mobiliario, tras compensar), no al patrimonio ni al importe retirado. Solo tributa la plusvalía, no el capital aportado.
 
 ### 5.2 Traspaso entre fondos — el caso crítico
 

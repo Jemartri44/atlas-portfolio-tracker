@@ -185,18 +185,124 @@ describe("savingsQuota", () => {
       source_country: "BR",
     });
     const quota = savingsQuota(reportOf(b.build(), 2025));
-    expect(cents(quota.withholdings_eur)).toBe("19.00");
+    expect(cents(quota.savings_withholdings_eur)).toBe("19.00");
     expect(quota.double_taxation).toBeUndefined();
     expect(quota.notes).toEqual(["deduction_incomplete"]);
     expect(cents(quota.result_eur)).toBe("0.00");
   });
 
-  it("computes nothing to deduct on a zero base", () => {
-    // A US dividend of 100 (15 withheld) and a custody fee of 200: the movable
-    // capital balance is −100 and the base 0. Quota 0, average 0 %, the
-    // foreign income in the base is 0 and so is the deduction.
+  it("leaves no empty bracket for a base exactly on a limit", () => {
+    // Base 6,000 (sold at 160): 6,000 × 19 % = 1,140; the next euro goes at 21 %.
+    const quota = savingsQuota(gainOf(2025, "160"));
+    expect(quota.brackets.map((b) => b.rate_pct)).toEqual(["19"]);
+    expect(cents(quota.quota_eur)).toBe("1140.00");
+    expect(quota.marginal_rate_pct).toBe("21");
+    expect(cents(quota.room_to_next_eur)).toBe("44000.00");
+  });
+
+  it.each([
+    [[]],
+    [[{ up_to: "6000", rate_pct: "19" }]],
+    [[{ up_to: "50000", rate_pct: "21" }, { up_to: "6000", rate_pct: "19" }, { rate_pct: "23" }]],
+    [[{ rate_pct: "19" }, { rate_pct: "21" }]],
+  ])("ignores brackets of the settings that are not a scale: %j", (brackets) => {
+    // Same base of 8,000 as the first case: the law of 2025 gives 1,560.
+    const quota = savingsQuota(gainOf(2025, "180"), brackets);
+    expect(quota.scale_origin).toBe("law");
+    expect(quota.notes).toEqual(["settings_brackets_invalid"]);
+    expect(cents(quota.quota_eur)).toBe("1560.00");
+  });
+
+  it("takes only the foreign share of what the compensation leaves", () => {
+    // A US dividend of 1,000 (150 withheld), a Spanish one of 1,000 and a loss
+    // of 2,000. Movable capital 2,000, offset 25 % = 500 (art. 49): base 1,500.
+    // The foreign share of that balance is 1,000 / 2,000: 750 enter the base.
+    // Quota 1,500 × 19 % = 285; average 19.00 %; second limit 750 × 19 % = 142.50 < 150.
     const b = taxBuilder(HAND_SETTINGS);
     b.buy({ account_id: "acc_b", asset_id: "stock_t", value_date: "2025-01-10" });
+    b.buy({ account_id: "acc_a", asset_id: "stock_s", value_date: "2025-01-10" });
+    b.buy({ account_id: "acc_a", asset_id: "fund_f", quantity: "100", value_date: "2024-03-01" });
+    b.sell({
+      account_id: "acc_a",
+      asset_id: "fund_f",
+      quantity: "100",
+      unit_price: "80",
+      value_date: "2025-06-10",
+    });
+    for (const [asset, country] of [
+      ["stock_t", "US"],
+      ["stock_s", undefined],
+    ] as const) {
+      b.dividend({
+        account_id: asset === "stock_t" ? "acc_b" : "acc_a",
+        asset_id: asset,
+        value_date: "2025-04-01",
+        fx_rate_date: "2025-04-01",
+        gross: "1000",
+        withholding_origin: country === undefined ? "0" : "150",
+        ...(country === undefined ? {} : { source_country: country }),
+      });
+    }
+    const quota = savingsQuota(reportOf(b.build(), 2025));
+    expect(cents(quota.base_eur)).toBe("1500.00");
+    expect(quota.double_taxation && cents(quota.double_taxation.foreign_income_eur)).toBe("750.00");
+    expect(quota.double_taxation && cents(quota.double_taxation.deduction_eur)).toBe("142.50");
+    expect(cents(quota.net_quota_eur)).toBe("142.50");
+  });
+
+  it("computes nothing to deduct on a zero base", () => {
+    // A US dividend of 100 (15 withheld) and an ETC, movable capital income
+    // (#24), sold at a loss of 200: the movable capital balance is −100 and the
+    // base 0. Quota 0, average 0 %, no foreign income left in the base.
+    const b = taxBuilder({
+      ...HAND_SETTINGS,
+      income_category: { ...HAND_SETTINGS.income_category, etc: "movable_capital" },
+    });
+    b.buy({ account_id: "acc_b", asset_id: "stock_t", value_date: "2025-01-10" });
+    b.buy({ account_id: "acc_a", asset_id: "etc_e", value_date: "2024-03-01" });
+    b.sell({
+      account_id: "acc_a",
+      asset_id: "etc_e",
+      quantity: "10",
+      unit_price: "80",
+      value_date: "2025-06-10",
+    });
+    b.dividend({
+      account_id: "acc_b",
+      asset_id: "stock_t",
+      value_date: "2025-04-01",
+      fx_rate_date: "2025-04-01",
+      gross: "100",
+      withholding_origin: "15",
+      source_country: "US",
+    });
+    const quota = savingsQuota(reportOf(b.build(), 2025));
+    expect(cents(quota.base_eur)).toBe("0.00");
+    expect(quota.brackets).toEqual([]);
+    expect(cents(quota.quota_eur)).toBe("0.00");
+    expect(quota.average_rate_pct).toBe("0");
+    expect(quota.double_taxation && cents(quota.double_taxation.foreign_income_eur)).toBe("0.00");
+    expect(quota.double_taxation && cents(quota.double_taxation.deduction_eur)).toBe("0.00");
+  });
+
+  it("takes no foreign income when the fees exceed the dividends and interest", () => {
+    // A US dividend of 100 (15 withheld), a custody fee of 200 (#23, as the
+    // engine reads it) and an ETC sold with a gain of 500 as movable capital:
+    // balance −100 + 500 = 400, base 400, quota 76.00. Dividends net of fees
+    // are negative, so nothing of the base is foreign income and nothing is deducted.
+    const b = taxBuilder({
+      ...HAND_SETTINGS,
+      income_category: { ...HAND_SETTINGS.income_category, etc: "movable_capital" },
+    });
+    b.buy({ account_id: "acc_b", asset_id: "stock_t", value_date: "2025-01-10" });
+    b.buy({ account_id: "acc_a", asset_id: "etc_e", value_date: "2024-03-01" });
+    b.sell({
+      account_id: "acc_a",
+      asset_id: "etc_e",
+      quantity: "10",
+      unit_price: "150",
+      value_date: "2025-06-10",
+    });
     b.dividend({
       account_id: "acc_b",
       asset_id: "stock_t",
@@ -208,10 +314,8 @@ describe("savingsQuota", () => {
     });
     b.fee({ account_id: "acc_b", value_date: "2025-06-30", amount: "200", fee_kind: "custody" });
     const quota = savingsQuota(reportOf(b.build(), 2025));
-    expect(cents(quota.base_eur)).toBe("0.00");
-    expect(cents(quota.quota_eur)).toBe("0.00");
-    expect(quota.average_rate_pct).toBe("0");
-    expect(quota.double_taxation && cents(quota.double_taxation.foreign_income_eur)).toBe("0.00");
+    expect(cents(quota.base_eur)).toBe("400.00");
+    expect(cents(quota.quota_eur)).toBe("76.00");
     expect(quota.double_taxation && cents(quota.double_taxation.deduction_eur)).toBe("0.00");
   });
 });

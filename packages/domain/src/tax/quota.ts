@@ -17,8 +17,10 @@
 // (art. 80) is the lesser of the first limit the report already computes (#16)
 // and the second: the average effective rate of the savings, with two decimals
 // (art. 80.2), applied to the foreign income **as it enters the base**: net of
-// the share of deductible expenses that falls on it, and no larger than the
-// base itself when losses offset part of it.
+// the share of deductible expenses that falls on it, and reduced in proportion
+// when losses offset part of the movable capital balance. The part of the
+// deduction above the limits is lost: art. 80 LIRPF, unlike the corporate
+// tax, carries nothing forward.
 
 import { Decimal, HUNDRED } from "../money/decimal.js";
 import { Money } from "../money/money.js";
@@ -46,7 +48,9 @@ export type QuotaNote =
   /** The year is later than the day the scale was checked: a law may still change it. */
   | "scale_after_check"
   /** Some foreign dividends have no first limit (no country or no treaty rate): no deduction for them. */
-  | "deduction_incomplete";
+  | "deduction_incomplete"
+  /** The brackets of the settings are not a scale (empty, unordered, or the last one bounded): the law is used. */
+  | "settings_brackets_invalid";
 
 export interface SavingsQuota {
   year: number;
@@ -79,8 +83,11 @@ export interface SavingsQuota {
   };
   /** `quota − deduction`, never below zero. */
   net_quota_eur?: Money;
-  /** The withholdings of the report: the savings part, an estimate. */
-  withholdings_eur: Money;
+  /**
+   * The withholdings of the savings income Atlas recorded. Only the savings
+   * part, an estimate: in the return they offset the whole quota.
+   */
+  savings_withholdings_eur: Money;
   /** `net quota − withholdings`: positive to pay, negative to be refunded, of this part. */
   result_eur?: Money;
   notes: QuotaNote[];
@@ -117,6 +124,18 @@ const settingsRates = (brackets: readonly TaxBracket[]): Rate[] =>
     rate: Decimal.parse(bracket.rate_pct),
   }));
 
+/** A scale: at least one bracket, increasing limits, and only the last one open. */
+const isScale = (brackets: readonly TaxBracket[]): boolean =>
+  brackets.length > 0 &&
+  brackets.every((bracket, i) => {
+    const last = i === brackets.length - 1;
+    if (bracket.up_to === undefined) {
+      return last;
+    }
+    const previous = i === 0 ? Decimal.ZERO : Decimal.parse(brackets[i - 1]?.up_to);
+    return !last && Decimal.parse(bracket.up_to).gt(previous);
+  });
+
 const sameRates = (a: readonly Rate[], b: readonly Rate[]): boolean =>
   a.length === b.length &&
   a.every((rate, i) => {
@@ -143,15 +162,17 @@ const applyRates = (base: Money, rates: readonly Rate[]) => {
     const top = inside ? base : limit;
     // `from` never exceeds the base: the loop stops at the bracket the base reaches.
     const part = top.sub(from);
-    brackets.push({
-      from_eur: from,
-      ...(limit === undefined ? {} : { up_to_eur: limit }),
-      rate_pct: rate.rate.toString(),
-      ...(rate.state === undefined ? {} : { state_pct: rate.state.toString() }),
-      ...(rate.regional === undefined ? {} : { regional_pct: rate.regional.toString() }),
-      base_eur: part,
-      quota_eur: pct(part, rate.rate),
-    });
+    // A base exactly on a limit reaches the next bracket with nothing in it.
+    if (!part.isZero())
+      brackets.push({
+        from_eur: from,
+        ...(limit === undefined ? {} : { up_to_eur: limit }),
+        rate_pct: rate.rate.toString(),
+        ...(rate.state === undefined ? {} : { state_pct: rate.state.toString() }),
+        ...(rate.regional === undefined ? {} : { regional_pct: rate.regional.toString() }),
+        base_eur: part,
+        quota_eur: pct(part, rate.rate),
+      });
     if (rate.state !== undefined && rate.regional !== undefined) {
       state = state.add(pct(part, rate.state));
       regional = regional.add(pct(part, rate.regional));
@@ -182,7 +203,11 @@ export const savingsQuota = (
   const base = report.base_eur;
   const withholdings = report.withholdings.total_eur;
   const fromLaw = scale === undefined ? undefined : lawRates(scale);
-  const fromSettings = brackets === undefined ? undefined : settingsRates(brackets);
+  if (brackets !== undefined && !isScale(brackets)) {
+    notes.push("settings_brackets_invalid");
+  }
+  const fromSettings =
+    brackets === undefined || !isScale(brackets) ? undefined : settingsRates(brackets);
   const rates = fromSettings ?? fromLaw;
   const common = {
     year,
@@ -198,7 +223,7 @@ export const savingsQuota = (
           },
         }),
     base_eur: base,
-    withholdings_eur: withholdings,
+    savings_withholdings_eur: withholdings,
     criteria: ["27"] as CriterionId[],
   };
   if (rates === undefined) {
@@ -222,8 +247,7 @@ export const savingsQuota = (
     ? Decimal.ZERO
     : quota.amount.mul(HUNDRED).div(base.amount).round(2);
 
-  // Second limit of art. 80: the foreign income, net of its share of the
-  // deductible expenses and no larger than the base.
+  // Second limit of art. 80: the foreign income as it enters the base.
   const ddi = report.double_taxation.lines;
   const counted = ddi.filter((line) => line.deductible_eur !== undefined);
   if (counted.length < ddi.length) {
@@ -241,9 +265,22 @@ export const savingsQuota = (
       (sum, line) => sum.add(line.amount_eur_rounded.neg()),
       zero,
     );
+    // Net of the expenses in proportion to the gross: `gross × (income − expenses) / income`.
     // A foreign dividend is part of `income`, so `income` is never zero here.
-    const net = gross.sub(expenses.mul(gross.amount).div(income.amount));
-    const foreign = minOf(net.isNegative() ? zero : net, base).roundToCents();
+    const netIncome = income.sub(expenses);
+    // Then its share of the positive movable capital balance —its net income
+    // plus the gains of movable capital transmissions— applied to what is left
+    // of that balance after the compensation (art. 49).
+    const gains = report.movable_capital.transmissions
+      .map((line) => line.computable_eur_rounded)
+      .filter((amount) => !amount.isNegative())
+      .reduce((sum, amount) => sum.add(amount), zero);
+    const foreign = netIncome.isNegative()
+      ? zero
+      : report.compensation.movable_capital_final_eur
+          .mul(gross.mul(netIncome.amount).div(income.amount).amount)
+          .div(netIncome.add(gains).amount)
+          .roundToCents();
     const second = pct(foreign, average).roundToCents();
     doubleTaxation = {
       first_limit_eur: first,
