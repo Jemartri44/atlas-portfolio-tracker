@@ -6,7 +6,7 @@ comandos:
   account add|update|list        asset add|update|list        settings set|show
   add buy|sell|swap|transfer|dividend|interest|fx|cash-in|cash-out|fee|valuation
   order place|cancel|note|list [--all] [--date]     transfer request|update|pending [--date]
-  ca split|reverse-split|merger|spin-off|fund-merger|share-class-change|fund-liquidation|delisting|raw
+  ca split|reverse-split|merger|spin-off|fund-merger|share-class-change|fund-liquidation|capital-return|delisting|raw
   thesis open|close <id>|show <id>|list [--closed] [--date]   add buy|sell … --thesis <id>
   edit <id> --reason …           delete <id> --reason …
   positions  lots [activo]  cash  gains <año>  income <año>  valuations [--date]  check [--deep]
