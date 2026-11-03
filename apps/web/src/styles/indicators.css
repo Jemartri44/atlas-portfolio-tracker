@@ -56,3 +56,86 @@
   stroke: var(--c-surface);
   stroke-width: 2;
 }
+
+/* ---- The small line of a tile (Sparkline.tsx) ---------------------------- */
+
+.sparkline {
+  display: block;
+  height: 2rem;
+  overflow: visible;
+  width: 100%;
+}
+
+.sparkline path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.75;
+  vector-effect: non-scaling-stroke;
+}
+
+.sparkline.is-core {
+  color: var(--c-series-core);
+}
+
+.sparkline.is-bucket {
+  color: var(--c-series-bucket);
+}
+
+.sparkline.is-bucket path {
+  stroke-dasharray: 5 3;
+}
+
+.sparkline.is-cash {
+  color: var(--c-series-cash);
+}
+
+.sparkline.is-cash path {
+  stroke-dasharray: 1 4;
+}
+
+.sparkline path {
+  stroke: currentColor;
+}
+
+.sparkline path.dot {
+  stroke-dasharray: none;
+  stroke-width: 4;
+}
+
+/* ---- A bullet bar (Bullet.tsx): weight, target and the band ------------- */
+
+.bullet {
+  display: block;
+  height: 1.25rem;
+  width: 100%;
+}
+
+.bullet-track {
+  fill: var(--c-fill);
+}
+
+.bullet-band {
+  fill: var(--c-chart-axis);
+  opacity: 0.55;
+}
+
+.bullet-target {
+  fill: var(--c-text);
+}
+
+.bullet.is-equity .bullet-bar {
+  fill: var(--c-class-equity);
+}
+
+.bullet.is-fixed_income .bullet-bar {
+  fill: var(--c-class-fixed-income);
+}
+
+.bullet.is-gold .bullet-bar {
+  fill: var(--c-class-gold);
+}
+
+.bullet.is-crypto .bullet-bar {
+  fill: var(--c-class-crypto);
+}

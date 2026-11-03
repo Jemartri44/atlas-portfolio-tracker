@@ -1,5 +1,6 @@
 export { Amount, type AmountProps } from "./Amount.jsx";
 export { AsOfPicker, useAsOf } from "./AsOfPicker.jsx";
+export { Bullet, type BulletProps } from "./Bullet.jsx";
 export { ClosedYearNotice } from "./ClosedYearNotice.jsx";
 export { type CardSlot, type DataColumn, DataTable } from "./DataTable.jsx";
 export { ConfirmDialog, Dialog } from "./Dialog.jsx";

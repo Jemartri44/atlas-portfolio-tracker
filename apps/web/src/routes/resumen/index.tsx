@@ -26,18 +26,18 @@ import {
   settingsAt,
   transferWatch,
 } from "@atlas/domain";
-import { bookCashSeries, contributedSeries } from "@atlas/domain/charts";
-import { A } from "@solidjs/router";
+import { bookCashSeries, contributedSeries, yearPeriod } from "@atlas/domain/charts";
 import { createMemo, createResource, For, type JSX, Show } from "solid-js";
-import { Icon, type NoticeItem, Section } from "../../components/index.js";
+import type { NoticeItem } from "../../components/index.js";
 import { formatLongDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
 import { type AppError, store, today } from "../../ledger/state.js";
 import { QuotesNotice, useQuotes } from "../../prices/use-quotes.jsx";
-import { MONITOR, mediaQuery } from "../../shell/media.js";
+import { GRID, mediaQuery } from "../../shell/media.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { privacy } from "../../shell/preferences.js";
+import { weightsView } from "../../view-models/core/index.js";
 import {
   attentionItems,
   firstEntries,
@@ -49,8 +49,9 @@ import {
 import { netWorthPlot, withBookCash, withContributed } from "../../view-models/series.js";
 import { type SummaryCard, summaryOrder } from "../../view-models/summary-order.js";
 import { RequireLedger } from "../guard.jsx";
-import { EntryLine } from "../movimientos/MovementList.jsx";
+import { AllocationCard } from "./AllocationCard.jsx";
 import { AttentionBlock } from "./AttentionBlock.jsx";
+import { bookLines } from "./book-lines.js";
 import { EvolutionCard } from "./EvolutionCard.jsx";
 import { FirstSteps } from "./FirstSteps.jsx";
 // The card that leads to the fiscal screen only draws, so it is on the boot
@@ -58,7 +59,10 @@ import { FirstSteps } from "./FirstSteps.jsx";
 // tax engine is `fiscal-status.ts`, loaded after it.
 import FiscalCard from "./FiscalCard.jsx";
 import type { FiscalStatus } from "./fiscal-status.js";
-import { NetWorthBlock } from "./NetWorthBlock.jsx";
+import { MonthCard } from "./MonthCard.jsx";
+import { type BookFigures, NetWorthBlock } from "./NetWorthBlock.jsx";
+import { RecentMoves } from "./RecentMoves.jsx";
+import type { SummaryExtras } from "./summary-extras.js";
 
 /** What the lazy tax engine ended in: its answer, or the error it raised. */
 type FiscalOutcome =
@@ -163,44 +167,42 @@ export default function ResumenRoute(): JSX.Element {
         );
         const onboarding = onboardingOf(dated, entries, settings);
         const moved = entries.some(isMovement);
-        const monitor = mediaQuery(MONITOR);
+        const wide = mediaQuery(GRID);
         const range = { to: date, max_points: MAX_POINTS };
         const contributed = contributedSeries(snapshot.events, range);
+        const worthSeries = netWorthSeries(snapshot.events, range);
         const series = withContributed(
-          withBookCash(
-            netWorthPlot(netWorthSeries(snapshot.events, range), names),
-            bookCashSeries(snapshot.events, range),
-          ),
+          withBookCash(netWorthPlot(worthSeries, names), bookCashSeries(snapshot.events, range)),
           contributed,
+        );
+        // The small line of each tile: its book over the last year, holes kept as holes.
+        // After the first paint, like the tax engine: the return, the plan and the bucket's index.
+        const [extras] = createResource(
+          () => ({ external: prices.external(dated) }),
+          async (input): Promise<SummaryExtras> =>
+            (await import("./summary-extras.js")).summaryExtras({
+              events: snapshot.events,
+              state: dated,
+              date,
+              settings,
+              external: input.external,
+            }),
+        );
+        const books = bookLines(worthSeries, worth, yearPeriod(date).from);
+        const figures = (): BookFigures => ({ ...books, ...extras() });
+        const allocation = createMemo(() =>
+          weightsView(coreWeights(dated, date, settings, prices.external(dated)), names),
         );
 
         // The cards, each once; `summaryOrder` says in which order they go.
         const cards: Record<SummaryCard, () => JSX.Element> = {
-          worth: () => <NetWorthBlock view={liveWorth()} />,
-          // The ledger lives in the cloud (ADR-0035): no copy on the device to lose.
-          loss: () => <></>,
-          attention: () => <AttentionBlock items={items} fiscal={fiscalNotice} />,
-          moves: () => (
-            <Section
-              title="Últimos movimientos"
-              class="span-5 summary-moves"
-              label="Últimos movimientos"
-            >
-              <ul class="rows">
-                <For each={recent}>
-                  {(entry) => (
-                    <li>
-                      <EntryLine entry={entry} />
-                    </li>
-                  )}
-                </For>
-              </ul>
-              <A href="/movimientos" class="card-foot">
-                <span>Ver todos los movimientos</span>
-                <Icon name="chevright" class="icon-sm" />
-              </A>
-            </Section>
+          worth: () => <NetWorthBlock view={liveWorth()} figures={figures()} />,
+          month: () => <MonthCard plan={extras()?.plan} names={names} />,
+          allocation: () => (
+            <AllocationCard view={allocation()} threshold={settings.deviation_threshold_pp} />
           ),
+          attention: () => <AttentionBlock items={items} fiscal={fiscalNotice} />,
+          moves: () => <RecentMoves entries={recent} />,
           fiscal: () => (
             <FiscalCard
               season={season}
@@ -225,9 +227,7 @@ export default function ResumenRoute(): JSX.Element {
               <Show when={onboarding}>{(steps) => <FirstSteps onboarding={steps()} />}</Show>
 
               <Show when={moved}>
-                <For each={summaryOrder({ monitor: monitor(), season, dataLoss: false })}>
-                  {(card) => cards[card]()}
-                </For>
+                <For each={summaryOrder({ wide: wide(), season })}>{(card) => cards[card]()}</For>
               </Show>
             </div>
           </>
