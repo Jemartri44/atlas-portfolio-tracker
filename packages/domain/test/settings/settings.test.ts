@@ -35,11 +35,10 @@ describe("DEFAULT_SETTINGS", () => {
     expect(DEFAULT_SETTINGS.fiscal_date_rule.etc).toBe("trade_date");
     expect(DEFAULT_SETTINGS.fiscal_date_rule.fund).toBe("value_date");
     expect(DEFAULT_SETTINGS.wash_sale_window.stock).toBe("2m");
-    // Two months for a fund (criterion #2): a fund that publishes its net asset
-    // value daily is a security admitted to trading. A monetary fund stays on a
-    // year, which is a noted inconsistency.
-    expect(DEFAULT_SETTINGS.wash_sale_window.fund).toBe("2m");
-    expect(DEFAULT_SETTINGS.wash_sale_window.money_market).toBe("2m");
+    // A year for a fund and a monetary fund (criterion #2, `2:fund_1y`): the
+    // prudent reading while the two months stay disputed.
+    expect(DEFAULT_SETTINGS.wash_sale_window.fund).toBe("1y");
+    expect(DEFAULT_SETTINGS.wash_sale_window.money_market).toBe("1y");
     expect(DEFAULT_SETTINGS.wash_sale_window.crypto).toBe("1y");
     expect(DEFAULT_SETTINGS.wash_sale_window_days).toBeUndefined();
     expect(validateSettings(DEFAULT_SETTINGS)).toEqual(DEFAULT_SETTINGS);
