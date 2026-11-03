@@ -52,6 +52,8 @@ const synthetic = async (): Promise<LedgerEvent[]> =>
 const FISCAL = (year: string) => [
   ["tax", year],
   ["tax", year, "--boxes"],
+  ["m720", year],
+  ["m721", year],
 ];
 
 /**
@@ -95,7 +97,12 @@ describe("the fiscal output with prices/ next to the ledger", () => {
     const prices = {
       etf_a: line("2027-12-29", "900") + line("2027-12-30", "901") + line("2027-12-31", "902"),
     };
-    const _f = await sameFiscalOutput(events, ["2027"], prices, "2028-03-01T10:00:00.000Z");
+    const f = await sameFiscalOutput(events, ["2027"], prices, "2028-03-01T10:00:00.000Z");
+
+    // The closes do not win over the valuation of the 720, however high they are.
+    const m720 = JSON.stringify(JSON.parse((await f.atlas("m720", "2027")).out));
+    expect(m720).toContain('"unit_value":"400"');
+    expect(m720).not.toContain("902");
   });
 
   it("is identical for the synthetic ledger of the golden files, every year", async () => {
