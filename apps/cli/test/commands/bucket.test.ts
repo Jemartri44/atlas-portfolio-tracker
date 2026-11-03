@@ -329,7 +329,11 @@ describe("atlas bucket", () => {
     expect(await h.exec(["bucket", "--date", DATE, "--json"])).toBe(0);
     const payload = JSON.parse(h.out.join("\n")) as { invalid_count: number; data: unknown };
     expect(payload.invalid_count).toBe(0);
-    expect(payload.data).toBeDefined();
+    expect(payload.data).toMatchObject({
+      date: DATE,
+      positions: { partial: false, total_value_eur: "150", total_cost_eur: "121" },
+      theses: [{ thesis_id: "th_a", status: "closed", result_eur: "28" }, { thesis_id: "th_b" }],
+    });
     expect((await h.store.load()).etag).toBe(before);
   });
 

@@ -24,7 +24,7 @@ import { loadForQuery, renderQuery, reportYear } from "./shared.js";
 
 const USAGE = "uso: atlas m720 <año> [--json] · atlas m721 <año> [--json]";
 
-/** A figure of the model: always two decimals, so a column reads as money. */
+/** What a category amounts to for the model: below the threshold, over it, or to be declared. */
 const VERDICT: Record<InformativeCategory["verdict"], string> = {
   obliged: "OBLIGADO",
   not_obliged: "no obligado",

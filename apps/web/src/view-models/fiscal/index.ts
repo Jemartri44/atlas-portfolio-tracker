@@ -22,7 +22,6 @@ export type { StakeView } from "./stakes.js";
 export {
   type FiscalGroup,
   type FiscalRow,
-  hasDisputed,
   type OffsetStep,
   type YearView,
   yearView,

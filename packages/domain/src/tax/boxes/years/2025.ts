@@ -20,9 +20,11 @@
 //   - the fields of the double-taxation capture window have no number, so
 //     only the total 0588 is here, and the engine says it computes just the
 //     first limit of it (#16);
-//   - "otros elementos patrimoniales" (1624 and following) is not mapped: the
-//     only thing that would land there is an ETC or an ETP the user configured
-//     as a capital gain, and no official text says it goes there;
+//   - "otros elementos patrimoniales" (1624 and following) is mapped only for
+//     shares outside the EU regulated markets (key 2, which the help of the
+//     form names); an exchange difference of currency and an ETC or an ETP the
+//     user configured as a capital gain keep no box, because no official text
+//     says they go there (key 4 is an inference the output names);
 //   - the annex C.3 has **no "pending in future years" box for 2021**: a
 //     balance of 2021 that is not offset in this return expires;
 //   - boxes 0392 and 0393, the **gains** of earlier years imputable to this
@@ -207,6 +209,45 @@ const conceptTable = (): Partial<Record<ConceptId, YearBoxMapping>> => ({
     14,
   ),
 
+  // --- Subscription rights, page 15 (read off the image on 2026-11-03) -------
+  "gp.rights.name": page(
+    "0342",
+    "Denominación de los derechos de suscripción transmitidos (entidad emisora)",
+    15,
+  ),
+  "gp.rights.transmission": page(
+    "0343",
+    "Importe global de las transmisiones efectuadas en 2025",
+    15,
+  ),
+  "gp.rights.acquisition": page(
+    "0346",
+    "Valor de adquisición global de los valores transmitidos",
+    15,
+  ),
+  "gp.rights.gain": page("0347", "Resultados: Ganancias patrimoniales", 15),
+  "gp.rights.gain_net": page(
+    "0351",
+    "Resultados: Ganancias patrimoniales reducidas no exentas ([0347] – [0348] – [0350])",
+    15,
+  ),
+  "gp.rights.loss": page("0352", "Resultados: Pérdidas patrimoniales. Importe obtenido", 15),
+  "gp.rights.loss_imputable": page(
+    "0353",
+    "Resultados: Pérdidas patrimoniales. Importe computable",
+    15,
+  ),
+  "gp.rights.gains": page(
+    "0354",
+    "Suma de ganancias patrimoniales derivadas de transmisiones de derechos de suscripción (suma de las casillas [0351])",
+    15,
+  ),
+  "gp.rights.losses": page(
+    "0355",
+    "Suma de pérdidas patrimoniales derivadas de transmisiones de derechos de suscripción (suma de las casillas [0353])",
+    15,
+  ),
+
   // --- Virtual currencies, page 15 ------------------------------------------
   "gp.crypto.name": page(
     "1802",
@@ -237,6 +278,40 @@ const conceptTable = (): Partial<Record<ConceptId, YearBoxMapping>> => ({
     "1814",
     "Suma de ganancias patrimoniales derivadas de transmisiones de monedas virtuales (suma de las casillas [1812])",
     15,
+  ),
+
+  // --- Other elements, key 2 (shares outside the EU regulated markets), page 17
+  // (read off the image on 2026-11-03). Only the section `other_shares`: the
+  // currency and the ETC configured as a gain (`other`) keep no box (H7).
+  "gp.other_shares.key": page("1626", "Tipo de elemento patrimonial. Clave", 17),
+  "gp.other_shares.transmission": page("1633", "Valor de transmisión", 17),
+  "gp.other_shares.acquisition": page("1637", "Valor de adquisición", 17),
+  "gp.other_shares.loss": page(
+    "1638",
+    "Pérdida patrimonial obtenida: diferencia ([1633] – [1637]) negativa",
+    17,
+  ),
+  "gp.other_shares.loss_imputable": page("1639", "Pérdida patrimonial imputable a 2025", 17),
+  "gp.other_shares.gain": page(
+    "1640",
+    "Ganancia patrimonial obtenida: diferencia ([1633] – [1637]) positiva",
+    17,
+  ),
+  "gp.other_shares.gain_net": page("1645", "Ganancia no exenta ([1640] – [1642] – [1644])", 17),
+  "gp.other_shares.gain_imputable": page(
+    "1650",
+    "Ganancia patrimonial reducida no exenta imputable a 2025",
+    17,
+  ),
+  "gp.other_shares.losses": page(
+    "0385",
+    "Suma de pérdidas patrimoniales derivadas de transmisiones de otros elementos patrimoniales (suma de las casillas [1639])",
+    17,
+  ),
+  "gp.other_shares.gains": page(
+    "0386",
+    "Suma de ganancias patrimoniales derivadas de transmisiones de otros elementos patrimoniales no afectos a actividades económicas (suma de las casillas [1650])",
+    17,
   ),
 
   // --- Earlier years that become imputable this one, page 17 -----------------

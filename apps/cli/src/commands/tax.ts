@@ -33,7 +33,7 @@ import { renderBoxes } from "./tax-boxes.js";
 
 const USAGE = "uso: atlas tax <año> [--lots] [--boxes] [--json]";
 
-/** A figure of the return: always two decimals, so a column reads as money. */
+/** The certainty of a criterion, as the report says it. */
 const CERTAINTY: Record<string, string> = {
   high: "alta",
   medium: "media",
@@ -328,7 +328,8 @@ const renderTaxReport = (report: TaxYearReport, withLots: boolean): string => {
   }
   const movable = report.movable_capital;
   const movableParts = [
-    `Dividendos:\n${incomeTable(movable.dividends)}`,
+    // The excess of a return of share premium or contributions goes here too (box 0029).
+    `Dividendos y devoluciones de prima o aportaciones (exceso):\n${incomeTable(movable.dividends)}`,
     `Intereses:\n${incomeTable(movable.interest)}`,
   ];
   if (movable.transmissions.length > 0) {

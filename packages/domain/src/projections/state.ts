@@ -109,6 +109,8 @@ export type ConsumePurpose = "transmission" | "transfer" | "convert";
  * - `units`: an asset **nobody held** was split or reverse split by `ratio`.
  *   There was no lot to scale, but units bought after it are not the units
  *   sold before it, and the tax engine needs the ratio to compare them.
+ * - `adjust`: a `cost_adjustment` lowered the lot's cost by `cost_eur`; quantity
+ *   and date stay.
  * - `gain`: `state.gains[gain_index]` was booked; the `transmission` consumptions
  *   right before it are the lots it disposed of.
  */
@@ -132,6 +134,7 @@ export type LotJournalEntry =
   | { kind: "carve"; lot_id: string; into_lot_id: string; event_id: Ulid; cost_share: Decimal }
   | { kind: "scale"; lot_id: string; event_id: Ulid; quantity_after: Quantity; ratio: string }
   | { kind: "units"; asset_id: AssetId; event_id: Ulid; ratio: string }
+  | { kind: "adjust"; lot_id: string; event_id: Ulid; cost_eur: Money }
   | { kind: "gain"; gain_index: number };
 
 export interface GainByLot {
@@ -164,9 +167,16 @@ export interface RealizedGain {
   fx_method?: "currency_first" | "each_leg" | "iic" | "mixed";
 }
 
+/**
+ * `capital_return`: what a distribution of share premium or a return of
+ * contributions paid beyond the cost of the lots (arts. 25.1.e and 33.3.a
+ * LIRPF), income from holding shares like a dividend.
+ */
+export type IncomeKind = "dividend" | "interest" | "capital_return";
+
 export interface InvestmentIncome {
   event_id: Ulid;
-  kind: "dividend" | "interest";
+  kind: IncomeKind;
   account_id: AccountId;
   asset_id?: AssetId;
   fiscal_date: CivilDate;

@@ -19,7 +19,7 @@ import type {
   TaxYearReport,
   TransmissionLine,
 } from "@atlas/domain/fiscal";
-import { FISCAL_CRITERIA, sortCriteria } from "@atlas/domain/fiscal";
+import { sortCriteria } from "@atlas/domain/fiscal";
 import { formatDate } from "../../format/date.js";
 import type { NameIndex } from "../../format/names.js";
 import { displayName } from "../../format/names.js";
@@ -85,6 +85,7 @@ const KINDS: Record<string, string> = {
   swap: "Permuta",
   dividend: "Dividendo",
   interest: "Interés",
+  capital_return: "Devolución de prima o aportaciones (exceso)",
 };
 
 const transmissionRow = (line: TransmissionLine, names: NameIndex): FiscalRow => ({
@@ -229,7 +230,3 @@ export const yearView = (report: TaxYearReport, names: NameIndex): YearView => {
       report.base_eur.isZero(),
   };
 };
-
-/** Whether any figure of the year leans on a criterion whose reading is in dispute. */
-export const hasDisputed = (criteria: readonly CriterionId[]): boolean =>
-  criteria.some((id) => FISCAL_CRITERIA[id].certainty === "disputed");
