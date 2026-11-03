@@ -1,7 +1,7 @@
 // How the mail writes a figure, Spanish style.
 
 import { describe, expect, it } from "vitest";
-import { count, euros, monthName, percent } from "../../src/jobs/mail/format.js";
+import { count, day, euros, monthName, percent, periodName } from "../../src/jobs/mail/format.js";
 import { Decimal } from "../../src/money/decimal.js";
 import { Money } from "../../src/money/money.js";
 
@@ -21,5 +21,15 @@ describe("the figures of the mail", () => {
     expect(monthName("2026-01")).toBe("enero de 2026");
     expect(monthName("2026-09")).toBe("septiembre de 2026");
     expect(monthName("2026-12")).toBe("diciembre de 2026");
+  });
+
+  it("says a day and every kind of period the Spanish way", () => {
+    expect(day("2026-10-20")).toBe("20/10/2026");
+    expect(periodName("2026-10-02")).toBe("02/10/2026");
+    expect(periodName("2026-W05")).toBe("la semana 5 de 2026");
+    expect(periodName("2026-10")).toBe("octubre de 2026");
+    expect(periodName("2026-Q1")).toBe("el primer trimestre de 2026");
+    expect(periodName("2026-Q4")).toBe("el cuarto trimestre de 2026");
+    expect(periodName("2026")).toBe("2026");
   });
 });

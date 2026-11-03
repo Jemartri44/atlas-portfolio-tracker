@@ -11,7 +11,11 @@ import { TestOnlyFakeSes } from "./test-only-fake-ses.js";
 import { TestOnlyFakeSsm } from "./test-only-fake-ssm.js";
 
 const PREFIX = "/atlas/prod/";
-const MESSAGE = { subject: "[Atlas] Recordatorio mensual 2026-10", body: "Hola\n" };
+const MESSAGE = {
+  subject: "[Atlas] Recordatorio de octubre de 2026",
+  body: "Hola\n",
+  html: "<p>Hola</p>",
+};
 
 const setup = (recipient: string | undefined) => {
   const ssm = new TestOnlyFakeSsm();
@@ -94,14 +98,15 @@ const sesError = (name: string, status?: number) =>
   );
 
 describe("the thin adapter of SES v2", () => {
-  it("sends one SendEmail with simple content, text only, in UTF-8, to one recipient", async () => {
+  it("sends one SendEmail with simple content, text and HTML, in UTF-8, to one recipient", async () => {
     const sent: unknown[] = [];
     const sender = new SdkMailSender({ send: async (command) => void sent.push(command) });
-    await sender.sendText({
+    await sender.sendMail({
       from: "a@example.test",
       to: "b@example.test",
       subject: "S",
       body: "Cuerpo ñ",
+      html: "<p>Cuerpo ñ</p>",
     });
     expect(sent).toHaveLength(1);
     const command = sent[0] as SendEmailCommand;
@@ -112,7 +117,10 @@ describe("the thin adapter of SES v2", () => {
       Content: {
         Simple: {
           Subject: { Data: "S", Charset: "UTF-8" },
-          Body: { Text: { Data: "Cuerpo ñ", Charset: "UTF-8" } },
+          Body: {
+            Text: { Data: "Cuerpo ñ", Charset: "UTF-8" },
+            Html: { Data: "<p>Cuerpo ñ</p>", Charset: "UTF-8" },
+          },
         },
       },
     });
@@ -122,7 +130,13 @@ describe("the thin adapter of SES v2", () => {
     const outcome = async (error: unknown) => {
       const sender = new SdkMailSender({ send: () => Promise.reject(error) });
       return sender
-        .sendText({ from: "a@example.test", to: "b@example.test", subject: "S", body: "B" })
+        .sendMail({
+          from: "a@example.test",
+          to: "b@example.test",
+          subject: "S",
+          body: "B",
+          html: "<p>B</p>",
+        })
         .catch((e) => e);
     };
     for (const [error, kind, reason] of [

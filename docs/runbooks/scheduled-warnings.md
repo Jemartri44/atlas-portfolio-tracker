@@ -10,16 +10,16 @@
 
 | Asunto del correo | Sección |
 |---|---|
-| `[Atlas] Recordatorio mensual AAAA-MM` | [Recordatorio mensual](#recordatorio-mensual) |
+| `[Atlas] Recordatorio de <mes> de AAAA` | [Recordatorio mensual](#recordatorio-mensual) |
 | `[Atlas] Aviso: fuente de precios …` | [Una fuente de precios falla](#una-fuente-de-precios-falla) |
 | `[Atlas] Aviso: correspondencias sin contrastar en …` | [Correspondencias sin contrastar](#correspondencias-sin-contrastar) |
 | `[Atlas] Aviso: tesis del cubo` | [Tesis del cubo](#tesis-del-cubo) |
 | `[Atlas] Aviso: ficheros de precios ilegibles` | [Ficheros de precios ilegibles](#ficheros-de-precios-ilegibles) |
 | `[Atlas] Aviso: historico del BCE …`, `calendario del BCE` | [Histórico del BCE](#histórico-del-bce) |
 | `[Atlas] Aviso: tarea …`, `registro de …` | [Una tarea falla o su registro no se lee](#una-tarea-falla-o-su-registro-no-se-lee) |
-| `[Atlas] Aviso: volcado AAAA-MM` | [El volcado mensual](#el-volcado-mensual) |
-| `[Atlas] Aviso: integridad AAAA-Qn` | [La integridad trimestral](#la-integridad-trimestral) |
-| `[Atlas] Revision semanal …`, `Revision mensual …` | [Revisión semanal](#revisión-semanal) |
+| `[Atlas] Aviso: volcado de <mes> de AAAA` | [El volcado mensual](#el-volcado-mensual) |
+| `[Atlas] Aviso: integridad del <n> trimestre de AAAA` | [La integridad trimestral](#la-integridad-trimestral) |
+| `[Atlas] Revision de la semana …`, `Revision de <mes> …` | [Revisión semanal](#revisión-semanal) |
 | `[Atlas] Renta AAAA lista`, `[Atlas] Renta AAAA` | [La Renta de enero](#la-renta-de-enero) |
 | `[Atlas] Modelos 720 y 721 de AAAA` | [Los modelos 720 y 721](#los-modelos-720-y-721) |
 
