@@ -31,7 +31,7 @@ const DAILY: readonly (readonly [string, IconName])[] = [
 const TRANSFERS = ["traspaso-solicitud", "traspaso-etapa", "traspaso"];
 const BUCKET = ["tesis", "tesis-cierre"];
 const CATALOGUE = ["cuenta", "activo"];
-const TAXES = ["fuera-de-cartera"];
+const TAXES = ["fuera-de-cartera", "pago-renta"];
 
 interface Entry {
   href: string;
