@@ -47,7 +47,7 @@ describe("projection", () => {
     const result = run(core(), settings);
     expect(result.gap).toBeUndefined();
     expect(result.missing).toEqual([]);
-    expect(result.start_eur.amount.toString()).toBe("1000");
+    expect(result.start_eur?.amount.toString()).toBe("1000");
     expect(result.monthly_core_eur.amount.toString()).toBe("90");
     const [base] = result.scenarios;
     expect(base?.blended_return_pct?.toString()).toBe("5.4");
