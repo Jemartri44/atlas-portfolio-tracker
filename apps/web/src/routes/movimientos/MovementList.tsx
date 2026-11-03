@@ -1,5 +1,5 @@
 // The rows of the ledger (docs/design/system.md §7.3): on a phone, under one
-// heading per month with the date in each row, and the valuations of a day
+// heading per day in small capitals, and the valuations of a day
 // gathered into one row that unfolds; from
 // 1024px, the dense table. What is genuinely about a movement — which figure
 // matters, what a reversed row looks like — lives in `MovementLine`.
@@ -7,9 +7,10 @@
 import { A } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
 import { type DataColumn, DataTable, Disclosure } from "../../components/index.js";
-import { formatDate, formatMonth } from "../../format/date.js";
+import { formatDate, formatLongDate } from "../../format/date.js";
 import {
-  byMonth,
+  byDay,
+  type DayOfEntries,
   groupValuations,
   hasState,
   type ListEntry,
@@ -91,29 +92,26 @@ export const EntryLine = (props: { entry: ListEntry }): JSX.Element => (
   </Show>
 );
 
-/** `2028-12` → `diciembre de 2028`. */
-const monthHeading = (month: string): string =>
-  `${formatMonth(`${month}-01`)} de ${month.slice(0, 4)}`;
+/** The entries of one day under its heading: the list of a phone and the recent movements. */
+export const DayBlock = (props: { day: DayOfEntries }): JSX.Element => (
+  <section class="day" aria-label={formatLongDate(props.day.day)}>
+    <h3 class="day-title">{formatLongDate(props.day.day)}</h3>
+    <ul class="rows">
+      <For each={props.day.entries}>
+        {(entry) => (
+          <li>
+            <EntryLine entry={entry} />
+          </li>
+        )}
+      </For>
+    </ul>
+  </section>
+);
 
 export const MovementList = (props: { rows: readonly MovementRow[] }): JSX.Element => (
   <>
     <div class="days only-narrow">
-      <For each={byMonth(groupValuations(props.rows))}>
-        {(month) => (
-          <section class="day" aria-label={monthHeading(month.month)}>
-            <h2 class="day-title">{monthHeading(month.month)}</h2>
-            <ul class="rows">
-              <For each={month.entries}>
-                {(entry) => (
-                  <li>
-                    <EntryLine entry={entry} />
-                  </li>
-                )}
-              </For>
-            </ul>
-          </section>
-        )}
-      </For>
+      <For each={byDay(groupValuations(props.rows))}>{(day) => <DayBlock day={day} />}</For>
     </div>
     <DataTable
       label="Movimientos"

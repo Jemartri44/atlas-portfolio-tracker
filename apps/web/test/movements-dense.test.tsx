@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import Movimientos from "../src/routes/movimientos/index.jsx";
 import Resumen from "../src/routes/resumen/index.jsx";
 import {
-  byMonth,
+  byDay,
   firstEntries,
   groupValuations,
   type MovementRow,
@@ -56,12 +56,12 @@ describe("the valuations of a day", () => {
   });
 });
 
-describe("the heading of a month", () => {
-  it("reads the month off the civil date: the last day of the year stays in December", () => {
-    const months = byMonth(
+describe("the heading of a day", () => {
+  it("reads the day off the civil date: the last day of the year stays in December", () => {
+    const days = byDay(
       groupValuations([row("a", "2029-01-01", "buy"), row("b", "2028-12-31", "buy")]),
     );
-    expect(months.map((month) => month.month)).toEqual(["2029-01", "2028-12"]);
+    expect(days.map((day) => day.day)).toEqual(["2029-01-01", "2028-12-31"]);
   });
 });
 
@@ -132,12 +132,12 @@ describe("the recent movements of the summary", () => {
 });
 
 describe("the list of a phone", () => {
-  it("puts a heading per month and the date in each row", async () => {
+  it("puts a heading per day and the date in each row", async () => {
     withStyles(400);
     const host = await show("/movimientos", Movimientos);
     const headings = [...host.querySelectorAll(".days .day-title")].map(text);
     expect(headings[0]).toMatch(
-      /^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre) de \d{4}$/,
+      /^\d{1,2} de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre) de \d{4}$/,
     );
     expect(new Set(headings).size).toBe(headings.length);
     // The day of 31/12/2028, gathered: one row that unfolds with its 44px summary.

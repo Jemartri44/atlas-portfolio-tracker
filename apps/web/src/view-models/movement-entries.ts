@@ -53,30 +53,29 @@ export const groupValuations = (rows: readonly MovementRow[]): ListEntry[] => {
   return entries;
 };
 
-export interface MonthOfEntries {
-  /** `YYYY-MM` of the civil dates of its rows: the month in Europe/Madrid. */
-  month: string;
+export interface DayOfEntries {
+  /** The civil date of its rows: the day in Europe/Madrid. */
+  day: string;
   entries: ListEntry[];
 }
 
 /**
- * The list of a phone under one heading per month, with the
- * date in each row: a heading per day cost a row per movement. The dates are
- * civil dates of the ledger, already the days of Madrid, so the month is read
- * off them and never off an instant.
+ * The list under one heading per day, in small capitals (direction A, docs/design/system.md §7.3;
+ * it replaces the heading per month of feature 020, M8). The dates are civil dates of the ledger,
+ * already the days of Madrid, so the day is read off them and never off an instant.
  */
-export const byMonth = (entries: readonly ListEntry[]): MonthOfEntries[] => {
-  const months: MonthOfEntries[] = [];
+export const byDay = (entries: readonly ListEntry[]): DayOfEntries[] => {
+  const days: DayOfEntries[] = [];
   for (const entry of entries) {
-    const month = (entry.kind === "row" ? entry.row.date : entry.date).slice(0, 7);
-    const last = months[months.length - 1];
-    if (last?.month === month) {
+    const day = entry.kind === "row" ? entry.row.date : entry.date;
+    const last = days[days.length - 1];
+    if (last?.day === day) {
       last.entries.push(entry);
     } else {
-      months.push({ month, entries: [entry] });
+      days.push({ day, entries: [entry] });
     }
   }
-  return months;
+  return days;
 };
 
 /**

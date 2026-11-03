@@ -43,6 +43,7 @@ import { privacy } from "../../shell/preferences.js";
 import { weightsView } from "../../view-models/core/index.js";
 import {
   attentionItems,
+  byDay,
   firstEntries,
   fiscalSlot,
   movementRows,
@@ -52,7 +53,7 @@ import {
 import { netWorthPlot, withBookCash, withContributed } from "../../view-models/series.js";
 import { type SummaryCard, summaryOrder } from "../../view-models/summary-order.js";
 import { RequireLedger } from "../guard.jsx";
-import { EntryLine } from "../movimientos/MovementList.jsx";
+import { DayBlock } from "../movimientos/MovementList.jsx";
 import { AllocationCard } from "./AllocationCard.jsx";
 import { AttentionBlock } from "./AttentionBlock.jsx";
 import { EvolutionCard } from "./EvolutionCard.jsx";
@@ -228,15 +229,9 @@ export default function ResumenRoute(): JSX.Element {
               class="span-7 summary-moves"
               label="Últimos movimientos"
             >
-              <ul class="rows">
-                <For each={recent}>
-                  {(entry) => (
-                    <li>
-                      <EntryLine entry={entry} />
-                    </li>
-                  )}
-                </For>
-              </ul>
+              <div class="days">
+                <For each={byDay(recent)}>{(day) => <DayBlock day={day} />}</For>
+              </div>
               <A href="/movimientos" class="card-foot">
                 <span>Ver todos los movimientos</span>
                 <Icon name="chevright" class="icon-sm" />
