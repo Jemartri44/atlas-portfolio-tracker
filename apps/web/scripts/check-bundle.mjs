@@ -34,8 +34,13 @@ const BOOT_BUDGET_GZIP_BYTES = 80_000;
 /**
  * Ceiling on everything the browser may download (JS + CSS, gzip): about
  * 10 % over what is measured, so only a real growth edits it.
+ *
+ * 355_000 → 365_000 (2026-11-03, the exposure screens): `develop` already measured 346,4 KB of
+ * 346,7 KB. The screens add about 9 KB of lazily loaded code (tables of the indexes 2,8, client and
+ * view model 2,2, card and dialog 2,7, Cartera 0,8, the common bar 0,6, CSS 0,3); the boot ceiling
+ * is untouched (76,4 → 76,8 KB of 78,1), which is what a phone feels.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 355_000;
+const TOTAL_BUDGET_GZIP_BYTES = 365_000;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None
