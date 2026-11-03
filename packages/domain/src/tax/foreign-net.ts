@@ -6,7 +6,8 @@
 // dictionary of the Modelo 100 of 2025). The law does not say how a fee shared
 // by every income is split; Atlas splits it in proportion to the gross of
 // dividends and interest, the only income the custody fees relate to. That is
-// Atlas's reading (criterion #16), and never below zero.
+// Atlas's reading (criterion #16), and never below zero. The treaty limit is
+// another figure and stays on the gross (`doubleTaxation` in `notes.ts`).
 
 import { positive, sum } from "../money/eur.js";
 import type { Money } from "../money/money.js";

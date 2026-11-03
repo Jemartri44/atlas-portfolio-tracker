@@ -112,6 +112,35 @@ describe("a Spanish withholding written as foreign tax", () => {
 });
 
 describe("a treaty rate for Spain", () => {
+  // Written before the rule, it rides every later snapshot: an unrelated
+  // change must still be recordable, and changing the rate must not.
+  it("does not block a change that only carries it forward", async () => {
+    const b = base();
+    b.settings({ ...DEFAULT_SETTINGS, treaty_withholding_pct: { ES: "19" } });
+    const events = b.build();
+    const carried = {
+      ...DEFAULT_SETTINGS,
+      treaty_withholding_pct: { ES: "19", US: "15" },
+    };
+    expect(
+      await codeOf(() =>
+        recordEvent(testDeps(new TestStore(events)), {
+          type: "settings_changed",
+          settings: carried,
+        } as never),
+      ),
+    ).toBe("recorded");
+    const altered = { ...DEFAULT_SETTINGS, treaty_withholding_pct: { ES: "15", US: "15" } };
+    expect(
+      await codeOf(() =>
+        recordEvent(testDeps(new TestStore(events)), {
+          type: "settings_changed",
+          settings: altered,
+        } as never),
+      ),
+    ).toBe("treaty_rate_for_spain");
+  });
+
   it("is refused when written", async () => {
     const store = new TestStore(base().build());
     const settings = { ...DEFAULT_SETTINGS, treaty_withholding_pct: { ES: "19", US: "15" } };

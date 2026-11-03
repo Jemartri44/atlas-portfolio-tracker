@@ -170,7 +170,7 @@ export const checkIsinUnique = (
  * is not refunded in a year with no quota, or be lost. Checked only when
  * written (ADR-0018): a ledger already written that way still loads.
  */
-const refuseSpanishForeignTax = (event: SupportedEvent): void => {
+const refuseSpanishForeignTax = (event: SupportedEvent, before: () => LedgerState): void => {
   if (
     event.type === "dividend" &&
     event.source_country === "ES" &&
@@ -184,7 +184,11 @@ const refuseSpanishForeignTax = (event: SupportedEvent): void => {
   }
   if (
     event.type === "settings_changed" &&
-    event.settings.treaty_withholding_pct?.ES !== undefined
+    event.settings.treaty_withholding_pct?.ES !== undefined &&
+    // A rate for Spain written before the rule is carried forward by every full
+    // snapshot: refuse only one this change introduces or alters, so that an
+    // unrelated change is not blocked by it.
+    event.settings.treaty_withholding_pct.ES !== before().fiscalSettings.treaty_withholding_pct?.ES
   ) {
     throw new ValidationError(
       "treaty_rate_for_spain",
@@ -205,7 +209,7 @@ export const checkOnWrite = (
   before: () => LedgerState,
 ): void => {
   checkIsinUnique(after, event, before);
-  refuseSpanishForeignTax(event);
+  refuseSpanishForeignTax(event, before);
 };
 
 /**
