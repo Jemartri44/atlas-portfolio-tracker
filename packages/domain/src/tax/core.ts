@@ -3,6 +3,7 @@
 // `notes.ts`) are built on it.
 
 import { yearOf } from "../dates/civil-date.js";
+import { isCompanyExchange } from "../projections/exchange-notices.js";
 import type { RealizedGain } from "../projections/state.js";
 import type { CorporateActionEvent, LedgerEvent } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
@@ -87,10 +88,5 @@ export const exchangesOfYear = (core: Core, year: number): CorporateActionEvent[
     (event): event is CorporateActionEvent =>
       event.type === "corporate_action" &&
       yearOf((event as CorporateActionEvent).effective_date) === year &&
-      ["merger", "spin_off", "issuer_restructuring"].includes(
-        (event as CorporateActionEvent).kind,
-      ) &&
-      (event as CorporateActionEvent).effects.some(
-        (effect) => effect.op === "convert" || effect.op === "carve_out",
-      ),
+      isCompanyExchange(event as CorporateActionEvent),
   );
