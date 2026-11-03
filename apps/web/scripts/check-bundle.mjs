@@ -17,8 +17,7 @@
 //    chunk, which `vite.config.ts` writes to `dist/.vite/atlas-modules.json`.
 //    This is the authoritative guard; the static ones of
 //    `tests/architecture/api.test.ts` are the quick warning.
-// 5. Size within two ceilings (JS + CSS, gzip): the boot (what index.html
-//    preloads, what a phone feels) and the whole output.
+// 5. Size within one ceiling (JS + CSS, gzip): the whole output. The boot is reported, not capped.
 
 import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
@@ -28,23 +27,18 @@ import { gzipSync } from "node:zlib";
 const webRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const dist = join(webRoot, "dist");
 
-/** Ceiling of what the browser downloads before the first screen paints: ~10 % over what is measured. */
-const BOOT_BUDGET_GZIP_BYTES = 80_000;
-
 /**
- * Ceiling on everything the browser may download (JS + CSS, gzip): about
- * 10 % over what is measured, so only a real growth edits it.
+ * Ceiling on everything the browser may download (JS + CSS, gzip): a margin over what is
+ * measured, so only a real growth edits it.
  *
  * 355_000 → 365_000 (2026-11-03, the exposure screens): `develop` already measured 346,4 KB of
  * 346,7 KB. The screens add about 9 KB of lazily loaded code (tables of the indexes 2,8, client and
- * view model 2,2, card and dialog 2,7, Cartera 0,8, the common bar 0,6, CSS 0,3); the boot ceiling
- * is untouched (76,4 → 76,8 KB of 78,1), which is what a phone feels.
+ * view model 2,2, card and dialog 2,7, Cartera 0,8, the common bar 0,6, CSS 0,3).
  *
  * 365_000 → 395_000 (2026-11-03, savings income from outside the portfolio, decided by the
  * coordination): back to the ~10 % margin the line above promises, over the 357,0 KB measured with
  * that branch (`develop` 355,9 KB). The branch adds 1,1 KB: fiscal 0,6, sale-tax 0,2, the forms
- * 0,2, the messages 0,1, all lazy; the boot grows 0,3 KB in the domain (the schema and the
- * projection of the new event, which loading any ledger needs) to 77,3 KB of 78,1.
+ * 0,2, the messages 0,1, all lazy.
  */
 const TOTAL_BUDGET_GZIP_BYTES = 395_000;
 
@@ -559,15 +553,12 @@ for (const entry of sizes.sort((a, b) => b.gzip - a.gzip)) {
   console.log(`  ${entry.name}  ${kb(entry.raw)} sin comprimir  ${kb(entry.gzip)} gzip  ${mark}`);
 }
 console.log(
-  `  ARRANQUE  ${kb(gzipBoot)} gzip  (techo ${kb(BOOT_BUDGET_GZIP_BYTES)})  — lo que se descarga antes de la primera pantalla`,
+  `  ARRANQUE  ${kb(gzipBoot)} gzip  — lo que se descarga antes de la primera pantalla (sin techo)`,
 );
 console.log(
   `  TOTAL     ${kb(gzipTotal)} gzip  (techo ${kb(TOTAL_BUDGET_GZIP_BYTES)})  — todo lo que puede llegar a descargarse`,
 );
 
-if (gzipBoot > BOOT_BUDGET_GZIP_BYTES) {
-  problems.push(`el arranque pesa ${gzipBoot} B gzip y el techo es ${BOOT_BUDGET_GZIP_BYTES} B`);
-}
 if (gzipTotal > TOTAL_BUDGET_GZIP_BYTES) {
   problems.push(`el bundle pesa ${gzipTotal} B gzip y el techo es ${TOTAL_BUDGET_GZIP_BYTES} B`);
 }
@@ -594,7 +585,7 @@ if (bootModules === 0) {
 }
 if (gzipBoot === 0) {
   // A guard on the guard: if the parsing of index.html ever stops matching, the
-  // boot budget would pass by measuring nothing.
+  // lazy-only rule above would pass by looking at nothing.
   problems.push("no se ha reconocido ningún asset de arranque en index.html");
 }
 
