@@ -58,20 +58,20 @@ describe("the return of the core", () => {
     expect(shown).toContain("Real: falta el IPC de");
   });
 
-  it("shows the rate after tax beside the one before, and says the open year's tax is not in it", async () => {
-    const host = await show("/cartera?fecha=2028-06-30", Cartera);
+  it("shows the rate after tax beside the one before, loaded on demand", async () => {
+    const host = await show("/cartera?fecha=2028-12-31", Cartera);
     await until(
       () => text(host).includes("después de impuestos (estimación)"),
       "the rate after tax",
     );
     const card = text(host.querySelector(".returns-card"));
     expect(card).toContain("Rentabilidad anual, ponderada por dinero");
-    expect(card).toMatch(
-      /Rentabilidad anual después de impuestos \(estimación\)\s*[+−]?\d+,\d\s*%/,
-    );
+    expect(card).toMatch(/Rentabilidad anual después de impuestos \(estimación\)[+−]?\d+,\d\s*%/);
     expect(card).toContain("Impuestos estimados de la cartera principal");
-    expect(card).toContain("Sin el impuesto de 2028, que se calcula al cerrar el año.");
-  });
+    expect(card).toContain("lo pagado por la Renta no se resta");
+    // On 31/12 the year is closed: nothing is left out.
+    expect(card).not.toContain("Sin el impuesto de");
+  }, 30_000);
 
   it("masks the amounts with the privacy mode on and leaves the percentages in sight", async () => {
     setPrivacy(true);
