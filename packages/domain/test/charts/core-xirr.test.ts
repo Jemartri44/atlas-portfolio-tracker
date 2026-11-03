@@ -116,4 +116,52 @@ describe("coreXirr", () => {
     b.deposit({ account_id: "acc_fund", amount: "9999", value_date: "2028-06-01" });
     expect(coreXirr(b.build(), END).contributed_eur?.amount.toString()).toBe("1000");
   });
+
+  describe("in real terms", () => {
+    it("deflates by the calendar years of the period: +10 % nominal with 2 % prices is about +7.8 %", () => {
+      const b = core();
+      worth(b, END, "110");
+      const result = coreXirr(b.build(), END, { "2027": "2", "2028": "0" });
+      expect(result.real?.missing_years).toEqual([]);
+      expect(result.xirr_pct?.toString()).toBe("10");
+      // Independent: 364 days of 2027 at 2 % a year, then 1 day of 2028 at 0 %.
+      const inflation = 1.02 ** (364 / 365);
+      const real = Number(result.real?.xirr_pct?.toString()) / 100;
+      expect(1000 * inflation * (1 + real) ** (365 / 365)).toBeCloseTo(1100, 0);
+      expect(Number(result.real?.gain_eur?.amount.toString())).toBeCloseTo(
+        1100 - 1000 * inflation,
+        1,
+      );
+    });
+
+    it("equals the nominal figure with no inflation", () => {
+      const b = core();
+      worth(b, END, "110");
+      const result = coreXirr(b.build(), END, { "2027": "0", "2028": "0" });
+      expect(result.real?.xirr_pct?.toString()).toBe("10");
+      expect(result.real?.gain_eur?.amount.round(2).toString()).toBe("100");
+    });
+
+    it("gives no real figure, and says which years, when one is missing; the nominal stays", () => {
+      const b = core();
+      worth(b, END, "110");
+      const result = coreXirr(b.build(), END, { "2027": "2" });
+      expect(result.real).toEqual({ missing_years: ["2028"] });
+      expect(result.xirr_pct?.toString()).toBe("10");
+    });
+
+    it("gives no real rate when it lies out of bounds, but still the real gain", () => {
+      const b = core();
+      worth(b, END, "10000");
+      const result = coreXirr(b.build(), END, { "2027": "0", "2028": "0" });
+      expect(result.real?.xirr_pct).toBeUndefined();
+      expect(result.real?.gain_eur?.amount.round(2).toString()).toBe("99000");
+    });
+
+    it.each(["-99", "1000", "-150"])("refuses a yearly change of prices of %s %%", (pct) => {
+      const b = core();
+      worth(b, END, "110");
+      expect(() => coreXirr(b.build(), END, { "2027": pct, "2028": "0" })).toThrow("out of range");
+    });
+  });
 });
