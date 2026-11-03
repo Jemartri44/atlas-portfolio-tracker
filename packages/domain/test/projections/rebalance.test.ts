@@ -46,6 +46,11 @@ const settings = (extra: { [K in keyof Settings]?: Settings[K] | undefined } = {
  */
 const core = (a = "6600", b = "2900", g = "500", pastSale = true): LedgerBuilder => {
   const x = new LedgerBuilder();
+  // Two months for a fund, written down: the window dates below must not ride the default.
+  x.settings({
+    ...DEFAULT_SETTINGS,
+    wash_sale_window: { ...DEFAULT_SETTINGS.wash_sale_window, fund: "2m" },
+  });
   catalogue(x);
   const price = (value: string, units: number) => (Number(value) / units).toString();
   x.buy({
@@ -198,9 +203,10 @@ describe("rebalancePlan", () => {
     expect(eur(plan.purchases_only_eur)).toBe("1666.67");
   });
 
-  it("leaves the tax unknown, not zero, without brackets", () => {
+  it("prices the sale with the scale of the law without brackets", () => {
+    // The same gain of 333.33 as above, each half at 9.5 % rounded: 31.67 + 31.67.
     const sale = run(core(), { savings_tax_brackets: undefined }).steps[1] as SaleStep;
-    expect(sale.tax.available && sale.tax.tax_eur).toBeUndefined();
+    expect(sale.tax.available && eur(sale.tax.tax_eur)).toBe("63.34");
     expect(sale.tax.available && eur(sale.tax.gain_eur)).toBe("333.33");
   });
 
@@ -218,9 +224,26 @@ describe("rebalancePlan", () => {
     const plan = run(b, { target_weights: { ast_world: "30", ast_bonds: "30", ast_gold: "40" } });
     const sale = plan.steps.find((step) => step.kind === "sale") as SaleStep;
     expect(sale.tax.available && sale.tax.gain_eur.isNegative()).toBe(true);
-    expect(sale.tax.available && sale.tax.tax_eur?.isZero()).toBe(true);
+    expect(sale.tax.available && sale.tax.tax_eur.isZero()).toBe(true);
     expect(sale.tax.available && sale.tax.deferred_eur.amount.isPositive()).toBe(true);
-    // A fund takes a year by default (criterion #2, `2:fund_1y`).
+    // Two months, pinned in `core`, from 31/12/2027 date to date: 29/02/2028.
+    expect(sale.tax.available && sale.tax.deferral_window_end).toBe("2028-02-29");
+  });
+
+  it("shows the window of the documented default when the ledger pins none", () => {
+    // The same loss with the settings back to their defaults: a fund takes one
+    // year (`2:fund_1y`), so the deferral runs until 31/12/2028.
+    const b = core("3520", "2900", "500");
+    b.settings(DEFAULT_SETTINGS);
+    b.buy({
+      account_id: "acc_fund",
+      asset_id: "ast_world",
+      quantity: "5",
+      unit_price: "100",
+      value_date: "2027-12-01",
+    });
+    const plan = run(b, { target_weights: { ast_world: "30", ast_bonds: "30", ast_gold: "40" } });
+    const sale = plan.steps.find((step) => step.kind === "sale") as SaleStep;
     expect(sale.tax.available && sale.tax.deferral_window_end).toBe("2028-12-31");
   });
 
