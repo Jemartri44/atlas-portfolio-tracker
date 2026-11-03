@@ -39,7 +39,7 @@ import { ContributionCard } from "./ContributionCard.jsx";
 import { CostsCard } from "./CostsCard.jsx";
 import { ExposureBlock } from "./ExposureBlock.jsx";
 import { ProjectionCard } from "./ProjectionCard.jsx";
-import { usePlanRepurchase } from "./plan-repurchase.js";
+import { usePlanRepurchase } from "./plan-repurchase.jsx";
 import { RebalanceCard } from "./RebalanceCard.jsx";
 import { ReturnsCard } from "./ReturnsCard.jsx";
 import { TotalCostCard } from "./TotalCostCard.jsx";

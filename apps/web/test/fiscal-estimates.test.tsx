@@ -137,7 +137,7 @@ describe("a loss whose repurchase window is open", () => {
   });
 });
 
-describe("no recomprar hasta", () => {
+describe("ventana de recompra abierta", () => {
   it("lists the asset, the last day and the loss at stake", async () => {
     // A loss of 0.55 € on 05/11/2027: a purchase until 05/01/2028 would defer it.
     const view = repurchaseView(repurchaseCalendar(events, "2027-11-20"), NO_NAMES);

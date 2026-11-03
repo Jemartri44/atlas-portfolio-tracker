@@ -10,7 +10,6 @@
 import type { CivilDate } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
 import type { Money } from "../money/money.js";
-import type { ContributionRow } from "../projections/contribution.js";
 import type { AssetId, LedgerEvent } from "../schema/events.js";
 import { repurchaseCalendar } from "./repurchase-calendar.js";
 
@@ -34,7 +33,8 @@ export interface PlanRepurchaseWarning {
  */
 export const planRepurchaseWarnings = (
   events: readonly LedgerEvent[],
-  plan: { rows: readonly Pick<ContributionRow, "asset_id" | "allocation_eur">[] },
+  // The rows of a `ContributionPlan`, typed here so that no price reaches the tax engine.
+  plan: { rows: readonly { asset_id: AssetId; allocation_eur: Money }[] },
   today: CivilDate,
 ): PlanRepurchaseWarning[] => {
   const buying = new Set(

@@ -11,7 +11,6 @@
 // three figures, what goes to each asset, and the note. The whole calculation
 // — value today, shortfall, weight after — is one tap away.
 
-import type { PlanRepurchaseWarning } from "@atlas/domain/fiscal";
 import { A } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
 import {
@@ -27,7 +26,7 @@ import {
   Section,
   Tag,
 } from "../../components/index.js";
-import { formatDate, formatMonth } from "../../format/date.js";
+import { formatMonth } from "../../format/date.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { type NameIndex, NO_NAMES } from "../../format/names.js";
 import type { AppError } from "../../ledger/state.js";
@@ -36,6 +35,7 @@ import { privacy } from "../../shell/preferences.js";
 import type { ContributionRowView, ContributionView } from "../../view-models/core/index.js";
 import { COLUMNS } from "./contribution-columns.jsx";
 import { PlatformSection } from "./PlatformsBlock.jsx";
+import { PlanRepurchaseNotes, type Repurchase } from "./plan-repurchase.jsx";
 import { REMEDIES } from "./remedies.js";
 import { SplitNotes } from "./SplitNotes.jsx";
 
@@ -48,9 +48,6 @@ const Refusal = (props: { error: AppError }): JSX.Element => (
     {(remedy) => <Pending action={remedy()}>{props.error.message}</Pending>}
   </Show>
 );
-
-/** Warnings of the plan by asset: a purchase that would defer a loss (criterion #2). */
-type Repurchase = (assetId: string) => PlanRepurchaseWarning[];
 
 const Split = (props: { view: ContributionView; repurchase?: Repurchase }): JSX.Element => {
   const wide = mediaQuery(GRID);
@@ -145,18 +142,7 @@ const Split = (props: { view: ContributionView; repurchase?: Repurchase }): JSX.
                   </svg>
                 )}
               </Show>
-              <For each={props.repurchase?.(row.assetId) ?? []}>
-                {(warning) => (
-                  <Notice severity="caution">
-                    <span data-testid="plan-repurchase">
-                      Esta compra aplazaría hasta <Amount value={warning.at_stake_eur} /> de pérdida
-                      de la venta del {formatDate(warning.sale_date)}: su ventana de recompra sigue
-                      abierta hasta el {formatDate(warning.until)}. La pérdida no se pierde, cuenta
-                      cuando vendas lo recomprado.
-                    </span>
-                  </Notice>
-                )}
-              </For>
+              <PlanRepurchaseNotes warnings={props.repurchase?.(row.assetId) ?? []} />
             </li>
           )}
         </For>
