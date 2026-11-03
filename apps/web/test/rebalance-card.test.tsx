@@ -35,9 +35,11 @@ describe("the contribution card per platform", () => {
       // A commission is the owner's own or it is unknown: never a made-up figure.
       for (const fee of platform.querySelectorAll("[data-testid=fee]")) {
         expect(text(fee)).toMatch(/comisión (desconocida|.*€)/);
-        // The percentage travels with its figure: one element, never split across lines.
-        for (const part of fee.children) {
-          expect(text(part)).not.toMatch(/^\(|\($/);
+        // The figure and its percentage travel in one element, never split across lines.
+        if (/%/.test(text(fee))) {
+          expect([...fee.children].some((part) => /comisión.*€.*\(.*%\)/.test(text(part)))).toBe(
+            true,
+          );
         }
       }
     }

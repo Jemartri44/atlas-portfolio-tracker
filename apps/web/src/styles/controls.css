@@ -189,6 +189,20 @@
   width: calc(var(--icon-lg) - var(--space-2));
 }
 
+:where(input[type="checkbox"][role="switch"]):focus {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* The ring goes on the track, not around the 44px target that holds it. */
+:where(input[type="checkbox"][role="switch"]):focus-visible {
+  outline: none;
+}
+
+:where(input[type="checkbox"][role="switch"]):focus-visible::after {
+  box-shadow: 0 0 0 var(--space-1) var(--c-accent);
+}
+
 :where(input[type="checkbox"][role="switch"]):checked::after {
   background-color: var(--c-accent);
   border-color: var(--c-accent);
