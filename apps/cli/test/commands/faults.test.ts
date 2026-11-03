@@ -39,6 +39,10 @@ describe("year arguments", () => {
     expect(await h.exec(["tax", "9999"])).toBe(64);
     expect(h.text()).toContain("aún no ha empezado");
     expect(await h.exec(["tax", "2027"])).toBe(0);
+    // And a year before 1900 is a usage error where no regime of its own answers it.
+    for (const command of ["gains", "income"]) {
+      expect(await h.exec([command, "1899"])).toBe(64);
+    }
   });
 });
 
