@@ -71,7 +71,7 @@ export const ProjectionCard = (props: {
         Configuración, si cada tipo de activo rindiera lo que escribas. Sin rentabilidades por
         defecto: no hay cifra hasta que las escribas. No es una previsión.
       </p>
-      <div class="fieldset">
+      <div class="fieldset assumptions">
         <Field
           id="pj-years"
           kind="integer"
@@ -97,7 +97,7 @@ export const ProjectionCard = (props: {
         {(scenario, index) => (
           <fieldset class="scenario">
             <legend>Escenario {index() + 1}</legend>
-            <div class="fieldset">
+            <div class="fieldset assumptions">
               <Field
                 id={`pj-name-${index()}`}
                 kind="text"

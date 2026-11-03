@@ -22,6 +22,19 @@ const CLASS_GAPS: Record<ClassReturnGap, string> = {
   no_rate: "sin rentabilidad anual",
 };
 
+const KINDS: Record<string, string> = {
+  transfer: "un traspaso a otra clase de activo",
+  corporate_action: "una operación corporativa",
+  asset_updated: "un cambio de clase o de libro de un activo",
+};
+
+const gapOf = (row: ClassReturns["classes"][number]): string | undefined =>
+  row.gap === "unsupported_events"
+    ? `sin cifra por ${row.unsupported_events.map((kind) => KINDS[kind] ?? kind).join(" y ")}`
+    : row.gap === undefined
+      ? undefined
+      : CLASS_GAPS[row.gap];
+
 export interface RealView {
   xirrPct?: string;
   /** Why there is no real rate, or that it stops before the date: always said. */
@@ -91,6 +104,6 @@ export const returnsView = (xirr: CoreXirr, classes: ClassReturns): ReturnsView 
     ...(row.value_eur === undefined ? {} : { value: row.value_eur }),
     ...(row.gain_pct === undefined ? {} : { gainPct: row.gain_pct.toString() }),
     ...(row.xirr_pct === undefined ? {} : { xirrPct: row.xirr_pct.toString() }),
-    ...(row.gap === undefined ? {} : { gap: CLASS_GAPS[row.gap] }),
+    ...(gapOf(row) === undefined ? {} : { gap: gapOf(row) as string }),
   })),
 });

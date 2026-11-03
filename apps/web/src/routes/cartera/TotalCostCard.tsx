@@ -32,7 +32,7 @@ export const TotalCostCard = (props: { summary: CostSummary; settings: Settings 
         Lo que el TER, las comisiones y los impuestos al vender se llevarían de la cartera principal
         en el horizonte. Es un supuesto tuyo, no una previsión: nada de esto se guarda.
       </p>
-      <div class="fieldset">
+      <div class="fieldset assumptions">
         <Field
           id="tc-years"
           kind="integer"
