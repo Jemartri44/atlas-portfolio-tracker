@@ -7,6 +7,7 @@
 import type { Money } from "@atlas/domain";
 import type { FeeEstimate, PlatformPlan } from "@atlas/domain/portfolio";
 import { formatDate } from "../../format/date.js";
+import { platformLabel } from "../../format/labels.js";
 import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
 
 export interface PlatformLineView {
@@ -22,6 +23,9 @@ export interface PlatformLineView {
 
 export interface PlatformRowView {
   accountId: string;
+  /** The name of the account, as the catalogue gives it. */
+  accountName: string;
+  /** The platform said as a person says it: «Interactive Brokers», not `ibkr`. */
   platform: string;
   buy: Money;
   /** In euros; absent for an account kept in another currency. */
@@ -55,7 +59,8 @@ const noteOf = (fee: FeeEstimate): string =>
 export const platformsView = (plan: PlatformPlan, names: NameIndex = NO_NAMES): PlatformsView => ({
   rows: plan.rows.map((row) => ({
     accountId: row.account_id,
-    platform: row.platform,
+    accountName: displayName(names, row.account_id),
+    platform: platformLabel(row.platform),
     buy: row.buy_eur,
     ...(row.cash_eur === undefined ? {} : { cash: row.cash_eur }),
     cashNegative: row.cash_negative,

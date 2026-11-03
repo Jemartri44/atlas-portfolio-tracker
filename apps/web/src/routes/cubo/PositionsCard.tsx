@@ -136,7 +136,7 @@ export const PositionsCard = (props: { view: BucketPositionsView }): JSX.Element
         size="lg"
         columns={COLUMNS}
         rows={props.view.rows}
-        maskedMerge="Importes ocultos"
+        maskedMerge
         detail={(row) => <ThesisNote row={row} />}
       />
       <TotalLine

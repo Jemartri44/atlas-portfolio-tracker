@@ -10,7 +10,10 @@
 // The whole ledger is downloaded with `ApiLedgerStore.load()` (`GET /api/ledger`,
 // `no-store`, the etag checked against the bytes) and projected once on the
 // client. Nothing is written to the device: no `localStorage` key, no IndexedDB
-// store, no cache entry (`test/cloud-device.test.tsx`).
+// store, no cache entry (`test/cloud-device.test.tsx`), with one exception:
+// the prices the user imports by hand in the browser
+// (`prices/quotes.ts`) stay in the browser's storage, because they are not part
+// of the ledger and nothing fiscal depends on them.
 //
 // Lazy: the boot only holds the `import()` of this file.
 
@@ -213,7 +216,7 @@ export const watchConnection = (request: Fetch = pageFetch): (() => void) => {
   // full boot is for what is not shown (offline, stopped, failed).
   const back = (): void => {
     if (store.load().phase === "ready") {
-      void reloadLedger({ quiet: true }).then(settleAfterBoot);
+      void reloadLedger({ quiet: true }).then(settleAfterBoot, () => undefined);
       return;
     }
     void bootCloud(request);

@@ -24,7 +24,10 @@ export interface ProductionParts {
   /** Called only when the function is the mail's. */
   readonly mail: () => MailSender;
   /** The `fetch` of the runtime, for the ECB and the price sources; a double in the tests. */
-  readonly fetch: (url: string, init?: { signal?: AbortSignal }) => Promise<Response>;
+  readonly fetch: (
+    url: string,
+    init?: { signal?: AbortSignal; redirect?: "error" },
+  ) => Promise<Response>;
   readonly clock: Clock;
   readonly log: (line: string) => void;
 }
@@ -38,7 +41,9 @@ export const SOURCE_TIMEOUT_MS = 15_000;
 
 const sourcesFor = (parts: ProductionParts): JobSources => {
   const timed = (url: string) =>
-    parts.fetch(url, { signal: AbortSignal.timeout(SOURCE_TIMEOUT_MS) });
+    // `redirect: "error"`: EODHD and Alpha Vantage carry their key in the address, and a redirect
+    // would hand it to wherever it points.
+    parts.fetch(url, { signal: AbortSignal.timeout(SOURCE_TIMEOUT_MS), redirect: "error" });
   return {
     ecb: () => new EcbFxRateSource(timed, () => parts.clock.now()),
     prices: (chosen, keys) =>

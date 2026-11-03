@@ -7,7 +7,7 @@ Lo que las features 015, 016 y 017 dejaron **sin verificar contra AWS real**. Ca
 - Reaplicar a mano el *bootstrap* de cada entorno, `dev` primero y `prod` después (cambiaron el límite y las políticas de despliegue; sin ello el primer `apply` recibe `AccessDenied`).
 - El usuario hace las comprobaciones C1-C19 de ADR-0034 y contesta sus preguntas: C2 decide si `prod` lleva clave KMS propia, C11 si `dev` va con plan Free o CloudFront de pago por uso, C5 la confianza del rol de administración.
 - El **simulador de políticas de IAM** con los tres escenarios de ADR-0034, fila 5: condición para aplicar. Lo que la 017 comprobó por análisis estático lo hizo con un evaluador propio de tests (`infra/test/lib/iam.ts`), solo de tests y con lista cerrada de operadores.
-- Estimación de coste de `specs/017-infrastructure-as-code/cost.md` delante, y visto bueno del usuario al primer `apply`.
+- Estimación de coste de `infra/test/contract/cost.md` delante, y visto bueno del usuario al primer `apply`.
 - Tareas del usuario: verificación en dos pasos de Google, clientes OAuth de `dev` y `prod`, remitente en SES (y destinatario si sigue en el *sandbox*), secretos con el guion de administración (ADR-0034, fila 21) y, en `terraform.tfvars`, subdominios, remitente, destinatario e interruptor de importes ([`runbooks/mail-recipient-and-amounts.md`](runbooks/mail-recipient-and-amounts.md)).
 - El *environment* `prod` de GitHub lleva una regla de rama que solo admite `main`.
 - La Lambda se despliega **antes** que los clientes que escriban una versión nueva del esquema (ADR-0026, caso 6).

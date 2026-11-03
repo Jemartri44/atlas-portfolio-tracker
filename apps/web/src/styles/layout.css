@@ -294,6 +294,35 @@
   padding-bottom: var(--space-9);
 }
 
+/* The entry screen: one card in the middle, with the mark and one sentence. */
+.gate {
+  background: var(--c-surface);
+  border: var(--border) solid var(--c-border);
+  border-radius: var(--radius-lg);
+  display: grid;
+  gap: var(--space-3);
+  justify-items: center;
+  margin: var(--space-9) auto 0;
+  max-width: 24rem;
+  padding: var(--space-6) var(--space-5);
+  text-align: center;
+}
+
+.gate h1 {
+  font-size: var(--text-lg);
+  margin: 0;
+}
+
+.gate p {
+  margin: 0;
+}
+
+.gate .mark {
+  color: var(--c-accent);
+  height: 2rem;
+  width: 2rem;
+}
+
 .page-head {
   align-items: center;
   display: flex;

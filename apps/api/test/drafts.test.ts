@@ -1,7 +1,7 @@
 // The routes of the drafts in the cloud (`docs/api.md` §6.1) over the double of S3, with both
 // credentials. Every object is created once and nothing is overwritten or deleted.
 
-import { endObjectText } from "@atlas/domain/ecb";
+import { endObjectText, MAX_PENDING_DRAFTS } from "@atlas/domain/ecb";
 import { describe, expect, it } from "vitest";
 import { consoleLogin, errorOf, SELF, setup } from "./harness.js";
 
@@ -81,6 +81,29 @@ describe("the drafts in the cloud (§6.1)", () => {
     expect(tooBig.statusCode).toBe(413);
     expect(errorOf(tooBig).details).toEqual({ limit: 65_536 });
     expect(api.s3.keys().filter((key) => key.startsWith("drafts/"))).toEqual([]);
+  });
+
+  it("refuses a draft past MAX_PENDING_DRAFTS pending, counts only the pending, and still answers a repeat", async () => {
+    const api = setup();
+    const { token } = await credentials(api);
+    const id = (n: number) => `01J00000000000000000${String(n).padStart(6, "0")}`;
+    for (let n = 1; n <= MAX_PENDING_DRAFTS; n += 1) {
+      expect((await post(api, token, "/api/drafts", { draft: draft(id(n)) })).statusCode).toBe(201);
+    }
+    const over = await post(api, token, "/api/drafts", { draft: draft(id(999)) });
+    expect(over.statusCode).toBe(409);
+    expect(errorOf(over)).toEqual({
+      code: "too_many_drafts",
+      details: { max: MAX_PENDING_DRAFTS },
+    });
+    expect(api.s3.keys()).not.toContain(`drafts/${id(999)}.json`);
+    // A retry of one already saved is still `draft_exists`: the client relies on it.
+    const again = await post(api, token, "/api/drafts", { draft: draft(id(1)) });
+    expect(errorOf(again).code).toBe("draft_exists");
+    // Closing one makes room: the closed do not count.
+    await post(api, token, `/api/drafts/${id(1)}/end`, { outcome: "discarded" });
+    expect((await post(api, token, "/api/drafts", { draft: draft(id(999)) })).statusCode).toBe(201);
+    expect((await listed(api, token)).drafts).toHaveLength(MAX_PENDING_DRAFTS);
   });
 
   it("stamps once, repeats the same stamp and refuses another", async () => {

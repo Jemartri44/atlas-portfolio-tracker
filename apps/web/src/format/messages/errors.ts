@@ -53,6 +53,8 @@ const REJECTION_REASONS: Readonly<Record<string, string>> = {
   pair_incomplete: "una anulación llegó sin su corrección.",
   pair_not_contiguous: "una anulación y su corrección no iban seguidas.",
   pair_rejected: "la anulación y su corrección juntas dejarían tus datos incoherentes.",
+  line_too_large: "una línea es demasiado larga para la nube; acórtala (por ejemplo, las notas).",
+  ledger_too_large: "los datos de la nube han llegado a su tamaño máximo.",
   partial_write: "solo se escribió una parte.",
 };
 
@@ -81,6 +83,8 @@ export const REMOTE_FAILURES: Readonly<Record<string, string>> = {
   draft_changed:
     "el borrador ya no está como se leyó (se cerró o se está confirmando en otro sitio); no se ha escrito nada.",
   draft_exists: "ya hay un borrador con ese identificador en la nube; no se ha guardado nada.",
+  too_many_drafts:
+    "hay demasiados borradores sin cerrar en la nube; cierra o descarta alguno antes de guardar otro.",
   append_too_many_units:
     "la operación tiene demasiadas partes indivisibles para una sola escritura; no se ha escrito nada.",
   body_too_large: "la petición era demasiado grande para la nube; no se ha escrito nada.",
@@ -320,6 +324,12 @@ export const ERROR_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures) 
     "Lo liquidado por el bróker en euros no puede ser cero en una compra, una venta o una comisión. Si el extracto no da la cifra, déjalo vacío.",
   ecb_history_unreadable: (d) =>
     `El histórico del BCE no tiene el formato esperado${d.line === undefined ? "" : ` (línea ${text(d.line)})`}: no se ha usado. Descárgalo otra vez con la consola o importa el archivo del BCE.`,
+  ecb_history_future: () =>
+    "El histórico del BCE trae un día posterior a hoy: no se ha usado. Comprueba la fecha del dispositivo o descarga el archivo otra vez.",
+  line_too_large: () =>
+    "Una línea es demasiado larga para guardarse en la nube: acórtala, por ejemplo las notas.",
+  ledger_too_large: () =>
+    "Los datos de la nube han llegado al tamaño máximo que admiten: no se ha guardado nada más.",
   draft_not_needed: () =>
     "Ningún tipo de esta operación está esperando al BCE: regístrala como siempre, no hace falta borrador.",
   draft_changed: (d) =>

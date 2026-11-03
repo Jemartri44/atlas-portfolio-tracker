@@ -102,7 +102,7 @@ export const RebalanceCard = (props: RebalanceCardProps): JSX.Element => {
         id="rebalance-amount"
         kind="decimal"
         unit="€"
-        label="Dinero nuevo para el núcleo (opcional)"
+        label="Dinero nuevo para la cartera (opcional)"
         placeholder="Nada"
         hint="Ya sin la parte del cubo. No se guarda."
         value={amountText()}

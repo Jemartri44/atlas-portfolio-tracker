@@ -20,7 +20,7 @@ import Configuracion from "../src/routes/ajustes/configuracion.jsx";
 import Verificacion from "../src/routes/ajustes/verificacion.jsx";
 import { asEventDraft } from "../src/view-models/forms/values.js";
 import { MemoryBlob } from "./helpers/memory-blob.js";
-import { choose, press, settle, show, text, withGoldenLedger } from "./helpers/render.jsx";
+import { choose, press, show, text, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -45,16 +45,6 @@ beforeAll(async () => {
 afterAll(() => {
   holder.indexedDB = before;
 });
-
-const until = async (condition: () => boolean, ms = 3000): Promise<void> => {
-  const deadline = Date.now() + ms;
-  while (!condition()) {
-    if (Date.now() > deadline) {
-      throw new Error("no llegó a pasar");
-    }
-    await settle(5);
-  }
-};
 
 const openDialog = (host: HTMLElement): HTMLElement | undefined =>
   [...host.querySelectorAll("dialog")].find((node) => node.hasAttribute("open"));

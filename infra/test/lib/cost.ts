@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { repoRoot } from "./terraform.js";
 
-export const costFile = join(repoRoot, "specs", "017-infrastructure-as-code", "cost.md");
+export const costFile = join(repoRoot, "infra", "test", "contract", "cost.md");
 
 /** The closed list of `cost.md`: the first column of its table. */
 export const costTypes = (): Map<string, string> => {

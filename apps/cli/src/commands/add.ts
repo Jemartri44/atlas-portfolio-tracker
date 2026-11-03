@@ -1,13 +1,20 @@
 // atlas add buy|sell|transfer|dividend|interest|fx|cash-in|cash-out|fee|valuation
 
-import { DomainError, type Draft, previewEvent, settingsAt, todayInMadrid } from "@atlas/domain";
+import { DomainError, previewEvent, settingsAt, todayInMadrid } from "@atlas/domain";
 import { bucketStats } from "@atlas/domain/portfolio";
 import type { Flags } from "../args.js";
 import { booleanFlag, UsageError } from "../args.js";
 import { CommandFailure, type Context, describeWarnings, EXIT } from "../context.js";
 import { saveAsDraft } from "./draft.js";
 import { confirmRates, rateDraft } from "./rates.js";
-import { aside, cancelled, confirmAndRecord, type DraftSpec, draftFromFlags } from "./shared.js";
+import {
+  asDraft,
+  aside,
+  cancelled,
+  confirmAndRecord,
+  type DraftSpec,
+  draftFromFlags,
+} from "./shared.js";
 
 const COMMON = [
   "account",
@@ -200,7 +207,7 @@ const assetsOf = (draft: Record<string, unknown>): string[] =>
  */
 const tradeNotes = async (ctx: Context, draft: Record<string, unknown>): Promise<string[]> => {
   try {
-    const { warnings, state, events } = await previewEvent(ctx.deps, draft as unknown as Draft, {
+    const { warnings, state, events } = await previewEvent(ctx.deps, asDraft(draft), {
       assets: assetsOf(draft),
     });
     const notes = describeWarnings(warnings);

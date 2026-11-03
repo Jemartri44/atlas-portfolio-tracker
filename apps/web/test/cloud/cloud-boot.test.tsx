@@ -142,6 +142,10 @@ describe("cloud boot", () => {
     assign.mockRestore();
     expect(text(host)).not.toContain("eventos:");
     expect(host.querySelector("nav")).toBeNull();
+    // The entry is one card with the mark and a sentence: no privacy switch, no settings button.
+    expect(host.querySelector("section.gate h1")?.textContent).toBe("Atlas");
+    expect(host.querySelector(".topbar .status")).toBeNull();
+    expect(host.querySelector("a[aria-label=Ajustes]")).toBeNull();
     // The ledger was never asked for.
     expect(asked.map((call) => call.url)).toEqual(["/api/session"]);
   });

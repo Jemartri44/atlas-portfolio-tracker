@@ -51,11 +51,11 @@ interface DataTableProps<R> {
    */
   detail?: (row: R) => JSX.Element;
   /**
-   * With the privacy mode on, the columns marked `amount` fuse into one with
-   * this header, and the ones marked `whenMasked` go in front of it
-   * (`components/columns.ts`). Absent: the table is the same in both modes.
+   * With the privacy mode on, the columns marked `amount` fuse into one that keeps the header of
+   * the lead column, and the ones marked `whenMasked` go in front of it (`components/columns.ts`).
+   * Absent: the table is the same in both modes.
    */
-  maskedMerge?: string | undefined;
+  maskedMerge?: boolean | undefined;
 }
 
 const slot = <R,>(columns: readonly DataColumn<R>[], which: CardSlot): DataColumn<R>[] =>
@@ -117,14 +117,12 @@ const RowBody = <R,>(props: {
 );
 
 export const DataTable = <R,>(props: DataTableProps<R>): JSX.Element => {
-  const merging = (): boolean => props.maskedMerge !== undefined && privacy();
+  const merging = (): boolean => props.maskedMerge === true && privacy();
   const wide = createMemo(() =>
-    props.maskedMerge === undefined
-      ? props.columns
-      : tableColumns(props.columns, merging(), props.maskedMerge),
+    props.maskedMerge === true ? tableColumns(props.columns, merging()) : props.columns,
   );
   const narrow = createMemo(() =>
-    props.maskedMerge === undefined ? props.columns : rowColumns(props.columns, merging()),
+    props.maskedMerge === true ? rowColumns(props.columns, merging()) : props.columns,
   );
   /** The classes of a row: its own, the one for a leading icon, and the caller's. */
   const classOf = (row: R, base: string, withLead: string): string =>

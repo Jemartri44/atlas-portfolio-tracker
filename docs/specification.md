@@ -382,7 +382,7 @@ Construidas (feature 016) y sin desplegar todavía: la infraestructura es de la 
 | Función (hora de Madrid) | Tarea | `job_frequencies` (por defecto, primero) | Notifica |
 |---|---|---|---|
 | `job-ecb` (17:15) | Histórico del BCE, con el calendario TARGET como comprobación (ADR-0029) | `ecb`: `daily`, `weekly` | Solo con un hallazgo |
-| `job-prices` (07:00) | Precios de cierre: EODHD, respaldo Alpha Vantage; nunca escribe `prices/symbols.json` (ADR-0031) | `prices`: `daily`, `weekly` | Solo con un hallazgo (fuente caída, correspondencias sin contrastar, horizonte de una tesis vencido) |
+| `job-prices` (07:00) | Precios de cierre: EODHD, respaldo Alpha Vantage; nunca escribe `prices/symbols.json` (ADR-0031). Cada llamada, 15 s de tope, sin seguir redirecciones (la clave va en la dirección) y leyendo como mucho 8 MiB | `prices`: `daily`, `weekly` | Solo con un hallazgo (fuente caída, correspondencias sin contrastar, horizonte de una tesis vencido) |
 | `job-backup` (03:15) | Volcado mensual a `backups/<YYYY-MM>/` (ADR-0032) | `backup`: `monthly` (fijo) | Solo si falla o queda incompleto |
 | `job-integrity` (04:15) | Errores de `atlas check --deep`, ensayo de restauración en memoria y tamaño del libro (ADR-0032) | `integrity`: `quarterly`, `monthly` | Solo con errores |
 | `job-mail` (08:00) | Recordatorio mensual: reparto de la aportación (sin importes salvo que se active, ADR-0028), días desde el último inicio de sesión y tokens de consola vivos | `reminder`: `monthly` (fijo) | **Siempre, al menos una vez** |

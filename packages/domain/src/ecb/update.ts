@@ -8,6 +8,7 @@
 // wrong. Either way it has to be known.
 
 import { type CivilDate, compareCivilDates } from "../dates/civil-date.js";
+import { ValidationError } from "../errors.js";
 import type { DecimalString } from "../money/decimal.js";
 import { type EcbHistory, latestPublication, rateOn, sameRate } from "./history.js";
 
@@ -36,12 +37,22 @@ export type HistoryUpdate =
 
 const SHOWN = 20;
 
-/** Compares a new history with the one in force. `previous` absent: the first download. */
+/**
+ * Compares a new history with the one in force. `previous` absent: the first download. A history
+ * whose last publication is after `today` (in Madrid, where the ECB publishes) is not a history
+ * of the past: it is refused, with nothing written, whatever else it holds.
+ */
 export const checkHistoryUpdate = (
   previous: EcbHistory | undefined,
   next: EcbHistory,
+  today: CivilDate,
 ): HistoryUpdate => {
   const latest = latestPublication(next);
+  if (compareCivilDates(latest, today) > 0) {
+    throw new ValidationError("ecb_history_future", "the ECB history has a day after today", {
+      latest,
+    });
+  }
   if (previous === undefined) {
     return { kind: "accepted", newDays: next.publications.length, latest };
   }
