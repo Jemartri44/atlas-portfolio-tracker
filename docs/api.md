@@ -216,7 +216,7 @@ Cuerpo:
 
 | Orden | Comprobación | Código del rechazo |
 |---|---|---|
-| 0 | La línea no pasa de **`MAX_LINE_BYTES` = 16 KiB** (en bytes de UTF-8). Una línea real ocupa unos cientos de bytes; el tope solo frena un texto libre que llene el libro | `line_too_large`, con `details.limit` y `details.bytes` |
+| 0 | La línea no pasa de **`MAX_LINE_BYTES` = 64 KiB** (en bytes de UTF-8). Una línea real ocupa unos cientos de bytes, salvo una presentación 720/721, que lista cada activo dos veces y no se puede acortar después (200 activos ≈ 46 KB); el tope solo frena un texto libre que llene el libro | `line_too_large`, con `details.limit` y `details.bytes` |
 | 1 | La línea es JSON y tiene `schema_version` | `line_unreadable` |
 | 2 | `schema_version` no es más nueva que la que conoce la Lambda | `schema_version_unsupported` |
 | 3 | **Las declaraciones de la entrada son admisibles para la línea**: `has_correction` solo en una anulación, `chain_continues` solo en una línea con `corrects_id`. Va antes que todo lo demás de la línea, y antes que `pair_incomplete`: si la declaración de la pareja está mal, no tiene sentido evaluar lo demás (decisión de la dirección, 2026-09-25) | `pair_declaration_invalid` |
