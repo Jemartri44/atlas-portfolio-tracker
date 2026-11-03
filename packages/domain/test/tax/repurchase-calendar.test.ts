@@ -7,6 +7,8 @@
 // (criterion #14).
 
 import { describe, expect, it } from "vitest";
+import { Money } from "../../src/money/money.js";
+import { planRepurchaseWarnings } from "../../src/tax/plan-repurchase.js";
 import { repurchaseCalendar } from "../../src/tax/repurchase-calendar.js";
 import { HAND_SETTINGS, taxBuilder } from "./helpers.js";
 
@@ -224,5 +226,41 @@ describe("repurchaseCalendar", () => {
     expect(repurchaseCalendar(b.build(), "2026-01-10").blocks.map((x) => x.until)).toEqual([
       "2026-01-24",
     ]);
+  });
+});
+
+describe("planRepurchaseWarnings", () => {
+  const plan = (rows: [string, string][]) => ({
+    rows: rows.map(([asset_id, eur]) => ({ asset_id, allocation_eur: Money.parse(eur, "EUR") })),
+  });
+
+  it("warns a purchase of the plan inside the open window, and only that one", () => {
+    // The loss of 200 of 15/09/2026 is open until 15/11/2026: a purchase of
+    // fund_f would defer it; fund_g has no sale and nothing goes to fund_h.
+    const events = lossOn("2026-09-15").build();
+    const warnings = planRepurchaseWarnings(
+      repurchaseCalendar(events, "2026-10-01"),
+      plan([
+        ["fund_f", "300"],
+        ["fund_g", "300"],
+        ["fund_h", "0"],
+      ]),
+    );
+    expect(
+      warnings.map((entry) => [
+        entry.asset_id,
+        entry.sale_date,
+        entry.until,
+        entry.at_stake_eur.centsText(),
+      ]),
+    ).toEqual([["fund_f", "2026-09-15", "2026-11-15", "200.00"]]);
+  });
+
+  it("says nothing once the window is closed, or when the plan does not buy the asset", () => {
+    const events = lossOn("2026-09-15").build();
+    const open = repurchaseCalendar(events, "2026-10-01");
+    const closed = repurchaseCalendar(events, "2026-11-16");
+    expect(planRepurchaseWarnings(closed, plan([["fund_f", "300"]]))).toEqual([]);
+    expect(planRepurchaseWarnings(open, plan([["fund_f", "0"]]))).toEqual([]);
   });
 });
