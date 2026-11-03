@@ -164,11 +164,10 @@ export const transfer = (
  * form, less the losses it declares imputable, less what earlier years bring
  * into this one, is the balance of capital gains the engine computed.
  *
- * Checked on the **exact** amounts, before the rounding of each box: the
- * engine adds up one rounded figure per operation and the form adds up one per
- * row, and the two roundings are not the same arithmetic. What has to hold to
- * the last decimal is that the layout **moves** figures between rows and never
- * creates or loses one.
+ * Twice: on the **exact** amounts, where the layout must only move figures
+ * between rows and never create or lose one (it throws otherwise), and on the
+ * **rounded** ones, which it returns: the engine rounds what is still deferred
+ * by origin, as the rows do, so box 0460 and the report give the same cent.
  */
 export const rowsAddUpToTheEngine = (
   events: readonly LedgerEvent[],
@@ -208,5 +207,12 @@ export const rowsAddUpToTheEngine = (
         zero,
       ),
     );
-  return { rows: rows.amount.toString(), engine: engine.amount.toString() };
+  if (!rows.eq(engine)) {
+    throw new Error(`exact rows ${rows.amount} differ from the engine ${engine.amount}`);
+  }
+  const balance = boxes.entries.find((entry) => entry.concept === "gp.balance");
+  return {
+    rows: (balance?.exact_eur ?? zero).amount.toString(),
+    engine: report.capital_gains.balance_eur.amount.toString(),
+  };
 };

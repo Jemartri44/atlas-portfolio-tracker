@@ -11,7 +11,7 @@
 // labels ("suma de las casillas [0320]"), and the rows by origin of the loss,
 // which are a **reordering** of what the engine already computed.
 
-import { legsRounded, positive, sum, zero } from "../../money/eur.js";
+import { imputableRounded, legsRounded, positive, sum, zero } from "../../money/eur.js";
 import type { Money } from "../../money/money.js";
 import type { CurrencyGain } from "../../projections/currency-lots.js";
 import type { LedgerState } from "../../projections/state.js";
@@ -19,6 +19,7 @@ import type { AssetId, CorporateActionEvent } from "../../schema/events.js";
 import type { IncomeCategory } from "../../settings/settings.js";
 import { type ChainCore, categoryOf } from "../chain.js";
 import { type CriterionId, sortCriteria } from "../criteria.js";
+import { deferredByOrigin } from "../deferred-origins.js";
 import type {
   CurrencyLine,
   IncomeLine,
@@ -39,10 +40,7 @@ import {
   transmissionSection,
 } from "./concepts.js";
 import type { BoxRow, PartialReason } from "./report.js";
-import { deferredByOrigin, gainIndexOf, gainOf } from "./rows.js";
-
-/** What a loss keeps after its deferral, which never turns it into a gain. */
-const negativeOrZero = (amount: Money): Money => (amount.isNegative() ? amount : zero());
+import { gainIndexOf, gainOf } from "./rows.js";
 
 /** One figure, with everything the layout knows about it except its box. */
 export interface Draft {
@@ -178,7 +176,7 @@ const disposalRows = (
     };
     const legs = legsRounded(line.proceeds.eur, line.cost_eur);
     // Never above zero: a deferral cannot turn a loss into a gain (`computableRounded`).
-    const imputable = negativeOrZero(legs.sub(deferred.roundToCents()));
+    const imputable = imputableRounded(legs, deferred);
     const rounded: Partial<Record<RowFieldId, Money>> = gain
       ? { gain: legs, gain_net: legs, gain_imputable: legs }
       : { loss: legs, loss_imputable: imputable };
@@ -247,7 +245,7 @@ const disposalRows = (
         ...(field === "gain" || field === "loss"
           ? { rounded: line.gain_eur_rounded }
           : field === "loss_imputable"
-            ? { rounded: negativeOrZero(line.gain_eur_rounded.sub(deferred.roundToCents())) }
+            ? { rounded: imputableRounded(line.gain_eur_rounded, deferred) }
             : {}),
       });
     }
@@ -258,9 +256,7 @@ const disposalRows = (
         ? { ...current, gains: current.gains.add(line.gain_eur_rounded) }
         : {
             ...current,
-            losses: current.losses.add(
-              negativeOrZero(line.gain_eur_rounded.sub(deferred.roundToCents())),
-            ),
+            losses: current.losses.add(imputableRounded(line.gain_eur_rounded, deferred)),
           },
     );
   }
@@ -609,8 +605,8 @@ const deductions = (
 export const draftEntries = (report: TaxYearReport, chain: ChainCore): Draft[] => {
   const year = report.year;
   const index = gainIndexOf(chain);
-  const now = deferredByOrigin(chain, year);
-  const before = deferredByOrigin(chain, year - 1);
+  const now = deferredByOrigin(chain.walk, year);
+  const before = deferredByOrigin(chain.walk, year - 1);
   const disposals = disposalRows(report, chain, now, index, chain.state);
   const prior = priorYearRows(chain, year, before, now);
   const drafts: Draft[] = [...disposals.drafts];

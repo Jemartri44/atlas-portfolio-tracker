@@ -163,3 +163,45 @@ describe("a deferral that comes from more than one earlier loss", () => {
     expect(totals.rows).toBe("-200");
   });
 });
+
+describe("one arithmetic of cents for the engine and the form (partial releases)", () => {
+  /**
+   * Case A3: +10,00 on T; S loses −0,028 (legs 100,00 − 100,03 = −0,03), all of
+   * it deferred onto the two units bought back, −0,014 each; selling one of
+   * them releases −0,014. The form rounds what is **still** deferred at 31/12
+   * by origin: −0,03 − (−0,01) = −0,02, so 10,00 − 0,02 = 9,98. The engine used
+   * to round per line, −0,01 on the release, and said 9,99.
+   */
+  it("gives the cent of box 0460 when a deferral is released in part in its own year", () => {
+    const b = taxBuilder(HAND_SETTINGS);
+    buy(b, "stock_t", "2025-01-10", "1", "100");
+    sell(b, "stock_t", "2025-01-20", "1", "110");
+    buy(b, "stock_s", "2025-02-03", "1", "100.028");
+    sell(b, "stock_s", "2025-03-03", "1", "100");
+    buy(b, "stock_s", "2025-03-10", "2", "100");
+    sell(b, "stock_s", "2025-06-02", "1", "100");
+    const events = b.build();
+    const report = taxYear(events, 2025, { today: TODAY });
+    const boxes = taxBoxes(events, 2025, { today: TODAY });
+    const base = boxes.entries.find((entry) => entry.concept === "base.savings");
+    expect([report.base_eur.centsText(), base?.amount_eur?.centsText()]).toEqual(["9.98", "9.98"]);
+    expect(rowsAddUpToTheEngine(events, 2025, TODAY)).toEqual({ rows: "9.98", engine: "9.98" });
+  });
+
+  /**
+   * Case A2: a loss of −0,01 in 2025, deferred whole onto two units bought
+   * back (−0,005 each); in 2026 each is sold and releases −0,005. The row of
+   * earlier years rounds the difference by origin: −0,01, not −0,01 twice.
+   */
+  it("gives the cent of the row of earlier years when a deferral comes back in two sales", () => {
+    const b = taxBuilder(HAND_SETTINGS);
+    buy(b, "stock_s", "2025-10-01", "1", "100.01");
+    sell(b, "stock_s", "2025-11-03", "1", "100");
+    buy(b, "stock_s", "2025-12-01", "2", "100");
+    sell(b, "stock_s", "2026-03-02", "1", "100");
+    sell(b, "stock_s", "2026-06-01", "1", "100");
+    const events = b.build();
+    expect(rowsAddUpToTheEngine(events, 2025, TODAY)).toEqual({ rows: "0", engine: "0" });
+    expect(rowsAddUpToTheEngine(events, 2026, TODAY)).toEqual({ rows: "-0.01", engine: "-0.01" });
+  });
+});

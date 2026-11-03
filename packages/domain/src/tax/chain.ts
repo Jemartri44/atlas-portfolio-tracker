@@ -18,7 +18,7 @@ import type { CivilDate } from "../dates/civil-date.js";
 import { yearOf } from "../dates/civil-date.js";
 import { DomainError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
-import { computableRounded, zero } from "../money/eur.js";
+import { computableRounded, imputableRounded, zero } from "../money/eur.js";
 import { EUR, Money } from "../money/money.js";
 import { type Filing, filingInForce } from "../projections/filings.js";
 import {
@@ -41,6 +41,7 @@ import {
   type CurrencyWashResult,
   walkCurrencyWashSales,
 } from "./currency-wash-sale.js";
+import { deferredAt, deferredByOrigin } from "./deferred-origins.js";
 import { expenseLines, type LineContext } from "./lines.js";
 import type {
   AnchorDifference,
@@ -233,21 +234,6 @@ export const filedAnchors = (state: LedgerState, today: CivilDate): FiledAnchor[
   return anchors;
 };
 
-/**
- * What the wash-sale rule still held deferred at the close of a year.
- *
- * `pendingByYear` names every year the lot journal crosses. A year before the
- * first of them has nothing deferred yet; one after the last keeps what the
- * whole ledger leaves, which is the entry of that last year. Exported because
- * the layout by box needs the same reading for the year asked **and for the one
- * before it**, and two copies of this rule would drift apart.
- */
-export const deferredAt = (walk: WashSaleResult, year: number): PendingDeferral[] => {
-  const walked = [...walk.pendingByYear.keys()];
-  const last = walked.length === 0 ? undefined : Math.max(...walked);
-  return walk.pendingByYear.get(last !== undefined && year > last ? last : year) ?? [];
-};
-
 export const taxChain = (
   events: readonly LedgerEvent[],
   year: number,
@@ -311,16 +297,52 @@ export const taxChain = (
     current[category] = current[category].add(amount);
     balances.set(y, current);
   };
+  // Capital gains go by the arithmetic of the form (criterion #6), so the
+  // balance gives the cent of box 0460: a disposal by its legs, rounded; a
+  // loss less what is **still** deferred of it at 31/12, rounded by origin;
+  // and what an earlier loss stops having deferred, rounded by origin too.
+  // Movable capital income has no section of earlier years: what a disposal
+  // releases of it stays in that disposal's own figure, rounded per line.
+  const deferred = new Map<number, Map<number, Money>>();
+  const deferredOf = (y: number): Map<number, Money> => {
+    let found = deferred.get(y);
+    if (found === undefined) {
+      found = deferredByOrigin(walk, y);
+      deferred.set(y, found);
+    }
+    return found;
+  };
   for (const outcome of walk.outcomes) {
     const gain = state.gains[outcome.gain_index] as RealizedGain;
-    add(
-      gain.year,
-      categoryOf(state, gain.asset_id),
-      computableRounded(gain, outcome.computable_eur),
-    );
+    if (categoryOf(state, gain.asset_id) === "movable_capital") {
+      add(gain.year, "movable_capital", computableRounded(gain, outcome.computable_eur));
+    } else {
+      add(
+        gain.year,
+        "capital_gain",
+        gain.gain_eur.isNegative()
+          ? imputableRounded(
+              gain.gain_eur_rounded,
+              deferredOf(gain.year).get(outcome.gain_index) ?? zero(),
+            )
+          : gain.gain_eur_rounded,
+      );
+    }
     for (const release of outcome.foreign_released) {
       const origin = state.gains[release.origin] as RealizedGain;
-      add(gain.year, categoryOf(state, origin.asset_id), release.amount_eur.roundToCents());
+      if (categoryOf(state, origin.asset_id) === "movable_capital") {
+        add(gain.year, "movable_capital", release.amount_eur.roundToCents());
+      }
+    }
+  }
+  for (const y of new Set(state.gains.map((gain) => gain.year))) {
+    const before = deferredOf(y - 1);
+    const now = deferredOf(y);
+    for (const [origin, held] of before) {
+      const gain = state.gains[origin] as RealizedGain;
+      if (categoryOf(state, gain.asset_id) === "capital_gain") {
+        add(y, "capital_gain", held.sub(now.get(origin) ?? zero()).roundToCents());
+      }
     }
   }
   for (const income of state.income) {
@@ -328,10 +350,25 @@ export const taxChain = (
   }
   // Exchange differences are capital gains and losses of the savings base
   // (V1877-10), what the wash-sale rule leaves computable of them (V1613-25).
+  // The same arithmetic of the form, by origin.
   state.currencyGains.forEach((gain, index) => {
-    const outcome = currencyWalk.outcomes[index] as CurrencyWashOutcome;
-    add(gain.year, "capital_gain", computableRounded(gain, outcome.computable_eur));
+    add(
+      gain.year,
+      "capital_gain",
+      gain.gain_eur.isNegative()
+        ? imputableRounded(
+            gain.gain_eur_rounded,
+            currencyWalk.pendingAt(gain.year).get(index) ?? zero(),
+          )
+        : gain.gain_eur_rounded,
+    );
   });
+  for (const y of new Set(state.currencyGains.map((gain) => gain.year))) {
+    const now = currencyWalk.pendingAt(y);
+    for (const [origin, held] of currencyWalk.pendingAt(y - 1)) {
+      add(y, "capital_gain", held.sub(now.get(origin) ?? zero()).roundToCents());
+    }
+  }
   const expenses = expenseLines(ctx);
   for (const expense of expenses) {
     add(yearOf(expense.fiscal_date), "movable_capital", expense.amount_eur_rounded);
