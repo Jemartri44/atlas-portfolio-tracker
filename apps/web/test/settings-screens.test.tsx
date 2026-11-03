@@ -11,6 +11,7 @@ import Configuracion from "../src/routes/ajustes/configuracion.jsx";
 import Ajustes from "../src/routes/ajustes/index.jsx";
 import Verificacion from "../src/routes/ajustes/verificacion.jsx";
 import { optionsOf, show, text, today, withGoldenLedger } from "./helpers/render.jsx";
+import { applied, pixels, withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
 
@@ -80,3 +81,42 @@ describe("the settings", () => {
 });
 
 describe("the first run", () => {});
+
+describe("the order of Ajustes", () => {
+  it("puts first what a phone uses — privacy and theme, the copy, the session — and folds nothing", async () => {
+    withStyles(390);
+    try {
+      const host = await show("/ajustes", Ajustes);
+      const titles = [...host.querySelectorAll("section.card h2")].map(text);
+      const at = (title: string): number => {
+        const found = titles.findIndex((one) => one.startsWith(title));
+        expect(found, `${title} en ${titles.join(" | ")}`).toBeGreaterThanOrEqual(0);
+        return found;
+      };
+      expect(at("Privacidad y apariencia")).toBeLessThan(at("Tus datos"));
+      expect(at("Tus datos")).toBeLessThan(at("Configuración y verificación"));
+      expect(
+        host
+          .querySelector("#sincronizacion")
+          ?.compareDocumentPosition(host.querySelector(".grid > .stack:last-child") as Node),
+      ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(host.querySelector(".grid details")).toBeNull();
+    } finally {
+      withoutStyles();
+    }
+  });
+
+  it("keeps a paragraph clear of the row of buttons before it, as of the one after it", async () => {
+    withStyles(390);
+    try {
+      const host = await show("/ajustes", Ajustes);
+      const after = [...host.querySelectorAll(".card .button-row + p")];
+      expect(after.length).toBeGreaterThan(0);
+      for (const paragraph of after) {
+        expect(pixels(applied(paragraph, "margin-top"))).toBe(12);
+      }
+    } finally {
+      withoutStyles();
+    }
+  });
+});
