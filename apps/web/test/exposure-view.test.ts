@@ -27,7 +27,13 @@ describe("barOf", () => {
     ]);
     expect(view.segments.map((s) => s.key)).toEqual(["a", "b", "c", "d", "rest"]);
     expect(view.legend.map((e) => e.label)).toEqual(["USD", "EUR", "JPY", "GBP", "Otras (2)"]);
-    expect(view.legend.map((e) => e.figure)).toEqual(["70 %", "10 %", "6 %", "5 %", "7 %"]);
+    expect(view.legend.map((e) => e.figure.replace(/\u00a0/g, " "))).toEqual([
+      "70 %",
+      "10 %",
+      "6 %",
+      "5 %",
+      "7 %",
+    ]);
     expect(view.segments.reduce((sum, s) => sum + s.width, 0)).toBe(98);
   });
 
