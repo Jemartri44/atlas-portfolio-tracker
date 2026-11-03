@@ -7,6 +7,7 @@ import { sum, zero } from "../money/eur.js";
 import { FxRate } from "../money/fx-rate.js";
 import { EUR } from "../money/money.js";
 import { currencyLots } from "../projections/currency-lots.js";
+import { exchangeNotices } from "../projections/exchange-notices.js";
 import { sharedIsins } from "../projections/isin.js";
 import type { LedgerState, RealizedGain, Warning } from "../projections/state.js";
 import {
@@ -426,6 +427,9 @@ export const notesOf = (
           { kind: action.kind },
         ),
       );
+    }
+    for (const notice of exchangeNotices(core.state.assets, action)) {
+      notes.push(eventNote(notice.code, action.id, "check this requisite", notice.details));
     }
   }
   // Two assets with one ISIN are one security to the tax agency and two to the

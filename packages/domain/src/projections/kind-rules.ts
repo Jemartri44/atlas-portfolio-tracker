@@ -74,7 +74,8 @@ export const KIND_RULES: Record<CorporateActionKind, KindRule> = {
 /**
  * The cash of an exchange lowers the cost of what is received **only under the
  * neutrality regime** (arts. 80.3 and 81.2 LIS); without it the exchange is a
- * taxable swap and the cash is part of its proceeds. So a `cost_adjustment`
+ * taxable disposal (art. 37.1.e LIRPF for a merger, 37.1.h for an exchange of
+ * securities) and the cash is part of its proceeds. So a `cost_adjustment`
  * outside `capital_return` needs `neutrality_regime: true`, said, not assumed.
  */
 export const checkCostAdjustmentRegime = (

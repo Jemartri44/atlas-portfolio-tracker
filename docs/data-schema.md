@@ -263,7 +263,7 @@ Efecto: no toca lotes; suma al efectivo de la cuenta el neto; alimenta rendimien
 **`corporate_action`** (ADR-0011)
 `kind`, `asset_id` (activo afectado), `effective_date`, `source_document` (clave en `documents/` o URL del emisor), `effects[]` (primitivas, ver §6.5), `neutrality_regime?` (booleano: si la operación se acoge al régimen de neutralidad), `notes?`, `fingerprint`
 
-`neutrality_regime` lo añadió ADR-0021. En qué primitivas se compone un canje sigue siendo elección del usuario, con una excepción: un `cost_adjustment` fuera de `capital_return` **exige** `neutrality_regime: true` (`cost_adjustment_requires_neutrality`), porque sin régimen el dinero forma parte de lo transmitido en una permuta. Existe porque el diferimiento es condicional (la AEAT exige que la entidad adquirente sea española o esté en la Directiva 2009/133/CE), y sin el régimen un canje es una permuta plenamente sujeta por el art. 37.1.h. El motor fiscal lo lee para decir cuánto hay en juego: un `convert` sin régimen escrito sale en los criterios dudosos (#7 y #13, motivo `regime_not_recorded`), y un régimen declarado que contradice lo registrado sale como nota.
+`neutrality_regime` lo añadió ADR-0021. Dos reglas lo atan a las primitivas: un `cost_adjustment` fuera de `capital_return` **exige** `true` (`cost_adjustment_requires_neutrality`), porque sin régimen el dinero forma parte de lo transmitido; y un `convert` o `carve_out` con `false` **se rechaza al escribir** (`neutrality_denied_keeps_cost`), porque sin régimen nada conserva fecha y coste. Una fusión o un canje sin régimen se registran como `swap`; una escisión sin régimen aún no tiene forma de registrarse (`fiscal-questions.md`, #7 y #13). Un libro que ya lo tenga se abre con ese código como aviso y con la nota `tax_neutrality_contradiction` en la Declaración. Un `convert` sin régimen escrito sale en los criterios dudosos (#7 y #13, motivo `regime_not_recorded`).
 
 Afecta a los lotes del `asset_id` en **todas** las cuentas (los lotes fiscales son globales, ADR-0009); `forced_sale` vende y cobra **cuenta a cuenta** según `per_account[]` (§6.5), sin reparto automático.
 
@@ -551,7 +551,7 @@ Las ocho primeras son **compatibles** en el sentido de ADR-0018 (campos opcional
 | `withholding` de `forced_sale` | Suma a las retenciones a cuenta del ejercicio, como la de un `sell` |
 | `income_eur`, `income_base` | No entran en ninguna base de Atlas: la Declaración los enseña aparte, y en un `crypto_fork` salen en los dudosos con `income_eur` como exposición. Con base `general` y `unit_cost` cero son el coste del lote (criterio #8) |
 | `swap` | Transmisión más adquisición, valorada por el art. 37.1.h; la comisión resta de lo transmitido (criterio #17) |
-| `neutrality_regime` | No decide nada; un `convert` sin régimen escrito sale en los dudosos (#7 y #13) y un régimen que contradice lo registrado sale como nota |
+| `neutrality_regime` | No mueve ninguna cifra; `false` con `convert` o `carve_out` se rechaza al escribir, un `convert` sin régimen escrito sale en los dudosos (#7 y #13) y `exchangeNotices` avisa de los requisitos que Atlas no puede decidir |
 | `fx_rate_date` | Convierte cada operación a su fecha fiscal, sin la cual nada de lo anterior es reproducible |
 
 ### 8.7 Lotes de divisa (spec 029, ADR-0036)
