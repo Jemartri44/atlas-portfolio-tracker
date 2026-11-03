@@ -93,9 +93,18 @@ export const EntryLine = (props: { entry: ListEntry }): JSX.Element => (
 );
 
 /** The entries of one day under its heading: the list of a phone and the recent movements. */
-export const DayBlock = (props: { day: DayOfEntries }): JSX.Element => (
+export const DayBlock = (props: {
+  day: DayOfEntries;
+  /** The level of its heading: 2 under the title of a page, 3 inside a card. */
+  level: 2 | 3;
+}): JSX.Element => (
   <section class="day" aria-label={formatLongDate(props.day.day)}>
-    <h3 class="day-title">{formatLongDate(props.day.day)}</h3>
+    <Show
+      when={props.level === 2}
+      fallback={<h3 class="day-title">{formatLongDate(props.day.day)}</h3>}
+    >
+      <h2 class="day-title">{formatLongDate(props.day.day)}</h2>
+    </Show>
     <ul class="rows">
       <For each={props.day.entries}>
         {(entry) => (
@@ -111,7 +120,9 @@ export const DayBlock = (props: { day: DayOfEntries }): JSX.Element => (
 export const MovementList = (props: { rows: readonly MovementRow[] }): JSX.Element => (
   <>
     <div class="days only-narrow">
-      <For each={byDay(groupValuations(props.rows))}>{(day) => <DayBlock day={day} />}</For>
+      <For each={byDay(groupValuations(props.rows))}>
+        {(day) => <DayBlock day={day} level={2} />}
+      </For>
     </div>
     <DataTable
       label="Movimientos"

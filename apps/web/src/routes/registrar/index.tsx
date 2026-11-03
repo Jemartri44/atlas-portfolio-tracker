@@ -54,7 +54,7 @@ interface Repeat {
 
 /**
  * «Repetir la compra del mes» (direction A): the first purchase of the plan still pending, with
- * its account (the one that holds the asset) and its amount carried to the form. Absent when the
+ * its account (the one that holds the asset); the form asks the plan for the amount again. Absent when the
  * plan cannot be computed or every purchase of the month is recorded.
  */
 const repeatOf = async (
@@ -71,9 +71,8 @@ const repeatOf = async (
     for (const row of plan.assets.filter((one) => one.done_on === undefined)) {
       const account = accountHolding(snapshot.state, row.asset_id);
       if (account !== undefined) {
-        const amount = row.proposed_eur.amount.toString();
         return {
-          href: `/registrar/buy?cuenta=${encodeURIComponent(account)}&activo=${encodeURIComponent(row.asset_id)}&importe=${encodeURIComponent(amount)}`,
+          href: `/registrar/buy?cuenta=${encodeURIComponent(account)}&activo=${encodeURIComponent(row.asset_id)}&repetir=1`,
           name: displayName(nameIndex(snapshot.state), row.asset_id),
           amount: row.proposed_eur,
         };

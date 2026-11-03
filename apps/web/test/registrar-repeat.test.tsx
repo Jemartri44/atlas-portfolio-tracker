@@ -8,7 +8,7 @@ import { projectLedger } from "@atlas/domain";
 import { afterEach, describe, expect, it } from "vitest";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
 import Registrar from "../src/routes/registrar/index.jsx";
-import { withPrefill } from "../src/routes/registrar/prefill.js";
+import { proposedAmount, withPrefill } from "../src/routes/registrar/prefill.js";
 import { setPrivacy } from "../src/shell/preferences.js";
 import {
   type EventFormSpec,
@@ -42,7 +42,9 @@ describe("«Repetir la compra del mes»", () => {
     expect(href.startsWith("/registrar/buy?")).toBe(true);
     expect(query.get("cuenta")).toMatch(/\S/);
     expect(query.get("activo")).toMatch(/\S/);
-    expect(query.get("importe")).toMatch(/^\d+(\.\d+)?$/);
+    expect(query.get("repetir")).toBe("1");
+    // No figure of the portfolio travels in the address, where the history of the browser keeps it.
+    expect(href).not.toMatch(/importe|\d+\.\d+/);
   });
 
   it("says its amount masked with the privacy mode on", async () => {
@@ -58,21 +60,38 @@ describe("«Repetir la compra del mes»", () => {
 describe("the form of a purchase", () => {
   const ACCOUNT = "acc_mi";
 
-  it("comes filled from the address, the proposed amount masked until it is edited", async () => {
+  it("asks the plan for the amount of the purchase repeated, and masks it until it is edited", async () => {
+    today("2029-01-20");
+    const proposed = await proposedAmount(goldenEvents(), "ast_smallcap_b", "2029-01-20");
+    expect(proposed).toMatch(/^\d+(\.\d+)?$/);
+    const address = `/registrar/buy?cuenta=${ACCOUNT}&activo=ast_smallcap_b&repetir=1`;
+    const shown = await show(address, RegistrarForm, "/registrar/:tipo");
+    const field = () => shown.querySelector("#f-amount") as HTMLInputElement | null;
+    await until(() => (field()?.value ?? "") !== "", "el importe propuesto");
+    expect(field()?.value.replace(",", ".")).toBe(proposed);
     setPrivacy(true);
+    const host = await show(address, RegistrarForm, "/registrar/:tipo");
+    expect((host.querySelector("#f-account_id") as HTMLSelectElement | null)?.value).toBe(ACCOUNT);
+    expect((host.querySelector("#f-asset_id") as HTMLSelectElement | null)?.value).toBe(
+      "ast_smallcap_b",
+    );
+    await until(
+      () => text(host.querySelector("#f-amount")?.closest(".field")).length > 0,
+      "el campo",
+    );
+    expect((host.querySelector("#f-amount") as HTMLInputElement | null)?.value).not.toMatch(/\d/);
+    type(host, "f-amount", "650");
+    expect((host.querySelector("#f-amount") as HTMLInputElement | null)?.value).toBe("650");
+  });
+
+  it("proposes no amount without «repetir», or for an asset the plan does not buy", async () => {
+    expect(await proposedAmount(goldenEvents(), "ast_none", "2029-01-20")).toBeUndefined();
     const host = await show(
-      `/registrar/buy?cuenta=${ACCOUNT}&activo=ast_world&importe=600`,
+      `/registrar/buy?cuenta=${ACCOUNT}&activo=ast_smallcap_b`,
       RegistrarForm,
       "/registrar/:tipo",
     );
-    expect((host.querySelector("#f-account_id") as HTMLSelectElement | null)?.value).toBe(ACCOUNT);
-    expect((host.querySelector("#f-asset_id") as HTMLSelectElement | null)?.value).toBe(
-      "ast_world",
-    );
-    const amount = host.querySelector("#f-amount") as HTMLInputElement | null;
-    expect(amount?.value).not.toBe("600");
-    type(host, "f-amount", "650");
-    expect((host.querySelector("#f-amount") as HTMLInputElement | null)?.value).toBe("650");
+    expect((host.querySelector("#f-amount") as HTMLInputElement | null)?.value).toBe("");
   });
 
   it("offers the assets of the account as picks that choose the asset, and sets the amount large", async () => {
