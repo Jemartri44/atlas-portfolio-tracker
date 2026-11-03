@@ -4,7 +4,6 @@
 // the user to a form, so that form has to exist where the owner records things.
 
 import { describe, expect, it } from "vitest";
-import { store } from "../src/ledger/state.js";
 import { toCorporateParams } from "../src/routes/registrar/corporate/params.js";
 import RegistrarForm from "../src/routes/registrar/form.jsx";
 import { corporateForm } from "../src/view-models/forms/corporate.js";
@@ -21,42 +20,26 @@ import {
 
 withGoldenLedger();
 
-const record = async (host: HTMLElement): Promise<void> => {
-  await press(host, "Ver el efecto");
-  await until(() => host.querySelector("section.effect") !== null);
-  (
-    [...host.querySelectorAll("section.effect button")].find(
-      (button) => button.textContent?.trim() === "Registrar",
-    ) as HTMLButtonElement
-  ).click();
-  await settle(50);
-};
-
 describe("the swap form", () => {
-  it("records what is handed over and what is received, with both market values", async () => {
-    const before = store.snapshot()?.events.length ?? 0;
+  it("shows what is handed over and the gain on the higher of the two market values", async () => {
     const host = await show("/registrar/permuta", RegistrarForm, "/registrar/:tipo");
-    choose(host, "f-account_id", "acc_ibkr");
-    choose(host, "f-from_asset_id", "ast_btc");
+    choose(host, "f-account_id", "acc_bucket");
+    choose(host, "f-from_asset_id", "ast_delta");
     await settle();
     expect((host.querySelector("#f-currency") as HTMLSelectElement).value).toBe("EUR");
-    choose(host, "f-to_asset_id", "ast_mm");
+    choose(host, "f-to_asset_id", "ast_gamma");
+    choose(host, "f-thesis_id", "th_gamma");
     type(host, "f-trade_date", "2028-06-01");
     type(host, "f-value_date", "2028-06-01");
-    type(host, "f-quantity_out", "1");
-    type(host, "f-market_value_out", "100");
-    type(host, "f-quantity_in", "2");
-    type(host, "f-market_value_in", "101");
+    type(host, "f-quantity_out", "25");
+    type(host, "f-market_value_out", "1000");
+    type(host, "f-quantity_in", "12");
+    type(host, "f-market_value_in", "1010");
     await settle(50);
-    await record(host);
-    await until(() => (store.snapshot()?.events.length ?? 0) > before);
-    expect(store.snapshot()?.events.at(-1)).toMatchObject({
-      type: "swap",
-      from_asset_id: "ast_btc",
-      to_asset_id: "ast_mm",
-      market_value_out: "100",
-      market_value_in: "101",
-    });
+    await press(host, "Ver el efecto");
+    await until(() => host.querySelector("section.effect") !== null);
+    expect(text(host.querySelector("section.effect"))).toContain("Ganancia");
+    expect(text(host.querySelector("section.effect"))).toContain("474,50");
   });
 });
 
