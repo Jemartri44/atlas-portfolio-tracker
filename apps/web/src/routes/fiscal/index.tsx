@@ -1,15 +1,7 @@
-// "¿Qué tengo que declarar?" — the fiscal screen.
-//
-// It is opened a handful of times a year, so it is **not** a sixth destination
-// of the navigation: it has its own address and is reached from a card of
-// the summary and from Ajustes. Everything it shows comes from the domain —
-// the base, the boxes, the informative returns and what each figure leans on —
-// and the whole of it is a lazily loaded chunk: the tax engine never reaches
-// the boot path.
-//
-// Reading order: which year, what the base is and where it comes from, what is
-// not settled, what is pending, the boxes, the informative returns and what
-// was filed.
+// "¿Qué tengo que declarar?" — the fiscal screen (docs/design/system.md §7.8): a destination of
+// the bar on a computer, reached from the summary on a phone. Everything comes from the domain, in
+// a lazily loaded chunk: the tax engine never reaches the boot path. A computer reads the return of
+// the year first; a phone, the deadlines and the informative models, then the return.
 
 import { yearOf } from "@atlas/domain";
 import { informativeReturn, taxBoxes, taxYear } from "@atlas/domain/fiscal";
@@ -20,6 +12,7 @@ import { nameIndex } from "../../format/names.js";
 import { toAppError } from "../../ledger/errors.js";
 import { attempt } from "../../ledger/query.js";
 import { store, today } from "../../ledger/state.js";
+import { GRID, mediaQuery } from "../../shell/media.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { privacy } from "../../shell/preferences.js";
 import { boxesView, informativeView, yearView } from "../../view-models/fiscal/index.js";
@@ -54,6 +47,7 @@ export default function FiscalRoute(): JSX.Element {
     <RequireLedger skeleton={8}>
       {(snapshot) => {
         const names = nameIndex(snapshot.state);
+        const wide = mediaQuery(GRID);
         const current = yearOf(today());
         const filings = [...snapshot.state.filings.values()];
         const choices = createMemo<YearChoice[]>(() =>
@@ -133,9 +127,57 @@ export default function FiscalRoute(): JSX.Element {
           const computed = report();
           return computed.ok ? computed.value.filing : undefined;
         };
-
         /** Nothing has ever been recorded: no purchase, no cash, no return. */
         const untouched = snapshot.events.every((event) => SETUP.has(event.type));
+        /** The return of the year: the base, the criteria, the losses, the boxes, what was filed. */
+        const renta = (): JSX.Element => (
+          <Show when={view()}>
+            {(year) => (
+              <>
+                <Show when={year().empty}>
+                  <Section title={`Ejercicio ${year().year}`} class="span-12">
+                    <EmptyState
+                      what="No hay nada que declarar en este ejercicio"
+                      why="No se ha vendido nada, no han llegado rendimientos y no arrastras pérdidas. La base del ahorro es cero."
+                      glyph="check"
+                    />
+                  </Section>
+                </Show>
+                <Show when={!year().empty}>
+                  <BaseCard view={year()} />
+                  <DoubtfulCard stakes={year().doubtful} />
+                  <SettledCard stakes={year().settled} />
+                  <LossesCard
+                    year={year().year}
+                    pending={year().pending}
+                    expired={year().expired}
+                    expiring={year().expiring}
+                    anchors={year().anchors}
+                  />
+                  {boxesCard()}
+                </Show>
+                <FilingCard
+                  year={picked.year()}
+                  {...(filing() === undefined ? {} : { filing: filing() })}
+                  quiet={year().empty}
+                />
+              </>
+            )}
+          </Show>
+        );
+        const models = (): JSX.Element => (
+          <Show when={store.invalidCount() === 0}>
+            <For each={informative()}>
+              {({ model, outcome }) =>
+                outcome.ok ? (
+                  <InformativeCard view={outcome.value} />
+                ) : (
+                  <PartFailed title={`Modelo ${model}`} error={outcome.error} half />
+                )
+              }
+            </For>
+          </Show>
+        );
 
         return (
           <>
@@ -193,49 +235,9 @@ export default function FiscalRoute(): JSX.Element {
                   names={names}
                   privacy={privacy()}
                 />
-                <Show when={view()}>
-                  {(year) => (
-                    <>
-                      <Show when={year().empty}>
-                        <Section title={`Ejercicio ${year().year}`} class="span-12">
-                          <EmptyState
-                            what="No hay nada que declarar en este ejercicio"
-                            why="No se ha vendido nada, no han llegado rendimientos y no arrastras pérdidas. La base del ahorro es cero."
-                            glyph="check"
-                          />
-                        </Section>
-                      </Show>
-                      <Show when={!year().empty}>
-                        <BaseCard view={year()} />
-                        <DoubtfulCard stakes={year().doubtful} />
-                        <SettledCard stakes={year().settled} />
-                        <LossesCard
-                          year={year().year}
-                          pending={year().pending}
-                          expired={year().expired}
-                          expiring={year().expiring}
-                          anchors={year().anchors}
-                        />
-                        {boxesCard()}
-                      </Show>
-                      <FilingCard
-                        year={picked.year()}
-                        {...(filing() === undefined ? {} : { filing: filing() })}
-                        quiet={year().empty}
-                      />
-                    </>
-                  )}
-                </Show>
-                <Show when={store.invalidCount() === 0}>
-                  <For each={informative()}>
-                    {({ model, outcome }) =>
-                      outcome.ok ? (
-                        <InformativeCard view={outcome.value} />
-                      ) : (
-                        <PartFailed title={`Modelo ${model}`} error={outcome.error} half />
-                      )
-                    }
-                  </For>
+                <Show when={wide()} fallback={[models(), renta()]}>
+                  {renta()}
+                  {models()}
                 </Show>
               </div>
             </Show>
