@@ -94,6 +94,13 @@ describe("monthPlan: the plan of the month", () => {
     expect(plan.deposit.proposed_eur.amount.toString()).toBe("600");
     expect(proposed(plan)).toEqual({ ast_world: "324", ast_bonds: "162", ast_gold: "54" });
   });
+
+  it("takes the settings in force on the plan date, changed before it", () => {
+    const b = december();
+    b.recordedAt("2027-12-15");
+    b.settings(settings({ monthly_contribution_eur: "900" }));
+    expect(read(b).deposit.proposed_eur.amount.toString()).toBe("900");
+  });
 });
 
 describe("monthPlan: what is done", () => {
@@ -113,7 +120,6 @@ describe("monthPlan: what is done", () => {
         trade_date,
         amount,
         quantity: "1",
-        unit_price: undefined,
       });
     }
     // An asset the plan sends nothing to is no task.
@@ -126,7 +132,6 @@ describe("monthPlan: what is done", () => {
       trade_date: "2028-01-09",
       amount: "66",
       quantity: "1",
-      unit_price: undefined,
       currency: "USD",
       fx_rate: "1.1",
     });
@@ -195,8 +200,15 @@ describe("monthPlan: when there is no plan", () => {
   });
 
   it("says the code of the domain, at the plan date", () => {
-    const b = december({ monthly_contribution_eur: undefined });
-    const events = b.build();
+    const events = december()
+      .build()
+      .map((event) => {
+        if (event.type !== "settings_changed") {
+          return event;
+        }
+        const { monthly_contribution_eur: _dropped, ...rest } = event.settings;
+        return { ...event, settings: rest };
+      });
     expect(monthPlan(events, "2028-01-20")).toEqual({
       status: "unavailable",
       month: "2028-01",
