@@ -112,6 +112,7 @@ const JOBS_ONLY: Record<string, string> = {
   // The findings of the ECB and the prices, said by the mail only.
   currency_unchecked: "el correo lo dice con su frase (jobs/mail/notice.ts)",
   ecb_calendar_mismatch: "el correo lo dice con su frase (jobs/mail/notice.ts)",
+  ecb_history_backfilled: "el correo lo dice con su frase (jobs/mail/notice.ts)",
   ecb_history_damaged: "el correo lo dice con su frase (jobs/mail/notice.ts)",
   ecb_history_rebuilt: "el correo lo dice con su frase (jobs/mail/notice.ts)",
   ecb_rebuilt_unverified: "el correo lo dice con su frase (jobs/mail/notice.ts)",

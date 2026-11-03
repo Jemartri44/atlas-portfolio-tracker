@@ -18,6 +18,7 @@ describe("checkHistoryUpdate", () => {
       kind: "accepted",
       newDays: 127,
       latest: "2026-03-31",
+      backfilled: 0,
     });
   });
 
@@ -27,7 +28,16 @@ describe("checkHistoryUpdate", () => {
       kind: "accepted",
       newDays: 3,
       latest: "2026-03-31",
+      backfilled: 0,
     });
+  });
+
+  it("accepts a past day the previous history lacked, and counts its rates", () => {
+    // The previous history lacks its second row; the new one has it back.
+    const previous = readEcbZipCsv(`${[header, rows[0], ...rows.slice(2)].join("\n")}\n`);
+    const result = checkHistoryUpdate(previous, readEcbZipCsv(text), TODAY);
+    expect(result).toMatchObject({ kind: "accepted", newDays: 0 });
+    expect((result as { backfilled: number }).backfilled).toBeGreaterThan(0);
   });
 
   it("takes 0.85950 for 0.8595: the comparison is numeric", () => {

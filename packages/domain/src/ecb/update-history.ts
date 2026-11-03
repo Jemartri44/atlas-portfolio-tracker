@@ -25,6 +25,8 @@ export type EcbUpdateResult =
       /** Days of publication added to the previous history (all of them, the first time). */
       newDays: number;
       latest: CivilDate;
+      /** Rates of days already known that the previous history lacked: see `HistoryUpdate`. */
+      backfilled: number;
       zip_failure?: string;
       /** Where the TARGET calendar and the history disagree, in the years of the ledger: a warning. */
       calendar: CalendarDisagreement[];
@@ -71,6 +73,7 @@ export const updateEcbHistory = async (
     stored,
     newDays: check.newDays,
     latest: check.latest,
+    backfilled: check.backfilled,
     ...failure,
     calendar: crossCheckCalendar(next, calendarYears(options.firstRateDate, options.today)),
   };
