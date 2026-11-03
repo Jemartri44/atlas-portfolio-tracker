@@ -21,6 +21,7 @@ import {
   ULID,
   withGoldenLedger,
 } from "./helpers/render.jsx";
+import { withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
 
@@ -412,5 +413,38 @@ describe("a ledger with nothing in it", () => {
       "Todavía no hay nada que declarar",
     ]);
     expect(shown).not.toContain("Criterios en duda");
+  });
+});
+
+describe("the order of the screen by device", () => {
+  /** The titles of the cards, in the order of the page. */
+  const titles = (host: HTMLElement): string[] =>
+    [...host.querySelectorAll(".grid > section > header h2, .grid > section > .card-head h2")].map(
+      text,
+    );
+
+  it("puts the deadlines, then the models 720 and 721, then the return, all in sight, on a phone", async () => {
+    today("2029-01-20");
+    withStyles(390);
+    const host = await show("/fiscal", Fiscal);
+    await settle();
+    const order = titles(host);
+    const at = (pattern: RegExp) => order.findIndex((title) => pattern.test(title));
+    expect(at(/Calendario/)).toBeGreaterThanOrEqual(0);
+    expect(at(/Calendario/)).toBeLessThan(at(/720/));
+    expect(at(/721/)).toBeLessThan(at(/Base del ahorro/));
+    // Nothing folded: the return is a card of the page, not the content of a disclosure.
+    expect(host.querySelector("details .grid section")).toBeNull();
+  });
+
+  it("keeps the return before the models on a computer", async () => {
+    today("2029-01-20");
+    withStyles(1440, 900);
+    const host = await show("/fiscal", Fiscal);
+    await settle();
+    const order = titles(host);
+    expect(order.findIndex((t) => /Base del ahorro/.test(t))).toBeLessThan(
+      order.findIndex((t) => /720/.test(t)),
+    );
   });
 });
