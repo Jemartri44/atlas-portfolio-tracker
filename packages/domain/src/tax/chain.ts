@@ -36,11 +36,7 @@ import {
   savingsOffsetLimitPctOf,
 } from "../settings/settings.js";
 import { compensate, type YearBalances } from "./compensation.js";
-import {
-  type CurrencyWashOutcome,
-  type CurrencyWashResult,
-  walkCurrencyWashSales,
-} from "./currency-wash-sale.js";
+import { type CurrencyWashResult, walkCurrencyWashSales } from "./currency-wash-sale.js";
 import { deferredAt, deferredByOrigin, releasedBetween } from "./deferred-origins.js";
 import { expenseLines, type LineContext } from "./lines.js";
 import type {
