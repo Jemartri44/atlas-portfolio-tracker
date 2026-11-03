@@ -78,7 +78,7 @@ export const COMMANDS: Readonly<Record<string, CommandSpec>> = {
   synth: { run: synthCommand, arity: 1, looksAtMode: blind },
   compact: { run: compactCommand, arity: 1 },
   backup: { run: backupCommand, arity: 1 },
-  rehearse: { run: rehearseCommand, arity: 1 },
+  rehearse: { run: rehearseCommand, arity: 1, looksAtMode: blind },
   lock: { run: lockCommand, arity: { show: 2, break: 2 }, looksAtMode: blind },
   fx: { run: fxCommand, arity: { update: 2, status: 2, correct: 2 } },
   draft: { run: draftCommand, arity: { list: 2, confirm: 3, discard: 3 } },

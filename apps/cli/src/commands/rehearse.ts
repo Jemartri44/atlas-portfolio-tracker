@@ -2,10 +2,19 @@
 // (ADR-0032, «La prueba de que se puede restaurar»). The dump — a copy made by `atlas backup` or
 // downloaded — is decoded as the loader does, projected, and compared with the ledger of the folder
 // cut at the same events (`restoreRehearsal`, the same function the quarterly job runs). Read only:
-// it writes nothing and reaches no server; with `--ledger` on a synthetic file it is a pure drill.
+// it writes nothing and reaches no server: the ledger is always the local file (`--ledger`, or the
+// folder's own `ledger.jsonl`), never the cloud, so the owner downloads the copy to compare with
+// first (`atlas backup`). With a synthetic file it is a pure drill.
 
 import { readFile } from "node:fs/promises";
-import { CURRENT_LEDGER_SCHEMA, decodeLines, loadAndProject, todayInMadrid } from "@atlas/domain";
+import {
+  CURRENT_LEDGER_SCHEMA,
+  DomainError,
+  decodeLines,
+  type LedgerEvent,
+  loadAndProject,
+  todayInMadrid,
+} from "@atlas/domain";
 import { restoreRehearsal } from "@atlas/domain/jobs";
 import { linesOfText } from "@atlas/domain/sync";
 import { assertKnownFlags, type Flags, requireFlag } from "../args.js";
@@ -19,10 +28,18 @@ export const rehearseCommand = async (
 ): Promise<number> => {
   assertKnownFlags(flags, ["dump", ...GLOBAL_FLAGS]);
   const bytes = await readFile(requireFlag(flags, "dump"));
-  const dump = decodeLines(
-    linesOfText(new TextDecoder("utf-8", { fatal: true }).decode(bytes)),
-    CURRENT_LEDGER_SCHEMA,
-  );
+  let dump: LedgerEvent[];
+  try {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    dump = decodeLines(linesOfText(text), CURRENT_LEDGER_SCHEMA);
+  } catch {
+    // No detail: a corrupt line must not echo pieces of itself (accounts, amounts) on the screen.
+    throw new DomainError("dump_unreadable", "the dump does not decode as a ledger", {});
+  }
+  if (dump.length === 0) {
+    // A truncated or wrong file would "restore" to an empty ledger and pass.
+    throw new DomainError("dump_empty", "the dump holds no events", {});
+  }
   await warnIfLedgerMissing(ctx);
   const live = await loadAndProject(ctx.deps, { collectErrors: true });
   const result = restoreRehearsal({

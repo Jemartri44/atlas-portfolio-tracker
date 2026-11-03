@@ -39,9 +39,26 @@ describe("atlas rehearse", () => {
     expect(h.text()).toContain("event_missing_in_live: 1");
   });
 
-  it("refuses a dump that does not decode", async () => {
+  it.each([
+    ["an empty dump", ""],
+    ["a line that is not a ledger event", "not json\n"],
+  ])("refuses %s, without echoing it", async (_name, content) => {
     const h = harness({ lines });
-    expect(await h.exec(["rehearse", "--dump", await dumpOf(["not json"])])).not.toBe(0);
-    expect(await h.exec(["rehearse"])).toBe(64);
+    const path = join(dir, "bad.jsonl");
+    await writeFile(path, content);
+    expect(await h.exec(["rehearse", "--dump", path])).toBe(1);
+    expect(h.text()).not.toContain("not json");
+  });
+
+  it("refuses bytes that are not UTF-8", async () => {
+    const h = harness({ lines });
+    const path = join(dir, "binary.jsonl");
+    await writeFile(path, Buffer.from([0xff, 0xfe, 0x0a]));
+    expect(await h.exec(["rehearse", "--dump", path])).toBe(1);
+    expect(h.text()).toContain("dump_unreadable");
+  });
+
+  it("needs its dump", async () => {
+    expect(await harness({ lines }).exec(["rehearse"])).toBe(64);
   });
 });
