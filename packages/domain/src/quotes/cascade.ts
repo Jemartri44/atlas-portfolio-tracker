@@ -311,7 +311,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
     const report = (outcome: AssetOutcome, extra: Partial<AssetReport> = {}): void => {
       reports.push({ asset_id, group, outcome, added: 0, failures, ...extra });
     };
-    const fail = (kind: QuoteFailureKind): void => {
+    const failAs = (kind: QuoteFailureKind): void => {
       failures.push({ source, kind });
       report(outcomeOf(failures));
     };
@@ -371,7 +371,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
     // close of today it would stay one for good. Only days before today.
     const to = addDays(today, -1);
     if (retired !== undefined) {
-      fail(retired);
+      failAs(retired);
       continue;
     }
     // A correspondence declared without contrasting it with the source (no
@@ -382,12 +382,12 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       const checked = await contrast(asset_id, entry);
       entry = checked.entry;
       if (checked.kind !== undefined) {
-        fail(checked.kind);
+        failAs(checked.kind);
         continue;
       }
     }
     if (!(await reserve())) {
-      fail("budget_exhausted");
+      failAs("budget_exhausted");
       continue;
     }
     const result = await port
@@ -400,7 +400,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
       if (RETIRES_SOURCE.includes(result.kind)) {
         retired = result.kind;
       }
-      fail(result.kind);
+      failAs(result.kind);
       continue;
     }
     outcomes.push({ source, at, ok: true });
@@ -417,7 +417,7 @@ export const updatePrices = async (input: UpdatePricesInput): Promise<UpdateRepo
         declared: entry.currencies[source] as string,
         found: found.currency as string,
       });
-      fail("currency_mismatch");
+      failAs("currency_mismatch");
       continue;
     }
     downloads.push({
