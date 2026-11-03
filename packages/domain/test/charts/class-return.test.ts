@@ -99,7 +99,7 @@ describe("classReturns", () => {
     expect(equity?.gain_eur?.amount.toString()).toBe("100");
   });
 
-  it("gives no figure for a class that had something not modelled, and says what", () => {
+  it("moves no money with a split: only the number of units changes, not what they are worth", () => {
     const b = bought();
     b.corporateAction({
       kind: "split",
@@ -107,32 +107,187 @@ describe("classReturns", () => {
       effects: [{ op: "scale", ratio: "2" }],
     });
     worth(b, "ast_world", "20", "55");
-    expect(of(b, "equity")).toEqual({
-      asset_class: "equity",
-      gap: "unsupported_events",
-      unsupported_events: ["corporate_action"],
-    });
+    const equity = of(b, "equity");
+    // 1000 in, 20 × 55 = 1100 worth: +10 % in the year.
+    expect(equity?.value_eur?.amount.toString()).toBe("1100");
+    expect(equity?.gain_pct?.toString()).toBe("10");
+    expect(equity?.unsupported).toEqual([]);
     expect(of(b, "gold")?.gap).toBe("no_flows");
   });
 
-  it("flags both classes of a transfer that changes class", () => {
+  it("gives no figure for a class that received a grant, and says which event, when and on what", () => {
     const b = bought();
+    const grant = b.corporateAction({
+      kind: "stock_dividend",
+      asset_id: "ast_world",
+      effective_date: "2027-03-01",
+      effects: [
+        {
+          op: "grant",
+          per_account: [{ account_id: "acc_fund", quantity: "1" }],
+          unit_cost: "0",
+          currency: "EUR",
+          fx_rate: "1",
+          fx_rate_date: "2027-03-01",
+          acquisition_date: "2027-03-01",
+        },
+      ],
+    });
+    worth(b, "ast_world", "11", "100");
+    expect(of(b, "equity")).toEqual({
+      asset_class: "equity",
+      gap: "unsupported_events",
+      unsupported: [
+        {
+          reason: "corporate_action_grant",
+          event_id: grant.id,
+          date: "2027-03-01",
+          asset_ids: ["ast_world"],
+          kind: "stock_dividend",
+        },
+      ],
+    });
+  });
+
+  it("counts the cash in lieu of a reverse split as money out, net of the fee and the withholding", () => {
+    const b = bought();
+    b.corporateAction({
+      kind: "reverse_split",
+      asset_id: "ast_world",
+      effective_date: "2027-06-06",
+      effects: [
+        { op: "scale", ratio: "1/4" },
+        {
+          op: "forced_sale",
+          per_account: [{ account_id: "acc_fund", quantity: "0.5", fee: "1", withholding: "5" }],
+          unit_price: "120",
+          currency: "EUR",
+          fx_rate: "1",
+          fx_rate_date: "2027-06-06",
+        },
+      ],
+    });
+    // 10 units → 2.5 → 2 after selling half a unit.
+    worth(b, "ast_world", "2", "480");
+    const equity = of(b, "equity");
+    // 0.5 × 120 − 1 = 59 of proceeds, 5 withheld: 54 came back; 2 × 480 = 960 is left.
+    expect(equity?.returned_eur?.amount.toString()).toBe("54");
+    expect(equity?.value_eur?.amount.toString()).toBe("960");
+    expect(equity?.gain_eur?.amount.toString()).toBe("14");
+    expect(equity?.unsupported).toEqual([]);
+  });
+
+  it("counts the cash that comes with a merger inside the class as money out", () => {
+    const b = bought();
+    b.asset("ast_eq2", { asset_class: "equity" });
+    b.corporateAction({
+      kind: "merger",
+      asset_id: "ast_world",
+      effective_date: "2027-06-06",
+      neutrality_regime: true,
+      effects: [
+        { op: "convert", to_asset_id: "ast_eq2", ratio: "1" },
+        {
+          op: "cost_adjustment",
+          asset_id: "ast_eq2",
+          per_account: [{ account_id: "acc_fund", amount: "30" }],
+          currency: "EUR",
+          fx_rate: "1",
+          fx_rate_date: "2027-06-06",
+        },
+      ],
+    });
+    worth(b, "ast_eq2", "10", "100");
+    const equity = of(b, "equity");
+    expect(equity?.returned_eur?.amount.toString()).toBe("30");
+    expect(equity?.gain_eur?.amount.toString()).toBe("30");
+    expect(equity?.unsupported).toEqual([]);
+  });
+
+  it("moves no money with a conversion inside the class, and the value follows the new asset", () => {
+    const b = bought();
+    b.asset("ast_eq2", { asset_class: "equity" });
+    b.corporateAction({
+      kind: "fund_merger",
+      asset_id: "ast_world",
+      effective_date: "2027-06-06",
+      effects: [{ op: "convert", to_asset_id: "ast_eq2", ratio: "1" }],
+    });
+    worth(b, "ast_eq2", "10", "110");
+    const equity = of(b, "equity");
+    expect(equity?.invested_eur?.amount.toString()).toBe("1000");
+    expect(equity?.value_eur?.amount.toString()).toBe("1100");
+    expect(equity?.gain_pct?.toString()).toBe("10");
+  });
+
+  const intoMoneyMarket = (b: LedgerBuilder, navs: { out?: string; in?: string }) => {
     b.asset("ast_mm", { asset_class: "fixed_income", asset_type: "money_market" });
-    b.transfer({
+    return b.transfer({
       from_account_id: "acc_fund",
       from_asset_id: "ast_world",
       quantity_out: "10",
-      nav_out: "100",
+      ...(navs.out === undefined ? {} : { nav_out: navs.out }),
       value_date_out: "2027-02-05",
       to_account_id: "acc_fund",
       to_asset_id: "ast_mm",
       quantity_in: "10",
-      nav_in: "100",
+      ...(navs.in === undefined ? {} : { nav_in: navs.in }),
       value_date_in: "2027-02-06",
     });
-    worth(b, "ast_mm", "10", "100");
-    expect(of(b, "equity")?.unsupported_events).toEqual(["transfer"]);
-    expect(of(b, "fixed_income")?.unsupported_events).toEqual(["transfer"]);
+  };
+
+  it("moves the money of a transfer that changes class by the NAV of each leg, on its own date", () => {
+    const b = bought();
+    intoMoneyMarket(b, { out: "104", in: "102" });
+    worth(b, "ast_mm", "10", "110");
+    const equity = of(b, "equity");
+    // 1000 in, 10 × 104 = 1040 out on the 5th of February: all of it left the class.
+    expect(equity?.returned_eur?.amount.toString()).toBe("1040");
+    expect(equity?.value_eur?.amount.toString()).toBe("0");
+    expect(equity?.gain_eur?.amount.toString()).toBe("40");
+    expect(equity?.unsupported).toEqual([]);
+    const bonds = of(b, "fixed_income");
+    // 10 × 102 = 1020 in on the 6th, worth 1100 at the end.
+    expect(bonds?.invested_eur?.amount.toString()).toBe("1020");
+    expect(bonds?.gain_eur?.amount.toString()).toBe("80");
+    expect(bonds?.unsupported).toEqual([]);
+  });
+
+  it("takes the price of that very day for a leg with no NAV", () => {
+    const b = bought();
+    intoMoneyMarket(b, {});
+    worth(b, "ast_world", "10", "104", "2027-02-05");
+    worth(b, "ast_mm", "10", "102", "2027-02-06");
+    worth(b, "ast_mm", "10", "110");
+    expect(of(b, "equity")?.returned_eur?.amount.toString()).toBe("1040");
+    expect(of(b, "fixed_income")?.invested_eur?.amount.toString()).toBe("1020");
+  });
+
+  it("gives no figure for a leg with no NAV and no price of that exact day, and says which day", () => {
+    const b = bought();
+    const transfer = intoMoneyMarket(b, { in: "102" });
+    // The nearest price is the day before: never taken.
+    worth(b, "ast_world", "10", "104", "2027-02-04");
+    worth(b, "ast_mm", "10", "110");
+    expect(of(b, "equity")?.unsupported).toEqual([
+      {
+        reason: "transfer_without_nav",
+        event_id: transfer.id,
+        date: "2027-02-05",
+        asset_ids: ["ast_world"],
+      },
+    ]);
+    expect(of(b, "equity")?.gap).toBe("unsupported_events");
+    // The other leg has its NAV: its class keeps the figure.
+    expect(of(b, "fixed_income")?.unsupported).toEqual([]);
+    expect(of(b, "fixed_income")?.invested_eur?.amount.toString()).toBe("1020");
+  });
+
+  it("does not read a transfer leg that falls after the date", () => {
+    const b = bought();
+    intoMoneyMarket(b, {});
+    worth(b, "ast_world", "10", "110");
+    expect(classReturns(b.build(), "2027-02-05").classes[1]?.unsupported).toEqual([]);
   });
 
   it("gives no figure with a held asset of the class unpriced, and none for an absurd rate", () => {
@@ -178,7 +333,7 @@ describe("classReturns", () => {
     expect(of(b, "equity")?.invested_eur?.amount.toString()).toBe("1000");
   });
 
-  it("flags every class a corporate action touches, destination included, but only once it happened", () => {
+  it("flags both classes of a conversion that changes class, once it happened", () => {
     const b = bought();
     b.buy({
       account_id: "acc_fund",
@@ -186,13 +341,20 @@ describe("classReturns", () => {
       value_date: "2027-01-05",
       quantity: "10",
     });
-    b.corporateAction({
+    const merger = b.corporateAction({
       kind: "merger",
       asset_id: "ast_world",
       effects: [{ op: "convert", to_asset_id: "ast_bonds", ratio: "1" }],
     });
-    expect(of(b, "equity")?.unsupported_events).toEqual(["corporate_action"]);
-    expect(of(b, "fixed_income")?.unsupported_events).toEqual(["corporate_action"]);
+    const why = {
+      reason: "corporate_action_reclassifies",
+      event_id: merger.id,
+      date: "2027-03-01",
+      asset_ids: ["ast_world", "ast_bonds"],
+      kind: "merger",
+    };
+    expect(of(b, "equity")?.unsupported).toEqual([why]);
+    expect(of(b, "fixed_income")?.unsupported).toEqual([why]);
 
     const later = bought();
     later.corporateAction({
@@ -294,8 +456,10 @@ describe("classReturns", () => {
       transferable: true,
       active: true,
     });
-    expect(of(b, "equity")?.unsupported_events).toEqual(["asset_updated"]);
-    expect(of(b, "fixed_income")?.unsupported_events).toEqual(["asset_updated"]);
+    expect(of(b, "equity")?.unsupported.map((item) => item.reason)).toEqual(["asset_reclassified"]);
+    expect(of(b, "fixed_income")?.unsupported.map((item) => item.reason)).toEqual([
+      "asset_reclassified",
+    ]);
 
     // Recorded after the date asked: the history is still reassigned, so it is flagged all the same.
     const later = bought();
@@ -311,8 +475,12 @@ describe("classReturns", () => {
       transferable: true,
       active: true,
     });
-    expect(of(later, "equity")?.unsupported_events).toEqual(["asset_updated"]);
-    expect(of(later, "fixed_income")?.unsupported_events).toEqual(["asset_updated"]);
+    expect(of(later, "equity")?.unsupported.map((item) => item.reason)).toEqual([
+      "asset_reclassified",
+    ]);
+    expect(of(later, "fixed_income")?.unsupported.map((item) => item.reason)).toEqual([
+      "asset_reclassified",
+    ]);
 
     const toBucket = bought();
     toBucket.assetUpdated({
@@ -324,7 +492,9 @@ describe("classReturns", () => {
       transferable: true,
       active: true,
     });
-    expect(of(toBucket, "equity")?.unsupported_events).toEqual(["asset_updated"]);
+    expect(of(toBucket, "equity")?.unsupported.map((item) => item.reason)).toEqual([
+      "asset_reclassified",
+    ]);
 
     const renamed = bought();
     worth(renamed, "ast_world", "10", "110");

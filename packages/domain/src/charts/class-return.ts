@@ -10,20 +10,38 @@
 //   swap     out of one class and into the other, by the market values of the legs; the fee is paid
 //            from cash and charged to neither
 //
-// A transfer between funds of the same class is no flow (no cash moves). Anything else that touches
-// an asset of the class and that this does not model — a corporate action, a transfer that changes
-// the class — makes **that class** come out without figure and with the kinds in `unsupported_events`:
-// nothing is invented to cover it. Informative; it reads prices and nothing fiscal reads it.
+// A transfer between funds of the same class is no flow (no cash moves); one that changes class
+// leaves the origin class at `quantity_out × nav_out` and enters the other at `quantity_in × nav_in`,
+// each on its own value date, like a swap by the market values of its legs; a missing NAV is
+// replaced only by the price the ledger holds for **that exact day**, and without one the class
+// has no figure and the reason says how to mend it. A corporate action is read by its effects: a
+// scale (split, reverse split) moves no money; a forced sale and a cost adjustment bring cash out of
+// the class (the proceeds recorded by the projection, less what was withheld; the cash received); a
+// conversion or a carve-out inside one class moves nothing. What this does not read — a conversion
+// or carve-out that changes class or book, a grant, an
+// asset that changes class — leaves **that class** without figure, and `unsupported` says which
+// event, when, on which assets: nothing is invented to cover it. Informative; it reads prices and
+// nothing fiscal reads it.
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { daysBetween } from "../dates/civil-date.js";
 import { type Decimal, HUNDRED } from "../money/decimal.js";
+import { FxRate } from "../money/fx-rate.js";
 import { EUR, Money } from "../money/money.js";
+import { Price } from "../money/price.js";
+import { Quantity } from "../money/quantity.js";
 import { basisOf, fxOf, money } from "../projections/operations.js";
+import { priceAt } from "../projections/prices.js";
 import { businessDateOf, liveOperations, projectLedger } from "../projections/project-ledger.js";
 import { readSeries } from "../projections/series.js";
+import { settingsAt } from "../projections/settings-at.js";
 import { coreWeights } from "../projections/weights.js";
-import { ASSET_CLASSES, type AssetClass, type LedgerEvent } from "../schema/events.js";
+import {
+  ASSET_CLASSES,
+  type AssetClass,
+  type CorporateActionKind,
+  type LedgerEvent,
+} from "../schema/events.js";
 import { annualRateOf, type DatedFlow } from "./core-xirr.js";
 
 export type ClassReturnGap =
@@ -31,16 +49,37 @@ export type ClassReturnGap =
   | "partial"
   /** Nothing was ever bought in the class. */
   | "no_flows"
-  /** Something touched the class that is not modelled: see `unsupported_events`. */
+  /** Something touched the class that is not modelled: see `unsupported`. */
   | "unsupported_events"
   /** The flows admit no rate within the bounds. */
   | "no_rate";
 
+export type UnsupportedReason =
+  /** An asset changed its class or its book: the whole history would move with it. */
+  | "asset_reclassified"
+  /** A conversion or a carve-out that leaves the class or the book. */
+  | "corporate_action_reclassifies"
+  /** Shares or tokens received at no price the event gives (a fork, a stock dividend). */
+  | "corporate_action_grant"
+  /** A transfer that changes class, a leg with no NAV and no price of that exact day. */
+  | "transfer_without_nav";
+
+export interface UnsupportedEvent {
+  reason: UnsupportedReason;
+  event_id: string;
+  /** The day of the event; of the leg missing its value for `transfer_without_nav`; the day it was recorded for `asset_reclassified`. */
+  date: CivilDate;
+  /** The assets of the event that the class holds. */
+  asset_ids: string[];
+  /** Of a corporate action. */
+  kind?: CorporateActionKind;
+}
+
 export interface ClassReturn {
   asset_class: AssetClass;
   gap?: ClassReturnGap;
-  /** Event types the class had that are not modelled. */
-  unsupported_events: string[];
+  /** What the class had that is not modelled, event by event. */
+  unsupported: UnsupportedEvent[];
   /** Σ bought. */
   invested_eur?: Money;
   /** Σ sold and received as dividends. */
@@ -73,16 +112,44 @@ export const classReturns = (events: readonly LedgerEvent[], to: CivilDate): Cla
     return asset?.book === "core" ? (asset.asset_class as AssetClass | undefined) : undefined;
   };
   const flows = new Map<AssetClass, Flow[]>(ASSET_CLASSES.map((c) => [c, []]));
-  const unsupported = new Map<AssetClass, Set<string>>(ASSET_CLASSES.map((c) => [c, new Set()]));
+  const unsupported = new Map<AssetClass, UnsupportedEvent[]>(ASSET_CLASSES.map((c) => [c, []]));
   const put = (assetClass: AssetClass | undefined, date: CivilDate, eur: Money): void => {
     if (assetClass !== undefined && date <= to) {
       (flows.get(assetClass) as Flow[]).push({ date, eur });
     }
   };
-  const flag = (assetClass: AssetClass | undefined, kind: string): void => {
+  const flag = (assetClass: AssetClass | undefined, item: UnsupportedEvent): void => {
     if (assetClass !== undefined) {
-      (unsupported.get(assetClass) as Set<string>).add(kind);
+      (unsupported.get(assetClass) as UnsupportedEvent[]).push(item);
     }
+  };
+  const gainsOf = new Map<string, (typeof state.gains)[number][]>();
+  for (const gain of state.gains) {
+    gainsOf.set(gain.event_id, [...(gainsOf.get(gain.event_id) ?? []), gain]);
+  }
+  // The value of what a transfer leg moves: its NAV, else the price the ledger holds for that very
+  // day (the one the valuation of the core uses). Nothing is interpolated.
+  const legValue = (
+    assetId: string,
+    quantity: string,
+    nav: string | undefined,
+    date: CivilDate,
+  ): Money | undefined => {
+    const units = Quantity.parse(quantity);
+    if (nav !== undefined) {
+      return Price.parse(nav, EUR).times(units);
+    }
+    const found = priceAt(state, assetId, date, settingsAt(state, date).settings);
+    if (found === undefined || found.date !== date) {
+      return undefined;
+    }
+    const worth = Price.parse(found.unit_value.toString(), found.currency).times(units);
+    if (found.currency === EUR) {
+      return worth;
+    }
+    return found.fx_rate === undefined || found.fx_rate_date === undefined
+      ? undefined
+      : FxRate.of(found.fx_rate, found.currency, found.fx_rate_date).toEur(worth);
   };
 
   // The class and the book of an asset are read at their latest, so a change of either, whenever it
@@ -104,7 +171,12 @@ export const classReturns = (events: readonly LedgerEvent[], to: CivilDate): Cla
       (before.book !== now.book || before.assetClass !== now.assetClass)
     ) {
       for (const side of [before, now]) {
-        flag(side.book === "core" ? side.assetClass : undefined, "asset_updated");
+        flag(side.book === "core" ? side.assetClass : undefined, {
+          reason: "asset_reclassified",
+          event_id: event.id,
+          date: event.recorded_at.slice(0, 10),
+          asset_ids: [event.asset_id],
+        });
       }
     }
   }
@@ -144,24 +216,94 @@ export const classReturns = (events: readonly LedgerEvent[], to: CivilDate): Cla
       put(classOf(event.asset_id), event.value_date, fxOf(event).toEur(net).neg());
     } else if (event.type === "corporate_action") {
       if (event.effective_date <= to) {
-        const touched = new Set([event.asset_id]);
         for (const effect of event.effects) {
-          touched.add(effect.asset_id ?? event.asset_id);
-          if ("to_asset_id" in effect) {
-            touched.add(effect.to_asset_id);
+          const assetId = effect.asset_id ?? event.asset_id;
+          const here = classOf(assetId);
+          const note = (reason: UnsupportedReason, side: AssetClass | undefined, ids: string[]) =>
+            flag(side, {
+              reason,
+              event_id: event.id,
+              date: event.effective_date,
+              asset_ids: ids,
+              kind: event.kind,
+            });
+          if (effect.op === "forced_sale") {
+            // An event the projection rejected is not a live operation, so an applied forced sale
+            // always has its sale recorded.
+            const sold = (gainsOf.get(event.id) ?? []).filter((gain) => gain.asset_id === assetId);
+            const rate = fxOf({ id: event.id, ...effect });
+            const withheld = effect.per_account.reduce(
+              (sum, entry) => sum.add(money(entry.withholding ?? "0", effect.currency)),
+              Money.zero(effect.currency),
+            );
+            const proceeds = sold.reduce(
+              (sum, gain) => sum.add(gain.proceeds_eur),
+              Money.zero(EUR),
+            );
+            put(here, event.effective_date, proceeds.sub(rate.toEur(withheld)).neg());
+          } else if (effect.op === "cost_adjustment") {
+            const received = effect.per_account.reduce(
+              (sum, entry) => sum.add(money(entry.amount, effect.currency)),
+              Money.zero(effect.currency),
+            );
+            put(
+              here,
+              event.effective_date,
+              fxOf({ id: event.id, ...effect })
+                .toEur(received)
+                .neg(),
+            );
+          } else if (effect.op === "grant") {
+            note("corporate_action_grant", here, [assetId]);
+          } else if (effect.op !== "scale") {
+            // convert / carve_out: no money moves while the value stays in the class and the book.
+            const there = classOf(effect.to_asset_id);
+            if (here !== there) {
+              note("corporate_action_reclassifies", here, [assetId, effect.to_asset_id]);
+              note("corporate_action_reclassifies", there, [assetId, effect.to_asset_id]);
+            }
           }
         }
-        for (const assetId of touched) {
-          flag(classOf(assetId), "corporate_action");
+      }
+    } else if (event.type === "transfer") {
+      const from = classOf(event.from_asset_id);
+      const into = classOf(event.to_asset_id);
+      if (from !== into) {
+        const legs = [
+          {
+            side: from,
+            asset: event.from_asset_id,
+            quantity: event.quantity_out,
+            nav: event.nav_out,
+            date: event.value_date_out,
+            sign: -1,
+          },
+          {
+            side: into,
+            asset: event.to_asset_id,
+            quantity: event.quantity_in,
+            nav: event.nav_in,
+            date: event.value_date_in,
+            sign: 1,
+          },
+        ];
+        for (const leg of legs) {
+          if (leg.side === undefined || leg.date > to) {
+            continue;
+          }
+          const value = legValue(leg.asset, leg.quantity, leg.nav, leg.date);
+          if (value === undefined) {
+            flag(leg.side, {
+              reason: "transfer_without_nav",
+              event_id: event.id,
+              date: leg.date,
+              asset_ids: [leg.asset],
+            });
+          } else {
+            put(leg.side, leg.date, leg.sign < 0 ? value.neg() : value);
+          }
         }
       }
-    } else if (
-      event.type === "transfer" &&
-      businessDateOf(state, event) <= to &&
-      classOf(event.from_asset_id) !== classOf(event.to_asset_id)
-    ) {
-      flag(classOf(event.from_asset_id), "transfer");
-      flag(classOf(event.to_asset_id), "transfer");
     }
   }
 
@@ -174,11 +316,13 @@ export const classReturns = (events: readonly LedgerEvent[], to: CivilDate): Cla
   return {
     to,
     classes: ASSET_CLASSES.map((assetClass): ClassReturn => {
-      const kinds = [...(unsupported.get(assetClass) as Set<string>)].sort();
-      const base = { asset_class: assetClass, unsupported_events: kinds };
+      const events = (unsupported.get(assetClass) as UnsupportedEvent[]).sort((a, b) =>
+        a.date === b.date ? a.event_id.localeCompare(b.event_id) : a.date.localeCompare(b.date),
+      );
+      const base = { asset_class: assetClass, unsupported: events };
       const own = flows.get(assetClass) as Flow[];
       const subtotal = byClass.find((row) => row.asset_class === assetClass);
-      if (kinds.length > 0) {
+      if (events.length > 0) {
         return { ...base, gap: "unsupported_events" };
       }
       if (own.length === 0) {
