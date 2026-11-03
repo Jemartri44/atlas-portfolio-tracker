@@ -57,9 +57,9 @@ export const saleResult = (
     result: gain.gain_eur_rounded,
   }));
   const [only] = lines;
+  // One line is the subtraction on screen, legs rounded first (#6): nothing to explain.
   if (lines.length === 1 && only !== undefined) {
-    const shown = only.proceeds.roundToCents().sub(only.cost.roundToCents());
-    return { lines, rounded: !shown.eq(only.result) };
+    return { lines, rounded: false };
   }
   return {
     lines,

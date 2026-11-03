@@ -79,16 +79,14 @@ export interface BoxEntry {
   source?: BoxSource;
   checked_at?: CivilDate;
   certainty?: Certainty;
-  /** What to type: rounded half-up to cents once (criterion #6). */
+  /**
+   * What to type, rounded half-up to cents (criterion #6); the result of a
+   * row is its transmission and its acquisition rounded first, as the form
+   * subtracts them.
+   */
   amount_eur?: Money;
   /** The same figure before rounding: what the invariants are checked on. */
   exact_eur?: Money;
-  /**
-   * What the **form** will compute from the two values typed above it, when it
-   * differs by a cent from the engine's own result. Absent when they
-   * agree, which is almost always.
-   */
-  form_eur?: Money;
   /** A value that is not an amount: the name of a security. */
   text?: string;
   /** The ledger does not hold it (the NIF of a fund): said, never invented. */

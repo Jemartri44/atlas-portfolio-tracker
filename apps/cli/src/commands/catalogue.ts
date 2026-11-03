@@ -106,6 +106,30 @@ const catalogueDraft = (
   return draft;
 };
 
+/**
+ * A transfer between funds keeps the tax deferral only under the conditions of
+ * art. 94 LIRPF, which the ledger cannot check and `transferable` takes on
+ * trust: said before recording, in full for a fund not known to be Spanish (an
+ * ISIN or an issuer country of Spain) and only the SICAV condition otherwise,
+ * because the catalogue does not tell a SICAV from a fund.
+ */
+const transferNotes = (draft: Record<string, unknown>): string[] => {
+  const fund = draft.asset_type === "fund" || draft.asset_type === "money_market";
+  if (draft.transferable !== true || !fund) {
+    return [];
+  }
+  const spanish =
+    draft.issuer_country === "ES" ||
+    (typeof draft.isin === "string" && draft.isin.toUpperCase().startsWith("ES"));
+  const sicav =
+    "una SICAV solo admite traspaso si tiene más de 500 accionistas y no tienes más del 5 % (art. 94.1.a.2.º)";
+  return [
+    spanish
+      ? `Aviso (art. 94 LIRPF): ${sicav}. Si no lo cumple, un traspaso tributa como venta: regístrala con --not-transferable.`
+      : `Aviso (art. 94 LIRPF): marcar un fondo extranjero como traspasable solo es correcto si es una IIC armonizada (UCITS) de la UE, inscrita en la CNMV y comprada a través de una comercializadora inscrita en España (art. 94.2.a); ${sicav}. Si no lo cumple, un traspaso tributa como venta: regístralo con --not-transferable.`,
+  ];
+};
+
 const stripProjection = (record: Record<string, unknown>): Record<string, unknown> => {
   const { history: _history, identifier_history: _identifiers, ...fields } = record;
   return fields;
@@ -174,7 +198,8 @@ export const assetCommand = async (
 ): Promise<number> => {
   const [, action, id] = positionals;
   if (action === "add") {
-    await confirmAndRecord(ctx, catalogueDraft("asset_created", flags, {}));
+    const draft = catalogueDraft("asset_created", flags, {});
+    await confirmAndRecord(ctx, draft, transferNotes(draft));
     return 0;
   }
   if (action === "update") {
@@ -186,15 +211,14 @@ export const assetCommand = async (
     if (current === undefined) {
       throw new UsageError(`el activo ${id} no existe`);
     }
-    await confirmAndRecord(
-      ctx,
-      catalogueDraft(
-        "asset_updated",
-        flags,
-        stripProjection(current as unknown as Record<string, unknown>),
-        id,
-      ),
+    const draft = catalogueDraft(
+      "asset_updated",
+      flags,
+      stripProjection(current as unknown as Record<string, unknown>),
+      id,
     );
+    // Only when this update is the one that marks it transferable.
+    await confirmAndRecord(ctx, draft, current.transferable ? [] : transferNotes(draft));
     return 0;
   }
   if (action === "list") {

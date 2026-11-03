@@ -89,7 +89,7 @@ describe("the detail of a movement", () => {
 });
 
 describe("the result of a single sale", () => {
-  it("says it is rounded once per operation when it is a cent off the subtraction", async () => {
+  it("has nothing to explain: the result is the subtraction on screen, legs rounded first", async () => {
     const { Money } = await import("@atlas/domain");
     const { saleResult } = await import("../src/view-models/sale.js");
     const gain = (proceeds: string, cost: string, rounded: string) =>
@@ -101,9 +101,8 @@ describe("the result of a single sale", () => {
         cost_eur: Money.parse(cost, "EUR"),
         gain_eur_rounded: Money.parse(rounded, "EUR"),
       }) as never;
-    // 263,123 − 265,236 = −2,113 → −2,11, while 263,12 − 265,24 = −2,12.
-    expect(saleResult([gain("263.123", "265.236", "-2.11")], "e", {})?.rounded).toBe(true);
-    expect(saleResult([gain("263.12", "265.24", "-2.12")], "e", {})?.rounded).toBe(false);
+    // 263,123 → 263,12 and 265,236 → 265,24: −2,12, the subtraction itself (#6).
+    expect(saleResult([gain("263.123", "265.236", "-2.12")], "e", {})?.rounded).toBe(false);
     expect(saleResult([], "e", {})).toBeUndefined();
   });
 });

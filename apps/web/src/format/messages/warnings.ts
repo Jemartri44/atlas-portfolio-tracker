@@ -252,8 +252,6 @@ export const WARNING_MESSAGES: Record<string, (d: Details, n: Naming, f: Figures
   tax_box_value_missing: (d) =>
     `${countOf(count(d.boxes), "casilla pide", "casillas piden")} algo que no está en tus datos, como el NIF de una gestora. Lo decimos en vez de inventarlo.`,
   tax_box_partial: (d) => `${PARTIAL_BOX[text(d.reason)] ?? "Esta casilla no se calcula entera"}.`,
-  tax_box_rounding_differs: (d) =>
-    `El formulario redondea cada valor y hace él mismo la resta: en ${countOf(count(d.boxes), "una casilla", "algunas casillas")} sale un céntimo distinto del nuestro. Te enseñamos los dos.`,
   // --- The informative returns --------------------
   // The date of the query is on the screen already: repeating it here only
   // gives the drift test a date to trip over.

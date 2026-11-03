@@ -217,12 +217,12 @@
   },
   "2027": {
     "anchors": [],
-    "base_eur": "184.89",
+    "base_eur": "184.9",
     "capital_gains": {
-      "balance_eur": "184.48",
+      "balance_eur": "184.49",
       "currency_lines": [],
       "foreign_releases_eur": "0",
-      "gains_eur": "272.63",
+      "gains_eur": "272.64",
       "lines": [
         {
           "account_id": "acc_mi",
@@ -520,7 +520,7 @@
           "book": "bucket",
           "category": "capital_gain",
           "computable_eur": "3.6040280857",
-          "computable_eur_rounded": "3.6",
+          "computable_eur_rounded": "3.61",
           "corporate_action_kind": "spin_off",
           "cost_eur": "7.8011825573",
           "criteria": [
@@ -819,9 +819,9 @@
       "losses_eur": "-88.15"
     },
     "compensation": {
-      "base_eur": "184.89",
-      "capital_gain_eur": "184.48",
-      "capital_gain_final_eur": "184.48",
+      "base_eur": "184.9",
+      "capital_gain_eur": "184.49",
+      "capital_gain_final_eur": "184.49",
       "expired": [],
       "limit_eur": {
         "capital_gain": "46.12",
@@ -898,7 +898,7 @@
         "pending_difference_eur": "0"
       },
       {
-        "base_difference_eur": "-10.54",
+        "base_difference_eur": "-10.57",
         "certainty": "medium",
         "criterion": "4",
         "deferred_difference_eur": "0",
@@ -1222,8 +1222,8 @@
       "origin": "01NDYZTZ804AP696WA0PA725XK"
     },
     "settings_diff": {
-      "base_after_eur": "184.89",
-      "base_before_eur": "184.89",
+      "base_after_eur": "184.9",
+      "base_before_eur": "184.9",
       "changes": [],
       "current_origin": "01NDYZTZ804AP696WA0PA725XK",
       "previous_origin": "01MZ56PR7833HV4ZQJTT064MFJ"
@@ -1351,9 +1351,9 @@
   },
   "2028": {
     "anchors": [],
-    "base_eur": "99.27",
+    "base_eur": "99.28",
     "capital_gains": {
-      "balance_eur": "83",
+      "balance_eur": "83.01",
       "currency_lines": [],
       "foreign_releases_eur": "0",
       "gains_eur": "176.81",
@@ -1365,7 +1365,7 @@
           "book": "bucket",
           "category": "capital_gain",
           "computable_eur": "-93.808287058",
-          "computable_eur_rounded": "-93.81",
+          "computable_eur_rounded": "-93.8",
           "cost_eur": "307.7345383161",
           "criteria": [
             "1",
@@ -1569,12 +1569,12 @@
           "released_eur": "0"
         }
       ],
-      "losses_eur": "-93.81"
+      "losses_eur": "-93.8"
     },
     "compensation": {
-      "base_eur": "99.27",
-      "capital_gain_eur": "83",
-      "capital_gain_final_eur": "83",
+      "base_eur": "99.28",
+      "capital_gain_eur": "83.01",
+      "capital_gain_final_eur": "83.01",
       "expired": [],
       "limit_eur": {
         "capital_gain": "20.75",
@@ -1625,7 +1625,7 @@
         "pending_difference_eur": "0"
       },
       {
-        "base_difference_eur": "11.86",
+        "base_difference_eur": "11.85",
         "certainty": "medium",
         "criterion": "4",
         "deferred_difference_eur": "0",
@@ -1728,8 +1728,8 @@
       "origin": "01NDYZTZ804AP696WA0PA725XK"
     },
     "settings_diff": {
-      "base_after_eur": "99.27",
-      "base_before_eur": "99.27",
+      "base_after_eur": "99.28",
+      "base_before_eur": "99.28",
       "changes": [],
       "current_origin": "01NDYZTZ804AP696WA0PA725XK",
       "previous_origin": "01MZ56PR7833HV4ZQJTT064MFJ"
