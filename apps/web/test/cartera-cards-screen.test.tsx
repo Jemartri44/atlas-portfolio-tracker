@@ -62,14 +62,16 @@ describe("the return of the core", () => {
   it("shows the rate after tax beside the one before, loaded on demand", async () => {
     const host = await show("/cartera?fecha=2028-12-31", Cartera);
     await until(
-      () => text(host).includes("después de impuestos (estimación)"),
+      () =>
+        text(host).includes("después de impuestos (estimación)") &&
+        !text(host).includes("calculando…"),
       "the rate after tax",
     );
     const card = text(host.querySelector(".returns-card"));
     expect(card).toContain("Rentabilidad anual, ponderada por dinero");
     expect(card).toMatch(/Rentabilidad anual después de impuestos \(estimación\)[+−]?\d+,\d\s*%/);
     expect(card).toContain("Impuestos estimados de la cartera principal");
-    expect(card).toContain("lo pagado por la Renta no se resta");
+    expect(card).toContain("Lo pagado por la Renta no se resta");
     // On 31/12 the year is closed: nothing is left out.
     expect(card).not.toContain("Sin el impuesto de");
   }, 30_000);

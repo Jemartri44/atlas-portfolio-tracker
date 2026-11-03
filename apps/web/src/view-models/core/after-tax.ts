@@ -14,11 +14,8 @@ export interface AfterTaxView {
   openYear?: number;
 }
 
-const GAPS: Record<NonNullable<CoreXirrAfterTax["gap"]>, string> = {
-  // The rate before says why it has no figure; this one has nothing to add.
-  before: "",
+const GAPS: Partial<Record<NonNullable<CoreXirrAfterTax["gap"]>, string>> = {
   invalid: "hay movimientos con errores: corrígelos y saldrá",
-  year: "",
   no_rate: "los movimientos no dan una rentabilidad anual",
 };
 
