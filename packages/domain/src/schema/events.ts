@@ -51,11 +51,9 @@ export type TransferRequestStage = (typeof TRANSFER_REQUEST_STAGES)[number];
 /**
  * Which base income in kind goes into (ADR-0021). The savings base is where
  * capital gains and movable capital income live; the **general** base is the
- * one for income not derived from a transfer, and the project has never had the
- * notion — which is precisely the hole: DGT doctrine treats the free receipt of
- * crypto-assets as a gain **not derived from a transfer**, integrated in the
- * general base, and the criterion in force here (cost zero, nothing declared on
- * receipt) is the opposite reading (`docs/fiscal-questions.md` #8).
+ * one for income not derived from a transfer, where the DGT puts the free
+ * receipt of crypto-assets. Atlas does not compute it: the return shows that
+ * income apart for the user to add (`docs/fiscal-questions.md` #8).
  */
 export const INCOME_BASES = ["general", "savings"] as const;
 export type IncomeBase = (typeof INCOME_BASES)[number];
@@ -619,10 +617,10 @@ export interface GrantEffect extends EffectBase {
    * the other is refused.
    *
    * A `grant` creates lots and declares nothing. These two fields say that what
-   * was received **is income when it is received** — a fork, an airdrop, shares
-   * from a spin-off outside the neutrality regime, a dividend in kind. They are
-   * stored and shown; **they become no calculation**. Who is taxed on what is
-   * phase 5 and is a criterion in dispute (`docs/fiscal-questions.md` #8).
+   * was received **is income when it is received** — a fork, an airdrop, a
+   * dividend in kind. They enter no base of Atlas: the return shows them apart
+   * for the user to add. With `unit_cost` zero and the general base, the income
+   * is the cost of the lot (`docs/fiscal-questions.md` #8).
    */
   income_eur?: DecimalString;
   income_base?: IncomeBase;
@@ -676,23 +674,19 @@ export interface CorporateActionEvent extends Envelope {
   effects: Effect[];
   /**
    * Whether the operation takes the neutrality regime, i.e. the tax deferral of
-   * a merger, exchange or spin-off (ADR-0021). Optional. Which primitives an
-   * exchange composes into is still the user's choice, except that a
-   * `cost_adjustment` outside `capital_return` requires it to be `true`
-   * (`checkCostAdjustmentRegime`). The tax engine **reads it**: an exchange that says nothing about the regime
-   * is exposed as doubtful under criteria #7 and #13, and one that says the
-   * regime does **not** apply while keeping date and cost gets its own note,
-   * `tax_neutrality_contradiction`.
+   * a merger, exchange or spin-off (ADR-0021). Optional. A `cost_adjustment`
+   * outside `capital_return` requires it to be `true`
+   * (`checkCostAdjustmentRegime`), and a `convert` or `carve_out` with `false`
+   * is refused when written and only warned about on replay: without the regime
+   * nothing keeps date and cost. An exchange that says nothing is exposed as
+   * doubtful under criteria #7 and #13.
    *
-   * It exists because the deferral is conditional (arts. 80.1 and 81.1 LIS:
-   * where the shareholder or, in an exchange of securities, the acquiring
-   * entity resides), and without the regime the exchange is a fully taxable
-   * swap under article 37.1.h. The project models
-   * it as `convert`, which keeps date and cost and declares nothing: if the
-   * regime did not apply, that omits the whole gain of the exchange. It is the
-   * largest single figure that can be wrong in the system
-   * (`docs/fiscal-questions.md` #7 and #13), and until now the ledger did not
-   * record which of the two readings the user was relying on.
+   * The deferral is conditional (arts. 80.1 and 81.1 LIS: where the shareholder
+   * or, in an exchange of securities, the acquiring entity resides). Without it
+   * the shareholder has a taxable gain: art. 37.1.e LIRPF for a merger or a
+   * spin-off, art. 37.1.h for an exchange of securities. It is the largest
+   * single figure that can be wrong in the system (`docs/fiscal-questions.md`
+   * #7 and #13).
    */
   neutrality_regime?: boolean;
   notes?: string;

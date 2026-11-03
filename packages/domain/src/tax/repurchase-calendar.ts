@@ -21,6 +21,7 @@
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { yearOf } from "../dates/civil-date.js";
+import { DomainError } from "../errors.js";
 import type { Ulid } from "../ids/ulid.js";
 import { Money } from "../money/money.js";
 import { byCode } from "../order.js";
@@ -28,9 +29,9 @@ import { projectLedger } from "../projections/project-ledger.js";
 import type { AssetId, LedgerEvent } from "../schema/events.js";
 import { ASSET_TYPES } from "../schema/events.js";
 import { washSaleTransferCounts, washSaleWindowOf } from "../settings/wash-sale.js";
-import { FIRST_SUPPORTED_YEAR } from "./chain.js";
-import type { TaxYearReport } from "./report.js";
-import { taxYear } from "./year.js";
+import { FIRST_SUPPORTED_YEAR, isUnsupported, type Unsupported } from "./chain.js";
+import type { SavingsReading } from "./report.js";
+import { savingsReadings } from "./year.js";
 
 export interface BlockingSale {
   event_id: Ulid;
@@ -62,10 +63,23 @@ export interface RepurchaseCalendar {
 const zero = Money.zero("EUR");
 const positive = (money: Money): Money => (money.isNegative() ? money.neg() : zero);
 
+const supported = (reading: SavingsReading | Unsupported): SavingsReading => {
+  if (isUnsupported(reading)) {
+    throw new DomainError(
+      "tax_year_unsupported",
+      `the engine applies the compensation regime in force since ${reading.unsupported.first_supported}`,
+      reading.unsupported,
+    );
+  }
+  return reading;
+};
+
 /**
  * Every asset whose sale at a loss still has its window open on `today`. The
  * engine is read for every year whose sales could still be open: one year back
  * for the legal windows, more only for a custom window in days that is longer.
+ * It reads the lines and nothing that compares readings: the stakes of a full
+ * report run the chain once per criterion, and this list runs on every plan.
  */
 export const repurchaseCalendar = (
   events: readonly LedgerEvent[],
@@ -79,10 +93,11 @@ export const repurchaseCalendar = (
       return window.endsWith("d") ? Math.ceil(Number(window.slice(0, -1)) / 365) : 1;
     }),
   );
-  const reports: TaxYearReport[] = [];
+  const years: number[] = [];
   for (let y = year; y >= Math.max(FIRST_SUPPORTED_YEAR, year - longest); y--) {
-    reports.push(taxYear(events, y, { today }));
+    years.push(y);
   }
+  const reports = [...savingsReadings(events, years, { today }).values()].map(supported);
   const byAsset = new Map<AssetId, BlockingSale[]>();
   for (const report of reports) {
     for (const line of [...report.capital_gains.lines, ...report.movable_capital.transmissions]) {

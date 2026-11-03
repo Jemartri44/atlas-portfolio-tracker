@@ -11,6 +11,7 @@ describe("the configuration of the Lambda (R30)", () => {
     ATLAS_SESSION_TTL_SECONDS: "28800",
     ATLAS_LOGIN_TTL_SECONDS: "600",
     ATLAS_CLOCK_TOLERANCE_SECONDS: "600",
+    ATLAS_ACTIVE_JOB_FAMILIES: "ecb,prices,mail,backup,integrity",
     ATLAS_ALLOW_LIST_CACHE_SECONDS: "120",
     ATLAS_SECRETS_CACHE_SECONDS: "300",
     PATH: "/usr/bin",
@@ -36,6 +37,7 @@ describe("the configuration of the Lambda (R30)", () => {
       clockToleranceSeconds: 600,
       allowListCacheSeconds: 120,
       secretsCacheSeconds: 300,
+      activeJobFamilies: ["ecb", "prices", "mail", "backup", "integrity"],
     });
     expect(
       parseApiConfig({
@@ -45,6 +47,21 @@ describe("the configuration of the Lambda (R30)", () => {
         ATLAS_ORIGIN: "https://a.example:8443",
       }).ssmPrefix,
     ).toBe("/atlas/prod/");
+  });
+
+  it("reads the active families of tasks, `none` when the environment sleeps, and nothing else", () => {
+    expect(parseApiConfig({ ...ENV, ATLAS_ACTIVE_JOB_FAMILIES: "none" }).activeJobFamilies).toEqual(
+      [],
+    );
+    expect(parseApiConfig({ ...ENV, ATLAS_ACTIVE_JOB_FAMILIES: "ecb" }).activeJobFamilies).toEqual([
+      "ecb",
+    ]);
+    fails({ ...ENV, ATLAS_ACTIVE_JOB_FAMILIES: "" }, "ATLAS_ACTIVE_JOB_FAMILIES", "missing");
+    fails(
+      { ...ENV, ATLAS_ACTIVE_JOB_FAMILIES: "ecb,everything" },
+      "ATLAS_ACTIVE_JOB_FAMILIES",
+      "not_job_families",
+    );
   });
 
   it("refuses to start with a secret or any unknown ATLAS_ variable", () => {

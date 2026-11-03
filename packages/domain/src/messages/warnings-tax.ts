@@ -98,8 +98,15 @@ export const WARNINGS_TAX: Record<string, Entry> = {
   },
   tax_in_kind_income_not_integrated: {
     say: (d, v) =>
-      `Renta en especie registrada (${v.money(d.income_eur)}, base ${v.text(d.base) === "general" ? "general" : "del ahorro"}) y no integrada: el criterio vigente no declara nada al recibirla.`,
+      v.text(d.base) === "general"
+        ? `Has recibido ${v.money(d.income_eur)} en especie: es renta de la base general de este año. Atlas no calcula tu base general, así que súmalos tú en la declaración. El lote entra con ese coste.`
+        : `Renta en especie registrada (${v.money(d.income_eur)}, base del ahorro) y no integrada: compruébala en la declaración.`,
     cli: () => "Criterio #8.",
+  },
+  tax_in_kind_income_missing: {
+    say: () =>
+      "Una bifurcación o un reparto gratuito de cripto no dice cuánto valía al recibirlo: ese valor es renta del año y el coste del lote. Sin él, el lote entra a coste cero.",
+    cli: () => "Indica income_eur e income_base en el efecto. Criterio #8.",
   },
   tax_fx_rate_finding: {
     say: () =>

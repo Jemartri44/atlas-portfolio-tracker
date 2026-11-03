@@ -35,10 +35,9 @@ describe("DEFAULT_SETTINGS", () => {
     expect(DEFAULT_SETTINGS.fiscal_date_rule.etc).toBe("trade_date");
     expect(DEFAULT_SETTINGS.fiscal_date_rule.fund).toBe("value_date");
     expect(DEFAULT_SETTINGS.wash_sale_window.stock).toBe("2m");
-    // A fund and a monetary fund by domicile (criterion #2): Spanish two
-    // months, foreign a year (`washSaleWindowOf`).
-    expect(DEFAULT_SETTINGS.wash_sale_window.fund).toBe("by_domicile");
-    expect(DEFAULT_SETTINGS.wash_sale_window.money_market).toBe("by_domicile");
+    // A fund and a monetary fund take two months, wherever they are domiciled (criterion #2).
+    expect(DEFAULT_SETTINGS.wash_sale_window.fund).toBe("2m");
+    expect(DEFAULT_SETTINGS.wash_sale_window.money_market).toBe("2m");
     expect(DEFAULT_SETTINGS.wash_sale_window.crypto).toBe("1y");
     expect(DEFAULT_SETTINGS.wash_sale_window_days).toBeUndefined();
     expect(validateSettings(DEFAULT_SETTINGS)).toEqual(DEFAULT_SETTINGS);

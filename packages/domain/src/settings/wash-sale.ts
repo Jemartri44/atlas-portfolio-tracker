@@ -39,9 +39,9 @@ export const fundAdmitted = (asset: WashSaleAsset): boolean =>
  * form, or the default (ADR-0018). Movable capital income has
  * its own rule, article 25.2.b) LIRPF: two months before or after, for any
  * financial asset, whatever the market and with no one-year variant, so a
- * configured window does not apply. A fund `"by_domicile"` takes two months
- * when its units count as admitted (`fundAdmitted`, `2:fund_admitted_2m`) and a
- * year otherwise (`2:fund_1y`, article 33.5.g), also without ISIN or country.
+ * configured window does not apply. A fund set to `"by_domicile"` takes two
+ * months when its units count as admitted (`fundAdmitted`, `2:fund_admitted_2m`)
+ * and a year otherwise (`2:fund_1y`, article 33.5.g), also without ISIN or country.
  */
 export const washSaleWindowOf = (settings: Settings, asset: WashSaleAsset): WashSaleWindow => {
   if (incomeCategoryOf(settings, asset.asset_type) === "movable_capital") {

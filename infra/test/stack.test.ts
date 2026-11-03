@@ -287,6 +287,14 @@ describe.each(ENVS)("the data bucket of %s", (env) => {
     );
   });
 
+  it("gives the API jobs/ to read and list, and never to write", () => {
+    const onJobs = roleStatements(stack(env), `atlas-${env}-api`).filter((statement) =>
+      JSON.stringify([statement.Resource, statement.Condition]).includes("jobs/*"),
+    );
+    const actions = new Set(onJobs.flatMap((statement) => [statement.Action ?? []].flat()));
+    expect([...actions].sort()).toEqual(["s3:GetObject", "s3:ListBucket"]);
+  });
+
   it("gives the API one object of settings/ to read and replace, the backup job only to read it", () => {
     const key = `arn:aws:s3:::${bucket}/settings/exposure.json`;
     const onSettings = (role: string) =>

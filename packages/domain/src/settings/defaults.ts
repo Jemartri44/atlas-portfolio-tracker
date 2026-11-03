@@ -43,8 +43,8 @@ export const isWashSaleWindow = (value: unknown): value is WashSaleWindow =>
 /**
  * What the settings may say of a fund or a money market fund besides a window:
  * `"by_domicile"`, the window chosen asset by asset from where the fund is
- * domiciled (criterion #2, `washSaleWindowOf`). Only the types whose default it
- * is take it: for a security or crypto the domicile decides nothing.
+ * domiciled (criterion #2, `washSaleWindowOf`). Only funds take it: for a
+ * security or crypto the domicile decides nothing.
  */
 export type WashSaleWindowSetting = WashSaleWindow | "by_domicile";
 
@@ -250,8 +250,11 @@ export const DEFAULT_INCOME_CATEGORY: Record<AssetType, IncomeCategory> = {
 /**
  * Same, for the wash-sale window (ADR-0013, ADR-0014; criterion #2).
  *
- * A **fund** and a **money market fund** take it **by domicile** by default
- * (since 2026-11-03, `washSaleWindowOf`, `fundAdmitted`); medium-high both:
+ * A **fund** and a **money market fund** take **two months** by default,
+ * wherever they are domiciled (the owner's decision of 2026-11-03, what the
+ * CNMV guide of 2026 and Indexa do). It is an aggressive reading backed by an
+ * interpretation, not a certainty: the sources below only reach the admitted
+ * fund. `"by_domicile"` stays as the value that separates them:
  *
  * - **Admitted** —Spanish (ISIN `ES…` or `issuer_country` ES), or a foreign
  *   class whose `market` is an EU regulated market—: **two months**,
@@ -263,9 +266,10 @@ export const DEFAULT_INCOME_CATEGORY: Record<AssetType, IncomeCategory> = {
  *   cotización que les otorga el artículo 4, apartado 9"). Binding and
  *   unchanged: arts. 89.1 and 179.2.d LGT.
  * - **Not admitted** —a foreign UCITS whose class trades only on a
- *   multilateral facility or nowhere, or a fund without ISIN or country—:
- *   **one year**, `2:fund_1y`, article 33.5.g). Not prudence: the only road the
- *   DGT took to two months is closed to it. (1) The law gives a year to what is
+ *   multilateral facility or nowhere, or a fund without ISIN or country—: two
+ *   months here, `2:fund_unlisted_2m`; **one year** under `"by_domicile"`,
+ *   `2:fund_1y`, article 33.5.g), the figure the doubtful section shows. The
+ *   only road the DGT took to two months is closed to it. (1) The law gives a year to what is
  *   not admitted on a regulated market. (2) The four consultations above rest
  *   on the Spanish fiction, and 1897-01 limits it to funds "regulados en la Ley
  *   46/1984". (3) The fiction needs an SGIIC registering the fund with the
@@ -281,7 +285,7 @@ export const DEFAULT_INCOME_CATEGORY: Record<AssetType, IncomeCategory> = {
  * In this catalogue `money_market` is a **money market fund** —it carries an
  * ISIN, a TER and `transferable`, the Spanish transfer regime of collective
  * investment undertakings— not a treasury bill or a deposit, so it follows the
- * fund. A window written in the settings for either type replaces the rule.
+ * fund. A window written in the settings for either type replaces the default.
  */
 export const DEFAULT_WASH_SALE_WINDOW: Record<AssetType, WashSaleWindowSetting> = {
   stock: "2m",
@@ -289,8 +293,8 @@ export const DEFAULT_WASH_SALE_WINDOW: Record<AssetType, WashSaleWindowSetting> 
   etc: "2m",
   etp: "2m",
   crypto: "1y",
-  fund: "by_domicile",
-  money_market: "by_domicile",
+  fund: "2m",
+  money_market: "2m",
 };
 
 /** Provisional defaults (ADR-0013, ADR-0014). Verify with the tax advisor; change via `settings_changed`, not code. */

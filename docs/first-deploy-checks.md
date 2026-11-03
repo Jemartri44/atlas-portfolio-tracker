@@ -24,6 +24,9 @@ Lo que las features 015, 016 y 017 dejaron **sin verificar contra AWS real**. Ca
 - **Vuelta a `http://127.0.0.1`** en el navegador real del usuario, incluido que el reenvío de WSL en modo NAT escuche en el literal `127.0.0.1`.
 - **Qué principal asume el rol de administración** (C5): con IAM Identity Center, `aws sso login`; con un usuario IAM con MFA, la sesión se abre antes por la CLI (`aws configure export-credentials`). Y que `aws:PrincipalArn` de una sesión de Identity Center deje al administrador dentro de las cerraduras de los buckets.
 
+**Tareas programadas**
+- **El aviso de tareas con retraso tras el primer despliegue es normal.** Hasta la primera ejecución no hay ningún registro en `jobs/` y Resumen dice que las tareas activas van con retraso: se va solo cuando empiezan a correr. Antes del primer despliegue hay que **aplicar el permiso nuevo del rol de la API** (`GetObject` y `ListBucket` sobre `jobs/*`): sin él, `GET /api/jobs/status` falla, y Resumen avisa de que no se ha podido comprobar si las tareas se ejecutan y la tarjeta de Ajustes lo repite, sin tocar el resto. En `dev` dormido no hay tareas activas y no sale nada.
+
 **Correo**
 - **El primer correo real, en un cliente real.** Las capturas del repaso de los correos son simuladas (Chromium, con la inversión de Gmail imitada). Abrir un correo en Gmail de móvil y de PC, en claro y en oscuro: se lee, el aviso y el bloque de la orden se distinguen, y **trae «Abrir Atlas»**. Si no lo trae, el origen configurado no es `https://` pelado: el correo sale igualmente sin enlace, a propósito.
 

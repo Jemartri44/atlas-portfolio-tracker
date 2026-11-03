@@ -524,10 +524,39 @@ describe("applyGrant", () => {
         base: "general",
       },
     ]);
-    // It feeds nothing: not movable capital income, not a gain, not a lot cost.
+    // It feeds no income and no gain, and it is what the lot costs.
     expect(state.income).toEqual([]);
     expect(state.gains).toEqual([]);
-    expect(open(state, "ast_fork")[0]?.cost_eur.amount.toString()).toBe("0");
+    const lot = open(state, "ast_fork")[0];
+    expect(lot?.cost_eur.amount.toString()).toBe("420.5");
+    expect(lot?.funding_eur.amount.toString()).toBe("420.5");
+  });
+
+  it("shares the income between accounts by units, in the currency of the grant too", () => {
+    const state = stateWith(tenShares);
+    applyGrant(
+      state,
+      grant(
+        [
+          { account_id: "acc_fund", quantity: "3" },
+          { account_id: "acc_etf", quantity: "1" },
+        ],
+        { income_eur: "100", income_base: "general", currency: "USD", fx_rate: "1.25" },
+      ),
+      ctx,
+    );
+    const lots = open(state, "ast_fork");
+    expect(lots.map((l) => l.cost_eur.amount.toString())).toEqual(["75", "25"]);
+    expect(lots.map((l) => l.cost.amount.toString())).toEqual(["93.75", "31.25"]);
+  });
+
+  it.each([
+    ["the savings base", { income_eur: "100", income_base: "savings" }, "0"],
+    ["a cost written down", { income_eur: "100", income_base: "general", unit_cost: "2" }, "20"],
+  ] as const)("leaves the cost alone with %s", (_name, fields, cost) => {
+    const state = stateWith(tenShares);
+    applyGrant(state, grant([{ account_id: "acc_fund", quantity: "10" }], fields), ctx);
+    expect(open(state, "ast_fork")[0]?.cost_eur.amount.toString()).toBe(cost);
   });
 
   it("records nothing when the grant declares no income", () => {

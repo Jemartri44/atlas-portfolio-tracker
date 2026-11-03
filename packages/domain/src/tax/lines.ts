@@ -268,10 +268,18 @@ const rootCost = (event: LedgerEvent, lot: FiscalLot): { cost: Converted; fork: 
   // admits one admits exactly one (data-schema.md §8.5).
   const action = event as CorporateActionEvent;
   const grant = action.effects.find((effect) => effect.op === "grant") as GrantEffect;
-  const cost = money(grant.unit_cost, grant.currency).mul(lot.original_quantity.value);
+  const listed = money(grant.unit_cost, grant.currency).mul(lot.original_quantity.value);
+  // A free grant declared as income costs that income (criterion #8), in its currency too.
+  const cost =
+    listed.isZero() && !lot.original_cost_eur.isZero()
+      ? money(
+          lot.original_cost_eur.amount.mul(Decimal.parse(grant.fx_rate)).toString(),
+          grant.currency,
+        )
+      : listed;
   return {
     cost: { ...convertedAs(cost, grant), eur: lot.original_cost_eur },
-    fork: action.kind === "crypto_fork" && cost.isZero(),
+    fork: action.kind === "crypto_fork" && listed.isZero(),
   };
 };
 

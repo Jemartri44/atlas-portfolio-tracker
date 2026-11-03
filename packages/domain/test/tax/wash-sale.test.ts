@@ -55,15 +55,14 @@ describe("the window, counted date to date, at its four edges", () => {
     expect(windowCase("stock_s", "2027-03-31", "2027-06-01")).toBe("0");
   });
 
-  // A year is the default of a fund (criterion #2, `2:fund_1y`).
-  it("one year for a fund, its default, from 29 February: the window ends on 28 February", () => {
-    expect(windowCase("fund_f", "2028-02-29", "2029-02-28")).toBe("-100");
-    expect(windowCase("fund_f", "2028-02-29", "2029-03-01")).toBe("0");
+  it("one year for a fund when configured (`2:fund_1y`), from 29 February: the window ends on 28 February", () => {
+    expect(windowCase("fund_f", "2028-02-29", "2029-02-28", "1y")).toBe("-100");
+    expect(windowCase("fund_f", "2028-02-29", "2029-03-01", "1y")).toBe("0");
   });
 
-  it("two months for a fund when configured (`2:fund_unlisted_2m`): 29 February plus two is 29 April", () => {
-    expect(windowCase("fund_f", "2028-02-29", "2028-04-29", "2m")).toBe("-100");
-    expect(windowCase("fund_f", "2028-02-29", "2028-04-30", "2m")).toBe("0");
+  it("two months for a fund, its default (criterion #2): 29 February plus two is 29 April", () => {
+    expect(windowCase("fund_f", "2028-02-29", "2028-04-29")).toBe("-100");
+    expect(windowCase("fund_f", "2028-02-29", "2028-04-30")).toBe("0");
   });
 });
 
@@ -392,7 +391,7 @@ describe("mandatory edge cases", () => {
    * the window moves.
    */
   it("a fund loss followed by the monthly contribution: the nearest purchases inside the window carry it", () => {
-    const monthly = (window?: "2m") => {
+    const monthly = (window?: "1y") => {
       const b = taxBuilder(
         window === undefined
           ? DEFAULT_SETTINGS
@@ -409,7 +408,7 @@ describe("mandatory edge cases", () => {
       return { line: lineOf(reportOf(b.build(), 2027), loss.id), months };
     };
     // Two months, [01/01/2027, 01/05/2027]: the contribution of 10 May is out.
-    const twoMonths = monthly("2m");
+    const twoMonths = monthly();
     expect(text(twoMonths.line.deferred_eur)).toBe("-160");
     expect(
       twoMonths.line.deferral?.acquisitions.map((a) => [a.event_id, a.units.toString()]),
@@ -418,7 +417,7 @@ describe("mandatory edge cases", () => {
       [twoMonths.months[1]?.id, "40"],
     ]);
     // A year: the three of them, and only 100 of the 120 units are needed.
-    const year = monthly();
+    const year = monthly("1y");
     expect(text(year.line.deferred_eur)).toBe("-200");
     expect(year.line.deferral?.acquisitions.map((a) => [a.event_id, a.units.toString()])).toEqual([
       [year.months[0]?.id, "40"],

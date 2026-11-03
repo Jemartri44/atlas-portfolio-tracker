@@ -133,8 +133,8 @@ describe("wash_sale_window_repurchase: buying back after a loss", () => {
     expect(codes(stockCycle("2027-04-11"), "wash_sale_window_repurchase")).toEqual([]);
   });
 
-  it("warns at eleven months and not at thirteen for a fund (one year, its default)", () => {
-    const fundCycle = (repurchase: string, window?: "2m"): LedgerState => {
+  it("warns at eleven months and not at thirteen for a fund set to a year", () => {
+    const fundCycle = (repurchase: string, window?: "1y"): LedgerState => {
       const b = new LedgerBuilder();
       catalogue(b);
       if (window !== undefined) {
@@ -172,14 +172,14 @@ describe("wash_sale_window_repurchase: buying back after a loss", () => {
       });
       return projectLedger(b.build());
     };
-    // A fund is taxed by value date and its window is **a year** by default
-    // (criterion #2, `2:fund_1y`): eleven months still warn, thirteen do not.
-    expect(codes(fundCycle("2028-01-10"), "wash_sale_window_repurchase")).toHaveLength(1);
-    expect(codes(fundCycle("2028-03-10"), "wash_sale_window_repurchase")).toEqual([]);
-    // With two months written into the ledger (`2:fund_unlisted_2m`), the sale of 10
-    // February warns until 10 April and not on the 11th.
-    expect(codes(fundCycle("2027-04-10", "2m"), "wash_sale_window_repurchase")).toHaveLength(1);
-    expect(codes(fundCycle("2027-04-11", "2m"), "wash_sale_window_repurchase")).toEqual([]);
+    // With a year written into the ledger (`2:fund_1y`), eleven months still
+    // warn and thirteen do not.
+    expect(codes(fundCycle("2028-01-10", "1y"), "wash_sale_window_repurchase")).toHaveLength(1);
+    expect(codes(fundCycle("2028-03-10", "1y"), "wash_sale_window_repurchase")).toEqual([]);
+    // By default two months: the sale of 10 February warns until 10 April and
+    // not on the 11th.
+    expect(codes(fundCycle("2027-04-10"), "wash_sale_window_repurchase")).toHaveLength(1);
+    expect(codes(fundCycle("2027-04-11"), "wash_sale_window_repurchase")).toEqual([]);
   });
 
   it("does not warn when the sale made money", () => {

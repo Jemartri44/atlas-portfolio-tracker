@@ -22,6 +22,7 @@ import { createContext, type HandlerDeps } from "./context.js";
 import { draftRoutes } from "./drafts.js";
 import { type FunctionUrlEvent, type FunctionUrlResult, normalise, type Request } from "./event.js";
 import { exposureRoutes } from "./exposure.js";
+import { jobStatusRoutes } from "./job-status.js";
 import { type LogEntry, logLine } from "./log.js";
 import { fail, type Outcome } from "./outcome.js";
 import { clearSessionCookie, json, noContent } from "./respond.js";
@@ -43,6 +44,10 @@ export const createHandler = (deps: HandlerDeps): Handler => {
   });
   const drafts = draftRoutes({ objects: draftObjects(deps.objects), now: deps.now });
   const exposure = exposureRoutes({ object: exposureObject(deps.objects) });
+  const jobStatus = jobStatusRoutes({
+    objects: deps.objects,
+    activeFamilies: deps.config.activeJobFamilies,
+  });
   const { login, callback } = signInRoutes(ctx);
 
   /** A route of the ledger, the reference data, the drafts or the exposure, once its session is checked. */
@@ -65,6 +70,8 @@ export const createHandler = (deps: HandlerDeps): Handler => {
         return drafts.stamp(params.id as string, body);
       case "/api/drafts/{id}/end":
         return drafts.end(params.id as string, body);
+      case "/api/jobs/status":
+        return jobStatus.read();
       case "/api/exposure":
         return request.method === "GET"
           ? exposure.read()
@@ -172,6 +179,7 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       case "/api/drafts":
       case "/api/drafts/{id}/stamp":
       case "/api/drafts/{id}/end":
+      case "/api/jobs/status":
       case "/api/exposure": {
         const session = await checkedSession(admission);
         if ("code" in session) {
