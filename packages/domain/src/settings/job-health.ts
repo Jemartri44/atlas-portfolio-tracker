@@ -13,6 +13,10 @@
 // for, so the last run of the others says nothing: a daily task always ran
 // yesterday. When nothing has ever run, all of them are late.
 //
+// A run left open from an earlier day is late too, whatever the margin: it died
+// halfway, closed nothing and sent no mail. A run that closed as failed has a
+// mail of its own, so it is judged by its date like any other.
+//
 // `reconciliation`, reserved in `job_frequencies`, is no task of the catalogue,
 // so it is never here. The API says only the tasks active in its environment.
 //
@@ -32,6 +36,8 @@ const LONGEST_PERIOD_DAYS: Readonly<Record<JobFrequency, number>> = {
 };
 
 const MARGIN_DAYS = 2;
+
+const OPEN_STATES: readonly string[] = ["claimed", "sending"];
 
 /** How many days a task of this frequency may go without running. */
 export const allowedDays = (frequency: JobFrequency): number =>
@@ -157,7 +163,7 @@ export const jobHealth = (
       last: { day, state: run.state },
       unreadable,
       days: since,
-      late: since > allowedDays(frequency),
+      late: since > allowedDays(frequency) || (since > 0 && OPEN_STATES.includes(run.state)),
     };
   });
 };

@@ -25,7 +25,7 @@
 
 ## Una tarea no arranca
 
-No llega ningún correo, porque el que falla es el que avisa: lo dice **Resumen**, con un aviso de tareas con retraso, y **Ajustes › Tareas automáticas** dice cuál y cuándo corrió por última vez. El margen sale de su frecuencia: 3 días una diaria, 9 una semanal, 33 una mensual, 94 una trimestral y 368 una anual. Mira su programación en EventBridge Scheduler y los registros de la función; si la tarea corrió pero falló, llega su correo aparte.
+No llega ningún correo, porque el que falla es el que avisa: lo dice **Resumen**, con un aviso de tareas con retraso, y **Ajustes › Tareas automáticas** dice cuál y cuándo corrió por última vez. El margen sale de su frecuencia: 3 días una diaria, 9 una semanal, 33 una mensual, 94 una trimestral y 368 una anual. Una ejecución que quedó a medias (`claimed` o `sending`) de un día anterior también va con retraso, sin esperar al margen. Mira su programación en EventBridge Scheduler y los registros de la función; si la tarea corrió pero falló, llega su correo aparte. Si Resumen dice que no se ha podido comprobar, el que falla es `GET /api/jobs/status`: mira los registros de la API y el permiso sobre `jobs/*`.
 
 ## Recordatorio mensual
 

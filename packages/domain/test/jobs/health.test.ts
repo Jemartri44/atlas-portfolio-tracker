@@ -58,6 +58,21 @@ describe("the health of the tasks", () => {
     });
   });
 
+  it.each(["claimed", "sending"])("says late a run left %s from an earlier day", (state) => {
+    const runs = [
+      { ...entry("ecb_update"), period: "2026-10-29", state, at: "2026-10-29T09:00:00Z" },
+    ];
+    expect(health(runs, "2026-10-29")[0]).toMatchObject({ days: 0, late: false });
+    expect(health(runs, "2026-10-30")[0]).toMatchObject({ days: 1, late: true });
+  });
+
+  it("judges a failed run by its date: it has a mail of its own", () => {
+    const runs = [
+      { ...entry("ecb_update"), period: "2026-10-29", state: "failed", at: "2026-10-29T09:00:00Z" },
+    ];
+    expect(health(runs, "2026-10-30")[0]).toMatchObject({ days: 1, late: false });
+  });
+
   it("says late a monthly task that never started, however fresh the daily ones are", () => {
     const rows = health(
       [ran("ecb_update", "2026-11-19T16:15:00Z"), entry("monthly_reminder")],
