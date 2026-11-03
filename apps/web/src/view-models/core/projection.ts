@@ -6,9 +6,8 @@ import type {
   ProjectionAssumptions,
   Projection as ProjectionResult,
 } from "@atlas/domain/portfolio";
-import { parseIntegerInput } from "../../format/input.js";
 import { valueLabel } from "../../format/labels.js";
-import { DEFAULT_YEARS, decimalOf, GAPS, missingSentence } from "./long-run.js";
+import { DEFAULT_YEARS, decimalOf, GAPS, missingPhrase, yearsOf } from "./long-run.js";
 
 export const MAX_SCENARIOS = 3;
 
@@ -41,7 +40,7 @@ export interface ReadProjection {
 /** What the owner typed, as assumptions, or the sentence of each field that does not read. */
 export const readProjection = (inputs: ProjectionInputs): ReadProjection => {
   const errors: ReadProjection = { returns: {} };
-  const years = parseIntegerInput(inputs.years);
+  const years = yearsOf(inputs.years);
   if (!years.ok) {
     errors.years = years.message;
   }
@@ -83,7 +82,7 @@ export const readProjection = (inputs: ProjectionInputs): ReadProjection => {
     : {
         ...errors,
         assumptions: {
-          years: Number(years.value),
+          years: years.value,
           scenarios,
           ...(goal === undefined ? {} : { goalEur: goal }),
         },
@@ -102,46 +101,63 @@ export interface ScenarioView {
 }
 
 export interface ProjectionView {
+  /** Why there is no projection at all, when there is none: everything that is missing. */
   gap?: string;
-  missing?: string;
   start?: Money;
   monthly?: Money;
   years: number;
   scenarios: ScenarioView[];
 }
 
-export const projectionView = (result: ProjectionResult, hasGoal: boolean): ProjectionView => ({
-  years: result.years,
-  ...(result.gap === undefined ? {} : { gap: GAPS[result.gap] ?? result.gap }),
-  ...(missingSentence(result.missing) === undefined
-    ? {}
-    : { missing: missingSentence(result.missing) as string }),
-  ...(result.start_eur === undefined ? {} : { start: result.start_eur }),
-  monthly: result.monthly_core_eur,
-  scenarios: result.scenarios.map((scenario) => {
-    const last = scenario.points?.at(-1);
-    return {
-      name: scenario.name,
-      missingReturns: scenario.missing_returns.map((assetClass) => valueLabel(assetClass)),
-      ...(scenario.blended_return_pct === undefined
-        ? {}
-        : { blendedPct: scenario.blended_return_pct.toString() }),
-      ...(last === undefined
-        ? {}
-        : {
-            end: last.value_eur,
-            contributed: last.contributed_eur,
-          }),
-      ...(hasGoal && scenario.points !== undefined
-        ? {
-            goal:
-              scenario.goal_month === undefined
-                ? ("never" as const)
-                : scenario.goal_month === 0
-                  ? ("now" as const)
-                  : scenario.goal_month,
-          }
-        : {}),
-    };
-  }),
-});
+/** The reasons the domain gives for not projecting, with what each one lacks. */
+const gapOf = (result: ProjectionResult): string | undefined => {
+  const reasons = [
+    ...(result.gap === undefined || result.gap === "missing_settings"
+      ? []
+      : [
+          result.gap === "targets_not_100"
+            ? `los pesos objetivo suman ${result.target_total_pct.toString().replace(".", ",")} y tienen que sumar 100`
+            : (GAPS[result.gap] ?? result.gap),
+        ]),
+    ...(missingPhrase(result.missing) === undefined
+      ? []
+      : [missingPhrase(result.missing) as string]),
+  ];
+  return reasons.length === 0 ? undefined : reasons.join("; ");
+};
+
+export const projectionView = (result: ProjectionResult, hasGoal: boolean): ProjectionView => {
+  const gap = gapOf(result);
+  return {
+    years: result.years,
+    ...(gap === undefined ? {} : { gap }),
+    ...(result.start_eur === undefined ? {} : { start: result.start_eur }),
+    monthly: result.monthly_core_eur,
+    scenarios: result.scenarios.map((scenario) => {
+      const last = scenario.points?.at(-1);
+      return {
+        name: scenario.name,
+        missingReturns: scenario.missing_returns.map((assetClass) => valueLabel(assetClass)),
+        ...(scenario.blended_return_pct === undefined
+          ? {}
+          : { blendedPct: scenario.blended_return_pct.toString() }),
+        ...(last === undefined
+          ? {}
+          : {
+              end: last.value_eur,
+              contributed: last.contributed_eur,
+            }),
+        ...(hasGoal && scenario.points !== undefined
+          ? {
+              goal:
+                scenario.goal_month === undefined
+                  ? ("never" as const)
+                  : scenario.goal_month === 0
+                    ? ("now" as const)
+                    : scenario.goal_month,
+            }
+          : {}),
+      };
+    }),
+  };
+};

@@ -125,4 +125,32 @@ describe("the projection", () => {
     await settle(30);
     expect(text(host.querySelector(".projection-card"))).toMatch(/entero|número|válid/i);
   });
+  it("masks the amounts with the privacy mode on and leaves the blended return in sight", async () => {
+    setPrivacy(true);
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => host.querySelector("#pj-years") !== null, "the card");
+    for (const input of host.querySelectorAll("input[id^='pj-0-']")) {
+      type(host, input.id, "5");
+    }
+    await settle(30);
+    const card = text(host.querySelector(".projection-card"));
+    expect(card).toContain("Dentro de 20 años");
+    expect(card).toContain("Rentabilidad mezclada con tus pesos objetivo");
+    expect(card).not.toMatch(/\d,\d{2}\s*€/);
+    setPrivacy(false);
+  });
+
+  it("says a goal that is not above zero, and removes a scenario", async () => {
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => host.querySelector("#pj-years") !== null, "the card");
+    type(host, "pj-goal", "0");
+    await settle(30);
+    expect(text(host.querySelector(".projection-card"))).toContain(
+      "El objetivo tiene que ser mayor que cero.",
+    );
+    await press(host, "Añadir un escenario");
+    expect(host.querySelectorAll("[id^='pj-name-']").length).toBe(2);
+    await press(host, "Quitar este escenario");
+    expect(host.querySelectorAll("[id^='pj-name-']").length).toBe(1);
+  });
 });

@@ -85,11 +85,9 @@ export const ProjectionCard = (props: {
           kind="decimal"
           label="Objetivo (opcional)"
           unit="€"
-          sensitive
           hint="Dice en qué mes se alcanza."
           value={inputs().goal}
           error={read().goal}
-          revealed
           onInput={(goal) => patch({ goal })}
         />
       </div>
@@ -159,13 +157,6 @@ export const ProjectionCard = (props: {
               </Notice>
             }
           >
-            <Show when={shown().missing}>
-              {(missing) => (
-                <Notice severity="info" title="Sin cifra">
-                  {missing()}
-                </Notice>
-              )}
-            </Show>
             <StatLine label="Hoy">
               <Amount value={shown().start} missingReason="sin dato" />
             </StatLine>
