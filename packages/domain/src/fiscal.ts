@@ -79,6 +79,12 @@ export {
 export { taxBoxesJson, taxReportJson } from "./tax/json.js";
 export type * from "./tax/report.js";
 export {
+  type BlockingSale,
+  type RepurchaseBlock,
+  type RepurchaseCalendar,
+  repurchaseCalendar,
+} from "./tax/repurchase-calendar.js";
+export {
   FIRST_SUPPORTED_YEAR,
   type MovedTaxYear,
   movedTaxYears,
