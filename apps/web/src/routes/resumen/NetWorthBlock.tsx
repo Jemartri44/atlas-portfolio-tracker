@@ -13,7 +13,7 @@ import type { CoreReturn, CoreReturnGap } from "@atlas/domain/charts";
 import { For, type JSX, Show } from "solid-js";
 import { LineKey } from "../../components/chart/ChartLegend.jsx";
 import { Sparkline } from "../../components/chart/Sparkline.jsx";
-import { Amount, Disclosure, Figure, Pending, Tag } from "../../components/index.js";
+import { Amount, Disclosure, Figure, Pending, ShareBar, Tag } from "../../components/index.js";
 import type { NetWorthBlock as Block, BlockKey, NetWorthView } from "../../view-models/index.js";
 
 /** The same line keys as the evolution chart: colour and dash. */
@@ -52,34 +52,13 @@ const widthOf = (share: string | undefined): number => {
  * Only when every share is a share: a negative balance would draw a bar that
  * lies, and the percentages beside each book already say it.
  */
-const Shares = (props: { blocks: readonly Block[] }): JSX.Element => {
-  const boxes = () => {
-    let cursor = 0;
-    return props.blocks.map((block) => {
-      const width = widthOf(block.share);
-      const box = { key: block.key, x: cursor, width };
-      cursor += width;
-      return box;
-    });
-  };
-  return (
-    <Show when={props.blocks.every((block) => widthOf(block.share) >= 0)}>
-      <svg class="shares" aria-hidden="true">
-        <For each={boxes()}>
-          {(box) => (
-            <rect
-              x={`${box.x}%`}
-              y="0"
-              width={`${box.width}%`}
-              height="100%"
-              class={`share-seg is-${box.key}`}
-            />
-          )}
-        </For>
-      </svg>
-    </Show>
-  );
-};
+const Shares = (props: { blocks: readonly Block[] }): JSX.Element => (
+  <Show when={props.blocks.every((block) => widthOf(block.share) >= 0)}>
+    <ShareBar
+      segments={props.blocks.map((block) => ({ key: block.key, width: widthOf(block.share) }))}
+    />
+  </Show>
+);
 
 /** «este mes +2,1 %», or why there is no figure: never a made-up one. */
 const Return = (props: { label: string; value: CoreReturn | undefined; period: string }) => (

@@ -143,6 +143,7 @@ describe("exposure", () => {
       expect(result.currency.assets.find((a) => a.asset_id === "ast_world")).toEqual({
         asset_id: "ast_world",
         state: "owner",
+        split: { JPY: "100" },
       });
       expect(result.region.assets.find((a) => a.asset_id === "ast_world")?.state).toBe("default");
       expect(result.currency.defaulted).not.toContain("ast_world");
@@ -174,6 +175,7 @@ describe("exposure", () => {
       expect(own.find((a) => a.asset_id === "ast_bonds")).toEqual({
         asset_id: "ast_bonds",
         state: "owner",
+        split: { EUR: "100" },
         lost_index: "gone",
       });
     });

@@ -1,0 +1,102 @@
+/*
+ * The bar of proportion (components/ShareBar.tsx): parts of one whole on a single bar, cut apart by
+ * the colour of the surface, with the figure always written beside it (docs/design/system.md §5.2).
+ * The colours are the series of tokens.css, which pass the contrast test; the thin variant is the
+ * line of a row.
+ */
+.shares {
+  clip-path: inset(0 round var(--radius-sm));
+  display: block;
+  height: var(--bar-h);
+  margin-bottom: var(--space-4);
+  width: 100%;
+}
+
+.share-seg {
+  stroke: var(--c-surface);
+  stroke-width: 3;
+}
+
+.share-seg.is-core {
+  fill: var(--c-series-core);
+}
+
+.share-seg.is-bucket {
+  fill: var(--c-series-bucket);
+}
+
+.share-seg.is-cash {
+  fill: var(--c-series-cash);
+}
+
+/* The parts of the exposure, in order of weight; what does not fit in four goes to «rest». The bar and
+   the swatch of its legend read the same colour. */
+.is-a {
+  --part: var(--c-series-core);
+}
+
+.is-b {
+  --part: var(--c-series-bucket);
+}
+
+.is-c {
+  --part: var(--c-series-cash);
+}
+
+.is-d {
+  --part: var(--c-series-contrib);
+}
+
+.is-rest {
+  --part: var(--c-border);
+}
+
+.share-seg.is-a,
+.share-seg.is-b,
+.share-seg.is-c,
+.share-seg.is-d,
+.share-seg.is-rest {
+  fill: var(--part);
+}
+
+/* A row's own bar: 6 px, a pill. */
+.shares.is-thin {
+  clip-path: inset(0 round var(--radius-pill));
+  height: 0.375rem;
+  margin-bottom: var(--space-2);
+}
+
+.shares.is-thin .share-seg {
+  stroke-width: 2;
+}
+
+/* Names and figures of the parts, under the bar. The swatch is a short bar, like the legend of a chart. */
+.share-legend {
+  color: var(--c-text-2);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  gap: var(--space-1) var(--space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.share-legend > li {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+.share-legend .swatch {
+  background: var(--part);
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  height: var(--swatch-h);
+  width: var(--swatch-w);
+}
+
+.share-legend .figure {
+  color: var(--c-text);
+  font-variant-numeric: tabular-nums;
+}

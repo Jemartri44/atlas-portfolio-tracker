@@ -51,6 +51,7 @@ export {
   type ExposureState,
   type Exposures,
   exposure,
+  resolveAsset,
   type Split,
 } from "./projections/exposure.js";
 export {

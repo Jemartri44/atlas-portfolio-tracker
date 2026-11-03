@@ -58,6 +58,8 @@ export interface ExposureAsset {
   asset_id: AssetId;
   state: ExposureState;
   index?: ExposureIndex;
+  /** The split in force in this dimension: the owner's own, or the default of the index. */
+  split?: Split;
   /** The index the owner chose, which is no longer in the tables: no proposal, and the screen says so. */
   lost_index?: string;
 }
@@ -106,6 +108,48 @@ const indexOf = (
   return profile === undefined ? undefined : { profile, proposed: chosen === undefined };
 };
 
+/**
+ * What one asset has in one dimension, with no value involved: where its split comes from, the
+ * split itself, and the index it comes from. Also for an asset the core does not hold yet, so the
+ * owner can look at it and choose before buying.
+ */
+export const resolveAsset = (
+  assetId: AssetId,
+  assetClass: AssetClass,
+  exposures: Exposures,
+  catalogue: ExposureCatalogue,
+  tables: IndexTables,
+  dimension: "currency" | "region",
+): ExposureAsset => {
+  const own = exposures[assetId]?.[dimension];
+  const found = indexOf(assetId, assetClass, exposures, catalogue, tables);
+  const chosen = exposures[assetId]?.index;
+  const lost =
+    chosen !== undefined && tables.profiles[chosen] === undefined ? { lost_index: chosen } : {};
+  const split = own ?? found?.profile[dimension];
+  if (split === undefined) {
+    return { asset_id: assetId, state: "none", ...lost };
+  }
+  const profile = found?.profile;
+  return {
+    asset_id: assetId,
+    state: own === undefined ? "default" : "owner",
+    split,
+    ...lost,
+    ...(own !== undefined || profile === undefined || found === undefined
+      ? {}
+      : {
+          index: {
+            key: profile.key,
+            name: profile.name,
+            ...(profile.as_of === undefined ? {} : { as_of: profile.as_of }),
+            ...(profile.via === undefined ? {} : { via: profile.via.name }),
+            proposed: found.proposed,
+          },
+        }),
+  };
+};
+
 const dimensionOf = (
   weights: CoreWeights,
   exposures: Exposures,
@@ -123,38 +167,23 @@ const dimensionOf = (
     if (!value.amount.isPositive()) {
       continue;
     }
-    const own = exposures[row.asset_id]?.[dimension];
-    const found = indexOf(row.asset_id, row.asset_class, exposures, catalogue, tables);
-    const chosen = exposures[row.asset_id]?.index;
-    const lost =
-      chosen !== undefined && tables.profiles[chosen] === undefined ? { lost_index: chosen } : {};
-    const split = own ?? found?.profile[dimension];
-    if (split === undefined) {
+    const resolved = resolveAsset(
+      row.asset_id,
+      row.asset_class,
+      exposures,
+      catalogue,
+      tables,
+      dimension,
+    );
+    assets.push(resolved);
+    if (resolved.split === undefined) {
       missing.push(row.asset_id);
-      assets.push({ asset_id: row.asset_id, state: "none", ...lost });
       continue;
     }
-    if (own === undefined) {
+    if (resolved.state === "default") {
       defaulted.push(row.asset_id);
     }
-    const profile = found?.profile;
-    assets.push({
-      asset_id: row.asset_id,
-      state: own === undefined ? "default" : "owner",
-      ...lost,
-      ...(own !== undefined || profile === undefined || found === undefined
-        ? {}
-        : {
-            index: {
-              key: profile.key,
-              name: profile.name,
-              ...(profile.as_of === undefined ? {} : { as_of: profile.as_of }),
-              ...(profile.via === undefined ? {} : { via: profile.via.name }),
-              proposed: found.proposed,
-            },
-          }),
-    });
-    for (const [key, pct] of Object.entries(split)) {
+    for (const [key, pct] of Object.entries(resolved.split)) {
       sums.set(
         key,
         (sums.get(key) ?? Money.zero(EUR)).add(value.mul(Decimal.parse(pct)).div(HUNDRED)),
