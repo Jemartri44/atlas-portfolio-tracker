@@ -355,6 +355,13 @@ describe.each(ENVS)("the parameters, logs and function of %s", (env) => {
     expect(parsed.env).toBe(env);
     expect(parsed.dataBucket).toBe(`atlas-${env}-data-${SUFFIX}`);
     expect(parsed.origin).toBe("https://atlas.example.invalid");
+    // The session length is one figure: the default of the code and what Terraform sets.
+    const defaults = parseApiConfig({
+      ATLAS_ENV: env,
+      ATLAS_ORIGIN: parsed.origin,
+      ATLAS_DATA_BUCKET: parsed.dataBucket,
+    });
+    expect(parsed.sessionTtlSeconds).toBe(defaults.sessionTtlSeconds);
     expect(
       Object.keys(variables).filter(
         (k) => /KEY|SECRET|PASSWORD/.test(k) && !k.endsWith("_SECONDS"),
