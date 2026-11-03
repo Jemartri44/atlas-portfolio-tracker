@@ -48,6 +48,28 @@ describe("fxRates: the last ECB rate the ledger knows per currency", () => {
    * event is therefore built by hand, which is the only way such a line can
    * exist now.
    */
+
+  it("does not let an event recorded later with an older rate displace the newer one", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    for (const [rate, day] of [
+      ["1.0900", "2027-06-04"],
+      ["1.0800", "2027-05-04"],
+    ] as const) {
+      b.buy({
+        account_id: "acc_etf",
+        asset_id: "ast_gold",
+        quantity: "1",
+        currency: "USD",
+        fx_rate: rate,
+        fx_rate_date: day,
+        trade_date: day,
+        value_date: day,
+      });
+    }
+    expect(project(b).fxRates.get("USD")?.date).toBe("2027-06-04");
+  });
+
   it("falls back to the business date on a line written before ADR-0021", () => {
     const b = new LedgerBuilder();
     catalogue(b);

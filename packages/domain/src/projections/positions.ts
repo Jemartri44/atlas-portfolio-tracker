@@ -4,7 +4,7 @@
 import { ProjectionError } from "../errors.js";
 import { Quantity } from "../money/quantity.js";
 import type { AccountId, AssetId } from "../schema/events.js";
-import { type LedgerState, positionKey } from "./state.js";
+import { type LedgerState, positionKey, splitPositionKey } from "./state.js";
 
 export interface PhysicalPosition {
   account_id: AccountId;
@@ -39,7 +39,7 @@ export const adjustPosition = (
 export const accountsHolding = (state: LedgerState, assetId: AssetId): AccountId[] => {
   const holders: AccountId[] = [];
   for (const [key, quantity] of state.positions) {
-    const [accountId, keyAsset] = key.split("|") as [AccountId, AssetId];
+    const [accountId, keyAsset] = splitPositionKey(key);
     if (keyAsset === assetId && quantity.isPositive()) {
       holders.push(accountId);
     }
@@ -51,7 +51,7 @@ export const physicalPositions = (state: LedgerState): PhysicalPosition[] => {
   const result: PhysicalPosition[] = [];
   for (const [key, quantity] of state.positions) {
     if (!quantity.isZero()) {
-      const [account_id, asset_id] = key.split("|") as [AccountId, AssetId];
+      const [account_id, asset_id] = splitPositionKey(key);
       result.push({ account_id, asset_id, quantity });
     }
   }
