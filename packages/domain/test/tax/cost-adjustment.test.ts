@@ -203,6 +203,48 @@ describe("a return of share premium or contributions (H2)", () => {
   });
 });
 
+describe("a spin-off with fractions sold and cash (art. 81.2 LIS)", () => {
+  // 10 S for 1,000 €; a spin-off hands over 3.5 T carrying 40 % of the cost
+  // (400). 0.5 T are sold at 200 € and 30 € compensate: 400 − 30 = 370 for
+  // 3.5 T, the fraction costs 370 / 7 = 52.86 and gains 47.14; 317.14 left.
+  const carve = {
+    op: "carve_out" as const,
+    to_asset_id: "stock_t",
+    ratio: "0.35",
+    cost_share: "0.4",
+  };
+  const sold = {
+    op: "forced_sale" as const,
+    asset_id: "stock_t",
+    per_account: [{ account_id: "acc_a", quantity: "0.5" }],
+    unit_price: "200",
+    currency: "EUR",
+    fx_rate: "1",
+    fx_rate_date: "2027-02-26",
+  };
+  const compensation = cash("30", "acc_a", "EUR", "1", "stock_t");
+
+  it.each([
+    ["the fractions first", [carve, sold, compensation]],
+    ["the cash first", [carve, compensation, sold]],
+  ] as const)("gives the same figures with %s", (_name, effects) => {
+    const b = taxBuilder(HAND_SETTINGS);
+    buy(b, "stock_s", "2027-01-11", "10", "100");
+    b.corporateAction({
+      kind: "spin_off",
+      asset_id: "stock_s",
+      effective_date: "2027-03-01",
+      neutrality_regime: true,
+      effects: [...effects],
+    });
+    const events = b.build();
+    const [line] = reportOf(events, 2027).capital_gains.lines;
+    expect(line?.computable_eur_rounded.centsText()).toBe("47.14");
+    const open = projectLedger(events).lots.get("stock_t")?.open ?? [];
+    expect(open.map((lot) => lot.cost_eur.roundToCents().centsText())).toEqual(["317.14"]);
+  });
+});
+
 describe("cash in a foreign currency (criterion #4, first in the currency)", () => {
   // 10 S at 100 USD at 1 USD/EUR: 1,000 USD, 1,000 €. A return of 100 USD at
   // 2 USD/EUR (50 €). The lot keeps 900 USD and 950 €. Sold in 2028 at 100 USD

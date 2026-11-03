@@ -56,6 +56,8 @@ export const KIND_RULES: Record<CorporateActionKind, KindRule> = {
       [onEvent("carve_out")],
       [onEvent("carve_out"), onPrevious("forced_sale")],
       [onEvent("carve_out"), onPrevious("cost_adjustment")],
+      [onEvent("carve_out"), onPrevious("forced_sale"), onPrevious("cost_adjustment")],
+      [onEvent("carve_out"), onPrevious("cost_adjustment"), onPrevious("forced_sale")],
     ],
   },
   fund_merger: { sequences: [[onEvent("convert")]] },
