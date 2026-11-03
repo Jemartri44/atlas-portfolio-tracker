@@ -210,7 +210,7 @@ describe("FileEcbHistoryStore", () => {
     const kept = await store.keepRejected(
       downloaded(Buffer.from("otro"), "zip", "2026-09-25T10:00:00.000Z"),
     );
-    expect(kept.file).toBe("rejected/2026-09-25T10-00-00-000Z-eurofxref-hist.csv");
+    expect(kept.file).toBe("rejected/eurofxref-hist.csv");
     expect((await store.active())?.text).toBe(content.toString("utf8"));
     expect((await store.manifest())?.rejected).toHaveLength(1);
   });

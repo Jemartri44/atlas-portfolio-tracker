@@ -141,7 +141,7 @@ describe("reference/ecb/ in the bucket (R31)", () => {
     const old = await load();
     await store.activate(download(old));
     const meta = await store.keepRejected(download(new TextEncoder().encode("bad"), "api"));
-    expect(meta.file).toBe("rejected/2026-10-01T15-30-00-000Z-api-exr.csv");
+    expect(meta.file).toBe("rejected/api-exr.csv");
     expect(s3.text(`reference/ecb/${meta.file}`)).toBe("bad");
     expect((await store.active())?.meta.sha256).toBe(sha(old));
     expect(JSON.parse(s3.text("reference/ecb/manifest.json") as string).rejected).toHaveLength(1);
