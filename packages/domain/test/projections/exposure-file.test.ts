@@ -26,6 +26,8 @@ describe("validateExposure", () => {
     expect(validateExposure(assets(good2))).toEqual(good2);
     expect(validateExposure(assets({}))).toEqual({});
     expect(validateExposure(assets({ a: {} }))).toEqual({ a: {} });
+    // The ledger puts no shape on an id: spaces, slashes and accents are fine.
+    expect(validateExposure(assets({ "Fondo A/B ñ": {} }))).toEqual({ "Fondo A/B ñ": {} });
   });
 
   it("says how much a split adds up to, in which asset and dimension", () => {
@@ -45,7 +47,9 @@ describe("validateExposure", () => {
     ["a document that is not an object", [], "format"],
     ["assets that is not an object", { exposure_format: 1, assets: [] }, "format"],
     ["an extra top-level key", { exposure_format: 1, assets: {}, notes: "x" }, "top_level_key"],
-    ["an asset id of the wrong shape", assets({ "a b": {} }), "asset_id"],
+    ["an asset id with a control character", assets({ "a\nb": {} }), "asset_id"],
+    ["an empty asset id", assets({ "": {} }), "asset_id"],
+    ["an asset id too long", assets({ [`a${"b".repeat(128)}`]: {} }), "asset_id"],
     [
       "__proto__ as an asset id",
       JSON.parse('{"exposure_format":1,"assets":{"__proto__":{}}}'),

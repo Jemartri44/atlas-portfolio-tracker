@@ -22,7 +22,11 @@ export const MAX_EXPOSURE_ASSETS = 200;
 const TOP_LEVEL = ["exposure_format", "assets"];
 const DIMENSIONS = ["currency", "region"] as const;
 // The shape of the ids the rest of the bucket already names objects with; `__proto__` cannot match.
-const ASSET_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+// The ledger puts no shape on an `asset_id` (any string), so neither does this: 1 to 128 characters
+// with no control character, and none of the names an object would inherit.
+// biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what it refuses
+const ASSET_ID = /^[^\u0000-\u001f\u007f]{1,128}$/u;
+const INHERITED = new Set(["__proto__", "constructor", "prototype"]);
 const CURRENCY_KEY = /^[A-Z]{3}$/;
 const REGION_KEY = /^[a-z][a-z0-9_]{0,39}$/;
 const PERCENT = /^-?\d{1,12}(\.\d{1,12})?$/;
@@ -97,7 +101,7 @@ export const validateExposure = (document: unknown): Exposures => {
   }
   const exposures: Record<string, { currency?: Split; region?: Split }> = {};
   for (const [assetId, declared] of assets) {
-    if (!ASSET_ID.test(assetId)) {
+    if (!ASSET_ID.test(assetId) || INHERITED.has(assetId)) {
       refuse("asset_id");
     }
     if (!isRecord(declared)) {
