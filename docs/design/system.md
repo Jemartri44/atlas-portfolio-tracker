@@ -376,8 +376,8 @@ Dirección A «Cuaderno vivo», elegida por el dueño el 2026-11-03 sobre la aud
 | D14 | Inter y Fraunces 600 alojadas; serifa en el título y la cifra protagonista | Recorte latino, OFL, sin nada de fuera |
 | D15 | Avisos con placa, botones y pestañas en píldora, hoja cálida | Los tokens de color, casi sin tocar |
 | D16 | La Declaración, destino de la barra en escritorio | Pieza tomada de la dirección B; en el móvil sigue desde su tarjeta |
-| D18 | Atajos: «Buscar o registrar» con `/`, C, V y P en el ordenador y accesos del icono instalado | Decidido por el dueño el 2026-11-03 sobre el informe visual §4 |
 | D17 | Resumen: baldosas con minigráfica, evolución en áreas apiladas, «Este mes» y reparto en barras de bala | Las baldosas, de B; la variación de la cartera y el plan del mes, del dominio (`docs/business-rules.md`) |
+| D18 | Atajos: «Buscar o registrar» con `/`, C, V y P en el ordenador y accesos del icono instalado | Decidido por el dueño el 2026-11-03 sobre el informe visual §4 |
 
 ---
 
