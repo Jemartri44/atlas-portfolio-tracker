@@ -9,6 +9,7 @@ import type { Ulid } from "../ids/ulid.js";
 import type { AccountId, AssetId, CorporateActionEvent } from "../schema/events.js";
 import { requireAsset } from "./catalogue.js";
 import type { CurrencyLots } from "./currency-lots.js";
+import { deniesRegimeKeepingCost, exchangeNotices } from "./exchange-notices.js";
 import {
   checkCostAdjustmentRegime,
   checkEffectsAgainstKind,
@@ -279,6 +280,26 @@ const restore = (state: LedgerState, saved: Snapshot): void => {
   state.currencyJournal.length = saved.currencyJournal;
 };
 
+/** Refused on entry through `RECORD_ONLY_BLOCKS`; a ledger that already holds it still opens. */
+const warnExchange = (state: LedgerState, event: CorporateActionEvent): void => {
+  if (deniesRegimeKeepingCost(event)) {
+    state.warnings.push({
+      code: "neutrality_denied_keeps_cost",
+      event_id: event.id,
+      message: "without the neutrality regime nothing keeps date and cost",
+      details: { kind: event.kind },
+    });
+  }
+  for (const notice of exchangeNotices(state.assets, event)) {
+    state.warnings.push({
+      code: notice.code,
+      event_id: event.id,
+      message: "the operation keeps date and cost on a requisite Atlas cannot check",
+      details: notice.details,
+    });
+  }
+};
+
 export const applyCorporateAction = (
   state: LedgerState,
   event: CorporateActionEvent,
@@ -305,6 +326,7 @@ export const applyCorporateAction = (
   const touched = [...new Set(effects.flatMap((effect) => [effect.asset_id, targetOf(effect)]))];
   const saved = snapshot(state, touched);
   warnUncoveredHolders(state, event, effects);
+  warnExchange(state, event);
   try {
     for (const effect of costAdjustmentsFirst(effects)) {
       applyEffect(state, effect, ctx);

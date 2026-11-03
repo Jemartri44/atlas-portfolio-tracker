@@ -92,6 +92,9 @@ export interface ListingFacts {
   isin?: string;
 }
 
+/** Whether an ISO 3166-1 alpha-2 code is a member state of the EU. */
+export const isEuCountry = (country: string): boolean => EU_COUNTRIES.includes(country);
+
 /**
  * `true` when the share is taken as admitted on an EU regulated market,
  * `false` when its market is outside the EU, `undefined` when Atlas cannot
