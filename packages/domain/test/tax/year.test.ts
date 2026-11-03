@@ -298,7 +298,7 @@ const report13 = (events: Parameters<typeof reportOf>[0]) =>
   reportOf(events, 2027).doubtful.filter((d) => d.criterion === "13");
 
 describe("income in kind and exchanges without regime", () => {
-  it("records a fork's income without integrating it (#8), and tags the sale of its lots", () => {
+  it("shows a fork's income apart, takes it as the cost (#8), and tags the sale of its lots", () => {
     const b = taxBuilder();
     buy(b, "coin_c", "2027-01-11", "1", "1000");
     const fork = b.corporateAction({
@@ -333,7 +333,8 @@ describe("income in kind and exchanges without regime", () => {
     });
     expect(lineOf(report, sale.id).criteria).toContain("8");
     expect(text(report.doubtful.find((d) => d.criterion === "8")?.exposure_eur)).toBe("50");
-    expect(text(report.base_eur)).toBe("80");
+    // Sold for 80, with the 50 of income as its cost: 30, and the 50 go to the general base.
+    expect(text(report.base_eur)).toBe("30");
     // Income of 2027 belongs to 2027: the next year does not list it again.
     const next = reportOf(b.build(), 2028);
     expect(next.in_kind).toEqual([]);
@@ -392,6 +393,42 @@ describe("income in kind and exchanges without regime", () => {
     // 2 × 70 − 2 × 100 = −60: 60 at stake, never −60.
     const items = report13(b.build());
     expect(items.map((d) => [d.measure, text(d.exposure_eur)])).toEqual([["exposure", "60"]]);
+  });
+
+  it("asks for the value of a free crypto grant that states none", () => {
+    const b = taxBuilder();
+    buy(b, "coin_c", "2027-01-11", "10", "100");
+    const fork = b.corporateAction({
+      kind: "crypto_fork",
+      asset_id: "coin_c",
+      effective_date: "2027-03-01",
+      effects: [
+        {
+          op: "grant",
+          asset_id: "coin_d",
+          per_account: [{ account_id: "acc_a", quantity: "10" }],
+          unit_cost: "0",
+          currency: "EUR",
+          fx_rate: "1",
+          fx_rate_date: "2027-03-01",
+          acquisition_date: "2027-03-01",
+        },
+      ],
+    });
+    const report = reportOf(b.build(), 2027);
+    expect(report.notes.find((n) => n.code === "tax_in_kind_income_missing")?.event_id).toBe(
+      fork.id,
+    );
+  });
+
+  it("a staking reward written as interest and a buy is savings income with its cost", () => {
+    const b = taxBuilder();
+    b.interest({ account_id: "acc_a", value_date: "2027-03-01", gross: "200" });
+    buy(b, "coin_c", "2027-03-01", "2", "100");
+    const sale = sell(b, "coin_c", "2027-06-01", "2", "150");
+    const report = reportOf(b.build(), 2027);
+    expect(text(lineOf(report, sale.id).own_eur)).toBe("100");
+    expect(text(report.base_eur)).toBe("300");
   });
 
   it("warns when the event says there is no regime and still keeps date and cost", () => {

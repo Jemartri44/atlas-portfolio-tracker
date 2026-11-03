@@ -396,7 +396,7 @@ Transformaciones que la app debe soportar sin migración de esquema. Se implemen
 | **Cierre / liquidación de fondo** (`fund_liquidation`) | Reembolso forzoso. **Sí es hecho imponible.** |
 | **Cambio de ISIN o ticker** (`identifier_change`) | Solo metadatos, pero rompe las fuentes de precios. |
 | **Exclusión de cotización** (`delisting`) | Posición sin precio. Requiere marcado manual. |
-| **Fork de cripto** (`crypto_fork`) | Activo nuevo con **coste de adquisición cero** y fecha del fork (criterio conservador, *verificar*). Se documenta en el evento. |
+| **Fork o *airdrop* de cripto** (`crypto_fork`) | Activo nuevo con fecha de recepción. Su valor de mercado es **renta de la base general del año** y el coste del lote; la Declaración lo enseña aparte para que lo sumes tú (criterio #8). |
 | **Migración de token** (`token_migration`) | Canje. Documentar el criterio aplicado. |
 | **Reestructuración de emisor de ETC/ETP** (`issuer_restructuring`) | Puede implicar canje o reembolso forzoso. |
 | **Devolución de prima de emisión o de aportaciones** (`capital_return`) | No vende nada: el importe **rebaja el valor de adquisición** de cada lote, por títulos, hasta cero, y el exceso es rendimiento del capital mobiliario (arts. 25.1.e y 33.3.a LIRPF, criterio #26). Solo acciones **admitidas en un mercado regulado de la UE** según el `market` del catálogo, por el MIC del segmento regulado (`RMKT` en ISO 10383, la lista `FUND_REGULATED_MARKETS`); con el MIC de toda una bolsa —Xetra, Fráncfort, Dublín, Milán, Viena— o con Euronext o BME, también su divisa y su ISIN (fuera de él la prima es rendimiento con el tope de fondos propios, no modelado; en una IIC rige el art. 94.1 LIRPF); la reducción con cargo a beneficios es un dividendo. |

@@ -143,7 +143,7 @@ export const FISCAL_CRITERIA = {
   "5": { doc: "5", certainty: "medium", risk: "conservative" },
   "6": { doc: "6", certainty: "high", risk: "conservative" },
   "7": { doc: "7", certainty: "disputed", risk: "aggressive" },
-  "8": { doc: "8", certainty: "disputed", risk: "aggressive" },
+  "8": { doc: "8", certainty: "medium", risk: "both" },
   "9": { doc: "9", certainty: "high", risk: "conservative" },
   "10": { doc: "10", certainty: "high", risk: "conservative" },
   "11": { doc: "11", certainty: "medium", risk: "conservative" },

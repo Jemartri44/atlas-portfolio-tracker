@@ -619,10 +619,10 @@ export interface GrantEffect extends EffectBase {
    * the other is refused.
    *
    * A `grant` creates lots and declares nothing. These two fields say that what
-   * was received **is income when it is received** — a fork, an airdrop, shares
-   * from a spin-off outside the neutrality regime, a dividend in kind. They are
-   * stored and shown; **they become no calculation**. Who is taxed on what is
-   * phase 5 and is a criterion in dispute (`docs/fiscal-questions.md` #8).
+   * was received **is income when it is received** — a fork, an airdrop, a
+   * dividend in kind. They enter no base of Atlas: the return shows them apart
+   * for the user to add. With `unit_cost` zero and the general base, the income
+   * is the cost of the lot (`docs/fiscal-questions.md` #8).
    */
   income_eur?: DecimalString;
   income_base?: IncomeBase;
