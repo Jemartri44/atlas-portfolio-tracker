@@ -1,5 +1,6 @@
 // The mark that closes every session, over S3, and the secrets of SSM with their cache.
 
+import { SESSIONS_VALID_FROM_KEY } from "@atlas/access";
 import {
   AccessSecrets,
   closeSessionsBefore,
@@ -7,7 +8,6 @@ import {
   parameterNames,
   readSessionsValidFrom,
 } from "@atlas/adapters/aws";
-import { SESSIONS_VALID_FROM_KEY } from "@atlas/domain/access";
 import { describe, expect, it } from "vitest";
 import { TestOnlyFakeS3 } from "./test-only-fake-s3.js";
 import { TestOnlyFakeSsm } from "./test-only-fake-ssm.js";

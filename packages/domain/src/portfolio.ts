@@ -57,6 +57,15 @@ export {
   type UnassignedOrder,
 } from "./projections/platform-plan.js";
 export {
+  type Projection,
+  type ProjectionAssumptions,
+  type ProjectionGap,
+  type ProjectionPoint,
+  projection,
+  type Scenario,
+  type ScenarioResult,
+} from "./projections/projection.js";
+export {
   DEFAULT_COST_YEARS,
   type TotalCost,
   type TotalCostAssumptions,

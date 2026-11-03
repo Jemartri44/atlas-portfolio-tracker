@@ -2,6 +2,12 @@
 // signer and how the session cookie is checked, in the order of §3. The routes that use them are
 // `sign-in.ts` and `handler.ts`, which only matches and dispatches.
 
+import {
+  closedByMark,
+  readSessionPayload,
+  type SessionPayload,
+  subjectAllowed,
+} from "@atlas/access";
 import { base64url, Signer } from "@atlas/adapters/access";
 import {
   AccessSecrets,
@@ -12,16 +18,12 @@ import {
 } from "@atlas/adapters/aws";
 import type { IdentityProvider } from "@atlas/adapters/identity";
 import {
-  type ApiConfig,
   type ApiRefusal,
-  closedByMark,
   LOGIN_PAGE_ERRORS,
   type LoginPageError,
-  readSessionPayload,
   refusal,
-  type SessionPayload,
-  subjectAllowed,
-} from "@atlas/domain/access";
+} from "./access/codes.js";
+import type { ApiConfig } from "./access/config.js";
 import type { Outcome } from "./outcome.js";
 import { loginErrorPage, PAGE_CSP } from "./pages.js";
 import { clearLoginCookie, page } from "./respond.js";

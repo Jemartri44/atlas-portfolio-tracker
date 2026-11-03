@@ -2,7 +2,7 @@
 // page's own origin, with the cookie of a web sign-in and `Origin` on a write, as the browser sends
 // them; a browser on the double of IndexedDB; and what the cloud holds.
 
-import { SESSION_COOKIE } from "@atlas/domain/access";
+import { SESSION_COOKIE } from "../../../api/src/access/cookies.js";
 import { ALLOWED, SELF, setup } from "../../../api/test/harness.js";
 
 export type Api = ReturnType<typeof setup>;
