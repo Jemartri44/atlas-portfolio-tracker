@@ -11,7 +11,7 @@ import { store } from "../src/ledger/state.js";
 import Cartera from "../src/routes/cartera/index.jsx";
 import { type Api, apiAt, sameOrigin, signedIn } from "./cloud/api-support.js";
 import { goldenText } from "./helpers/golden.js";
-import { settle, show, text, type, until, withGoldenLedger } from "./helpers/render.jsx";
+import { press, settle, show, text, type, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -71,5 +71,34 @@ describe("the total cost", () => {
     type(host, "tc-gross", "5,x");
     await settle(30);
     expect(text(host.querySelector(".total-cost"))).not.toContain("Coste total en el horizonte");
+  });
+});
+
+describe("the projection", () => {
+  it("asks for the returns instead of inventing them, then projects once they are typed", async () => {
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => host.querySelector("#pj-years") !== null, "the card");
+    expect(text(host.querySelector(".projection-card"))).toContain("Falta la rentabilidad de");
+    for (const input of host.querySelectorAll("input[id^='pj-0-']")) {
+      type(host, input.id, "5");
+    }
+    await settle(30);
+    const card = text(host.querySelector(".projection-card"));
+    expect(card).toContain("Dentro de 20 años");
+    expect(card).not.toContain("Falta la rentabilidad de");
+  });
+
+  it("keeps up to three scenarios and says what a wrong figure is", async () => {
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => host.querySelector("#pj-years") !== null, "the card");
+    await press(host, "Añadir un escenario");
+    await press(host, "Añadir un escenario");
+    expect(host.querySelectorAll("[id^='pj-name-']").length).toBe(3);
+    expect(
+      [...host.querySelectorAll("button")].some((b) => b.textContent === "Añadir un escenario"),
+    ).toBe(false);
+    type(host, "pj-years", "veinte");
+    await settle(30);
+    expect(text(host.querySelector(".projection-card"))).toMatch(/entero|número|válid/i);
   });
 });
