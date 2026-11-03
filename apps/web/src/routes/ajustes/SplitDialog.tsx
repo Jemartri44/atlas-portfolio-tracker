@@ -135,9 +135,7 @@ export const SplitDialog = (props: Props): JSX.Element => {
         </>
       }
     >
-      <p class="card-note">
-        Escribe el reparto real. Con la coma como decimal: 62,5. Tienen que sumar exactamente 100.
-      </p>
+      <p class="card-note">Con la coma como decimal (62,5). Tienen que sumar exactamente 100.</p>
       <For each={rows()}>
         {(row, index) => (
           <div class="split-row">

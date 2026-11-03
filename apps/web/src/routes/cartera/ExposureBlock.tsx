@@ -35,8 +35,8 @@ const Dimension = (props: { title: string; view: DimensionView }): JSX.Element =
       when={props.view.bar}
       fallback={
         <Notice severity="info" title="Sin propuesta">
-          Todavía no hay reparto para {props.view.missing.join(", ")}. Elige su índice o escribe sus
-          porcentajes en <A href={SETTINGS}>Ajustes</A>.
+          Falta el reparto de {props.view.missing.join(", ")}: elígelo en{" "}
+          <A href={SETTINGS}>Ajustes</A>.
         </Notice>
       }
     >
