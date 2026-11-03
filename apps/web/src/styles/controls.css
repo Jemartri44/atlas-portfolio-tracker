@@ -15,7 +15,7 @@
   align-items: center;
   background-color: var(--c-accent);
   border: var(--border) solid transparent;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   color: var(--c-on-accent);
   cursor: pointer;
   display: inline-flex;

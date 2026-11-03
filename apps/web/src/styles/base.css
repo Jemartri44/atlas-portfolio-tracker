@@ -4,6 +4,23 @@
  * class wins without a fight — the opposite of what Pico's defaults did.
  */
 
+/* Hosted with the app (CSP font-src 'self'); `swap` paints the system font first, never blank. */
+@font-face {
+  font-display: swap;
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  src: url("/fonts/inter-latin-wght.woff2") format("woff2");
+}
+
+@font-face {
+  font-display: swap;
+  font-family: "Fraunces";
+  font-style: normal;
+  font-weight: 600;
+  src: url("/fonts/fraunces-latin-600.woff2") format("woff2");
+}
+
 *,
 *::before,
 *::after {
@@ -26,6 +43,7 @@
   line-height: var(--lh-body);
   margin: 0;
   min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
@@ -45,7 +63,9 @@
 }
 
 :where(h1) {
+  font-family: var(--font-serif);
   font-size: var(--text-xl);
+  letter-spacing: -0.01em;
 }
 
 :where(h2) {
