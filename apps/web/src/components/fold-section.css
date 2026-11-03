@@ -1,0 +1,15 @@
+/* A card folded on the phone (FoldSection): the disclosure's row carries the title and the summary line. Loaded with the chunk that uses it, not at boot. */
+.fold-card .disclosure > summary {
+  column-gap: var(--space-3);
+  display: grid;
+  grid-template-columns: 1fr auto;
+}
+
+.fold-card summary > .chev {
+  grid-column: 2;
+  grid-row: 1 / 3;
+}
+
+.fold-summary {
+  font-weight: var(--fw-regular);
+}

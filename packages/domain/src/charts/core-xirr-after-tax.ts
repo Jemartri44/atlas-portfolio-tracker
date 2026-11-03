@@ -36,11 +36,11 @@ import { projectLedger } from "../projections/project-ledger.js";
 import { settingsAt } from "../projections/settings-at.js";
 import type { Account, LedgerState } from "../projections/state.js";
 import type { LedgerEvent } from "../schema/events.js";
-import { tryReading } from "../tax/chain.js";
+import type { Unsupported } from "../tax/chain.js";
 import type { CriterionId } from "../tax/criteria.js";
 import { type QuotaNote, savingsQuota } from "../tax/quota.js";
-import type { TaxYearReport } from "../tax/report.js";
-import { taxYear } from "../tax/year.js";
+import type { SavingsReading } from "../tax/report.js";
+import { savingsReadings } from "../tax/year.js";
 import { coreCashFlows } from "./contributed.js";
 import { annualRateOf, type CoreXirr, coreXirr } from "./core-xirr.js";
 
@@ -86,7 +86,7 @@ const zero = Money.zero("EUR");
 const HALF_YEAR_END = "06-30";
 
 /** The year's own lines of the report that add to the base, by the book of their account. */
-const shareOfCore = (report: TaxYearReport, state: LedgerState): Decimal => {
+const shareOfCore = (report: SavingsReading, state: LedgerState): Decimal => {
   const byBook = { core: zero, bucket: zero };
   const add = (account: string, amount: Money): void => {
     // Every line comes from an account the ledger created.
@@ -127,19 +127,16 @@ const outsideOnly = (events: readonly LedgerEvent[]): LedgerEvent[] => {
 };
 
 /**
- * The estimated result of the savings part of `year`, read with the income from outside. Every
+ * The estimated result of the savings part of a year, read with the income from outside. Every
  * year the engine reads (from 2018) has a scale, so there is always a result.
  */
 const quotaOf = (
-  events: readonly LedgerEvent[],
+  reading: SavingsReading,
   state: LedgerState,
-  year: number,
-  to: CivilDate,
-): { report: TaxYearReport; result: Money; notes: QuotaNote[] } => {
-  const report = taxYear(events, year, { today: to, external: true });
-  const brackets = settingsAt(state, `${year}-12-31`).settings.savings_tax_brackets;
-  const quota = savingsQuota(report, brackets);
-  return { report, result: quota.result_eur as Money, notes: quota.notes };
+): { result: Money; notes: QuotaNote[] } => {
+  const brackets = settingsAt(state, `${reading.year}-12-31`).settings.savings_tax_brackets;
+  const quota = savingsQuota(reading, brackets);
+  return { result: quota.result_eur as Money, notes: quota.notes };
 };
 
 /** The cost of the year spread over the payments recorded for it, or on 30/06 of the next. */
@@ -159,22 +156,20 @@ const datesOf = (state: LedgerState, year: number, cost: Money): AfterTaxYear["d
 };
 
 const closedYear = (
-  events: readonly LedgerEvent[],
-  outside: readonly LedgerEvent[],
+  reading: SavingsReading | Unsupported,
+  alone: SavingsReading | Unsupported | undefined,
   state: LedgerState,
   year: number,
-  to: CivilDate,
 ): AfterTaxYear => {
-  const all = tryReading(() => quotaOf(events, state, year, to));
-  if ("unsupported" in all) {
+  if ("unsupported" in reading) {
     return { year, dated: [], notes: [], gap: "unsupported" };
   }
+  const all = quotaOf(reading, state);
   // The income from outside is part of the ledger read above: if that reading was supported, so
   // is this one, which starts no earlier.
-  const hasOutside = state.externalIncome.some((entry) => entry.year === year);
-  const alone = hasOutside ? quotaOf(outside, state, year, to).result : zero;
-  const added = all.result.sub(alone);
-  const share = shareOfCore(all.report, state);
+  const outside = alone === undefined ? zero : quotaOf(alone as SavingsReading, state).result;
+  const added = all.result.sub(outside);
+  const share = shareOfCore(reading, state);
   const cost = added.mul(share);
   return {
     year,
@@ -199,11 +194,20 @@ export const coreXirrAfterTax = (
   if (state.invalid.length > 0) {
     return { before, years: [], gap: "invalid" };
   }
-  const outside = outsideOnly(events);
-  const years: AfterTaxYear[] = [];
+  const closed: number[] = [];
   for (let year = Number(before.from.slice(0, 4)); `${year}-12-31` <= to; year += 1) {
-    years.push(closedYear(events, outside, state, year, to));
+    closed.push(year);
   }
+  // One walk for every year, and one more for the income from outside alone (`savingsReadings`).
+  const options = { today: to, external: true };
+  const all = savingsReadings(events, closed, options);
+  const withOutside = closed.filter((year) =>
+    state.externalIncome.some((entry) => entry.year === year),
+  );
+  const alone = savingsReadings(outsideOnly(events), withOutside, options);
+  const years = closed.map((year) =>
+    closedYear(all.get(year) as SavingsReading | Unsupported, alone.get(year), state, year),
+  );
   if (years.some((entry) => entry.gap !== undefined)) {
     return { before, years, gap: "year" };
   }

@@ -35,7 +35,7 @@ import {
   type Settings,
   savingsOffsetLimitPctOf,
 } from "../settings/settings.js";
-import { compensate, type YearBalances } from "./compensation.js";
+import { type CompensationRules, compensate, type YearBalances } from "./compensation.js";
 import type { FundCriterion } from "./criteria.js";
 import { type CurrencyWashResult, walkCurrencyWashSales } from "./currency-wash-sale.js";
 import { deferredAt, deferredByOrigin, releasedBetween } from "./deferred-origins.js";
@@ -120,6 +120,10 @@ export interface ChainCore {
    * chain built for 2028 has to get the deferred loss of 2027.
    */
   deferrals: Map<number, Money>;
+  /** The compensation of every year of the chain, so `chainAt` can read an earlier one. */
+  compensations: Map<number, Compensation>;
+  /** The offset limit and the carry-forward years of the settings read. */
+  rules: CompensationRules;
 }
 
 /** A reading that could not be computed because the ledger has invalid events under it. */
@@ -427,7 +431,7 @@ export const taxChain = (
     );
   }
 
-  const rules = {
+  const rules: CompensationRules = {
     limitPct: savingsOffsetLimitPctOf(state.fiscalSettings),
     carryYears: lossCarryforwardYearsOf(state.fiscalSettings),
   };
@@ -439,20 +443,14 @@ export const taxChain = (
   const bases = new Map<number, Money>();
   const pendings = new Map<number, PendingLoss[]>();
   const deferrals = new Map<number, Money>();
+  const compensations = new Map<number, Compensation>();
   for (let y = firstYear; y <= year; y += 1) {
     compensation = compensate(y, balances.get(y) ?? zeroBalances(), pending, rules);
+    compensations.set(y, compensation);
     bases.set(y, compensation.base_eur);
     pending = compensation.pending;
     pendings.set(y, pending);
-    deferrals.set(
-      y,
-      [
-        ...deferredAt(walk, y).map((entry) => entry.amount_eur),
-        ...currencyWalk.pendingAt(y).values(),
-      ]
-        .reduce((total, amount) => total.add(amount), zero())
-        .roundToCents(),
-    );
+    deferrals.set(y, deferredTotal(walk, currencyWalk, y));
     const anchored = filed.find((entry) => entry.year === y);
     if (anchored !== undefined) {
       const declared = anchored.pending.map((entry) => ({
@@ -486,5 +484,64 @@ export const taxChain = (
     bases,
     pendings,
     deferrals,
+    compensations,
+    rules,
+  };
+};
+
+/** What the wash-sale rules still hold deferred at 31/12 of `year`, rounded. */
+const deferredTotal = (
+  walk: WashSaleResult,
+  currencyWalk: CurrencyWashResult,
+  year: number,
+): Money =>
+  [
+    ...deferredAt(walk, year).map((entry) => entry.amount_eur),
+    ...currencyWalk.pendingAt(year).values(),
+  ]
+    .reduce((total, amount) => total.add(amount), zero())
+    .roundToCents();
+
+/**
+ * The chain built up to a later year, read **as if it had been asked for `year`**: the same
+ * projection and the same walks, which do not depend on the year asked, with the figures of the
+ * years up to `year`. It is what lets one walk serve every year of a ledger: `taxChain(events, y)`
+ * and `chainAt(taxChain(events, last), y)` are the same reading (a test holds them together).
+ */
+export const chainAt = (chain: ChainCore, year: number): ChainCore => {
+  if (year < FIRST_SUPPORTED_YEAR) {
+    throw new DomainError(
+      "tax_year_unsupported",
+      `the engine applies the compensation regime in force since ${FIRST_SUPPORTED_YEAR}; ${year} is earlier`,
+      { year, first_supported: FIRST_SUPPORTED_YEAR },
+    );
+  }
+  const upTo = <T>(map: Map<number, T>): Map<number, T> =>
+    new Map([...map].filter(([y]) => y <= year));
+  // A year before every figure and every filed return: the chain asked for it starts and ends
+  // there, with nothing to offset.
+  if (year < chain.firstYear) {
+    const compensation = compensate(year, zeroBalances(), [], chain.rules);
+    return {
+      ...chain,
+      compensation,
+      anchors: [],
+      pendingDeferrals: deferredAt(chain.walk, year),
+      firstYear: year,
+      bases: new Map([[year, compensation.base_eur]]),
+      pendings: new Map([[year, compensation.pending]]),
+      deferrals: new Map([[year, deferredTotal(chain.walk, chain.currencyWalk, year)]]),
+      compensations: new Map([[year, compensation]]),
+    };
+  }
+  return {
+    ...chain,
+    compensation: chain.compensations.get(year) as Compensation,
+    anchors: chain.anchors.filter((anchor) => anchor.year <= year),
+    pendingDeferrals: deferredAt(chain.walk, year),
+    bases: upTo(chain.bases),
+    pendings: upTo(chain.pendings),
+    deferrals: upTo(chain.deferrals),
+    compensations: upTo(chain.compensations),
   };
 };

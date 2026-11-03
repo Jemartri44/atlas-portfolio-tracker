@@ -21,12 +21,18 @@ import { DomainError } from "../errors.js";
 import { filingComparison } from "../filings/comparison.js";
 import type { Money } from "../money/money.js";
 import type { CurrencyGain } from "../projections/currency-lots.js";
-import type { RealizedGain } from "../projections/state.js";
+import type { RealizedGain, Warning } from "../projections/state.js";
 import type { CorporateActionEvent, LedgerEvent } from "../schema/events.js";
 import type { IncomeCategory, Settings } from "../settings/settings.js";
 import { isDoubtful } from "./criteria.js";
 import { deferralLine, withholdingLines } from "./lines.js";
-import type { InKindLine, PendingLoss, TaxYearReport, TransmissionLine } from "./report.js";
+import type {
+  InKindLine,
+  PendingLoss,
+  SavingsReading,
+  TaxYearReport,
+  TransmissionLine,
+} from "./report.js";
 
 export { FIRST_SUPPORTED_YEAR, type TaxOptions } from "./chain.js";
 
@@ -34,14 +40,17 @@ import { sum, zero } from "../money/eur.js";
 import {
   type ChainCore,
   categoryOf,
+  chainAt,
   FIRST_SUPPORTED_YEAR,
+  type Invalid,
   isInvalid,
   isUnsupported,
   type TaxOptions,
   taxChain,
   tryReading,
+  type Unsupported,
 } from "./chain.js";
-import { type Core, computeCore } from "./core.js";
+import { type Core, computeCore, coreOf } from "./core.js";
 import { doubleTaxation, notesOf, rateNotes, settingsFromCode } from "./notes.js";
 import { settingsDiff } from "./settings-diff.js";
 import { eventNote } from "./shared.js";
@@ -184,20 +193,16 @@ export const taxYear = (
   options: TaxOptions,
 ): TaxYearReport => taxYearWithChain(events, year, options).report;
 
-/**
- * The same report **and the walk of the years behind it**.
- *
- * The layout by box needs two things the report does not carry: what each year
- * of the chain left deferred, so it can say which original loss every deferred
- * amount belongs to, and what the year before left pending, for
- * annex C.3. Handing over the chain that was walked anyway is what keeps the
- * layout from projecting the ledger a second time to find out.
- */
-export const taxYearWithChain = (
-  events: readonly LedgerEvent[],
-  year: number,
-  options: TaxOptions,
-): { report: TaxYearReport; chain: ChainCore } => {
+/** The ledger has invalid events: no tax year is computed on it. */
+const refuseInvalid = (invalid: Invalid): never => {
+  throw new DomainError(
+    "tax_ledger_invalid",
+    `the ledger has ${invalid.invalid.length} invalid events; repair them before computing a tax year`,
+    { count: invalid.invalid.length, invalid: invalid.invalid },
+  );
+};
+
+const refuseUnsupported = (year: number): void => {
   if (!Number.isInteger(year) || year < FIRST_SUPPORTED_YEAR) {
     throw new DomainError(
       "tax_year_unsupported",
@@ -205,17 +210,19 @@ export const taxYearWithChain = (
       { year, first_supported: FIRST_SUPPORTED_YEAR },
     );
   }
-  const core = computeCore(events, year, options);
-  if (isInvalid(core)) {
-    throw new DomainError(
-      "tax_ledger_invalid",
-      `the ledger has ${core.invalid.length} invalid events; repair them before computing a tax year`,
-      { count: core.invalid.length, invalid: core.invalid },
-    );
-  }
-  // What was filed for this year, when there is a return in force: a fact kept
-  // as it was filed, compared with what the ledger says today (ADR-0020).
-  const filing = filingComparison(events, year, options.today, core);
+};
+
+/**
+ * The figures of `year` over its core: the lines, the compensation, the base, the withholdings and
+ * the double taxation — everything but what compares this reading with another (the stakes of the
+ * criteria, the difference with the previous settings, what was filed) and the notes. The full
+ * report is built **on** this, so the two cannot drift apart.
+ */
+const savingsReadingOf = (
+  core: Core,
+  year: number,
+  options: TaxOptions,
+): { reading: SavingsReading; ddiNotes: Warning[] } => {
   const { state } = core;
   const byCategory = (category: IncomeCategory) =>
     core.transmissions.filter((line) => line.category === category);
@@ -256,32 +263,11 @@ export const taxYearWithChain = (
       base: entry.base,
       kind: (core.ctx.events.get(entry.event_id) as CorporateActionEvent).kind,
     }));
-  const settings = settingsFromCode(state);
-  const stakes = criterionStakes(core, events, year, options);
-  const notes = [
-    ...notesOf(core, year, settings.from_code, inKind, ddi.notes),
-    ...rateNotes(core, options.rateFindings ?? []),
-  ];
-  // **A cause that cannot be sustained is not attributed in silence**
-  // (ADR-0024). The comparison already omitted the four causes when the prefix
-  // could not be trusted; omitting is not warning, and this is the datum with a
-  // code that says so.
-  if (filing?.unverified_prefix !== undefined) {
-    notes.push(
-      eventNote(
-        "tax_filing_prefix_unverified",
-        filing.filing_id,
-        "the prefix of the ledger this filing was computed on is not verified, so the difference is not split into its causes",
-        { reason: filing.unverified_prefix },
-      ),
-    );
-  }
-  const diff = settingsDiff(core, events, year, options);
-  const report: TaxYearReport = {
+  const reading: SavingsReading = {
     year,
     scope: "fiscal_total",
     today: options.today,
-    settings,
+    settings: settingsFromCode(state),
     capital_gains: {
       lines: gains,
       currency_lines: core.currency,
@@ -326,7 +312,6 @@ export const taxYearWithChain = (
     },
     compensation: core.compensation,
     anchors: core.anchors,
-    ...(filing === undefined ? {} : { filing }),
     base_eur: core.compensation.base_eur,
     withholdings: {
       lines: withholdings,
@@ -339,6 +324,56 @@ export const taxYearWithChain = (
     },
     in_kind: inKind,
     ...(options.external === true ? { external_income: externalOf(core, year) } : {}),
+  };
+  return { reading, ddiNotes: ddi.notes };
+};
+
+/**
+ * The same report **and the walk of the years behind it**.
+ *
+ * The layout by box needs two things the report does not carry: what each year
+ * of the chain left deferred, so it can say which original loss every deferred
+ * amount belongs to, and what the year before left pending, for
+ * annex C.3. Handing over the chain that was walked anyway is what keeps the
+ * layout from projecting the ledger a second time to find out.
+ */
+export const taxYearWithChain = (
+  events: readonly LedgerEvent[],
+  year: number,
+  options: TaxOptions,
+): { report: TaxYearReport; chain: ChainCore } => {
+  refuseUnsupported(year);
+  const core = computeCore(events, year, options);
+  if (isInvalid(core)) {
+    return refuseInvalid(core);
+  }
+  const { reading, ddiNotes } = savingsReadingOf(core, year, options);
+  // What was filed for this year, when there is a return in force: a fact kept
+  // as it was filed, compared with what the ledger says today (ADR-0020).
+  const filing = filingComparison(events, year, options.today, core);
+  const stakes = criterionStakes(core, events, year, options);
+  const notes = [
+    ...notesOf(core, year, reading.settings.from_code, reading.in_kind, ddiNotes),
+    ...rateNotes(core, options.rateFindings ?? []),
+  ];
+  // **A cause that cannot be sustained is not attributed in silence**
+  // (ADR-0024). The comparison already omitted the four causes when the prefix
+  // could not be trusted; omitting is not warning, and this is the datum with a
+  // code that says so.
+  if (filing?.unverified_prefix !== undefined) {
+    notes.push(
+      eventNote(
+        "tax_filing_prefix_unverified",
+        filing.filing_id,
+        "the prefix of the ledger this filing was computed on is not verified, so the difference is not split into its causes",
+        { reason: filing.unverified_prefix },
+      ),
+    );
+  }
+  const diff = settingsDiff(core, events, year, options);
+  const report: TaxYearReport = {
+    ...reading,
+    ...(filing === undefined ? {} : { filing }),
     // One walk, two lists: the reading that is open and the reading that is
     // settled. Splitting instead of filtering is what keeps a criterion of high
     // certainty from taking its figure with it when it stops being doubtful.
@@ -348,4 +383,33 @@ export const taxYearWithChain = (
     ...(diff === undefined ? {} : { settings_diff: diff }),
   };
   return { report, chain: core };
+};
+
+/**
+ * The figures of several years of one ledger **with one projection and one walk** (`chainAt`),
+ * for whoever needs many years and not what compares readings: the return after tax reads the
+ * quota of every closed year. Each one is what `taxYear` would give without its stakes, settings
+ * difference, filing comparison and notes; a year the engine does not read says so.
+ */
+export const savingsReadings = (
+  events: readonly LedgerEvent[],
+  years: readonly number[],
+  options: TaxOptions,
+): Map<number, SavingsReading | Unsupported> => {
+  const readings = new Map<number, SavingsReading | Unsupported>();
+  if (years.length === 0) {
+    return readings;
+  }
+  const last = Math.max(...years);
+  const chain = tryReading(() => taxChain(events, Math.max(last, FIRST_SUPPORTED_YEAR), options));
+  if (isInvalid(chain)) {
+    return refuseInvalid(chain);
+  }
+  for (const year of years) {
+    const read = isUnsupported(chain)
+      ? chain
+      : tryReading(() => savingsReadingOf(coreOf(chainAt(chain, year), year), year, options));
+    readings.set(year, "unsupported" in read ? read : read.reading);
+  }
+  return readings;
 };
