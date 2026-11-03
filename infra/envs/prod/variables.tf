@@ -145,7 +145,7 @@ variable "prices_sources" {
   default = ["eodhd"]
 
   validation {
-    condition     = var.prices_sources == ["eodhd"]
+    condition     = length(var.prices_sources) == 1 && var.prices_sources[0] == "eodhd"
     error_message = "prices_sources is [\"eodhd\"]."
   }
 }
