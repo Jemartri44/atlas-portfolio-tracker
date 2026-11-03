@@ -45,20 +45,19 @@ export interface FiscalCriterion {
  *   crypto itself); conservative.
  * - `2:crypto_2m`: two months after the sale for crypto — a configuration, not a
  *   legal reading; aggressive.
- * - `2:fund_2m`: two months for a fund, which is what the document says since
- *   2026-09-22 — the two binding consultations found on the point (V0011-00
- *   and V2067-06, both older than Ley 35/2006) put fund units under letter
- *   f). High for a Spanish fund, **medium** for a foreign UCITS, which no
- *   source names; the catalogue does not know the domicile and keeps the
- *   weaker.
- * - `2:fund_1y`: one year for a fund, the other side of the same dispute and
- *   the conservative one.
+ * - `2:fund_2m`: two months for a fund, what the document held from
+ *   2026-09-22 to 2026-11-03 and a setting since. It rests on article 4.9 of
+ *   RD 1082/2012, which its own last clause narrows, and on two consultations
+ *   older than Ley 35/2006 (V0011-00, V2067-06); the Manual de Renta 2025 does
+ *   not name funds. **Medium**; aggressive.
+ * - `2:fund_1y`: one year for a fund, the default since 2026-11-03: the
+ *   conservative side of the same dispute.
  * - `2:movable_capital`: two months for an asset that yields movable capital
  *   income (an ETC or an ETP by default), article 25.2.b) LIRPF: its own rule,
  *   with no market and no one-year variant — **high**; aggressive if wrong.
  * - `2:other`: any other window —a number of days— that no reading of the
- *   document supports. Two months for a fund is **not** one of these any more:
- *   since 2026-09-22 it is `2:fund_2m`, the reading the document holds.
+ *   document supports. Two months for a fund is **not** one of these: it is
+ *   `2:fund_2m`, a reading the document names.
  *
  * **A new reading gets a new identifier; an identifier never changes meaning.**
  * That is why the year of funds is `2:fund_1y` and not the old bare `2:fund`,
