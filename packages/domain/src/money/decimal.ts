@@ -14,18 +14,34 @@ export type DecimalString = string;
 
 const DECIMAL_PATTERN = /^-?\d+(\.\d+)?$/;
 
+export const isDecimalString = (value: unknown): value is DecimalString =>
+  typeof value === "string" && DECIMAL_PATTERN.test(value);
+
 /**
- * Digits a decimal string may carry, sign and point aside. Far above any amount, quantity or
- * rate of a real ledger (the widest, a rate to ten decimals of a large sum, takes some 25);
- * what it stops is a number of thousands of digits, whose arithmetic grows with its length.
+ * Digits a decimal string may carry **when it is written**, sign and point aside. Far above any
+ * amount, quantity or rate of a real ledger (the widest, a rate to ten decimals of a large sum,
+ * takes some 25); what it stops is a number of thousands of digits, whose arithmetic grows with
+ * its length. Only on writing (`recordEvent`, the API): the loader never applies it, because
+ * narrowing what a ledger may hold is a change of `schema_version` (ADR-0018).
  */
 export const MAX_DECIMAL_DIGITS = 40;
 
-export const isDecimalString = (value: unknown): value is DecimalString =>
-  typeof value === "string" &&
-  value.length <= MAX_DECIMAL_DIGITS + 2 &&
-  DECIMAL_PATTERN.test(value) &&
-  value.replace(/[-.]/g, "").length <= MAX_DECIMAL_DIGITS;
+/** Whether a value to be written holds, at any depth, a decimal string of more than `MAX_DECIMAL_DIGITS` digits. */
+export const hasOverlongDecimal = (value: unknown): boolean => {
+  if (typeof value === "string") {
+    return (
+      value.length > MAX_DECIMAL_DIGITS &&
+      DECIMAL_PATTERN.test(value) &&
+      value.replace(/[-.]/g, "").length > MAX_DECIMAL_DIGITS
+    );
+  }
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  return Object.entries(value).some(
+    ([key, member]) => !key.includes("fingerprint") && hasOverlongDecimal(member),
+  );
+};
 
 export class Decimal {
   private constructor(private readonly value: BigValue) {}

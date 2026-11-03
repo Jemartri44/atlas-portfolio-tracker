@@ -672,38 +672,32 @@ describe("the size bounds of what the remote keeps", () => {
     }
   });
 
-  it("refuses an amount of more than MAX_DECIMAL_DIGITS digits as an invalid line", () => {
+  it("refuses a decimal of more than MAX_DECIMAL_DIGITS digits as an invalid line, at any depth", () => {
     const b = device(710);
     const long = b.deposit({ account_id: "acc_fund", amount: "1".repeat(MAX_DECIMAL_DIGITS + 1) });
     expect(acceptAppend(remote, plain([long]), rules)).toMatchObject({
       accepted: 0,
-      rejected: { code: "line_invalid", details: { domain_code: "invalid_field" } },
+      rejected: { code: "line_invalid", details: { domain_code: "invalid_decimal" } },
     });
     const ok = b.deposit({ account_id: "acc_fund", amount: "1".repeat(MAX_DECIMAL_DIGITS) });
     expect(acceptAppend(remote, plain([ok]), rules).accepted).toBe(1);
   });
 
-  it("refuses a unit that would take the ledger past MAX_LEDGER_BYTES, and keeps the units before it", () => {
+  it("refuses a unit that would take the ledger past the bound, and keeps the units before it", () => {
     const b = device(800);
-    const filler: LedgerEvent[] = [];
-    const room = MAX_LEDGER_BYTES - textOf(events).length;
-    const each = MAX_LINE_BYTES - 200;
-    for (let n = 0; n < Math.floor(room / (each + 1)) - 1; n += 1) {
-      filler.push(withNotes(b, each - 330, String(n + 1)));
-    }
-    const fat = linesOf([...events, ...filler]);
-    const size = fat.reduce((sum, line) => sum + line.length + 1, 0);
-    expect(size).toBeLessThan(MAX_LEDGER_BYTES);
+    const base = textOf(events).length;
     const small = b.deposit({ account_id: "acc_fund", amount: "9999991" });
-    const big = withNotes(b, MAX_LINE_BYTES - 400, "9999992");
-    const answer = acceptAppend(fat, plain([small, big]), rules);
+    const big = withNotes(b, 3000, "9999992");
+    const room = base + encodeLine(small).length + 1 + 500;
+    const answer = acceptAppend(remote, plain([small, big]), { ...rules, maxLedgerBytes: room });
     expect(answer.accepted).toBe(1);
     expect(answer.rejected).toMatchObject({
       index: 1,
       code: "ledger_too_large",
-      details: { limit: MAX_LEDGER_BYTES },
+      details: { limit: room },
     });
-  }, 30_000);
+    expect(acceptAppend(remote, plain([small, big]), rules).accepted).toBe(2);
+  });
 
   it("refuses the initialisation of a ledger over MAX_LEDGER_BYTES, before reading a line", () => {
     const huge = `${"x".repeat(MAX_LEDGER_BYTES)}\n`;

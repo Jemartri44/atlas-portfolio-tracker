@@ -1,7 +1,12 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { ValidationError } from "../../src/errors.js";
-import { Decimal, isDecimalString, MAX_DECIMAL_DIGITS } from "../../src/money/decimal.js";
+import {
+  Decimal,
+  hasOverlongDecimal,
+  isDecimalString,
+  MAX_DECIMAL_DIGITS,
+} from "../../src/money/decimal.js";
 import { decimal, decimalString } from "../arbitraries.js";
 
 const d = (text: string): Decimal => Decimal.parse(text);
@@ -119,13 +124,19 @@ describe("Decimal properties", () => {
   });
 });
 
-describe("the digit bound", () => {
-  it("accepts MAX_DECIMAL_DIGITS digits, the sign and the point aside, and refuses one more", () => {
+describe("the digit bound on writing", () => {
+  it("is not part of what a decimal string is: the loader takes the long ones as before", () => {
+    expect(isDecimalString("9".repeat(MAX_DECIMAL_DIGITS + 10))).toBe(true);
+  });
+
+  it("finds a decimal of more than MAX_DECIMAL_DIGITS digits at any depth, and nothing else", () => {
     const digits = "9".repeat(MAX_DECIMAL_DIGITS);
-    expect(isDecimalString(digits)).toBe(true);
-    expect(isDecimalString(`-${digits.slice(1)}.5`)).toBe(true);
-    expect(isDecimalString(`${digits}1`)).toBe(false);
-    expect(isDecimalString(`1.${"0".repeat(MAX_DECIMAL_DIGITS)}`)).toBe(false);
-    expect(() => Decimal.parse("1".repeat(200_000))).toThrow(ValidationError);
+    expect(hasOverlongDecimal({ a: digits, b: [{ c: `-${digits.slice(1)}.5` }] })).toBe(false);
+    expect(hasOverlongDecimal(`${digits}1`)).toBe(true);
+    expect(hasOverlongDecimal({ a: { b: [`1.${digits}`] } })).toBe(true);
+    expect(hasOverlongDecimal({ note: "x".repeat(100), n: 5, none: null })).toBe(false);
+    expect(
+      hasOverlongDecimal({ fingerprint: "1".repeat(64), ledger_fingerprint: "2".repeat(64) }),
+    ).toBe(false);
   });
 });

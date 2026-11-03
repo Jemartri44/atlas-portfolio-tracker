@@ -6,6 +6,7 @@
 
 import type { DomainError } from "../errors.js";
 import { isRecord, type UnknownRecord } from "../guards.js";
+import { hasOverlongDecimal } from "../money/decimal.js";
 import type { AppendEntry, LineRejection } from "../ports/remote-ledger.js";
 import { RemoteError } from "../ports/remote-ledger.js";
 import { projectLedger } from "../projections/project-ledger.js";
@@ -25,6 +26,8 @@ export interface RemoteRules {
   readonly now: Date;
   /** How far ahead of the remote's clock a `recorded_at` may be (the value is the API's). */
   readonly clockToleranceMs: number;
+  /** Only for tests that need a small ledger bound; absent, `MAX_LEDGER_BYTES`. */
+  readonly maxLedgerBytes?: number;
 }
 
 /**
@@ -50,7 +53,7 @@ export const MAX_LINE_BYTES = 16 * 1024;
  * years takes 2.7 to 6.5 MB (`docs/api.md` §5.1): this bound is not met by one, it only stops
  * the ledger that would stop being served. A bound of the protocol, not a setting of the user.
  */
-export const MAX_LEDGER_BYTES = 8 * 1024 * 1024;
+export const MAX_LEDGER_BYTES = 16 * 1024 * 1024;
 
 /**
  * The bytes of `text` in UTF-8, counted without building them. A surrogate pair is 4 bytes; a lone
@@ -197,6 +200,9 @@ const readLine = (
     (entry?.chain_continues === true && raw.corrects_id === undefined)
   ) {
     return { code: "pair_declaration_invalid", details: {} };
+  }
+  if (hasOverlongDecimal(raw)) {
+    return { code: "line_invalid", details: { domain_code: "invalid_decimal" } };
   }
   let event: LedgerEvent;
   try {
@@ -404,8 +410,9 @@ export const acceptAppend = (
     units,
     (unit, base) => {
       const bytes = size + ledgerBytes(unit.lines);
-      if (bytes > MAX_LEDGER_BYTES) {
-        return { code: "ledger_too_large", details: { limit: MAX_LEDGER_BYTES, bytes } };
+      const limit = rules.maxLedgerBytes ?? MAX_LEDGER_BYTES;
+      if (bytes > limit) {
+        return { code: "ledger_too_large", details: { limit, bytes } };
       }
       const rejection = judgeUnit(unit, base, rules);
       if (rejection === undefined) {
