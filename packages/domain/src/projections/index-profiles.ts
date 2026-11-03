@@ -334,28 +334,25 @@ export const DEFAULT_INDEX_TABLES: IndexTables = {
 const SSGA =
   "https://www.ssga.com/library-content/products/fund-data/etfs/emea/holdings-daily-emea-en-";
 
-const HOLDINGS_FILE: Readonly<Record<string, string>> = {
-  IE00BFY0GT14: "sppw-gy",
-  IE00B44Z5B48: "spyy-gy",
-  IE00B6YX5C33: "spy5-gy",
-  IE00B469F816: "spym-gy",
-  IE00BKWQ0Q14: "ero-fp",
-  IE00BF1QPL78: "spfe-gy",
+const SOURCE_BY_FUND: Readonly<Record<string, string>> = {
+  IE00BFY0GT14: `${SSGA}sppw-gy.xlsx`,
+  IE00B44Z5B48: `${SSGA}spyy-gy.xlsx`,
+  IE00B6YX5C33: `${SSGA}spy5-gy.xlsx`,
+  IE00B469F816: `${SSGA}spym-gy.xlsx`,
+  IE00BKWQ0Q14: `${SSGA}ero-fp.xlsx`,
+  IE00BF1QPL78: `${SSGA}spfe-gy.xlsx`,
+  IE00BFPM9W02:
+    "https://fund-docs.vanguard.com/Euro_Government_Bond_Index_Fund_9187_EUR_EN_INT_IRISH.pdf",
 };
 
 /**
  * Where the figures of a profile were read: the holdings file of its ETF, or the factsheet of the
- * Vanguard fund. Not used by the web, so its bundle does not carry the address. A definition has none.
+ * Vanguard fund (the euro government profile, whose region is the euro zone by definition of the
+ * index). Not used by the web, so its bundle does not carry the address. A definition has none.
  */
 export const indexSourceOf = (key: string): string | undefined => {
   const isin = INDEX_PROFILES[key]?.via?.isin;
-  if (isin === undefined) {
-    return undefined;
-  }
-  const file = HOLDINGS_FILE[isin];
-  return file === undefined
-    ? "https://fund-docs.vanguard.com/Euro_Government_Bond_Index_Fund_9187_EUR_EN_INT_IRISH.pdf"
-    : `${SSGA}${file}.xlsx`;
+  return isin === undefined ? undefined : SOURCE_BY_FUND[isin];
 };
 
 const FUND_PAGES: Readonly<Record<string, string>> = {

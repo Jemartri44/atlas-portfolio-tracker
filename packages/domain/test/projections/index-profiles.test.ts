@@ -41,6 +41,9 @@ describe("the index profiles", () => {
       if (profile.via !== undefined) {
         expect(profile.via.isin).toMatch(/^[A-Z]{2}[A-Z0-9]{9}\d$/);
         expect(indexSourceOf(profile.key)).toMatch(/^https:\/\//);
+        expect(indexSourceOf(profile.key)).toContain(
+          profile.via.isin === "IE00BFPM9W02" ? "Euro_Government" : "holdings-daily",
+        );
       } else {
         expect(indexSourceOf(profile.key)).toBeUndefined();
       }
