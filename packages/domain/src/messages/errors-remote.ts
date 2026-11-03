@@ -116,12 +116,6 @@ export const ERRORS_REMOTE: Record<string, Entry> = {
   waiver_not_appendable: () =>
     "Una renuncia a verificar una huella solo nace al compactar en la consola y nunca se sube sola. No se ha guardado.",
   // --- What a synced ledger refuses ----------------------------------------
-  init_refused_invalid_ledger: {
-    say: (d, v) =>
-      `No se suben tus datos a la nube: tienen ${v.count(d.invalid)} operaciones inválidas, y la nube nunca recibe datos inválidos.`,
-    cli: (d, v) => `Son: ${v.many(d.invalid)}. Repáralas primero (atlas check te las enseña).`,
-    web: () => "Repáralas primero en Ajustes → Verificación.",
-  },
   accept_invalid_while_synced: {
     say: (d, v) =>
       `Tus datos se sincronizan, y este cambio dejaría ${v.count(d.affected)} operaciones inválidas: tus datos quedarían inválidos, no se podrían sincronizar y la sincronización se pararía. La nube rechaza siempre datos inválidos.`,

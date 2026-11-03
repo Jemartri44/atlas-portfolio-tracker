@@ -97,7 +97,7 @@ variable "reserve_jobs_concurrency" {
 }
 
 # The budgets of the prices function (ssm-and-config.md, section 2; ADR-0031): the free
-# quotas of the sources are 20 and 25 calls a day. Changing one is changing terraform.tfvars.
+# quota of the source is 20 calls a day. Changing one is changing terraform.tfvars.
 variable "prices_eodhd_daily_calls" {
   type    = number
   default = 18
@@ -105,16 +105,6 @@ variable "prices_eodhd_daily_calls" {
   validation {
     condition     = var.prices_eodhd_daily_calls >= 0 && var.prices_eodhd_daily_calls <= 20 && var.prices_eodhd_daily_calls == floor(var.prices_eodhd_daily_calls)
     error_message = "prices_eodhd_daily_calls is a whole number from 0 to 20."
-  }
-}
-
-variable "prices_alpha_vantage_daily_calls" {
-  type    = number
-  default = 23
-
-  validation {
-    condition     = var.prices_alpha_vantage_daily_calls >= 0 && var.prices_alpha_vantage_daily_calls <= 25 && var.prices_alpha_vantage_daily_calls == floor(var.prices_alpha_vantage_daily_calls)
-    error_message = "prices_alpha_vantage_daily_calls is a whole number from 0 to 25."
   }
 }
 
@@ -148,15 +138,15 @@ variable "ledger_size_warning_bytes" {
   }
 }
 
-# The order of the cascade of sources. The simulated one is of the development
-# environment only (ssm-and-config.md, section 2).
+# The source of daily closes (ADR-0031: one). The simulated one is of the
+# development environment only (ssm-and-config.md, section 2).
 variable "prices_sources" {
   type    = list(string)
-  default = ["eodhd", "alpha_vantage"]
+  default = ["eodhd"]
 
   validation {
-    condition     = length(var.prices_sources) >= 1 && length(distinct(var.prices_sources)) == length(var.prices_sources) && alltrue([for s in var.prices_sources : contains(["eodhd", "alpha_vantage"], s)])
-    error_message = "prices_sources is eodhd and/or alpha_vantage, without repeats."
+    condition     = length(var.prices_sources) == 1 && var.prices_sources[0] == "eodhd"
+    error_message = "prices_sources is [\"eodhd\"]."
   }
 }
 

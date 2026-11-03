@@ -47,15 +47,10 @@ export const sameOrigin = (api: Api, cookie: () => string | undefined): typeof f
     return new Response(body, { status: result.statusCode, headers: result.headers });
   }) as typeof fetch;
 
-/** A sign-in of the web from scratch: its cookie, and the device the API assigned it. */
-export const signedIn = async (api: Api): Promise<{ cookie: string; device: string }> => {
+/** A sign-in of the web from scratch: its cookie. */
+export const signedIn = async (api: Api): Promise<{ cookie: string }> => {
   await api.signIn(ALLOWED);
-  const cookie = api.session() as string;
-  const view = await api.call("GET", "/api/session", {
-    jar: false,
-    cookies: [`${SESSION_COOKIE}=${cookie}`],
-  });
-  return { cookie, device: (JSON.parse(view.body) as { device_id: string }).device_id };
+  return { cookie: api.session() as string };
 };
 
 /** What the cloud holds, read off the double of S3. */

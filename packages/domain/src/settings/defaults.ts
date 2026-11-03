@@ -195,28 +195,23 @@ export const DEFAULT_INCOME_CATEGORY: Record<AssetType, IncomeCategory> = {
  * Same, for the wash-sale window (ADR-0013, ADR-0014; verify with the tax
  * advisor).
  *
- * A **fund** takes two months, not a year (criterion #2, corrected on
- * 2026-09-22). What separates the two months of article 33.5 f) from the year
- * of g) is being admitted to trading, and article 4.9 of RD 1082/2012 says,
- * for funds that guarantee daily redemption, that meeting the obligation to
- * publish the net asset value daily "determinará que las participaciones en
- * los correspondientes fondos tengan la consideración de valores admitidos a
- * cotización **a los efectos de aquellas disposiciones que regulen regímenes
- * específicos de inversión**".
+ * A **fund** takes a year by default (criterion #2, `2:fund_1y`, since
+ * 2026-11-03): the prudent reading while the dispute is open. What separates
+ * the two months of article 33.5 f) from the year of g) is being admitted to
+ * trading, and the law does not name funds. For two months there is only
+ * article 4.9 of RD 1082/2012, whose last clause ("a los efectos de aquellas
+ * disposiciones que regulen regímenes específicos de inversión") narrows it,
+ * and two consultations older than Ley 35/2006 (V0011-00, V2067-06); the
+ * Manual de Renta 2025 does not name funds in the two months, and a sentence
+ * of the help of 2025 the documents used to quote could not be found. With
+ * a year, a loss of a fund is deferred rather than computed too early. Two
+ * months stays a setting (`2:fund_2m`), and the output measures it.
  *
- * **That last clause is part of the quote and it narrows it**: article 33.5 f)
- * LIRPF is not obviously one of those provisions, so the regulation on its own
- * is arguable and does not carry the decision. What carries it is the doctrine:
- * the two consultations found on the point (DGT V0011-00 and V2067-06, both
- * older than Ley 35/2006) put fund units under f), and the help of Modelo 100
- * for 2025 lists funds with daily information among the two-month case; its
- * example of the year is a SICAV of the MAB.
- *
- * **A monetary fund too** (`money_market`), for exactly the same reason and
- * with the same certainty: in this catalogue the type is a **money market
- * fund** —it carries an ISIN, a TER and `transferable`, which is the Spanish
- * transfer regime and only exists for collective investment undertakings— not
- * a treasury bill, a repo or a deposit, which the reasoning would not reach.
+ * **A monetary fund too** (`money_market`), for exactly the same reason: in
+ * this catalogue the type is a **money market fund** —it carries an ISIN, a
+ * TER and `transferable`, which is the Spanish transfer regime and only
+ * exists for collective investment undertakings— not a treasury bill, a repo
+ * or a deposit.
  */
 export const DEFAULT_WASH_SALE_WINDOW: Record<AssetType, WashSaleWindow> = {
   stock: "2m",
@@ -224,8 +219,8 @@ export const DEFAULT_WASH_SALE_WINDOW: Record<AssetType, WashSaleWindow> = {
   etc: "2m",
   etp: "2m",
   crypto: "1y",
-  fund: "2m",
-  money_market: "2m",
+  fund: "1y",
+  money_market: "1y",
 };
 
 /** Provisional defaults (ADR-0013, ADR-0014). Verify with the tax advisor; change via `settings_changed`, not code. */

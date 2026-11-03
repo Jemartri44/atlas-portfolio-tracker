@@ -47,11 +47,13 @@ export interface SeriesCardProps {
   panels?: readonly { series: readonly number[]; name?: string }[] | undefined;
   /**
    * Areas: the series filled down to zero, and one stacked on another — drawn as their sum, filled
-   * between the two lines and left out of the legend, which names it already. Its index, for a
-   * panel, is the one after the last label.
+   * between the two lines and named in the legend for what its edge is. Its index, for a panel, is
+   * the one after the last label.
    */
   filled?: readonly number[] | undefined;
   stacked?: { top: number; on: number } | undefined;
+  /** The name of the stack, for its legend: what its top edge is. */
+  stackedLabel?: string | undefined;
   /** What the values are: euros, or a percentage (axis and table without a mask). */
   unit?: "eur" | "pct" | undefined;
   /** Past half a range of holes, jump to the last stretch with data and say so. */
@@ -103,11 +105,12 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
     return [
       ...own,
       {
-        label: `${top.label} (sobre ${on.label.toLowerCase()})`,
+        // Its top edge is the sum of both: named for what it is, in the legend too, so the bucket's
+        // colour up there is never read as the bucket's value.
+        label: props.stackedLabel ?? `${top.label} y ${on.label.toLowerCase()}`,
         values: sum,
         colour: top.colour,
         fill: { below: on.label },
-        legend: false,
       },
     ];
   };
@@ -159,7 +162,7 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
             )}
           </Show>
           <figcaption>
-            <ChartLegend series={series().filter((one) => one.legend !== false)} />
+            <ChartLegend series={series()} />
           </figcaption>
         </figure>
         <Show when={typeof hole() === "object"}>

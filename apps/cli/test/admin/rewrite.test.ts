@@ -7,7 +7,6 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { encodeLine, type LedgerSchema, type Migration } from "@atlas/domain";
-import { newDevice, serializeDeviceObject } from "@atlas/domain/access";
 import { describe, expect, it } from "vitest";
 import { TestOnlyFakeSecrets } from "../../../../packages/adapters/test/aws/test-only-fake-secrets.js";
 import { CONFIG, setup } from "../../../api/test/harness.js";
@@ -31,17 +30,6 @@ const adminOf = (api: Api): AdminAccess => ({
 const text = (lines: readonly string[]): string => lines.map((line) => `${line}\n`).join("");
 const seeded = seed().map((event) => encodeLine(event));
 
-const device = (api: Api, id: string, fields: { state?: "forgotten" } = {}) =>
-  api.s3.seed(
-    `sync/devices/${id}.json`,
-    serializeDeviceObject({
-      ...newDevice({ deviceId: id, type: "web", createdAt: "2026-10-01T10:00:00Z" }),
-      ...(fields.state === undefined
-        ? {}
-        : { state: "forgotten", forgotten_at: "2026-10-02T10:00:00Z" }),
-    }),
-  );
-
 const adminConsole = async (
   api: Api,
   options: { confirm?: boolean; schema?: LedgerSchema } = {},
@@ -63,26 +51,6 @@ const adminConsole = async (
 // A schema with a version 2, to have something to compact (as the local compact tests).
 const renameNote: Migration = (record) => record;
 const V2: LedgerSchema = { version: 2, migrations: new Map([[1, renameNote]]) };
-
-describe("no queue to wait for (ADR-0035, E4)", () => {
-  it.each([
-    ["compact", ["admin", "compact", "--env", "test"]],
-    ["restore", ["admin", "restore", "--env", "test", "--from", "backups/2026-09"]],
-  ])(
-    "does not refuse %s for what a device published or for an unreadable object",
-    async (_what, argv) => {
-      const api = setup();
-      api.s3.seed(LEDGER, text(seeded));
-      api.s3.seed("backups/2026-09/ledger.jsonl", text(seeded.slice(0, 2)));
-      device(api, `D${"1".repeat(21)}`);
-      api.s3.seed(`sync/devices/${"U".repeat(22)}.json`, "{");
-      const { c } = await adminConsole(api, { schema: V2 });
-      expect(await c.exec(argv)).toBe(EXIT.ok);
-      expect(c.text()).not.toContain("rewrite_refused");
-      expect(api.s3.keys().some((key) => key.startsWith("archive/"))).toBe(true);
-    },
-  );
-});
 
 describe("atlas admin compact", () => {
   it("archives the remote first, rewrites it in the current version, and never deletes", async () => {
@@ -152,6 +120,16 @@ describe("atlas admin compact", () => {
 });
 
 describe("atlas admin restore (ADR-0032, the six steps)", () => {
+  it("is also the first upload: an empty cloud takes the local ledger as its bytes are", async () => {
+    const api = setup();
+    const { c, folder } = await adminConsole(api);
+    await writeFile(join(folder, "copia.jsonl"), text(seeded));
+    expect(
+      await c.exec(["admin", "restore", "--env", "test", "--from", join(folder, "copia.jsonl")]),
+    ).toBe(EXIT.ok);
+    expect(api.s3.text(LEDGER)).toBe(text(seeded));
+  });
+
   it("restores a prefix, saying the tail it loses, archiving first and writing the bytes as they are", async () => {
     const api = setup();
     api.s3.seed(LEDGER, text(seeded));

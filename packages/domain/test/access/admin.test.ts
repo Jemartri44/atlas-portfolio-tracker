@@ -1,46 +1,8 @@
 // The pure rules of the administration of the remote.
 
 import { describe, expect, it } from "vitest";
-import {
-  compareForRestore,
-  forgetRefusal,
-  forgottenDevice,
-  parseAdminConfig,
-} from "../../src/access/admin.js";
-import { newDevice } from "../../src/access/device.js";
+import { compareForRestore, parseAdminConfig } from "../../src/access/admin.js";
 import { SAMPLES } from "../samples.js";
-
-const device = (id: string, fields: { forgotten?: boolean } = {}) => ({
-  ...newDevice({ deviceId: id, type: "console" as const, createdAt: "2026-10-01T10:00:00Z" }),
-  ...(fields.forgotten === true
-    ? { state: "forgotten" as const, forgotten_at: "2026-10-02T10:00:00Z" }
-    : {}),
-});
-const A = "A".repeat(22);
-
-describe("forgetRefusal and forgottenDevice", () => {
-  it("refuses a missing or unreadable object, and does nothing to a forgotten one", () => {
-    expect(forgetRefusal(undefined)).toEqual({ code: "forget_device_missing", details: {} });
-    expect(forgetRefusal("unreadable")).toEqual({
-      code: "forget_device_unreadable",
-      details: {},
-    });
-    expect(forgetRefusal(device(A, { forgotten: true }))).toBe("already_forgotten");
-  });
-
-  it("lets an active device be forgotten", () => {
-    expect(forgetRefusal(device(A))).toBeUndefined();
-  });
-
-  it("marks it forgotten with the instant, and changes nothing else", () => {
-    const before = device(A);
-    expect(forgottenDevice(before, "2026-10-03T10:00:00Z")).toEqual({
-      ...before,
-      state: "forgotten",
-      forgotten_at: "2026-10-03T10:00:00Z",
-    });
-  });
-});
 
 describe("compareForRestore", () => {
   const [a, b, c] = [SAMPLES.account_created, SAMPLES.asset_created, SAMPLES.cash_deposit];

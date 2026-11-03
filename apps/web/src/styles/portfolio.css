@@ -237,3 +237,17 @@
     margin-top: 0;
   }
 }
+
+/* The calculation of the split in sight on a computer: five columns in a card of five, so the
+   cells keep a tighter gutter than a table of the whole row. */
+.split-calc .table :is(th, td) {
+  padding-inline: var(--space-2);
+}
+
+.split-calc .table :is(th, td):first-child {
+  padding-left: 0;
+}
+
+.split-calc .table :is(th, td):last-child {
+  padding-right: 0;
+}

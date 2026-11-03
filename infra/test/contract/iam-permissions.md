@@ -29,8 +29,8 @@ Por qué `s3:GetObject` sobre lo que se escribe: `If-Match` exige `s3:PutObject`
 | `s3:PutObject` | `B/prices/*` **con denegación explícita** de `B/prices/symbols.json` y `B/prices/config.json` | cierres y `_status.json`; **un solo escritor por objeto** (§8.1 P18, §8.2 M5): IAM impide lo que el código ya no hace |
 | `s3:GetObject`, `s3:PutObject` | `B/jobs/prices/*` | su registro |
 | `s3:ListBucket` | `B`, con `s3:prefix` en `prices/`, `jobs/prices/`, `ledger/` | ídem |
-| `ssm:GetParameter` | `P/prices/eodhd-key`, `P/prices/alpha-vantage-key` | las claves (`SecureString`, `aws/ssm`); `kms:Decrypt` **sin verificar**: comprobación de la 018 (questions §9) |
-| — | red de salida | `eodhd.com`, `www.alphavantage.co` |
+| `ssm:GetParameter` | `P/prices/eodhd-key` | la clave (`SecureString`, `aws/ssm`); `kms:Decrypt` **sin verificar**: comprobación de la 018 (questions §9) |
+| — | red de salida | `eodhd.com` |
 
 ## 3. `atlas-<entorno>-job-mail`
 
@@ -41,7 +41,6 @@ Por qué `s3:GetObject` sobre lo que se escribe: `If-Match` exige `s3:PutObject`
 | `s3:PutObject` | `B/jobs/mail/*` | sus registros y sus rachas; **ningún otro prefijo** |
 | `s3:ListBucket` | `B`, con `s3:prefix` en `jobs/`, `prices/`, `reference/ecb/`, `access/`, `ledger/` | ídem |
 | `ssm:GetParameter` | `P/mail/recipient`, `P/mail/amounts` | `String`, sin KMS |
-| `ssm:GetParametersByPath` | `P/device-tokens` (con `ssm:Recursive = false`) | contar tokens vivos y emitidos; `SecureString`, `kms:Decrypt` **sin verificar**: comprobación de la 018 |
 | `ses:SendEmail` | `I/<remitente>` **y** `I/<dominio del remitente>`, los dos (aceptado, questions §9; qué ARN evalúa SES con un dominio verificado sigue sin verificar, §1.1), y la del destinatario si la cuenta sigue en el *sandbox* | el envío |
 
 Condiciones de `ses:SendEmail` (questions §1.1, verificadas contra la API v2):
@@ -91,11 +90,12 @@ Condiciones de `ses:SendEmail` (questions §1.1, verificadas contra la API v2):
 | Acción | Recurso | Para qué |
 |---|---|---|
 | `s3:GetObject`, `s3:PutObject` | `B/access/last-web-sign-in.json` | avanzar la fecha del último inicio de sesión web (Q3; §8.1 P6) |
+| `s3:GetObject`, `s3:PutObject` | `B/access/sessions-valid-from.json` | «Cerrar sesión en todos los dispositivos»: se lee en cada petición con cookie y se escribe en `POST /api/auth/logout-all` (ADR-0037) |
 | `s3:ListBucket` | `B`, con `s3:prefix` en `access/` | `404` en vez de `403` en el primer inicio de sesión web de un entorno nuevo (nota del 2026-10-03) |
 | `logs:CreateLogStream`, `logs:PutLogEvents` | su propio grupo, `/aws/lambda/atlas-<entorno>-api` | sus registros (nota del 2026-10-03) |
 
 **Nota del 2026-10-03 (revisión de la PR #110, ronda 1; decisión del usuario, `docs/prompts/017-infrastructure-as-code.md` §12.2 B5 y N6).**
-- **B5.** El rol de la API gana **`access/`** en los prefijos de su `s3:ListBucket`. Hasta hoy los cubría `ledger/`, `sync/devices/`, `reference/ecb/` y `prices/` (`specs/015-api-access/plan.md` (retirada; en git) §10 y hoja de ruta, «Lo que la 015 le deja a la 017»). **Sin `access/`**, el primer inicio de sesión web de un entorno nuevo hace `get` de `access/last-web-sign-in.json` y recibe `403` en lugar de `404` (`packages/adapters/src/aws/web-sign-in.ts`). Entonces `signInDate` (`apps/api/src/handler.ts`) registra `sign_in_date_unavailable`, **el objeto no se crea nunca** y el correo mensual pierde para siempre los días desde el último inicio de sesión web.
+- **B5.** El rol de la API gana **`access/`** en los prefijos de su `s3:ListBucket`. Hasta entonces los cubrían `ledger/`, `reference/ecb/` y `prices/` (y `sync/devices/`, retirado con ADR-0037) (`specs/015-api-access/plan.md` (retirada; en git) §10 y hoja de ruta, «Lo que la 015 le deja a la 017»). **Sin `access/`**, el primer inicio de sesión web de un entorno nuevo hace `get` de `access/last-web-sign-in.json` y recibe `403` en lugar de `404` (`packages/adapters/src/aws/web-sign-in.ts`). Entonces `signInDate` (`apps/api/src/handler.ts`) registra `sign_in_date_unavailable`, **el objeto no se crea nunca** y el correo mensual pierde para siempre los días desde el último inicio de sesión web.
 - **N6.** **`logs:CreateLogStream` y `logs:PutLogEvents` sobre su propio grupo** entran en el contrato de la API, que no los tenía. **Para las cinco tareas ya estaban en §7** («Comunes a las cinco funciones de tareas»): cada una, sobre su propio grupo `/aws/lambda/atlas-<entorno>-job-<familia>`, y sobre ningún otro. La política de la 017 concede exactamente eso.
 
 ## 7. Comunes a las cinco funciones de tareas

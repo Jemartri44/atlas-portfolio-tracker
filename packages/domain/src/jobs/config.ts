@@ -36,7 +36,6 @@ export const JOBS_CONFIG_VARIABLES: Readonly<Record<JobFamily, readonly string[]
   prices: [
     "ATLAS_PRICE_SOURCES",
     "ATLAS_PRICES_EODHD_DAILY_CALLS",
-    "ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS",
     "ATLAS_PRICES_FAILURE_THRESHOLD",
   ],
   mail: ["ATLAS_MAIL_FROM", "ATLAS_ORIGIN", "ATLAS_OAUTH_IDLE_WARNING_DAYS"],
@@ -58,13 +57,13 @@ export interface MailConfig {
  * `prod`**.
  */
 export interface PricesConfig {
-  readonly sources: readonly ("eodhd" | "alpha_vantage")[] | "simulated";
-  readonly dailyCalls: { readonly eodhd: number; readonly alpha_vantage: number };
+  readonly sources: readonly "eodhd"[] | "simulated";
+  readonly dailyCalls: { readonly eodhd: number };
   readonly failureThreshold: number;
 }
 
 /** The ceilings of the budgets, **fixed in the code**: the quotas of the free plans (ADR-0031). */
-export const PRICE_BUDGET_CEILINGS = { eodhd: 20, alpha_vantage: 25 } as const;
+export const PRICE_BUDGET_CEILINGS = { eodhd: 20 } as const;
 
 /** The ceiling of the threshold of consecutive failures. */
 export const FAILURE_THRESHOLD_CEILING = 30;
@@ -169,24 +168,18 @@ const pricesConfig = (
     }
     sources = "simulated";
   } else {
-    if (!names.every((name) => name === "eodhd" || name === "alpha_vantage")) {
+    if (!names.every((name) => name === "eodhd")) {
       throw invalid("ATLAS_PRICE_SOURCES", "unknown_source");
     }
     if (new Set(names).size !== names.length) {
       throw invalid("ATLAS_PRICE_SOURCES", "repeated_source");
     }
-    sources = names as ("eodhd" | "alpha_vantage")[];
+    sources = names as "eodhd"[];
   }
   return {
     sources,
     dailyCalls: {
       eodhd: wholeNumber(env, "ATLAS_PRICES_EODHD_DAILY_CALLS", 0, PRICE_BUDGET_CEILINGS.eodhd),
-      alpha_vantage: wholeNumber(
-        env,
-        "ATLAS_PRICES_ALPHA_VANTAGE_DAILY_CALLS",
-        0,
-        PRICE_BUDGET_CEILINGS.alpha_vantage,
-      ),
     },
     failureThreshold: wholeNumber(
       env,
@@ -199,18 +192,14 @@ const pricesConfig = (
 
 /**
  * The text of a `prices/config.json` made of the configuration of the
- * function, for `parsePriceConfig` to read as always: the order of the
- * sources, their budgets and the threshold. The market days and the recent
+ * function, for `parsePriceConfig` to read as always: the budget and the
+ * threshold. The market days and the recent
  * days asked again by asset type keep their defaults. The simulated
  * source answers as `eodhd`, the only name the store knows.
  */
 export const cloudPriceConfigText = (prices: PricesConfig): string =>
   JSON.stringify({
-    source_order: prices.sources === "simulated" ? ["eodhd"] : prices.sources,
-    daily_calls:
-      prices.sources === "simulated"
-        ? { eodhd: prices.dailyCalls.eodhd, alpha_vantage: 0 }
-        : prices.dailyCalls,
+    daily_calls: prices.dailyCalls,
     failure_threshold: prices.failureThreshold,
   });
 

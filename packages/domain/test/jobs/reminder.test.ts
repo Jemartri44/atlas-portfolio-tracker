@@ -3,7 +3,6 @@
 // looked for in the mail with the switch off — also written with thousands and a decimal comma.
 
 import { describe, expect, it } from "vitest";
-import { newTokenRecord, revokedRecord, type TokenRecord } from "../../src/access/token.js";
 import { reminderMail } from "../../src/jobs/mail/reminder.js";
 import { type ReminderInput, reminderFacts } from "../../src/jobs/reminder.js";
 import { Decimal } from "../../src/money/decimal.js";
@@ -12,8 +11,6 @@ import type { ContributionPlan, ContributionRow } from "../../src/projections/co
 import type { AssetClass } from "../../src/schema/events.js";
 
 const eur = (text: string) => Money.parse(text, "EUR");
-const DAY = 86_400_000;
-const NOW = Date.parse("2026-10-01T06:00:00Z");
 
 /** Sentinels: none of them may ever reach a mail with the switch off. */
 const SENTINELS = {
@@ -60,30 +57,11 @@ const PLAN: ContributionPlan = {
   ],
 };
 
-const token = (id: string, issuedAtMs: number): TokenRecord =>
-  newTokenRecord({
-    tokenId: id.padEnd(22, "A"),
-    secretSha256: "0".repeat(64),
-    sub: "108234567890123456789",
-    email: "user@example.test",
-    deviceId: "D".repeat(22),
-    deviceName: SENTINELS.account,
-    issuedAtMs,
-    lifetimeDays: 90,
-  });
-
 const INPUT: ReminderInput = {
   period: "2026-10",
   today: "2026-10-01",
-  nowMs: NOW,
   plan: PLAN,
-  webSignIn: "2026-08-28",
-  tokens: [
-    token("alive", NOW - 10 * DAY),
-    token("old", NOW - 200 * DAY),
-    revokedRecord(token("revoked", NOW - 5 * DAY), NOW - DAY),
-    "unreadable",
-  ],
+  webSignIn: "2026-09-26",
   idleWarningDays: 150,
 };
 
@@ -133,50 +111,25 @@ describe("the facts of the monthly reminder", () => {
     });
   });
 
-  it("counts the alive tokens, the ones issued in the month just ended and the unreadable apart (R13)", () => {
-    const september = NOW - 10 * DAY;
-    const facts = reminderFacts({
-      ...INPUT,
-      tokens: [
-        token("a", september),
-        token("b", Date.parse("2026-08-31T21:59:59Z")),
-        token("c", Date.parse("2026-08-31T22:00:00Z")),
-        revokedRecord(token("d", september), NOW - DAY),
-        token("e", NOW - 130 * DAY),
-        "unreadable",
-        "unreadable",
-      ],
-    });
-    expect(facts.issuedMonth).toBe("2026-09");
-    // a (alive), b (31 Aug in Madrid, alive), c (1 Sep in Madrid, alive); d revoked; e past the 120-day ceiling.
-    expect(facts.tokens).toEqual({ alive: 3, issued: 3, unreadable: 2 });
-    expect(reminderFacts({ ...INPUT, tokens: "unavailable" }).tokens).toBe("unavailable");
-  });
-
-  it("counts the days since the last sign-in, the web's or any issue of a token (R14)", () => {
+  it("counts the days since the last sign-in of the web (R14)", () => {
     expect(reminderFacts(INPUT).signIn).toEqual({
       last: "2026-09-26",
       days: 5,
       webUnreadable: false,
     });
-    const webOnly = reminderFacts({ ...INPUT, tokens: [], webSignIn: "2026-05-04" });
-    expect(webOnly.signIn).toEqual({
+    const old = reminderFacts({ ...INPUT, webSignIn: "2026-05-04" });
+    expect(old.signIn).toEqual({
       last: "2026-05-04",
       days: 150,
       deadline: "2026-11-04",
       webUnreadable: false,
     });
-    const justBefore = reminderFacts({ ...INPUT, tokens: [], webSignIn: "2026-05-05" });
+    const justBefore = reminderFacts({ ...INPUT, webSignIn: "2026-05-05" });
     expect(justBefore.signIn).toEqual({ last: "2026-05-05", days: 149, webUnreadable: false });
-    const revokedCounts = reminderFacts({
-      ...INPUT,
-      webSignIn: undefined,
-      tokens: [revokedRecord(token("r", Date.parse("2026-09-30T08:00:00Z")), NOW)],
+    expect(reminderFacts({ ...INPUT, webSignIn: undefined }).signIn).toEqual({
+      webUnreadable: false,
     });
-    expect(revokedCounts.signIn.last).toBe("2026-09-30");
-    expect(
-      reminderFacts({ ...INPUT, tokens: "unavailable", webSignIn: "unreadable" }).signIn,
-    ).toEqual({
+    expect(reminderFacts({ ...INPUT, webSignIn: "unreadable" }).signIn).toEqual({
       webUnreadable: true,
     });
   });
@@ -229,10 +182,7 @@ describe("the text of the monthly reminder", () => {
         "  Algún peso usa la aproximación por ETF de referencia (weights_use_approximation).",
         "",
         "Acceso",
-        "  Último inicio de sesión: hace 5 días (2026-09-26), en la web o en la consola.",
-        "  Tokens de consola vivos: 1. Emitidos en septiembre de 2026: 2.",
-        "  Registros de tokens ilegibles: 1.",
-        "  Si no reconoces una emisión, tu cuenta de Google puede estar comprometida (docs/runbooks/stolen-google-account.md).",
+        "  Último inicio de sesión en la web: hace 5 días (2026-09-26).",
         "",
         "Copia fuera de AWS",
         "  Haz la copia a tu disco: atlas backup --to <dir> --from-bucket --env prod",
@@ -257,12 +207,11 @@ describe("the text of the monthly reminder", () => {
     }
   });
 
-  it("still arrives, saying why, when the split, the tokens or the sign-in could not be read (R8)", () => {
+  it("still arrives, saying why, when the split or the sign-in could not be read (R8)", () => {
     const broken = reminderMail(
       reminderFacts({
         ...INPUT,
         plan: { failure: "ledger_unreadable" },
-        tokens: "unavailable",
         webSignIn: "unreadable",
       }),
       "on",
@@ -273,7 +222,6 @@ describe("the text of the monthly reminder", () => {
     );
     expect(broken.body).toContain("  No consta ningún inicio de sesión.");
     expect(broken.body).toContain("(web_sign_in_unreadable)");
-    expect(broken.body).toContain("(tokens_unavailable)");
     expect(broken.body).toContain("atlas backup --to <dir> --from-bucket --env prod");
     expect(broken.body).not.toContain("€");
   });
@@ -290,14 +238,12 @@ describe("the text of the monthly reminder", () => {
 
   it("warns before the six months of an unused OAuth client, with the date (R14)", () => {
     const mail = reminderMail(
-      reminderFacts({ ...INPUT, tokens: [], webSignIn: "2026-05-04" }),
+      reminderFacts({ ...INPUT, webSignIn: "2026-05-04" }),
       "off",
       "https://atlas.example.test",
     );
     expect(mail.body).toContain(
-      "  Aviso: si nadie inicia sesión antes del 2026-11-04, Google puede borrar el cliente OAuth. Inicia sesión en la web o con «atlas remote login».",
+      "  Aviso: si nadie inicia sesión antes del 2026-11-04, Google puede borrar el cliente OAuth. Entra en la web para evitarlo.",
     );
-    expect(mail.body).toContain("  Tokens de consola vivos: 0. Emitidos en septiembre de 2026: 0.");
-    expect(mail.body).not.toContain("ilegibles");
   });
 });

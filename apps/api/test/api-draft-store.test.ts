@@ -5,7 +5,7 @@ import { ApiDraftStore } from "@atlas/adapters/drafts-http";
 import { DraftChangedError, type PendingDraft } from "@atlas/domain/ecb";
 import { RemoteError } from "@atlas/domain/sync";
 import { describe, expect, it } from "vitest";
-import { consoleLogin, SELF, setup } from "./harness.js";
+import { SELF, setup } from "./harness.js";
 
 const A = "01J0000000000000000000000A";
 const E1 = "01J000000000000000000000E1";
@@ -19,20 +19,19 @@ const draft = (id = A): PendingDraft => ({
 
 const rig = async () => {
   const api = setup();
-  const { token } = await consoleLogin(api);
+  await api.signIn();
   const sent: { url: string; init: RequestInit }[] = [];
   const fetch = (async (url: string, init: RequestInit) => {
     sent.push({ url, init });
     const result = await api.call(init.method ?? "GET", url.replace(SELF, ""), {
-      headers: init.headers as Record<string, string>,
+      headers: { ...(init.headers as Record<string, string>), origin: SELF },
       ...(init.body === undefined
         ? {}
         : { body: new TextDecoder().decode(init.body as Uint8Array) }),
-      jar: false,
     });
     return new Response(result.body, { status: result.statusCode, headers: result.headers });
   }) as unknown as typeof globalThis.fetch;
-  return { api, sent, store: new ApiDraftStore({ origin: SELF, fetch, token }) };
+  return { api, sent, store: new ApiDraftStore({ origin: SELF, fetch }) };
 };
 
 const failure = (promise: Promise<unknown>): Promise<unknown> =>
@@ -54,9 +53,13 @@ describe("ApiDraftStore", () => {
     await store.remove(A, { outcome: "confirmed", eventId: E1 });
     expect((await store.list()).drafts).toEqual([]);
     expect(api.s3.keys().filter((key) => key.startsWith("drafts/"))).toHaveLength(3);
-    // The token travels, nothing redirects, nothing is cached, every POST says its hash.
+    // The cookie travels, nothing redirects, nothing is cached, every POST says its hash.
     const post = sent.find((entry) => entry.init.method === "POST") as (typeof sent)[number];
-    expect(post.init).toMatchObject({ redirect: "error", cache: "no-store", credentials: "omit" });
+    expect(post.init).toMatchObject({
+      redirect: "error",
+      cache: "no-store",
+      credentials: "same-origin",
+    });
     expect((post.init.headers as Record<string, string>)["x-amz-content-sha256"]).toMatch(
       /^[0-9a-f]{64}$/,
     );
@@ -151,7 +154,7 @@ describe("ApiDraftStore", () => {
     expect(await failure(odd.list())).toMatchObject({ code: "transport_rejected" });
   });
 
-  it("names a draft of the answer it cannot read, and uses the cookie with no token", async () => {
+  it("names a draft of the answer it cannot read", async () => {
     let init: RequestInit | undefined;
     const store = new ApiDraftStore({
       origin: SELF,
@@ -163,6 +166,6 @@ describe("ApiDraftStore", () => {
       }) as unknown as typeof fetch,
     });
     expect(await store.list()).toEqual({ drafts: [], unreadable: ["x", A, "5"] });
-    expect(init).toMatchObject({ credentials: "same-origin" });
+    expect(init).toMatchObject({ method: "GET" });
   });
 });

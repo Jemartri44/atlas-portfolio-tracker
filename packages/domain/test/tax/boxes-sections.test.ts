@@ -9,7 +9,7 @@ import { taxBoxes } from "../../src/tax/boxes/boxes.js";
 import { transmissionSection } from "../../src/tax/boxes/concepts.js";
 import type { BoxEntry, TaxBoxes } from "../../src/tax/boxes/report.js";
 import { LedgerBuilder } from "../ledger-builder.js";
-import { buy, HAND_SETTINGS, sell, taxBuilder, text } from "./helpers.js";
+import { buy, HAND_SETTINGS, sell, taxBuilder } from "./helpers.js";
 
 const TODAY = "2035-01-01";
 
@@ -141,12 +141,13 @@ describe("subscription rights (H5)", () => {
 });
 
 describe("a share outside the EU regulated markets (H4)", () => {
-  const sale = (market: string | undefined) => {
+  const sale = (market: string | undefined, isin?: string) => {
     const b = taxBuilder(HAND_SETTINGS);
     b.asset("stock_us", {
       asset_type: "stock",
       transferable: false,
       ...(market === undefined ? {} : { market }),
+      ...(isin === undefined ? {} : { isin }),
     });
     buy(b, "stock_us", "2025-01-10", "10", "100");
     sell(b, "stock_us", "2025-09-01", "10", "80");
@@ -173,10 +174,8 @@ describe("a share outside the EU regulated markets (H4)", () => {
       expect(codes(boxes)).not.toContain("tax_box_section_doubtful");
     }
     expect(transmissionSection("stock", "capital_gain")).toBe("listed_shares");
-    expect(transmissionSection("stock", "capital_gain", { market: "Nasdaq GS" })).toBe(
-      "other_shares",
-    );
-    expect(transmissionSection("etf", "capital_gain", { market: "XNYS" })).toBe("etf");
+    expect(transmissionSection("stock", "capital_gain", { eu: false })).toBe("other_shares");
+    expect(transmissionSection("etf", "capital_gain", { eu: false })).toBe("etf");
   });
 
   // Without a market Atlas knows, a share stays among "acciones negociadas",
@@ -185,40 +184,165 @@ describe("a share outside the EU regulated markets (H4)", () => {
     ["with no market", undefined, true],
     ["with an unknown market", "somewhere", true],
     ["on an EU market", "XMAD", false],
-  ])("notes a share %s", (_name, market, noted) => {
-    const found = sale(market).notes.filter((entry) => entry.code === "tax_box_market_unknown");
+    // Xetra also trades shares not admitted on its regulated market: a US
+    // share bought there is not "admitida" in the EU (help of 2025, key 2).
+    ["of the US bought on Xetra", "XETR", true, "US0378331005"],
+    ["on Xetra with no ISIN", "XETR", true],
+    ["of Germany on Xetra", "XETR", false, "DE0007236101"],
+  ])("notes a share %s", (_name, market, noted, isin?: string) => {
+    const found = sale(market, isin).notes.filter(
+      (entry) => entry.code === "tax_box_market_unknown",
+    );
     expect(found.map((entry) => entry.details)).toEqual(noted ? [{ assets: ["stock_us"] }] : []);
   });
 });
 
 describe("an exchange difference of currency (H7)", () => {
-  // 1.000 USD bought for 800 € (1,25) and sold for 850 € (≈1,1765): +50,00.
-  it("keeps no box and names key 4 of 'otros elementos' as an inference", () => {
+  // The bucket's dollars: euros bought into USD and sold back. Each pair of
+  // rates is ECB-style (USD per EUR); the gain is proceeds − cost in euros.
+  const roundTrip = (
+    euros: string,
+    dollars: string,
+    rateIn: string,
+    back: string,
+    rateOut: string,
+  ) => {
     const b = new LedgerBuilder();
     b.settings(HAND_SETTINGS);
     b.account("acc_us", { platform: "broker", country: "IE" });
-    b.deposit({ account_id: "acc_us", value_date: "2025-01-02", amount: "800" });
-    const exchange = (date: string, sold: [string, string], bought: [string, string]) =>
+    b.deposit({ account_id: "acc_us", value_date: "2025-01-02", amount: euros });
+    b.fx({
+      account_id: "acc_us",
+      value_date: "2025-02-03",
+      sold_amount: euros,
+      sold_currency: "EUR",
+      bought_amount: dollars,
+      bought_currency: "USD",
+      fee: "0",
+      fee_currency: "EUR",
+      fx_rate_bought: rateIn,
+      fx_rate_date: "2025-02-03",
+    });
+    b.fx({
+      account_id: "acc_us",
+      value_date: "2025-06-02",
+      sold_amount: dollars,
+      sold_currency: "USD",
+      bought_amount: back,
+      bought_currency: "EUR",
+      fee: "0",
+      fee_currency: "EUR",
+      fx_rate_sold: rateOut,
+      fx_rate_bought: "1",
+      fx_rate_date: "2025-06-02",
+    });
+    return b;
+  };
+
+  // 800 € → 1.000 USD at 1,25 (cost 800 €); back for the 850 € received:
+  // transmission 850, acquisition 800, gain +50,00.
+  // Help of the Modelo 100 of 2025, key 4: «cualesquiera otros bienes o
+  // derechos no incluidos en los apartados anteriores».
+  it("goes to 'otros elementos' with key 4, chosen by exclusion", () => {
+    const boxes = taxBoxes(roundTrip("800", "1000", "1.25", "850", "1.1765").build(), 2025, {
+      today: TODAY,
+    });
+    expect(
+      ["1626", "1633", "1637", "1640", "1645", "1650", "0386"].map((box) => shown(boxes, box)),
+    ).toEqual(["4", "850.00", "800.00", "50.00", "50.00", "50.00", "50.00"]);
+    expect(codes(boxes)).toContain("tax_box_other_inferred");
+    expect(codes(boxes)).not.toContain("tax_box_section_doubtful");
+  });
+
+  // Audit of 2026-11-03 (ronda 3, N2): 10.000 USD bought at 1,10
+  // (9.090,91 €) and sold at 1,05 (9.523,81 €): +432,90 € to declare.
+  it("declares the audit's example in 1640 and 0386", () => {
+    const boxes = taxBoxes(roundTrip("9090.91", "10000", "1.10", "9523.81", "1.05").build(), 2025, {
+      today: TODAY,
+    });
+    expect(["1640", "1650", "0386"].map((box) => shown(boxes, box))).toEqual([
+      "432.90",
+      "432.90",
+      "432.90",
+    ]);
+  });
+
+  // 800 € → 1.000 USD at 1,25, back for 750 €: loss −50,00 (1638). Art.
+  // 33.5.e LIRPF: buying the same currency again within the year after defers
+  // it (criterion 4:currency_wash_sale), so 1639 and 0385 hold what is left.
+  it.each([
+    ["with no repurchase", false, "50.00"],
+    ["when the dollars are bought again within the year", true, "0.00"],
+  ])("declares a loss of currency %s", (_name, rebuy, imputable) => {
+    const b = roundTrip("800", "1000", "1.25", "750", "1.3333");
+    if (rebuy) {
       b.fx({
         account_id: "acc_us",
-        value_date: date,
-        sold_amount: sold[0],
-        sold_currency: sold[1],
-        bought_amount: bought[0],
-        bought_currency: bought[1],
+        value_date: "2025-08-01",
+        sold_amount: "750",
+        sold_currency: "EUR",
+        bought_amount: "1000",
+        bought_currency: "USD",
         fee: "0",
         fee_currency: "EUR",
-        ...(sold[1] === "USD" ? { fx_rate_sold: "1.1765" } : {}),
-        fx_rate_bought: bought[1] === "USD" ? "1.25" : "1",
-        fx_rate_date: date,
+        fx_rate_bought: "1.3333",
+        fx_rate_date: "2025-08-01",
       });
-    exchange("2025-02-03", ["800", "EUR"], ["1000", "USD"]);
-    exchange("2025-06-02", ["1000", "USD"], ["850", "EUR"]);
+    }
     const boxes = taxBoxes(b.build(), 2025, { today: TODAY });
-    const other = boxes.entries.filter((item) => item.section === "other");
-    expect(other.find((item) => item.concept === "gp.other.key")?.text).toBe("4");
-    expect(text(other.find((item) => item.concept === "gp.other.gain")?.amount_eur)).toBe("50");
-    expect(other.every((item) => item.box === undefined)).toBe(true);
-    expect(codes(boxes)).toContain("tax_box_other_inferred");
+    expect(["1626", "1638", "1639", "0385"].map((box) => shown(boxes, box))).toEqual([
+      "4",
+      "50.00",
+      imputable,
+      imputable,
+    ]);
+    const sum = boxes.entries.find((item) => item.box === "0385");
+    expect(sum?.criteria).toContain("4:currency_wash_sale");
+  });
+
+  // Key 2 and key 4 are rows of the same part of the form: one sum each way.
+  it("adds both keys of 'otros elementos' into one 0385 and one 0386", () => {
+    const b = roundTrip("800", "1000", "1.25", "850", "1.1765");
+    b.asset("stock_us", { asset_type: "stock", transferable: false, market: "XNYS" });
+    b.buy({
+      account_id: "acc_us",
+      asset_id: "stock_us",
+      value_date: "2025-03-03",
+      quantity: "10",
+      unit_price: "100",
+      currency: "EUR",
+      fx_rate: "1",
+      fx_rate_date: "2025-03-03",
+    });
+    b.sell({
+      account_id: "acc_us",
+      asset_id: "stock_us",
+      value_date: "2025-09-01",
+      quantity: "10",
+      unit_price: "80",
+      currency: "EUR",
+      fx_rate: "1",
+      fx_rate_date: "2025-09-01",
+    });
+    const boxes = taxBoxes(b.build(), 2025, { today: TODAY });
+    const sums = (box: string) => boxes.entries.filter((item) => item.box === box);
+    expect(sums("0385").map((item) => item.amount_eur?.centsText())).toEqual(["200.00"]);
+    expect(sums("0386").map((item) => item.amount_eur?.centsText())).toEqual(["50.00"]);
+    expect(boxes.entries.filter((item) => item.box === "1626").map((item) => item.text)).toEqual([
+      "2",
+      "4",
+    ]);
+    // The sums carry the criteria of both keys, and the balance adds them.
+    const criteria = sums("0385")[0]?.criteria ?? [];
+    expect(criteria).toContain("4:currency_fifo");
+    expect(criteria.some((id) => id.startsWith("2:"))).toBe(true);
+    const amount = (concept: string) =>
+      boxes.entries.find((item) => item.concept === concept)?.amount_eur?.centsText();
+    // The form prints the balance as a positive amount in the box of its sign.
+    expect(["gp.gains_total", "gp.losses_total", "gp.balance"].map(amount)).toEqual([
+      "50.00",
+      "200.00",
+      "150.00",
+    ]);
   });
 });

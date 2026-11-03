@@ -94,7 +94,7 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
   // What the user typed, by field: in the draft and not in the fields, which a
   // phone takes off the screen while it shows the effect.
   const [typed, setTyped] = createSignal<ReadonlySet<string>>(new Set());
-  const proposed = new Set(
+  const proposed = new Set<string>(
     Object.keys(props.prefill ?? {}).filter((name) => name === "amount" || name === "quantity"),
   );
   const revealed = (name: string): boolean =>

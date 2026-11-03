@@ -7,7 +7,7 @@
 // money behind it.
 
 import { DEFAULT_SETTINGS } from "@atlas/domain";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { MEASURE_REASONS } from "../src/format/criteria.js";
 import Fiscal from "../src/routes/fiscal/index.jsx";
 import { setPrivacy } from "../src/shell/preferences.js";
@@ -21,6 +21,7 @@ import {
   ULID,
   withGoldenLedger,
 } from "./helpers/render.jsx";
+import { withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
 
@@ -412,5 +413,47 @@ describe("a ledger with nothing in it", () => {
       "Todavía no hay nada que declarar",
     ]);
     expect(shown).not.toContain("Criterios en duda");
+  });
+});
+
+describe("the order of the screen by device", () => {
+  afterEach(() => withoutStyles());
+
+  /** Where a card is in the page, by its title; a card that is missing fails the test. */
+  const positions = (host: HTMLElement) => {
+    const order = [
+      ...host.querySelectorAll(".grid > section > header h2, .grid > section > .card-head h2"),
+    ].map(text);
+    return (pattern: RegExp): number => {
+      const at = order.findIndex((title) => pattern.test(title));
+      expect(at, `${pattern} en ${order.join(" | ")}`).toBeGreaterThanOrEqual(0);
+      return at;
+    };
+  };
+
+  it("puts the deadlines, then the models 720 and 721, then the return, all in sight, on a phone", async () => {
+    today("2029-01-20");
+    withStyles(390);
+    const host = await show("/fiscal", Fiscal);
+    await settle();
+    const at = positions(host);
+    expect(at(/Calendario/)).toBeLessThan(at(/720/));
+    expect(at(/720/)).toBeLessThan(at(/721/));
+    expect(at(/721/)).toBeLessThan(at(/Base del ahorro/));
+    // Nothing folded: the base is a card of the page, never inside a disclosure.
+    const base = host.querySelector('section[aria-label^="Base del ahorro"]');
+    expect(base).not.toBeNull();
+    expect(base?.closest("details")).toBeNull();
+  });
+
+  it("keeps the return before the models on a computer", async () => {
+    today("2029-01-20");
+    withStyles(1440, 900);
+    const host = await show("/fiscal", Fiscal);
+    await settle();
+    const at = positions(host);
+    expect(at(/Calendario/)).toBeLessThan(at(/Base del ahorro/));
+    expect(at(/Base del ahorro/)).toBeLessThan(at(/720/));
+    expect(at(/720/)).toBeLessThan(at(/721/));
   });
 });

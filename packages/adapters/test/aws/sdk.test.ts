@@ -9,12 +9,7 @@ import {
   PutObjectCommand,
   S3ServiceException,
 } from "@aws-sdk/client-s3";
-import {
-  type GetParameterCommand,
-  type GetParametersByPathCommand,
-  PutParameterCommand,
-  SSMServiceException,
-} from "@aws-sdk/client-ssm";
+import { type GetParameterCommand, SSMServiceException } from "@aws-sdk/client-ssm";
 import { describe, expect, it } from "vitest";
 import { DependencyUnavailable } from "../../src/aws/errors.js";
 import { type S3Sender, SdkObjectStore } from "../../src/aws/sdk-s3.js";
@@ -257,88 +252,18 @@ describe("SdkParameterStore", () => {
     });
   });
 
-  it("refuses a parameter answered without a version (the exclusive renewal needs it)", async () => {
-    const { client } = ssmClient(() => ({ Parameter: { Value: "v" } }));
-    await expect(new SdkParameterStore(client).get("/atlas/dev/a")).rejects.toThrow(/version/);
-  });
-
-  it("creates without Overwrite and with its tags; an existing one is exists", async () => {
-    const { client, sent } = ssmClient(() => ({}));
-    const store = new SdkParameterStore(client);
-    expect(await store.putNew("/n", "v", { project: "atlas", env: "dev" })).toBe("created");
-    const command = sent[0] as PutParameterCommand;
-    expect(command).toBeInstanceOf(PutParameterCommand);
-    expect(command.input).toEqual({
-      Name: "/n",
-      Value: "v",
-      Type: "SecureString",
-      Tags: [
-        { Key: "project", Value: "atlas" },
-        { Key: "env", Value: "dev" },
-      ],
-    });
-    const taken = ssmClient(() => ssmError("ParameterAlreadyExists", 400));
-    expect(await new SdkParameterStore(taken.client).putNew("/n", "v", {})).toBe("exists");
-  });
-
-  it("overwrites only with Overwrite and no tags", async () => {
-    const { client, sent } = ssmClient(() => ({ Version: 3 }));
-    expect(await new SdkParameterStore(client).overwrite("/n", "w")).toBe(3);
-    expect((sent[0] as PutParameterCommand).input).toEqual({
-      Name: "/n",
-      Value: "w",
-      Type: "SecureString",
-      Overwrite: true,
-    });
-  });
-
-  it("reads the version with the value, and refuses an overwrite answered without one", async () => {
-    const read = ssmClient(() => ({ Parameter: { Value: "v", Version: 4 } }));
-    expect(await new SdkParameterStore(read.client).getVersioned("/n")).toEqual({
-      value: "v",
-      version: 4,
-    });
-    await expect(
-      new SdkParameterStore(ssmClient(() => ({})).client).overwrite("/n", "w"),
-    ).rejects.toThrow("without a version");
-  });
-
-  it("turns a throttling, TooManyUpdates, a 5xx and the network into a transient failure", async () => {
+  it("turns a throttling, a 5xx and the network into a transient failure", async () => {
     for (const error of [
       ssmError("ThrottlingException", 400),
-      ssmError("TooManyUpdates", 429),
       ssmError("InternalServerError", 500),
       Object.assign(new Error("socket"), { code: "ETIMEDOUT" }),
     ]) {
       const store = new SdkParameterStore(ssmClient(() => error).client);
-      for (const call of [
-        () => store.get("/n"),
-        () => store.putNew("/n", "v", {}),
-        () => store.overwrite("/n", "v"),
-        () => store.listByPath("/p/"),
-      ]) {
-        await expect(call()).rejects.toBeInstanceOf(DependencyUnavailable);
-      }
+      await expect(store.get("/n")).rejects.toBeInstanceOf(DependencyUnavailable);
     }
     const store = new SdkParameterStore(
       ssmClient(() => ssmError("AccessDeniedException", 400)).client,
     );
     await expect(store.get("/n")).rejects.toMatchObject({ name: "AccessDeniedException" });
-  });
-
-  it("lists a path, not recursive, decrypted, every page", async () => {
-    const { client, sent } = ssmClient((command) =>
-      (command as GetParametersByPathCommand).input.NextToken === undefined
-        ? { Parameters: [{ Name: "/p/a", Value: "1" }], NextToken: "t" }
-        : { Parameters: [{ Name: "/p/b", Value: "2" }] },
-    );
-    expect(await new SdkParameterStore(client).listByPath("/p/")).toEqual([
-      { name: "/p/a", value: "1" },
-      { name: "/p/b", value: "2" },
-    ]);
-    expect(sent.map((command) => (command as GetParametersByPathCommand).input)).toEqual([
-      { Path: "/p/", Recursive: false, WithDecryption: true },
-      { Path: "/p/", Recursive: false, WithDecryption: true, NextToken: "t" },
-    ]);
   });
 });

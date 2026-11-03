@@ -122,7 +122,7 @@ export default function BorradoresRoute(): JSX.Element {
                 </Notice>
               </Show>
               <Notice severity="info" title="Están en tu cuenta">
-                Los ves desde cualquier dispositivo y desde la consola, y no se guardan en este. La
+                Los ves desde cualquier dispositivo en el que entres, y no se guardan en este. La
                 exportación del libro no los incluye: no son movimientos.
               </Notice>
               <Show when={refused()}>

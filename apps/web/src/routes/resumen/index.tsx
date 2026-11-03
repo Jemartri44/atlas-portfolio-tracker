@@ -19,8 +19,6 @@ import {
   integrity,
   type LedgerEntry,
   ledgerEntries,
-  type Money,
-  type NetWorthPoint,
   netWorth,
   netWorthSeries,
   nextReturnYear,
@@ -29,9 +27,8 @@ import {
   transferWatch,
 } from "@atlas/domain";
 import { bookCashSeries, contributedSeries, yearPeriod } from "@atlas/domain/charts";
-import { A } from "@solidjs/router";
 import { createMemo, createResource, For, type JSX, Show } from "solid-js";
-import { Icon, type NoticeItem, Section } from "../../components/index.js";
+import type { NoticeItem } from "../../components/index.js";
 import { formatLongDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
@@ -43,7 +40,6 @@ import { privacy } from "../../shell/preferences.js";
 import { weightsView } from "../../view-models/core/index.js";
 import {
   attentionItems,
-  byDay,
   firstEntries,
   fiscalSlot,
   movementRows,
@@ -53,9 +49,9 @@ import {
 import { netWorthPlot, withBookCash, withContributed } from "../../view-models/series.js";
 import { type SummaryCard, summaryOrder } from "../../view-models/summary-order.js";
 import { RequireLedger } from "../guard.jsx";
-import { DayBlock } from "../movimientos/MovementList.jsx";
 import { AllocationCard } from "./AllocationCard.jsx";
 import { AttentionBlock } from "./AttentionBlock.jsx";
+import { bookLines } from "./book-lines.js";
 import { EvolutionCard } from "./EvolutionCard.jsx";
 import { FirstSteps } from "./FirstSteps.jsx";
 // The card that leads to the fiscal screen only draws, so it is on the boot
@@ -65,6 +61,7 @@ import FiscalCard from "./FiscalCard.jsx";
 import type { FiscalStatus } from "./fiscal-status.js";
 import { MonthCard } from "./MonthCard.jsx";
 import { type BookFigures, NetWorthBlock } from "./NetWorthBlock.jsx";
+import { RecentMoves } from "./RecentMoves.jsx";
 import type { SummaryExtras } from "./summary-extras.js";
 
 /** What the lazy tax engine ended in: its answer, or the error it raised. */
@@ -179,15 +176,6 @@ export default function ResumenRoute(): JSX.Element {
           contributed,
         );
         // The small line of each tile: its book over the last year, holes kept as holes.
-        const lastYear = worthSeries.points.filter((point) => point.date >= yearPeriod(date).from);
-        const sparkOf = (pick: (point: NetWorthPoint) => Money | undefined) =>
-          lastYear.map((point) => {
-            const value = pick(point);
-            return value === undefined ? null : Number(value.amount.toString());
-          });
-        const cashAccounts = new Set(
-          worth.cash.rows.filter((row) => !row.balance.isZero()).map((row) => row.account_id),
-        ).size;
         // After the first paint, like the tax engine: the return, the plan and the bucket's index.
         const [extras] = createResource(
           () => ({ external: prices.external(dated) }),
@@ -200,17 +188,8 @@ export default function ResumenRoute(): JSX.Element {
               external: input.external,
             }),
         );
-        const figures = (): BookFigures => ({
-          month: extras()?.month,
-          year: extras()?.year,
-          bucketVsIndexPct: extras()?.bucketVsIndexPct,
-          cashAccounts,
-          spark: {
-            core: sparkOf((point) => point.core_eur),
-            bucket: sparkOf((point) => point.bucket_eur),
-            cash: sparkOf((point) => point.cash_eur),
-          },
-        });
+        const books = bookLines(worthSeries, worth, yearPeriod(date).from);
+        const figures = (): BookFigures => ({ ...books, ...extras() });
         const allocation = createMemo(() =>
           weightsView(coreWeights(dated, date, settings, prices.external(dated)), names),
         );
@@ -223,21 +202,7 @@ export default function ResumenRoute(): JSX.Element {
             <AllocationCard view={allocation()} threshold={settings.deviation_threshold_pp} />
           ),
           attention: () => <AttentionBlock items={items} fiscal={fiscalNotice} />,
-          moves: () => (
-            <Section
-              title="Últimos movimientos"
-              class="span-7 summary-moves"
-              label="Últimos movimientos"
-            >
-              <div class="days">
-                <For each={byDay(recent)}>{(day) => <DayBlock day={day} />}</For>
-              </div>
-              <A href="/movimientos" class="card-foot">
-                <span>Ver todos los movimientos</span>
-                <Icon name="chevright" class="icon-sm" />
-              </A>
-            </Section>
-          ),
+          moves: () => <RecentMoves entries={recent} />,
           fiscal: () => (
             <FiscalCard
               season={season}

@@ -7,30 +7,16 @@ import type { Presented } from "./cookies.js";
 /**
  * - `public`: no credential is looked at (the start of a sign-in replaces
  *   whatever session there was).
- * - `console_start`: public too, but **a token opens no attempt** (§2.3:
- *   issuing is only at the end of a sign-in the console opens).
  * - `login_return`: only the transient cookie of the attempt counts.
- * - `session`: the cookie of the session and nothing else.
+ * - `session`: the cookie of the session and nothing else; a write checks
+ *   `Origin`.
  * - `logout`: the cookie is **deleted without being checked**, so none is
- *   required; a token is not a session to close.
- * - `exchange`: the exchange of §4.3, with no credential or with the previous
- *   token to renew; never with the cookie.
- * - `token`: the token of the console and nothing else.
- * - `sync`: the sync and the reference data: the cookie **or** the
- *   token. With the cookie, a write checks `Origin`.
+ *   required.
  */
-export type RoutePolicy =
-  | "public"
-  | "console_start"
-  | "login_return"
-  | "session"
-  | "logout"
-  | "exchange"
-  | "token"
-  | "sync";
+export type RoutePolicy = "public" | "login_return" | "session" | "logout";
 
 export interface RouteSpec {
-  readonly method: "GET" | "POST" | "PUT";
+  readonly method: "GET" | "POST";
   readonly path: string;
   readonly policy: RoutePolicy;
   /** A write: JSON body required, and `Origin` checked when it comes with the cookie. */
@@ -41,31 +27,19 @@ export const ROUTES: readonly RouteSpec[] = [
   { method: "GET", path: "/api/auth/login", policy: "public", writes: false },
   { method: "GET", path: "/api/auth/callback", policy: "login_return", writes: false },
   { method: "POST", path: "/api/auth/logout", policy: "logout", writes: true },
+  { method: "POST", path: "/api/auth/logout-all", policy: "session", writes: true },
   { method: "GET", path: "/api/session", policy: "session", writes: false },
-  // The token of the console (`docs/api.md` §4).
-  { method: "GET", path: "/api/auth/console/start", policy: "console_start", writes: false },
-  { method: "POST", path: "/api/auth/console/token", policy: "exchange", writes: true },
-  { method: "POST", path: "/api/auth/console/revoke", policy: "token", writes: true },
-  { method: "GET", path: "/api/devices/tokens", policy: "session", writes: false },
-  {
-    method: "POST",
-    path: "/api/devices/tokens/{token_id}/revoke",
-    policy: "session",
-    writes: true,
-  },
-  // The sync (`docs/api.md` §5) and the reference data.
-  { method: "GET", path: "/api/ledger", policy: "sync", writes: false },
-  { method: "POST", path: "/api/ledger/lines", policy: "sync", writes: true },
-  { method: "PUT", path: "/api/ledger", policy: "sync", writes: true },
-  { method: "GET", path: "/api/sync/devices", policy: "session", writes: false },
-  { method: "GET", path: "/api/reference/index", policy: "sync", writes: false },
-  { method: "GET", path: "/api/reference/ecb/{name}", policy: "sync", writes: false },
-  { method: "GET", path: "/api/reference/prices/{name}", policy: "sync", writes: false },
-  // The drafts in the cloud (`docs/api.md` §6.1): the cookie or the token.
-  { method: "GET", path: "/api/drafts", policy: "sync", writes: false },
-  { method: "POST", path: "/api/drafts", policy: "sync", writes: true },
-  { method: "POST", path: "/api/drafts/{id}/stamp", policy: "sync", writes: true },
-  { method: "POST", path: "/api/drafts/{id}/end", policy: "sync", writes: true },
+  // The ledger (`docs/api.md` §5) and the reference data.
+  { method: "GET", path: "/api/ledger", policy: "session", writes: false },
+  { method: "POST", path: "/api/ledger/lines", policy: "session", writes: true },
+  { method: "GET", path: "/api/reference/index", policy: "session", writes: false },
+  { method: "GET", path: "/api/reference/ecb/{name}", policy: "session", writes: false },
+  { method: "GET", path: "/api/reference/prices/{name}", policy: "session", writes: false },
+  // The drafts in the cloud (`docs/api.md` §6.1).
+  { method: "GET", path: "/api/drafts", policy: "session", writes: false },
+  { method: "POST", path: "/api/drafts", policy: "session", writes: true },
+  { method: "POST", path: "/api/drafts/{id}/stamp", policy: "session", writes: true },
+  { method: "POST", path: "/api/drafts/{id}/end", policy: "session", writes: true },
 ];
 
 /**
@@ -108,8 +82,6 @@ export type Admission =
   | { readonly kind: "session"; readonly value: string }
   /** `logout` with a cookie: it is cleared, never read. */
   | { readonly kind: "clear_session" }
-  /** The token of the console, **not yet checked**: the handler checks it. */
-  | { readonly kind: "token"; readonly value: string }
   | { readonly kind: "refused"; readonly refusal: ApiRefusal };
 
 const refused = (value: ApiRefusal): Admission => ({ kind: "refused", refusal: value });
@@ -131,30 +103,6 @@ export const admit = (
 ): Admission => {
   if (route.policy === "public" || route.policy === "login_return") {
     return { kind: "anonymous" };
-  }
-  if (presented.kind === "ambiguous") {
-    return refused(refusal("credentials_ambiguous"));
-  }
-  if (route.policy === "console_start") {
-    return presented.kind === "token"
-      ? refused(refusal("forbidden_for_credential"))
-      : { kind: "anonymous" };
-  }
-  if (route.policy === "exchange" || route.policy === "token") {
-    if (presented.kind === "token") {
-      return { kind: "token", value: presented.value };
-    }
-    if (presented.kind === "none") {
-      return route.policy === "exchange"
-        ? { kind: "anonymous" }
-        : refused(refusal("unauthenticated"));
-    }
-    return refused(refusal("forbidden_for_credential"));
-  }
-  if (presented.kind === "token") {
-    return route.policy === "sync"
-      ? { kind: "token", value: presented.value }
-      : refused(refusal("forbidden_for_credential"));
   }
   if (presented.kind === "none") {
     return route.policy === "logout" ? { kind: "anonymous" } : refused(refusal("unauthenticated"));

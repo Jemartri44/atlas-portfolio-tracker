@@ -77,6 +77,12 @@ export {
   sortCriteria,
 } from "./tax/criteria.js";
 export { taxBoxesJson, taxReportJson } from "./tax/json.js";
+export {
+  type QuotaBracket,
+  type QuotaNote,
+  type SavingsQuota,
+  savingsQuota,
+} from "./tax/quota.js";
 export type * from "./tax/report.js";
 export {
   type BlockingSale,
@@ -84,6 +90,14 @@ export {
   type RepurchaseCalendar,
   repurchaseCalendar,
 } from "./tax/repurchase-calendar.js";
+export {
+  SAVINGS_SCALES,
+  type SavingsScale,
+  type SavingsScaleBracket,
+  SCALES_CHECKED_AT,
+  savingsScaleOf,
+} from "./tax/savings-scale.js";
+
 export {
   FIRST_SUPPORTED_YEAR,
   type MovedTaxYear,

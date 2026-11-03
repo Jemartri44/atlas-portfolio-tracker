@@ -32,6 +32,7 @@ export const EvolutionCard = (props: {
     stepped={[2]}
     filled={[0, 1]}
     stacked={{ top: 1, on: 0 }}
+    stackedLabel="Cubo apilado encima: el borde es el patrimonio"
     panels={[{ series: [0, 3, 2] }, { series: [1], name: "Cubo" }]}
     foot={
       <Show when={props.uncoveredBuys}>

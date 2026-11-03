@@ -10,9 +10,14 @@ export const SIGNED_OUT: Readonly<Record<string, SignedOutReason>> = {
   unauthenticated: "signed_out",
   session_invalid: "expired",
   not_allowed: "not_allowed",
-  device_forgotten: "forgotten",
 };
 
 /** The reason a failure says the session is gone, or `undefined` if it is anything else. */
-export const signedOutReason = (error: unknown): SignedOutReason | undefined =>
-  error instanceof RemoteError ? SIGNED_OUT[error.code] : undefined;
+export const signedOutReason = (error: unknown): SignedOutReason | undefined => {
+  if (!(error instanceof RemoteError)) {
+    return undefined;
+  }
+  return error.code === "session_invalid" && error.details.reason === "closed"
+    ? "closed"
+    : SIGNED_OUT[error.code];
+};

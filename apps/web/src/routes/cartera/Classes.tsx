@@ -118,7 +118,6 @@ export const ClassTable = (props: { view: WeightsView }): JSX.Element => (
             </td>
             <td class="num">
               <span class="dev-cell">
-                <Strip deviation={row.deviationPp} />
                 <Figure value={row.deviationPp} unit="points" />
               </span>
             </td>
