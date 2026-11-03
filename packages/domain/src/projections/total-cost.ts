@@ -7,11 +7,19 @@
 // figure, and an assumption that is missing leaves its part out and says so.
 //
 // Three runs of the same pot: no costs; with the weighted TER; with the TER and the commission on
-// each contribution. The difference between consecutive runs is the cost of each. The tax friction
-// is the exit tax over the gain of the last run, against what was put in (`invested_eur` plus the
-// contributions). `invested_eur` counts purchases only, so after sales it overstates the basis and
-// the friction comes out low: an informative bound, never the tax computed by the tax engine.
+// each contribution. The difference between consecutive runs is the cost of each.
+//
+// - **Only the value that declares a TER is projected**: a part with no TER would inherit the
+//   average of the others, so it is left out and `ter_missing_eur` says how much (`ter_partial`).
+// - The commission is an assumption of the owner. The observed fees cannot stand in for it (they
+//   include sales, the invested base does not): without it the commission part has no figure.
+// - The tax friction is a flat rate over the gain of the last run against what was put in
+//   (`invested_eur` plus the contributions). That base is **historical cost and wrong in both
+//   directions**: sales do not subtract their cost (base too high, friction too low) and a position
+//   that arrived by transfer has no purchase (base too low, friction too high). It is a rough
+//   order of magnitude, never a bound, and never the tax of the tax engine, which is progressive.
 
+import { ValidationError } from "../errors.js";
 import { Decimal, HUNDRED } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
 import type { Settings } from "../settings/settings.js";
@@ -24,7 +32,7 @@ export interface TotalCostAssumptions {
   years: number;
   /** Nominal annual return before costs, percent. */
   grossReturnPct: Decimal;
-  /** Percent per contribution; absent → the observed fees over what was invested, if any. */
+  /** Percent taken from each contribution; absent → no commission figure. */
   commissionPct?: Decimal;
   /** Percent of the final gain taken on selling everything; absent → no friction figure. */
   exitTaxPct?: Decimal;
@@ -40,16 +48,17 @@ export interface TotalCost {
   years: number;
   gap?: TotalCostGap;
   /** Pieces the figure lacks, so it is not read as complete. */
-  missing: ("monthly_contribution" | "commission" | "exit_tax")[];
-  /** Part of the value has no TER: it is projected with none. */
+  missing: ("monthly_contribution" | "bucket_pct" | "commission" | "exit_tax")[];
+  /** Part of the priced value has no TER: it is left out of the projection (`ter_missing_eur`). */
   ter_partial: boolean;
+  ter_missing_eur: Money;
   monthly_core_eur: Money;
   end_without_costs_eur?: Money;
   end_net_eur?: Money;
   ter_cost_eur?: Money;
   commission_cost_eur?: Money;
   exit_tax_eur?: Money;
-  /** TER + commissions + exit tax (the parts that exist). */
+  /** TER + commissions + exit tax (the parts that exist, see `missing`). */
   total_eur?: Money;
 }
 
@@ -61,6 +70,11 @@ export const totalCost = (
   assumptions: TotalCostAssumptions,
 ): TotalCost => {
   const { totals } = summary.core;
+  if (!Number.isInteger(assumptions.years) || assumptions.years < 0) {
+    throw new ValidationError("invalid_horizon", "the horizon is a whole number of years", {
+      years: assumptions.years,
+    });
+  }
   const missing: TotalCost["missing"] = [];
 
   const contribution =
@@ -70,6 +84,9 @@ export const totalCost = (
   if (contribution === undefined) {
     missing.push("monthly_contribution");
   }
+  if (settings.bucket_pct_of_contribution === undefined) {
+    missing.push("bucket_pct");
+  }
   const bucketPct = Decimal.parse(settings.bucket_pct_of_contribution ?? "0");
   const monthly = (contribution ?? Decimal.ZERO).mul(HUNDRED.sub(bucketPct)).div(HUNDRED);
 
@@ -77,6 +94,7 @@ export const totalCost = (
     years: assumptions.years,
     missing,
     ter_partial: totals.ter_partial,
+    ter_missing_eur: totals.ter_missing_eur,
     monthly_core_eur: eur(monthly),
   };
   if (totals.partial) {
@@ -86,11 +104,7 @@ export const totalCost = (
     return { ...base, gap: "no_ter" };
   }
 
-  const commission =
-    assumptions.commissionPct ??
-    (totals.invested_eur.isZero()
-      ? undefined
-      : totals.fees_eur.amount.div(totals.invested_eur.amount).mul(HUNDRED));
+  const commission = assumptions.commissionPct;
   if (commission === undefined) {
     missing.push("commission");
   }
@@ -98,7 +112,7 @@ export const totalCost = (
     missing.push("exit_tax");
   }
 
-  const start = totals.value_eur.amount;
+  const start = totals.value_eur.amount.sub(totals.ter_missing_eur.amount);
   const common = { start, monthly, years: assumptions.years };
   const last = (annualReturnPct: Decimal, entryFeePct?: Decimal) => {
     const points = grow({ ...common, annualReturnPct, ...(entryFeePct ? { entryFeePct } : {}) });
@@ -109,8 +123,8 @@ export const totalCost = (
   const net = last(assumptions.grossReturnPct.sub(totals.weighted_ter), commission);
 
   const terCost = free.value.sub(afterTer.value);
-  const commissionCost = afterTer.value.sub(net.value);
-  let total = terCost.add(commissionCost);
+  const commissionCost = commission === undefined ? undefined : afterTer.value.sub(net.value);
+  let total = terCost.add(commissionCost ?? Decimal.ZERO);
   let tax: Decimal | undefined;
   if (assumptions.exitTaxPct !== undefined) {
     const basis = totals.invested_eur.amount.add(net.contributed.sub(start));
@@ -123,7 +137,7 @@ export const totalCost = (
     end_without_costs_eur: eur(free.value),
     end_net_eur: eur(net.value),
     ter_cost_eur: eur(terCost),
-    commission_cost_eur: eur(commissionCost),
+    ...(commissionCost === undefined ? {} : { commission_cost_eur: eur(commissionCost) }),
     ...(tax === undefined ? {} : { exit_tax_eur: eur(tax) }),
     total_eur: eur(total),
   };

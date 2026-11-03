@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { Decimal } from "../../src/money/decimal.js";
-import { Money } from "../../src/money/money.js";
 import { costSummary } from "../../src/projections/costs.js";
 import { grow } from "../../src/projections/growth.js";
 import { projectLedger } from "../../src/projections/project-ledger.js";
@@ -109,31 +108,41 @@ describe("totalCost", () => {
     expect(result.exit_tax_eur?.isZero()).toBe(true);
   });
 
-  it("falls back to the observed commission, and says what is missing without it", () => {
-    const observed = costOf(pot("1"), settings);
-    expect(observed.missing).toEqual(["exit_tax"]);
-    expect(observed.commission_cost_eur?.amount.isPositive()).toBe(true);
-    expect(observed.exit_tax_eur).toBeUndefined();
-
-    // A position that arrived by transfer has no purchase: nothing to observe a commission from.
-    const events = pot("1");
-    const summary = costSummary(projectLedger(events), events, DATE, settings);
-    const transferred = {
-      ...summary,
-      core: {
-        ...summary.core,
-        totals: { ...summary.core.totals, invested_eur: Money.zero("EUR") },
-      },
-    };
-    const none = totalCost(transferred, settings, { years: 1, grossReturnPct: d("0") });
-    expect(none.missing).toContain("commission");
-    expect(none.commission_cost_eur?.isZero()).toBe(true);
+  it("gives no commission figure without the owner's assumption, and says so", () => {
+    const result = costOf(pot("1"), settings);
+    expect(result.missing).toEqual(["commission", "exit_tax"]);
+    expect(result.commission_cost_eur).toBeUndefined();
+    expect(result.exit_tax_eur).toBeUndefined();
+    expect(result.total_eur?.amount.toString()).toBe(result.ter_cost_eur?.amount.toString());
   });
 
-  it("reports the missing contribution and a TER-less part instead of guessing", () => {
-    const noContribution = costOf(pot("1"), DEFAULT_SETTINGS);
-    expect(noContribution.missing).toContain("monthly_contribution");
-    expect(noContribution.monthly_core_eur.isZero()).toBe(true);
+  it("projects only the value that declares a TER and says how much is left out", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.asset("ast_ter", { ter: "1" });
+    b.buy({ account_id: "acc_fund", asset_id: "ast_ter", quantity: "10", unit_price: "100" });
+    b.buy({ account_id: "acc_fund", asset_id: "ast_world", quantity: "10", unit_price: "100" });
+    for (const asset of ["ast_ter", "ast_world"]) {
+      b.valuation({ account_id: "acc_fund", asset_id: asset, date: DATE, unit_value: "100" });
+    }
+    const result = costOf(b.build(), settings, { commissionPct: d("0") });
+    expect(result.ter_partial).toBe(true);
+    expect(result.ter_missing_eur.amount.toString()).toBe("1000");
+    const alone = costOf(pot("1"), settings, { commissionPct: d("0") });
+    expect(result.ter_cost_eur?.amount.toString()).toBe(alone.ter_cost_eur?.amount.toString());
+  });
+
+  it("reports a missing contribution and bucket share instead of assuming them", () => {
+    const result = costOf(pot("1"), DEFAULT_SETTINGS);
+    expect(result.missing).toEqual(expect.arrayContaining(["monthly_contribution", "bucket_pct"]));
+    expect(result.monthly_core_eur.isZero()).toBe(true);
+  });
+
+  it("refuses a horizon that is not a whole number of years", () => {
+    for (const years of [0.5, -1, Number.NaN]) {
+      expect(() => costOf(pot("1"), settings, { years })).toThrow("whole number");
+    }
+    expect(costOf(pot("1"), settings, { years: 0 }).ter_cost_eur?.amount.isZero()).toBe(true);
   });
 
   it("gives no figure with a missing price or with no TER", () => {
