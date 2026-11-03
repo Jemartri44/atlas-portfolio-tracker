@@ -85,6 +85,7 @@ const KINDS: Record<string, string> = {
   swap: "Permuta",
   dividend: "Dividendo",
   interest: "Interés",
+  capital_return: "Devolución de prima o aportaciones (exceso)",
 };
 
 const transmissionRow = (line: TransmissionLine, names: NameIndex): FiscalRow => ({

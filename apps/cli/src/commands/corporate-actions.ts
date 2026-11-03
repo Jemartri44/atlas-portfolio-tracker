@@ -1,4 +1,4 @@
-// atlas ca split|reverse-split|merger|spin-off|fund-merger|share-class-change|fund-liquidation|delisting|raw
+// atlas ca split|reverse-split|merger|spin-off|fund-merger|share-class-change|fund-liquidation|capital-return|delisting|raw
 //
 // The wizards map **flags to parameters**; composing the `effects[]` — and, in
 // particular, working out the fractional shares of a reverse split — is the
@@ -211,6 +211,11 @@ const WIZARDS: Record<string, Wizard> = {
       cash: cashOf(flags, "unit-price") as CashSettlement,
       ...amountsOf(flags),
     }),
+  },
+  "capital-return": {
+    kind: "capital_return",
+    flags: ["cash-per-share", "currency", "fx-rate", "fx-rate-date"],
+    params: async (flags) => ({ cash: cashOf(flags, "cash-per-share") as CashSettlement }),
   },
   delisting: { kind: "delisting", flags: [], params: async () => ({}) },
   raw: {
