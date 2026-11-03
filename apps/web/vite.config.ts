@@ -150,6 +150,38 @@ const DEVELOPMENT_CSP = PRODUCTION_CSP.replace(
  * under `/api/` (the sign-in and the return from Google) are never answered
  * with `index.html`. Exported for `test/pwa-cache.test.ts`.
  */
+/** The web manifest: what the installed application is called, looks like and offers. */
+export const MANIFEST: NonNullable<VitePWAOptions["manifest"]> = {
+  name: "Atlas",
+  short_name: "Atlas",
+  description: "Gestión de la cartera de inversión: movimientos, lotes FIFO y Renta.",
+  lang: "es",
+  dir: "ltr",
+  start_url: "/",
+  scope: "/",
+  display: "standalone",
+  orientation: "portrait-primary",
+  // The paper of the page for the splash, the top bar for the system bar:
+  // the light theme, the one a manifest can name (tokens.css).
+  background_color: "#f3f1ea",
+  theme_color: "#fffdf8",
+  // A long press on the icon of the installed application (docs/design/system.md §4.4).
+  shortcuts: [
+    { name: "Registrar compra", short_name: "Compra", url: "/registrar/buy" },
+    { name: "Registrar valoración", short_name: "Valoración", url: "/registrar/valuation" },
+  ],
+  icons: [
+    { src: "icon-192.png", sizes: "192x192", type: "image/png" },
+    { src: "icon-512.png", sizes: "512x512", type: "image/png" },
+    {
+      src: "icon-maskable-512.png",
+      sizes: "512x512",
+      type: "image/png",
+      purpose: "maskable",
+    },
+  ],
+};
+
 export const WORKBOX_OPTIONS: NonNullable<VitePWAOptions["workbox"]> = {
   globPatterns: ["**/*.{js,css,html,svg,png,webmanifest,woff2}"],
   // The shell opens without a connection and says «Sin conexión» by itself.
@@ -175,36 +207,7 @@ export default defineConfig(({ command }) => ({
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["icon.svg", "icon-192.png", "icon-512.png", "icon-maskable-512.png"],
-      manifest: {
-        name: "Atlas",
-        short_name: "Atlas",
-        description: "Gestión de la cartera de inversión: movimientos, lotes FIFO y Renta.",
-        lang: "es",
-        dir: "ltr",
-        start_url: "/",
-        scope: "/",
-        display: "standalone",
-        orientation: "portrait-primary",
-        // The paper of the page for the splash, the top bar for the system bar:
-        // the light theme, the one a manifest can name (tokens.css).
-        background_color: "#f3f1ea",
-        theme_color: "#fffdf8",
-        // A long press on the icon of the installed application (docs/design/system.md §4.4).
-        shortcuts: [
-          { name: "Registrar compra", short_name: "Compra", url: "/registrar/buy" },
-          { name: "Registrar valoración", short_name: "Valoración", url: "/registrar/valuation" },
-        ],
-        icons: [
-          { src: "icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "icon-512.png", sizes: "512x512", type: "image/png" },
-          {
-            src: "icon-maskable-512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "maskable",
-          },
-        ],
-      },
+      manifest: MANIFEST,
       workbox: WORKBOX_OPTIONS,
       devOptions: { enabled: false },
     }),

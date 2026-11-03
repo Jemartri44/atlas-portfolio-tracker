@@ -43,8 +43,7 @@ export const shortcutOf = (
     event.altKey ||
     event.isComposing === true ||
     dialogOpen ||
-    (target !== null &&
-      (EDITABLE.has(target.tagName ?? "") || target.isContentEditable === true))
+    (target !== null && (EDITABLE.has(target.tagName ?? "") || target.isContentEditable === true))
   ) {
     return undefined;
   }

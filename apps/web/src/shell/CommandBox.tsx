@@ -12,6 +12,12 @@ import { Icon } from "../components/Icon.jsx";
 import { mediaQuery, TOP_BAR } from "./media.js";
 import { type Command, commandsFor, shortcutOf } from "./shortcuts.js";
 
+/**
+ * The key that opens the box, set at run time: Solid writes a static attribute (a literal or a
+ * constant) into its template without quotes, and `aria-keyshortcuts=/` reads as empty.
+ */
+const openKey = (): string => "/";
+
 export const CommandBox = (): JSX.Element => {
   const wide = mediaQuery(TOP_BAR);
   const navigate = useNavigate();
@@ -81,7 +87,7 @@ export const CommandBox = (): JSX.Element => {
         type="button"
         class="command-button secondary"
         aria-haspopup="dialog"
-        aria-keyshortcuts="/"
+        aria-keyshortcuts={openKey()}
         onClick={show}
       >
         <Icon name="search" class="icon-sm" />
@@ -119,13 +125,16 @@ export const CommandBox = (): JSX.Element => {
             }}
             onKeyDown={onFieldKey}
           />
-          <ul class="command-list" id={`cmd-list-${id}`} role="listbox" aria-label="Órdenes">
+          <div class="command-list" id={`cmd-list-${id}`} role="listbox" aria-label="Órdenes">
             <For each={shown()}>
               {(command, at) => (
-                // biome-ignore lint/a11y/useKeyWithClickEvents: the field keeps the keyboard (combobox)
-                <li
+                // The field keeps the focus and the keyboard (an ARIA combobox): an option is reached
+                // by the arrows through `aria-activedescendant`, and clicked with the mouse.
+                // biome-ignore lint/a11y/useKeyWithClickEvents: the field handles the keys
+                <div
                   id={`cmd-${id}-${at()}`}
                   role="option"
+                  tabIndex={-1}
                   aria-selected={active() === at()}
                   class="command-option"
                   onClick={() => follow(command)}
@@ -133,10 +142,10 @@ export const CommandBox = (): JSX.Element => {
                 >
                   <span>{command.label}</span>
                   <Show when={command.key}>{(key) => <kbd>{key().toUpperCase()}</kbd>}</Show>
-                </li>
+                </div>
               )}
             </For>
-          </ul>
+          </div>
           <p class="command-hint">
             Flechas para elegir, Intro para ir, Esc para cerrar. Desde cualquier pantalla: C compra,
             V venta, P valoración.
