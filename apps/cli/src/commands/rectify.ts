@@ -1,7 +1,6 @@
 // atlas edit <id> --reason … [campos] · atlas delete <id> --reason …
 
 import {
-  type CivilDate,
   correctEvent,
   DomainError,
   type Draft,
@@ -18,7 +17,6 @@ import { closedYearImpact } from "@atlas/domain/fiscal";
 import { type Flags, requireFlag, stringFlag, UsageError } from "../args.js";
 import { type Context, describeWarnings, GLOBAL_FLAGS, summarize } from "../context.js";
 import { closedYearLines, unfiledYearsNote } from "../output/closed-years.js";
-import { day } from "../output/ecb.js";
 import { priorYearWarning } from "../output/messages.js";
 import { ADD_SPECS } from "./add.js";
 import { requireId } from "./catalogue.js";
@@ -116,7 +114,7 @@ const rateOfNewDate = async (
   flags: Flags,
 ): Promise<Awaited<ReturnType<typeof rateDraft>>> => {
   const movesDate = [...flags.keys()].some(
-    (name) => name.endsWith("-date") && !name.startsWith("fx-"),
+    (name) => (name === "date" || name.endsWith("-date")) && !name.startsWith("fx-"),
   );
   const typesRate = [...flags.keys()].some((name) => name.startsWith("fx-"));
   const dropped = FX_FIELDS.filter((field) => draft[field] !== undefined);
@@ -131,11 +129,13 @@ const rateOfNewDate = async (
   if (dropped.some((field) => proposed.draft[field] === undefined)) {
     return rateDraft(ctx, draft);
   }
-  const was = (field: string): string => String(draft[field]);
+  const moved = dropped.map(
+    (field) => `${field} ${String(draft[field])} → ${String(proposed.draft[field])}`,
+  );
   return {
     ...proposed,
     notes: [
-      `El tipo se ha vuelto a proponer porque cambia la fecha: antes ${was("fx_rate")} del ${day(draft.fx_rate_date as CivilDate)}, ahora ${String(proposed.draft.fx_rate)} del ${day(proposed.draft.fx_rate_date as CivilDate)} (el oficial del BCE). Teclea --fx-rate y --fx-rate-date para conservar otro.`,
+      `El tipo se ha vuelto a proponer porque cambia la fecha (${moved.join("; ")}): el oficial del BCE de la nueva fecha. Teclea --fx-rate y --fx-rate-date para conservar otro.`,
       ...proposed.notes,
     ],
   };

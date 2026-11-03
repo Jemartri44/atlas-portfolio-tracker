@@ -154,9 +154,79 @@ describe("atlas add with the ECB history", () => {
     );
     expect(result.code).toBe(0);
     expect(result.text).toContain("El tipo se ha vuelto a proponer");
-    expect(result.text).toContain("1.1169 del 02/01/2026");
+    expect(result.text).toContain("fx_rate 1.1169 → 1.1013");
     expect(result.text).toContain("1.1013 del 09/01/2026");
     expect(await last()).toMatchObject({ fx_rate: "1.1013", fx_rate_date: "2026-01-09" });
+  });
+
+  it("re-proposes the rate of a valuation edited with --date and of both legs of an exchange", async () => {
+    const { atlas, last } = await setup();
+    await atlas(
+      undefined,
+      "add",
+      "valuation",
+      "--account",
+      "acc",
+      "--asset",
+      "gold",
+      "--date",
+      "2026-01-02",
+      "--quantity",
+      "1",
+      "--unit-value",
+      "100",
+      "--currency",
+      "USD",
+      "--yes",
+    );
+    const valuation = await atlas(
+      undefined,
+      "edit",
+      (await last()).id as string,
+      "--reason",
+      "x",
+      "--date",
+      "2026-01-09",
+      "--yes",
+    );
+    expect(valuation.code).toBe(0);
+    expect(valuation.text).toContain("fx_rate 1.1169 → 1.1013");
+    expect(await last()).toMatchObject({ fx_rate: "1.1013", fx_rate_date: "2026-01-09" });
+    const added = await atlas(
+      undefined,
+      "add",
+      "fx",
+      "--account",
+      "acc",
+      "--value-date",
+      "2026-01-02",
+      "--sold-amount",
+      "100",
+      "--sold-currency",
+      "USD",
+      "--bought-amount",
+      "89",
+      "--bought-currency",
+      "EUR",
+      "--fee-currency",
+      "EUR",
+      "--yes",
+    );
+    const exchange = await atlas(
+      undefined,
+      "edit",
+      (await last()).id as string,
+      "--reason",
+      "x",
+      "--value-date",
+      "2026-01-09",
+      "--yes",
+    );
+    expect(added.code).toBe(0);
+    expect(exchange.code).toBe(0);
+    expect(exchange.text).toContain("fx_rate_sold 1.1169 → 1.1013");
+    expect(exchange.text).not.toContain("undefined");
+    expect(await last()).toMatchObject({ fx_rate_sold: "1.1013", fx_rate_date: "2026-01-09" });
   });
 
   it("keeps the typed rate when the edit also types one, and keeps the old one without a history", async () => {
