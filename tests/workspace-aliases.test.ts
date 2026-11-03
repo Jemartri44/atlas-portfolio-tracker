@@ -15,12 +15,19 @@ const WORKSPACES = [
 ];
 
 describe("the aliases of the workspaces", () => {
-  it("give every door of every exports one source file that exists", () => {
+  it("send every door to the source the architecture tests read off exports, which exists", () => {
     const aliases = workspaceAliases(repoRoot, WORKSPACES);
-    const doors = WORKSPACES.flatMap((folder) =>
-      Object.keys(JSON.parse(readFileSync(join(repoRoot, folder, "package.json"), "utf8")).exports),
-    );
-    expect(aliases).toHaveLength(doors.length);
+    // Read on their own, with every condition of each entry (`exportsOf`).
+    const expected = WORKSPACES.flatMap((folder) => {
+      const name = JSON.parse(readFileSync(join(repoRoot, folder, "package.json"), "utf8")).name;
+      return [...exportsOf(join(repoRoot, folder))].map(
+        ([door, source]) => [door === "." ? name : `${name}${door.slice(1)}`, source] as const,
+      );
+    });
+    expect(aliases).toHaveLength(expected.length);
+    for (const [specifier, source] of expected) {
+      expect(aliases.find(({ find }) => find.test(specifier))?.replacement, specifier).toBe(source);
+    }
     expect(aliases.filter(({ replacement }) => !existsSync(replacement))).toEqual([]);
     // Exact: a door never matches a longer specifier, so their order does not matter.
     const domain = aliases.find(({ find }) => find.test("@atlas/domain"));
