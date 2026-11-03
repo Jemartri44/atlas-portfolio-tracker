@@ -18,6 +18,7 @@ import {
   type AdminObjectStore,
   DependencyUnavailable,
   type ListedObject,
+  type ObjectLock,
   type StoredObject,
 } from "@atlas/adapters/aws";
 
@@ -29,6 +30,8 @@ export class TestOnlyFakeS3 implements AdminObjectStore {
   private failures = 0;
   private conflicts = 0;
   readonly calls: string[] = [];
+  /** The governance lock each key was last written with (`undefined`: none). */
+  readonly locks = new Map<string, Date | undefined>();
   /** The condition of every conditional write, as it reached S3. */
   readonly conditions: { key: string; ifMatch?: string; ifNoneMatch?: "*" }[] = [];
   /** Runs inside every conditional write, before S3 decides: another writer can win here. */
@@ -75,8 +78,13 @@ export class TestOnlyFakeS3 implements AdminObjectStore {
     return this.objects.get(key);
   }
 
-  async putIfNoneMatch(key: string, body: Uint8Array): Promise<"created" | "exists"> {
+  async putIfNoneMatch(
+    key: string,
+    body: Uint8Array,
+    lock?: ObjectLock,
+  ): Promise<"created" | "exists"> {
     this.step(`putIfNoneMatch ${key}`);
+    this.locks.set(key, lock?.retainUntil);
     this.conditions.push({ key, ifNoneMatch: "*" });
     if (this.contend(key) || this.objects.has(key)) {
       return "exists";
