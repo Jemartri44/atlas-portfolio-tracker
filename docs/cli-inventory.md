@@ -63,7 +63,7 @@ Nota sobre `valuations` (1): la web enseña las valoraciones como movimientos, n
 
 1. Cartera: `weights`, `contribute`, `rebalance`, `transfer simulate`, `costs`, `networth`.
 2. Cubo: `bucket`, `thesis list`.
-3. Fiscal: `tax`, `gains`, `income`, `m720`, `m721`.
+3. Fiscal: `tax` (texto y `--boxes`), `gains`, `income` y el texto de `m720`, `m721`.
 4. `valuations`, `cash`, y el código compartido que quede huérfano (`output/`, `query.ts`, `portfolio.ts`, `tracking.ts` en lo que corresponda).
 
 En cada grupo: fuera pruebas, dorados y documentación; el dominio no se toca; los mensajes del catálogo que el dominio aún pueda lanzar se quedan. `CLAUDE.md` y `cli.md` pasan a decir que la web es la superficie principal y la consola la de mantenimiento.
