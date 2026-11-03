@@ -60,3 +60,18 @@ export interface AdminObjectStore extends ObjectStore {
   /** `ListObjectsV2` with no delimiter: every object under `prefix`, every page, by key. */
   listAll(prefix: string): Promise<readonly ListedObject[]>;
 }
+
+/**
+ * The conditional write every store of the bucket does the same way: `If-None-Match: *` when
+ * nothing was read at the key, `If-Match` on the ETag that was read when something was. `true` when
+ * the object was written, `false` when the precondition did not hold (somebody wrote in between).
+ */
+export const writeConditional = async (
+  objects: ObjectStore,
+  key: string,
+  body: Uint8Array,
+  etag: string | undefined,
+): Promise<boolean> =>
+  etag === undefined
+    ? (await objects.putIfNoneMatch(key, body)) === "created"
+    : (await objects.putIfMatch(key, body, etag)) === "written";

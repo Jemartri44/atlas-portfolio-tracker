@@ -16,6 +16,7 @@
 
 import type { CivilDate } from "../dates/civil-date.js";
 import { lastWorkingDay, yearOf } from "../dates/civil-date.js";
+import { byCode } from "../order.js";
 import { hasForeignAccountsAt } from "../projections/foreign-accounts.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import type { LedgerEvent } from "../schema/events.js";
@@ -130,8 +131,7 @@ export const fiscalCalendar = (
     year,
     season,
     dates: [...merged.values()].sort(
-      (a, b) =>
-        a.date.localeCompare(b.date) || KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind),
+      (a, b) => byCode(a.date, b.date) || KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind),
     ),
     unknown_deadlines: unknown,
   };

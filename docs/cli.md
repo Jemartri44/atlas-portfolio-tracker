@@ -62,11 +62,11 @@ El reparto de la aportación, el rebalanceo y el simulador de traspasos viven en
 
 ## Precios de cierre diarios (feature 013)
 
-La consola descarga los cierres diarios de los activos **de su libro** desde EODHD, una API gratuita con clave, y los guarda junto al libro en `prices/`, nunca en el libro. Son **informativos**: ninguna cifra de la Renta ni del Modelo 720 los lee. Sin claves, todo funciona igual con las valoraciones manuales. La web no descarga nada: en el escritorio lee `prices/` de la carpeta enlazada, y en el móvil, hasta que exista la nube, solo hay la importación a mano desde Ajustes. Al importar a mano, conviene incluir `prices/symbols.json` junto a los ficheros de precios: sin él, la web no puede comprobar la divisa de los cierres, y lo avisa.
+La consola descarga los cierres diarios de los activos **de su libro** desde EODHD, una API gratuita con clave, y los guarda junto al libro en `prices/`, nunca en el libro. Son **informativos**: ninguna cifra de la Renta ni del Modelo 720 los lee. Sin claves, todo funciona igual con las valoraciones manuales. La web no los descarga de la fuente: los lee de la nube (`/api/reference/prices`) con su sesión, en memoria, sin guardar nada en el dispositivo; la tarea diaria de la nube es quien los descarga. Junto a los precios se sirve `prices/symbols.json`: sin él, la web no puede comprobar la divisa de los cierres, y lo avisa.
 
 ```bash
 # Las claves van fuera de la carpeta del libro, solo legibles por ti; la aplicación nunca las escribe
-mkdir -p ~/.config/atlas && printf '{"eodhd":"…"}\n' > ~/.config/atlas/secrets.json && chmod 600 ~/.config/atlas/secrets.json
+mkdir -p -m 700 ~/.config/atlas && printf '{"eodhd":"…"}\n' > ~/.config/atlas/secrets.json && chmod 600 ~/.config/atlas/secrets.json
 
 atlas prices symbols set ast_world --currency EUR --eodhd XX0000000001.EUFUND   # el símbolo y la divisa de la cotización, contrastada con la fuente
 atlas prices symbols set ast_tsco --eodhd TSCO.LSE --currency GBX   # Londres cotiza en peniques (GBX), no en libras: la divisa se declara

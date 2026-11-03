@@ -1,7 +1,9 @@
 // The money-weighted return of the core since the first deposit, worked out by hand.
 
 import { describe, expect, it } from "vitest";
+import { annualRateOf } from "../../src/charts/core-xirr.js";
 import { coreXirr } from "../../src/charts.js";
+import { Decimal } from "../../src/money/decimal.js";
 import { catalogue, LedgerBuilder } from "../ledger-builder.js";
 
 const END = "2028-01-02";
@@ -186,5 +188,11 @@ describe("coreXirr", () => {
       worth(b, END, "110");
       expect(() => coreXirr(b.build(), END, { "2027": pct, "2028": "0" })).toThrow("out of range");
     });
+  });
+});
+
+describe("annualRateOf", () => {
+  it("has no rate without a flow, instead of failing", () => {
+    expect(annualRateOf([], Decimal.parse("100"))).toBeUndefined();
   });
 });

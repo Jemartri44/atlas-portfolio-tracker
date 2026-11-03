@@ -18,6 +18,7 @@ describe("the mail of a streak", () => {
       "prices_file_unreadable",
       "ecb_update_rejected",
       "ecb_update_undone",
+      "ecb_history_backfilled",
       "ecb_calendar_mismatch",
       "ecb_history_damaged",
       "ecb_history_rebuilt",
@@ -172,6 +173,9 @@ describe("the mail of a streak", () => {
     expect(mail("ecb_calendar_mismatch", "ecb", { days: 2 })?.body).toContain(
       "2 días del histórico del BCE no cuadran con el calendario TARGET",
     );
+    expect(mail("ecb_history_backfilled", "ecb", { rates: 4 })?.body).toContain(
+      "trae 4 tipos de días ya conocidos que el anterior no tenía",
+    );
     expect(mail("ecb_history_damaged", "ecb")?.body).toContain("no cuadra con su manifiesto");
     expect(mail("ecb_history_damaged", "ecb")?.body).toContain("Se reconstruirá entero");
     const refused = mail("ecb_history_damaged", "ecb", { conflicts: 3 })?.body;
@@ -197,6 +201,7 @@ describe("the mail of a streak", () => {
       ["thesis_horizon_exceeded", "bucket"],
       ["currency_unchecked", "eodhd"],
       ["ecb_calendar_mismatch", "ecb"],
+      ["ecb_history_backfilled", "ecb"],
       ["ecb_history_damaged", "ecb"],
       ["ecb_history_rebuilt", "ecb"],
       ["ecb_rebuilt_unverified", "ecb"],

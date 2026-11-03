@@ -11,12 +11,7 @@
 // at any depth (`documents/<event_id>/<file>`, for `atlas backup`). Still no
 // delete, never.
 
-import {
-  GetObjectCommand,
-  ListObjectsV2Command,
-  type ListObjectsV2CommandOutput,
-  S3Client,
-} from "@aws-sdk/client-s3";
+import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import {
   AddTagsToResourceCommand,
   GetParameterCommand,
@@ -25,7 +20,7 @@ import {
 } from "@aws-sdk/client-ssm";
 import type { AdminObjectStore, ListedObject, StoredObject } from "./object-store.js";
 import { factsOf, transient } from "./sdk-errors.js";
-import { rethrow, type S3Sender, SdkObjectStore } from "./sdk-s3.js";
+import { listObjects, rethrow, type S3Sender, SdkObjectStore } from "./sdk-s3.js";
 import { SdkParameterStore } from "./sdk-ssm.js";
 import { type SecretKind, type SecretStore, SecretTagsFailed } from "./secret-store.js";
 
@@ -33,8 +28,9 @@ export class SdkAdminObjectStore extends SdkObjectStore implements AdminObjectSt
   constructor(
     private readonly sender: S3Sender,
     private readonly name: string,
+    writer: S3Sender = sender,
   ) {
-    super(sender, name);
+    super(sender, name, writer);
   }
 
   async getVersion(key: string, versionId: string): Promise<StoredObject | undefined> {
@@ -61,29 +57,7 @@ export class SdkAdminObjectStore extends SdkObjectStore implements AdminObjectSt
   }
 
   async listAll(prefix: string): Promise<readonly ListedObject[]> {
-    const listed: ListedObject[] = [];
-    let token: string | undefined;
-    do {
-      let page: ListObjectsV2CommandOutput;
-      try {
-        page = (await this.sender.send(
-          new ListObjectsV2Command({
-            Bucket: this.name,
-            Prefix: prefix,
-            ...(token === undefined ? {} : { ContinuationToken: token }),
-          }),
-        )) as ListObjectsV2CommandOutput;
-      } catch (error) {
-        return rethrow(error);
-      }
-      for (const object of page.Contents ?? []) {
-        if (object.Key !== undefined && object.ETag !== undefined && object.Size !== undefined) {
-          listed.push({ key: object.Key, etag: object.ETag, size: object.Size });
-        }
-      }
-      token = page.IsTruncated === true ? page.NextContinuationToken : undefined;
-    } while (token !== undefined);
-    return listed.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+    return listObjects(this.sender, this.name, prefix);
   }
 }
 
@@ -185,6 +159,8 @@ export const adminClients = (environment: {
   objects: new SdkAdminObjectStore(
     new S3Client({ region: environment.region }),
     environment.data_bucket,
+    // Writes never retried by the SDK: see `SdkObjectStore`.
+    new S3Client({ region: environment.region, maxAttempts: 1 }),
   ),
   parameters: new SdkParameterStore(new SSMClient({ region: environment.region })),
   secrets: new SdkSecretStore(new SSMClient({ region: environment.region })),

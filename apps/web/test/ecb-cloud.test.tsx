@@ -1,251 +1,142 @@
 // @vitest-environment happy-dom
 //
-// The web of the phone downloads the ECB history from its own cloud — the manifest, then the file
-// in force, its SHA-256 checked against the manifest before anything reads it — and keeps it as the
-// imported copy is kept, marked as from the cloud. Only when the card of the ECB opens or the user
-// asks; never at start or on a timer. Over a `fetch` that answers as the API does; never the
-// network.
+// The web reads the ECB history from its own cloud — the manifest, then the file in force, its
+// SHA-256 checked against the manifest before anything reads it — and holds it in memory: nothing
+// is kept on the device. Over a `fetch` that answers as the API does; never the network.
 
-import { createHash } from "node:crypto";
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { FakeIdbFactory } from "../../../packages/adapters/test/fake-idb.js";
-import { downloadCloudHistory } from "../src/ecb/cloud.js";
-import { loadWebHistory, reloadWebHistory } from "../src/ecb/history.js";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { forgetWebHistory, loadWebHistory, reloadWebHistory } from "../src/ecb/history.js";
 import Ajustes from "../src/routes/ajustes/index.jsx";
+import { referenceAnswer, serveReference } from "./helpers/cloud-reference.js";
 import { press, settle, show, text, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
 const root = dirname(fileURLToPath(import.meta.url));
 const csv = readFileSync(join(root, "../../../tests/fixtures/ecb/eurofxref-hist.csv"), "utf8");
-const sha = (value: string) => createHash("sha256").update(value).digest("hex");
 
-const manifestOf = (content: string, hash = sha(content)) =>
-  JSON.stringify({
-    active: {
-      file: "eurofxref-hist.csv",
-      source: "zip",
-      url: "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.zip",
-      fetched_at: "2026-10-01T15:30:00.000Z",
-      sha256: hash,
-    },
-    rejected: [],
-  });
-
-interface Cloud {
-  manifest?: string;
-  file?: string;
-  status?: number;
-  session?: boolean;
-}
-
-/** The API of the tests: the session, the manifest (version m-<sha>) and the file. */
-const api = (cloud: Cloud) => {
-  const asked: { path: string; ifNoneMatch: string | null }[] = [];
-  const request = (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const path = String(input);
-    const headers = new Headers(init?.headers);
-    asked.push({ path, ifNoneMatch: headers.get("if-none-match") });
-    if (path === "/api/session") {
-      return cloud.session === false
-        ? new Response(JSON.stringify({ error: { code: "unauthenticated", details: {} } }), {
-            status: 401,
-          })
-        : new Response(
-            JSON.stringify({
-              signed_in: true,
-              expires_at: "2026-10-30T00:00:00.000Z",
-            }),
-          );
-    }
-    if (cloud.status !== undefined) {
-      return new Response(JSON.stringify({ error: { code: "not_allowed", details: {} } }), {
-        status: cloud.status,
-      });
-    }
-    if (path === "/api/reference/ecb/manifest.json") {
-      if (cloud.manifest === undefined) {
-        return new Response(JSON.stringify({ error: { code: "not_found", details: {} } }), {
-          status: 404,
-        });
-      }
-      const version = `m-${sha(cloud.manifest).slice(0, 8)}`;
-      return headers.get("if-none-match") === `"${version}"`
-        ? new Response(null, { status: 304, headers: { etag: `"${version}"` } })
-        : new Response(cloud.manifest, { headers: { etag: `"${version}"` } });
-    }
-    if (path === "/api/reference/ecb/eurofxref-hist.csv" && cloud.file !== undefined) {
-      return new Response(cloud.file, { headers: { etag: '"f1"' } });
-    }
-    throw new Error(`unexpected ${path}`);
-  }) as typeof fetch;
-  return { asked, request };
+let restore: (() => void) | undefined;
+const cloud = (...args: Parameters<typeof serveReference>): void => {
+  restore?.();
+  forgetWebHistory();
+  restore = serveReference(...args);
 };
-
-const holder = globalThis as { indexedDB?: unknown };
-const before = holder.indexedDB;
-beforeAll(() => {
-  holder.indexedDB = new FakeIdbFactory();
-});
-beforeEach(() => {
-  holder.indexedDB = new FakeIdbFactory();
-});
-afterAll(() => {
-  holder.indexedDB = before;
+beforeEach(() => cloud({}));
+afterEach(() => {
+  restore?.();
+  restore = undefined;
+  forgetWebHistory();
 });
 
-const NOW = () => new Date("2026-10-02T08:00:00.000Z");
-
-describe("the ECB history of the cloud in the web (016, E3, block 2)", () => {
-  it("downloads the file in force, checks its SHA-256 and keeps it as from the cloud", async () => {
-    const { asked, request } = api({ manifest: manifestOf(csv), file: csv });
-    expect(await downloadCloudHistory(request, NOW)).toEqual({
-      kind: "saved",
-      latest: "2026-03-31",
-      source: "zip",
-    });
-    expect(asked.map((a) => a.path)).toEqual([
-      "/api/reference/ecb/manifest.json",
-      "/api/reference/ecb/eurofxref-hist.csv",
-    ]);
+describe("the ECB history of the cloud in the web", () => {
+  it("reads the file in force, checks its SHA-256 and holds it in memory", async () => {
+    cloud({ ecb: { csv } });
     const web = await loadWebHistory();
-    expect(web).toMatchObject({ origin: "cloud", source: "zip", latest: "2026-03-31" });
-    // Asked again on the version it holds: nothing travels.
-    asked.length = 0;
-    expect(await downloadCloudHistory(request, NOW)).toEqual({ kind: "up_to_date" });
-    expect(asked).toEqual([
-      {
-        path: "/api/reference/ecb/manifest.json",
-        ifNoneMatch: `"m-${sha(manifestOf(csv)).slice(0, 8)}"`,
-      },
-    ]);
+    expect(web).toMatchObject({ source: "zip", latest: "2026-03-31" });
+    expect(web.problem).toBeUndefined();
   });
 
-  it("never uses a file that is not the one its manifest records (mutant 25)", async () => {
-    const { importedHistory } = await import("@atlas/adapters/reference");
-    const held = JSON.stringify(await importedHistory());
-    const other = csv.replace(/^2026-03-31.*\n/m, "");
-    const { request } = api({ manifest: manifestOf(other, sha("something else")), file: other });
-    expect(await downloadCloudHistory(request, NOW)).toEqual({ kind: "damaged" });
-    const unreadable = api({ manifest: "{", file: other });
-    expect(await downloadCloudHistory(unreadable.request, NOW)).toEqual({ kind: "damaged" });
-    // Nothing of it was kept.
-    expect(JSON.stringify(await importedHistory())).toBe(held);
-  });
-
-  it("never replaces what it holds with a history that changes a published rate", async () => {
-    await downloadCloudHistory(api({ manifest: manifestOf(csv), file: csv }).request, NOW);
-    const changed = csv.replace(",0.8595,", ",0.8596,");
-    const { request } = api({ manifest: manifestOf(changed), file: changed });
-    expect(await downloadCloudHistory(request, NOW)).toEqual({ kind: "rejected", total: 1 });
-    expect((await reloadWebHistory()).history).toBeDefined();
-  });
-
-  it("says a cloud with no history, and a failure by its code", async () => {
-    expect(await downloadCloudHistory(api({}).request, NOW)).toEqual({ kind: "none" });
-    expect(await downloadCloudHistory(api({ status: 403 }).request, NOW)).toEqual({
-      kind: "failed",
-      code: "not_allowed",
-    });
-  });
-
-  it("comes down when the card opens with a session, and says it", async () => {
-    const { asked, request } = api({ manifest: manifestOf(csv), file: csv });
-    const real = globalThis.fetch;
-    globalThis.fetch = request;
-    try {
-      await reloadWebHistory();
-      const host = await show("/ajustes", Ajustes);
-      await settle(100);
-      const said = text(host);
-      expect(said).toContain("Bajado de tu nube");
-      expect(said).toContain("Bajar de la nube");
-      expect(asked.map((a) => a.path)).toContain("/api/reference/ecb/manifest.json");
-    } finally {
-      globalThis.fetch = real;
-    }
-  });
-
-  it("downloads nothing when the card opens without a session", async () => {
-    const { asked, request } = api({ manifest: manifestOf(csv), file: csv, session: false });
-    const real = globalThis.fetch;
-    globalThis.fetch = request;
-    try {
-      const host = await show("/ajustes", Ajustes);
-      await settle(100);
-      expect(asked.filter((a) => a.path.startsWith("/api/reference/"))).toEqual([]);
-      expect(text(host)).not.toContain("Bajar de la nube");
-    } finally {
-      globalThis.fetch = real;
-    }
-  });
-});
-
-describe("erasing the copy of this browser (review of PR #108, N4)", () => {
-  it("asks first, erases only when confirmed, and lets the restored one come down again", async () => {
-    const { importedHistory } = await import("@atlas/adapters/reference");
-    await downloadCloudHistory(api({ manifest: manifestOf(csv), file: csv }).request, NOW);
+  it("asks the cloud once per page, and again after forgetting", async () => {
+    let asked = 0;
+    const holder = globalThis as { fetch: typeof fetch };
+    holder.fetch = (async (input: RequestInfo | URL) => {
+      asked += 1;
+      return referenceAnswer(String(input), { ecb: { csv } }) as Response;
+    }) as typeof fetch;
+    await loadWebHistory();
+    const first = asked;
+    await loadWebHistory();
+    expect(asked).toBe(first);
     await reloadWebHistory();
-    const offline = api({ manifest: manifestOf(csv), file: csv, session: false });
-    const real = globalThis.fetch;
-    globalThis.fetch = offline.request;
-    try {
-      const host = await show("/ajustes", Ajustes);
-      await settle(100);
-      await press(host, "Borrar la copia del BCE de este navegador");
-      expect(text(host.querySelector("dialog"))).toContain("se puede volver a bajar");
-      // Cancelled: nothing is erased.
-      await press(host, "Cancelar");
-      expect(await importedHistory()).toBeDefined();
-      await press(host, "Borrar la copia del BCE de este navegador");
-      const confirm = [...(host.querySelector("dialog")?.querySelectorAll("button") ?? [])].find(
-        (button) => button.textContent?.trim() === "Borrar la copia",
-      );
-      confirm?.click();
-      await settle(100);
-      expect(await importedHistory()).toBeUndefined();
-      expect(text(host)).toContain("Copia borrada");
-    } finally {
-      globalThis.fetch = real;
-    }
-    // The next download is a first one: a restored generation comes down whole.
-    const changed = csv.replace(",0.8595,", ",0.8596,");
-    expect(
-      await downloadCloudHistory(
-        api({ manifest: manifestOf(changed), file: changed }).request,
-        NOW,
-      ),
-    ).toMatchObject({ kind: "saved" });
+    expect(asked).toBe(first * 2);
+  });
+
+  it("never uses a file that is not the one its manifest records", async () => {
+    cloud({ ecb: { csv, hash: "0".repeat(64) } });
+    const web = await loadWebHistory();
+    expect(web.history).toBeUndefined();
+    expect(web.problem).toBe("unreadable");
+  });
+
+  it("never uses a file that does not read", async () => {
+    cloud({ ecb: { csv: "this is not a history" } });
+    const web = await loadWebHistory();
+    expect(web.history).toBeUndefined();
+    expect(web.problem).toBe("unreadable");
+  });
+
+  it("does not hold a half-rotated file: the next call asks again", async () => {
+    const holder = globalThis as { fetch: typeof fetch };
+    let hash: string | undefined = "0".repeat(64);
+    holder.fetch = (async (input: RequestInfo | URL) =>
+      referenceAnswer(
+        String(input),
+        hash === undefined ? { ecb: { csv } } : { ecb: { csv, hash } },
+      ) as Response) as typeof fetch;
+    expect((await loadWebHistory()).problem).toBe("unreadable");
+    hash = undefined;
+    expect((await loadWebHistory()).latest).toBe("2026-03-31");
+  });
+
+  it("has no history, and no problem, when the cloud has none yet", async () => {
+    expect(await loadWebHistory()).toEqual({ staleDays: 30 });
+  });
+
+  it("says the cloud's failure by its code, and asks again next time", async () => {
+    cloud({ status: 403 });
+    expect(await loadWebHistory()).toMatchObject({ problem: "unavailable", code: "not_allowed" });
+    cloud({ ecb: { csv } });
+    // `cloud` forgets; the point is that the failure itself was not held either.
+    const holder = globalThis as { fetch: typeof fetch };
+    let down = true;
+    holder.fetch = (async (input: RequestInfo | URL) =>
+      referenceAnswer(
+        String(input),
+        down ? { status: 503 } : { ecb: { csv } },
+      ) as Response) as typeof fetch;
+    forgetWebHistory();
+    expect((await loadWebHistory()).problem).toBe("unavailable");
+    down = false;
+    expect((await loadWebHistory()).latest).toBe("2026-03-31");
   });
 });
 
-describe("nothing downloads the history of the cloud at start or on a timer (mutant 25)", () => {
-  const src = join(root, "../src");
-  const files = (dir: string): string[] =>
-    readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
-      entry.isDirectory()
-        ? files(join(dir, entry.name))
-        : /\.tsx?$/.test(entry.name)
-          ? [join(dir, entry.name)]
-          : [],
-    );
+describe("the card of the ECB", () => {
+  it("says it was read from the cloud, with no way to import or erase a copy", async () => {
+    cloud({ ecb: { csv } });
+    const host = await show("/ajustes", Ajustes);
+    await settle(100);
+    const said = text(host);
+    expect(said).toContain("Leído de tu nube");
+    expect(said).toContain("publica hasta el 31/03/2026");
+    expect(said).not.toContain("Importar el histórico");
+    expect(said).not.toContain("Borrar la copia");
+  });
 
-  it("is reached only from the card of the ECB, which keeps no timer", () => {
-    const importers = files(src).filter((file) =>
-      // A value taken from it, or a dynamic import: a type alone runs nothing.
-      /import\s*\{[^}]*\}\s*from\s*"[^"]*ecb\/cloud\.js"|import\(\s*"[^"]*ecb\/cloud\.js"/.test(
-        readFileSync(file, "utf8"),
-      ),
-    );
-    expect(importers.map((file) => file.slice(src.length + 1))).toEqual([
-      "routes/ajustes/EcbCard.tsx",
-    ]);
-    const card = readFileSync(join(src, "routes/ajustes/EcbCard.tsx"), "utf8");
-    expect(card).not.toMatch(/setTimeout|setInterval|requestIdleCallback|onMount/);
-    // It downloads when it opens and from its button, and from nothing else.
-    expect(card.match(/downloadCloudHistory\(/g)).toHaveLength(1);
+  it("says an unreadable history as what it is", async () => {
+    cloud({ ecb: { csv: "this is not a history" } });
+    const host = await show("/ajustes", Ajustes);
+    await settle(100);
+    expect(text(host)).toContain("no se entiende: no se usa");
+  });
+
+  it("gives the reason in words when the cloud did not answer, never only the code", async () => {
+    cloud({ status: 403 });
+    const host = await show("/ajustes", Ajustes);
+    await settle(100);
+    expect(text(host)).toContain("No se ha podido leer el histórico del BCE de la nube");
+    expect(text(host)).not.toContain("not_allowed");
+  });
+
+  it("reads it again from its button", async () => {
+    cloud({ ecb: { csv } });
+    const host = await show("/ajustes", Ajustes);
+    await settle(100);
+    await press(host, "Volver a leer");
+    await settle(100);
+    expect(text(host)).toContain("Histórico leído de la nube: publica hasta el 31/03/2026.");
   });
 });

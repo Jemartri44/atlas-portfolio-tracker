@@ -1,134 +1,135 @@
 // @vitest-environment happy-dom
 //
-// The automatic prices in the web: read from the folder the console writes or imported by hand,
-// never downloaded and never written in the folder; shown with their origin, the approximation
-// marked, the quote without an ECB rate said; and on the phone, the truth: no automatic prices
-// until the cloud exists.
+// The automatic prices in the web: read from our own cloud with the session (`GET
+// /api/reference/prices`), held in memory, never written on the device; shown with their origin, the
+// approximation marked, the quote without an ECB rate said, and the cloud not answering said too.
 
 import { Decimal, Money } from "@atlas/domain";
 import { readEcbZipCsv } from "@atlas/domain/ecb";
-import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
-import { FakeIdbFactory } from "../../../packages/adapters/test/fake-idb.js";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Price, PriceDetail } from "../src/components/Price.jsx";
-import { reloadWebHistory } from "../src/ecb/history.js";
-import { externalOf, forgetPrices, importPriceFiles, loadWebQuotes } from "../src/prices/quotes.js";
+import { forgetWebHistory } from "../src/ecb/history.js";
+import { externalOf, forgetPrices, loadWebQuotes } from "../src/prices/quotes.js";
 import Ajustes from "../src/routes/ajustes/index.jsx";
 import Cartera from "../src/routes/cartera/index.jsx";
+import { serveReference } from "./helpers/cloud-reference.js";
 import { settle, show, text, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
-const holder = globalThis as { indexedDB?: unknown };
-const before = holder.indexedDB;
-beforeEach(async () => {
-  holder.indexedDB = new FakeIdbFactory();
-  await reloadWebHistory();
-});
-afterAll(() => {
-  holder.indexedDB = before;
+let restore: (() => void) | undefined;
+const cloud = (...args: Parameters<typeof serveReference>): void => {
+  restore?.();
+  forgetPrices();
+  forgetWebHistory();
+  restore = serveReference(...args);
+};
+beforeEach(() => cloud({}));
+afterEach(() => {
+  restore?.();
+  restore = undefined;
+  forgetPrices();
+  forgetWebHistory();
 });
 
 const line = (date: string, close: string, currency = "EUR") =>
   `${JSON.stringify({ schema_version: 1, date, close, currency, source: "eodhd", fetched_at: "2029-06-30T06:00:00.000Z" })}\n`;
 
-/** A folder as the File System Access API hands it over: read only, from a map of paths. */
-const _fakeFolder = (files: Record<string, string>, permission = "granted") => {
-  const notFound = () => new DOMException("not found", "NotFoundError");
-  const dir = (prefix: string): unknown => ({
-    kind: "directory",
-    queryPermission: async () => permission,
-    getDirectoryHandle: async (name: string) => {
-      const path = `${prefix}${name}/`;
-      if (!Object.keys(files).some((key) => key.startsWith(path))) {
-        throw notFound();
-      }
-      return dir(path);
-    },
-    getFileHandle: async (name: string) => {
-      const content = files[`${prefix}${name}`];
-      if (content === undefined) {
-        throw notFound();
-      }
-      return { getFile: async () => ({ text: async () => content }) };
-    },
-  });
-  return dir("") as FileSystemDirectoryHandle;
-};
+const pence = JSON.stringify({
+  symbols_format: 2,
+  assets: { ast_world: { eodhd: "W.LSE", currencies: { eodhd: "GBX" }, confirmed_at: "x" } },
+});
 
-describe("importing prices by hand", () => {
-  it("reads each file before keeping anything, and keeps the format of prices/", async () => {
-    const refused = await importPriceFiles([
-      { name: "ast_world.jsonl", text: line("2029-06-29", "999") },
-      { name: "ast_bonds.jsonl", text: '{"schema_version":2}\n' },
-    ]);
-    expect(refused).toEqual({
-      kind: "refused",
-      file: "ast_bonds.jsonl",
-      code: "price_file_newer_version",
-    });
-    expect((await loadWebQuotes(["ast_world"])).closes.size).toBe(0);
-    expect(await importPriceFiles([{ name: "notes.txt", text: "x" }])).toMatchObject({
-      kind: "refused",
-      code: "not_a_price_file",
-    });
-    const imported = await importPriceFiles([
-      { name: "ast_world.jsonl", text: line("2029-06-29", "999") },
-    ]);
-    expect(imported).toEqual({ kind: "imported", assets: ["ast_world"], ignored: [] });
+describe("reading the prices of the cloud", () => {
+  it("reads each asset's file with the session and keeps nothing on the device", async () => {
+    cloud({ prices: { ast_world: line("2029-06-29", "999") } });
     const quotes = await loadWebQuotes(["ast_world", "ast_bonds"]);
-    expect(quotes.origin).toBe("imported");
+    expect(quotes.origin).toBe("cloud");
     expect(quotes.closes.get("ast_world")?.[0]?.close).toBe("999");
+    expect(quotes.closes.has("ast_bonds")).toBe(false);
+  });
+
+  it("has no automatic price when the cloud has no file, and says nothing is wrong", async () => {
+    const quotes = await loadWebQuotes(["ast_world"]);
+    expect(quotes.closes.size).toBe(0);
+    expect(quotes.origin).toBeUndefined();
+    expect(quotes.problem).toBeUndefined();
+  });
+
+  it("says the cloud did not answer, and does not take it for a lack of prices", async () => {
+    cloud({ status: 503 });
+    expect((await loadWebQuotes(["ast_world"])).problem).toBe("unavailable");
+  });
+
+  it("does not disguise a failure of its own as the cloud being down (review M9)", async () => {
+    cloud({ prices: { ast_world: line("2029-06-29", "999") }, symbols: "{" });
+    const quotes = await loadWebQuotes(["ast_world"]);
+    expect(quotes.problem).toBeUndefined();
+    expect(quotes.symbols).toMatchObject({ problem: "unreadable" });
+  });
+
+  it("reads each file once per page, and again after forgetting", async () => {
+    let asked = 0;
+    const holder = globalThis as { fetch: typeof fetch };
+    cloud({ prices: { ast_world: line("2029-06-29", "999") } });
+    const inner = holder.fetch;
+    holder.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+      asked += String(input).includes("/prices/") ? 1 : 0;
+      return inner(input, init);
+    }) as typeof fetch;
+    await loadWebQuotes(["ast_world"]);
+    const first = asked;
+    await loadWebQuotes(["ast_world"]);
+    expect(asked).toBe(first);
+    forgetPrices();
+    await loadWebQuotes(["ast_world"]);
+    expect(asked).toBe(first * 2);
   });
 
   it("feeds the gate: the weights of Cartera show the close, with its source", async () => {
-    await importPriceFiles([{ name: "ast_world.jsonl", text: line("2029-06-29", "999") }]);
+    cloud({ prices: { ast_world: line("2029-06-29", "999") } });
     const host = await show("/cartera", Cartera);
     await settle(20);
     expect(text(host)).toContain("EODHD");
   });
 });
 
-describe("the other files of prices/ and deleting what was imported", () => {
-  it("leaves the status aside with a note instead of refusing the import", async () => {
-    const outcome = await importPriceFiles([
-      { name: "ast_world.jsonl", text: line("2029-06-29", "999") },
-      { name: "_status.json", text: "{}" },
-    ]);
-    expect(outcome).toEqual({ kind: "imported", assets: ["ast_world"], ignored: ["_status.json"] });
+describe("the correspondence beside the prices", () => {
+  it("leaves out what symbols.json says is stored in the wrong currency", async () => {
+    cloud({ prices: { ast_world: line("2029-06-29", "1000", "GBP") }, symbols: pence });
+    const quotes = await loadWebQuotes(["ast_world"]);
+    expect(quotes.closes.get("ast_world")).toEqual([]);
+    expect(quotes.mismatched).toMatchObject([{ asset_id: "ast_world", count: 1 }]);
+    expect(quotes.symbols).toBeUndefined();
   });
 
-  it("deletes the prices imported by hand, and nothing else", async () => {
-    await importPriceFiles([{ name: "ast_world.jsonl", text: line("2029-06-29", "999") }]);
-    expect((await loadWebQuotes(["ast_world"])).origin).toBe("imported");
-    await forgetPrices();
-    expect((await loadWebQuotes(["ast_world"])).closes.size).toBe(0);
-  });
-
-  it("offers to delete them in Ajustes only when there are imported prices", async () => {
-    await importPriceFiles([{ name: "ast_world.jsonl", text: line("2029-06-29", "999") }]);
-    const host = await show("/ajustes", Ajustes);
-    const forget = () =>
-      [...host.querySelectorAll("button")].find((b) =>
-        b.textContent?.includes("Borrar los precios importados"),
-      );
-    // The condition, not a time: a fixed wait failed under load.
-    await until(() => forget() !== undefined, "the button to delete the imported prices");
-    forget()?.click();
+  it("says it cannot check the currency of prices that come without symbols.json", async () => {
+    cloud({ prices: { ast_world: line("2029-06-29", "999") } });
+    expect((await loadWebQuotes(["ast_world"])).symbols).toEqual({ problem: "missing" });
+    const host = await show("/cartera", Cartera);
     await until(
-      () => text(host).includes("Precios importados borrados de este navegador"),
-      "the notice that they were deleted",
+      () => text(host).includes("no se puede comprobar la divisa"),
+      "the warning about the currency of the prices",
     );
-    expect(text(host)).toContain("Precios importados borrados de este navegador");
-    // The other half of the notice comes on its own render: waited for too.
-    await until(
-      () => text(host).includes("Sin precios automáticos en este dispositivo"),
-      "the notice that there are no automatic prices",
-    );
-    expect(text(host)).toContain("Sin precios automáticos en este dispositivo");
   });
 });
 
-describe("reading prices from the folder the console writes", () => {
+describe("Ajustes", () => {
+  it("shows how many assets have a price, read from the cloud, with nothing to import", async () => {
+    cloud({ prices: { ast_world: line("2029-06-29", "999") } });
+    const host = await show("/ajustes", Ajustes);
+    await until(() => text(host).includes("Leídos de tu nube: un activo"), "the prices card");
+    expect(text(host)).not.toContain("Importar");
+    expect(text(host)).not.toContain("Borrar los precios importados");
+  });
+
+  it("says there are no automatic prices when the cloud has none", async () => {
+    const host = await show("/ajustes", Ajustes);
+    await until(() => text(host).includes("Sin precios automáticos."), "the prices card");
+  });
+});
+
+describe("the ECB rates for the cash", () => {
   it("without any close, still gives the ECB history's rates for the cash of the net worth", () => {
     // Live test of 2026-09-27: the net worth valued the dollars with the
     // ledger's rate of weeks before while the history had newer ones.
@@ -149,53 +150,6 @@ describe("reading prices from the folder the console writes", () => {
     expect(externalOf({ ...quotes, history: { staleDays: 30 } }, {} as never)).toBeUndefined();
   });
 });
-
-describe("closes stored in the wrong currency (review of PR #80)", () => {});
-
-describe("second pass of PR #80 in the web: the correspondence beside the prices", () => {
-  // The store of this browser outlives a test: what one imports, the next reads.
-  beforeEach(() => forgetPrices());
-  afterEach(() => forgetPrices());
-  const pence = JSON.stringify({
-    symbols_format: 2,
-    assets: { ast_world: { eodhd: "W.LSE", currencies: { eodhd: "GBX" }, confirmed_at: "x" } },
-  });
-
-  it("takes symbols.json in an import and leaves out what it says is stored wrong", async () => {
-    const outcome = await importPriceFiles([
-      { name: "ast_world.jsonl", text: line("2029-06-29", "1000", "GBP") },
-      { name: "symbols.json", text: pence },
-    ]);
-    expect(outcome).toEqual({ kind: "imported", assets: ["ast_world"], ignored: [] });
-    const quotes = await loadWebQuotes(["ast_world"]);
-    expect(quotes.closes.get("ast_world")).toEqual([]);
-    expect(quotes.mismatched).toMatchObject([{ asset_id: "ast_world", count: 1 }]);
-    expect(quotes.symbols).toBeUndefined();
-    // Prices imported later without it keep the correspondence imported before.
-    await importPriceFiles([{ name: "ast_world.jsonl", text: line("2029-06-29", "1000", "GBP") }]);
-    expect((await loadWebQuotes(["ast_world"])).closes.get("ast_world")).toEqual([]);
-  });
-
-  it("refuses an import whose symbols.json does not read, whole", async () => {
-    expect(
-      await importPriceFiles([
-        { name: "ast_world.jsonl", text: line("2029-06-29", "999") },
-        { name: "symbols.json", text: "{" },
-      ]),
-    ).toEqual({ kind: "refused", file: "symbols.json", code: "invalid_symbols_file" });
-    expect((await loadWebQuotes(["ast_world"])).closes.size).toBe(0);
-  });
-
-  it("says it cannot check the currency of prices imported without symbols.json", async () => {
-    await importPriceFiles([{ name: "ast_world.jsonl", text: line("2029-06-29", "999") }]);
-    expect((await loadWebQuotes(["ast_world"])).symbols).toEqual({ problem: "missing" });
-    const host = await show("/cartera", Cartera);
-    await settle(20);
-    expect(text(host)).toContain("no se puede comprobar la divisa");
-  });
-});
-
-describe("a local configuration that does not read (§6.4 (d))", () => {});
 
 describe("a price on the screen", () => {
   it("marks an approximation, a quote without its value in euros, and says its origin", async () => {
@@ -228,10 +182,6 @@ describe("a price on the screen", () => {
     dispose();
   });
 });
-
-describe("Ajustes with prices imported", () => {});
-
-describe("Ajustes on a device without folders (the phone)", () => {});
 
 describe("the calculator of the contribution in the web", () => {
   it("says the note of the domain when a weight rests on an approximation, and adds nothing of its own", async () => {

@@ -134,8 +134,9 @@ describe("projection", () => {
     ).toBeUndefined();
   });
 
-  it("refuses a horizon that is not a whole number of years", () => {
+  it("refuses a horizon that is not a whole number of years, or longer than the ceiling", () => {
     expect(() => run(core(), settings, { years: 1.5 })).toThrow("whole number");
+    expect(() => run(core(), settings, { years: 101 })).toThrow("whole number");
     expect(run(core(), settings, { years: 0 }).scenarios[0]?.points).toHaveLength(1);
   });
 });

@@ -12,6 +12,7 @@ import type { CivilDate } from "../dates/civil-date.js";
 import { ValidationError } from "../errors.js";
 import { Decimal, HUNDRED } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
+import { byCode } from "../order.js";
 import type { AssetClass, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import type { ExternalPrices } from "./prices.js";
@@ -172,7 +173,7 @@ const residueOrder = (slices: readonly Slice[]): Slice[] =>
       return byGap;
     }
     const byTarget = b.target_pct.cmp(a.target_pct);
-    return byTarget !== 0 ? byTarget : a.asset_id.localeCompare(b.asset_id);
+    return byTarget !== 0 ? byTarget : byCode(a.asset_id, b.asset_id);
   });
 
 /**

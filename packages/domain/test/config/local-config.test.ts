@@ -26,6 +26,7 @@ describe("the local configuration (atlas.config.json)", () => {
       '{"lock_stale_minutes": 0}',
       '{"lock_stale_minutes": 1.5}',
       '{"ecb_stale_currency_days": "30"}',
+      '{"lock_stale_minutes": 5, "lock_stale_minutes": 10}',
     ]) {
       const error = (() => {
         try {

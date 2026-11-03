@@ -8,42 +8,39 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { BlobLedgerStore } from "@atlas/adapters/blob";
-import { saveImportedHistory } from "@atlas/adapters/reference";
 import { DEFAULT_SETTINGS, mergeSettings, type Settings, type UseCaseDeps } from "@atlas/domain";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { FakeIdbFactory } from "../../../packages/adapters/test/fake-idb.js";
-import { reloadWebHistory } from "../src/ecb/history.js";
+import { forgetWebHistory, reloadWebHistory } from "../src/ecb/history.js";
 import { loadInto } from "../src/ledger/actions.js";
 import { store } from "../src/ledger/state.js";
 import { changeSettings, recordDraft } from "../src/ledger/write.js";
 import Configuracion from "../src/routes/ajustes/configuracion.jsx";
 import Verificacion from "../src/routes/ajustes/verificacion.jsx";
 import { asEventDraft } from "../src/view-models/forms/values.js";
+import { serveReference } from "./helpers/cloud-reference.js";
 import { MemoryBlob } from "./helpers/memory-blob.js";
 import { choose, press, show, text, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
-const holder = globalThis as { indexedDB?: unknown };
-const before = holder.indexedDB;
+let restore: (() => void) | undefined;
 beforeAll(async () => {
-  holder.indexedDB = new FakeIdbFactory();
-  await saveImportedHistory({
-    text: readFileSync(
-      join(
-        dirname(fileURLToPath(import.meta.url)),
-        "../../../tests/fixtures/ecb/eurofxref-hist.csv",
+  restore = serveReference({
+    ecb: {
+      csv: readFileSync(
+        join(
+          dirname(fileURLToPath(import.meta.url)),
+          "../../../tests/fixtures/ecb/eurofxref-hist.csv",
+        ),
+        "utf8",
       ),
-      "utf8",
-    ),
-    source: "zip",
-    file_name: "eurofxref-hist.csv",
-    imported_at: "2026-04-01T10:00:00.000Z",
+    },
   });
   await reloadWebHistory();
 });
 afterAll(() => {
-  holder.indexedDB = before;
+  restore?.();
+  forgetWebHistory();
 });
 
 const openDialog = (host: HTMLElement): HTMLElement | undefined =>

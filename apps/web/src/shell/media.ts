@@ -33,10 +33,3 @@ export const GRID = "(min-width: 64rem)";
  * past its card.
  */
 export const SIDE_COLUMN = "(min-width: 80rem)";
-
-/**
- * The step of the monitor (styles/tokens.css): from here the
- * summary is laid out in 8+4, and its reading order changes with it — CSS can
- * place a card, not the order the keyboard walks through the cards.
- */
-export const MONITOR = "(min-width: 112.5rem)";

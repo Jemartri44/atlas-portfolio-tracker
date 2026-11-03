@@ -28,6 +28,7 @@ export const PRODUCER_FINDINGS: ProducerFindings = {
     ecb_update_undone: ["ecb"],
     ecb_update_rejected: ["ecb"],
     ecb_calendar_mismatch: ["ecb"],
+    ecb_history_backfilled: ["ecb"],
     ecb_history_damaged: ["ecb"],
     ecb_history_rebuilt: ["ecb"],
     ecb_rebuilt_unverified: ["ecb"],
@@ -88,8 +89,14 @@ const resultFindings = (result: EcbUpdateResult | EcbRebuildResult): Finding[] =
             counts: { days: result.calendar.length },
           },
         ];
+  // A past day filled in by an update: accepted, but never in silence (ADR-0029 treats the absence
+  // of a publication as a datum).
+  const backfilled: Finding[] =
+    result.kind === "accepted" && result.backfilled > 0
+      ? [{ code: "ecb_history_backfilled", subject: "ecb", counts: { rates: result.backfilled } }]
+      : [];
   if (result.kind !== "rebuilt") {
-    return calendar;
+    return [...backfilled, ...calendar];
   }
   return [
     { code: "ecb_history_rebuilt", subject: "ecb", counts: { days: result.days } },

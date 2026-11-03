@@ -21,6 +21,7 @@ import type { CivilDate } from "../dates/civil-date.js";
 import type { Ulid } from "../ids/ulid.js";
 import { zero } from "../money/eur.js";
 import { EUR, Money } from "../money/money.js";
+import { byCode } from "../order.js";
 import type { Filing } from "../projections/filings.js";
 import { filingInForce } from "../projections/filings.js";
 import type { LedgerState } from "../projections/state.js";
@@ -132,7 +133,7 @@ const readingOf = (
 const chainOf = (state: LedgerState, filing: Filing): Ulid[] =>
   [...state.filings.values()]
     .filter((entry) => entry.model === filing.model && entry.tax_year === filing.tax_year)
-    .sort((a, b) => a.filed_at.localeCompare(b.filed_at) || a.position - b.position)
+    .sort((a, b) => byCode(a.filed_at, b.filed_at) || a.position - b.position)
     .map((entry) => entry.event_id);
 
 /**

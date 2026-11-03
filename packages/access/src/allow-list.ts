@@ -4,7 +4,7 @@
 // **exactly**: normalising it would be recognising
 // by resemblance.
 
-import { isRecord, ValidationError } from "@atlas/domain";
+import { isRecord, repeatsKey, ValidationError } from "@atlas/domain";
 import { isSubject } from "./signed.js";
 
 export interface AllowEntry {
@@ -24,6 +24,11 @@ export const parseAllowList = (text: string): readonly AllowEntry[] => {
     value = JSON.parse(text);
   } catch {
     throw unreadable("json");
+  }
+  // A key written twice is read as the last one by JSON.parse: a copy and paste in SSM would
+  // change who gets in without anyone seeing it.
+  if (repeatsKey(text)) {
+    throw unreadable("repeated_key");
   }
   if (
     !isRecord(value) ||

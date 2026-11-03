@@ -47,7 +47,7 @@ export default defineConfig({
     globalSetup: [local("./tests/support/tmp-per-run.ts")],
     // Every outDir of a tsconfig (tests/test-outputs.test.ts): a compiled test
     // must never run a second time after a build.
-    exclude: ["**/node_modules/**", "**/dist/**", "**/dist-test/**", "**/dist-test-browser/**"],
+    exclude: ["**/node_modules/**", "**/dist/**", "**/dist-test/**"],
     projects: [
       { extends: true, test: { name: "domain", root: "packages/domain" } },
       { extends: true, test: { name: "access", root: "packages/access" } },

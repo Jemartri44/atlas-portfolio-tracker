@@ -1,25 +1,20 @@
-// Where the web gets the daily closes: the price files
-// the user imported by hand into this browser, converted with the ECB history
-// the web holds. The web downloads no price and reads no folder; the ledger
-// never depends on them (they are informational).
+// Where the web gets the daily closes: the price files of our own cloud (`GET /api/reference/prices`),
+// read with the session, held in memory for the life of the page and converted with the ECB history
+// the web holds. Nothing is kept on the device; the ledger never depends on them (they are
+// informational).
 //
 // Loaded lazily: nothing of it is on the boot path, and the build fails if it
 // ever is.
 
-import {
-  assetOfPriceFile,
-  forgetImportedPrices,
-  importedPrices,
-  saveImportedPrices,
-} from "@atlas/adapters/prices";
-import type { AssetId, ExternalPrices, LedgerState } from "@atlas/domain";
+import { httpReference } from "@atlas/adapters/reference-http";
+import { type AssetId, DomainError, type ExternalPrices, type LedgerState } from "@atlas/domain";
 import {
   type EffectiveClose,
   ecbRatesOnly,
   externalPricesOf,
   type MismatchedCloses,
   parseSymbols,
-  readCloseFile,
+  priceFileName,
   readCloses,
   type SymbolsFile,
   type UnreadableCloses,
@@ -29,15 +24,13 @@ import { loadWebHistory, type WebHistory } from "../ecb/history.js";
 export interface WebQuotes {
   readonly closes: ReadonlyMap<AssetId, readonly EffectiveClose[]>;
   /** Where they came from; absent when there are none. */
-  readonly origin?: "imported";
-  /** When the import was made. */
-  readonly importedAt?: string;
+  readonly origin?: "cloud";
   /** Files that do not read: their assets have no automatic price, and it is said. */
   readonly unreadable: readonly UnreadableCloses[];
   /**
    * Closes stored in a currency their source does not declare in
    * `prices/symbols.json`: left out, and
-   * said. Only known where `symbols.json` was imported with the closes.
+   * said. Only known where the cloud serves `symbols.json` with the closes.
    */
   readonly mismatched: readonly MismatchedCloses[];
   /**
@@ -47,8 +40,8 @@ export interface WebQuotes {
   readonly symbols?: SymbolsProblem;
   /** What the screens say of `symbols`, here and not in a module of its own (the boot). */
   readonly symbolsNotice?: string;
-  /** This browser keeps no site data, so nothing imported can be read. */
-  readonly problem?: "storage";
+  /** The cloud did not answer, so no automatic price could be read. */
+  readonly problem?: "unavailable";
   readonly history: WebHistory;
 }
 
@@ -59,7 +52,7 @@ type SymbolsProblem =
 /** Why the currency of the automatic prices could not be checked. */
 const symbolsNotice = (symbols: SymbolsProblem): string =>
   symbols.problem === "missing"
-    ? "Sin prices/symbols.json junto a ellos no se puede comprobar la divisa de los precios automáticos: se usan tal como están. Si los importaste a mano, importa también ese fichero."
+    ? "Sin prices/symbols.json junto a ellos no se puede comprobar la divisa de los precios automáticos: se usan tal como están."
     : symbols.code === "symbols_file_newer_version"
       ? "prices/symbols.json es de una versión más nueva de la aplicación: no se usan precios automáticos. Recarga la aplicación para actualizarla."
       : "prices/symbols.json no se entiende: no se puede comprobar la divisa de los precios automáticos, y no se usan. Vuelve a declarar los símbolos desde la consola.";
@@ -103,28 +96,83 @@ const withSymbols = (
   };
 };
 
-/** The closes for the assets given: the imported ones, else none. */
-export const loadWebQuotes = async (assetIds: readonly AssetId[]): Promise<WebQuotes> => {
-  const history = await loadWebHistory();
-  try {
-    const imported = await importedPrices();
-    if (imported === undefined) {
-      return { closes: new Map(), unreadable: [], mismatched: [], history };
-    }
-    const wanted = new Set(assetIds);
-    return {
-      ...withSymbols(
-        new Map(Object.entries(imported.files).filter(([assetId]) => wanted.has(assetId))),
-        imported.symbols,
-      ),
-      origin: "imported",
-      importedAt: imported.imported_at,
-      history,
-    };
-  } catch {
-    // Without a store to read from (private mode, blocked site data): said.
-    return { closes: new Map(), unreadable: [], mismatched: [], history, problem: "storage" };
+/** The text of each price file already read in this page, by file name (`undefined`: not there). */
+const held = new Map<string, Promise<string | undefined>>();
+
+const SYMBOLS = "symbols.json";
+
+/** Forgets what was read: a new reading, or the end of the session (they say which assets are followed). */
+export const forgetPrices = (): void => {
+  held.clear();
+};
+
+const decoder = new TextDecoder("utf-8");
+
+/** One file of `prices/` from the API, once per page; a failed read is not held. */
+const fileOf = (
+  reference: ReturnType<typeof httpReference>,
+  name: string,
+): Promise<string | undefined> => {
+  let reading = held.get(name);
+  if (reading === undefined) {
+    reading = reference.get("prices", name).then((read) => {
+      if (read.kind !== "file") {
+        return undefined;
+      }
+      return decoder.decode(read.bytes);
+    });
+    held.set(name, reading);
+    reading.catch(() => {
+      if (held.get(name) === reading) {
+        held.delete(name);
+      }
+    });
   }
+  return reading;
+};
+
+/**
+ * The closes for the assets given, read from the cloud with the session and held in memory. A file
+ * the cloud has not is an asset with no automatic price; the cloud not answering is said
+ * (`problem`), and the rest of the screen goes on with the manual valuations.
+ */
+export const loadWebQuotes = async (
+  assetIds: readonly AssetId[],
+  request: typeof fetch = (...args) => fetch(...args),
+): Promise<WebQuotes> => {
+  const history = await loadWebHistory(request);
+  const reference = httpReference({ origin: "", fetch: request });
+  let files: ReadonlyMap<AssetId, string>;
+  let symbols: string | undefined;
+  try {
+    const read = await Promise.all([
+      fileOf(reference, SYMBOLS),
+      ...assetIds.map(
+        async (assetId) => [assetId, await fileOf(reference, priceFileName(assetId))] as const,
+      ),
+    ]);
+    [symbols] = read as [string | undefined, ...unknown[]];
+    files = new Map(
+      (read.slice(1) as (readonly [AssetId, string | undefined])[]).flatMap(([assetId, text]) =>
+        text === undefined ? [] : [[assetId, text] as const],
+      ),
+    );
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return {
+        closes: new Map(),
+        unreadable: [],
+        mismatched: [],
+        history,
+        problem: "unavailable",
+      };
+    }
+    throw error;
+  }
+  if (files.size === 0) {
+    return { closes: new Map(), unreadable: [], mismatched: [], history };
+  }
+  return { ...withSymbols(files, symbols), origin: "cloud", history };
 };
 
 /** The quotes of `state` for the gate; without closes, the ECB rates of the cash. */
@@ -142,73 +190,3 @@ export const externalOf = (
     staleDays: quotes.history.staleDays,
   });
 };
-
-/**
- * The files of `prices/` that the console writes, that are not prices and that
- * the web does not need. `symbols.json` is not one of them: it says which
- * closes are stored in the wrong currency.
- */
-const COMPANIONS = ["_status.json", "config.json"];
-const SYMBOLS = "symbols.json";
-
-type PricesImport =
-  | {
-      readonly kind: "imported";
-      readonly assets: readonly AssetId[];
-      /** Files of `prices/` that are not prices (its correspondence, its status): left aside. */
-      readonly ignored: readonly string[];
-    }
-  | { readonly kind: "refused"; readonly file: string; readonly code: string };
-
-/**
- * Imports the files of `prices/` the user chose, in the format of `prices/` —
- * not a new one. Each is read **before** anything is kept, with the reader of
- * the domain: one that does not read refuses the whole import, never half.
- */
-export const importPriceFiles = async (
-  files: readonly { name: string; text: string }[],
-  now: Date = new Date(),
-): Promise<PricesImport> => {
-  const incoming: Record<AssetId, string> = {};
-  const ignored: string[] = [];
-  let symbols: string | undefined;
-  for (const { name, text } of files) {
-    if (name === SYMBOLS) {
-      try {
-        parseSymbols(text);
-      } catch (error) {
-        return { kind: "refused", file: name, code: (error as { code: string }).code };
-      }
-      symbols = text;
-      continue;
-    }
-    // The other files of the folder `prices/` come along when a whole folder
-    // is chosen: they are not prices, and they are left aside with a note
-    // instead of refusing the import.
-    if (COMPANIONS.includes(name)) {
-      ignored.push(name);
-      continue;
-    }
-    const assetId = assetOfPriceFile(name);
-    if (assetId === undefined) {
-      return { kind: "refused", file: name, code: "not_a_price_file" };
-    }
-    try {
-      readCloseFile(assetId, text);
-    } catch (error) {
-      return { kind: "refused", file: name, code: (error as { code: string }).code };
-    }
-    incoming[assetId] = text;
-  }
-  const before = await importedPrices();
-  const kept = symbols ?? before?.symbols;
-  await saveImportedPrices({
-    files: { ...(before?.files ?? {}), ...incoming },
-    imported_at: now.toISOString(),
-    ...(kept === undefined ? {} : { symbols: kept }),
-  });
-  return { kind: "imported", assets: Object.keys(incoming), ignored };
-};
-
-/** Deletes the prices imported by hand in this browser. */
-export const forgetPrices = (): Promise<void> => forgetImportedPrices();

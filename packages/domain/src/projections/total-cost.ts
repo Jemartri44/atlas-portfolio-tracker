@@ -19,13 +19,12 @@
 //   that arrived by transfer has no purchase (base too low, friction too high). It is a rough
 //   order of magnitude, never a bound, and never the tax of the tax engine, which is progressive.
 
-import { ValidationError } from "../errors.js";
 import { Decimal, HUNDRED } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
 import type { Settings } from "../settings/settings.js";
 import { coreMonthlyOf } from "./core-monthly.js";
 import type { CostSummary } from "./costs.js";
-import { grow } from "./growth.js";
+import { checkHorizon, grow } from "./growth.js";
 
 export const DEFAULT_COST_YEARS = 20;
 
@@ -71,11 +70,7 @@ export const totalCost = (
   assumptions: TotalCostAssumptions,
 ): TotalCost => {
   const { totals } = summary.core;
-  if (!Number.isInteger(assumptions.years) || assumptions.years < 0) {
-    throw new ValidationError("invalid_horizon", "the horizon is a whole number of years", {
-      years: assumptions.years,
-    });
-  }
+  checkHorizon(assumptions.years);
   const missing: TotalCost["missing"] = [];
 
   const { monthly, missing: absent } = coreMonthlyOf(settings);

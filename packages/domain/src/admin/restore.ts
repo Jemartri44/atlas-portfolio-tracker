@@ -9,6 +9,8 @@ import type { LedgerEvent } from "../schema/events.js";
 export type RestoreComparison =
   | { readonly kind: "same" }
   | { readonly kind: "prefix"; readonly lost: readonly string[] }
+  /** The same events in another order: the replay, and so the figures, may differ. */
+  | { readonly kind: "reordered" }
   | {
       readonly kind: "differs";
       readonly onlyCandidate: readonly string[];
@@ -28,11 +30,11 @@ export const compareForRestore = (
     const lost = remote.slice(candidate.length).map((event) => event.id);
     return lost.length === 0 ? { kind: "same" } : { kind: "prefix", lost };
   }
-  return {
-    kind: "differs",
-    onlyCandidate: candidate.filter((event) => !inRemote.has(event.id)).map((event) => event.id),
-    onlyRemote: remote.filter((event) => !inCandidate.has(event.id)).map((event) => event.id),
-  };
+  const onlyCandidate = candidate.filter((event) => !inRemote.has(event.id)).map((e) => e.id);
+  const onlyRemote = remote.filter((event) => !inCandidate.has(event.id)).map((e) => e.id);
+  return onlyCandidate.length === 0 && onlyRemote.length === 0
+    ? { kind: "reordered" }
+    : { kind: "differs", onlyCandidate, onlyRemote };
 };
 
 /** One environment of the administration (`data-model.md` §9): where its data live. */
