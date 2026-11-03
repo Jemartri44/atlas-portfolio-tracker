@@ -131,4 +131,32 @@ describe("the cards of the portfolio by device", () => {
     );
     expect(note?.closest("details")).toBeNull();
   });
+
+  it("fold five cards under a summary line on a phone, and none on a computer", async () => {
+    const folded = [
+      "Exposición",
+      "Rebalancear",
+      "Costes",
+      "Coste total a largo plazo",
+      "Proyección",
+    ];
+    const open = ["Pesos frente al objetivo", "Rentabilidad"];
+    withStyles(390);
+    const phone = await show(`/cartera?fecha=${DATE}`, Cartera);
+    for (const title of folded) {
+      const fold = card(phone, title)?.querySelector(":scope > div > details");
+      expect(text(fold?.querySelector("summary h2"))).toBe(title);
+      expect(text(fold?.querySelector(".fold-summary")).length).toBeGreaterThan(0);
+    }
+    for (const title of open) {
+      expect(
+        card(phone, title)?.querySelector(":scope > div > details.disclosure > summary h2"),
+      ).toBeNull();
+    }
+    phone.remove();
+    withStyles(1440, 900);
+    const computer = await show(`/cartera?fecha=${DATE}`, Cartera);
+    expect(computer.querySelector(".fold")).toBeNull();
+    expect(text(card(computer, "Costes")?.querySelector(":scope > .card-head h2"))).toBe("Costes");
+  });
 });

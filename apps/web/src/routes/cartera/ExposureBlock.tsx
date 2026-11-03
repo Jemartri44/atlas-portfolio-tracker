@@ -1,7 +1,8 @@
 // How the core is exposed by currency and by region: the money of the core split by the currency
 // its value moves with and by the part of the world it depends on. The split of each asset is the
 // owner's own, else the default of its index, else none — and the block says which, always in
-// sight and never folded: the percentages are not amounts and stay visible with the privacy mode on.
+// sight, even folded on the phone (its summary line carries the warning). The percentages are not
+// amounts and stay visible with the privacy mode on.
 //
 // Core only. A price missing means no figure at all, like the rest of the screen.
 
@@ -10,8 +11,8 @@ import { DEFAULT_INDEX_TABLES, type Exposure, exposure } from "@atlas/domain/por
 import { A } from "@solidjs/router";
 import { createMemo, For, type JSX, Show } from "solid-js";
 import {
+  FoldSection,
   Notice,
-  Section,
   ShareBar,
   ShareLegend,
   Skeleton,
@@ -109,8 +110,29 @@ export const ExposureBlock = (props: {
     );
     return { view: exposureBlockView(computed, props.names), unreadable: state.unreadable };
   });
+  /** The warning, when there is one, before the figure: a folded card never hides it. */
+  const summaryLine = (): string => {
+    const state = declared.state();
+    if (state.kind === "failed") {
+      return "No se ha podido leer";
+    }
+    const shown = view();
+    if (shown === undefined) {
+      return "Cargando…";
+    }
+    if (shown.unreadable) {
+      return "El fichero de exposición no se puede leer";
+    }
+    if (shown.view.partial) {
+      return "Sin cifra: falta un precio";
+    }
+    const { none, owner, default: byDefault } = shown.view.counts;
+    return none > 0
+      ? `${none} sin propuesta de reparto`
+      : `${owner} con tus porcentajes, ${byDefault} por defecto`;
+  };
   return (
-    <Section title="Exposición" class="span-12 exposure-block">
+    <FoldSection title="Exposición" class="span-12 exposure-block" summary={summaryLine()}>
       <Show
         when={declared.state().kind !== "failed"}
         fallback={
@@ -123,6 +145,6 @@ export const ExposureBlock = (props: {
           {(ready) => <Ready view={ready().view} unreadable={ready().unreadable} />}
         </Show>
       </Show>
-    </Section>
+    </FoldSection>
   );
 };

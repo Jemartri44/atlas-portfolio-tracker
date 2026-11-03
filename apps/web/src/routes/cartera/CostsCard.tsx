@@ -18,7 +18,7 @@ import {
   type DataColumn,
   DataTable,
   Figure,
-  Section,
+  FoldSection,
   StandaloneFees,
   StatLine,
   Tag,
@@ -71,7 +71,20 @@ const CORE_COLUMNS: readonly DataColumn<CoreCostRowView>[] = [
 ];
 
 export const CostsCard = (props: { view: CostsView }): JSX.Element => (
-  <Section title="Costes" class="span-12" aside={<span>coste anual estimado</span>}>
+  <FoldSection
+    title="Costes"
+    class="span-12"
+    aside={<span>coste anual estimado</span>}
+    summary={
+      <>
+        <Amount value={props.view.core.annualCost} missingReason="sin precio" /> al año
+        <Show when={props.view.core.partial}>
+          {" "}
+          <Tag icon="half">parcial</Tag>
+        </Show>
+      </>
+    }
+  >
     <div class="costs">
       <div class="costs-main">
         <Show
@@ -135,5 +148,5 @@ export const CostsCard = (props: { view: CostsView }): JSX.Element => (
         </Show>
       </div>
     </div>
-  </Section>
+  </FoldSection>
 );
