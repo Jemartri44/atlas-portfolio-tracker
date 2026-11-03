@@ -10,7 +10,7 @@ import {
   WEB_SIGN_IN_KEY,
 } from "@atlas/access";
 import { utf8TextOrUndefined } from "../utf8.js";
-import type { ObjectStore } from "./object-store.js";
+import { type ObjectStore, writeConditional } from "./object-store.js";
 
 const decoded = (bytes: Uint8Array): string | undefined => utf8TextOrUndefined(bytes, true);
 
@@ -37,9 +37,6 @@ export const recordWebSignIn = async (
     return "unchanged";
   }
   const body = new TextEncoder().encode(serializeWebSignIn(date));
-  const done =
-    stored.etag === undefined
-      ? (await objects.putIfNoneMatch(WEB_SIGN_IN_KEY, body)) === "created"
-      : (await objects.putIfMatch(WEB_SIGN_IN_KEY, body, stored.etag)) === "written";
+  const done = await writeConditional(objects, WEB_SIGN_IN_KEY, body, stored.etag);
   return done ? "written" : "conflict";
 };

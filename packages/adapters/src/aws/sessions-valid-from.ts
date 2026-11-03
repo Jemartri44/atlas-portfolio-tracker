@@ -9,7 +9,7 @@ import {
   serializeSessionsValidFrom,
 } from "@atlas/access";
 import { utf8TextOrUndefined } from "../utf8.js";
-import type { ObjectStore } from "./object-store.js";
+import { type ObjectStore, writeConditional } from "./object-store.js";
 
 /** How many times a write lost to another one is tried again before failing. */
 const ATTEMPTS = 3;
@@ -40,11 +40,7 @@ export const closeSessionsBefore = async (objects: ObjectStore, seconds: number)
     if (typeof stored.mark === "number" && stored.mark >= seconds) {
       return;
     }
-    const done =
-      stored.etag === undefined
-        ? (await objects.putIfNoneMatch(SESSIONS_VALID_FROM_KEY, body)) === "created"
-        : (await objects.putIfMatch(SESSIONS_VALID_FROM_KEY, body, stored.etag)) === "written";
-    if (done) {
+    if (await writeConditional(objects, SESSIONS_VALID_FROM_KEY, body, stored.etag)) {
       return;
     }
   }

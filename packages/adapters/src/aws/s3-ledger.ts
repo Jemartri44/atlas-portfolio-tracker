@@ -16,7 +16,7 @@
 
 import { ConflictError, sha256Hex } from "@atlas/domain";
 import { BlobArchiveExists, BlobLedgerStore, type LedgerBlob } from "../ledger-store/blob.js";
-import type { ObjectStore } from "./object-store.js";
+import { type ObjectStore, writeConditional } from "./object-store.js";
 
 export const LEDGER_KEY = "ledger/ledger.jsonl";
 
@@ -49,11 +49,7 @@ export class S3LedgerBlob implements LedgerBlob {
     ) {
       throw new BlobArchiveExists(archiveName);
     }
-    const written =
-      stored === undefined
-        ? (await this.objects.putIfNoneMatch(LEDGER_KEY, next)) === "created"
-        : (await this.objects.putIfMatch(LEDGER_KEY, next, stored.etag)) === "written";
-    if (!written) {
+    if (!(await writeConditional(this.objects, LEDGER_KEY, next, stored?.etag))) {
       throw new ConflictError();
     }
     return next;
