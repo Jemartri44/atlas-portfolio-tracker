@@ -82,7 +82,7 @@ describe("describeError: the remedy of a key twice, by the kind of line", () => 
   });
 
   it("sends an annulment to the file, since it cannot be annulled", () => {
-    expect(of("reversal")).toContain("corrígela a mano en el fichero");
+    expect(of("reversal")).toContain("corrígela a mano en el archivo");
     expect(of("reversal")).not.toContain("atlas delete");
   });
 });
@@ -98,14 +98,14 @@ describe("describeError: a write the API refused", () => {
   });
 
   it("still reads without a reason", () => {
-    expect(refused({})).toContain("no se ha escrito nada");
+    expect(refused({})).toContain("No se ha guardado nada");
   });
 
   it.each([
-    ["seal_mismatch", "Regístrala otra vez sobre el libro actual"],
-    ["recorded_at_in_future", "Revisa la hora de este dispositivo"],
+    ["seal_mismatch", "Regístrala otra vez sobre tus datos actuales"],
+    ["recorded_at_in_future", "revisa la hora de este dispositivo"],
     ["duplicate_unconfirmed", "Confírmala si de verdad son dos"],
-    ["schema_version_unsupported", "Espera a que la nube se actualice"],
+    ["schema_version_unsupported", "espera a que la nube se actualice"],
     ["domain_rejected", "Rehazla sobre el estado actual"],
   ])("%s says what to do about it, not only its code", (code, advice) => {
     const text = describeError(new RemoteRejectedError(code, 0, { domain_code: "x" }));
@@ -115,7 +115,7 @@ describe("describeError: a write the API refused", () => {
 
   it("adds no advice to a code that has none", () => {
     expect(describeError(new RemoteRejectedError("partial_write", 0))).toMatch(
-      /no se ha escrito nada\.$/,
+      /No se ha guardado nada\. \(partial_write\)$/,
     );
   });
 });
@@ -124,10 +124,10 @@ describe("describeError: a write that stayed in part", () => {
   it("says how many lines went in and that repeating from scratch would duplicate them", () => {
     const partial = describeError(new RemoteRejectedError("partial_write", 101));
     expect(partial).toContain("101 líneas");
-    expect(partial).toContain("mira el libro antes de repetir");
+    expect(partial).toContain("Mira el libro antes de repetir");
     expect(partial).not.toContain("no se duplica");
     const none = describeError(new RemoteRejectedError("line_invalid", 0));
-    expect(none).toContain("no se ha escrito nada");
+    expect(none).toContain("No se ha guardado nada");
   });
 });
 
@@ -141,7 +141,7 @@ describe("describeError: a field the schema refuses is said in Spanish, with wha
       field: "quantity",
       value: "-5",
     });
-    expect(text).toContain("El campo quantity de buy no es válido");
+    expect(text).toContain("quantity no es válido en buy");
     expect(text).toContain("número decimal mayor que cero");
     expect(text).toContain("recibido: -5");
     expect(text).not.toContain("positive_decimal");

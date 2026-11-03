@@ -193,7 +193,7 @@ describe("atlas over a ledger file", () => {
     );
     const { io, lines } = capture();
     expect(await run(["--ledger", ledger, "positions"], io)).toBe(5);
-    expect(lines.join("\n")).toContain("schema_version 2");
+    expect(lines.join("\n")).toContain("formato 2");
     expect(await readFile(ledger, "utf8")).toContain('"schema_version":2');
     lines.length = 0;
     expect(await run([], io)).toBe(64);

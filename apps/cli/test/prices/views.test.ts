@@ -150,7 +150,7 @@ describe("the views with automatic prices", () => {
     await writePrices(f.dir, { fund_a: '{"schema_version":2}\n' });
     const weights = await f.atlas("weights", "--date", "2027-06-09");
     expect(weights.code).toBe(0);
-    expect(weights.err).toContain("una versión más nueva que esta aplicación");
+    expect(weights.err).toContain("una versión más nueva de la aplicación");
     expect(weights.text).toMatch(
       /fund_a\s+equity\s+10\s+110\s+EUR\s+1\s+2027-05-31\s+9 ⚠\s+manual/,
     );
@@ -325,7 +325,7 @@ describe("the cash in a foreign currency in the net worth", () => {
     const fromHistory = (await f.atlas("networth", "--date", "2027-06-09")).text;
     expect(fromHistory.match(STALE_USD)).toHaveLength(1);
     expect(fromHistory).toContain(
-      "El tipo de cambio aplicado a USD es el del histórico del BCE del 2027-06-01, de hace 8 días; actualízalo con `atlas fx update`.",
+      "El tipo de cambio aplicado a USD es el del histórico del BCE de hace 8 días (2027-06-01); actualízalo con `atlas fx update`.",
     );
     // Without a history, the ledger's rate, said once as well.
     const bare = await folder(dollars());
@@ -333,7 +333,7 @@ describe("the cash in a foreign currency in the net worth", () => {
     expect(fromLedger.text).toMatch(/acc_ib\s+USD\s+1000\s+1\.0582\s+2027-05-04/);
     expect(fromLedger.text.match(STALE_USD)).toHaveLength(1);
     expect(fromLedger.text).toContain(
-      "El tipo de cambio aplicado a USD es de 36 días atrás (2027-05-04); registra una operación o una valoración más reciente en esa divisa.",
+      "El tipo de cambio aplicado a USD es de hace 36 días (2027-05-04); registra una operación o una valoración más reciente en esa divisa.",
     );
     const json = JSON.parse((await bare.atlas("networth", "--date", "2027-06-09", "--json")).out);
     expect(json.data.cash.rows[0]).toMatchObject({ fx_rate_source: "ledger" });
