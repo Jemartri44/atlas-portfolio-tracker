@@ -3,7 +3,7 @@
 # deploy role is denied every IAM write on the roles of the bootstrap, this one
 # included (row 5), so a change of what the administrator can do is always an
 # `apply` of the bootstrap made by hand, `dev` first. Every line comes from
-# `infra/test/contract/permissions.json` (role `admin`): `specs/015-api-access/plan.md`
+# `infra/test/contract/permissions.json` (role `admin`): `specs/015-api-access/plan.md` (retired; in git)
 # section 10, `infra/test/contract/iam-permissions.md` section 8 and
 # the answer P-3 (the secrets script reads only to know whether a parameter exists,
 # never with decryption). No `kms:` action: with `aws/ssm` the key policy decides
