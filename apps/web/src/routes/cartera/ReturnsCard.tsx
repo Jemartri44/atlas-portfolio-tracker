@@ -166,9 +166,13 @@ export const ReturnsCard = (props: {
       />
       <For each={props.view.classes.filter((row) => row.gap !== undefined)}>
         {(row) => (
-          <p class="card-note">
-            {row.label}: {row.gap}.
-          </p>
+          <For each={row.reasons ?? [row.gap]}>
+            {(reason) => (
+              <p class="card-note">
+                {row.label}: {reason}.
+              </p>
+            )}
+          </For>
         )}
       </For>
     </Show>

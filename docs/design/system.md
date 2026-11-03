@@ -133,6 +133,15 @@ Rejilla de 4 px: `--space-0` 2 · `-1` 4 · `-2` 8 · `-3` 12 · `-4` 16 · `-5`
 
 `--tap` 44: objetivo táctil mínimo, y alto de botones, campos, desplegables y filas de menú. Iconos de 16, 20 y 24 px. Gráfica de 184 px de alto en el móvil y 240 en escritorio. Ancho máximo de lectura (`--reading-max`) de 40 rem para formularios y prosa. Movimiento: solo el giro del chevrón de un desplegable (120 ms), anulado con «reducir movimiento».
 
+### 3.7 La marca
+
+El globo en su cuna: un globo cuyos gajos recuerdan el reparto de la cartera, sostenido por una cuna. Sin degradados ni sombras; todos sus colores son tokens de 3.1 (`palette.test.ts` solo lee `tokens.css`, no mira `public/`).
+
+- **Iconos** (`apps/web/public/`): `icon.svg` (pestaña, trazos más gruesos), `icon-192.png` y `icon-512.png`, y `icon-maskable-512.png` (dibujo dentro de la zona segura del 80 %). Fondo `--c-accent`, globo `--c-surface`, pétalo `--c-chart-gap-edge` claro, iguales en claro y oscuro.
+- **Marca de la barra y de la entrada**: dos `<img alt="">` (`simbolo-claro.svg`, `simbolo-oscuro.svg`) servidos desde `public/`, fuera del JS, de modo que no cuentan en el techo del arranque. Se alterna por CSS con la regla de `tokens.css` (sistema, salvo tema forzado en Ajustes). Sus cortes llevan el color de la superficie de su modo: solo van sobre ella. El nombre «Atlas» es texto junto a la marca.
+- Tamaño: `--icon-lg` en la barra y 2,5 rem en la entrada (`layout.css`).
+- Los ficheros del paquete no se retocan sin una decisión del dueño.
+
 ---
 
 ## 4. Maquetación por anchos
