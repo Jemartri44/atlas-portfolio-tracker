@@ -76,6 +76,9 @@ export const ExposureCard = (props: { assets: readonly Asset[] }): JSX.Element =
     return result;
   });
 
+  /** Counted beside the rest: the row that says it may be past the ones in sight. */
+  const lost = () => rows().filter((row) => row.lostIndex !== undefined).length;
+
   const initialSplit = () => {
     const target = editing();
     return target === undefined ? undefined : target.row[target.dimension].split;
@@ -131,7 +134,8 @@ export const ExposureCard = (props: { assets: readonly Asset[] }): JSX.Element =
                 </Show>
                 <p class="card-note">
                   Por defecto {counts().default} · tuyos {counts().owner} · sin propuesta{" "}
-                  {counts().none}.
+                  {counts().none}
+                  <Show when={lost() > 0}> · {lost()} con índice retirado</Show>.
                 </p>
                 <Peek items={rows()} limit={IN_SIGHT} more={(total) => `Ver los ${total} activos`}>
                   {(shown) => (

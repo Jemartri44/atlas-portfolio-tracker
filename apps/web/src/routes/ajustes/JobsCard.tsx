@@ -2,7 +2,7 @@
 // records the tasks leave. A task that does not even start sends no mail, so this is where that
 // shows. Dates and states only: nothing of what a task found.
 
-import { settingsAt } from "@atlas/domain";
+import { type JobHealth, settingsAt } from "@atlas/domain";
 import { createResource, For, type JSX, Show } from "solid-js";
 import { FoldSection, Peek, Tag } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
@@ -21,8 +21,33 @@ const TASKS: Readonly<Record<string, string>> = {
   quarterly_integrity: "Comprobación de integridad",
 };
 
-/** The rows in sight: the card says how many are late, so none hides behind the button. */
+/** The rows in sight. Those with a problem go first and the title counts them: none hides. */
 const IN_SIGHT = 5;
+
+/** How a run that ended badly ended: a failure is judged by its date, so it may not be late. */
+const FAILED = new Set(["failed", "send_failed", "send_unknown", "expired"]);
+
+type JobRow = Pick<JobHealth, "late" | "last" | "unreadable">;
+
+const failed = (row: JobRow): boolean =>
+  !row.late && (row.unreadable === true || FAILED.has(row.last?.state ?? ""));
+
+/** What the title and the folded line say: every row with a problem, or that all is well. */
+export const jobsLine = (rows: readonly JobRow[]): string => {
+  const late = rows.filter((row) => row.late).length;
+  const bad = rows.filter(failed).length;
+  const said = [
+    ...(late > 0 ? [`${late} con retraso`] : []),
+    ...(bad > 0 ? [`${bad} con fallo`] : []),
+  ];
+  return said.length === 0 ? "Al día" : said.join(" · ");
+};
+
+/** The rows with a problem first, each group in its order. */
+const worstFirst = <T extends JobRow>(rows: readonly T[]): T[] => [
+  ...rows.filter((row) => row.late || failed(row)),
+  ...rows.filter((row) => !row.late && !failed(row)),
+];
 
 const STATES: Readonly<Record<string, string>> = {
   claimed: "en curso",
@@ -58,12 +83,7 @@ export const JobsCard = (): JSX.Element => {
     if (answer.kind === "failed") {
       return "No se ha podido leer";
     }
-    const late = answer.rows.filter((row) => row.late).length;
-    return answer.rows.length === 0
-      ? "Sin tareas activas"
-      : late > 0
-        ? `${late} con retraso`
-        : "Al día";
+    return answer.rows.length === 0 ? "Sin tareas activas" : jobsLine(answer.rows);
   };
 
   return (
@@ -89,7 +109,7 @@ export const JobsCard = (): JSX.Element => {
               fallback={<p class="meta">Este entorno no tiene tareas activas.</p>}
             >
               <Peek
-                items={answer.rows}
+                items={worstFirst(answer.rows)}
                 limit={IN_SIGHT}
                 more={(total) => `Ver las ${total} tareas`}
               >

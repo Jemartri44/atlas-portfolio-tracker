@@ -47,7 +47,9 @@ export const PricesCard = (): JSX.Element => {
     const said =
       loaded.closes.size === 0
         ? "Sin precios automáticos"
-        : `${countOf(loaded.closes.size, "activo", "activos")}, hasta el ${formatDate(latest() as string)}`;
+        : `${countOf(loaded.closes.size, "activo", "activos")}${
+            latest() === undefined ? "" : `, hasta el ${formatDate(latest() as string)}`
+          }`;
     return loaded.symbolsNotice === undefined ? said : `${said} · 1 aviso`;
   };
 

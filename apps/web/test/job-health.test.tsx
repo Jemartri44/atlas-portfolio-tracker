@@ -5,7 +5,7 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 import { today } from "../src/ledger/state.js";
-import { JobsCard } from "../src/routes/ajustes/JobsCard.jsx";
+import { JobsCard, jobsLine } from "../src/routes/ajustes/JobsCard.jsx";
 import Resumen from "../src/routes/resumen/index.jsx";
 import { lateJobsNotice } from "../src/view-models/late-jobs.js";
 import { show, text, until, withGoldenLedger } from "./helpers/render.jsx";
@@ -99,7 +99,24 @@ describe("«Tareas automáticas» in Ajustes", () => {
     const host = await show("/ajustes", JobsCard);
     await until(() => text(host).includes("Ver las 6 tareas"));
     expect(host.querySelectorAll(".rows > li")).toHaveLength(5);
-    expect(text(host.querySelector(".aside"))).toMatch(/^\d con retraso$/);
+    expect(text(host.querySelector(".aside"))).toMatch(/^[1-9] con retraso$/);
+  });
+
+  it.each([
+    ["all is well", [{ late: false }], "Al día"],
+    [
+      "a failed run, which is not late",
+      [{ late: false, last: { state: "failed" } }],
+      "1 con fallo",
+    ],
+    ["an unreadable record", [{ late: false, unreadable: true }], "1 con fallo"],
+    [
+      "both",
+      [{ late: true }, { late: false, last: { state: "send_unknown" } }],
+      "1 con retraso · 1 con fallo",
+    ],
+  ])("says in its line %s", (_name, rows, line) => {
+    expect(jobsLine(rows as Parameters<typeof jobsLine>[0])).toBe(line);
   });
 
   it("says a sleeping environment has no tasks, without a warning", async () => {
