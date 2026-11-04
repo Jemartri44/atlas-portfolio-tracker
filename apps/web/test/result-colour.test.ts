@@ -68,20 +68,20 @@ const RESULTS: Record<string, { count: number; what: string }> = {
     what: "the core's annual rate after the tax it causes",
   },
   "routes/cartera/ReturnsCard.tsx": {
-    count: 7,
-    what: "what the core and each class have earned: amount, %, annual rate and the real one",
+    count: 10,
+    what: "what the core and each class have earned, and the same in the line of the folded card",
   },
   "routes/cubo/BudgetCard.tsx": {
     count: 2,
     what: "the realised and the latent result of the bucket",
   },
   "routes/cubo/PositionsCard.tsx": {
-    count: 4,
-    what: "the latent gain of a position, amount and %, and the % that stands for it",
+    count: 5,
+    what: "the latent gain of a position, amount and %, the % that stands for it, and the % of its line on a phone",
   },
   "routes/cubo/StatsCard.tsx": {
-    count: 6,
-    what: "the result against the index and the averages of won and lost theses",
+    count: 7,
+    what: "the result against the index, also in its line on a phone, and the averages of won and lost theses",
   },
   "routes/cubo/ThesesCard.tsx": {
     count: 4,

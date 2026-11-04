@@ -237,21 +237,3 @@
 .split-calc .table :is(th, td):not(:first-child, :last-child) {
   padding-inline: var(--space-2);
 }
-
-/* A row of the split: its share and its amount on one line, the amount the one that weighs. */
-.split-figs {
-  align-self: center;
-  white-space: nowrap;
-}
-
-.split-figs .fig {
-  font-weight: var(--fw-semibold);
-}
-
-.cartera-contribution .kpis {
-  margin-top: var(--space-3);
-}
-
-.cartera-weights .bullets {
-  margin-bottom: var(--space-4);
-}
