@@ -37,12 +37,6 @@ a.notice:hover {
   padding-block: var(--space-3);
 }
 
-@media (min-width: 64rem) {
-  .notice-reserved {
-    min-height: var(--notice-reserved-h-wide);
-  }
-}
-
 /* The icon sits on a plate of its severity's colour: the shape and the word still say it. */
 .notice-icon {
   background-color: var(--c-fill);

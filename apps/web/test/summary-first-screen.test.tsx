@@ -17,7 +17,7 @@
 // never exported from this browser.
 
 import { describe, expect, it } from "vitest";
-import { NoticeList } from "../src/components/Notice.jsx";
+import { NoticeFolds } from "../src/components/NoticeFolds.jsx";
 import { Pending } from "../src/components/States.jsx";
 import Resumen from "../src/routes/resumen/index.jsx";
 import { NetWorthBlock } from "../src/routes/resumen/NetWorthBlock.jsx";
@@ -47,10 +47,11 @@ describe("the summary out of the income tax season", () => {
       "que llegue el estado fiscal",
     );
     expect(reservedAtFirst).toBe(true);
-    const notices = [...(attention(host)?.querySelectorAll(".notices > li") ?? [])];
+    const notices = [...(attention(host)?.querySelectorAll(".notice-folds > li") ?? [])];
     const fiscal = notices.filter((li) => /Modelo 72[01]/.test(text(li)));
     expect(fiscal).toHaveLength(1);
     expect(fiscal[0]?.querySelector('a[href="/fiscal"]')).not.toBeNull();
+    expect(text(fiscal[0]?.querySelector("summary"))).toContain("Declaración: algo por presentar");
     // Among the four in sight: at most the fourth.
     expect(notices.indexOf(fiscal[0] as Element)).toBeLessThanOrEqual(3);
     // Said once: the row of the tax card does not repeat it.
@@ -110,6 +111,7 @@ describe("the place of the 720 and the 721 in Atención", () => {
 
   it("is one notice to the fiscal screen once it answers, or nothing", () => {
     expect(fiscalSlot({ season: false, abroad: true, answer: { lines } })).toEqual({
+      title: "Declaración: algo por presentar",
       message: lines[0],
       action: { label: "Ver la declaración", to: "/fiscal" },
     });
@@ -118,17 +120,13 @@ describe("the place of the 720 and the 721 in Atención", () => {
 });
 
 describe("the row kept in Atención", () => {
-  it("has the height of the notice that fills it, on the phone and on the monitor", async () => {
-    // Measured in Chromium with the golden ledger on 20/01/2029: 119.56px at
-    // 400 and 71.38px at 2045, so nothing in the first screenful jumps when
-    // the notice arrives (`medidas.json`, «jumps»).
-    for (const [width, height] of [
-      [400, "119.5632px"],
-      [2045, "71.376px"],
-    ] as const) {
+  it("has the height of the title that fills it, on the phone and on the monitor", async () => {
+    for (const width of [400, 2045]) {
       withStyles(width);
-      const host = await show("/", () => <NoticeList items={[]} label="Avisos" reserve />);
-      expect(applied(host.querySelector(".notice-reserved"), "min-height")).toBe(height);
+      const host = await show("/", () => (
+        <NoticeFolds items={[]} label="Avisos" limit={4} reserve />
+      ));
+      expect(applied(host.querySelector(".notice-reserved"), "min-height")).toBe("44px");
       withoutStyles();
     }
     // Back to the viewport of the other tests: the order of the summary reads it.
