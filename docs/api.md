@@ -301,19 +301,9 @@ Y los **motivos de rechazo de una línea** (dentro de un `200`, en `rejected.cod
 
 Fuera de la Lambda: `transport_rejected` es el nombre que da **el cliente** a una respuesta sin este formato (el hash del cuerpo rechazado por AWS, el WAF, un error de CloudFront). Nunca se trata como un rechazo de líneas: se dice y el resultado de la escritura se trata como desconocido (§5.8).
 
-## 8. Quién implementa qué
+## 8. Dónde está implementado
 
-| Pieza | Feature |
-|---|---|
-| El caso de uso puro que acepta líneas (el mismo para el cliente y para la Lambda), las operaciones de líneas crudas del puerto y un **remoto simulado** que cumple §5 sin HTTP | **014**, fusionada (PR #83, 2026-09-25) |
-| `ApiLedgerStore`, la web contra la nube (la consola, hasta ADR-0037), la API sin cola y el código muerto, retirados | **021 a 026** (E1 a E5 de ADR-0035) |
-| Las órdenes de administración de la consola contra el almacén remoto (`pull`, `compact` y `restore`), **fuera de la API** (ADR-0026, Parte A; ADR-0037) | **015** y ADR-0037 |
-| La Lambda: §1 a §7 sobre HTTP, `LedgerStore` sobre S3 con `If-Match`, la lista permitida en SSM y el cliente HTTP de la web | **015** |
-| El correo mensual con el último inicio de sesión de la web (`access/last-web-sign-in.json`, §3); la regla de nombres de `prices/` y el cliente de §6 | **016**, fusionada (PR #104, #106, #108 y #109, 2026-09-28) |
-| El prefijo de SSM y sus permisos, y la política de origen que reenvía `Origin` a `/api/*` (sin él, toda escritura se rechaza con `origin_rejected`, §2; revisión de la PR #90, ronda 2) | **017** |
-| `POST /api/auth/logout-all` y su marca (§3), y la retirada del token de la consola | ADR-0037 |
-| Los borradores en la nube: §6.1, el prefijo `drafts/` del rol de la API sin permiso de borrado, el puerto sobre la API y el cliente de la web | **027** (E6 de ADR-0035) |
-| La exposición por activo: §6.2, `settings/exposure.json`, `validateExposure` y las rutas `GET`/`PUT /api/exposure` (la pantalla, aparte) | exposición en la nube |
+Todo este contrato está implementado y probado con dobles, y sin desplegar. El código vive en `apps/api` (la Lambda y la tabla de rutas `apps/api/src/access/routes.ts`), `packages/access` (las reglas puras del acceso) y `packages/adapters` (`ApiLedgerStore`, el cliente de referencia `reference-http` y los almacenes de S3). La subida inicial a una nube vacía y las órdenes de administración no pasan por la API: son `atlas admin` ([`cli.md`](cli.md), ADR-0037). El historial de qué feature trajo cada ruta está en `git log -- docs/api.md` y en `specs/`.
 
 ## 9. Parámetros de SSM y configuración de la Lambda
 

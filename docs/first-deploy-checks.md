@@ -30,6 +30,11 @@ Lo que las features 015, 016 y 017 dejaron **sin verificar contra AWS real**. Ca
 **Correo**
 - **El primer correo real, en un cliente real.** Las capturas del repaso de los correos son simuladas (Chromium, con la inversión de Gmail imitada). Abrir un correo en Gmail de móvil y de PC, en claro y en oscuro: se lee, el aviso y el bloque de la orden se distinguen, y **trae «Abrir Atlas»**. Si no lo trae, el origen configurado no es `https://` pelado: el correo sale igualmente sin enlace, a propósito.
 
+**Precios de EODHD con tu clave** (la verifica el dueño; la clave se lee de su fichero, nunca se pega en un chat ni en un documento; gasta el cupo de 20 llamadas del día, así que va un día en que la tarea de la nube no corra)
+- **ETP de bitcoin en IBKR:** que el plan gratuito sirve los cierres del símbolo del ETP elegido (`atlas prices symbols set <activo> --eodhd <SÍMBOLO>.<BOLSA> --currency <DIVISA>` y `atlas prices update`; la divisa declarada tiene que coincidir con la del listado de la fuente). Si no los sirve, el ETP queda con valoración manual (`atlas add valuation`), que es la entrada de respaldo y no cambia ninguna cifra fiscal.
+- **Cripto directa:** `BTC-EUR.CC` se verificó el 2026-09-27 (365 cierres de un año, ADR-0031, nota de esa fecha). Repetir con la clave del entorno real solo si se usa tenencia directa.
+- **Siguen sin verificar** los índices del cubo y `EUFUND` para los fondos de MyInvestor; hasta que se pruebe, valoración manual o por ETF equivalente, siempre marcada.
+
 **Libro y permisos de S3**
 - **`404` y no `403`:** un `s3:ListBucket` con la condición `s3:prefix` basta para que un `GetObject` de una clave inexistente dé `404` (la condición no existe en el contexto de `GetObject`). Si da `403`, la salida es un `s3:ListBucket` sin condición sobre el bucket de datos. Hay que comprobarlo también en el primer `init`.
 - **Carrera real de dos `PutObject` condicionales** sobre el libro: una escribe y la otra recibe `412` (S3 responde `412` o `409`, la API traduce los dos).

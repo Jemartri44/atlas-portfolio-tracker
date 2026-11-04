@@ -46,6 +46,8 @@ Dos libros (`book`) independientes. Cada uno con sus reglas, sus métricas y su 
 | `core` | **Cartera principal / núcleo** | Cuatro clases de activo: renta variable, renta fija, oro y cripto | MyInvestor (fondos), IBKR (ETC/ETP) | Desviación frente a pesos objetivo |
 | `bucket` | **Cubo especulativo** | Acciones al contado, operativa corta. Pequeña parte para especular, trastear y aprender | IBKR (cuenta separada) | Rendimiento frente al índice |
 
+**Uso previsto.** El dueño (2026-11-04): «Voy a usar myinvestor y ibkr con inversiones comunes» y «Yo quiero bitcoin y acciones a través de ibkr o myinvestor». Lo que sigue es lectura de los documentos, no decisión suya: el bitcoin cabe en el núcleo (`crypto`) como ETP o como tenencia directa anotada a mano, y las acciones sueltas en el cubo. Atlas cubre las dos vías del bitcoin (ETP: Modelo 720 y, por defecto, rendimiento del capital mobiliario, criterio #24; directo: permutas, Modelo 721, recompra de un año hacia delante), así que no hace falta decidirlo para empezar. En qué plataforma va cada cosa queda por confirmar con el dueño.
+
 ### 3.1 Clases de activo del núcleo (`asset_class`)
 
 | Clase | Nombre | Vehículo | Traspasable | Particularidad |
@@ -261,7 +263,8 @@ Es el libro con más funcionalidad propia: es una parte pequeña de la cartera p
 | Dato | Fuente | Fiabilidad | Riesgo |
 |---|---|---|---|
 | Acciones, ETFs, ETCs | **EODHD**, API con clave gratuita (ADR-0031) | Buena | Cupo diario (20 llamadas) y condiciones de uso de una API gratuita |
-| Cripto | **EODHD si su plan gratuito la cubre**; si no, entrada manual (ADR-0031, tercera enmienda). ~~CoinGecko Demo~~ | **Sin verificar** | Cobertura del plan gratuito **SIN VERIFICAR** hasta la prueba con la clave del usuario (`docs/runbooks/013-daily-close-prices-live-test.md`) |
+| Cripto directa (`<PAR>.CC`) | **EODHD** (ADR-0031, tercera enmienda). ~~CoinGecko Demo~~ | Verificada el 2026-09-27: el plan gratuito sirve `BTC-EUR.CC` | El cierre del fin de semana es provisional: se vuelve a pedir (`refetch_recent_days`) |
+| ETP de bitcoin (en IBKR) | **EODHD si su plan gratuito lo cubre**; si no, entrada manual | **Sin verificar** | Se comprueba con la clave en el primer despliegue (`docs/first-deploy-checks.md`); no se ha probado ningún ETP concreto |
 | Tipos de cambio | BCE (CSV/API oficial) | Excelente | Ninguno |
 | Valor liquidativo de fondos | `EUFUND` de EODHD si cubre el ISIN; si no, **aproximación por ETF equivalente**, siempre marcada como tal (ADR-0031) | Buena para consulta | No sirve para fiscalidad |
 | Valor liquidativo exacto | Entrada manual al registrar la operación | Exacta | Requiere disciplina |
