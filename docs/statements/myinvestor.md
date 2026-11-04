@@ -39,4 +39,4 @@ Los importes usan coma decimal y símbolo `€` (`0,0000 €`); el parser debe n
 - Exportación de **operaciones de fondos** (suscripciones, reembolsos, traspasos internos y externos): qué columnas trae (ISIN, participaciones, valor liquidativo, importe, fechas de orden y valor) y si un traspaso aparece como un movimiento o como dos. **Antes de escribir el importador, identificar qué columna es la fecha del valor liquidativo aplicado**: esa, y no la del abono, va a `value_date`. Es la entrada principal de `buy`/`sell`/`transfer` del libro `core`.
 - Si el PDF de posición admite descarga a una fecha dada (para `valuation` a 31/12).
 
-Cuando se disponga de estos ficheros, actualizar esta página y crear las fixtures sintéticas en `tests/fixtures/myinvestor/`.
+Cuando se disponga de estos ficheros, actualizar esta página y crear las fixtures sintéticas (carpeta `tests/fixtures/myinvestor/`, por crear).

@@ -137,8 +137,8 @@ jq -S 'del(.LastModificationDate)' ecb-schedule.json | diff - ecb-schedule-now.j
 
 Después, `terraform plan` ya no enseña ninguna diferencia en la programación (paso 1).
 
-## Después, en cada dispositivo
+## Después
 
-- **La consola no cambia**: sigue bajando el BCE del propio BCE (feature 016, §8.1 P16).
-- **La web guarda su propia copia**, y una web que ya guardó la generación que mentía **rechaza la restaurada**, porque le faltan tipos o los cambia (ADR-0029, punto 2): se queda con la mala y lo dice. **En cada navegador**: Ajustes → Tipos del BCE → «Borrar la copia del BCE de este navegador». Confirma, y la tarjeta la vuelve a bajar entera de la nube la próxima vez que la abras con la sesión iniciada (o con «Bajar de la nube»).
+- **La consola no cambia**: sigue bajando el BCE del propio BCE.
+- **La web no guarda nada**: lee el histórico de la nube cada vez (botón «Volver a leer» en Ajustes), así que ve la generación restaurada sin más.
 - Si algún tipo del libro se contrastó contra la generación que mentía, `atlas check --deep` lo vuelve a contrastar con la buena.

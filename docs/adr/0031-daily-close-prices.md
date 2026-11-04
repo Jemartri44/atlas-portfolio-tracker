@@ -124,7 +124,7 @@ Decidida por la dirección durante la feature 013 (PR #78, fusionada el 2026-09-
 
 Sufijos de bolsa documentados en Alpha Vantage: `.LON`, `.DEX` (Xetra), `.TRT`, `.TRV`, `.BSE`, `.SHH`, `.SHZ`; EE. UU. sin sufijo. París, Ámsterdam, Madrid, Milán y Suiza **no están documentados**. El detalle de cada cita, literal y con su dirección, está en `questions.md` §1.1, §1.4 y §1.7.
 
-**Sigue SIN VERIFICAR**, porque solo se comprueba con la clave del usuario (procedimiento en [`docs/runbooks/013-daily-close-prices-live-test.md`](../runbooks/013-daily-close-prices-live-test.md)): si el plan gratuito de EODHD incluye **índices**; cuántos de los ISIN del usuario cubre **`EUFUND`** y si el plan gratuito sirve sus cierres; en qué unidad llegan los cierres de **Londres** frente a la divisa que dice el listado; y si el plan gratuito cubre **cripto** (`<PAR>.CC`). Hasta entonces, un índice, un fondo o una cripto sin precio automático se dice como tal y queda la entrada manual.
+**Sigue SIN VERIFICAR**, porque solo se comprueba con la clave del usuario (procedimiento en [`docs/first-deploy-checks.md`](../first-deploy-checks.md), «Precios de EODHD con tu clave»): si el plan gratuito de EODHD incluye **índices**; cuántos de los ISIN del usuario cubre **`EUFUND`** y si el plan gratuito sirve sus cierres; en qué unidad llegan los cierres de **Londres** frente a la divisa que dice el listado; y si el plan gratuito cubre **cripto** (`<PAR>.CC`). Hasta entonces, un índice, un fondo o una cripto sin precio automático se dice como tal y queda la entrada manual.
 
 ### 2. CoinGecko, retirada (D-Q5)
 
@@ -197,10 +197,11 @@ Sufijos de bolsa documentados en Alpha Vantage: `.LON`, `.DEX` (Xetra), `.TRT`, 
 
 ## Nota del 2026-09-27 (prueba real de precios)
 
-Decisiones de la dirección tras la prueba real del 2026-09-27 ([`docs/runbooks/013-daily-close-prices-live-test.md`](../runbooks/013-daily-close-prices-live-test.md), «Resultado de la prueba del 2026-09-27»):
+Decisiones de la dirección tras la prueba real del 2026-09-27 (la prueba real con la clave del dueño; su guía se retiró el 2026-11-04 y está en git):
 
 - **Lo verificado.** Londres: EODHD lista `TSCO.LSE` en **`GBX`** y da sus cierres en peniques, así que la divisa declarada `GBX` coincide con la de la fuente y no hay nada que confirmar. Cripto: el plan gratuito de EODHD sirve `BTC-EUR.CC`. **Siguen SIN VERIFICAR** los índices y `EUFUND`.
 - **El día de mercado depende del tipo de activo** (§6, «Un activo cuyo último cierre ya es el último día de lunes a viernes…»): lo dice `market_days` de `prices/config.json`, por tipo de activo, con `every_day` para `crypto` por defecto. La cripto cotiza los siete días y sus cierres del fin de semana se piden al día siguiente, no el lunes. **Nunca se guarda el día en curso**, igual que antes.
+- *(Hallazgo tercero de esa prueba, de una vista que ya no existe en la consola.)* `atlas networth` pasaba el efectivo en dólares con el tipo del libro de semanas antes; pasó a usar el más reciente de los tipos del BCE y a avisar una vez por divisa con su fecha.
 - **Los cierres recientes se vuelven a pedir** donde el tipo de activo lo dice (`refetch_recent_days` de `prices/config.json`, `2` para `crypto` por defecto, como mucho `31`): EODHD dio el cierre de un sábado igual al del viernes, provisional. Se piden **los N días naturales que acaban en el último cierre guardado**, no los N últimos cierres: un fin de semana o un hueco cuentan como días. La misma llamada empieza antes, sin gastar cupo, y un valor distinto de la misma fuente se añade como corrección, con la regla de «un solo cierre en vigor por fecha». No toca `symbols.json`, cuyo `refetch_days` sigue siendo solo lo que pide una purga, una vez.
 
 ## Nota del 2026-09-28 (cierre de la feature 016): los precios en la nube

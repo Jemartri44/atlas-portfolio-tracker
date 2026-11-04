@@ -172,7 +172,7 @@ Los objetos de dispositivo (§5.3), su ligadura con la sesión (§5.4) y la inic
 
 ### 5.8 El cliente de escritura directa (ADR-0035)
 
-Decidido por ADR-0035. **El adaptador está implementado (E1, `specs/021-api-ledger-store`)**: `ApiLedgerStore` sobre `httpRemote`, con los errores `remote_rejected` (`RemoteRejectedError`) y `write_outcome_unknown` (`WriteOutcomeUnknownError`) y `findOutcome(ids)` para resolver el resultado desconocido. La web lo usa desde E2b (feature 023); la consola lo usó de E3 (feature 024) a ADR-0037.
+Decidido por ADR-0035. **El adaptador está implementado (E1, feature 021, retirada; en git)**: `ApiLedgerStore` sobre `httpRemote`, con los errores `remote_rejected` (`RemoteRejectedError`) y `write_outcome_unknown` (`WriteOutcomeUnknownError`) y `findOutcome(ids)` para resolver el resultado desconocido. La web lo usa desde E2b (feature 023); la consola lo usó de E3 (feature 024) a ADR-0037.
 
 - **Un solo almacén, `ApiLedgerStore`**, implementa `LedgerStore` sobre HTTP: `load()` es `GET /api/ledger` (se comprueba que el `ETag` es el SHA-256 de los bytes); `append(events, etag)` serializa cada evento con `encodeLine` y lo envía en `POST /api/ledger/lines` con `If-Match: "<etag>"`. `replace`, `appendLines` y `replaceLines` se niegan. Sin cola local y sin libro guardado en el dispositivo.
 - **Las declaraciones de §5.2 las deduce el adaptador:** `has_correction` y `chain_continues`, de la forma del lote; `confirm_duplicate`, por unidad, con las huellas del libro cargado más la unidad entera (miembros posteriores incluidos), que es la regla de la fila 7 de la tabla de §5.2.
@@ -190,7 +190,7 @@ Decidido por ADR-0035. **El adaptador está implementado (E1, `specs/021-api-led
 - **Lo que las interfaces dicen de un rechazo** (catálogo único, `packages/domain/src/messages/errors-remote.ts`): `remote_rejected` se traduce por `remote_code` con una tabla de motivos (`line_invalid`, `domain_rejected`, `duplicate_unconfirmed`, `seal_mismatch`, `recorded_at_in_future`, `partial_write`, etc.), cada uno con su remedio de consola o de web; un código que la tabla no conoce da «no la ha aceptado tal como estaba». Si `accepted` es 0 añade «No se ha guardado nada»; si no, el número de líneas guardadas y que se mire el libro antes de repetir. Un `RemoteError` antes de enviar se dice con `REMOTE_FAILURES` (`remote-failures.ts`, el mismo catálogo) y termina en «No se ha guardado nada».
 - **Sin conexión, la web no muestra datos ni deja registrar** («Sin conexión» y «Reintentar»).
 - **`compact` y la restauración** siguen como operaciones de administración sobre el remoto (ADR-0032); sin pendientes que comprobar, tras ellas el siguiente `412` recarga el libro.
-- **La consola no es cliente de la API** (ADR-0037): trabaja sobre una carpeta local, y llega a la nube solo como administración, con credenciales cortas de AWS y MFA (`atlas admin pull|compact|restore`, `docs/cli.md`). Las carpetas «de nube» de E3 (`specs/024-console-cloud`) se retiraron.
+- **La consola no es cliente de la API** (ADR-0037): trabaja sobre una carpeta local, y llega a la nube solo como administración, con credenciales cortas de AWS y MFA (`atlas admin pull|compact|restore`, `docs/cli.md`). Las carpetas «de nube» de E3 (feature 024) se retiraron.
 
 ## 6. Datos de referencia
 
@@ -301,19 +301,9 @@ Y los **motivos de rechazo de una línea** (dentro de un `200`, en `rejected.cod
 
 Fuera de la Lambda: `transport_rejected` es el nombre que da **el cliente** a una respuesta sin este formato (el hash del cuerpo rechazado por AWS, el WAF, un error de CloudFront). Nunca se trata como un rechazo de líneas: se dice y el resultado de la escritura se trata como desconocido (§5.8).
 
-## 8. Quién implementa qué
+## 8. Dónde está implementado
 
-| Pieza | Feature |
-|---|---|
-| El caso de uso puro que acepta líneas (el mismo para el cliente y para la Lambda), las operaciones de líneas crudas del puerto y un **remoto simulado** que cumple §5 sin HTTP | **014**, fusionada (PR #83, 2026-09-25) |
-| `ApiLedgerStore`, la web contra la nube (la consola, hasta ADR-0037), la API sin cola y el código muerto, retirados | **021 a 026** (E1 a E5 de ADR-0035) |
-| Las órdenes de administración de la consola contra el almacén remoto (`pull`, `compact` y `restore`), **fuera de la API** (ADR-0026, Parte A; ADR-0037) | **015** y ADR-0037 |
-| La Lambda: §1 a §7 sobre HTTP, `LedgerStore` sobre S3 con `If-Match`, la lista permitida en SSM y el cliente HTTP de la web | **015** |
-| El correo mensual con el último inicio de sesión de la web (`access/last-web-sign-in.json`, §3); la regla de nombres de `prices/` y el cliente de §6 | **016**, fusionada (PR #104, #106, #108 y #109, 2026-09-28) |
-| El prefijo de SSM y sus permisos, y la política de origen que reenvía `Origin` a `/api/*` (sin él, toda escritura se rechaza con `origin_rejected`, §2; revisión de la PR #90, ronda 2) | **017** |
-| `POST /api/auth/logout-all` y su marca (§3), y la retirada del token de la consola | ADR-0037 |
-| Los borradores en la nube: §6.1, el prefijo `drafts/` del rol de la API sin permiso de borrado, el puerto sobre la API y el cliente de la web | **027** (E6 de ADR-0035) |
-| La exposición por activo: §6.2, `settings/exposure.json`, `validateExposure` y las rutas `GET`/`PUT /api/exposure` (la pantalla, aparte) | exposición en la nube |
+Todo este contrato está implementado y probado con dobles, y sin desplegar. El código vive en `apps/api` (la Lambda y la tabla de rutas `apps/api/src/access/routes.ts`), `packages/access` (las reglas puras del acceso) y `packages/adapters` (`ApiLedgerStore`, el cliente de referencia `reference-http` y los almacenes de S3). La subida inicial a una nube vacía y las órdenes de administración no pasan por la API: son `atlas admin` ([`cli.md`](cli.md), ADR-0037). El historial de qué feature trajo cada ruta está en `git log -- docs/api.md` y en `specs/`.
 
 ## 9. Parámetros de SSM y configuración de la Lambda
 

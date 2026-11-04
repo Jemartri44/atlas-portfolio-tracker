@@ -4,13 +4,13 @@ Aplicación personal para gestionar una cartera de inversión a 20 años: libro 
 
 ## Estado
 
-- **Fases 1, 2 y 3 completas.** El libro mayor con lotes FIFO, traspasos y eventos corporativos; la aportación mensual repartida según los pesos objetivo; y el seguimiento del cubo especulativo frente a su índice. Todo se usa desde la CLI `atlas`.
-- **La web, completa.** Resumen, Movimientos, Registrar, Cartera, Cubo, Ajustes y libro, con gráficas y todos los asistentes, más la pantalla fiscal fuera de la barra. Desde ADR-0035 es solo en la nube: entra con Google, lee el libro de la API (que lo guarda en S3) y no muestra ni registra nada sin conexión.
-- **Las previsiones fiscales del esquema, integradas.** El libro ya guarda los datos que necesitará el cálculo de la Renta (ADR-0021).
-- **La Fase 5, terminada.** El motor: la base imponible del ahorro de un ejercicio, con la regla de recompra calculada, la compensación del art. 49 y el arrastre a cuatro ejercicios. Y la salida: la Renta por casillas del Modelo 100 del ejercicio, los Modelos 720 y 721, la constancia de lo presentado frente a lo calculado, y todo ello en la consola y en la pantalla fiscal de la web.
-- **La nube, escrita y sin desplegar.** La API (Lambda), las tareas programadas (BCE, precios, correo, copias, integridad) y la infraestructura de Terraform están implementadas y probadas con dobles de S3, SSM y Google; falta desplegarlas. Hasta entonces la web solo se prueba contra el servidor local de pruebas (más abajo) y la consola trabaja sobre un fichero local.
+- **La web es la superficie principal** (ADR-0037): Resumen, Movimientos, Registrar, Cartera, Cubo y Ajustes, más la pantalla fiscal en `/fiscal`. Entra con Google, lee el libro de la API (que lo guarda en S3, la única fuente de verdad, ADR-0035) y no muestra ni registra nada sin conexión.
+- **La consola `atlas` es la herramienta de mantenimiento**: alta y corrección de datos, `check`, copias, exportación, datos sintéticos, administración de la nube y unos pocos informes en JSON pensados para que Claude diagnostique un libro. Trabaja sobre un fichero local; no tiene acceso propio a la API ([`docs/cli.md`](docs/cli.md)).
+- **Funcionalidad completa:** libro mayor con lotes FIFO, traspasos y eventos corporativos; aportación mensual, rebalanceo y simulador de venta; cubo especulativo con tesis; y la salida fiscal (base del ahorro con la regla de recompra y la compensación del art. 49, Renta por casillas, Modelos 720 y 721, y lo presentado frente a lo calculado).
+- **La nube, escrita y sin desplegar.** La API (Lambda), las tareas programadas (BCE, precios, correo, copias, integridad) y la infraestructura de Terraform están implementadas y probadas con dobles de S3, SSM y Google. Lo pendiente de verificar contra AWS real está en [`docs/first-deploy-checks.md`](docs/first-deploy-checks.md). Hasta entonces la web solo se prueba contra el servidor local de pruebas (más abajo).
+- **Alcance de uso:** el dueño usará MyInvestor e IBKR con inversiones comunes, con bitcoin y acciones; los importadores están previstos y sin escribir, y la entrada manual siempre está disponible ([`docs/decision-roadmap.md`](docs/decision-roadmap.md)).
 
-Las especificaciones de las últimas funcionalidades están en [`specs/`](specs/); las anteriores están en el historial de git.
+Las especificaciones de las funcionalidades recientes están en [`specs/`](specs/); las anteriores están en el historial de git.
 
 ## Documentación
 
@@ -42,7 +42,7 @@ npm run clean                        # borra dist/, dist-test/, coverage/ y la c
 
 `npm run clean && npm run build` reconstruye desde cero (los `.tsbuildinfo` viven dentro de `dist*/`, así que borrar la salida no deja estado incremental a medias, por ejemplo al cambiar de rama).
 
-Estructura (ADR-0007): `packages/domain` (núcleo puro, sin imports externos; `vendor/big.js` para el decimal exacto), `packages/adapters` (`FileLedgerStore`, `BlobLedgerStore`, los clientes de la API y los almacenes de AWS, reloj y aleatoriedad del sistema), `apps/cli` y `apps/web`.
+Estructura (ADR-0007): `packages/domain` (núcleo puro, sin imports externos; `vendor/big.js` para el decimal exacto), `packages/access` (reglas puras del acceso a la API: lista permitida, firmas, sesiones), `packages/adapters` (almacenes de fichero, memoria y S3, clientes de la API, fuentes de precios y del BCE, correo, reloj y aleatoriedad), `apps/cli` (consola de mantenimiento), `apps/api` (Lambda tras CloudFront), `apps/jobs` (tareas programadas), `apps/web` (la SPA) e `infra/` (Terraform).
 
 ## La aplicación web
 
