@@ -171,7 +171,7 @@ Campos: hipótesis, plazo esperado, condición de invalidación, tamaño previst
 
 **Regla 16 — La referencia es el índice, no cero.**
 Para cada operación cerrada se calcula qué habría rendido ese mismo importe invertido en el fondo global durante el mismo periodo. La pregunta no es "¿gané?" sino "¿gané más que la alternativa aburrida?".
-→ Mecánica (feature 005): el índice es un activo configurable (`bucket_benchmark_asset_id`) cuyos precios salen de las `valuation` manuales, como cualquier otro precio (Nivel 1). El equivalente en índice de una tesis es `Σ coste_i × P(fecha de cierre) / P(fecha de la compra i)` sobre sus compras enlazadas, y el resultado frente al índice es el resultado de la tesis menos el del índice. Si falta cualquiera de esos precios, la comparación queda **sin dato**: nunca se estima (constitución V).
+→ Mecánica (feature 005): el índice es un activo configurable (`bucket_benchmark_asset_id`) cuyos precios salen de las `valuation` manuales, como cualquier otro precio (Nivel 1). El equivalente en índice de una tesis es `Σ coste_i × P(fecha de cierre) / P(fecha de la compra i)` sobre sus compras enlazadas, y el resultado frente al índice es el resultado de la tesis menos el del índice. Lo comprado sin tesis (regla 15) se mide igual como una fila «sin tesis» por (cuenta, activo), que termina cuando deja de tener posición propia; entra en el total frente al índice y no en las estadísticas de tesis. Si falta cualquiera de esos precios, la comparación queda **sin dato**: nunca se estima (constitución V).
 
 **Regla 17 — Regla de parada.** *(Pendiente de definir. Configurable.)*
 Umbral de pérdida acumulada o tope de aportación total tras el cual se deja de financiar el cubo.

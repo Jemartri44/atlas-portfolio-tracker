@@ -28,7 +28,7 @@ const ledger = (steps: { thesisBuy?: boolean; thesisSell?: boolean }) => {
     b.valuation({ account_id: "acc_fund", asset_id: "ast_world", date, unit_value });
   }
   b.deposit({ account_id: "acc_bucket", amount: "1000" });
-  if (steps.thesisBuy === true) {
+  if (steps.thesisBuy === true || steps.thesisSell === true) {
     b.thesisOpened({ thesis_id: "th1" });
   }
   b.buy({
@@ -175,5 +175,74 @@ describe("a bucket operation with no thesis", () => {
     );
     expect(stats.vs_index_total_eur).toBeUndefined();
     expect(stats.vs_index_missing).toBe(1);
+  });
+
+  it("keeps the gain of a sale with no thesis of a lot bought under one (and the reverse)", () => {
+    // Same trade as with a thesis on both sides: the totals must agree.
+    const reference = vsIndex(ledger({ thesisBuy: true, thesisSell: true })).stats;
+    for (const steps of [{ thesisBuy: true }, { thesisSell: true }]) {
+      const { view, stats } = vsIndex(ledger(steps));
+      expect(stats.vs_index_missing).toBe(0);
+      expect(stats.vs_index_total_eur).toEqual(reference.vs_index_total_eur);
+      const realised = [...view.rows, ...view.untagged].reduce(
+        (sum, part) => sum + Number(part.result_eur.amount.toString()),
+        0,
+      );
+      expect(realised).toBe(30);
+    }
+  });
+
+  it("closes the pair handed over by a swap with no thesis, so no money counts twice", () => {
+    const b = new LedgerBuilder();
+    catalogue(b);
+    b.settings(settings);
+    for (const [date, unit_value] of [
+      ["2027-01-01", "100"],
+      ["2027-07-01", "120"],
+    ] as const) {
+      b.valuation({ account_id: "acc_fund", asset_id: "ast_world", date, unit_value });
+    }
+    b.asset("ast_spec2", {
+      asset_type: "stock",
+      book: "bucket",
+      currency: "EUR",
+      transferable: false,
+    });
+    b.buy({
+      account_id: "acc_bucket",
+      asset_id: "ast_spec",
+      quantity: "10",
+      unit_price: "10",
+      fee: "0",
+      ...EUR,
+      trade_date: "2027-01-11",
+      value_date: "2027-01-13",
+    });
+    b.swap({
+      account_id: "acc_bucket",
+      from_asset_id: "ast_spec",
+      to_asset_id: "ast_spec2",
+      quantity_out: "10",
+      market_value_out: "130",
+      quantity_in: "10",
+      market_value_in: "130",
+      value_date: "2027-03-15",
+    });
+    b.valuation({
+      account_id: "acc_bucket",
+      asset_id: "ast_spec2",
+      date: "2027-07-01",
+      quantity: "10",
+      unit_value: "15",
+    });
+    const { view, stats } = vsIndex(b);
+    const [from, to] = view.untagged;
+    expect(from?.status).toBe("closed");
+    expect(from?.result_eur.amount.toString()).toBe("30");
+    expect(from?.benchmark_equivalent_eur?.amount.toString()).toBe("100");
+    expect(to?.status).toBe("open");
+    // Real: 30 realised + 20 latent. Index: 130 from 100 to 120 = +26. 50 − 26.
+    expect(stats.vs_index_total_eur?.amount.toString()).toBe("24");
+    expect(stats.vs_index_missing).toBe(0);
   });
 });

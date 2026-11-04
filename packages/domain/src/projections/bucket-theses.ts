@@ -63,6 +63,8 @@ interface Measured {
   sells: ThesisLeg[];
   invested_eur: Money;
   result_eur: Money;
+  /** Where a pair with no thesis stopped holding anything; a thesis ends on its closing or last sale. */
+  ended_at?: CivilDate;
 }
 
 /** The greatest fiscal date among the legs, or nothing when there are none. */
@@ -108,7 +110,7 @@ const benchmarkEquivalentOf = (
   // its asset was swapped — ends on the day it was closed.
   const end =
     thesis.status === "closed"
-      ? (lastFiscalDateOf(thesis.sells) ?? (thesis.closed_at as CivilDate))
+      ? (thesis.ended_at ?? lastFiscalDateOf(thesis.sells) ?? (thesis.closed_at as CivilDate))
       : date;
   const endPrice = priceAt(state, benchmarkId, end, settings, external);
   if (endPrice?.unit_value_eur === undefined) {
@@ -258,6 +260,32 @@ const benchmarkWarningsOf = (rows: readonly IndexComparison[]): Warning[] => {
   return warnings;
 };
 
+/**
+ * The last day something of this pair's own was taken out of its lots, whoever
+ * sold it: a pair with no thesis has nobody to close it, so what it holds says
+ * when it ended. Absent when nothing was bought here.
+ */
+const endedAtOf = (
+  state: LedgerState,
+  legs: { buys: ThesisLeg[]; sells: ThesisLeg[]; asset_id: AssetId },
+  lots: Map<string, FiscalLot>,
+): { ended_at?: CivilDate } => {
+  const own = new Set(legs.buys.map((leg) => leg.event_id));
+  let last = lastFiscalDateOf(legs.sells);
+  for (const lot of lots.values()) {
+    if (lot.asset_id !== legs.asset_id || !own.has(rootEventOf(lots, lot))) {
+      continue;
+    }
+    for (const consumption of lot.consumptions) {
+      const day = state.eventFacts.get(consumption.event_id)?.date;
+      if (day !== undefined && (last === undefined || day > last)) {
+        last = day;
+      }
+    }
+  }
+  return last === undefined ? {} : { ended_at: last };
+};
+
 /** The comparison with the index (rule 16) of one thing measured. */
 const compareWithIndex = (
   state: LedgerState,
@@ -275,6 +303,11 @@ const compareWithIndex = (
     gaps.push({ reason: "no_benchmark" });
   } else if (!state.assets.has(benchmarkId)) {
     gaps.push({ reason: "unknown_asset", asset_id: benchmarkId });
+  } else if (measured.buys.length === 0 && measured.sells.length > 0) {
+    // What was sold here was bought under another thesis, or under none, which
+    // carries the money put in: this one brings its realised gain and nothing
+    // to compare it with.
+    equivalent = Money.zero(EUR);
   } else if (measured.buys.length === 0) {
     // Nothing was ever put in: the index would have made nothing out of
     // nothing, and that is "no data", not zero.
@@ -325,13 +358,18 @@ export const bucketTheses = (
     ...compareWithIndex(state, thesis, date, settings, lots, external),
   }));
   const untagged = [...state.unlinked.values()].map((legs): UntaggedView => {
-    const open = { ...legs, status: "open" as const };
-    const held = ownQuantityOf(state, open, lots).isPositive();
-    const measured = {
+    const held = ownQuantityOf(state, { ...legs, status: "open" }, lots).isPositive();
+    const closed = !held;
+    const measured: Measured = {
       ...legs,
-      status: !held && legs.sells.length > 0 ? ("closed" as const) : open.status,
+      status: closed ? "closed" : "open",
+      ...(closed ? endedAtOf(state, legs, lots) : {}),
     };
-    return { ...measured, ...compareWithIndex(state, measured, date, settings, lots, external) };
+    return {
+      ...legs,
+      status: measured.status,
+      ...compareWithIndex(state, measured, date, settings, lots, external),
+    };
   });
   return { rows, untagged, warnings: benchmarkWarningsOf([...rows, ...untagged]) };
 };

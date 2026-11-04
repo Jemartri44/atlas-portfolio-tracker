@@ -451,6 +451,16 @@ export const applySwap = (state: LedgerState, event: SwapEvent, position: number
   if (thesis !== undefined) {
     linkBuy(state, thesis, event.id, dateIn, quantityIn, costEur, Money.zero("EUR"));
   } else if (account.book === "bucket") {
+    // With no thesis to close it, the pair handed over ends here: its leg out is
+    // a sale for rule 16, so its gain and its money are not lost between the two.
+    linkUnlinkedSell(state, event.account_id, event.from_asset_id, {
+      event_id: event.id,
+      fiscal_date: dateOut,
+      quantity: quantityOut,
+      amount_eur: proceedsEur,
+      fee_eur: fx.toEur(fee),
+      gain_eur: gain.gain_eur,
+    });
     linkUnlinkedBuy(state, event.account_id, event.to_asset_id, {
       event_id: event.id,
       fiscal_date: dateIn,
