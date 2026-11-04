@@ -295,8 +295,9 @@ describe.each(ENVS)("the data bucket of %s", (env) => {
     expect([...actions].sort()).toEqual(["s3:GetObject", "s3:ListBucket"]);
   });
 
-  it("gives the API one object of settings/ to read and replace, the backup job only to read it", () => {
+  it("gives the API two objects of settings/ to read and replace, the backup job only to read them", () => {
     const key = `arn:aws:s3:::${bucket}/settings/exposure.json`;
+    const projection = `arn:aws:s3:::${bucket}/settings/projection.json`;
     const onSettings = (role: string) =>
       roleStatements(stack(env), `atlas-${env}-${role}`).filter(
         (statement) =>
@@ -304,11 +305,13 @@ describe.each(ENVS)("the data bucket of %s", (env) => {
       );
     expect(onSettings("api")).toMatchObject([
       { Effect: "Allow", Action: ["s3:GetObject", "s3:PutObject"], Resource: [key] },
+      { Effect: "Allow", Action: ["s3:GetObject", "s3:PutObject"], Resource: [projection] },
     ]);
     expect(
       onSettings("job-backup").flatMap((statement) => [statement.Action ?? []].flat()),
     ).toEqual(["s3:GetObject"]);
     expect(JSON.stringify(onSettings("job-backup"))).toContain(key);
+    expect(JSON.stringify(onSettings("job-backup"))).toContain(projection);
   });
 
   it("has no Allow at all: the identity policies grant, the bucket policy only denies", () => {

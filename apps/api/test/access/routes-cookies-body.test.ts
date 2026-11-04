@@ -78,6 +78,7 @@ describe("the routes and what each admits (api §2.3)", () => {
       "POST /api/drafts/{id}/stamp",
       "POST /api/drafts/{id}/end",
       "PUT /api/exposure",
+      "PUT /api/projection",
     ]);
     expect(findRoute("PUT", "/api/exposure")?.policy).toBe("session");
     expect(findRoute("GET", "/api/exposure")?.writes).toBe(false);

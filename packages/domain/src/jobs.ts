@@ -22,6 +22,7 @@ export {
   DUMP_EXPOSURE,
   DUMP_LEDGER,
   DUMP_POSITIONS,
+  DUMP_PROJECTION,
   type DumpStep,
   dumpablePriceName,
   dumpManifestStep,

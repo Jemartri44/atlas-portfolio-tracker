@@ -1,24 +1,29 @@
-// The exposure of the owner, from a client (`docs/api.md` §6.2): `GET` and `PUT /api/exposure`
-// with the cookie of the web. No rule lives here: what is valid is `validateExposure`'s, and what a
-// refusal may be is the domain's (`@atlas/domain/sync`). Nothing is kept on the device.
+// The objects of `settings/` from a client (`docs/api.md` §6.2): `GET` and `PUT` with the cookie of
+// the web. No rule lives here: what is valid is the domain's validator, and what a refusal may be is
+// the domain's (`@atlas/domain/sync`). Nothing is kept on the device.
 //
 // - `read` gives the bytes as stored with their etag, **without judging them**: whoever uses them
-//   decides (`exposureOrNone`). An object that does not exist is `missing`, not an error.
-// - `write` validates first (`exposureText`), so nothing invalid leaves the client, and sends the
-//   object whole with `If-Match` (or `If-None-Match: *` the first time). A `412` or a `428` is a
-//   `RemoteError` with its code: the owner reads again before writing again.
+//   decides (`exposureOrNone`, `projectionOrNone`). An object that does not exist is `missing`.
+// - `write` validates first, so nothing invalid leaves the client, and sends the object whole with
+//   `If-Match` (or `If-None-Match: *` the first time). A `412` or a `428` is a `RemoteError` with
+//   its code: the owner reads again before writing again.
 
-import { type Exposures, exposureText } from "@atlas/domain/portfolio";
+import {
+  type Exposures,
+  exposureText,
+  type ProjectionEdits,
+  projectionText,
+} from "@atlas/domain/portfolio";
 import { etagOfHeader, parseErrorAnswer, RemoteError } from "@atlas/domain/sync";
 import { apiFetch } from "../sync/api-fetch.js";
 
-export interface ApiExposureStoreOptions {
+export interface ApiSettingsOptions {
   /** The web's own origin. */
   readonly origin: string;
   readonly fetch: typeof fetch;
 }
 
-export type ExposureRead =
+export type SettingsRead =
   | { readonly kind: "missing" }
   | { readonly kind: "found"; readonly etag: string; readonly text: string };
 
@@ -38,11 +43,15 @@ const failed = async (response: Response): Promise<RemoteError> => {
     : new RemoteError(error.code, response.status, error.details);
 };
 
-export class ApiExposureStore {
-  constructor(private readonly options: ApiExposureStoreOptions) {}
+class ApiSettingsObject<T> {
+  constructor(
+    private readonly options: ApiSettingsOptions,
+    private readonly path: string,
+    private readonly textOf: (value: T) => string,
+  ) {}
 
-  async read(): Promise<ExposureRead> {
-    const response = await apiFetch(this.options, "GET", "/api/exposure");
+  async read(): Promise<SettingsRead> {
+    const response = await apiFetch(this.options, "GET", this.path);
     if (response.status === 404) {
       return { kind: "missing" };
     }
@@ -57,13 +66,13 @@ export class ApiExposureStore {
   }
 
   /** The etag of what is stored now. `etag` is what was read; absent when nothing existed. */
-  async write(exposures: Exposures, etag: string | undefined): Promise<{ etag: string }> {
+  async write(value: T, etag: string | undefined): Promise<{ etag: string }> {
     // Validated and put in its canonical form before anything is sent.
-    const body: unknown = JSON.parse(exposureText(exposures));
+    const body: unknown = JSON.parse(this.textOf(value));
     const response = await apiFetch(
       this.options,
       "PUT",
-      "/api/exposure",
+      this.path,
       body,
       etag === undefined ? { "if-none-match": "*" } : { "if-match": `"${etag}"` },
     );
@@ -81,5 +90,17 @@ export class ApiExposureStore {
       throw shapeless(response.status);
     }
     return { etag: written };
+  }
+}
+
+export class ApiExposureStore extends ApiSettingsObject<Exposures> {
+  constructor(options: ApiSettingsOptions) {
+    super(options, "/api/exposure", exposureText);
+  }
+}
+
+export class ApiProjectionStore extends ApiSettingsObject<ProjectionEdits> {
+  constructor(options: ApiSettingsOptions) {
+    super(options, "/api/projection", projectionText);
   }
 }

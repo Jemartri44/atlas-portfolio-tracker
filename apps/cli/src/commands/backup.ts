@@ -156,7 +156,7 @@ export const backupCommand = async (
       ...(bucket === undefined
         ? []
         : [
-            `documents/, imports/ y la exposición (settings/exposure.json) del bucket, en ${join(directory, "bucket")}: ${describeCopied(bucket)}. En el bucket no se ha escrito ni borrado nada.`,
+            `documents/, imports/ y lo que tecleas en settings/ (exposición y proyección) del bucket, en ${join(directory, "bucket")}: ${describeCopied(bucket)}. En el bucket no se ha escrito ni borrado nada.`,
           ]),
     ].join("\n"),
   );

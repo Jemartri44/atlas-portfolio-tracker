@@ -35,6 +35,13 @@ locals {
       Resource = ["${local.data_arn}/settings/exposure.json"]
     },
     {
+      # What the owner edited of the projection (`docs/api.md` section 6.2): the same rules.
+      Sid      = "Projection"
+      Effect   = "Allow"
+      Action   = ["s3:GetObject", "s3:PutObject"]
+      Resource = ["${local.data_arn}/settings/projection.json"]
+    },
+    {
       # The run records of the scheduled tasks, read only (`docs/api.md` section 6.3): what the web
       # shows of a task that stopped running. The API never writes under `jobs/`.
       Sid      = "JobRecords"
