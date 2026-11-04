@@ -106,7 +106,7 @@ rm -f objeto.tmp registro.json
 
 La tarea recalcula el libro desde cero con las comprobaciones de `atlas check --deep`, ensaya la restauración con el último volcado **en memoria**, sin escribir nada, y mide el tamaño del libro.
 
-- **`integrity_errors`**: `atlas check --deep` encuentra errores en el libro vivo. El correo dice los códigos y cuántos hay. Ejecútalo en la consola sobre una carpeta sincronizada: dice qué eventos son. **Un error de registro se rectifica, no se restaura** (ADR-0032): una anulación (`reversal`) y el evento corregido.
+- **`integrity_errors`**: `atlas check --deep` encuentra errores en el libro vivo. El correo dice los códigos y cuántos hay. Baja el libro con `atlas admin pull --env <entorno> --to <carpeta>` y pasa `atlas --ledger <carpeta>/ledger.jsonl check --deep`: dice qué eventos son. **Un error de registro se rectifica, no se restaura** (ADR-0032): una anulación (`reversal`) y el evento corregido.
 - **`restore_rehearsal_differs`**: el último volcado **no reproduce** el libro vivo cortado en los mismos eventos. Los códigos dicen qué difiere:
   - `event_missing_in_live`, `event_differs` u `order_differs`: el volcado tiene eventos que el libro vivo no tiene, o con otro contenido, o en otro orden. El libro es de solo añadir, así que algo lo reescribió después del volcado, por ejemplo un `atlas admin compact` o una restauración.
   - `positions_differ`, `cash_differ`, `lots_differ`, `gains_differ` o `income_differ`: con los mismos eventos, las proyecciones no coinciden.

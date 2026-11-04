@@ -172,7 +172,7 @@ Los objetos de dispositivo (§5.3), su ligadura con la sesión (§5.4) y la inic
 
 ### 5.8 El cliente de escritura directa (ADR-0035)
 
-Decidido por ADR-0035. **El adaptador está implementado (E1, `specs/021-api-ledger-store`)**: `ApiLedgerStore` sobre `httpRemote`, con los errores `remote_rejected` (`RemoteRejectedError`) y `write_outcome_unknown` (`WriteOutcomeUnknownError`) y `findOutcome(ids)` para resolver el resultado desconocido. La web lo usa desde E2b (feature 023); la consola lo usó de E3 (feature 024) a ADR-0037.
+Decidido por ADR-0035. **El adaptador está implementado (E1, feature 021, retirada; en git)**: `ApiLedgerStore` sobre `httpRemote`, con los errores `remote_rejected` (`RemoteRejectedError`) y `write_outcome_unknown` (`WriteOutcomeUnknownError`) y `findOutcome(ids)` para resolver el resultado desconocido. La web lo usa desde E2b (feature 023); la consola lo usó de E3 (feature 024) a ADR-0037.
 
 - **Un solo almacén, `ApiLedgerStore`**, implementa `LedgerStore` sobre HTTP: `load()` es `GET /api/ledger` (se comprueba que el `ETag` es el SHA-256 de los bytes); `append(events, etag)` serializa cada evento con `encodeLine` y lo envía en `POST /api/ledger/lines` con `If-Match: "<etag>"`. `replace`, `appendLines` y `replaceLines` se niegan. Sin cola local y sin libro guardado en el dispositivo.
 - **Las declaraciones de §5.2 las deduce el adaptador:** `has_correction` y `chain_continues`, de la forma del lote; `confirm_duplicate`, por unidad, con las huellas del libro cargado más la unidad entera (miembros posteriores incluidos), que es la regla de la fila 7 de la tabla de §5.2.
@@ -190,7 +190,7 @@ Decidido por ADR-0035. **El adaptador está implementado (E1, `specs/021-api-led
 - **Lo que las interfaces dicen de un rechazo** (catálogo único, `packages/domain/src/messages/errors-remote.ts`): `remote_rejected` se traduce por `remote_code` con una tabla de motivos (`line_invalid`, `domain_rejected`, `duplicate_unconfirmed`, `seal_mismatch`, `recorded_at_in_future`, `partial_write`, etc.), cada uno con su remedio de consola o de web; un código que la tabla no conoce da «no la ha aceptado tal como estaba». Si `accepted` es 0 añade «No se ha guardado nada»; si no, el número de líneas guardadas y que se mire el libro antes de repetir. Un `RemoteError` antes de enviar se dice con `REMOTE_FAILURES` (`remote-failures.ts`, el mismo catálogo) y termina en «No se ha guardado nada».
 - **Sin conexión, la web no muestra datos ni deja registrar** («Sin conexión» y «Reintentar»).
 - **`compact` y la restauración** siguen como operaciones de administración sobre el remoto (ADR-0032); sin pendientes que comprobar, tras ellas el siguiente `412` recarga el libro.
-- **La consola no es cliente de la API** (ADR-0037): trabaja sobre una carpeta local, y llega a la nube solo como administración, con credenciales cortas de AWS y MFA (`atlas admin pull|compact|restore`, `docs/cli.md`). Las carpetas «de nube» de E3 (`specs/024-console-cloud`) se retiraron.
+- **La consola no es cliente de la API** (ADR-0037): trabaja sobre una carpeta local, y llega a la nube solo como administración, con credenciales cortas de AWS y MFA (`atlas admin pull|compact|restore`, `docs/cli.md`). Las carpetas «de nube» de E3 (feature 024) se retiraron.
 
 ## 6. Datos de referencia
 

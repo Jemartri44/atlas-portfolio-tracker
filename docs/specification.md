@@ -91,17 +91,13 @@ Los identificadores cambian con el tiempo. El `id` interno es inmutable; ISIN y 
 **Los lotes no se almacenan: son una proyección** calculada desde cero a partir de las operaciones (`projectLots(transactions)`, ADR-0003). **Nunca almacenar posiciones agregadas.** El FIFO exige el detalle lote a lote. La posición actual es una consulta, no un campo.
 
 **Transaction** (operación)
-`id`, `trade_date`, `value_date`, `type`, `asset_id`, `account_id`, `quantity`, `unit_price`, `currency`, `fx_rate`, `fee`, `notes`, `reverses_transaction_id` (opcional), `corrects_transaction_id` (opcional)
+`id`, `trade_date`, `value_date`, `type`, `asset_id`, `account_id`, `quantity`, `unit_price`, `currency`, `fx_rate`, `fee`, `notes` y, en una rectificación, `reverses_id` / `corrects_id`. El detalle de campos por evento está en `docs/data-schema.md` §4 y §6
 
-Tipos (`type`): `buy`, `sell`, `transfer`, `dividend`, `interest`, `fx_exchange`, `swap`, `corporate_action`, `cash_deposit`, `cash_withdrawal`, `standalone_fee`, `valuation`, `reversal`; los eventos de seguimiento sin efecto contable `order_placed`/`order_updated` y `transfer_requested`/`transfer_request_updated` (ADR-0010, ADR-0012); las tesis del cubo `thesis_opened`/`thesis_closed`; y `tax_return_filed`, la constancia de lo declarado (ADR-0020). Con el catálogo y la configuración, **25 tipos**. Detalle en `docs/data-schema.md`.
+Tipos (`type`): `buy`, `sell`, `transfer`, `dividend`, `interest`, `fx_exchange`, `swap`, `corporate_action`, `cash_deposit`, `cash_withdrawal`, `standalone_fee`, `valuation`, `reversal`; los eventos de seguimiento sin efecto contable `order_placed`/`order_updated` y `transfer_requested`/`transfer_request_updated` (ADR-0010, ADR-0012); las tesis del cubo `thesis_opened`/`thesis_closed`; y `tax_return_filed`, la constancia de lo declarado (ADR-0020). Con el catálogo, la configuración, los ingresos de fuera de la cartera y los pagos de impuestos, **28 tipos**; la lista completa está en `docs/data-schema.md` §3.
 
-**El libro es append-only** (ADR-0003): las operaciones nunca se editan ni se borran. *Editar* en la interfaz escribe un `reversal` de la original más la operación correcta enlazada por `corrects_transaction_id`; *Eliminar* escribe solo el `reversal`. La proyección de lotes ignora las parejas anuladas. Si la rectificación afecta a un ejercicio fiscal ya declarado, la app lo advierte.
+**El libro es append-only** (ADR-0003): las operaciones nunca se editan ni se borran. *Editar* en la interfaz escribe un `reversal` de la original más la operación correcta enlazada por `corrects_id`; *Eliminar* escribe solo el `reversal`. La proyección de lotes ignora las parejas anuladas. Si la rectificación afecta a un ejercicio fiscal ya declarado, la app lo advierte.
 
-**Price** (precio)
-`asset_id`, `date`, `value`, `currency`, `source`, `fetched_at`
-
-**ExchangeRate** (tipo de cambio)
-`date`, `pair`, `rate`, `source` (BCE)
+**Precios y tipos del BCE** no son entidades del libro: viven fuera de `ledger.jsonl`, en `prices/` y `reference/ecb/` del bucket (`docs/data-schema.md` §1).
 
 **Thesis** (tesis) — solo cubo
 `id`, `opened_at`, `asset_id`, `hypothesis`, `expected_horizon`, `invalidation`, `planned_size`, `opening_transaction_id`, `closing_transaction_id`, `result_eur`, `result_vs_index`, `closing_notes`
@@ -122,22 +118,7 @@ Si esto se modela como venta + compra, la fiscalidad sale mal durante veinte añ
 
 A 20 años, todos estos van a ocurrir. El modelo debe soportarlos sin migración de esquema. Un evento corporativo es una `Transaction` de tipo `corporate_action` con un subtipo `kind`:
 
-| `kind` | Evento | Efecto sobre los lotes |
-|---|---|---|
-| `split` | Split (ej. 4:1) | Multiplica cantidad, divide coste unitario. Fecha y coste total intactos. |
-| `reverse_split` | Contrasplit | Inverso. Cuidado con las fracciones sobrantes, que suelen liquidarse en efectivo (hecho imponible). |
-| `cash_dividend` | Dividendo en efectivo | No toca lotes. Rendimiento del capital mobiliario. Si hay retención en origen, registrarla para la deducción por doble imposición. |
-| `stock_dividend` | Dividendo en acciones | Lotes nuevos. Fecha de adquisición y valoración según normativa. |
-| `merger` | Fusión / absorción | Los lotes se transforman en el valor nuevo con canje. Conserva antigüedad. |
-| `spin_off` | Escisión | El coste original se reparte entre matriz y escindida según proporción publicada. |
-| `fund_merger` | Fusión de fondos | Frecuente en fondos indexados. Similar al traspaso: conserva antigüedad y coste. |
-| `share_class_change` | Cambio de clase de participación | Muy frecuente. Mismo fondo, otro ISIN, otro TER. Conserva antigüedad. |
-| `fund_liquidation` | Cierre / liquidación de fondo | Reembolso forzoso. **Sí es hecho imponible.** |
-| `identifier_change` | Cambio de ISIN o ticker | Solo metadatos, pero rompe las fuentes de precios. |
-| `delisting` | Exclusión de cotización | Posición sin precio. Requiere marcado manual. |
-| `crypto_fork` | Fork de cripto | Activo nuevo con coste de adquisición cero o valor de mercado, según criterio. |
-| `token_migration` | Migración de token | Canje. Documentar el criterio aplicado. |
-| `issuer_restructuring` | Reestructuración del emisor de un ETC/ETP | Puede implicar canje o reembolso forzoso. |
+Los `kind` admitidos (split, contrasplit, dividendo en acciones, fusión, escisión, fusión de fondos, cambio de clase, liquidación de fondo o de emisor, devolución de prima, exclusión de cotización, fork y migración de token, reestructuración de emisor) y la transformación de lotes de cada uno están en `docs/data-schema.md` §8.5. El cambio de ISIN o ticker y el dividendo en efectivo **no** son eventos corporativos.
 
 **Requisito:** un evento corporativo es un tipo de operación de primera clase, con su propia lógica de transformación de lotes, no un apaño manual sobre la base de datos.
 
@@ -173,8 +154,6 @@ Proyectos de código abierto que ya han resuelto partes de esto:
 **No toda la configuración vive en `Settings`** (principio IV de la constitución, enmendado en la 1.6.0). Nada configurable se escribe en el código, pero en `Settings` vive solo la configuración que **afecta a cifras del libro**. La que es **dato personal o secreto** (destinatario del correo, lista permitida de acceso, claves) y la **configuración operativa que ninguna cifra lee** (fuentes de precios, correo) viven **fuera del libro**, en SSM Parameter Store en la nube o en un fichero de configuración local fuera del repositorio (ADR-0027, ADR-0028, ADR-0031; detalle en §11.8). Un campo nuevo en `settings_changed` sigue además la enmienda de ADR-0018.
 
 **La lista normativa de parámetros es `business-rules.md` §7**, con el valor inicial y la regla asociada de cada uno. Manda ella, y esta especificación **no la repite**: la tabla que había aquí se quedó desfasada durante meses —le faltaban los criterios fiscales que el motor ya usaba y le sobraba alguno que nunca existió en el código—, que es lo que pasa siempre con una lista duplicada. Cualquier parámetro nuevo se añade en §7 y solo en §7.
-
-**`alert_channels{}` no existe y no entra en §7.** Qué avisa por correo y qué se queda solo en la interfaz lo decide hoy el código de las tareas (feature 016): cada aviso tiene su canal fijo (§9.5). Si algún día se configura, **vive fuera del libro, junto al destinatario del correo**, en SSM (ADR-0028, ADR-0034): es configuración operativa que ninguna cifra del libro lee (constitución, principio IV, enmienda 1.6.0), y en `Settings`, que es una foto completa, un cliente antiguo la borraría al escribir la foto siguiente. **Nunca en `docs/business-rules.md` §7.**
 
 ### 5.2 Requisitos
 
@@ -308,6 +287,8 @@ Mitigaciones, en orden:
 
 ## 8. Importación de extractos
 
+> **Planificada, sin escribir.** Ningún importador existe todavía (`StatementSource` es un puerto previsto; estado en [`decision-roadmap.md`](decision-roadmap.md)). Lo que sigue es el diseño; hoy toda entrada es manual.
+
 Toda entrada de datos tiene dos vías: **importación** y **manual**. La manual siempre disponible, nunca eliminada.
 
 ### 8.1 Fuentes de importación
@@ -383,7 +364,7 @@ En el Free Plan de AWS (cuentas nuevas desde julio de 2025) la cuenta se cierra 
 
 ### 9.5 Lambdas programadas
 
-Construidas (feature 016) y sin desplegar todavía: la infraestructura es de la 017 y la prueba contra AWS real, de la 018 ([`decision-roadmap.md`](decision-roadmap.md)). EventBridge Scheduler despierta **una vez al día** a cada una de las cinco funciones (`apps/jobs`, un solo artefacto), en hora de Madrid; el dominio decide qué tarea toca según su periodo y `job_frequencies`. Cada tarea deja un registro por periodo en `jobs/<familia>/<tarea>/<periodo>.json` ([`data-schema.md`](data-schema.md) §1). **Solo la función de correo envía**; las demás dejan sus hallazgos y `dispatch_findings` los avisa una vez por racha.
+Construidas, con su infraestructura de Terraform, y sin desplegar todavía: falta el despliegue y la prueba contra AWS real ([`decision-roadmap.md`](decision-roadmap.md), [`first-deploy-checks.md`](first-deploy-checks.md)). EventBridge Scheduler despierta **una vez al día** a cada una de las cinco funciones (`apps/jobs`, un solo artefacto), en hora de Madrid; el dominio decide qué tarea toca según su periodo y `job_frequencies`. Cada tarea deja un registro por periodo en `jobs/<familia>/<tarea>/<periodo>.json` ([`data-schema.md`](data-schema.md) §1). **Solo la función de correo envía**; las demás dejan sus hallazgos y `dispatch_findings` los avisa una vez por racha.
 
 | Función (hora de Madrid) | Tarea | `job_frequencies` (por defecto, primero) | Notifica |
 |---|---|---|---|
@@ -456,7 +437,7 @@ Terraform para todos los recursos AWS, sin nada creado a mano salvo las excepcio
 
 ### 11.5 Tests
 
-Unitarios (FIFO, transformaciones de lotes, divisa, regla de los dos meses, reparto mensual), de integración (API contra un `LedgerStore` en memoria o fichero), de contrato (parsers contra extractos anonimizados) y de extremo a extremo (flujos críticos). **Prioridad absoluta: el motor fiscal.** Cobertura del 100 % de líneas y ramas en `packages/domain`, bloqueante en CI; sin umbral fuera del dominio. Casos límite explícitos en `CLAUDE.md`. Los extractos de ejemplo son sintéticos y están versionados.
+Unitarios (FIFO, transformaciones de lotes, divisa, regla de los dos meses, reparto mensual), de integración (API contra un `LedgerStore` en memoria o fichero), de contrato (parsers contra extractos anonimizados) y de extremo a extremo (flujos críticos). **Prioridad absoluta: el motor fiscal.** Cobertura del 100 % de líneas y ramas en `money/`, `projections/`, `tax/`, `informative/` y `dates/` del dominio y en `packages/access` y `apps/api/src/access`, y ~90 % en el resto del dominio (constitución VII, `vitest.config.ts`). Casos límite explícitos en `CLAUDE.md`. Los extractos de ejemplo son sintéticos y están versionados.
 
 ### 11.6 CI/CD
 
@@ -478,7 +459,7 @@ Todo en SSM Parameter Store estándar como `SecureString`; los valores nunca pas
 
 ### 11.9 Documentación
 
-`README` con arranque en local; licencia MIT; etiquetas `vX.Y.Z` en `main` al cerrar cada `release/*` y `CHANGELOG.md` a mano; ADR en `docs/adr/` para las decisiones importantes; esquema de datos en el repositorio, con la lógica de transformación de lotes de cada evento corporativo.
+`README` con arranque en local; licencia MIT; etiquetas `vX.Y.Z` en `main` al cerrar cada `release/*` (aún no hay ninguna) y, cuando exista la primera, un `CHANGELOG.md` a mano; ADR en `docs/adr/` para las decisiones importantes; esquema de datos en el repositorio, con la lógica de transformación de lotes de cada evento corporativo.
 
 ---
 
@@ -497,13 +478,13 @@ Requisitos que no son técnicos pero deciden si el sistema sigue vivo en 2046:
 
 ## 13. Fases
 
-**Estado a 2026-10-24:** entregadas las fases 1, 2, 3 y 5, la aplicación web contra la nube (ADR-0035) y la consola, local y de administración (ADR-0037). La Fase 4 y la infraestructura están en código y probadas con dobles, **sin desplegar** (018 y 019).
+**Estado a 2026-11-04:** entregadas las fases 1, 2, 3 y 5, la aplicación web contra la nube (ADR-0035) y la consola, local y de administración (ADR-0037). La Fase 4 y la infraestructura están en código y probadas con dobles, **sin desplegar** (018 y 019).
 
 **Fase 0 — Validación (antes de escribir nada)**
 1. **Pasar la cuenta AWS al Paid Plan** y configurar alerta de presupuesto en 1$.
 2. Probar la Flex Query de IBKR: configurar un informe, descargarlo por API, ver qué campos trae realmente.
 3. Descargar los tipos de cambio del BCE y verificar formato e histórico disponible.
-4. Probar el scraping de Yahoo desde una Lambda real, no desde tu máquina. Es donde se verá si las IPs de AWS están bloqueadas.
+4. ~~Probar el scraping de Yahoo desde una Lambda real~~ (descartado: Yahoo prohíbe el acceso automatizado, ADR-0031).
 5. Exportar un extracto de MyInvestor y ver qué formato y qué campos ofrece.
 6. Leer los esquemas de Beancount y Ghostfolio antes de diseñar el propio.
 
@@ -519,7 +500,7 @@ Registro de tesis, posiciones abiertas, métricas frente al índice, gráficas y
 **Fase 4 — Automatización**
 Lambdas programadas, correos, precios automáticos.
 
-**En código, sin desplegar** (feature 016, fusionada el 2026-09-28): las cinco funciones programadas, el correo y los precios y el histórico del BCE de la nube (§9.5). La infraestructura es de la 017 y la prueba contra AWS real, de la 018 (`docs/decision-roadmap.md`).
+**En código, sin desplegar** (feature 016, fusionada el 2026-09-28): las cinco funciones programadas, el correo y los precios y el histórico del BCE de la nube (§9.5). La infraestructura de Terraform está escrita; falta desplegar y probar contra AWS real (`docs/decision-roadmap.md`).
 
 **Fase 5 — Motor fiscal**
 FIFO consolidado, conversión de divisa por fecha valor, regla de los dos meses, dividendos y doble imposición, salida agregada por casilla.
@@ -551,6 +532,6 @@ Puntos detectados al revisar la especificación. Sin decidir todavía; cada uno 
 - [x] **Despliegue desde GitHub Actions con OIDC**, sin claves de AWS de larga duración en el repositorio. Resuelto (ADR-0028, 2026-09-24; cuenta compartida desde ADR-0034, 2026-09-25): un rol de despliegue por entorno en la misma cuenta, que solo puede crear roles con el límite de permisos de su entorno; el de `dev` solo desde `develop`, el de `prod` solo desde el *environment* `prod` con aprobación obligatoria, y un rol de `terraform plan` de solo lectura que nunca se usa para una PR desde un *fork*.
 - [x] **Tests de propiedades** para el motor FIFO. Hecho con `fast-check` en `packages/domain/test/properties/`: los lotes abiertos igualan la posición física por activo, proyectar dos veces da lo mismo y el diario reconstruye cada lote y cada ganancia, y `scale` seguido de su inverso deja lotes y posiciones idénticos.
 - [x] **Reconsiderar DynamoDB frente a JSONL en S3**: S3 (ADR-0002).
-- [ ] **Esqueleto del repositorio**: `docs/adr/`, `docs/data-schema.md`, `LICENSE`, CI, escaneo de secretos. El formato lo impone Biome, sin `.editorconfig`; el escaneo de secretos es `gitleaks` en `.githooks/pre-commit`, local por clon y no en CI.
+- [x] **Esqueleto del repositorio**: `docs/adr/`, `docs/data-schema.md`, `LICENSE`, CI, escaneo de secretos. El formato lo impone Biome, sin `.editorconfig`; el escaneo de secretos es `gitleaks` en `.githooks/pre-commit`, local por clon y no en CI.
 - [x] **Protección de ramas** en GitHub: hecha solo para `main` (comprobado el 2026-11-03); `develop` sin proteger.
 - [x] **Revisión externa (*challenge*) del 2026-08-30**: diez hallazgos aplicados (ADR-0012, ADR-0013, `docs/data-schema.md`); criterios fiscales consolidados en `docs/fiscal-questions.md`.
