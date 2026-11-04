@@ -21,7 +21,8 @@ export const EvolutionCard = (props: {
   <SeriesCard
     title="Evolución del patrimonio"
     asOf={props.asOf}
-    class="span-8 summary-evolution"
+    class="summary-evolution"
+    phone={{ title: "Evolución", fold: "Leyenda, huecos y datos" }}
     labels={[
       "Cartera principal con su efectivo",
       "Cubo con su efectivo",

@@ -70,19 +70,19 @@
 .part-metric {
   color: var(--c-text-2);
   font-size: var(--text-sm);
-  grid-column: 1 / -1;
-}
-
-/* On a phone the evolution carries the same shape, and the core's return is under the figure. */
-.part > .sparkline,
-.part.is-core > .part-metric {
-  display: none;
-}
-
-.part-metric {
   display: flex;
   flex-wrap: wrap;
   gap: 0 var(--space-3);
+  grid-column: 1 / -1;
+}
+
+.part-metric .num {
+  font-weight: var(--fw-semibold);
+}
+
+/* On a phone the evolution carries the same shape. */
+.part > .sparkline {
+  display: none;
 }
 
 /* The title of the figure, quiet and in small capitals, so the figure is what is read. */
@@ -95,17 +95,9 @@
   text-transform: uppercase;
 }
 
-.hero-deltas {
-  color: var(--c-text-2);
-  display: flex;
-  flex-wrap: wrap;
-  font-size: var(--text-sm);
-  gap: var(--space-1) var(--space-3);
-  margin: calc(-1 * var(--space-2)) 0 var(--space-4);
-}
-
-.hero-deltas .num {
-  font-weight: var(--fw-semibold);
+/* Under the figure the action follows its sentence: at the far end it would read as another thing. */
+.hero-main .pending-body {
+  justify-content: start;
 }
 
 .part-label {
@@ -178,15 +170,6 @@
     margin-top: auto;
   }
 
-  /* The core's return moves into its tile: said once. */
-  .part.is-core > .part-metric {
-    display: flex;
-  }
-
-  .hero-deltas {
-    display: none;
-  }
-
   .part-label {
     color: var(--c-text-2);
     font-size: var(--text-sm);
@@ -233,13 +216,54 @@
 
 /* ---- The card of the summary -------------------------------------------- */
 
-/* Flush with the title of the card: no indent. */
+/* Flush with the title of the card: no indent. The same air above and below the two lines. */
 .fiscal-todo {
   color: var(--c-text);
   display: grid;
   gap: var(--space-2);
-  margin: 0;
+  margin: var(--space-3) 0;
   padding-left: 0;
+}
+
+/* On a phone the term is in the tag: the card keeps the strip and its lines. */
+.summary-fiscal .calendar-short .card-note {
+  display: none;
+}
+
+/* From the grid's columns, a strip: title, calendar, what is pending and the way in, side by side. */
+@media (min-width: 64rem) {
+  .summary-fiscal.is-season {
+    align-items: center;
+    column-gap: var(--space-6);
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr) minmax(0, 1.4fr) max-content;
+  }
+
+  .summary-fiscal.is-season > .card-head {
+    display: grid;
+    gap: 0;
+    margin: 0;
+  }
+
+  .summary-fiscal.is-season > .card-note {
+    margin: 0;
+  }
+
+  .summary-fiscal .calendar-short .card-note {
+    display: block;
+  }
+
+  .summary-fiscal.is-season .fiscal-todo {
+    font-size: var(--text-sm);
+    gap: var(--space-1);
+    margin: 0;
+  }
+
+  .summary-fiscal.is-season > .card-foot {
+    border-top: 0;
+    margin: 0;
+    padding: 0;
+  }
 }
 
 /* ---- First screenful by importance ---------------------- */
@@ -274,36 +298,4 @@
   display: inline-flex;
   font-weight: var(--fw-semibold);
   gap: var(--space-1);
-}
-
-/* ---- From the grid's 12 columns: the rows of the summary ----------------- */
-
-/* The markup is already in the order read (`view-models/summary-order.ts`); this only spans. */
-@media (min-width: 64rem) {
-  .grid > .summary-evolution {
-    grid-column: span 8;
-  }
-
-  .grid > .summary-month {
-    grid-column: span 4;
-  }
-
-  .grid > .summary-attention,
-  .grid > .summary-moves {
-    grid-column: span 7;
-  }
-
-  .grid > .summary-allocation,
-  .grid > .summary-fiscal {
-    grid-column: span 5;
-  }
-
-  .grid > .summary-fiscal {
-    align-self: start;
-  }
-
-  /* In the season the tax card goes first, and across: never alone with seven empty columns. */
-  .grid > .summary-fiscal:first-child {
-    grid-column: 1 / -1;
-  }
 }

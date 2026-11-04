@@ -5,8 +5,8 @@
 // reached from here — and from Ajustes — and this card has two shapes, decided
 // by the domain (`inRentaSeason`, known on the first paint):
 //
-// - **in the income tax season**, a card at the top of the summary, with
-//   «Campaña de la Renta» beside its title and what is pending;
+// - **in the income tax season**, at the top of the summary, with «Campaña de la Renta» beside its
+//   title and what is pending: a strip on a wide screen, a short card on a phone;
 // - **out of it**, a row folded at the end that says only its neutral state
 //   and the years with figures and no return recorded — never a notice:
 //   what is pending of the 720 and the 721, and the invalid events, go to
@@ -20,9 +20,11 @@
 import type { CivilDate } from "@atlas/domain";
 import { A } from "@solidjs/router";
 import { type JSX, lazy, Show } from "solid-js";
-import { Icon, Section, Skeleton } from "../../components/index.js";
+import { Icon, Section, Skeleton, Tag } from "../../components/index.js";
+import { formatDate } from "../../format/date.js";
 import type { NameIndex } from "../../format/names.js";
 import type { AppError } from "../../ledger/state.js";
+import { GRID, mediaQuery } from "../../shell/media.js";
 import { FAILED_TO_CALCULATE } from "../../view-models/attention.js";
 import type { FiscalStatus } from "./fiscal-status.js";
 
@@ -50,11 +52,17 @@ export default function FiscalCard(props: {
   today: CivilDate;
   names: NameIndex;
 }): JSX.Element {
+  const wide = mediaQuery(GRID);
+  /** «hasta 30/06»: on a phone, the term goes in the tag and the strip says no sentence. */
+  const until = (): string => {
+    const end = props.status()?.calendar.season.end;
+    return end === undefined ? "" : ` · hasta ${formatDate(end).slice(0, 5)}`;
+  };
   return (
     <Show
       when={props.season}
       fallback={
-        <section class="card span-5 summary-fiscal is-row" aria-label="Declaración">
+        <section class="card summary-fiscal is-row" aria-label="Declaración">
           <A href="/fiscal" class="fiscal-row">
             <Icon name="calendar" class="icon" />
             <span class="fiscal-row-text">
@@ -73,8 +81,12 @@ export default function FiscalCard(props: {
     >
       <Section
         title="Declaración"
-        class="span-5 summary-fiscal"
-        aside={<span class="scope">Campaña de la Renta</span>}
+        class="span-12 summary-fiscal is-season"
+        aside={
+          <Show when={!wide()} fallback={<span class="scope">Campaña de la Renta</span>}>
+            <Tag tone="accent">Campaña{until()}</Tag>
+          </Show>
+        }
       >
         <Show
           when={props.status()}

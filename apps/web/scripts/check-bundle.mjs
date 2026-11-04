@@ -39,8 +39,12 @@ const dist = join(webRoot, "dist");
  * coordination): back to the ~10 % margin the line above promises, over the 357,0 KB measured with
  * that branch (`develop` 355,9 KB). The branch adds 1,1 KB: fiscal 0,6, sale-tax 0,2, the forms
  * 0,2, the messages 0,1, all lazy.
+ *
+ * 395_000 → 425_000 (2026-11-04, the redesign and the new projection, decided by the coordination):
+ * `develop` measured 383,8 KB of 385,7 KB with the screens and the projection still to come. It
+ * stays a guard against an accidental jump, not a limit on what the screens need.
  */
-const TOTAL_BUDGET_GZIP_BYTES = 395_000;
+const TOTAL_BUDGET_GZIP_BYTES = 425_000;
 
 /**
  * Absolute URLs allowed in the output, one by one and with their reason. None

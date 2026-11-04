@@ -15,8 +15,19 @@
   align-items: center;
   display: grid;
   gap: var(--space-3);
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto 3.25rem;
   min-height: var(--tap);
+}
+
+/* One line: the amount and its share are what the row is read for, and `title` keeps the name. */
+.task-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-share {
+  text-align: right;
 }
 
 .task + .task {

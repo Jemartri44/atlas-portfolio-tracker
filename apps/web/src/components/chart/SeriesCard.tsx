@@ -7,7 +7,9 @@
 
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
 import { formatDate } from "../../format/date.js";
+import { GRID, mediaQuery } from "../../shell/media.js";
 import { gapRule, type MissingNote } from "../../view-models/series.js";
+import { Disclosure } from "../Disclosure.jsx";
 import { Section } from "../Section.jsx";
 import { Chart, type ChartSeries } from "./Chart.jsx";
 import { ChartLegend } from "./ChartLegend.jsx";
@@ -56,12 +58,16 @@ export interface SeriesCardProps {
   stackedLabel?: string | undefined;
   /** What the values are: euros, or a percentage (axis and table without a mask). */
   unit?: "eur" | "pct" | undefined;
+  /** On a phone: a shorter title, and the fold that keeps the legend, the notes and the table. */
+  phone?: { title: string; fold: string } | undefined;
   /** Past half a range of holes, jump to the last stretch with data and say so. */
   jump?: boolean | undefined;
 }
 
 export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
   const [range, setRange] = createSignal<RangeKey>("TODO");
+  const wide = mediaQuery(GRID);
+  const folded = (): boolean => !wide() && props.phone !== undefined;
 
   const ranged = createMemo<number[]>(() => rangeIndices(props.x, range(), props.asOf));
   const hole = createMemo(() =>
@@ -120,11 +126,36 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
     <RangeButtons options={options()} current={range()} onChange={setRange} />
   );
 
+  const legend = (): JSX.Element => <ChartLegend series={series()} />;
+  const notes = (): JSX.Element => (
+    <>
+      <Show when={typeof hole() === "object"}>
+        <p class="gap-note">
+          Los huecos ocupan más de la mitad de este rango: se enseña el último tramo con datos, del{" "}
+          {formatDate(props.rows[indices()[0] as number]?.date ?? "")} al{" "}
+          {formatDate(props.rows[indices().at(-1) as number]?.date ?? "")}.
+        </p>
+      </Show>
+      {props.foot}
+      <ChartTable
+        headers={props.labels}
+        rows={indices().map((at) => ({
+          date: props.rows[at]?.date ?? "",
+          values: props.rows[at]?.values ?? [],
+        }))}
+        caption={props.title}
+        unit={props.unit}
+        missing={props.missing}
+        banded={gapsOf(shown(), series()).length > 0}
+      />
+    </>
+  );
+
   // With a lead figure between the title and the chart, the range goes with the
   // chart it changes, not above the figure it does not.
   return (
     <Section
-      title={props.title}
+      title={folded() ? (props.phone?.title ?? props.title) : props.title}
       class={`is-chart ${props.class ?? ""}`.trimEnd()}
       aside={props.lead === undefined ? buttons() : undefined}
     >
@@ -161,29 +192,16 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
               </For>
             )}
           </Show>
-          <figcaption>
-            <ChartLegend series={series()} />
-          </figcaption>
+          <Show when={!folded()}>
+            <figcaption>{legend()}</figcaption>
+          </Show>
         </figure>
-        <Show when={typeof hole() === "object"}>
-          <p class="gap-note">
-            Los huecos ocupan más de la mitad de este rango: se enseña el último tramo con datos,
-            del {formatDate(props.rows[indices()[0] as number]?.date ?? "")} al{" "}
-            {formatDate(props.rows[indices().at(-1) as number]?.date ?? "")}.
-          </p>
+        <Show when={folded()} fallback={notes()}>
+          <Disclosure label={props.phone?.fold}>
+            {legend()}
+            {notes()}
+          </Disclosure>
         </Show>
-        {props.foot}
-        <ChartTable
-          headers={props.labels}
-          rows={indices().map((at) => ({
-            date: props.rows[at]?.date ?? "",
-            values: props.rows[at]?.values ?? [],
-          }))}
-          caption={props.title}
-          unit={props.unit}
-          missing={props.missing}
-          banded={gapsOf(shown(), series()).length > 0}
-        />
       </Show>
       {props.tail}
     </Section>
