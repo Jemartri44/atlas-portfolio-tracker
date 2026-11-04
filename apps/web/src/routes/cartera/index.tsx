@@ -17,9 +17,8 @@
 import { assets, coreWeights, ledgerEntries, settingsAt } from "@atlas/domain";
 import { classReturns, coreXirr, spanishCpiPct } from "@atlas/domain/charts";
 import { contributionPlan, costSummary, platformPlan } from "@atlas/domain/portfolio";
-import { A } from "@solidjs/router";
 import { createMemo, createSignal, type JSX, Show } from "solid-js";
-import { AsOfPicker, EmptyState, useAsOf } from "../../components/index.js";
+import { AsOfPicker, useAsOf } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
 import { attempt } from "../../ledger/query.js";
 import { store } from "../../ledger/state.js";
@@ -42,6 +41,7 @@ import { RequireLedger } from "../guard.jsx";
 import { ContributionCard } from "./ContributionCard.jsx";
 import { CostsCard } from "./CostsCard.jsx";
 import { ExposureBlock } from "./ExposureBlock.jsx";
+import { NothingBought } from "./NothingBought.jsx";
 import { ProjectionCard } from "./ProjectionCard.jsx";
 import { usePlanRepurchase } from "./plan-repurchase.jsx";
 import { RebalanceCard } from "./RebalanceCard.jsx";
@@ -199,20 +199,7 @@ export default function CarteraRoute(): JSX.Element {
             />
 
             <QuotesNotice prices={prices} />
-            <Show
-              when={!empty()}
-              fallback={
-                <EmptyState
-                  glyph="portfolio"
-                  what="Todavía no hay nada en la cartera"
-                  why="Cuando registres tu primera compra verás aquí los pesos, la aportación del mes y la rentabilidad."
-                >
-                  <A href="/" role="button">
-                    Ir a los primeros pasos
-                  </A>
-                </EmptyState>
-              }
-            >
+            <Show when={!empty()} fallback={<NothingBought />}>
               <div class="grid">
                 <Show
                   when={wide()}
