@@ -32,6 +32,7 @@ export {
   type ContributionRow,
   contributionPlan,
 } from "./projections/contribution.js";
+export { bucketShareOf, coreMonthlyOf } from "./projections/core-monthly.js";
 export {
   type BucketCostRow,
   type CoreCostRow,
@@ -66,7 +67,7 @@ export {
   parseExposureText,
   validateExposure,
 } from "./projections/exposure-file.js";
-export { MAX_HORIZON_YEARS } from "./projections/growth.js";
+export { MAX_HORIZON_YEARS } from "./projections/horizon.js";
 export {
   DEFAULT_INDEX_TABLES,
   INDEX_PROFILES,
@@ -90,15 +91,6 @@ export {
   platformPlan,
   type UnassignedOrder,
 } from "./projections/platform-plan.js";
-export {
-  type Projection,
-  type ProjectionAssumptions,
-  type ProjectionGap,
-  type ProjectionPoint,
-  projection,
-  type Scenario,
-  type ScenarioResult,
-} from "./projections/projection.js";
 export {
   PROJECTION_CASES,
   type ProjectionCase,
@@ -126,10 +118,3 @@ export {
   type ResolvedAssumptions,
   validateProjection,
 } from "./projections/projection-file.js";
-export {
-  DEFAULT_COST_YEARS,
-  type TotalCost,
-  type TotalCostAssumptions,
-  type TotalCostGap,
-  totalCost,
-} from "./projections/total-cost.js";

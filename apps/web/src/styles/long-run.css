@@ -1,5 +1,5 @@
 /*
- * The assumptions of the projection and of the total cost: a column on the phone, as many as fit
+ * The assumptions of the projection: a column on the phone, as many as fit
  * on a wide screen (a field is never stretched across the whole card).
  */
 .fieldset.assumptions {
@@ -9,4 +9,44 @@
 
 .fieldset.assumptions > * {
   grid-column: auto;
+}
+
+.projection-classes {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr));
+}
+
+.projection-classes > .scenario {
+  margin: 0;
+}
+
+.projection-boxes {
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-5);
+  margin: var(--space-3) 0;
+  padding: 0;
+}
+
+.projection-costs caption {
+  text-align: left;
+}
+
+.projection-costs :is(th, td):not(:first-child) {
+  text-align: right;
+}
+
+.projection-costs th {
+  white-space: normal;
+}
+
+.rebalance-bucket {
+  margin-block: var(--space-3);
+}
+
+.card-note + .fieldset.assumptions,
+.fieldset.assumptions + .button-row {
+  margin-top: var(--space-3);
 }

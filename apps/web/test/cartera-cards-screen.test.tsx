@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 //
 // The questions about the core that the Cartera answers from the domain: what it has earned, what
-// it costs over the years and what it projects under the owner's scenarios. Through the real handler
+// it costs and what it projects in three cases. Through the real handler
 // with the doubles of S3, SSM and Google, on the golden ledger.
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -77,131 +77,120 @@ describe("the return of the core", () => {
   });
 });
 
-describe("the total cost", () => {
-  it("shows no figure without a gross return, and the costs once it is typed", async () => {
-    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
-    await until(() => host.querySelector("#tc-gross") !== null, "the card");
-    expect(text(host.querySelector(".total-cost"))).toContain(
-      "Escribe la rentabilidad bruta anual",
-    );
-    type(host, "tc-gross", "5");
-    const costText = () => text(host.querySelector(".total-cost"));
-    await until(() => costText().includes("Coste total en el horizonte"), "the cost");
-    expect(costText()).toContain("Se lleva el TER");
-    type(host, "tc-gross", "5,x");
-    await until(() => !costText().includes("Coste total en el horizonte"), "the cost to go");
-  });
-  it("masks the amounts with the privacy mode on", async () => {
-    setPrivacy(true);
-    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
-    await until(() => host.querySelector("#tc-gross") !== null, "the card");
-    type(host, "tc-gross", "5");
-    await until(
-      () => text(host.querySelector(".total-cost")).includes("Coste total en el horizonte"),
-      "the cost",
-    );
-    const card = text(host.querySelector(".total-cost"));
-    expect(card).not.toMatch(/\d,\d{2}\s*€/);
-    setPrivacy(false);
-  });
-});
-
 describe("the projection", () => {
-  it("asks for the returns instead of inventing them, then projects once they are typed", async () => {
+  const card = (host: Element) => text(host.querySelector(".projection-card"));
+  const open = async () => {
     const host = await show(`/cartera?fecha=${DATE}`, Cartera);
     await until(() => host.querySelector("#pj-years") !== null, "the card");
-    expect(text(host.querySelector(".projection-card"))).toContain("Falta la rentabilidad de");
-    for (const input of host.querySelectorAll("input[id^='pj-0-']")) {
-      type(host, input.id, "5");
+    return host;
+  };
+  const box = (host: Element, label: string) =>
+    [...host.querySelectorAll(".projection-boxes label")]
+      .find((row) => row.textContent?.includes(label))
+      ?.querySelector("input") as HTMLInputElement;
+
+  it("starts with the published figures, three cases and everything discounted", async () => {
+    const host = await open();
+    await until(() => card(host).includes("Normal, dentro de 20 años"), "the cases");
+    expect((host.querySelector("#pj-equity-return") as HTMLInputElement).value).toBe("7");
+    expect((host.querySelector("#pj-crypto-volatility") as HTMLInputElement).value).toBe("55");
+    expect(card(host)).toContain("J.P. Morgan 2027 · datos a 30/09/2026 · en euros");
+    expect(card(host)).toContain("bitcoin, en dólares");
+    expect(card(host)).toContain("Pesimista, dentro de 20 años");
+    expect(card(host)).toContain("Qué se llevan los costes");
+    expect(card(host)).toContain("inflación");
+    expect(card(host)).not.toContain("Objetivo");
+  });
+
+  it("says what is discounted as each box is unmarked, and nothing at the end", async () => {
+    const host = await open();
+    await until(() => card(host).includes("Normal, dentro de 20 años"), "the cases");
+    for (const label of ["Inflación", "Impuestos al vender", "Comisiones y TER"]) {
+      box(host, label).click();
     }
-    await until(
-      () => text(host.querySelector(".projection-card")).includes("Dentro de 20 años"),
-      "the projection",
-    );
-    const card = text(host.querySelector(".projection-card"));
-    // Year by year, in the table that goes with the chart.
-    expect(card).toContain("Ver los datos de la gráfica");
-    expect(card).toContain("31/12/2028");
-    expect(card).not.toContain("Falta la rentabilidad de");
+    await until(() => card(host).includes("Sin descontar nada."), "the sentence");
   });
 
   it("keeps the very input (and its focus) while the owner types in it", async () => {
-    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
-    await until(() => host.querySelector("#pj-years") !== null, "the card");
-    for (const id of ["pj-name-0", "pj-0-equity"]) {
-      const input = host.querySelector(`#${id}`) as HTMLInputElement;
-      input.focus();
-      type(host, id, "5");
-      // negative wait: nothing to poll (the input must survive the re-render)
-      await settle(3);
-      expect(host.querySelector(`#${id}`)).toBe(input);
-      expect(document.activeElement).toBe(input);
-    }
+    const host = await open();
+    const input = host.querySelector("#pj-equity-return") as HTMLInputElement;
+    input.focus();
+    type(host, "pj-equity-return", "6");
+    // negative wait: nothing to poll (the input must survive the re-render)
+    await settle(3);
+    expect(host.querySelector("#pj-equity-return")).toBe(input);
+    expect(document.activeElement).toBe(input);
   });
 
-  it("keeps up to three scenarios and says what a wrong figure is", async () => {
-    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
-    await until(() => host.querySelector("#pj-years") !== null, "the card");
-    await press(host, "Añadir un escenario");
-    await press(host, "Añadir un escenario");
-    expect(host.querySelectorAll("[id^='pj-name-']").length).toBe(3);
-    expect(
-      [...host.querySelectorAll("button")].some((b) => b.textContent === "Añadir un escenario"),
-    ).toBe(false);
+  it("says what a wrong figure is", async () => {
+    const host = await open();
     type(host, "pj-years", "veinte");
-    await until(
-      () => /entero|número|válid/i.test(text(host.querySelector(".projection-card"))),
-      "the error",
-    );
+    await until(() => /entero|número|válid/i.test(card(host)), "the error");
   });
-  it("masks the amounts with the privacy mode on and leaves the blended return in sight", async () => {
+
+  const KEY = "settings/projection.json";
+  const ready = (host: Element) =>
+    until(
+      () => (host.querySelector("#pj-gold-return") as HTMLInputElement).value === "4",
+      "what is stored",
+    );
+
+  it("keeps only what was edited, and reads it back when it opens again", async () => {
+    const host = await open();
+    await until(() => card(host).includes("Normal, dentro de 20 años"), "the cases");
+    type(host, "pj-gold-return", "4");
+    await until(() => api.s3.text(KEY) !== undefined, "the write");
+    expect(JSON.parse(api.s3.text(KEY) as string)).toEqual({
+      projection_format: 1,
+      classes: { gold: { return_pct: "4" } },
+    });
+    await ready(await open());
+  });
+
+  it("leaves what is typed as it is once it is saved", async () => {
+    const host = await open();
+    await until(() => card(host).includes("Normal, dentro de 20 años"), "the cases");
+    type(host, "pj-gold-return", "4,50");
+    await until(() => api.s3.text(KEY) !== undefined, "the write");
+    await settle(3);
+    expect((host.querySelector("#pj-gold-return") as HTMLInputElement).value).toBe("4,50");
+  });
+
+  it("goes back to the published figures with Restablecer", async () => {
+    api.s3.seed(KEY, '{"projection_format":1,"classes":{"gold":{"return_pct":"4"}}}\n');
+    const host = await open();
+    await ready(host);
+    await press(host, "Restablecer");
+    await until(() => api.s3.text(KEY) === '{"projection_format":1}\n', "the reset");
+    expect((host.querySelector("#pj-gold-return") as HTMLInputElement).value).toBe("5");
+  });
+
+  it("says a stored object it cannot read, and shows the published figures", async () => {
+    api.s3.seed(KEY, '{"projection_format":9}\n');
+    const host = await open();
+    await until(() => card(host).includes("no se pueden leer"), "the notice");
+    expect((host.querySelector("#pj-gold-return") as HTMLInputElement).value).toBe("5");
+  });
+
+  it("re-reads and says so when another device wrote first, keeping what is there", async () => {
+    api.s3.seed(KEY, '{"projection_format":1,"years":30}\n');
+    const host = await open();
+    await until(
+      () => (host.querySelector("#pj-years") as HTMLInputElement).value === "30",
+      "what is stored",
+    );
+    api.s3.seed(KEY, '{"projection_format":1,"years":40}\n');
+    type(host, "pj-gold-return", "4");
+    await until(() => card(host).includes("desde otro dispositivo"), "the conflict");
+    expect(api.s3.text(KEY)).toBe('{"projection_format":1,"years":40}\n');
+    expect((host.querySelector("#pj-years") as HTMLInputElement).value).toBe("40");
+  });
+
+  it("masks the amounts with the privacy mode on", async () => {
     setPrivacy(true);
-    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
-    await until(() => host.querySelector("#pj-years") !== null, "the card");
-    for (const input of host.querySelectorAll("input[id^='pj-0-']")) {
-      type(host, input.id, "5");
-    }
-    type(host, "pj-goal", "300000");
-    await until(
-      () => text(host.querySelector(".projection-card")).includes("Dentro de 20 años"),
-      "the projection",
-    );
-    const card = text(host.querySelector(".projection-card"));
-    expect(card).toContain("Rentabilidad mezclada con tus pesos objetivo");
-    expect(card).not.toMatch(/\d,\d{2}\s*€/);
-    // The goal is an amount too: masked in the result, where the sentence says when it is reached.
-    expect(card).not.toContain("300.000");
-    expect(card).toContain("Objetivo");
+    const host = await open();
+    await until(() => card(host).includes("Normal, dentro de 20 años"), "the cases");
+    expect(card(host)).not.toMatch(/\d,\d{2}\s*€/);
     setPrivacy(false);
-  });
-
-  it("shows the goal as an amount next to when it is reached, with the privacy mode off", async () => {
-    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
-    await until(() => host.querySelector("#pj-years") !== null, "the card");
-    for (const input of host.querySelectorAll("input[id^='pj-0-']")) {
-      type(host, input.id, "5");
-    }
-    type(host, "pj-goal", "300000");
-    await until(
-      () => text(host.querySelector(".projection-card")).includes("300.000,00"),
-      "the goal",
-    );
-  });
-
-  it("says a goal that is not above zero, and removes a scenario", async () => {
-    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
-    await until(() => host.querySelector("#pj-years") !== null, "the card");
-    type(host, "pj-goal", "0");
-    await until(
-      () =>
-        text(host.querySelector(".projection-card")).includes(
-          "El objetivo tiene que ser mayor que cero.",
-        ),
-      "the message of a goal that is not above zero",
-    );
-    await press(host, "Añadir un escenario");
-    expect(host.querySelectorAll("[id^='pj-name-']").length).toBe(2);
-    await press(host, "Quitar este escenario");
-    expect(host.querySelectorAll("[id^='pj-name-']").length).toBe(1);
   });
 });

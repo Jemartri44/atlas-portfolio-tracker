@@ -46,7 +46,6 @@ import { ProjectionCard } from "./ProjectionCard.jsx";
 import { usePlanRepurchase } from "./plan-repurchase.jsx";
 import { RebalanceCard } from "./RebalanceCard.jsx";
 import { ReturnsCard } from "./ReturnsCard.jsx";
-import { TotalCostCard } from "./TotalCostCard.jsx";
 import { WeightsCard } from "./WeightsCard.jsx";
 
 export default function CarteraRoute(): JSX.Element {
@@ -226,8 +225,12 @@ export default function CarteraRoute(): JSX.Element {
                   </div>
                 </Show>
                 <CostsCard view={costs()} />
-                <TotalCostCard summary={summary()} settings={settings()} />
-                <ProjectionCard weights={projection()} settings={settings()} asOf={date()} />
+                <ProjectionCard
+                  weights={projection()}
+                  summary={summary()}
+                  settings={settings()}
+                  asOf={date()}
+                />
               </div>
             </Show>
           </>

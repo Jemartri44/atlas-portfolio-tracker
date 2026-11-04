@@ -92,6 +92,16 @@ Ejemplo: 1.000 € el 31/01, 300 € ingresados el 15/02 y 1.400 € el 28/02 da
 6. El total enseña cuántos activos van por defecto, cuántos con reparto propio y cuántos sin propuesta.
 7. **Cada enero se revisa, junto con el IPC**: las posiciones de los ETF se mueven (los pesos de un índice cambian unos puntos al año). Se vuelve a leer cada fichero, se actualizan `as_of` y `checked` y se comprueba que las sumas cierran.
 
+### Proyección
+
+`projectionCases` (`projections/projection-cases.ts`) es una cuenta directa, sin simulaciones: los mismos datos dan siempre lo mismo. Solo el núcleo; es informativa y ninguna cifra fiscal la lee.
+
+1. **Caso normal.** Cada clase crece a su rentabilidad **compuesta**, la que publican las fuentes: un mes es la raíz duodécima del año, no un doceavo de la tasa. La aportación entra a final de mes.
+2. **Pesimista y optimista en el año t.** `μ ± 1,28·σ/√t`: el margen en el que caería unas 8 de cada 10 veces. Se estrecha como tasa anual y se abre en euros. Todas las clases van mal, o bien, a la vez: es lo más simple y exagera algo la banda. Un año nunca pierde más del 99 %.
+3. **Cripto** usa sus casos malo y bueno publicados (`lowPct`, `highPct`) mientras no se edite su rentabilidad o su volatilidad; al editarlas, usa la fórmula, para que esos campos no queden sin efecto.
+4. **Descuentos, por este orden.** Comisiones: el TER medio del núcleo se resta de la tasa, y lo que no declara TER cuenta como nada, sin heredar la media, y se dice cuánto es; la comisión de cada aportación es un supuesto del dueño, vacía de inicio. Impuestos: la escala del ahorro (`quotaOfBase`, la de la ley o `savings_tax_brackets`) sobre la ganancia de venderlo todo ese año, frente a lo invertido más lo aportado. Esa base es coste histórico y falla en los dos sentidos: las ventas no restan su coste y lo llegado por traspaso no tiene compra. Es un orden de magnitud. Inflación: al final, porque el impuesto cae sobre la ganancia nominal.
+5. **Valores de partida** (`PROJECTION_START`): J.P. Morgan Asset Management, *Long-Term Capital Market Assumptions 2027*, datos a 30/09/2026, horizonte de 10 a 15 años, en euros salvo bitcoin, en dólares. Son estimaciones de una gestora. Solo se guarda lo editado, así que su actualización anual llega a todo lo que el dueño no tocó.
+
 ### Este mes: el plan de la aportación como lista de tareas
 
 `monthPlan` (`projections/month-plan.ts`) dice qué compras del plan del mes ya están registradas. Definición aprobada el 2026-11-03.

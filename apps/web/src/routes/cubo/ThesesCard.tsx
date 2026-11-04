@@ -5,16 +5,17 @@
 // comparison is missing, the cell says **sin dato** and the row says why: a
 // column of dashes is not an explanation.
 
-import { type JSX, Show } from "solid-js";
+import { For, type JSX, Show } from "solid-js";
 import {
   Amount,
   type DataColumn,
   DataTable,
   Disclosure,
   Figure,
+  FoldSection,
   type NoticeItem,
   NoticeList,
-  Section,
+  StatLine,
   Tag,
 } from "../../components/index.js";
 import { countOf } from "../../format/number.js";
@@ -100,6 +101,28 @@ const COLUMNS: readonly DataColumn<ThesisRow>[] = [
 const byState = (rows: readonly ThesisRow[], open: boolean): ThesisRow[] =>
   rows.filter((row) => row.open === open);
 
+/** What the folded card says: how many of each, and that there is something to read inside. */
+const folded = (rows: readonly ThesisRow[], untagged: number, notices: number): string => {
+  const open = byState(rows, true).length;
+  const closed = rows.length - open;
+  const said = [
+    ...(rows.length === 0 ? [] : [countOf(open, "abierta", "abiertas")]),
+    ...(rows.length === 0 ? [] : [countOf(closed, "cerrada", "cerradas")]),
+    ...(untagged === 0 ? [] : [`${untagged} sin tesis`]),
+    ...(notices === 0 ? [] : [countOf(notices, "aviso", "avisos")]),
+  ];
+  return rows.length === 0 && untagged === 0 ? "Todavía ninguna" : said.join(" · ");
+};
+
+/** An open thesis in a line: against the index, in points, or why there is no figure. */
+const Line = (props: { row: ThesisRow }): JSX.Element => (
+  <StatLine label={`${props.row.assetName} · ${props.row.period}`}>
+    <Show when={props.row.vsIndexPp !== undefined} fallback={<span class="nodata">sin dato</span>}>
+      <Figure value={props.row.vsIndexPp} unit="points" />
+    </Show>
+  </StatLine>
+);
+
 export const ThesesCard = (props: {
   view: ThesesView;
   /** What the theses warn of that no row says: no index set, a thesis closed still holding. */
@@ -108,9 +131,9 @@ export const ThesesCard = (props: {
   const open = () => byState(props.view.rows, true);
   const closed = () => byState(props.view.rows, false);
   return (
-    <Section
+    <FoldSection
       title="Tesis frente al índice"
-      class="span-12"
+      summary={folded(props.view.rows, props.view.untagged.length, (props.notices ?? []).length)}
       aside={<span>la vara de medir es el índice, no el cero</span>}
     >
       <Show when={(props.notices ?? []).length > 0}>
@@ -124,29 +147,25 @@ export const ThesesCard = (props: {
           </Show>
         }
       >
-        {/*
-        The open theses in sight, the closed ones folded when there are open
-        ones: they are history, their sum against the index heads the screen,
-        and on a phone they were most of its four screens (third pass).
-      */}
-        <Show
-          when={open().length > 0 && closed().length > 0}
-          fallback={
-            <>
-              <Dumbbells rows={props.view.rows} label="Tesis frente al índice, en puntos" />
-              <DataTable
-                label="Tesis del cubo"
-                columns={COLUMNS}
-                rows={props.view.rows}
-                size="lg"
-                maskedMerge
-              />
-            </>
-          }
-        >
-          <Dumbbells rows={open()} label="Tesis abiertas frente al índice, en puntos" />
-          <DataTable label="Tesis abiertas" columns={COLUMNS} rows={open()} size="lg" maskedMerge />
-          <Disclosure label={countOf(closed().length, "tesis cerrada", "tesis cerradas")}>
+        {/* The open ones in a line; the table and the closed ones, which are history, fold. */}
+        <For each={open()}>{(row) => <Line row={row} />}</For>
+        <Show when={open().length > 0}>
+          <Disclosure label={`${countOf(open().length, "tesis", "tesis")} en tabla`}>
+            <Dumbbells rows={open()} label="Tesis abiertas frente al índice, en puntos" />
+            <DataTable
+              label="Tesis abiertas"
+              columns={COLUMNS}
+              rows={open()}
+              size="lg"
+              maskedMerge
+            />
+          </Disclosure>
+        </Show>
+        <Show when={closed().length > 0}>
+          <Disclosure
+            label={countOf(closed().length, "tesis cerrada", "tesis cerradas")}
+            open={open().length === 0}
+          >
             <Dumbbells rows={closed()} label="Tesis cerradas frente al índice, en puntos" />
             <DataTable
               label="Tesis cerradas"
@@ -168,14 +187,19 @@ export const ThesesCard = (props: {
         </Show>
       </Show>
       <Show when={props.view.untagged.length > 0}>
-        <DataTable
-          label="Operaciones sin tesis"
-          columns={COLUMNS}
-          rows={props.view.untagged}
-          size="lg"
-          maskedMerge
-        />
+        <For each={props.view.untagged}>{(row) => <Line row={row} />}</For>
+        <Disclosure
+          label={`${countOf(props.view.untagged.length, "operación", "operaciones")} sin tesis, en tabla`}
+        >
+          <DataTable
+            label="Operaciones sin tesis"
+            columns={COLUMNS}
+            rows={props.view.untagged}
+            size="lg"
+            maskedMerge
+          />
+        </Disclosure>
       </Show>
-    </Section>
+    </FoldSection>
   );
 };

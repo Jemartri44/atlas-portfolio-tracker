@@ -16,7 +16,7 @@ import {
   Skeleton,
   StatLine,
 } from "../../components/index.js";
-import { createExposure } from "../../exposure/use-exposure.js";
+import { createExposure } from "../../settings-objects/use-settings-object.js";
 import {
   type Dimension,
   type ExposureRowView,
@@ -50,7 +50,7 @@ export const ExposureCard = (props: { assets: readonly Asset[] }): JSX.Element =
   };
   const rows = createMemo(() => {
     const state = ready();
-    return state === undefined ? [] : exposureRows(props.assets, state.exposures, catalogue());
+    return state === undefined ? [] : exposureRows(props.assets, state.value, catalogue());
   });
   const counts = createMemo(() => {
     const result = { owner: 0, default: 0, none: 0 };
@@ -77,7 +77,7 @@ export const ExposureCard = (props: { assets: readonly Asset[] }): JSX.Element =
       return "La exposición todavía no se ha leído.";
     }
     setProblem(undefined);
-    const said = await declared.save(next(state.exposures));
+    const said = await declared.save(next(state.value));
     if (report) {
       setProblem(said);
     }

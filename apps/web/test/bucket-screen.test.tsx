@@ -6,14 +6,24 @@
 // notice of the application and none links to the screen already open; and a
 // bucket where nothing ever happened is one empty state.
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { SeriesCard } from "../src/components/chart/index.js";
+import { folded } from "../src/routes/cubo/BudgetCard.jsx";
 import Cubo from "../src/routes/cubo/index.jsx";
 import { setPrivacy } from "../src/shell/preferences.js";
+import type { ControlsView, GaugesView } from "../src/view-models/bucket/index.js";
 import { openLedger, show, text, withGoldenLedger } from "./helpers/render.jsx";
+import { withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
 
 describe("the bucket", () => {
+  // Back to the viewport of the other tests: what the screen paints reads it.
+  afterEach(() => {
+    withStyles(1024);
+    withoutStyles();
+  });
+
   it("opens with its result against the index in percent, in sight with the privacy mode", async () => {
     // 10/01/2027: every thesis can be compared, 2.000 € put in.
     setPrivacy(true);
@@ -47,24 +57,76 @@ describe("the bucket", () => {
   });
 
   it("keeps the open theses in sight and folds the closed ones, which are history", async () => {
+    withStyles(1280);
     const host = await show("/cubo?fecha=2029-01-15", Cubo);
     const card = [...host.querySelectorAll("section.card")].find(
       (section) => text(section.querySelector("h2")) === "Tesis frente al índice",
     );
-    const fold = card?.querySelector("details") as HTMLDetailsElement | null;
-    expect(fold?.open).toBe(false);
-    expect(text(fold?.querySelector("summary"))).toMatch(/^\d+ tesis cerradas$/);
-    // Every open thesis is outside the fold.
-    const outside = [...(card?.querySelectorAll('[aria-label="Tesis abiertas"] tbody tr') ?? [])];
+    const folds = [...(card?.querySelectorAll("details") ?? [])] as HTMLDetailsElement[];
+    const closed = folds.find((fold) =>
+      /^\d+ tesis cerradas$/.test(text(fold.querySelector("summary"))),
+    );
+    expect(closed?.open).toBe(false);
+    // Every open thesis has its line outside any fold, and no closed one does.
+    const outside = [...(card?.querySelectorAll(".stat-row") ?? [])].filter(
+      (line) => line.closest("details") === null,
+    );
     expect(outside.length).toBeGreaterThan(0);
-    expect(outside.every((row) => text(row).includes("abierta"))).toBe(true);
+    expect(outside.every((line) => text(line).includes("abierta"))).toBe(true);
+  });
+
+  it("says on a phone how many theses wait inside the folded card", async () => {
+    withStyles(400);
+    const host = await show("/cubo?fecha=2029-01-15", Cubo);
+    const fold = [...host.querySelectorAll("section.fold-card")].find(
+      (section) => text(section.querySelector("h2")) === "Tesis frente al índice",
+    );
+    expect(fold?.querySelector("details")?.open).toBe(false);
+    expect(text(fold?.querySelector(".fold-summary"))).toMatch(/^\d+ abiertas? · \d+ cerradas?/);
   });
 
   it("puts the range right over the chart it changes, not over the figure", async () => {
     const host = await show("/cubo?fecha=2029-01-15", Cubo);
     const range = host.querySelector(".card.is-chart fieldset.segmented");
-    expect(range?.closest(".chart-range")).not.toBeNull();
-    expect(range?.closest(".chart-range")?.nextElementSibling?.matches("figure.chart")).toBe(true);
+    const after = range?.closest(".chart-range")?.nextElementSibling;
+    // The chart shares its row with its figures: nothing goes between it and the range.
+    expect(after?.firstElementChild?.matches("figure.chart")).toBe(true);
+  });
+
+  it("keeps the three figures on a computer when there is no chart to put them beside", async () => {
+    withStyles(1280);
+    const host = await show("/", () => (
+      <SeriesCard
+        title="Frente al índice"
+        asOf="2029-01-15"
+        unit="pct"
+        labels={[]}
+        colours={[]}
+        dashes={[]}
+        x={[]}
+        values={[]}
+        rows={[]}
+        empty={<p>Nada que dibujar</p>}
+        side={<p class="beside">Tasa de acierto</p>}
+      />
+    ));
+    expect(text(host.querySelector(".beside"))).toBe("Tasa de acierto");
+  });
+
+  it("marks on a phone the line of a position whose price went stale", async () => {
+    withStyles(400);
+    const host = await show("/cubo?fecha=2029-05-10", Cubo);
+    const line = [...host.querySelectorAll('[aria-label^="Posiciones del cubo, en"] li')].find(
+      (item) => text(item).startsWith("Delta Materials"),
+    );
+    expect(line?.querySelector(".stale-mark")).not.toBeNull();
+  });
+
+  it("counts in the folded budget the notices its line does not already say", () => {
+    const gauges = { contributionPctOfCap: "50", nearLimitPct: "80" } as unknown as GaugesView;
+    const warned = (code: string) => ({ warnings: [{ code }] }) as unknown as ControlsView;
+    expect(folded(warned("bucket_weight_exceeded"), gauges, 1)).toContain("1 aviso");
+    expect(folded(warned("bucket_contribution_near_limit"), gauges, 1)).not.toContain("aviso");
   });
 
   it("says each warning once, where it happens, and never links to itself", async () => {

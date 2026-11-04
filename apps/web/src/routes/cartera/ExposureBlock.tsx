@@ -18,8 +18,8 @@ import {
   Skeleton,
   StatLine,
 } from "../../components/index.js";
-import { createExposure } from "../../exposure/use-exposure.js";
 import type { NameIndex } from "../../format/names.js";
+import { createExposure } from "../../settings-objects/use-settings-object.js";
 import {
   type DimensionView,
   type ExposureBlockView,
@@ -104,7 +104,7 @@ export const ExposureBlock = (props: {
     }
     const computed: Exposure = exposure(
       props.weights,
-      state.exposures,
+      state.value,
       props.catalogue,
       DEFAULT_INDEX_TABLES,
     );

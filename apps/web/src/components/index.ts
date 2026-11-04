@@ -15,7 +15,7 @@ export { Notice, type NoticeItem, NoticeLink, NoticeList, type Severity } from "
 export { type FoldedNotice, NoticeFolds } from "./NoticeFolds.jsx";
 export { Parts } from "./Parts.jsx";
 export { Peek } from "./Peek.jsx";
-export { Price, PriceDetail, type PriceInfo, PriceSource } from "./Price.jsx";
+export { Price, PriceDetail, type PriceInfo, PriceSource, StaleMark } from "./Price.jsx";
 export { Section } from "./Section.jsx";
 export { type BarSegment, type LegendEntry, ShareBar, ShareLegend } from "./ShareBar.jsx";
 export { StandaloneFees, type StandaloneFeesProps } from "./StandaloneFees.jsx";
