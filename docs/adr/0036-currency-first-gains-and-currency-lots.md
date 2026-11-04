@@ -40,4 +40,4 @@ ADR-0013 no cambia.
 
 ## Notas de estado
 
-Aceptada (2026-10-27), por decisión del dueño transmitida por la coordinadora el 27/10/2026 con sus palabras «Sí a todo lo de atlas» (aceptar ADR-0036 con su corrección); el diseño lo aprobó Coordinación el mismo día (`specs/029-fx-currency-first/`). Acotada por la nota del 2026-10-27 al final. Criterio de Atlas (#4).
+Aceptada (2026-10-27), por decisión del dueño transmitida por la coordinadora el 27/10/2026 con sus palabras «Sí a todo lo de atlas» (aceptar ADR-0036 con su corrección); el diseño lo aprobó Coordinación el mismo día (la feature 029 (retirada; en git)). Acotada por la nota del 2026-10-27 al final. Criterio de Atlas (#4).

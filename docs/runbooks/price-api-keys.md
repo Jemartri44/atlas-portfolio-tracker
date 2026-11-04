@@ -8,7 +8,7 @@ Sin clave, Atlas funciona igual con las valoraciones manuales (`atlas add valuat
 
 1. **La clave no se le pasa a nadie.** Ni se pega en el chat, ni se le da a un asistente, ni a la dirección, ni se escribe en un documento o en un mensaje. **El asistente nunca la ve ni le hace falta**: tú la dejas en tu fichero, y la consola la lee de ahí. Ninguna orden de esta guía lleva una clave escrita.
 2. **Nunca en el repositorio.** Una clave que llega a un *commit* hay que darla por perdida y cambiarla.
-3. **Nunca dentro de la carpeta del libro.** Esa carpeta se copia, se exporta y un día se sincronizará; la clave no debe viajar con ella. La consola se niega a trabajar si la carpeta de la clave y la del libro están una dentro de la otra.
+3. **Nunca dentro de la carpeta del libro.** Esa carpeta se copia y se exporta; la clave no debe viajar con ella. La consola se niega a trabajar si la carpeta de la clave y la del libro están una dentro de la otra.
 
 ---
 
