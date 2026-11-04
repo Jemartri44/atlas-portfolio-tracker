@@ -1,7 +1,7 @@
 // `ApiExposureStore` against the real handler with the doubles of S3, SSM and Google. `fetch` is a
 // bridge to `api.call`.
 
-import { ApiExposureStore } from "@atlas/adapters/exposure-http";
+import { ApiExposureStore, ApiProjectionStore } from "@atlas/adapters/settings-http";
 import { exposureOrNone } from "@atlas/domain/portfolio";
 import { RemoteError } from "@atlas/domain/sync";
 import { describe, expect, it } from "vitest";
@@ -24,7 +24,11 @@ const rig = async () => {
     });
     return new Response(result.body, { status: result.statusCode, headers: result.headers });
   }) as unknown as typeof globalThis.fetch;
-  return { sent, store: new ApiExposureStore({ origin: SELF, fetch }) };
+  return {
+    sent,
+    store: new ApiExposureStore({ origin: SELF, fetch }),
+    projection: new ApiProjectionStore({ origin: SELF, fetch }),
+  };
 };
 
 const lastHeaders = (sent: { init: RequestInit }[]): Record<string, string> =>
@@ -77,5 +81,21 @@ describe("ApiExposureStore", () => {
       store.write({ ast_world: { currency: { USD: "60" } } }, undefined),
     ).rejects.toThrow(/not valid: total/);
     expect(sent.length).toBe(before);
+  });
+});
+
+describe("ApiProjectionStore", () => {
+  it("writes and reads its own object, validated before it leaves", async () => {
+    const { projection } = await rig();
+    expect(await projection.read()).toEqual({ kind: "missing" });
+    const { etag } = await projection.write({ years: 30 }, undefined);
+    expect(await projection.read()).toEqual({
+      kind: "found",
+      etag,
+      text: '{"projection_format":1,"years":30}\n',
+    });
+    await expect(projection.write({ years: 0 }, etag)).rejects.toMatchObject({
+      code: "invalid_projection",
+    });
   });
 });

@@ -79,6 +79,11 @@ export class Decimal {
     return new Decimal(this.value.div(other.value));
   }
 
+  /** Square root rounded half-up to 10 decimals, as `div`. Only of a value that is not negative. */
+  sqrt(): Decimal {
+    return new Decimal(this.value.sqrt());
+  }
+
   neg(): Decimal {
     return new Decimal(this.value.neg());
   }

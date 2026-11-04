@@ -41,6 +41,8 @@ export const DUMP_LEDGER = "ledger.jsonl";
 export const DUMP_POSITIONS = "positions.json";
 /** The exposure the owner declares, as it is (`settings/exposure.json`), when there is one. */
 export const DUMP_EXPOSURE = "settings/exposure.json";
+/** What the owner edited of the projection, as it is (`settings/projection.json`), when there is. */
+export const DUMP_PROJECTION = "settings/projection.json";
 
 /**
  * Whether a name of the first level of `prices/` goes into the dump: a plain
