@@ -173,7 +173,10 @@ describe("the fiscal screen", () => {
     await until(() => host.querySelector("#f-fx_rate") !== null, "the exchange rate field");
     type(host, "f-fx_rate", "1,12");
     type(host, "f-fx_rate_date", "2026-01-02");
-    await until(() => buttonOf(host, "Ver el efecto") !== undefined, "the effect button");
+    await until(
+      () => buttonOf(host, "Ver el efecto")?.disabled === false,
+      "the effect button, enabled",
+    );
     await press(host, "Ver el efecto");
     await until(() => text(host).includes("El tipo no es el oficial"));
     const acknowledge = host.querySelector("#confirm-fx-rate") as HTMLInputElement;

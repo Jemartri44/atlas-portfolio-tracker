@@ -48,7 +48,10 @@ const fill = async (host: HTMLElement): Promise<void> => {
   choose(host, "f-account_id", "acc_mi");
   type(host, "f-value_date", "2027-11-02");
   type(host, "f-amount", "100");
-  await until(() => buttonOf(host, "Ver el efecto") !== undefined, "the effect button");
+  await until(
+    () => buttonOf(host, "Ver el efecto")?.disabled === false,
+    "the effect button, enabled",
+  );
   await press(host, "Ver el efecto");
   await until(
     () => buttonOf(host.querySelector("section.effect") ?? host, "Registrar") !== undefined,
@@ -98,7 +101,10 @@ describe("the duplicate question of the registration form", () => {
       type(host, "ca-effective_date", "2028-11-02");
       type(host, "ca-source_document", "https://example.test/nota.pdf");
       type(host, "ca-ratio", "2");
-      await until(() => buttonOf(host, "Ver el efecto") !== undefined, "the effect button");
+      await until(
+        () => buttonOf(host, "Ver el efecto")?.disabled === false,
+        "the effect button, enabled",
+      );
       await press(host, "Ver el efecto");
       await until(
         () => buttonOf(host.querySelector("section.effect") ?? host, "Registrar") !== undefined,

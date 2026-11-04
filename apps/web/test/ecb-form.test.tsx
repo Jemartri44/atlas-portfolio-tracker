@@ -45,7 +45,9 @@ const value = (host: HTMLElement, id: string): string =>
   (host.querySelector(`#${id}`) as HTMLInputElement | null)?.value ?? "";
 
 const hasButton = (host: HTMLElement, label: string): boolean =>
-  [...host.querySelectorAll("button")].some((button) => button.textContent?.trim() === label);
+  [...host.querySelectorAll("button")].some(
+    (button) => button.textContent?.trim() === label && !button.disabled,
+  );
 
 const goldBuy = async (trade: string): Promise<HTMLElement> => {
   const host = await show("/registrar/buy", RegistrarForm, "/registrar/:tipo");
