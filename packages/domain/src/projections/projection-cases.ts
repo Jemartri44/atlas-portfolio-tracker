@@ -150,7 +150,8 @@ const futureValue = (
   const year = Decimal.ONE.add(rate.div(HUNDRED));
   const total = powerOf(year, years);
   const month = twelfthRoot(year);
-  const annuity = rate.isZero()
+  // Not `rate.isZero()`: a rate too small for `div` to keep leaves a month of exactly one.
+  const annuity = month.eq(Decimal.ONE)
     ? TWELVE.mul(Decimal.parse(String(years)))
     : fineDiv(total.sub(Decimal.ONE), month.sub(Decimal.ONE));
   return precise(start.mul(total).add(monthly.mul(annuity)));

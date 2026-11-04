@@ -85,6 +85,14 @@ describe("projectionCases: the three cases", () => {
     expect(cents(result.points[3]?.contributed_eur)).toBe("1360");
   });
 
+  it.each(["0.000000001", "0.000000000001", "-0.000000001"])(
+    "treats a rate of %s, too small to move a month, as zero",
+    (rate) => {
+      const result = run({ years: 1, monthly_eur: "10", classes: equity(rate) });
+      expect(cents(result.points[1]?.normal_eur)).toBe("1120");
+    },
+  );
+
   it("opens the band by 1.28 · volatility / √t, narrower as a rate the longer it runs", () => {
     // At year 4 the margin is 1.28 × 10 / 2 = 6.4: 3.6 % and 16.4 % on a return of 10 %.
     const result = run({ years: 4, classes: equity("10", "10") });
