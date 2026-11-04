@@ -30,6 +30,6 @@ it("shows no proposal for a press that started before the ledger was read again"
   await openLedger(undefined, true);
 
   arrival.release();
-  await vi.waitFor(() => expect(host.querySelector("button:disabled")).toBeNull());
+  await vi.waitFor(() => expect(text(host)).not.toContain("Calculando…"));
   expect(host.querySelector("[aria-label='Desviación de cada activo']")).toBeNull();
 });
