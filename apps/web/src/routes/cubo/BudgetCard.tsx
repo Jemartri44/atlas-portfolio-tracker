@@ -13,15 +13,16 @@
 import { For, type JSX, Show } from "solid-js";
 import {
   Amount,
+  Disclosure,
+  FoldSection,
   Icon,
   type NoticeItem,
   NoticeList,
-  Section,
   StatLine,
   Tag,
   TotalLine,
 } from "../../components/index.js";
-import { pct } from "../../format/number.js";
+import { countOf, pct } from "../../format/number.js";
 import type { ControlsView, GaugesView } from "../../view-models/bucket/index.js";
 import type { NetWorthView } from "../../view-models/index.js";
 import { Meter } from "./Meters.jsx";
@@ -34,14 +35,66 @@ interface BucketLimits {
 
 const UNSET = "Todavía no tiene umbral: fíjalo en Ajustes → Configuración.";
 
-const Rule = (props: { title: string; ask: string; limit: string | undefined }): JSX.Element => (
+const Rule = (props: {
+  title: string;
+  ask: string;
+  limit: string | undefined;
+  /** Why it could not be measured, and what that does not mean. */
+  unavailable: string | undefined;
+  absent: string;
+}): JSX.Element => (
   <>
     <h3 class="block-title">{props.title}</h3>
     <p class="card-note">
       {props.limit === undefined ? UNSET : props.ask.replace("{x}", pct(props.limit))}
     </p>
+    <Show when={props.unavailable}>
+      {(reason) => (
+        <p class="card-note">
+          {reason()}. {props.absent}
+        </p>
+      )}
+    </Show>
   </>
 );
+
+/** A rule in a line: its threshold and its state, with the gauge when it could be measured. */
+const RuleState = (props: {
+  label: string;
+  limit: string | undefined;
+  unavailable: string | undefined;
+  children: JSX.Element;
+}): JSX.Element => (
+  <Show
+    when={props.unavailable === undefined && props.limit !== undefined}
+    fallback={
+      <StatLine
+        label={props.limit === undefined ? props.label : `${props.label} · ${pct(props.limit)}`}
+      >
+        <Tag tone="caution">{props.limit === undefined ? "sin umbral" : "no evaluada"}</Tag>
+      </StatLine>
+    }
+  >
+    {props.children}
+  </Show>
+);
+
+/**
+ * The line of the folded card: how much of the cap, whether it has passed its mark, and how many
+ * other notices wait inside, because the fold never hides that there is one.
+ */
+export const folded = (view: ControlsView, gauges: GaugesView, notices: number): string => {
+  const used = gauges.contributionPctOfCap;
+  const codes = new Set(view.warnings.map((warning) => warning.code));
+  const state = codes.has("bucket_contribution_exceeded")
+    ? " · tope superado"
+    : codes.has("bucket_contribution_near_limit")
+      ? ` · pasa del ${pct(gauges.nearLimitPct)}`
+      : "";
+  const others = notices - (state === "" ? 0 : 1);
+  const more = others > 0 ? ` · ${countOf(others, "aviso", "avisos")}` : "";
+  return `${used === undefined ? "Sin tope fijado" : `${pct(used)} del tope${state}`}${more}`;
+};
 
 export const BudgetCard = (props: {
   view: ControlsView;
@@ -52,7 +105,10 @@ export const BudgetCard = (props: {
   /** What the budget warns of that no line of the card already says: a cap passed. */
   notices: readonly NoticeItem[];
 }): JSX.Element => (
-  <Section title="Presupuesto y control" class="span-5">
+  <FoldSection
+    title="Presupuesto y control"
+    summary={folded(props.view, props.gauges, props.notices.length)}
+  >
     <Show when={props.notices.length > 0}>
       <NoticeList items={props.notices} label="Avisos del presupuesto" />
     </Show>
@@ -80,67 +136,65 @@ export const BudgetCard = (props: {
         missingReason="falta el precio de alguna posición"
       />
     </StatLine>
-
-    <Rule
-      title="Regla de parada"
-      ask="Dejar de aportar al cubo si la pérdida acumulada pasa del {x} de lo aportado."
+    <RuleState
+      label="Regla de parada"
       limit={props.limits.stopLossPct}
-    />
-    <Show
-      when={props.view.lossUnavailable === undefined}
-      fallback={
-        <p class="card-note">
-          <Tag tone="caution">no evaluada</Tag> {props.view.lossUnavailable}. Sin ese dato no hay
-          control de pérdida acumulada; no es que no la haya.
-        </p>
-      }
+      unavailable={props.view.lossUnavailable}
     >
       <Meter gauges={props.gauges} which="result" />
-    </Show>
-
-    <Rule
-      title="Regla de recogida"
-      ask="Pasar el exceso a la cartera principal si el cubo pesa más del {x} de tu patrimonio."
+    </RuleState>
+    <RuleState
+      label="Regla de recogida"
       limit={props.limits.maxWeightPct}
-    />
-    <p class="joined">
-      <Icon name="info" class="icon-sm" />
-      <span>
-        Es la única cifra que suma el cubo y la cartera principal: el peso se mide sobre todo tu
-        patrimonio, y por eso el desglose va al lado.
-      </span>
-    </p>
-    <Show
-      when={props.view.weightUnavailable === undefined}
-      fallback={
-        <p class="card-note">
-          <Tag tone="caution">no evaluada</Tag> {props.view.weightUnavailable}. Sin ese dato no hay
-          control de peso del cubo; no es que esté dentro.
-        </p>
-      }
+      unavailable={props.view.weightUnavailable}
     >
       <Meter gauges={props.gauges} which="weight" />
-    </Show>
+    </RuleState>
 
-    <For each={props.worth.blocks}>
-      {(block) => (
-        <StatLine label={block.label}>
-          <Amount value={block.subtotal} />
-        </StatLine>
-      )}
-    </For>
-    <TotalLine
-      label={
-        <>
-          Patrimonio total
-          <Show when={props.worth.partial}>
-            {" "}
-            <Tag icon="half">parcial</Tag>
-          </Show>
-        </>
-      }
-    >
-      <Amount value={props.worth.total} />
-    </TotalLine>
-  </Section>
+    <Disclosure label="Por qué y las reglas en llano">
+      <Rule
+        title="Regla de parada"
+        ask="Dejar de aportar al cubo si la pérdida acumulada pasa del {x} de lo aportado."
+        limit={props.limits.stopLossPct}
+        unavailable={props.view.lossUnavailable}
+        absent="Sin ese dato no hay control de pérdida acumulada; no es que no la haya."
+      />
+      <Rule
+        title="Regla de recogida"
+        ask="Pasar el exceso a la cartera principal si el cubo pesa más del {x} de tu patrimonio."
+        limit={props.limits.maxWeightPct}
+        unavailable={props.view.weightUnavailable}
+        absent="Sin ese dato no hay control de peso del cubo; no es que esté dentro."
+      />
+    </Disclosure>
+    <Disclosure label="Peso sobre el patrimonio">
+      <p class="joined">
+        <Icon name="info" class="icon-sm" />
+        <span>
+          Es la única cifra que suma el cubo y la cartera principal: el peso se mide sobre todo tu
+          patrimonio, y por eso el desglose va al lado.
+        </span>
+      </p>
+      <For each={props.worth.blocks}>
+        {(block) => (
+          <StatLine label={block.label}>
+            <Amount value={block.subtotal} />
+          </StatLine>
+        )}
+      </For>
+      <TotalLine
+        label={
+          <>
+            Patrimonio total
+            <Show when={props.worth.partial}>
+              {" "}
+              <Tag icon="half">parcial</Tag>
+            </Show>
+          </>
+        }
+      >
+        <Amount value={props.worth.total} />
+      </TotalLine>
+    </Disclosure>
+  </FoldSection>
 );
