@@ -19,7 +19,7 @@
     "build": "tsc -b && npm run build -w @atlas/web && npm run build -w @atlas/api && npm run build -w @atlas/jobs",
     "clean": "rm -rf packages/*/dist packages/*/dist-test packages/*/coverage apps/*/dist apps/*/dist-test apps/*/dist-lambda tests/dist infra/test/dist coverage node_modules/.vite",
     "test": "vitest run --project='!infra'",
-    "test:all": "bash -c 'npm run test & main=$!; npm run test:infra; infra=$?; wait $main; [ $? -eq 0 ] && [ $infra -eq 0 ]'",
+    "test:all": "bash -c 'npm run test & main=$!; trap \"kill $main\" INT TERM; npm run test:infra; infra=$?; wait $main; [ $? -eq 0 ] && [ $infra -eq 0 ]'",
     "test:coverage": "npm run test:coverage:domain && npm run test:coverage:access && npm run test:coverage:api-access && npm run test:others",
     "test:coverage:domain": "ATLAS_COVERAGE=domain vitest run --coverage --project domain",
     "test:coverage:access": "ATLAS_COVERAGE=access vitest run --coverage --project access",
