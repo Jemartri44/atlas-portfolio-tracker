@@ -20,6 +20,7 @@ import { WARNINGS_WEIGHTS } from "./warnings-weights.js";
 
 export { FINDINGS, type FindingEntry } from "./findings.js";
 export { REMOTE_FAILURES } from "./remote-failures.js";
+export { FINDING_TITLES, type Title, titleOf, WARNING_TITLES } from "./titles.js";
 export { type Details, type Entry, render, type Say, type Surface, type Voice } from "./voice.js";
 export { fxMissingReason, windowText, year } from "./words.js";
 

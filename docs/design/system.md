@@ -113,7 +113,7 @@ Rejilla de 4 px: `--space-0` 2 · `-1` 4 · `-2` 8 · `-3` 12 · `-4` 16 · `-5`
 El globo en su cuna: un globo cuyos gajos recuerdan el reparto de la cartera, sostenido por una cuna. Sin degradados ni sombras; todos sus colores son tokens de 3.1 (`palette.test.ts` solo lee `tokens.css`, no mira `public/`).
 
 - **Iconos** (`apps/web/public/`): `icon.svg` (pestaña, trazos más gruesos), `icon-192.png` y `icon-512.png`, y `icon-maskable-512.png` (dibujo dentro de la zona segura del 80 %). Fondo `--c-accent`, globo `--c-surface`, pétalo `--c-chart-gap-edge` claro, iguales en claro y oscuro.
-- **Marca de la barra y de la entrada**: dos `<img alt="">` (`simbolo-claro.svg`, `simbolo-oscuro.svg`) servidos desde `public/`, fuera del JS, de modo que no pesan en el JS. Se alterna por CSS con la regla de `tokens.css` (sistema, salvo tema forzado en Ajustes). Sus cortes llevan el color de la superficie de su modo: solo van sobre ella. El nombre «Atlas» es texto junto a la marca.
+- **Marca de la barra y de la entrada**: dos `<img alt="">` (`simbolo-claro.svg`, `simbolo-oscuro.svg`) servidos desde `public/`, fuera del JS, de modo que no pesan en el JS. Se alterna por CSS con la regla de `tokens.css` (sistema, salvo tema forzado en Ajustes). Sus cortes llevan el color de la superficie de su modo: solo van sobre ella. El nombre «Atlas» es texto junto a la marca, en Fraunces 600.
 - Tamaño: `--icon-lg` en la barra y 2,5 rem en la entrada (`layout.css`).
 - Los ficheros del paquete no se retocan sin una decisión del dueño.
 
@@ -146,7 +146,7 @@ Un `<header>` y dentro **un** `<nav>`, **antes que `<main>` en el DOM**. El orde
 
 ### 4.3 La rejilla
 
-Desde 1024 px, 12 columnas con espacio de 20 y clases `span-N`. Las tarjetas de una misma fila se estiran a la misma altura, y lo que cierra una tarjeta (sus desplegables o el enlace «Ver todos») se ancla abajo. La excepción es una tarjeta cuya vecina es mucho más alta (`.is-natural`, *Pesos* y *Aportación* en la Cartera): conserva su altura, porque estirada dejaba un campo en blanco en mitad de la corta.
+Desde 1024 px, 12 columnas con espacio de 20 y clases `span-N`. **Una columna es un `.stack` dentro de la rejilla**: apila sus tarjetas a su aire, cada una mide lo que contiene y lo que sobre queda al final de la columna, nunca dentro de una tarjeta. Las tarjetas sueltas de una misma fila se estiran a la misma altura, y lo que cierra una tarjeta (sus desplegables o el enlace «Ver todos») se ancla abajo. La excepción es una tarjeta cuya vecina es mucho más alta (`.is-natural`, *Pesos* y *Aportación* en la Cartera): conserva su altura, porque estirada dejaba un campo en blanco en mitad de la corta.
 
 **Lo que se maqueta por el sitio que tiene, no por el ancho de la pantalla.** A 1024 px una tarjeta de 7 columnas mide menos que un móvil apaisado, y una tabla decidida por la ventana se salía de ella. Por eso la tarjeta es un contenedor (`container: card / inline-size`) y la tabla o sus filas, los datos en dos columnas del detalle y la rejilla de *Costes* se deciden con consultas de contenedor. Cada tabla declara cuánto necesita (`DataTable size`: `sm` desde 30 rem, por defecto desde 44 rem, `lg` desde 49 rem), medido sobre su anchura mínima de contenido. En el móvil todo es una columna en el orden del DOM, que es el orden de lectura. **Los formularios nunca pasan de su ancho de lectura** (`--reading-max`), por ancho que sea la pantalla.
 
@@ -184,7 +184,7 @@ Píldora de 24 px, texto a 13 px y un icono de 14 px. Variantes: **neutra** («�
 
 ### 5.6 Aviso: un único componente (`.notice`)
 
-Igual en el Resumen, el Cubo, la Cartera, la Verificación y en cualquier otro sitio. Icono de 20 px con **forma distinta por gravedad**: triángulo (aviso), octógono (crítico) o círculo con «i» (información), **dentro de una placa** de 32 px del color suave de su gravedad (D15). El texto va a tamaño de cuerpo, con la cifra clave de un grupo en seminegrita, y la acción en acento con flecha: debajo del texto en el móvil y a la derecha en escritorio. El aviso entero es el enlace. **Solo el crítico lleva fondo.** En lista se separan con líneas, no con cajas. Se enseñan **4 grupos** y el resto va en «Ver N avisos más». La agrupación y el orden (el riesgo de perder datos, primero) los decide `view-models/attention.ts`. Los precios caducados, los tipos de cambio caducados y las desviaciones van **en un solo aviso cada uno**, con los activos nombrados («3 precios con más de 15 días · A, B y C»). Las compras dentro de la ventana de una misma venta con pérdida van en una frase con cuántas son («… con 10 compras en cartera dentro de la ventana …»), y cada una plegada debajo. **La vista previa de Registrar agrupa sus avisos con el mismo agrupador**, sin enlaces: salir perdería lo escrito. Un aviso que una tarjeta ya dice en su sitio no se repite en una lista: en el Cubo, cada aviso que queda va en la tarjeta de la que trata.
+Igual en el Resumen, el Cubo, la Cartera, la Verificación y en cualquier otro sitio. Icono de 20 px con **forma distinta por gravedad**: triángulo (aviso), octógono (crítico) o círculo con «i» (información), **dentro de una placa** de 32 px del color suave de su gravedad (D15). El texto va a tamaño de cuerpo, con la cifra clave de un grupo en seminegrita, y la acción en acento con flecha: debajo del texto en el móvil y a la derecha en escritorio. Fuera de *Atención*, el aviso entero es el enlace. **Solo el crítico lleva fondo.** En lista se separan con líneas, no con cajas. Se enseñan **4 grupos** y el resto va en «Ver N avisos más». **En *Atención* la lista va por títulos** (`NoticeFolds`, títulos en `packages/domain/src/messages/titles.ts`): cada aviso abre en su sitio, en un bloque propio, lo que ocurre, con lo enumerable uno por línea y el enlace a arreglarlo dentro. La agrupación y el orden (el riesgo de perder datos, primero) los decide `view-models/attention.ts`. Los precios caducados, los tipos de cambio caducados y las desviaciones van **en un solo aviso cada uno**, con los activos nombrados («3 precios con más de 15 días · A, B y C»; en *Atención*, uno por línea). Las compras dentro de la ventana de una misma venta con pérdida van en una frase con cuántas son («… con 10 compras en cartera dentro de la ventana …»), y cada una plegada debajo (en *Atención*, una por línea). **La vista previa de Registrar agrupa sus avisos con el mismo agrupador**, sin enlaces: salir perdería lo escrito. Un aviso que una tarjeta ya dice en su sitio no se repite en una lista: en el Cubo, cada aviso que queda va en la tarjeta de la que trata.
 
 ### 5.7 «No se puede calcular todavía» (`.pending`)
 
@@ -217,6 +217,8 @@ El contorno de un campo tiene **3:1** sobre el papel y sobre la superficie en lo
 ### 5.11 Desplegable (`.disclosure`)
 
 `<details>` nativo. El `<summary>` es una fila de **44 px**, etiqueta a 14 px en seminegrita y chevrón a la derecha que gira al abrirse. Dentro de una tarjeta es su última fila, de borde a borde. Es el mismo en toda la aplicación.
+
+**Lista recortada (`Peek`).** Una lista de cosas iguales enseña sus primeras filas y un botón la abre entera en su sitio; corta por fila entera. Regla: una lista se recorta, una explicación se pliega, y una cifra principal o un aviso nunca quedan escondidos.
 
 **Tarjeta plegada en el móvil (`FoldSection`).** Por debajo del corte de la rejilla, una tarjeta secundaria se pliega entera: el título y una línea de resumen (la cifra principal o el aviso, nunca escondidos) van en el `<summary>`. Desde la rejilla es la `Section` de siempre. Lo usan las tarjetas secundarias de Cartera.
 
@@ -387,6 +389,7 @@ Dirección A «Cuaderno vivo», elegida por el dueño el 2026-11-03 sobre la aud
 | Tarjetas, pie de tarjeta, líneas de panel y de total | `styles/cards.css` |
 | Filas en dos líneas y tablas | `styles/lists.css` |
 | Avisos, pendiente, vacío, esqueleto | `styles/feedback.css` |
+| Atención por títulos y botón de la lista recortada | `styles/notice-folds.css` |
 | Gráficas, leyenda, hueco, reparto | `styles/charts.css` |
 | Resumen: cifra protagonista, proporción y partes | `styles/summary.css` |
 | Barra de proporción y su leyenda (patrimonio, exposición) | `styles/share-bar.css` |
