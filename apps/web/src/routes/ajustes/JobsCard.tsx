@@ -89,7 +89,7 @@ export const JobsCard = (): JSX.Element => {
               >
                 {(shown) => (
                   <ul class="rows">
-                    <For each={shown}>
+                    <For each={shown()}>
                       {(row) => (
                         <li>
                           <div class="row">

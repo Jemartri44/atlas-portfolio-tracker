@@ -86,6 +86,22 @@ describe("«Tareas automáticas» in Ajustes", () => {
     expect(shown).toContain("registro ilegible");
   });
 
+  it("cuts the list at five rows and says beside the title how many are late", async () => {
+    const names = [
+      "ecb_update",
+      "prices_update",
+      "dispatch_findings",
+      "monthly_reminder",
+      "weekly_review",
+      "tax_return_ready",
+    ];
+    answer({ since: late.since, tasks: names.map((task) => ({ task, schedule: "ecb" })) });
+    const host = await show("/ajustes", JobsCard);
+    await until(() => text(host).includes("Ver las 6 tareas"));
+    expect(host.querySelectorAll(".rows > li")).toHaveLength(5);
+    expect(text(host.querySelector(".aside"))).toMatch(/^\d con retraso$/);
+  });
+
   it("says a sleeping environment has no tasks, without a warning", async () => {
     answer({ tasks: [] });
     const host = await show("/ajustes", JobsCard);

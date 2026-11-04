@@ -137,7 +137,7 @@ export const ExposureCard = (props: { assets: readonly Asset[] }): JSX.Element =
                   {(shown) => (
                     <ul class="exposure-rows">
                       {/* By position: a save rebuilds the rows, and the open one stays open. */}
-                      <Index each={shown}>
+                      <Index each={shown()}>
                         {(row) => (
                           <li>
                             <Disclosure label={rowLabel(row())}>
