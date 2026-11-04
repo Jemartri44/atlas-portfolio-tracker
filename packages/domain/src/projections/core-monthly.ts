@@ -21,3 +21,15 @@ export const coreMonthlyOf = (
   const bucketPct = Decimal.parse(settings.bucket_pct_of_contribution ?? "0");
   return { monthly: contribution.mul(HUNDRED.sub(bucketPct)).div(HUNDRED), missing };
 };
+
+/**
+ * What the bucket gets when `coreEur` goes to the core: its share of the whole, so that
+ * `core × pct / (100 − pct)`. Undefined without a share below 100 in the settings.
+ */
+export const bucketShareOf = (coreEur: Decimal, settings: Settings): Decimal | undefined => {
+  if (settings.bucket_pct_of_contribution === undefined) {
+    return undefined;
+  }
+  const pct = Decimal.parse(settings.bucket_pct_of_contribution);
+  return pct.lt(HUNDRED) ? coreEur.mul(pct).div(HUNDRED.sub(pct)) : undefined;
+};
