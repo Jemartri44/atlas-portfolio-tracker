@@ -313,6 +313,13 @@ describe("projectionCases: the figures it cannot give", () => {
     expect(cents(result.points[1]?.normal_eur)).toBe("120");
   });
 
+  it("has only today at a horizon of zero", () => {
+    const result = run({ years: 0 }, { fees: true, taxes: true, inflation: true });
+    expect(result.points).toHaveLength(1);
+    expect(cents(result.ends?.normal.value_eur)).toBe("1000");
+    expect(cents(result.ends?.normal.fees_eur)).toBe("0");
+  });
+
   it("gives the same figures twice", () => {
     expect(run({ years: 5 })).toEqual(run({ years: 5 }));
   });
