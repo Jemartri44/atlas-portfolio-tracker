@@ -7,6 +7,7 @@ import { createResource, For, type JSX, Show } from "solid-js";
 import { FoldSection, Peek, Tag } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { store, today } from "../../ledger/state.js";
+import { GRID, mediaQuery } from "../../shell/media.js";
 
 const TASKS: Readonly<Record<string, string>> = {
   ecb_update: "Histórico del BCE",
@@ -34,6 +35,7 @@ const STATES: Readonly<Record<string, string>> = {
 };
 
 export const JobsCard = (): JSX.Element => {
+  const wide = mediaQuery(GRID);
   const [load] = createResource(
     () => ({ snapshot: store.snapshot() }),
     async ({ snapshot }) => {
@@ -65,7 +67,11 @@ export const JobsCard = (): JSX.Element => {
   };
 
   return (
-    <FoldSection title="Tareas automáticas" summary={state()} aside={<span>{state()}</span>}>
+    <FoldSection
+      title="Tareas automáticas"
+      summary={state()}
+      aside={wide() ? <span>{state()}</span> : undefined}
+    >
       <Show when={load.state === "ready" && load()} fallback={<p class="meta">Leyendo…</p>}>
         {(loaded) => {
           const answer = loaded();
