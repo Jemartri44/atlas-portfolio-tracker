@@ -66,7 +66,7 @@ describe("the coverage of each area is measured on its own", () => {
       "vitest run --project adapters --project cli --project jobs --project web --project repo",
     );
     // The infrastructure suite has a job of its own in the CI, which installs Terraform.
-    expect(scripts["test:infra"]).toBe("vitest run --project infra --pool=forks --maxWorkers=1");
+    expect(scripts["test:infra"]).toBe("vitest run --project infra --pool=forks --maxWorkers=3");
   });
 
   it("keeps 100 % on what computes figures and on the access, 90 % elsewhere in the domain", () => {
