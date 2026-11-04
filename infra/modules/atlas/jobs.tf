@@ -104,7 +104,7 @@ locals {
     ]
 
     backup = [
-      { Sid = "Read", Effect = "Allow", Action = ["s3:GetObject"], Resource = ["${local.data_arn}/ledger/ledger.jsonl", "${local.data_arn}/reference/ecb/manifest.json", "${local.data_arn}/reference/ecb/eurofxref-hist.csv", "${local.data_arn}/reference/ecb/api-exr.csv", "${local.data_arn}/prices/*", "${local.data_arn}/settings/exposure.json"] },
+      { Sid = "Read", Effect = "Allow", Action = ["s3:GetObject"], Resource = ["${local.data_arn}/ledger/ledger.jsonl", "${local.data_arn}/reference/ecb/manifest.json", "${local.data_arn}/reference/ecb/eurofxref-hist.csv", "${local.data_arn}/reference/ecb/api-exr.csv", "${local.data_arn}/prices/*", "${local.data_arn}/settings/exposure.json", "${local.data_arn}/settings/projection.json"] },
       { Sid = "ReadWrite", Effect = "Allow", Action = ["s3:GetObject", "s3:PutObject"], Resource = ["${local.data_arn}/backups/*", "${local.data_arn}/jobs/backup/*"] },
       # A PutObject that carries a lock needs it; nothing here bypasses or shortens one.
       { Sid = "LockTheCopies", Effect = "Allow", Action = ["s3:PutObjectRetention"], Resource = ["${local.data_arn}/backups/*"] },

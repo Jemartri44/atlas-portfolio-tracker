@@ -952,6 +952,13 @@
           "contract": "EXP-1"
         },
         {
+          "sid": "Projection",
+          "effect": "Allow",
+          "actions": ["s3:GetObject", "s3:PutObject"],
+          "resources": ["arn:aws:s3:::atlas-{env}-data-{suffix}/settings/projection.json"],
+          "contract": "PRJ-1"
+        },
+        {
           "sid": "JobRecords",
           "effect": "Allow",
           "actions": ["s3:GetObject"],
@@ -1260,9 +1267,10 @@
             "arn:aws:s3:::atlas-{env}-data-{suffix}/reference/ecb/eurofxref-hist.csv",
             "arn:aws:s3:::atlas-{env}-data-{suffix}/reference/ecb/api-exr.csv",
             "arn:aws:s3:::atlas-{env}-data-{suffix}/prices/*",
-            "arn:aws:s3:::atlas-{env}-data-{suffix}/settings/exposure.json"
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/settings/exposure.json",
+            "arn:aws:s3:::atlas-{env}-data-{suffix}/settings/projection.json"
           ],
-          "contract": "C16-n4; EXP-1"
+          "contract": "C16-n4; EXP-1; PRJ-1"
         },
         {
           "sid": "ReadWrite",
