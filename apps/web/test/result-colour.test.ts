@@ -76,12 +76,12 @@ const RESULTS: Record<string, { count: number; what: string }> = {
     what: "the realised and the latent result of the bucket",
   },
   "routes/cubo/PositionsCard.tsx": {
-    count: 4,
-    what: "the latent gain of a position, amount and %, and the % that stands for it",
+    count: 5,
+    what: "the latent gain of a position, amount and %, the % that stands for it, and the % of its line on a phone",
   },
   "routes/cubo/StatsCard.tsx": {
-    count: 6,
-    what: "the result against the index and the averages of won and lost theses",
+    count: 7,
+    what: "the result against the index, also in its line on a phone, and the averages of won and lost theses",
   },
   "routes/cubo/ThesesCard.tsx": {
     count: 4,

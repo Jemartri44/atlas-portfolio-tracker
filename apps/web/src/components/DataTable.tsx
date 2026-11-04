@@ -49,6 +49,7 @@ interface DataTableProps<R> {
    * A block under the row, for what belongs to it and does not fit in a cell:
    * the thesis of a position. On the table it goes in a row of its own.
    */
+  /** A line under the row; a row with nothing to add returns `undefined` and gets none. */
   detail?: (row: R) => JSX.Element;
   /**
    * With the privacy mode on, the columns marked `amount` fuse into one that keeps the header of
@@ -110,8 +111,8 @@ const RowBody = <R,>(props: {
         </For>
       </span>
     </Show>
-    <Show when={props.detail !== undefined}>
-      <span class="row-extra">{(props.detail as (row: R) => JSX.Element)(props.row)}</span>
+    <Show when={props.detail?.(props.row)}>
+      {(extra) => <span class="row-extra">{extra()}</span>}
     </Show>
   </>
 );
@@ -222,12 +223,12 @@ export const DataTable = <R,>(props: DataTableProps<R>): JSX.Element => {
                     )}
                   </For>
                 </tr>
-                <Show when={props.detail !== undefined}>
-                  <tr class="extra-row">
-                    <td colSpan={wide().length}>
-                      {(props.detail as (row: R) => JSX.Element)(row)}
-                    </td>
-                  </tr>
+                <Show when={props.detail?.(row)}>
+                  {(extra) => (
+                    <tr class="extra-row">
+                      <td colSpan={wide().length}>{extra()}</td>
+                    </tr>
+                  )}
                 </Show>
               </>
             )}

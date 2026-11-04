@@ -107,7 +107,7 @@ const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
  * eyes every time the position is looked at.
  */
 const ThesisNote = (props: { row: BucketPositionRow }): JSX.Element => (
-  <Show when={props.row.thesisId !== undefined}>
+  <>
     <span class="thesis-line">
       <Tag icon="flask">tesis abierta</Tag>
       <span class="meta">
@@ -124,7 +124,7 @@ const ThesisNote = (props: { row: BucketPositionRow }): JSX.Element => (
         <strong>Me equivoco si:</strong> {props.row.invalidation}
       </span>
     </Show>
-  </Show>
+  </>
 );
 
 /** A position in a line, on a phone: what it is worth and how it goes. The rest folds. */
@@ -156,7 +156,7 @@ export const PositionsCard = (props: { view: BucketPositionsView }): JSX.Element
       columns={COLUMNS}
       rows={props.view.rows}
       maskedMerge
-      detail={(row) => <ThesisNote row={row} />}
+      detail={(row) => (row.thesisId === undefined ? undefined : <ThesisNote row={row} />)}
     />
   );
   return (
@@ -178,7 +178,7 @@ export const PositionsCard = (props: { view: BucketPositionsView }): JSX.Element
         <TotalLine
           label={
             <>
-              Total del cubo
+              {wide() ? "Total del cubo" : "Total"}
               <Show when={props.view.partial}>
                 {" "}
                 <Tag icon="half" title={`Faltan: ${props.view.missing.join(", ")}`}>
@@ -189,9 +189,11 @@ export const PositionsCard = (props: { view: BucketPositionsView }): JSX.Element
           }
         >
           <Amount value={props.view.totalValue} missingReason="ninguna posición tiene precio" />
-          <span class="meta">
-            coste <Amount value={props.view.totalCost} />
-          </span>
+          <Show when={wide()}>
+            <span class="meta">
+              coste <Amount value={props.view.totalCost} />
+            </span>
+          </Show>
         </TotalLine>
         <Show when={props.view.partial}>
           <Show
@@ -203,8 +205,7 @@ export const PositionsCard = (props: { view: BucketPositionsView }): JSX.Element
             }
           >
             <Pending action={{ label: "Registrar valoraciones", to: "/registrar/valuation" }}>
-              {pricesOf(props.view.missing)}: el total solo cubre lo que sí tiene precio, y los
-              pesos dentro del cubo no se calculan sobre un total parcial.
+              {pricesOf(props.view.missing)}: el total solo cubre lo que sí tiene precio.
             </Pending>
           </Show>
         </Show>
