@@ -91,7 +91,7 @@ const Split = (props: { view: ContributionView; repurchase?: Repurchase }): JSX.
         <div class="kpi">
           <dt>
             {wide() ? "Al cubo" : "Cubo"}
-            <Show when={wide() && props.view.bucketPct}>
+            <Show when={props.view.bucketPct}>
               {" "}
               <Figure value={props.view.bucketPct} unit="percent" decimals="auto" />
             </Show>
@@ -103,7 +103,7 @@ const Split = (props: { view: ContributionView; repurchase?: Repurchase }): JSX.
         <div class="kpi">
           <dt>
             {wide() ? "A la cartera" : "Cartera"}
-            <Show when={wide() && props.view.corePct}>
+            <Show when={props.view.corePct}>
               {" "}
               <Figure value={props.view.corePct} unit="percent" decimals="auto" />
             </Show>
