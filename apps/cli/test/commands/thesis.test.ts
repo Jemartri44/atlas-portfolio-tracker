@@ -49,11 +49,10 @@ const trade = (side: "buy" | "sell", price: string, date: string, thesis?: strin
 ];
 
 describe("atlas thesis", () => {
-  it("rejects a bucket buy without thesis, citing rule 15", async () => {
+  it("records a bucket buy without thesis, with no warning", async () => {
     const h = harness({ events: bucketSeed() });
-    expect(await h.exec(trade("buy", "50", "2027-07-01"))).toBe(1);
-    expect(h.text()).toContain("regla 15");
-    expect(h.text()).toContain("atlas thesis open");
+    expect(await h.exec(trade("buy", "50", "2027-07-01"))).toBe(0);
+    expect(h.text()).not.toContain("tesis");
   });
 
   it("opens, buys and sells with --thesis, closes and shows the derived metrics", async () => {
@@ -96,13 +95,13 @@ describe("atlas thesis", () => {
     expect((events[events.length - 4] as Record<string, unknown>).expected_horizon_days).toBe(90);
   });
 
-  it("warns on a sale without thesis and on closing with a live position", async () => {
+  it("accepts a sale without thesis silently and warns on closing with a live position", async () => {
     const h = harness({ events: bucketSeed() });
     expect(await h.exec(OPEN)).toBe(0);
     expect(await h.exec(trade("buy", "50", "2027-07-01", "th_spec_1"))).toBe(0);
     h.reset();
     expect(await h.exec(trade("sell", "60", "2027-09-01"))).toBe(0);
-    expect(h.text()).toContain("sell_without_thesis");
+    expect(h.text()).not.toContain("thesis");
     expect(await h.exec(trade("buy", "50", "2027-09-02", "th_spec_1"))).toBe(0);
     h.reset();
     expect(await h.exec(["thesis", "close", "th_spec_1", "--notes", "early", "--yes"])).toBe(0);

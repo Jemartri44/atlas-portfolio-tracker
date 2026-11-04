@@ -102,15 +102,16 @@ const byState = (rows: readonly ThesisRow[], open: boolean): ThesisRow[] =>
   rows.filter((row) => row.open === open);
 
 /** What the folded card says: how many of each, and that there is something to read inside. */
-const folded = (rows: readonly ThesisRow[], notices: number): string => {
+const folded = (rows: readonly ThesisRow[], untagged: number, notices: number): string => {
   const open = byState(rows, true).length;
   const closed = rows.length - open;
   const said = [
-    countOf(open, "abierta", "abiertas"),
-    countOf(closed, "cerrada", "cerradas"),
+    ...(rows.length === 0 ? [] : [countOf(open, "abierta", "abiertas")]),
+    ...(rows.length === 0 ? [] : [countOf(closed, "cerrada", "cerradas")]),
+    ...(untagged === 0 ? [] : [`${untagged} sin tesis`]),
     ...(notices === 0 ? [] : [countOf(notices, "aviso", "avisos")]),
   ];
-  return rows.length === 0 ? "Todavía ninguna" : said.join(" · ");
+  return rows.length === 0 && untagged === 0 ? "Todavía ninguna" : said.join(" · ");
 };
 
 /** An open thesis in a line: against the index, in points, or why there is no figure. */
@@ -132,7 +133,7 @@ export const ThesesCard = (props: {
   return (
     <FoldSection
       title="Tesis frente al índice"
-      summary={folded(props.view.rows, (props.notices ?? []).length)}
+      summary={folded(props.view.rows, props.view.untagged.length, (props.notices ?? []).length)}
       aside={<span>la vara de medir es el índice, no el cero</span>}
     >
       <Show when={(props.notices ?? []).length > 0}>
@@ -140,7 +141,11 @@ export const ThesesCard = (props: {
       </Show>
       <Show
         when={props.view.rows.length > 0}
-        fallback={<p class="meta">Todavía no hay ninguna tesis.</p>}
+        fallback={
+          <Show when={props.view.untagged.length === 0}>
+            <p class="meta">Todavía no hay ninguna tesis.</p>
+          </Show>
+        }
       >
         {/* The open ones in a line; the table and the closed ones, which are history, fold. */}
         <For each={open()}>{(row) => <Line row={row} />}</For>
@@ -180,6 +185,20 @@ export const ThesesCard = (props: {
             con el índice. El motivo está en la propia fila: nunca se estima.
           </p>
         </Show>
+      </Show>
+      <Show when={props.view.untagged.length > 0}>
+        <For each={props.view.untagged}>{(row) => <Line row={row} />}</For>
+        <Disclosure
+          label={`${countOf(props.view.untagged.length, "operación", "operaciones")} sin tesis, en tabla`}
+        >
+          <DataTable
+            label="Operaciones sin tesis"
+            columns={COLUMNS}
+            rows={props.view.untagged}
+            size="lg"
+            maskedMerge
+          />
+        </Disclosure>
       </Show>
     </FoldSection>
   );

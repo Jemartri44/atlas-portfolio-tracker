@@ -286,7 +286,8 @@ export const bucketStats = (
   external?: ExternalPrices,
 ): BucketReport => {
   const accounts = bucketAccountIds(state);
-  const theses = bucketTheses(state, date, settings, external).rows;
+  const view = bucketTheses(state, date, settings, external);
+  const theses = view.rows;
   const gains = state.gains.filter((gain) => accounts.has(gain.account_id));
   const lots = lotIndexOf(state);
   const warnings: Warning[] = [];
@@ -328,7 +329,9 @@ export const bucketStats = (
     );
   }
 
-  const withIndex = theses.filter((thesis) => thesis.result_vs_index_eur !== undefined);
+  // Rule 16 covers all the money of the bucket, thesis or not; the statistics above do not.
+  const compared = [...theses, ...view.untagged];
+  const withIndex = compared.filter((entry) => entry.result_vs_index_eur !== undefined);
   const stats: BucketStats = {
     date,
     closed_theses: closed.length,
@@ -355,11 +358,11 @@ export const bucketStats = (
       ? {}
       : {
           vs_index_total_eur: withIndex.reduce(
-            (sum, thesis) => sum.add(thesis.result_vs_index_eur as Money),
+            (sum, entry) => sum.add(entry.result_vs_index_eur as Money),
             Money.zero(EUR),
           ),
         }),
-    vs_index_missing: theses.length - withIndex.length,
+    vs_index_missing: compared.length - withIndex.length,
     warnings,
   };
 

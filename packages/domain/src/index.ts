@@ -48,6 +48,7 @@ export type {
   BenchmarkGap,
   BucketThesesView,
   BucketThesisView,
+  UntaggedView,
 } from "./projections/bucket-theses.js";
 export * from "./projections/cash.js";
 export { accounts, assets } from "./projections/catalogue.js";

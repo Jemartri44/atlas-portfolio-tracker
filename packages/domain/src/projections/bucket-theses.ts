@@ -8,7 +8,7 @@ import type { CivilDate } from "../dates/civil-date.js";
 import type { Decimal } from "../money/decimal.js";
 import { EUR, Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
-import type { AssetId } from "../schema/events.js";
+import type { AccountId, AssetId } from "../schema/events.js";
 import type { Settings } from "../settings/settings.js";
 import { lotIndexOf, openUnitCostOf, rootEventOf, warn } from "./bucket.js";
 import { type ExternalPrices, positionValueOf, priceAt } from "./prices.js";
@@ -22,7 +22,8 @@ export interface BenchmarkGap {
   date?: CivilDate;
 }
 
-export interface BucketThesisView extends ThesisView {
+/** Rule 16 for one thing measured: a thesis, or the operations no thesis covers. */
+export interface IndexComparison {
   /** Latent gain of the live position of the pair (account, asset); zero when there is none. */
   unrealized_eur?: Money;
   benchmark_asset_id?: AssetId;
@@ -31,6 +32,39 @@ export interface BucketThesisView extends ThesisView {
   /** `(result + latent) − (equivalent − invested)`. Absent when anything is missing. */
   result_vs_index_eur?: Money;
   missing_benchmark: BenchmarkGap[];
+}
+
+export interface BucketThesisView extends ThesisView, IndexComparison {}
+
+/**
+ * What a bucket (account, asset) pair bought and sold with no thesis (the
+ * thesis is optional). Measured against the index like a thesis, so the main
+ * metric of the bucket exists without any; it is **not** a thesis and stays out
+ * of every thesis statistic (closed, hit rate, averages).
+ */
+export interface UntaggedView extends IndexComparison {
+  account_id: AccountId;
+  asset_id: AssetId;
+  /** Closed when nothing of its own is held any more and it sold something. */
+  status: "open" | "closed";
+  buys: ThesisLeg[];
+  sells: ThesisLeg[];
+  invested_eur: Money;
+  fees_eur: Money;
+  result_eur: Money;
+}
+
+/** What the comparison with the index needs of a thesis or of an untagged pair. */
+interface Measured {
+  asset_id: AssetId;
+  status: "open" | "closed";
+  closed_at?: CivilDate;
+  buys: ThesisLeg[];
+  sells: ThesisLeg[];
+  invested_eur: Money;
+  result_eur: Money;
+  /** Where a pair with no thesis stopped holding anything; a thesis ends on its closing or last sale. */
+  ended_at?: CivilDate;
 }
 
 /** The greatest fiscal date among the legs, or nothing when there are none. */
@@ -60,7 +94,7 @@ const lastFiscalDateOf = (legs: readonly ThesisLeg[]): CivilDate | undefined => 
  */
 const benchmarkEquivalentOf = (
   state: LedgerState,
-  thesis: ThesisView,
+  thesis: Measured,
   benchmarkId: AssetId,
   date: CivilDate,
   settings: Settings,
@@ -76,7 +110,7 @@ const benchmarkEquivalentOf = (
   // its asset was swapped — ends on the day it was closed.
   const end =
     thesis.status === "closed"
-      ? (lastFiscalDateOf(thesis.sells) ?? (thesis.closed_at as CivilDate))
+      ? (thesis.ended_at ?? lastFiscalDateOf(thesis.sells) ?? (thesis.closed_at as CivilDate))
       : date;
   const endPrice = priceAt(state, benchmarkId, end, settings, external);
   if (endPrice?.unit_value_eur === undefined) {
@@ -114,7 +148,7 @@ const benchmarkEquivalentOf = (
  */
 const ownQuantityOf = (
   state: LedgerState,
-  thesis: ThesisView,
+  thesis: Measured,
   lots: Map<string, FiscalLot>,
 ): Quantity => {
   const own = new Set(thesis.buys.map((leg) => leg.event_id));
@@ -136,7 +170,7 @@ const ownQuantityOf = (
  */
 const latentOf = (
   state: LedgerState,
-  thesis: ThesisView,
+  thesis: Measured,
   date: CivilDate,
   settings: Settings,
   gaps: BenchmarkGap[],
@@ -159,6 +193,8 @@ const latentOf = (
 
 export interface BucketThesesView {
   rows: BucketThesisView[];
+  /** The part of the bucket no thesis covers, by (account, asset); empty when every operation has one. */
+  untagged: UntaggedView[];
   /** What keeps the comparison with the index from existing, said once per cause. */
   warnings: Warning[];
 }
@@ -173,7 +209,7 @@ export interface BucketThesesView {
  * the benchmark: the first means nothing was ever put in, and the second is
  * already the `partial_bucket_total` of its own asset.
  */
-const benchmarkWarningsOf = (rows: readonly BucketThesisView[]): Warning[] => {
+const benchmarkWarningsOf = (rows: readonly IndexComparison[]): Warning[] => {
   const warnings: Warning[] = [];
   const said = new Set<string>();
   const once = (
@@ -225,10 +261,89 @@ const benchmarkWarningsOf = (rows: readonly BucketThesisView[]): Warning[] => {
 };
 
 /**
- * The theses with their result against the index. It **wraps** `theses()`
- * instead of extending it: pass B of the projection uses `theses.ts`, and the
- * path that creates lots and gains must never learn what a price is
- * (constitution II, enforced by the architecture test).
+ * The last day something of this pair's own was taken out of its lots, whoever
+ * sold it: a pair with no thesis has nobody to close it, so what it holds says
+ * when it ended. Absent when nothing was bought here.
+ */
+const endedAtOf = (
+  state: LedgerState,
+  legs: { buys: ThesisLeg[]; sells: ThesisLeg[]; asset_id: AssetId },
+  lots: Map<string, FiscalLot>,
+): { ended_at: CivilDate } => {
+  const own = new Set(legs.buys.map((leg) => leg.event_id));
+  const days: string[] = [...legs.buys, ...legs.sells].map((leg) => leg.fiscal_date);
+  for (const lot of lots.values()) {
+    if (lot.asset_id === legs.asset_id && own.has(rootEventOf(lots, lot))) {
+      // Every consumption is an operation the projection applied: it has its date.
+      for (const consumption of lot.consumptions) {
+        days.push((state.eventFacts.get(consumption.event_id) as { date: CivilDate }).date);
+      }
+    }
+  }
+  return { ended_at: days.sort().at(-1) as CivilDate };
+};
+
+/** The comparison with the index (rule 16) of one thing measured. */
+const compareWithIndex = (
+  state: LedgerState,
+  measured: Measured,
+  date: CivilDate,
+  settings: Settings,
+  lots: Map<string, FiscalLot>,
+  external?: ExternalPrices,
+  /** Pairs with no thesis only: what a thesis sold of another's lots stays "no data", as it always was. */
+  soldOnly = false,
+): IndexComparison => {
+  const benchmarkId = settings.bucket_benchmark_asset_id;
+  const gaps: BenchmarkGap[] = [];
+  const latent = latentOf(state, measured, date, settings, gaps, lots, external);
+  let equivalent: Money | undefined;
+  if (benchmarkId === undefined) {
+    gaps.push({ reason: "no_benchmark" });
+  } else if (!state.assets.has(benchmarkId)) {
+    gaps.push({ reason: "unknown_asset", asset_id: benchmarkId });
+  } else if (soldOnly && measured.buys.length === 0 && measured.sells.length > 0) {
+    // What was sold here was bought under another thesis, or under none, which
+    // carries the money put in: this one brings its realised gain and nothing
+    // to compare it with.
+    equivalent = Money.zero(EUR);
+  } else if (measured.buys.length === 0) {
+    // Nothing was ever put in: the index would have made nothing out of
+    // nothing, and that is "no data", not zero.
+    gaps.push({ reason: "no_linked_buys" });
+  } else {
+    equivalent = benchmarkEquivalentOf(
+      state,
+      measured,
+      benchmarkId,
+      date,
+      settings,
+      gaps,
+      external,
+    );
+  }
+  const comparable = equivalent !== undefined && latent !== undefined;
+  return {
+    ...(latent === undefined ? {} : { unrealized_eur: latent }),
+    ...(benchmarkId === undefined ? {} : { benchmark_asset_id: benchmarkId }),
+    ...(equivalent === undefined ? {} : { benchmark_equivalent_eur: equivalent }),
+    ...(comparable
+      ? {
+          result_vs_index_eur: measured.result_eur
+            .add(latent as Money)
+            .sub((equivalent as Money).sub(measured.invested_eur)),
+        }
+      : {}),
+    missing_benchmark: gaps,
+  };
+};
+
+/**
+ * The theses with their result against the index, and the pairs bought with no
+ * thesis. It **wraps** `theses()` instead of extending it: pass B of the
+ * projection uses `theses.ts`, and the path that creates lots and gains must
+ * never learn what a price is (constitution II, enforced by the architecture
+ * test).
  */
 export const bucketTheses = (
   state: LedgerState,
@@ -236,46 +351,24 @@ export const bucketTheses = (
   settings: Settings,
   external?: ExternalPrices,
 ): BucketThesesView => {
-  const benchmarkId = settings.bucket_benchmark_asset_id;
   const lots = lotIndexOf(state);
-  const rows = theses(state, date).map((thesis) => {
-    const gaps: BenchmarkGap[] = [];
-    const latent = latentOf(state, thesis, date, settings, gaps, lots, external);
-    let equivalent: Money | undefined;
-    if (benchmarkId === undefined) {
-      gaps.push({ reason: "no_benchmark" });
-    } else if (!state.assets.has(benchmarkId)) {
-      gaps.push({ reason: "unknown_asset", asset_id: benchmarkId });
-    } else if (thesis.buys.length === 0) {
-      // Nothing was ever put in: the index would have made nothing out of
-      // nothing, and that is "no data", not zero.
-      gaps.push({ reason: "no_linked_buys" });
-    } else {
-      equivalent = benchmarkEquivalentOf(
-        state,
-        thesis,
-        benchmarkId,
-        date,
-        settings,
-        gaps,
-        external,
-      );
-    }
-    const comparable = equivalent !== undefined && latent !== undefined;
+  const rows = theses(state, date).map((thesis) => ({
+    ...thesis,
+    ...compareWithIndex(state, thesis, date, settings, lots, external),
+  }));
+  const untagged = [...state.unlinked.values()].map((legs): UntaggedView => {
+    const held = ownQuantityOf(state, { ...legs, status: "open" }, lots).isPositive();
+    const closed = !held;
+    const measured: Measured = {
+      ...legs,
+      status: closed ? "closed" : "open",
+      ...(closed ? endedAtOf(state, legs, lots) : {}),
+    };
     return {
-      ...thesis,
-      ...(latent === undefined ? {} : { unrealized_eur: latent }),
-      ...(benchmarkId === undefined ? {} : { benchmark_asset_id: benchmarkId }),
-      ...(equivalent === undefined ? {} : { benchmark_equivalent_eur: equivalent }),
-      ...(comparable
-        ? {
-            result_vs_index_eur: thesis.result_eur
-              .add(latent as Money)
-              .sub((equivalent as Money).sub(thesis.invested_eur)),
-          }
-        : {}),
-      missing_benchmark: gaps,
+      ...legs,
+      status: measured.status,
+      ...compareWithIndex(state, measured, date, settings, lots, external, true),
     };
   });
-  return { rows, warnings: benchmarkWarningsOf(rows) };
+  return { rows, untagged, warnings: benchmarkWarningsOf([...rows, ...untagged]) };
 };

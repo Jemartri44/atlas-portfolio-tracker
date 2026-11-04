@@ -137,7 +137,7 @@ export const openTransferOptions = (state: LedgerState, at: CivilDate): Option[]
 };
 
 /**
- * Open theses of that (account, asset). A bucket purchase demands one (rule 15),
+ * Open theses of that (account, asset). A bucket purchase may link one (rule 15, optional),
  * and the form that creates one lives in the web too.
  */
 export const openThesisOptions = (
@@ -228,10 +228,6 @@ export const optionsFor = (
       return [];
   }
 };
-
-/** Whether the chosen account belongs to the bucket: a purchase there needs a thesis. */
-export const isBucketAccount = (state: LedgerState, accountId: string | undefined): boolean =>
-  accountId !== undefined && state.accounts.get(accountId)?.book === "bucket";
 
 /** Currency of an asset or an account, to prefill the field (the domain still validates). */
 export const derivedCurrency = (

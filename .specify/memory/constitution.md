@@ -1,5 +1,6 @@
 <!--
 Sync Impact Report
+- Version change: 2.1.1 → 2.2.0 (2026-11-04): III (bucket), the rule "no purchase in the bucket without a thesis" becomes "the thesis is optional; if used, it is created first and validated", and its Razón stops presenting the thesis as impossible to skip; MINOR, a rule materially relaxed by the owner's decision of 2026-11-04 («no quiero que sea obligatorio, quiero que sea opcional. No me puedes forzar a eso»), which replaces rule 15 of the plan in docs/business-rules.md.
 - Version change: 2.1.0 → 2.1.1 (2026-11-03): Restricciones técnicas (Seguridad) drops the console's device tokens, retired by ADR-0037 (PATCH, the reverse of 1.6.0 → 1.6.1).
 - Version change: 2.0.0 → 2.1.0 (2026-11-03): VII, domain coverage 100% only in money/projections/tax/informative/dates and ~90% elsewhere; MINOR, a guideline materially narrowed. Previous report (1.6.2 → 2.0.0) follows.
 - Version change: 1.6.2 → 2.0.0
@@ -54,9 +55,9 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
   1. La **salida fiscal** y los umbrales informativos (Modelos 720/721) agregan los dos libros **por contribuyente**, siempre etiquetados como total fiscal, nunca como métrica de cartera.
   2. El **patrimonio total** y el **peso del cubo sobre él** (regla 18, regla de recogida) suman los dos libros como **control de presupuesto**, siempre desglosados y sin alimentar ningún peso objetivo.
   Ninguna otra vista, métrica o cálculo los mezcla.
-- No se puede registrar una compra en el cubo sin una tesis (`Thesis`) creada antes.
+- La tesis (`Thesis`) de una compra en el cubo es opcional; si se usa, se crea antes y se valida.
 
-*Razón:* las reglas de conducta del plan de inversión solo sirven si el sistema las hace imposibles de saltar.
+*Razón:* las reglas de conducta del plan de inversión solo sirven si el sistema las hace cumplir; la tesis es una ayuda que decide el dueño, no una condición para registrar lo que ya ha hecho en el bróker.
 
 ### IV. Nada codificado que deba ser configurable
 
@@ -124,4 +125,4 @@ Documentos de referencia: `docs/specification.md` (especificación de producto),
 - Versionado semántico: MAJOR para eliminar o redefinir principios, MINOR para añadir principios o secciones o ampliar materialmente una guía, PATCH para aclaraciones y redacción.
 - Toda revisión de spec, plan o PR DEBE comprobar el cumplimiento de los principios I–VII. Cualquier complejidad que los contradiga debe justificarse por escrito o rechazarse.
 
-**Version**: 2.1.1 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-11-03
+**Version**: 2.2.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-11-04

@@ -302,7 +302,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         label: "Tesis",
         kind: "select",
         options: "openTheses",
-        hint: "Obligatoria en el cubo: se abre antes de comprar.",
+        hint: "Opcional: la tesis del cubo a la que pertenece la compra.",
       },
     ],
     omitted: [],
@@ -370,7 +370,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
         label: "Tesis",
         kind: "select",
         options: "openTheses",
-        hint: "Obligatoria en el cubo, para lo que recibes.",
+        hint: "Opcional: la tesis del cubo de lo que recibes.",
       },
       { name: "broker_ref", label: "Referencia del bróker", kind: "text" },
       { name: "source", label: "Origen del dato", kind: "text", initial: "manual", required: true },
@@ -815,7 +815,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
     slug: "tesis",
     type: "thesis_opened",
     title: "Abrir una tesis",
-    when: "Antes de comprar en el cubo. En el cubo no se compra sin una tesis escrita.",
+    when: "Si quieres escribir lo que esperas de una posición del cubo. Es opcional: se puede comprar sin ella.",
     fields: [
       {
         name: "thesis_id",

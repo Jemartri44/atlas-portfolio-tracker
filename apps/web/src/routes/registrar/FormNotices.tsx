@@ -1,7 +1,5 @@
-// The three things a form may have to say above everything else: the data
-// changed underneath it, the record touched a year already declared, or a
-// purchase of the bucket has no thesis yet (rule 15) — and two small pieces of
-// the form of a correction: its reason and the refusal of its dependants.
+// What a form may have to say above everything else: the data changed
+// underneath it — and two small pieces of the form of a correction: its reason and the refusal of its dependants.
 
 import { A } from "@solidjs/router";
 import type { JSX } from "solid-js";
@@ -14,22 +12,6 @@ export const Reloaded = (): JSX.Element => (
     Otro dispositivo u otra pestaña han registrado algo mientras rellenabas. Se han vuelto a leer
     tus datos y el efecto de abajo es el de ahora: revísalo y confirma otra vez. No se ha pisado
     nada.
-  </Notice>
-);
-
-export const ThesisFirst = (): JSX.Element => (
-  <Notice
-    severity="caution"
-    title="Las compras del cubo exigen una tesis"
-    action={
-      <A href="/registrar/tesis" role="button">
-        Abrir una tesis
-      </A>
-    }
-  >
-    En el cubo la tesis se escribe <strong>antes</strong> de comprar: la hipótesis, el plazo, la
-    condición de invalidación y el tamaño previsto. Si no hay ninguna abierta para esta cuenta y
-    este activo, créala ahora y vuelve.
   </Notice>
 );
 

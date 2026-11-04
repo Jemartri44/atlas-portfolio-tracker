@@ -24,6 +24,7 @@ export {
   type BucketThesesView,
   type BucketThesisView,
   bucketTheses,
+  type UntaggedView,
 } from "./projections/bucket-theses.js";
 export {
   type ContributionInput,

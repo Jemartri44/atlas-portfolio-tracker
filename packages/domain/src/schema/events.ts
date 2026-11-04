@@ -251,7 +251,7 @@ export interface SwapEvent extends Envelope {
   fx_rate: DecimalString;
   fx_rate_date: CivilDate;
   fee: DecimalString;
-  /** Required in a bucket account, for the asset **received**: the position it opens (rule 15). */
+  /** Optional in a bucket account, for the asset **received**: the position it opens (rule 15). */
   thesis_id?: string;
   broker_ref?: string;
   fingerprint: string;

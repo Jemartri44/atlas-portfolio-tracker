@@ -55,7 +55,9 @@ export const bucketIndexSeries = (
     let benchmark = Money.zero(EUR);
     let idle = 0;
     let incomplete = false;
-    for (const thesis of bucketTheses(state, date, settings).rows) {
+    const view = bucketTheses(state, date, settings);
+    // The pairs bought with no thesis are the same money: the comparison covers them.
+    for (const thesis of [...view.rows, ...view.untagged]) {
       if (thesis.buys.length === 0 && thesis.sells.length === 0) {
         idle += 1;
         continue;
