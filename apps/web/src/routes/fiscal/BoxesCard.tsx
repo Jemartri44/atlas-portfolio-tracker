@@ -6,7 +6,7 @@
 // typed into a real return. The figures are still shown, by concept, and the
 // card says plainly that it has no numbers for that year.
 
-import { For, type JSX, Show } from "solid-js";
+import { createSignal, For, type JSX, onMount, Show } from "solid-js";
 import { Amount, Disclosure, FoldSection, Icon, Notice } from "../../components/index.js";
 import { countOf } from "../../format/number.js";
 import type { BoxesView, BoxRowView } from "../../view-models/fiscal/index.js";
@@ -19,6 +19,19 @@ const Value = (props: { row: BoxRowView }): JSX.Element => (
   </Show>
 );
 
+/*
+ * The printing is a state of the screen, not of one element: the card is built
+ * again when the ECB findings arrive, and a phone can still be laying the sheet
+ * out then. The new card is born marked and with its blocks open.
+ */
+const [printing, setPrinting] = createSignal(false);
+/** Positions, among the blocks of the card, of the ones that were closed before printing. */
+let wasClosed: number[] = [];
+
+const blocksOf = (card: Element | null | undefined): HTMLDetailsElement[] => [
+  ...(card?.querySelectorAll("details") ?? []),
+];
+
 /**
  * The package of the year, to keep, attach or type from: the boxes, the lots
  * behind each sale and where each figure comes from, as a CSV file; and the
@@ -26,24 +39,35 @@ const Value = (props: { row: BoxRowView }): JSX.Element => (
  */
 const PackageActions = (props: { onDownload: () => void }): JSX.Element => {
   let row: HTMLDivElement | undefined;
+  onMount(() => {
+    if (printing()) {
+      for (const block of blocksOf(row?.closest(".card"))) {
+        block.open = true;
+      }
+    }
+  });
   const print = (): void => {
-    const card = row?.closest(".card");
-    const blocks = [...(card?.querySelectorAll("details") ?? [])];
-    const closed = blocks.filter((block) => !block.open);
-    for (const block of closed) {
+    const blocks = blocksOf(row?.closest(".card"));
+    if (!printing()) {
+      wasClosed = blocks.flatMap((block, at) => (block.open ? [] : [at]));
+    }
+    for (const block of blocks) {
       block.open = true;
     }
     // The print sheet keeps only the card marked as the one being printed (`styles/layout.css`).
-    card?.classList.add("is-printing");
+    setPrinting(true);
     // On a phone `print()` returns before the sheet is laid out: the page is
     // put back only when the browser says the printing is over.
     window.addEventListener(
       "afterprint",
       () => {
-        card?.classList.remove("is-printing");
-        for (const block of closed) {
-          block.open = false;
+        const blocks = blocksOf(document.querySelector(".is-printing"));
+        for (const at of wasClosed) {
+          if (blocks[at] !== undefined) {
+            blocks[at].open = false;
+          }
         }
+        setPrinting(false);
       },
       { once: true },
     );
@@ -66,7 +90,7 @@ export const BoxesCard = (props: { view: BoxesView; onDownload?: () => void }): 
   <FoldSection
     title="Tu declaración por casillas"
     summary={`${countOf(props.view.blocks.length, "bloque", "bloques")} · mejor en el ordenador`}
-    class="span-12"
+    class={printing() ? "span-12 is-printing" : "span-12"}
     aside={<span class="scope">Ejercicio {props.view.year}</span>}
   >
     <Show when={props.onDownload}>

@@ -7,8 +7,11 @@
 // bucket where nothing ever happened is one empty state.
 
 import { afterEach, describe, expect, it } from "vitest";
+import { SeriesCard } from "../src/components/chart/index.js";
+import { folded } from "../src/routes/cubo/BudgetCard.jsx";
 import Cubo from "../src/routes/cubo/index.jsx";
 import { setPrivacy } from "../src/shell/preferences.js";
+import type { ControlsView, GaugesView } from "../src/view-models/bucket/index.js";
 import { openLedger, show, text, withGoldenLedger } from "./helpers/render.jsx";
 import { withoutStyles, withStyles } from "./helpers/styles.js";
 
@@ -88,6 +91,42 @@ describe("the bucket", () => {
     const after = range?.closest(".chart-range")?.nextElementSibling;
     // The chart shares its row with its figures: nothing goes between it and the range.
     expect(after?.firstElementChild?.matches("figure.chart")).toBe(true);
+  });
+
+  it("keeps the three figures on a computer when there is no chart to put them beside", async () => {
+    withStyles(1280);
+    const host = await show("/", () => (
+      <SeriesCard
+        title="Frente al índice"
+        asOf="2029-01-15"
+        unit="pct"
+        labels={[]}
+        colours={[]}
+        dashes={[]}
+        x={[]}
+        values={[]}
+        rows={[]}
+        empty={<p>Nada que dibujar</p>}
+        side={<p class="beside">Tasa de acierto</p>}
+      />
+    ));
+    expect(text(host.querySelector(".beside"))).toBe("Tasa de acierto");
+  });
+
+  it("marks on a phone the line of a position whose price went stale", async () => {
+    withStyles(400);
+    const host = await show("/cubo?fecha=2029-05-10", Cubo);
+    const line = [...host.querySelectorAll('[aria-label^="Posiciones del cubo, en"] li')].find(
+      (item) => text(item).startsWith("Delta Materials"),
+    );
+    expect(line?.querySelector(".stale-mark")).not.toBeNull();
+  });
+
+  it("counts in the folded budget the notices its line does not already say", () => {
+    const gauges = { contributionPctOfCap: "50", nearLimitPct: "80" } as unknown as GaugesView;
+    const warned = (code: string) => ({ warnings: [{ code }] }) as unknown as ControlsView;
+    expect(folded(warned("bucket_weight_exceeded"), gauges, 1)).toContain("1 aviso");
+    expect(folded(warned("bucket_contribution_near_limit"), gauges, 1)).not.toContain("aviso");
   });
 
   it("says each warning once, where it happens, and never links to itself", async () => {

@@ -22,7 +22,7 @@ import {
   Tag,
   TotalLine,
 } from "../../components/index.js";
-import { pct } from "../../format/number.js";
+import { countOf, pct } from "../../format/number.js";
 import type { ControlsView, GaugesView } from "../../view-models/bucket/index.js";
 import type { NetWorthView } from "../../view-models/index.js";
 import { Meter } from "./Meters.jsx";
@@ -79,8 +79,11 @@ const RuleState = (props: {
   </Show>
 );
 
-/** The line of the folded card: how much of the cap, and whether it has passed its mark. */
-const folded = (view: ControlsView, gauges: GaugesView): string => {
+/**
+ * The line of the folded card: how much of the cap, whether it has passed its mark, and how many
+ * other notices wait inside, because the fold never hides that there is one.
+ */
+export const folded = (view: ControlsView, gauges: GaugesView, notices: number): string => {
   const used = gauges.contributionPctOfCap;
   const codes = new Set(view.warnings.map((warning) => warning.code));
   const state = codes.has("bucket_contribution_exceeded")
@@ -88,7 +91,9 @@ const folded = (view: ControlsView, gauges: GaugesView): string => {
     : codes.has("bucket_contribution_near_limit")
       ? ` · pasa del ${pct(gauges.nearLimitPct)}`
       : "";
-  return used === undefined ? "Sin tope fijado" : `${pct(used)} del tope${state}`;
+  const others = notices - (state === "" ? 0 : 1);
+  const more = others > 0 ? ` · ${countOf(others, "aviso", "avisos")}` : "";
+  return `${used === undefined ? "Sin tope fijado" : `${pct(used)} del tope${state}`}${more}`;
 };
 
 export const BudgetCard = (props: {
@@ -100,7 +105,10 @@ export const BudgetCard = (props: {
   /** What the budget warns of that no line of the card already says: a cap passed. */
   notices: readonly NoticeItem[];
 }): JSX.Element => (
-  <FoldSection title="Presupuesto y control" summary={folded(props.view, props.gauges)}>
+  <FoldSection
+    title="Presupuesto y control"
+    summary={folded(props.view, props.gauges, props.notices.length)}
+  >
     <Show when={props.notices.length > 0}>
       <NoticeList items={props.notices} label="Avisos del presupuesto" />
     </Show>
