@@ -294,6 +294,8 @@ const compareWithIndex = (
   settings: Settings,
   lots: Map<string, FiscalLot>,
   external?: ExternalPrices,
+  /** Pairs with no thesis only: what a thesis sold of another's lots stays "no data", as it always was. */
+  soldOnly = false,
 ): IndexComparison => {
   const benchmarkId = settings.bucket_benchmark_asset_id;
   const gaps: BenchmarkGap[] = [];
@@ -303,7 +305,7 @@ const compareWithIndex = (
     gaps.push({ reason: "no_benchmark" });
   } else if (!state.assets.has(benchmarkId)) {
     gaps.push({ reason: "unknown_asset", asset_id: benchmarkId });
-  } else if (measured.buys.length === 0 && measured.sells.length > 0) {
+  } else if (soldOnly && measured.buys.length === 0 && measured.sells.length > 0) {
     // What was sold here was bought under another thesis, or under none, which
     // carries the money put in: this one brings its realised gain and nothing
     // to compare it with.
@@ -368,7 +370,7 @@ export const bucketTheses = (
     return {
       ...legs,
       status: measured.status,
-      ...compareWithIndex(state, measured, date, settings, lots, external),
+      ...compareWithIndex(state, measured, date, settings, lots, external, true),
     };
   });
   return { rows, untagged, warnings: benchmarkWarningsOf([...rows, ...untagged]) };

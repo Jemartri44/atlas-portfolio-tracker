@@ -177,19 +177,22 @@ describe("a bucket operation with no thesis", () => {
     expect(stats.vs_index_missing).toBe(1);
   });
 
-  it("keeps the gain of a sale with no thesis of a lot bought under one (and the reverse)", () => {
-    // Same trade as with a thesis on both sides: the totals must agree.
+  it("keeps the gain of a sale with no thesis of a lot bought under a thesis", () => {
     const reference = vsIndex(ledger({ thesisBuy: true, thesisSell: true })).stats;
-    for (const steps of [{ thesisBuy: true }, { thesisSell: true }]) {
-      const { view, stats } = vsIndex(ledger(steps));
-      expect(stats.vs_index_missing).toBe(0);
-      expect(stats.vs_index_total_eur).toEqual(reference.vs_index_total_eur);
-      const realised = [...view.rows, ...view.untagged].reduce(
-        (sum, part) => sum + Number(part.result_eur.amount.toString()),
-        0,
-      );
-      expect(realised).toBe(30);
-    }
+    const { view, stats } = vsIndex(ledger({ thesisBuy: true }));
+    expect(stats.vs_index_missing).toBe(0);
+    expect(stats.vs_index_total_eur).toEqual(reference.vs_index_total_eur);
+    const realised = [...view.rows, ...view.untagged].reduce(
+      (sum, part) => sum + Number(part.result_eur.amount.toString()),
+      0,
+    );
+    expect(realised).toBe(30);
+  });
+
+  it("says «no data» for a thesis that sold lots bought with none, as it does for any thesis with no buys", () => {
+    const { stats } = vsIndex(ledger({ thesisSell: true }));
+    expect(stats.vs_index_missing).toBe(1);
+    expect(stats.vs_index_total_eur?.amount.toString()).toBe("-20");
   });
 
   it("closes the pair handed over by a swap with no thesis, so no money counts twice", () => {
