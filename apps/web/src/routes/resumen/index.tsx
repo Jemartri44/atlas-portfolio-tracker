@@ -16,7 +16,6 @@ import {
   hasForeignAccountsAt,
   inRentaSeason,
   integrity,
-  type LedgerEntry,
   ledgerEntries,
   netWorth,
   netWorthSeries,
@@ -47,6 +46,7 @@ import {
 } from "../../view-models/index.js";
 import { lateJobsNotice } from "../../view-models/late-jobs.js";
 import { netWorthPlot, withBookCash, withContributed } from "../../view-models/series.js";
+import { isMovement } from "../../view-models/setup-events.js";
 import { type SummaryCard, summaryOrder } from "../../view-models/summary-order.js";
 import { RequireLedger } from "../guard.jsx";
 import { AllocationCard } from "./AllocationCard.jsx";
@@ -74,17 +74,6 @@ const RECENT = { wide: 5, phone: 3 };
 
 /** Enough points for a curve, few enough that twenty years stay instant. */
 const MAX_POINTS = 120;
-
-/** What sets the ledger up without moving anything: it is not a movement. */
-const SETUP = new Set([
-  "account_created",
-  "account_updated",
-  "asset_created",
-  "asset_updated",
-  "settings_changed",
-]);
-
-const isMovement = (entry: LedgerEntry): boolean => !SETUP.has(entry.event.type);
 
 export default function ResumenRoute(): JSX.Element {
   return (
