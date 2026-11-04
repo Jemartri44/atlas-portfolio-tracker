@@ -237,6 +237,7 @@ describe("going to the fragment", () => {
     const host = await showInShell("/uno#destino", { "/uno": Uno, "/dos": Dos });
     (host.querySelector('a[href="/dos"]') as HTMLElement).click();
     await until(() => host.querySelector("#destino") !== null, "la segunda página");
+    // Negative wait: nothing to poll.
     await settle(300);
     expect(scroll.mock.contexts.filter((element) => (element as Element).id === "destino")).toEqual(
       [],
@@ -264,6 +265,7 @@ describe("going to the fragment", () => {
     await until(() => window.location.pathname === "/otra", "la otra pantalla");
     window.history.back();
     await until(() => host.querySelector("#sincronizacion") !== null, "la vuelta a Ajustes");
+    // Negative wait: nothing to poll.
     await settle(100);
     expect(toSync(scroll)).toBe(1);
   });

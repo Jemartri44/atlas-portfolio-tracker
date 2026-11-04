@@ -132,6 +132,7 @@ describe("the projection", () => {
       const input = host.querySelector(`#${id}`) as HTMLInputElement;
       input.focus();
       type(host, id, "5");
+      // negative wait: nothing to poll (the input must survive the re-render)
       await settle(3);
       expect(host.querySelector(`#${id}`)).toBe(input);
       expect(document.activeElement).toBe(input);
