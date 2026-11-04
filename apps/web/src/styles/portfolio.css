@@ -159,11 +159,6 @@
   font-weight: var(--fw-medium);
 }
 
-/* The share of a part, in front of the amount that may be hidden. */
-.kpi dd .share {
-  display: block;
-}
-
 .kpi dd .kpi-amount {
   color: var(--c-text-2);
   display: block;

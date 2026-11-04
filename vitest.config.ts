@@ -121,6 +121,8 @@ export default defineConfig({
           name: "infra",
           root: "infra/test",
           setupFiles: ["./setup/no-credentials.ts"],
+          // The provider goes into the plugin cache before the workers run in parallel.
+          globalSetup: ["./setup/warm-provider.ts"],
           // Rendering a plan loads the whole AWS provider: tens of seconds each.
           testTimeout: 600_000,
           hookTimeout: 600_000,

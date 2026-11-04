@@ -102,41 +102,47 @@ const Row = (props: { row: PlatformRowView }): JSX.Element => (
   </div>
 );
 
+/** An order with nowhere to go is a warning: it stays in sight when the plan folds. */
+export const UnassignedOrders = (props: { view: PlatformsView | undefined }): JSX.Element => (
+  <For each={props.view?.unassigned ?? []}>
+    {(order) => (
+      <Notice severity="caution" title={`${order.name} no está en ninguna cuenta`}>
+        Hay <Amount value={order.amount} /> para comprarlo y ninguna cuenta activa de la cartera lo
+        tiene. Elige dónde en {order.candidates.join(", ") || "tus cuentas"} y regístralo allí.
+      </Notice>
+    )}
+  </For>
+);
+
 export const PlatformsBlock = (props: { view: PlatformsView }): JSX.Element => (
   <>
     <For each={props.view.rows}>{(row) => <Row row={row} />}</For>
-    <For each={props.view.unassigned}>
-      {(order) => (
-        <Notice severity="caution" title={`${order.name} no está en ninguna cuenta`}>
-          Hay <Amount value={order.amount} /> para comprarlo y ninguna cuenta activa de la cartera
-          lo tiene. Elige dónde en {order.candidates.join(", ") || "tus cuentas"} y regístralo allí.
-        </Notice>
-      )}
-    </For>
+    <UnassignedOrders view={props.view} />
   </>
 );
 
-/** What the monthly contribution adds: how much purchases alone would take, and the plan per platform. */
+/** How much purchases alone would take: arithmetic of today, with its figures. */
+export const PurchasesOnly = (props: { view: ContributionView }): JSX.Element => (
+  <Show when={props.view.purchasesOnly}>
+    {(only) => (
+      <p class="card-note" data-testid="purchases-only">
+        Con este importe quedan activos por debajo de su peso. Solo con aportaciones, llevar todos a
+        su objetivo exigiría <Amount value={only().total} /> en total (
+        <Amount value={only().missing} /> más que este mes), sin que cambien los precios. Es la
+        aritmética de hoy, no una previsión.
+      </p>
+    )}
+  </Show>
+);
+
+/** The plan per platform. */
 export const PlatformSection = (props: { view: ContributionView }): JSX.Element => (
-  <>
-    <Show when={props.view.purchasesOnly}>
-      {(only) => (
-        <p class="card-note" data-testid="purchases-only">
-          Con este importe quedan activos por debajo de su peso. Solo con aportaciones, llevar todos
-          a su objetivo exigiría <Amount value={only().total} /> en total (
-          <Amount value={only().missing} /> más que este mes), sin que cambien los precios. Es la
-          aritmética de hoy, no una previsión.
-        </p>
-      )}
-    </Show>
-    <Show when={props.view.platforms}>
-      {(platforms) => (
-        <>
-          <h3 class="block-title">Por plataforma</h3>
-          <p class="card-note">Las comisiones van aparte del importe del mes.</p>
-          <PlatformsBlock view={platforms()} />
-        </>
-      )}
-    </Show>
-  </>
+  <Show when={props.view.platforms}>
+    {(platforms) => (
+      <>
+        <p class="card-note">Las comisiones van aparte del importe del mes.</p>
+        <For each={platforms().rows}>{(row) => <Row row={row} />}</For>
+      </>
+    )}
+  </Show>
 );

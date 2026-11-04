@@ -7,6 +7,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  renameSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -236,7 +237,10 @@ export const renderPlan = (request: PlanRequest): Plan => {
     throw new Error(`terraform show failed in ${request.root}:\n${shown.stderr}`);
   }
   mkdirSync(cacheDir, { recursive: true });
-  writeFileSync(cached, shown.stdout);
+  // Written aside and renamed: another worker may be reading the same entry.
+  const pending = `${cached}.${process.pid}.tmp`;
+  writeFileSync(pending, shown.stdout);
+  renameSync(pending, cached);
   return JSON.parse(shown.stdout) as Plan;
 };
 

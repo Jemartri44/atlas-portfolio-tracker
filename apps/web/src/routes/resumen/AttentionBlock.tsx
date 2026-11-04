@@ -51,7 +51,7 @@ export const AttentionBlock = (props: {
   };
   const count = (): number => notices().length;
   return (
-    <section class="card span-7 summary-attention" aria-label="Lo que reclama atención">
+    <section class="card summary-attention" aria-label="Lo que reclama atención">
       <div class="card-head">
         <h2>Atención</h2>
         <Show when={count() > 0}>

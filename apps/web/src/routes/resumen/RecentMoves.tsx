@@ -8,7 +8,7 @@ import { byDay, type ListEntry } from "../../view-models/index.js";
 import { DayBlock } from "../movimientos/MovementList.jsx";
 
 export const RecentMoves = (props: { entries: readonly ListEntry[] }): JSX.Element => (
-  <Section title="Últimos movimientos" class="span-7 summary-moves" label="Últimos movimientos">
+  <Section title="Últimos movimientos" class="summary-moves" label="Últimos movimientos">
     <div class="days">
       <For each={byDay(props.entries)}>{(day) => <DayBlock day={day} level={3} />}</For>
     </div>

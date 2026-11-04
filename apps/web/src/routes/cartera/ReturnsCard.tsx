@@ -10,9 +10,10 @@ import {
   Amount,
   type DataColumn,
   DataTable,
+  Disclosure,
   Figure,
+  FoldSection,
   Notice,
-  Section,
   StatLine,
 } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
@@ -96,14 +97,30 @@ const COLUMNS: readonly DataColumn<ClassReturnRowView>[] = [
   },
 ];
 
+/** The line of the folded card: what was earned, or why there is no figure. */
+const Headline = (props: { view: ReturnsView }): JSX.Element => (
+  <Show when={props.view.gain} fallback={`Sin cifra: ${props.view.gap ?? "sin dato"}`}>
+    <Amount value={props.view.gain} signed coloured />
+    <Show when={props.view.gainPct}>
+      {" · "}
+      <Figure value={props.view.gainPct} unit="percent" decimals="auto" signed coloured />
+    </Show>
+    <Show when={props.view.xirrPct}>
+      {" · "}
+      <Figure value={props.view.xirrPct} unit="percent" decimals={1} signed coloured /> al año
+    </Show>
+  </Show>
+);
+
 export const ReturnsCard = (props: {
   view: ReturnsView;
   events: readonly LedgerEvent[];
   to: string;
 }): JSX.Element => (
-  <Section
+  <FoldSection
     title="Rentabilidad"
-    class="span-12 returns-card"
+    class="returns-card"
+    summary={<Headline view={props.view} />}
     aside={
       <Show when={props.view.from}>{(from) => <span>desde el {formatDate(from())}</span>}</Show>
     }
@@ -140,21 +157,33 @@ export const ReturnsCard = (props: {
             <Figure value={props.view.xirrPct} unit="percent" decimals={1} signed coloured />
           </Show>
         </StatLine>
-        <AfterTaxLines events={props.events} to={props.to} />
-        <StatLine label="Rentabilidad anual real, descontando el IPC">
-          <Show when={props.view.real?.xirrPct} fallback={<span class="nodata">sin cifra</span>}>
-            <Figure value={props.view.real?.xirrPct} unit="percent" decimals={1} signed coloured />
-          </Show>
-        </StatLine>
-        <Show when={props.view.real?.gain}>
-          {(gain) => (
-            <StatLine label="Has ganado, descontando el IPC">
-              <Amount value={gain()} signed coloured missingReason="sin dato" />
-            </StatLine>
-          )}
-        </Show>
       </div>
-      <Show when={props.view.real?.note}>{(note) => <p class="card-note">Real: {note()}.</p>}</Show>
+      <Disclosure label="Después de impuestos, real y sus notas">
+        <div class="returns-headline">
+          <AfterTaxLines events={props.events} to={props.to} />
+          <StatLine label="Rentabilidad anual real, descontando el IPC">
+            <Show when={props.view.real?.xirrPct} fallback={<span class="nodata">sin cifra</span>}>
+              <Figure
+                value={props.view.real?.xirrPct}
+                unit="percent"
+                decimals={1}
+                signed
+                coloured
+              />
+            </Show>
+          </StatLine>
+          <Show when={props.view.real?.gain}>
+            {(gain) => (
+              <StatLine label="Has ganado, descontando el IPC">
+                <Amount value={gain()} signed coloured missingReason="sin dato" />
+              </StatLine>
+            )}
+          </Show>
+        </div>
+        <Show when={props.view.real?.note}>
+          {(note) => <p class="card-note">Real: {note()}.</p>}
+        </Show>
+      </Disclosure>
     </Show>
     <Show when={props.view.classes.length > 0}>
       <h3 class="block-title">Por tipo de activo</h3>
@@ -176,5 +205,5 @@ export const ReturnsCard = (props: {
         )}
       </For>
     </Show>
-  </Section>
+  </FoldSection>
 );

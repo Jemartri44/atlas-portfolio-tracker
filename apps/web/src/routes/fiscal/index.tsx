@@ -15,6 +15,7 @@ import { PageHeader } from "../../shell/PageHeader.jsx";
 import { privacy } from "../../shell/preferences.js";
 import { boxesView, informativeView, yearView } from "../../view-models/fiscal/index.js";
 import { repurchaseView } from "../../view-models/fiscal/sale.js";
+import { SETUP_EVENTS } from "../../view-models/setup-events.js";
 import { RequireLedger } from "../guard.jsx";
 import { BaseCard } from "./BaseCard.jsx";
 import { BoxesCard } from "./BoxesCard.jsx";
@@ -32,15 +33,6 @@ import { RepurchaseCard } from "./RepurchaseCard.jsx";
 import { SaleSimulatorCard } from "./SaleSimulatorCard.jsx";
 import { useYear, type YearChoice, YearPicker } from "./YearPicker.jsx";
 import { yearsOf } from "./years.js";
-
-/** What sets a ledger up without moving anything: with only these, the screen is `NothingYet`. */
-const SETUP = new Set([
-  "account_created",
-  "account_updated",
-  "asset_created",
-  "asset_updated",
-  "settings_changed",
-]);
 
 export default function FiscalRoute(): JSX.Element {
   return (
@@ -133,7 +125,7 @@ export default function FiscalRoute(): JSX.Element {
           return computed.ok ? computed.value.filing : undefined;
         };
         /** Nothing has ever been recorded: no purchase, no cash, no return. */
-        const untouched = snapshot.events.every((event) => SETUP.has(event.type));
+        const untouched = snapshot.events.every((event) => SETUP_EVENTS.has(event.type));
         /** The return of the year: the base, the criteria, the losses, the boxes, what was filed. */
         const renta = (): JSX.Element => (
           <Show when={view()}>
