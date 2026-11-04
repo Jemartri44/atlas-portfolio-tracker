@@ -10,7 +10,7 @@ import type { Dirent } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { DomainError } from "@atlas/domain";
-import { EXPOSURE_KEY } from "@atlas/domain/portfolio";
+import { EXPOSURE_KEY, PROJECTION_KEY } from "@atlas/domain/portfolio";
 import type { AdminClients } from "../admin/environment.js";
 import { sha256 } from "../fs.js";
 
@@ -126,7 +126,7 @@ export const copyBucketFolders = async (
   for (const prefix of ["documents/", "imports/"]) {
     keys.push(...(await clients.objects.listAll(prefix)).map((listed) => listed.key));
   }
-  keys.push(EXPOSURE_KEY);
+  keys.push(EXPOSURE_KEY, PROJECTION_KEY);
   for (const key of keys) {
     // The marker of a folder made in the console of S3: nothing to copy.
     if (key.endsWith("/")) {

@@ -43,6 +43,9 @@ export const ROUTES: readonly RouteSpec[] = [
   // The exposure the owner declares per asset (`docs/api.md` §6.2).
   { method: "GET", path: "/api/exposure", policy: "session", writes: false },
   { method: "PUT", path: "/api/exposure", policy: "session", writes: true },
+  // The assumptions of the projection the owner edited (`docs/api.md` §6.2).
+  { method: "GET", path: "/api/projection", policy: "session", writes: false },
+  { method: "PUT", path: "/api/projection", policy: "session", writes: true },
   // The last run of each scheduled task (`docs/api.md` §6.3).
   { method: "GET", path: "/api/jobs/status", policy: "session", writes: false },
 ];

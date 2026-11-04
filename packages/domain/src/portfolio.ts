@@ -99,6 +99,33 @@ export {
   type ScenarioResult,
 } from "./projections/projection.js";
 export {
+  PROJECTION_CASES,
+  type ProjectionCase,
+  type ProjectionCaseEnd,
+  type ProjectionCases,
+  type ProjectionCasesGap,
+  type ProjectionCasesPoint,
+  type ProjectionDiscounts,
+  projectionCases,
+} from "./projections/projection-cases.js";
+export {
+  type ClassEdit,
+  type ClassStart,
+  DEFAULT_PROJECTION_YEARS,
+  MAX_PROJECTION_BYTES,
+  PROJECTION_FORMAT,
+  PROJECTION_KEY,
+  PROJECTION_START,
+  type ProjectionEdits,
+  type ProjectionFileReason,
+  parseProjectionText,
+  projectionAssumptions,
+  projectionOrNone,
+  projectionText,
+  type ResolvedAssumptions,
+  validateProjection,
+} from "./projections/projection-file.js";
+export {
   DEFAULT_COST_YEARS,
   type TotalCost,
   type TotalCostAssumptions,
