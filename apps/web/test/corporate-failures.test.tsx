@@ -37,14 +37,27 @@ const registerSplit = async (): Promise<HTMLElement> => {
   type(host, "ca-effective_date", "2028-11-02");
   type(host, "ca-source_document", "https://example.test/nota.pdf");
   type(host, "ca-ratio", "2");
-  await settle(30);
+  await until(
+    () =>
+      [...host.querySelectorAll("button")].some(
+        (button) => button.textContent?.trim() === "Ver el efecto" && !button.disabled,
+      ),
+    "the preview button enabled",
+  );
   await press(host, "Ver el efecto");
-  await settle(30);
+  await until(
+    () =>
+      [...host.querySelectorAll("section.effect button")].some(
+        (button) => button.textContent?.trim() === "Registrar",
+      ),
+    "the effect with its «Registrar» button",
+  );
   (
     [...host.querySelectorAll("section.effect button")].find(
       (button) => button.textContent?.trim() === "Registrar",
     ) as HTMLButtonElement
   ).click();
+  // No common observable: each test waits for its own outcome right after.
   await settle(60);
   return host;
 };

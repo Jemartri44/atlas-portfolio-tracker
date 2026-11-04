@@ -44,6 +44,11 @@ afterAll(() => {
 const value = (host: HTMLElement, id: string): string =>
   (host.querySelector(`#${id}`) as HTMLInputElement | null)?.value ?? "";
 
+const hasButton = (host: HTMLElement, label: string): boolean =>
+  [...host.querySelectorAll("button")].some(
+    (button) => button.textContent?.trim() === label && !button.disabled,
+  );
+
 const goldBuy = async (trade: string): Promise<HTMLElement> => {
   const host = await show("/registrar/buy", RegistrarForm, "/registrar/:tipo");
   choose(host, "f-account_id", "acc_ibkr");
@@ -53,7 +58,7 @@ const goldBuy = async (trade: string): Promise<HTMLElement> => {
   type(host, "f-value_date", trade);
   type(host, "f-quantity", "1");
   type(host, "f-unit_price", "100");
-  await settle(20);
+  await until(() => host.querySelector("#f-fx_rate") !== null, "the exchange rate field");
   return host;
 };
 
@@ -75,7 +80,7 @@ describe("the ECB rate in the form", () => {
     const host = await goldBuy("2026-01-02");
     await until(() => value(host, "f-fx_rate") === "1,1169");
     type(host, "f-fx_rate", "1,2");
-    await settle(20);
+    await until(() => hasButton(host, "Ver el efecto"), "the effect button");
     await press(host, "Ver el efecto");
     await until(() => text(host).includes("El tipo no es el oficial"));
     expect(text(host)).toContain("el BCE publicó 1,1169");
@@ -91,7 +96,7 @@ describe("the ECB rate in the form", () => {
     const host = await goldBuy("2026-01-02");
     await until(() => value(host, "f-fx_rate") === "1,1169");
     type(host, "f-fx_rate", "1,11690");
-    await settle(20);
+    await until(() => hasButton(host, "Ver el efecto"), "the effect button");
     await press(host, "Ver el efecto");
     await until(() => host.querySelector("section.effect") !== null);
     expect(text(host)).not.toContain("El tipo no es el oficial");
@@ -131,6 +136,7 @@ describe("the yes to a rate that is not the official one, on a computer", () => 
         ) as HTMLButtonElement | undefined;
       await until(() => recordButton()?.disabled === false, "el sí al tipo");
       // Longer than the delay of the effect that follows the keys: the yes stays.
+      // negative wait: nothing to poll
       await settle(600);
       expect(recordButton()?.disabled).toBe(false);
     } finally {

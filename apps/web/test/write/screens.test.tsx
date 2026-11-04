@@ -16,16 +16,7 @@ import PendingWrite from "../../src/shell/PendingWrite.jsx";
 import { SessionNotice } from "../../src/shell/SessionNotice.jsx";
 import { goldenLines, goldenText } from "../helpers/golden.js";
 import { MemoryBlob } from "../helpers/memory-blob.js";
-import {
-  choose,
-  press,
-  settle,
-  show,
-  text,
-  type,
-  until,
-  withGoldenLedger,
-} from "../helpers/render.jsx";
+import { choose, press, show, text, type, until, withGoldenLedger } from "../helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -60,7 +51,15 @@ describe("a form whose write finds the ledger changed (412)", () => {
     choose(host, "f-account_id", "acc_mi");
     type(host, "f-value_date", "2027-11-02");
     type(host, "f-amount", "100");
-    await settle(30);
+    await until(
+      () =>
+        (
+          [...host.querySelectorAll("button")].find(
+            (b) => b.textContent?.trim() === "Ver el efecto",
+          ) as HTMLButtonElement | undefined
+        )?.disabled === false,
+      "the effect button enabled",
+    );
     await press(host, "Ver el efecto");
     // Another device records something while this form is open.
     await recordEvent(deps(blob), {
@@ -179,7 +178,7 @@ describe("the notice of a session about to end", () => {
       expect(text(host)).not.toContain("caduca");
       now += 6 * 60_000;
       vi.advanceTimersByTime(30_000);
-      await settle(10);
+      await until(() => text(host).includes("Quedan 14 minutos"), "the minutes read again");
       expect(text(host)).toContain("Quedan 14 minutos");
       expect(text(host)).not.toContain("se pierde");
     } finally {

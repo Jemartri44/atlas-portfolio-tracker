@@ -35,7 +35,15 @@ describe("the swap form", () => {
     type(host, "f-market_value_out", "1000");
     type(host, "f-quantity_in", "12");
     type(host, "f-market_value_in", "1010");
-    await settle(50);
+    await until(
+      () =>
+        (
+          [...host.querySelectorAll("button")].find(
+            (b) => b.textContent?.trim() === "Ver el efecto",
+          ) as HTMLButtonElement | undefined
+        )?.disabled === false,
+      "the effect button enabled",
+    );
     await press(host, "Ver el efecto");
     await until(() => host.querySelector("section.effect") !== null);
     expect(text(host.querySelector("section.effect"))).toContain("Ganancia");

@@ -13,7 +13,7 @@ import { externalOf, forgetPrices, loadWebQuotes } from "../src/prices/quotes.js
 import Ajustes from "../src/routes/ajustes/index.jsx";
 import Cartera from "../src/routes/cartera/index.jsx";
 import { serveReference } from "./helpers/cloud-reference.js";
-import { settle, show, text, until, withGoldenLedger } from "./helpers/render.jsx";
+import { show, text, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -89,7 +89,7 @@ describe("reading the prices of the cloud", () => {
   it("feeds the gate: the weights of Cartera show the close, with its source", async () => {
     cloud({ prices: { ast_world: line("2029-06-29", "999") } });
     const host = await show("/cartera", Cartera);
-    await settle(20);
+    await until(() => text(host).includes("EODHD"), "the source of the close");
     expect(text(host)).toContain("EODHD");
   });
 });

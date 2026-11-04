@@ -20,7 +20,7 @@ import { yearView } from "../src/view-models/fiscal/index.js";
 import { quotaView } from "../src/view-models/fiscal/quota.js";
 import { repurchaseView, saleView } from "../src/view-models/fiscal/sale.js";
 import { goldenEvents } from "./helpers/golden.js";
-import { choose, press, settle, show, text, withGoldenLedger } from "./helpers/render.jsx";
+import { choose, press, show, text, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -167,8 +167,9 @@ describe("¿y si vendo?", () => {
       />
     ));
     expect(text(host)).toContain("nada registrado");
+    const idle = text(host);
     choose(host, "sale-asset", asset);
-    await settle(30);
+    await until(() => text(host) !== idle, "the simulation");
     return text(host);
   };
 
@@ -241,7 +242,11 @@ describe("the package of the return", () => {
         open: [...(card?.querySelectorAll("details") ?? [])].every((block) => block.open),
       };
     });
+    // The screen recomputes its boxes when the lazily imported ECB findings arrive, which
+    // replaces the card; with the module loaded already that happens before the first look.
+    await import("../src/ecb/findings.js");
     const host = await open(2028);
+    await until(() => text(host).includes("Cuota estimada del ahorro"), "the estimate");
     await press(host, "Imprimir o guardar en PDF");
     expect(printed).toEqual({ card: true, open: true });
     // A phone returns from print() before laying the sheet out: nothing is put back until afterprint.

@@ -19,6 +19,7 @@ import type { CivilDate } from "../dates/civil-date.js";
 import { Decimal } from "../money/decimal.js";
 import { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
+import { byCode } from "../order.js";
 import { projectLedger } from "../projections/project-ledger.js";
 import type { LedgerState } from "../projections/state.js";
 import type { LedgerEvent } from "../schema/events.js";
@@ -132,6 +133,6 @@ export const latestDump = (records: readonly RunRecord[]): LatestDump | undefine
         ? []
         : [{ period: record.period, ledgerKey: key, ledgerSha256: ledger.sha256 }];
     })
-    .sort((a, b) => b.period.localeCompare(a.period));
+    .sort((a, b) => byCode(b.period, a.period));
   return found[0];
 };
