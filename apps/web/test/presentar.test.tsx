@@ -174,6 +174,7 @@ describe("recording what was filed", () => {
         node.hasAttribute("open"),
       ) as HTMLElement;
     await press(open(), "Registrar de todas formas");
+    // Negative wait: nothing to poll.
     await settle(30);
     expect(filings()).toBe(before);
     await until(() => open() !== undefined, "la pregunta otra vez", 3000);

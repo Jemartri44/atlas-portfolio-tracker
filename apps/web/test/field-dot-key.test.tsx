@@ -10,11 +10,11 @@ import RegistrarForm from "../src/routes/registrar/form.jsx";
 import {
   choose,
   press,
-  settle,
   show,
   text,
   today,
   type,
+  until,
   withGoldenLedger,
 } from "./helpers/render.jsx";
 
@@ -49,7 +49,7 @@ describe("the dot in a numeric field", () => {
     type(host, "f-amount", "1");
     amount.setSelectionRange(1, 1);
     expect(keyDown(amount, { key: ".", code: "NumpadDecimal" }).defaultPrevented).toBe(true);
-    await settle(10);
+    await until(() => amount.value === "1,", "the comma in the amount");
     expect(amount.value).toBe("1,");
   });
 
@@ -76,7 +76,11 @@ describe("the dot in a numeric field", () => {
     choose(host, "f-asset_id", "ast_world");
     type(host, "f-quantity", "4,8765");
     type(host, "f-amount", "0.500");
-    await settle(20);
+    await until(
+      () =>
+        [...host.querySelectorAll("button")].some((b) => b.textContent?.trim() === "Ver el efecto"),
+      "the effect button",
+    );
     await press(host, "Ver el efecto");
     expect(host.querySelector("#f-amount")?.getAttribute("aria-invalid")).toBe("true");
     expect(text(host)).toContain("no se sabe si son decimales o miles");

@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { forgetWebHistory, loadWebHistory, reloadWebHistory } from "../src/ecb/history.js";
 import Ajustes from "../src/routes/ajustes/index.jsx";
 import { referenceAnswer, serveReference } from "./helpers/cloud-reference.js";
-import { press, settle, show, text, withGoldenLedger } from "./helpers/render.jsx";
+import { press, show, text, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -108,7 +108,7 @@ describe("the card of the ECB", () => {
   it("says it was read from the cloud, with no way to import or erase a copy", async () => {
     cloud({ ecb: { csv } });
     const host = await show("/ajustes", Ajustes);
-    await settle(100);
+    await until(() => text(host).includes("Leído de tu nube"), "the card read from the cloud");
     const said = text(host);
     expect(said).toContain("Leído de tu nube");
     expect(said).toContain("publica hasta el 31/03/2026");
@@ -119,14 +119,17 @@ describe("the card of the ECB", () => {
   it("says an unreadable history as what it is", async () => {
     cloud({ ecb: { csv: "this is not a history" } });
     const host = await show("/ajustes", Ajustes);
-    await settle(100);
+    await until(() => text(host).includes("no se entiende: no se usa"), "the unreadable history");
     expect(text(host)).toContain("no se entiende: no se usa");
   });
 
   it("gives the reason in words when the cloud did not answer, never only the code", async () => {
     cloud({ status: 403 });
     const host = await show("/ajustes", Ajustes);
-    await settle(100);
+    await until(
+      () => text(host).includes("No se ha podido leer el histórico del BCE de la nube"),
+      "the reason in words",
+    );
     expect(text(host)).toContain("No se ha podido leer el histórico del BCE de la nube");
     expect(text(host)).not.toContain("not_allowed");
   });
@@ -134,9 +137,9 @@ describe("the card of the ECB", () => {
   it("reads it again from its button", async () => {
     cloud({ ecb: { csv } });
     const host = await show("/ajustes", Ajustes);
-    await settle(100);
+    await until(() => text(host).includes("Volver a leer"), "the button to read again");
     await press(host, "Volver a leer");
-    await settle(100);
+    await until(() => text(host).includes("Histórico leído de la nube"), "the history read again");
     expect(text(host)).toContain("Histórico leído de la nube: publica hasta el 31/03/2026.");
   });
 });

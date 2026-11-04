@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from "vitest";
 import CorporateForm from "../src/routes/registrar/corporate/form.jsx";
-import { choose, settle, show, text, type, withGoldenLedger } from "./helpers/render.jsx";
+import { choose, show, text, type, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -19,7 +19,7 @@ const fill = async (slug: string, ratio: string): Promise<HTMLElement> => {
   type(host, "ca-effective_date", "2028-11-02");
   type(host, "ca-source_document", "https://example.test/nota.pdf");
   type(host, "ca-ratio", ratio);
-  await settle(30);
+  await until(() => preview(host) !== undefined, "the preview button");
   return host;
 };
 
@@ -39,6 +39,7 @@ describe("the corporate action forms: the direction of the ratio", () => {
     "%s with %s says why it is refused, and cannot be previewed",
     async (slug, ratio, sentence) => {
       const host = await fill(slug, ratio);
+      await until(() => text(host).includes(sentence), "the refusal sentence");
       expect(text(host)).toContain(sentence);
       expect(preview(host).disabled).toBe(true);
     },
@@ -51,6 +52,7 @@ describe("the corporate action forms: the direction of the ratio", () => {
     ["contrasplit", "0,25"],
   ])("%s with %s is accepted", async (slug, ratio) => {
     const host = await fill(slug, ratio);
+    await until(() => !preview(host).disabled, "the preview button enabled");
     expect(text(host)).not.toContain("ha de ser");
     expect(preview(host).disabled).toBe(false);
   });
