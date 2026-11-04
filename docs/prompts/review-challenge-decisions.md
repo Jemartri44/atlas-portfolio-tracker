@@ -13,12 +13,12 @@ Eres un revisor externo del proyecto **Atlas Portfolio Tracker** (`~/personal/at
 3. `docs/adr/README.md` y **todos** los ADRs, incluidas sus secciones *Opciones consideradas* y *Consecuencias*.
 4. `docs/data-schema.md`, `docs/business-rules.md`, `docs/specification.md`.
 5. `docs/decision-roadmap.md` (lo que sigue pendiente; lo decidido está en los ADR).
-6. Si existe código en `packages/` o `apps/`, léelo después de los documentos, no antes.
+6. Lee el código de `packages/` y `apps/` después de los documentos, no antes.
 
 ## 2. Reglas del juego
 
 - **No reabras un trade-off ya escrito.** Si un ADR dice "opción A a cambio del inconveniente X", ese inconveniente es conocido y aceptado: no lo señales. Solo cuenta lo que **no aparece** en ninguna sección de opciones o consecuencias.
-- **No hagas de listillo.** Nada de estilo, nombres, "yo lo habría hecho en Go", frameworks de moda, ni sugerencias que añadan dependencias o servicios. La constitución fija pocas dependencias y always-free de AWS; trabaja dentro de eso.
+- **No hagas de listillo.** Nada de estilo, nombres, "yo lo habría hecho en Go", frameworks de moda, ni sugerencias que añadan dependencias o servicios. La constitución fija pocas dependencias y coste mínimo con alarma de presupuesto (ADR-0028, ADR-0034); trabaja dentro de eso.
 - **No aportes cosas rebuscadas.** Un hallazgo vale si cumple al menos uno: (a) cuesta dinero o rompe la fiscalidad de forma silenciosa; (b) pierde o corrompe datos; (c) hace imposible o muy caro algo que la especificación promete; (d) deja una laguna de seguridad o privacidad real; (e) sale caro de cambiar dentro de dos años si no se decide ahora.
 - **Máximo 10 hallazgos**, ordenados por importancia. Mejor 4 buenos que 10 mediocres. Si no encuentras nada importante, dilo: es un resultado válido.
 - **Cada hallazgo tiene que ser concreto y comprobable.** Cita el documento y la sección que lo contradice o que calla; da un ejemplo (una secuencia de operaciones, un escenario, una cifra) donde el problema aparece.

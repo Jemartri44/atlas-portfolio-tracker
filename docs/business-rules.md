@@ -231,7 +231,7 @@ Los fondos de inversión españoles y los UCITS comercializados en España admit
 
 Los ETFs, ETCs y ETPs (oro, cripto y las acciones del cubo) **no** admiten traspaso: cada venta es hecho imponible (art. 94.1.a LIRPF: el diferimiento es solo para fondos de inversión). El motor lo hace cumplir: un `transfer` o `transfer_requested` entre activos distintos solo se **escribe** (registro, corrección o unidad que recibe el servidor) si ambos son `fund` o `money_market` y están marcados `transferable` (en otro caso se rechaza con `not_transferable`). Al **reproducir** un libro que ya lo contenía no se bloquea la carga: sale el aviso `transfer_not_between_funds` en la atención, con el texto de registrarlo como venta y compra. Un catálogo con `transferable: true` en otro tipo de activo también carga, con el aviso `transferable_not_fund`.
 
-`transferable` lo marca el usuario y el motor no puede comprobarlo: un fondo extranjero solo admite traspaso si es una IIC de la Directiva 2009/65/CE «constituida y domiciliada en algún Estado miembro de la Unión Europea» (el EEE no basta), inscrita en el registro especial de la CNMV y operada a través de entidades comercializadoras inscritas en la CNMV (art. 94.2.a y su 1.º), y una SICAV si tiene más de 500 socios (por compartimento si los hay, art. 94.2.a.2.º) y el contribuyente no ha tenido más del 5 % del capital en los 12 meses anteriores (art. 94.1.a.2.º). El diferimiento tampoco vale cuando la operación tiene por objeto fondos o sociedades cotizados del art. 79 del RD 1082/2012 (art. 94.1.a, último párrafo), ni, en una IIC extranjera, las «análogas» a ellos, «cualquiera que sea el mercado regulado o el sistema multilateral» y el índice que repliquen (art. 94.2.a.3.º); tampoco cuando el importe se pone a disposición del contribuyente (art. 94.1.a, párrafo 3.º). Texto leído en el BOE consolidado el 2026-11-04. Por eso un `convert` de fondo a ETF conserva el coste sin que Atlas avise. `atlas asset add` y `asset update` lo recuerdan al marcar traspasable un fondo: entero si no consta como español (ISIN o país emisor `ES`), y solo la condición de la SICAV si consta, porque el catálogo no distingue una SICAV de un fondo.
+`transferable` lo marca el usuario y el motor no puede comprobarlo: un fondo extranjero solo admite traspaso si es una IIC de la Directiva 2009/65/CE «constituida y domiciliada en algún Estado miembro de la Unión Europea» (el EEE no basta), inscrita en el registro especial de la CNMV y operada a través de entidades comercializadoras inscritas en la CNMV (art. 94.2.a y su 1.º), y una SICAV si tiene más de 500 socios (por compartimento si los hay, art. 94.2.a.2.º) y el contribuyente no ha tenido más del 5 % del capital en los 12 meses anteriores (art. 94.1.a.2.º). El diferimiento tampoco vale cuando la operación tiene por objeto fondos o sociedades cotizados del art. 79 del RD 1082/2012 (art. 94.1.a, último párrafo), ni, en una IIC extranjera, las «análogas» a ellos, «cualquiera que sea el mercado regulado o el sistema multilateral» y el índice que repliquen (art. 94.2.a.3.º); tampoco cuando el importe se pone a disposición del contribuyente (art. 94.1.a, párrafo 3.º). Texto leído en el BOE consolidado el 2026-11-04. Atlas no avisa de un `convert` de fondo a ETF y conserva el coste, y la ley no da diferimiento en ese caso; no es un movimiento propio de inversiones comunes. `atlas asset add` y `asset update` lo recuerdan al marcar traspasable un fondo: entero si no consta como español (ISIN o país emisor `ES`), y solo la condición de la SICAV si consta, porque el catálogo no distingue una SICAV de un fondo.
 
 ### 5.3 FIFO
 
@@ -414,18 +414,18 @@ Ninguno de estos valores va codificado en el fuente. Los valores marcados como *
 
 Algunos parámetros tienen un **valor por defecto documentado** (el que aplica mientras el libro no diga otra cosa). Ese valor por defecto **se materializa en el libro** en cuanto se escribe un `settings_changed`, porque cada uno registra la configuración vigente **entera**, no un parche (ADR-0022): un ejercicio calculado hoy se reproduce dentro de quince años aunque el valor por defecto del código haya cambiado, que es lo que un cálculo fiscal necesita.
 
-| Parámetro | Valor inicial | Regla asociada |
+| Parámetro | Valor sugerido (el código no fija ninguno por defecto: sin el parámetro, el aviso no se evalúa) | Regla asociada |
 |---|---|---|
 | `target_weights{}` | Pendiente (claves: `asset_id` del núcleo; suman 100) | 1, 2 |
-| `deviation_threshold_pp` | 5 puntos | 3 |
-| `satellite_min_weight_pct` | 10% | 6b |
+| `deviation_threshold_pp` | 5 puntos (sugerido) | 3 |
+| `satellite_min_weight_pct` | 10-12 % según el plan del dueño (privado); sin valor fijado en el código | 6b |
 | `monthly_contribution_eur` | Pendiente | 9 |
 | `bucket_pct_of_contribution` | Pendiente | — |
 | `bucket_max_cumulative_contribution` | Pendiente | 17 |
 | `bucket_stop_loss_pct` | Pendiente | 17 |
 | `bucket_max_weight_pct` | Pendiente | 18 |
 | `bucket_benchmark_asset_id` | Pendiente (`asset_id` del índice de referencia) | 16 |
-| `stale_price_days` | 5 | — |
+| `stale_price_days` | 5 (sugerido) | — |
 | `model_720_threshold_eur` | 50.000€. Importe por encima del cual una categoría del Modelo 720 obliga a presentar (arts. 42 bis.4.e y 42 ter.4.c RD 1065/2007) | 5.8 |
 | `model_720_increase_eur` | 20.000€. Subida sobre la última presentada que vuelve a obligar (arts. 42 bis.5 y 42 ter.5) | 5.8 |
 | `model_720_alert_threshold_eur` | 45.000€. Importe al que la aplicación avisa, antes de que el umbral obligue. No es una cifra de la ley: es una elección del usuario, y la validación exige que no supere al umbral | 5.8 |
