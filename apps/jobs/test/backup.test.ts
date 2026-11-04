@@ -107,6 +107,19 @@ describe("the monthly dump (E4, plan §8)", () => {
     );
   });
 
+  it("dumps what the owner edited of the projection as it is, and goes without when there is none", async () => {
+    const s3 = seeded();
+    s3.seed("settings/projection.json", '{"projection_format":1}');
+    await backup(s3).run(["monthly_backup"]);
+    expect(s3.text(`${DUMP}settings/projection.json`)).toBe('{"projection_format":1}');
+    expect(recordOf(s3).outcome.counts).toMatchObject({ projection: 1 });
+
+    const none = seeded();
+    await backup(none).run(["monthly_backup"]);
+    expect(none.text(`${DUMP}settings/projection.json`)).toBeUndefined();
+    expect(recordOf(none).outcome.counts).toMatchObject({ projection: 0 });
+  });
+
   it("dumps the exposure of the owner as it is, after the positions, and goes without when there is none", async () => {
     const s3 = seeded();
     // Not even valid: the job never judges it, it keeps the bytes that were there.

@@ -1,21 +1,34 @@
-// The routes of the exposure the owner declares per asset (`docs/api.md` §6.2). One object,
-// `settings/exposure.json`, outside the ledger. They decide nothing about its content: that is the
-// domain's `parseExposureText`. The ETag is the SHA-256 of the bytes, as the ledger's (§5.1); S3
-// only sees the conditional write, with its own ETag taken from the same read.
+// The routes of the objects the owner edits outside the ledger (`docs/api.md` §6.2): the exposure
+// per asset (`settings/exposure.json`) and the assumptions of the projection
+// (`settings/projection.json`). They decide nothing about the content: that is the domain's
+// validator. The ETag is the SHA-256 of the bytes, as the ledger's (§5.1); S3 only sees the
+// conditional write, with its own ETag taken from the same read.
 
-import type { ExposureObject } from "@atlas/adapters/aws";
+import type { SettingsObject } from "@atlas/adapters/aws";
 import { sha256Hex, utf8Encode, ValidationError } from "@atlas/domain";
-import { exposureText, MAX_EXPOSURE_BYTES, parseExposureText } from "@atlas/domain/portfolio";
+import {
+  exposureText,
+  MAX_EXPOSURE_BYTES,
+  MAX_PROJECTION_BYTES,
+  parseExposureText,
+  parseProjectionText,
+  projectionText,
+} from "@atlas/domain/portfolio";
 import { refusal } from "./access/codes.js";
 import { requestedEtag } from "./access/sync-routes.js";
 import { fail, type Outcome } from "./outcome.js";
 import { bytes, json } from "./respond.js";
 
-export interface ExposureContext {
-  readonly object: ExposureObject;
+interface SettingsRules {
+  readonly object: SettingsObject;
+  readonly maxBytes: number;
+  /** The text to store, or the domain's `ValidationError`. */
+  readonly canonical: (text: string) => string;
+  readonly readCode: string;
+  readonly writtenCode: string;
 }
 
-export interface ExposureWrite {
+export interface SettingsWrite {
   readonly ifMatch: string | undefined;
   readonly ifNoneMatch: string | undefined;
   /** The body as it came, to see a key twice. */
@@ -23,8 +36,8 @@ export interface ExposureWrite {
   readonly bytes: number;
 }
 
-export const exposureRoutes = ({ object }: ExposureContext) => {
-  /** `GET /api/exposure` (§6.2): the stored bytes as they are, with their ETag; not read, not judged. */
+const settingsRoutes = ({ object, maxBytes, canonical, readCode, writtenCode }: SettingsRules) => {
+  /** `GET` (§6.2): the stored bytes as they are, with their ETag; not read, not judged. */
   const read = async (): Promise<Outcome> => {
     const stored = await object.read();
     if (stored === undefined) {
@@ -35,12 +48,12 @@ export const exposureRoutes = ({ object }: ExposureContext) => {
         "content-type": "application/json; charset=utf-8",
         etag: `"${sha256Hex(stored.body)}"`,
       }),
-      code: "exposure_read",
+      code: readCode,
     };
   };
 
-  /** `PUT /api/exposure` (§6.2): the whole object, created once or replaced on the version read. */
-  const write = async (input: ExposureWrite): Promise<Outcome> => {
+  /** `PUT` (§6.2): the whole object, created once or replaced on the version read. */
+  const write = async (input: SettingsWrite): Promise<Outcome> => {
     const creating = input.ifNoneMatch === "*";
     if (input.ifMatch !== undefined && input.ifNoneMatch !== undefined) {
       return fail(refusal("body_invalid", { reason: "preconditions" }));
@@ -48,15 +61,15 @@ export const exposureRoutes = ({ object }: ExposureContext) => {
     if (input.ifMatch === undefined && !creating) {
       return fail(refusal("precondition_required"));
     }
-    if (input.bytes > MAX_EXPOSURE_BYTES) {
-      return fail(refusal("body_too_large", { limit: MAX_EXPOSURE_BYTES }));
+    if (input.bytes > maxBytes) {
+      return fail(refusal("body_too_large", { limit: maxBytes }));
     }
-    let canonical: Uint8Array;
+    let stored: Uint8Array;
     try {
-      canonical = utf8Encode(exposureText(parseExposureText(input.text)));
+      stored = utf8Encode(canonical(input.text));
     } catch (error) {
       if (error instanceof ValidationError) {
-        // `reason`, and for a split that does not add up `asset_id`, `dimension` and `total`.
+        // `reason`, and whatever else the validator says of where.
         return fail(refusal("body_invalid", error.details));
       }
       throw error;
@@ -65,15 +78,13 @@ export const exposureRoutes = ({ object }: ExposureContext) => {
     let written: "written" | "created" | "stale";
     if (creating) {
       written =
-        current === undefined && (await object.create(canonical)) === "created"
-          ? "created"
-          : "stale";
+        current === undefined && (await object.create(stored)) === "created" ? "created" : "stale";
     } else {
       const asked = requestedEtag(input.ifMatch) as { etag: string };
       written =
         current !== undefined &&
         asked.etag === sha256Hex(current.body) &&
-        (await object.replace(canonical, current.etag)) === "written"
+        (await object.replace(stored, current.etag)) === "written"
           ? "written"
           : "stale";
     }
@@ -81,10 +92,28 @@ export const exposureRoutes = ({ object }: ExposureContext) => {
       return fail(refusal("precondition_failed"));
     }
     return {
-      result: json(200, { etag: sha256Hex(canonical) }, { etag: `"${sha256Hex(canonical)}"` }),
-      code: "exposure_written",
+      result: json(200, { etag: sha256Hex(stored) }, { etag: `"${sha256Hex(stored)}"` }),
+      code: writtenCode,
     };
   };
 
   return { read, write };
 };
+
+export const exposureRoutes = (object: SettingsObject) =>
+  settingsRoutes({
+    object,
+    maxBytes: MAX_EXPOSURE_BYTES,
+    canonical: (text) => exposureText(parseExposureText(text)),
+    readCode: "exposure_read",
+    writtenCode: "exposure_written",
+  });
+
+export const projectionRoutes = (object: SettingsObject) =>
+  settingsRoutes({
+    object,
+    maxBytes: MAX_PROJECTION_BYTES,
+    canonical: (text) => projectionText(parseProjectionText(text)),
+    readCode: "projection_read",
+    writtenCode: "projection_written",
+  });

@@ -173,17 +173,21 @@ describe("atlas backup --from-bucket", () => {
     expect(api.s3.keys().map((key) => [key, api.s3.etagOf(key)])).toEqual(before);
   });
 
-  it("copies the exposure of the owner too", async () => {
+  it("copies what the owner typed in settings/ too", async () => {
     const api = setup();
     api.s3.seed("ledger/ledger.jsonl", "el de la nube\n");
     api.s3.seed("settings/exposure.json", '{"exposure_format":1,"assets":{}}\n');
+    api.s3.seed("settings/projection.json", '{"projection_format":1}\n');
     const f = await folder(api);
     const target = join(f.dir, "..", `copies-exposure-${Date.now()}`);
     expect(await f.atlas("backup", "--to", target, "--from-bucket", "--env", "test")).toBe(EXIT.ok);
     expect(await readFile(join(target, "bucket", "settings", "exposure.json"), "utf8")).toBe(
       '{"exposure_format":1,"assets":{}}\n',
     );
-    expect(f.text()).toContain("1 ficheros copiados y verificados");
+    expect(await readFile(join(target, "bucket", "settings", "projection.json"), "utf8")).toBe(
+      '{"projection_format":1}\n',
+    );
+    expect(f.text()).toContain("2 ficheros copiados y verificados");
     expect(api.s3.calls.filter((call) => /^put/.test(call))).toEqual([]);
   });
 
