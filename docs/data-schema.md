@@ -555,7 +555,7 @@ Las ocho primeras son **compatibles** en el sentido de ADR-0018 (campos opcional
 | `neutrality_regime` | No mueve ninguna cifra; `false` con `convert` o `carve_out` se rechaza al escribir, un `convert` sin régimen escrito sale en los dudosos (#7 y #13) y `exchangeNotices` avisa de los requisitos que Atlas no puede decidir |
 | `fx_rate_date` | Convierte cada operación a su fecha fiscal, sin la cual nada de lo anterior es reproducible |
 
-### 8.7 Lotes de divisa (spec 029, ADR-0036)
+### 8.7 Lotes de divisa (ADR-0036)
 
 La divisa extranjera que se tiene es un elemento patrimonial con su coste en euros. Sus lotes son **una proyección** (`currency_lots` en la instantánea), sin campos nuevos en el libro: salen de importes, divisas, tipos y fechas que ya están en los eventos. Hay **un FIFO por divisa a través de todas las cuentas**, en el orden de la segunda pasada (§7.1) (`4:currency_fifo`).
 

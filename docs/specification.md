@@ -222,10 +222,10 @@ Es el libro con más funcionalidad propia: es una parte pequeña de la cartera p
 
 **Gráficas y comparativas:**
 - Curva de valor del cubo frente a la del mismo dinero invertido en el índice.
-- Distribución de resultados por operación (histograma) y por tesis.
-- Línea temporal de cada tesis: apertura, precio, invalidación, cierre.
-- Rendimiento por plazo, por tamaño y por tipo de hipótesis, para aprender qué funciona y qué no.
-- Evolución de comisiones acumuladas frente al capital operado.
+- *(No construidas todavía; la web tiene la curva de arriba, las mancuernas de cada tesis frente al índice, los medidores y las estadísticas con comisiones y máxima caída.)* Distribución de resultados por operación (histograma) y por tesis.
+- *(No construida.)* Línea temporal de cada tesis: apertura, precio, invalidación, cierre.
+- *(No construida.)* Rendimiento por plazo, por tamaño y por tipo de hipótesis, para aprender qué funciona y qué no.
+- *(No construida.)* Evolución de comisiones acumuladas frente al capital operado.
 
 **Reglas de control:**
 - **Regla de parada (17)**: aviso al acercarse al umbral, bloqueo visible al superarlo.
@@ -387,7 +387,6 @@ Requisitos transversales:
 
 - Responsive real: la misma interfaz en PC y móvil, sin funcionalidad recortada.
 - **Modo privacidad**, activado por defecto: oculta importes y cantidades con una máscara de ancho fijo que conserva la unidad; porcentajes y formas de gráficas siguen visibles. Lo que el usuario escribe no se oculta ([`design/brief.md`](design/brief.md)).
-- Modo de solo lectura por defecto; registrar operaciones requiere acción explícita.
 - Un único sistema de componentes y tokens, en [`design/system.md`](design/system.md).
 
 ---
