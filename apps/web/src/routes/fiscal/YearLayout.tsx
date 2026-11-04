@@ -9,8 +9,7 @@ import { GRID, mediaQuery } from "../../shell/media.js";
 
 export interface YearCards {
   base: () => JSX.Element;
-  /** Absent when there is no estimate to give: the losses take its column. */
-  estimate?: (() => JSX.Element) | undefined;
+  estimate: () => JSX.Element;
   losses: () => JSX.Element;
   doubtful: () => JSX.Element;
   settled: () => JSX.Element;
@@ -30,7 +29,7 @@ export const YearLayout = (props: { cards: YearCards }): JSX.Element => {
       fallback={
         <>
           {cards().base()}
-          {cards().estimate?.()}
+          {cards().estimate()}
           {cards().model720()}
           {cards().model721()}
           {cards().doubtful()}
@@ -44,13 +43,9 @@ export const YearLayout = (props: { cards: YearCards }): JSX.Element => {
     >
       <div class="stack span-5">
         {cards().base()}
-        <Show when={cards().estimate}>{cards().losses()}</Show>
+        {cards().losses()}
       </div>
-      <div class="stack span-7">
-        <Show when={cards().estimate} fallback={cards().losses()}>
-          {cards().estimate?.()}
-        </Show>
-      </div>
+      <div class="stack span-7">{cards().estimate()}</div>
       <div class="stack span-6">
         {cards().doubtful()}
         {cards().model721()}

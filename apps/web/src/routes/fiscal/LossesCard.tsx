@@ -38,6 +38,26 @@ const COLUMNS: DataColumn<PendingView>[] = [
   },
 ];
 
+/** The line of the folded card: all that is inside, a balance that died and an anchor included. */
+export const foldedLosses = (card: {
+  pending: readonly unknown[];
+  expired: readonly unknown[];
+  expiring: readonly unknown[];
+  anchors: readonly unknown[];
+}): string => {
+  const said = [
+    ...(card.pending.length > 0
+      ? [countOf(card.pending.length, "saldo pendiente", "saldos pendientes")]
+      : []),
+    ...(card.expiring.length > 0 ? ["caduca pronto"] : []),
+    ...(card.expired.length > 0
+      ? [countOf(card.expired.length, "saldo caducado", "saldos caducados")]
+      : []),
+    ...(card.anchors.length > 0 ? ["anclado en lo declarado"] : []),
+  ];
+  return said.length === 0 ? "No arrastras pérdidas" : said.join(" · ");
+};
+
 export const LossesCard = (props: {
   year: number;
   pending: readonly PendingView[];
@@ -45,16 +65,7 @@ export const LossesCard = (props: {
   expiring: readonly ExpiryWarning[];
   anchors: readonly AnchorView[];
 }): JSX.Element => (
-  <FoldSection
-    title="Pérdidas pendientes de compensar"
-    summary={
-      props.pending.length === 0
-        ? "No arrastras pérdidas"
-        : `${countOf(props.pending.length, "saldo pendiente", "saldos pendientes")}${
-            props.expiring.length > 0 ? " · caduca pronto" : ""
-          }`
-    }
-  >
+  <FoldSection title="Pérdidas pendientes de compensar" summary={foldedLosses(props)}>
     {/*
       **What the engine substitutes, the engine says** (ADR-0024). When a
       return is on record the chain replaces the pending losses it computed

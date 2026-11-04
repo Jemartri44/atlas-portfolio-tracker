@@ -73,10 +73,12 @@ const Notes = (props: { notes: QuotaView["notes"] }): JSX.Element => (
 const Folded = (props: { view: QuotaView }): JSX.Element => {
   const warned = (): number => props.view.notes.filter((note) => note.severity !== "info").length;
   return (
-    <Show when={props.view.computed} fallback="Sin escala comprobada">
-      <Amount value={props.view.result_eur} signed /> · estimación
+    <>
+      <Show when={props.view.computed} fallback="Sin escala comprobada">
+        <Amount value={props.view.result_eur} signed /> · estimación
+      </Show>
       <Show when={warned() > 0}> · {countOf(warned(), "aviso", "avisos")}</Show>
-    </Show>
+    </>
   );
 };
 

@@ -86,10 +86,22 @@ const PackageActions = (props: { onDownload: () => void }): JSX.Element => {
   );
 };
 
+/** The line of the folded card: a year by concepts and a row to check are never hidden by it. */
+export const foldedBoxes = (view: BoxesView): string => {
+  const doubts = view.blocks
+    .flatMap((block) => block.rows)
+    .filter((row) => row.missing === true || row.partial !== undefined).length;
+  return [
+    countOf(view.blocks.length, "bloque", "bloques"),
+    view.checked ? "mejor en el ordenador" : "por conceptos, sin casillas",
+    ...(doubts > 0 ? [countOf(doubts, "fila por revisar", "filas por revisar")] : []),
+  ].join(" · ");
+};
+
 export const BoxesCard = (props: { view: BoxesView; onDownload?: () => void }): JSX.Element => (
   <FoldSection
     title="Tu declaración por casillas"
-    summary={`${countOf(props.view.blocks.length, "bloque", "bloques")} · mejor en el ordenador`}
+    summary={foldedBoxes(props.view)}
     class={printing() ? "span-12 is-printing" : "span-12"}
     aside={<span class="scope">Ejercicio {props.view.year}</span>}
   >

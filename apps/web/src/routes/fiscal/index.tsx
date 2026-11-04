@@ -162,16 +162,16 @@ export default function FiscalRoute(): JSX.Element {
                   when={!year().empty}
                   fallback={
                     <>
+                      <For each={informative()}>{(one) => modelCard(one)}</For>
                       {sale()}
                       {filingCard(year().empty)}
-                      <For each={informative()}>{(one) => modelCard(one)}</For>
                     </>
                   }
                 >
                   <YearLayout
                     cards={{
                       base: () => <BaseCard view={year()} />,
-                      estimate: quota() === undefined ? undefined : estimateCards,
+                      estimate: estimateCards,
                       losses: () => (
                         <LossesCard
                           year={year().year}

@@ -66,13 +66,23 @@ const Category = (props: { category: CategoryView; year: number; model: string }
   </div>
 );
 
-/** The verdict that asks the most of the reader: what the folded card says. */
+/** The verdict that asks the most of the reader, and what else waits inside: the folded line. */
 export const folded = (view: InformativeView): string => {
+  const { categories } = view;
   const first =
-    view.categories.find((category) => category.verdict === "obliged") ??
-    view.categories.find((category) => category.verdict === "undetermined") ??
-    view.categories[0];
-  return first?.verdictText ?? view.periodText;
+    categories.find((category) => category.verdict === "obliged") ??
+    categories.find((category) => category.verdict === "undetermined") ??
+    categories[0];
+  return [
+    first?.verdictText ?? view.periodText,
+    ...(first?.verdict === "obliged" && view.filedText === undefined
+      ? ["no consta presentado"]
+      : []),
+    ...(first?.verdict !== "undetermined" && categories.some((one) => one.missing.length > 0)
+      ? ["faltan datos"]
+      : []),
+    ...(categories.some((one) => one.decided_with.length > 0) ? ["con datos marcados"] : []),
+  ].join(" · ");
 };
 
 export const InformativeCard = (props: { view: InformativeView }): JSX.Element => (

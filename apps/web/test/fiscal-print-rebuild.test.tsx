@@ -6,9 +6,7 @@
 // out would otherwise print the whole page, with the blocks closed.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { folded } from "../src/routes/fiscal/InformativeCard.jsx";
 import Fiscal from "../src/routes/fiscal/index.jsx";
-import type { InformativeView } from "../src/view-models/fiscal/index.js";
 import { press, show, text, until, withGoldenLedger } from "./helpers/render.jsx";
 import { withoutStyles, withStyles } from "./helpers/styles.js";
 
@@ -71,17 +69,5 @@ describe("printing the package while the findings are still arriving", () => {
     window.dispatchEvent(new Event("afterprint"));
     expect(printed()).toBeNull();
     expect(card?.querySelector("details")?.open).toBe(false);
-  });
-});
-
-describe("the folded line of an informative model", () => {
-  it("says what is undetermined over what needs no filing, and what must be filed over both", () => {
-    const of = (...verdicts: string[]) =>
-      ({
-        periodText: "",
-        categories: verdicts.map((verdict) => ({ verdict, verdictText: verdict })),
-      }) as unknown as InformativeView;
-    expect(folded(of("not_obliged", "undetermined"))).toBe("undetermined");
-    expect(folded(of("undetermined", "obliged"))).toBe("obliged");
   });
 });

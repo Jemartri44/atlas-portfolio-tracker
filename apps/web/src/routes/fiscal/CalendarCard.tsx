@@ -37,6 +37,9 @@ export const CalendarCard = (props: {
       </For>
     </ul>
   );
+  const unknown = (): number => props.calendar.unknown_deadlines.length;
+  const foldLabel = (): string =>
+    unknown() === 0 ? "Todas las fechas" : `Todas las fechas · ${unknown()} ${UNVERIFIED}`;
   const { start, end } = props.calendar.season;
   const inSeason = (): boolean => start <= props.today && props.today <= end;
   return (
@@ -51,7 +54,7 @@ export const CalendarCard = (props: {
       }
     >
       <CalendarStrip calendar={props.calendar} today={props.today} names={props.names} />
-      <Show when={wide()} fallback={<Disclosure label="Todas las fechas">{dates()}</Disclosure>}>
+      <Show when={wide()} fallback={<Disclosure label={foldLabel()}>{dates()}</Disclosure>}>
         {dates()}
       </Show>
     </Section>
