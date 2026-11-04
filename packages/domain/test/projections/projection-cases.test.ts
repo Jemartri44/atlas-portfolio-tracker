@@ -54,7 +54,7 @@ const run = (
   );
 };
 
-const equity = (return_pct: string, volatility_pct = "0"): ProjectionEdits["classes"] => ({
+const equity = (return_pct: string, volatility_pct = "0") => ({
   equity: { return_pct, volatility_pct },
 });
 const cents = (value?: { amount: Decimal }) => value?.amount.round(2).toString();
