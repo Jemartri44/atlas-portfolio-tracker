@@ -11,8 +11,9 @@ import type { Money } from "@atlas/domain";
 import type { FilingComparison, FilingFigure } from "@atlas/domain/fiscal";
 import { A } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
-import { Amount, Disclosure, Notice, Section, StatLine } from "../../components/index.js";
+import { Amount, Disclosure, FoldSection, Notice, StatLine } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
+import { countOf } from "../../format/number.js";
 
 const FIGURE_NAMES: Record<string, string> = {
   savings_base: "Base del ahorro",
@@ -68,6 +69,20 @@ const Figure = (props: { figure: FilingFigure }): JSX.Element => (
   </li>
 );
 
+/** The line of the folded card: when, and whatever has moved since. */
+export const foldedFiling = (filing: {
+  filed_at: string;
+  fingerprint_ok: boolean;
+  figures: readonly { declared: Money; now: Money }[];
+}): string => {
+  const moved = filing.figures.filter((figure) => !figure.declared.eq(figure.now)).length;
+  return [
+    `Declarado el ${formatDate(filing.filed_at)}`,
+    ...(filing.fingerprint_ok ? [] : ["tus datos han cambiado"]),
+    ...(moved > 0 ? [countOf(moved, "cifra distinta", "cifras distintas")] : []),
+  ].join(" · ");
+};
+
 export const FilingCard = (props: {
   year: number;
   filing?: FilingComparison | undefined;
@@ -78,7 +93,7 @@ export const FilingCard = (props: {
     when={props.filing}
     fallback={
       <Show when={!props.quiet}>
-        <Section title="Lo presentado" class="span-6">
+        <FoldSection title="Lo presentado" summary={`No consta la Renta de ${props.year}`}>
           <Notice
             severity="info"
             title={`No consta que hayas presentado la Renta de ${props.year}`}
@@ -91,14 +106,14 @@ export const FilingCard = (props: {
             Registrarlo es lo que permite avisarte cuando algo que hagas mueva una cifra que ya
             declaraste.
           </Notice>
-        </Section>
+        </FoldSection>
       </Show>
     }
   >
     {(filing) => (
-      <Section
+      <FoldSection
         title="Lo presentado"
-        class="span-6"
+        summary={foldedFiling(filing())}
         aside={<span class="scope">Declarado el {formatDate(filing().filed_at)}</span>}
       >
         <Show when={filing().chain.length > 1}>
@@ -119,7 +134,7 @@ export const FilingCard = (props: {
         <A href={`/fiscal/presentar/renta/${props.year}`} class="card-foot">
           <span>Registrar una complementaria</span>
         </A>
-      </Section>
+      </FoldSection>
     )}
   </Show>
 );

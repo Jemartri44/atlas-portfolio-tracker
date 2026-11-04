@@ -14,7 +14,7 @@
 
 import { A } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
-import { Amount, Figure, Notice, Pending, Section, Tag } from "../../components/index.js";
+import { Amount, Figure, FoldSection, Notice, Pending, Tag } from "../../components/index.js";
 import type { CategoryView, InformativeView } from "../../view-models/fiscal/index.js";
 import { CriteriaList } from "./Criteria.jsx";
 
@@ -66,9 +66,29 @@ const Category = (props: { category: CategoryView; year: number; model: string }
   </div>
 );
 
+/** The verdict that asks the most of the reader, and what else waits inside: the folded line. */
+export const folded = (view: InformativeView): string => {
+  const { categories } = view;
+  const first =
+    categories.find((category) => category.verdict === "obliged") ??
+    categories.find((category) => category.verdict === "undetermined") ??
+    categories[0];
+  return [
+    first?.verdictText ?? view.periodText,
+    ...(first?.verdict === "obliged" && view.filedText === undefined
+      ? ["no consta presentado"]
+      : []),
+    ...(first?.verdict !== "undetermined" && categories.some((one) => one.missing.length > 0)
+      ? ["faltan datos"]
+      : []),
+    ...(categories.some((one) => one.decided_with.length > 0) ? ["con datos marcados"] : []),
+  ].join(" · ");
+};
+
 export const InformativeCard = (props: { view: InformativeView }): JSX.Element => (
-  <Section
+  <FoldSection
     title={props.view.title}
+    summary={folded(props.view)}
     class="span-6"
     aside={<span class="scope">Ejercicio {props.view.year}</span>}
   >
@@ -106,5 +126,5 @@ export const InformativeCard = (props: { view: InformativeView }): JSX.Element =
       </Show>
       <CriteriaList criteria={props.view.criteria} />
     </Show>
-  </Section>
+  </FoldSection>
 );

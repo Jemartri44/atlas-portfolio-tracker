@@ -425,9 +425,7 @@ describe("the order of the screen by device", () => {
 
   /** Where a card is in the page, by its title; a card that is missing fails the test. */
   const positions = (host: HTMLElement) => {
-    const order = [
-      ...host.querySelectorAll(".grid > section > header h2, .grid > section > .card-head h2"),
-    ].map(text);
+    const order = [...host.querySelectorAll(".grid section h2")].map(text);
     return (pattern: RegExp): number => {
       const at = order.findIndex((title) => pattern.test(title));
       expect(at, `${pattern} en ${order.join(" | ")}`).toBeGreaterThanOrEqual(0);
@@ -435,19 +433,38 @@ describe("the order of the screen by device", () => {
     };
   };
 
-  it("puts the deadlines, then the models 720 and 721, then the return, all in sight, on a phone", async () => {
+  it("puts the deadlines, then the base in sight, then the rest folded, on a phone", async () => {
     today("2029-01-20");
     withStyles(390);
     const host = await show("/fiscal", Fiscal);
     await settle();
     const at = positions(host);
-    expect(at(/Calendario/)).toBeLessThan(at(/720/));
+    expect(at(/Calendario/)).toBeLessThan(at(/Base del ahorro/));
+    expect(at(/Base del ahorro/)).toBeLessThan(at(/720/));
     expect(at(/720/)).toBeLessThan(at(/721/));
-    expect(at(/721/)).toBeLessThan(at(/Base del ahorro/));
-    // Nothing folded: the base is a card of the page, never inside a disclosure.
+    // The base is the figure looked for: a card of the page, never inside a disclosure.
     const base = host.querySelector('section[aria-label^="Base del ahorro"]');
     expect(base).not.toBeNull();
     expect(base?.closest("details")).toBeNull();
+    // The models wait folded, with their verdict in the line.
+    const model = [...host.querySelectorAll("section.fold-card")].find((card) =>
+      text(card.querySelector("h2")).includes("720"),
+    );
+    expect(model?.querySelector("details")?.open).toBe(false);
+    expect(text(model?.querySelector(".fold-summary"))).not.toBe("");
+  });
+
+  it("gives each model half the row on a computer in a year with nothing to declare", async () => {
+    today("2029-01-20");
+    withStyles(1440, 900);
+    const host = await show("/fiscal?ejercicio=2029", Fiscal, "/fiscal");
+    await settle();
+    expect(text(host)).toContain("No hay nada que declarar");
+    const models = [...host.querySelectorAll(".grid > section")].filter((card) =>
+      /^Modelo 72/.test(text(card.querySelector("h2"))),
+    );
+    expect(models).toHaveLength(2);
+    expect(models.every((card) => card.matches(".span-6"))).toBe(true);
   });
 
   it("keeps the return before the models on a computer", async () => {
@@ -458,6 +475,6 @@ describe("the order of the screen by device", () => {
     const at = positions(host);
     expect(at(/Calendario/)).toBeLessThan(at(/Base del ahorro/));
     expect(at(/Base del ahorro/)).toBeLessThan(at(/720/));
-    expect(at(/720/)).toBeLessThan(at(/721/));
+    expect(at(/Base del ahorro/)).toBeLessThan(at(/721/));
   });
 });

@@ -326,3 +326,37 @@
   margin: var(--space-3) 0 0;
   padding: 0;
 }
+
+/* From the grid's columns: the strip beside its dates, and the blocks of the boxes in two columns. */
+@media (min-width: 64rem) {
+  .fiscal-calendar {
+    align-items: center;
+    column-gap: var(--space-6);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .fiscal-calendar > .card-head {
+    grid-column: 1 / -1;
+  }
+
+  .fiscal-calendar > .calendar-list {
+    margin: 0;
+  }
+
+  .box-blocks {
+    align-items: start;
+    column-gap: var(--space-6);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.box-blocks,
+.button-row + .notice {
+  margin-top: var(--space-3);
+}
+
+.box-blocks > .disclosure {
+  border-top: var(--border) solid var(--c-border);
+}

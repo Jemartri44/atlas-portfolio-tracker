@@ -13,9 +13,9 @@ import {
   DataTable,
   ErrorView,
   Field,
+  FoldSection,
   Notice,
   PriceDetail,
-  Section,
   SelectField,
   StatLine,
   Switch,
@@ -133,7 +133,12 @@ export const SaleSimulatorCard = (props: {
   };
 
   return (
-    <Section title="¿Y si vendo?" class="span-12" aside={<Tag>nada registrado</Tag>}>
+    <FoldSection
+      title="¿Y si vendo?"
+      summary="Simulación, nada registrado"
+      class="span-12"
+      aside={<Tag>nada registrado</Tag>}
+    >
       <p class="card-note">
         Elige qué venderías y Atlas te dice qué lotes salen (los más antiguos primero, en todas tus
         cuentas), cuánto ganarías o perderías y cuánto subiría tu cuota estimada del año, al último
@@ -233,6 +238,6 @@ export const SaleSimulatorCard = (props: {
           </>
         )}
       </Show>
-    </Section>
+    </FoldSection>
   );
 };
