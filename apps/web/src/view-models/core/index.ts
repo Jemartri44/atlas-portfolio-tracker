@@ -2,6 +2,7 @@ export {
   type ContributionRowView,
   type ContributionView,
   contributionView,
+  shareOf,
   type TypedAmount,
   typedAmount,
   type UnitPrices,

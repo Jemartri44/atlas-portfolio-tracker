@@ -71,6 +71,11 @@ a.card-foot:hover {
   margin-top: var(--space-3);
 }
 
+/* A note before the foot keeps its air; the foot alone closes the card. */
+.card > .card-note:has(+ .card-foot) {
+  margin-bottom: var(--space-3);
+}
+
 .block-title {
   color: var(--c-text-2);
   font-size: var(--text-sm);
