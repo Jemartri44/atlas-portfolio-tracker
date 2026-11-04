@@ -26,15 +26,15 @@ import { Amount, Field, FoldSection, Notice, Tag } from "../../components/index.
 import { valueLabel } from "../../format/labels.js";
 import { createAutosave } from "../../settings-objects/autosave.js";
 import { createProjectionEdits } from "../../settings-objects/use-settings-object.js";
+import { projectionView } from "../../view-models/core/projection.js";
 import {
   CLASS_SOURCES,
   inputsOf,
   notReadSentence,
   PROJECTION_CLASSES,
   type ProjectionInputs,
-  projectionView,
   readProjection,
-} from "../../view-models/core/projection.js";
+} from "../../view-models/core/projection-inputs.js";
 import { ProjectionResult } from "./ProjectionResult.jsx";
 
 const SAVE_AFTER_MS = 800;
@@ -73,12 +73,8 @@ export const ProjectionCard = (props: {
     return state.kind === "ready" ? state.etag : undefined;
   };
   // What was typed stays on the screen: only the first read, or a conflict, replaces it.
-  createEffect(
-    on(
-      () => stored.state().kind === "ready",
-      (ready) => ready && showStored(),
-    ),
-  );
+  const loaded = createMemo(() => stored.state().kind === "ready");
+  createEffect(on(loaded, (ready) => ready && showStored()));
   const saver = createAutosave<ProjectionEdits>(
     async (next) => {
       const before = etag();

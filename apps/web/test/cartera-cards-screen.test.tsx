@@ -147,6 +147,15 @@ describe("the projection", () => {
     await ready(await open());
   });
 
+  it("leaves what is typed as it is once it is saved", async () => {
+    const host = await open();
+    await until(() => card(host).includes("Normal, dentro de 20 años"), "the cases");
+    type(host, "pj-gold-return", "4,50");
+    await until(() => api.s3.text(KEY) !== undefined, "the write");
+    await settle(3);
+    expect((host.querySelector("#pj-gold-return") as HTMLInputElement).value).toBe("4,50");
+  });
+
   it("goes back to the published figures with Restablecer", async () => {
     api.s3.seed(KEY, '{"projection_format":1,"classes":{"gold":{"return_pct":"4"}}}\n');
     const host = await open();

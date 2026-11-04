@@ -4,7 +4,8 @@ import { Decimal, EUR, Money } from "@atlas/domain";
 import type { ProjectionCases, ProjectionDiscounts } from "@atlas/domain/portfolio";
 import { describe, expect, it } from "vitest";
 import { bucketPartView } from "../src/view-models/core/index.js";
-import { inputsOf, projectionView, readProjection } from "../src/view-models/core/projection.js";
+import { projectionView } from "../src/view-models/core/projection.js";
+import { inputsOf, readProjection } from "../src/view-models/core/projection-inputs.js";
 
 const monthly = Decimal.parse("540");
 const eur = (text: string): Money => Money.parse(text, EUR);
