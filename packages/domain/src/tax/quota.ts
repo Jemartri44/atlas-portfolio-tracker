@@ -195,6 +195,27 @@ const applyRates = (base: Money, rates: readonly Rate[]) => {
 };
 
 /**
+ * The scale over a base that is only an assumption, with the rates `savingsQuota` would take: the
+ * projection's, never a report's. Undefined when no scale was checked for the year.
+ */
+export const quotaOfBase = (
+  base: Money,
+  year: number,
+  brackets?: readonly TaxBracket[],
+): Money | undefined => {
+  const scale = savingsScaleOf(year);
+  const rates =
+    brackets !== undefined && isScale(brackets)
+      ? settingsRates(brackets)
+      : scale === undefined
+        ? undefined
+        : lawRates(scale);
+  return rates === undefined
+    ? undefined
+    : applyRates(base, rates).brackets.reduce((sum, part) => sum.add(part.quota_eur), zero);
+};
+
+/**
  * The estimated quota of the savings base of `report`. `brackets` are the
  * `savings_tax_brackets` of the settings in force, when the user set them: when
  * they differ from the scale of the law they replace it, and the result says so.

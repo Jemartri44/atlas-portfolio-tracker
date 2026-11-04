@@ -30,9 +30,9 @@
       "types": "./dist/drafts/api-drafts.d.ts",
       "import": "./dist/drafts/api-drafts.js"
     },
-    "./exposure-http": {
-      "types": "./dist/exposure/api-exposure.d.ts",
-      "import": "./dist/exposure/api-exposure.js"
+    "./settings-http": {
+      "types": "./dist/settings/api-settings.d.ts",
+      "import": "./dist/settings/api-settings.js"
     },
     "./sync-http": {
       "types": "./dist/sync/http-remote.d.ts",

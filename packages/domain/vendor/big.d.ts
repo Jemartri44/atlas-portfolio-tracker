@@ -18,6 +18,7 @@ export interface Big {
   gt(value: BigSource): boolean;
   gte(value: BigSource): boolean;
   abs(): Big;
+  sqrt(): Big;
   neg(): Big;
   round(dp?: number, rm?: RoundingMode): Big;
   /** Normal (non-exponential) notation; all digits when `dp` is omitted. */

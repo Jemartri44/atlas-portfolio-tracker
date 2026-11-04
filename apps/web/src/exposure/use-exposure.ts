@@ -8,7 +8,7 @@
 // - A write that meets another one (`412`) reads again and says so: the owner decides again over
 //   what is there now.
 
-import { ApiExposureStore } from "@atlas/adapters/exposure-http";
+import { ApiExposureStore } from "@atlas/adapters/settings-http";
 import { type Exposures, exposureOrNone } from "@atlas/domain/portfolio";
 import { RemoteError } from "@atlas/domain/sync";
 import { createSignal, onMount } from "solid-js";

@@ -11,9 +11,10 @@ import {
   closeSessionsBefore,
   DependencyUnavailable,
   draftObjects,
-  exposureObject,
   referenceReader,
+  settingsObject,
 } from "@atlas/adapters/aws";
+import { EXPOSURE_KEY, PROJECTION_KEY } from "@atlas/domain/portfolio";
 import { bodyTooLarge, expectEmptyObject, readJsonBody } from "./access/body.js";
 import { refusal } from "./access/codes.js";
 import { presentedCredential } from "./access/cookies.js";
@@ -21,11 +22,11 @@ import { admit, findRoute, matchRoute } from "./access/routes.js";
 import { createContext, type HandlerDeps } from "./context.js";
 import { draftRoutes } from "./drafts.js";
 import { type FunctionUrlEvent, type FunctionUrlResult, normalise, type Request } from "./event.js";
-import { exposureRoutes } from "./exposure.js";
 import { jobStatusRoutes } from "./job-status.js";
 import { type LogEntry, logLine } from "./log.js";
 import { fail, type Outcome } from "./outcome.js";
 import { clearSessionCookie, json, noContent } from "./respond.js";
+import { exposureRoutes, projectionRoutes } from "./settings-objects.js";
 import { signInRoutes } from "./sign-in.js";
 import { syncRoutes } from "./sync.js";
 
@@ -43,14 +44,15 @@ export const createHandler = (deps: HandlerDeps): Handler => {
     now: deps.now,
   });
   const drafts = draftRoutes({ objects: draftObjects(deps.objects), now: deps.now });
-  const exposure = exposureRoutes({ object: exposureObject(deps.objects) });
+  const exposure = exposureRoutes(settingsObject(deps.objects, EXPOSURE_KEY));
+  const projection = projectionRoutes(settingsObject(deps.objects, PROJECTION_KEY));
   const jobStatus = jobStatusRoutes({
     objects: deps.objects,
     activeFamilies: deps.config.activeJobFamilies,
   });
   const { login, callback } = signInRoutes(ctx);
 
-  /** A route of the ledger, the reference data, the drafts or the exposure, once its session is checked. */
+  /** A route of the ledger, the reference data, the drafts or the objects of settings, once its session is checked. */
   const syncRoute = async (
     request: Request,
     path: string,
@@ -73,15 +75,18 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       case "/api/jobs/status":
         return jobStatus.read();
       case "/api/exposure":
+      case "/api/projection": {
+        const routes = path === "/api/exposure" ? exposure : projection;
         return request.method === "GET"
-          ? exposure.read()
-          : exposure.write({
+          ? routes.read()
+          : routes.write({
               ifMatch: request.headers.get("if-match"),
               ifNoneMatch: request.headers.get("if-none-match"),
               // Never undefined here: a body that is not UTF-8 was refused above (415 body_not_json).
               text: request.bodyText as string,
               bytes: request.bodyBytes,
             });
+      }
       default:
         return sync.readReference(
           path === "/api/reference/ecb/{name}" ? "ecb" : "prices",
@@ -180,7 +185,8 @@ export const createHandler = (deps: HandlerDeps): Handler => {
       case "/api/drafts/{id}/stamp":
       case "/api/drafts/{id}/end":
       case "/api/jobs/status":
-      case "/api/exposure": {
+      case "/api/exposure":
+      case "/api/projection": {
         const session = await checkedSession(admission);
         if ("code" in session) {
           return { outcome: fail(session), route: at };
