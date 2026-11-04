@@ -118,7 +118,11 @@ export const ThesesCard = (props: {
       </Show>
       <Show
         when={props.view.rows.length > 0}
-        fallback={<p class="meta">Todavía no hay ninguna tesis.</p>}
+        fallback={
+          <Show when={props.view.untagged.length === 0}>
+            <p class="meta">Todavía no hay ninguna tesis.</p>
+          </Show>
+        }
       >
         {/*
         The open theses in sight, the closed ones folded when there are open
@@ -162,6 +166,15 @@ export const ThesesCard = (props: {
             con el índice. El motivo está en la propia fila: nunca se estima.
           </p>
         </Show>
+      </Show>
+      <Show when={props.view.untagged.length > 0}>
+        <DataTable
+          label="Operaciones sin tesis"
+          columns={COLUMNS}
+          rows={props.view.untagged}
+          size="lg"
+          maskedMerge
+        />
       </Show>
     </Section>
   );

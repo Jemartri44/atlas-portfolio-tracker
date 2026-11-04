@@ -185,7 +185,7 @@ Un `settings_changed` que reinterpreta el pasado (p. ej. un cambio de `fiscal_da
 **`broker_settled_eur?` (ADR-0030, Ronda 8, bloque 0 de la feature `012`).** Campo opcional en `buy`, `sell`, `dividend`, `interest` y `standalone_fee`: el movimiento total de euros que el extracto del bróker atribuye a la operación, tal cual figura; si el extracto carga la comisión en euros por separado, se incluye. **El signo lo da el tipo de evento** (ADR-0030, enmienda): un negativo se rechaza siempre (`broker_settled_eur_negative`); **en `dividend` e `interest` se admite el cero**, que es el neto que entró en la cuenta (un dividendo retenido entero en origen es un cero conocido); **en `buy`, `sell` y `standalone_fee` tiene que ser estrictamente positivo** (`broker_settled_eur_zero`). Omitido significa desconocido, nunca cero. Solo tiene sentido si `currency` no es `EUR` (en euros se rechaza, `broker_settled_eur_in_eur`, sería redundante) y **nunca se rellena con un valor calculado**: si el extracto no lo trae, el campo no está. **Puramente informativo**: ninguna proyección, cálculo fiscal ni saldo lo lee — solo una lista cerrada de módulos puede leerlo, vigilada por un test de arquitectura — y **no entra en la huella de idempotencia** (§4), para que la misma operación registrada a mano y luego importada se siga detectando como duplicado. Es un cambio **compatible** según ADR-0018 (campo opcional de una operación, no de una foto completa): no sube `schema_version`.
 
 **`buy`**
-Comunes (§4) + `order_id?` (cierra un `order_placed`) + `thesis_id?` (obligatorio si la cuenta es del libro `bucket`; debe existir un `thesis_opened` previo con ese id) + `broker_settled_eur?` (ADR-0030).
+Comunes (§4) + `order_id?` (cierra un `order_placed`) + `thesis_id?` (opcional en `bucket`; si se indica, debe existir un `thesis_opened` previo con ese id) + `broker_settled_eur?` (ADR-0030).
 
 ```json
 {"type":"buy","account_id":"acc_ibkr","asset_id":"ast_xau","trade_date":"2026-09-01","value_date":"2026-09-03","quantity":"12","unit_price":"215.30","currency":"USD","fx_rate":"1.0857","fx_rate_date":"2026-09-01","fee":"1.50","source":"manual","fingerprint":"sha256:…"}
@@ -194,7 +194,7 @@ Comunes (§4) + `order_id?` (cierra un `order_placed`) + `thesis_id?` (obligator
 Efecto: crea un lote con `acquisition_date = fiscal_date`, `cost_eur = ((amount ?? quantity × unit_price) + fee) / fx_rate`.
 
 **`sell`**
-Comunes + `withholding?` (retención a cuenta practicada, en `currency`) + `thesis_id?` (en cuentas `bucket`, enlaza la venta con su tesis abierta, igual que en `buy`; sin él se acepta con aviso) + `broker_settled_eur?` (ADR-0030).
+Comunes + `withholding?` (retención a cuenta practicada, en `currency`) + `thesis_id?` (en cuentas `bucket`, enlaza la venta con su tesis abierta, igual que en `buy`; sin él también se acepta) + `broker_settled_eur?` (ADR-0030).
 
 Admite `order_id?`. Efecto: consume lotes FIFO del `asset_id` en todas las cuentas (§8.1); valor de transmisión `((amount ?? quantity × unit_price) − fee) / fx_rate`; genera ganancia o pérdida por lote consumido; comprueba la regla de recompra (§8.4). Rechaza si la cantidad supera la posición física de la cuenta.
 
@@ -206,7 +206,7 @@ Un `transfer` **no lleva comisión**: la comisión real de un traspaso de custod
 **Dos modos:** (a) *traspaso fiscal* entre fondos distintos: ambos activos deben ser `transferable` y de tipo `fund` o `money_market`, y la `tax_residence` vigente, `ES`; al escribirlo —registro, corrección o unidad que llega al servidor— se rechaza (`not_transferable`, `transfer_not_resident`) y al reproducir un libro antiguo solo avisa (`transfer_not_between_funds`, `transfer_not_resident`; business-rules.md §5.2 y §5.9); (b) *traspaso de custodia* (`from_asset_id == to_asset_id`, cuentas distintas): admitido para cualquier activo, sin `nav_*`, solo mueve `physicalPositions`; los lotes fiscales no cambian (ADR-0012). En el modo (a), efecto: consume `quantity_out` de lotes origen en FIFO; por cada lote consumido crea un lote destino con la **misma `acquisition_date`** y el **mismo coste total** (repartiendo `quantity_in` en proporción a la cantidad consumida de cada lote); `unit_cost_eur` destino = coste heredado / cantidad recibida. No genera ganancia ni pérdida.
 
 **`swap`** (ADR-0021)
-`account_id`, `trade_date`, `value_date`, `from_asset_id`, `quantity_out`, `market_value_out`, `to_asset_id`, `quantity_in`, `market_value_in`, `currency`, `fx_rate`, `fx_rate_date`, `fee`, `thesis_id?` (obligatorio en cuentas `bucket`, para el activo **recibido**), `broker_ref?`, `source`, `notes?`, `fingerprint`
+`account_id`, `trade_date`, `value_date`, `from_asset_id`, `quantity_out`, `market_value_out`, `to_asset_id`, `quantity_in`, `market_value_in`, `currency`, `fx_rate`, `fx_rate_date`, `fee`, `thesis_id?` (opcional en cuentas `bucket`, para el activo **recibido**), `broker_ref?`, `source`, `notes?`, `fingerprint`
 
 Permuta de un activo por otro (cripto por cripto es el caso que la motiva; `fx_exchange` es solo para divisas). Es una **transmisión más una adquisición**, no un traspaso: se valora por el art. 37.1.h LIRPF, **el mayor** entre el valor de mercado de lo entregado y el de lo recibido, y por eso se guardan los dos y ninguno se deriva del otro. La comisión resta de lo transmitido (criterio #17). El lote recibido nace con la fecha del swap y **sin heredar antigüedad ni coste**. Aviso `swap_fiscal_dates_differ` si las dos patas tienen reglas de fecha fiscal distintas. El vocabulario es a propósito el de `transfer` (`from_*`, `quantity_out`, `to_*`, `quantity_in`); lo que los distingue es el tipo, los dos `market_value_*` que un traspaso no tiene y la ausencia de `nav_*`.
 
@@ -297,7 +297,7 @@ Cualquier evento puede llevar `corrects_id` apuntando al evento que sustituye. L
 **`thesis_closed`**
 `thesis_id`, `closing_notes`. El resultado (`result_eur`, `result_vs_index`) es derivado: `result_eur` suma las ganancias de los `sell` enlazados por `thesis_id`.
 
-Las tesis **no tienen fecha de negocio**: se proyectan en la primera pasada de §7.1, en orden de fichero, como el catálogo. "Crear la tesis antes de abrir la posición" (regla 15) significa *antes en el fichero*; su fecha administrativa es la de `recorded_at` en `Europe/Madrid`. Validación: cuenta y activo del libro `bucket`; como máximo una tesis abierta por (`account_id`, `asset_id`); un `buy` en `bucket` exige `thesis_id` de una tesis abierta, anterior en el fichero y de la misma cuenta y activo.
+Las tesis **no tienen fecha de negocio**: se proyectan en la primera pasada de §7.1, en orden de fichero, como el catálogo. "Crear la tesis antes de abrir la posición" (regla 15) significa *antes en el fichero*; su fecha administrativa es la de `recorded_at` en `Europe/Madrid`. Validación: cuenta y activo del libro `bucket`; como máximo una tesis abierta por (`account_id`, `asset_id`); un `buy` o `swap` en `bucket` puede llevar `thesis_id` (opcional); si lo lleva, debe ser de una tesis abierta, anterior en el fichero y de la misma cuenta y activo. Los libros antiguos no se migran: solo se relajó la regla.
 
 ### 6.5 Eventos corporativos: primitivas
 

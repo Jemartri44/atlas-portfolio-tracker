@@ -163,9 +163,9 @@ Cualquier desviación respecto a la ponderación por capitalización debe ser un
 **Regla 14 — Pocas operaciones y grandes.** Con capital pequeño y comisiones fijas, las comisiones deciden el resultado antes que el criterio.
 → La app muestra las comisiones acumuladas como porcentaje del capital operado. Es probablemente la métrica más reveladora del panel.
 
-**Regla 15 — Log de tesis obligatorio ANTES de abrir la posición.**
+**Regla 15 — Log de tesis opcional, antes de abrir la posición.**
 Campos: hipótesis, plazo esperado, condición de invalidación, tamaño previsto.
-→ **El sistema no debe permitir registrar una compra en el cubo sin tesis asociada.** Es un requisito funcional, no una recomendación.
+→ **La tesis es opcional** (decisión del dueño, 04/11, sustituye a la versión original, que la exigía): el sistema registra una compra o una permuta en el cubo con o sin tesis, sin rechazo ni avisos. Quien la use, la abre antes y la enlaza; si se indica, se valida (que exista y esté abierta en ese punto del fichero). Una operación sin tesis cuenta igual en posiciones, patrimonio y topes del cubo.
 
 **Regla 16 — La referencia es el índice, no cero.**
 Para cada operación cerrada se calcula qué habría rendido ese mismo importe invertido en el fondo global durante el mismo periodo. La pregunta no es "¿gané?" sino "¿gané más que la alternativa aburrida?".

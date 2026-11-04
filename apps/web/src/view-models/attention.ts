@@ -70,7 +70,6 @@ const DESTINATIONS: Record<string, { label: string; to: string }> = {
   bucket_contribution_near_limit: { label: "Ver el cubo", to: "/cubo" },
   bucket_contaminated_theses: { label: "Ver el cubo", to: "/cubo" },
   bucket_sample_too_small: { label: "Ver el cubo", to: "/cubo" },
-  sell_without_thesis: { label: "Ver el cubo", to: "/cubo" },
   thesis_size_exceeded: { label: "Ver el cubo", to: "/cubo" },
   thesis_closed_with_position: { label: "Ver el cubo", to: "/cubo" },
   // The rest are read on the event itself.
@@ -120,7 +119,6 @@ const RANKS: readonly string[] = [
   "exchange_cash_cap",
   "convert_fund_to_listed_fund",
   "thesis_size_exceeded",
-  "sell_without_thesis",
   "thesis_closed_with_position",
   "currency_mismatch",
   "fx_rate_date_after_fiscal_date",

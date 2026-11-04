@@ -104,7 +104,7 @@ Tipos (`type`): `buy`, `sell`, `transfer`, `dividend`, `interest`, `fx_exchange`
 **Thesis** (tesis) — solo cubo
 `id`, `opened_at`, `asset_id`, `hypothesis`, `expected_horizon`, `invalidation`, `planned_size`, `opening_transaction_id`, `closing_transaction_id`, `result_eur`, `result_vs_index`, `closing_notes`
 
-Se crea **antes** de abrir la posición (regla 15). El sistema no debe permitir registrar un `buy` en el libro `bucket` sin una tesis asociada.
+Es **opcional** (regla 15): un `buy` o un `swap` en el libro `bucket` se registra con o sin tesis. Si se usa, se crea **antes** de abrir la posición.
 
 ### 4.2 El traspaso: el caso que hay que modelar bien
 
@@ -222,7 +222,7 @@ Funcionalidad común a las cuatro clases de activo:
 
 Es el libro con más funcionalidad propia: es una parte pequeña de la cartera para especular, trastear y aprender, y por eso necesita las mejores herramientas de seguimiento.
 
-**Registro de tesis (obligatorio antes de abrir):**
+**Registro de tesis (opcional; si se usa, antes de abrir):**
 - Hipótesis: qué crees que va a pasar y por qué.
 - Plazo esperado.
 - Condición de invalidación: qué te haría estar equivocado.

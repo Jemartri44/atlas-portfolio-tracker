@@ -6,7 +6,7 @@
 // difference equal to everything invested. `bucketTheses` owns the definition
 // and has the tests.
 
-import type { BucketThesisView, Money, Warning } from "@atlas/domain";
+import type { BucketThesisView, Money, UntaggedView, Warning } from "@atlas/domain";
 import { thesisVsIndexPct } from "@atlas/domain/charts";
 import { formatDate } from "../../format/date.js";
 import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
@@ -48,6 +48,8 @@ export interface ThesisRow {
 
 export interface ThesesView {
   rows: ThesisRow[];
+  /** What was bought with no thesis, by asset and account: measured against the index too. */
+  untagged: ThesisRow[];
   /** Theses that could not be compared with the index at all. */
   withoutIndex: number;
   warnings: readonly Warning[];
@@ -61,13 +63,13 @@ const GAPS: Record<string, string> = {
   no_asset_price: "falta el precio del propio activo",
 };
 
-const gapOf = (thesis: BucketThesisView): string | undefined => {
+const gapOf = (thesis: BucketThesisView | UntaggedView): string | undefined => {
   const first = thesis.missing_benchmark[0];
   return first === undefined ? undefined : (GAPS[first.reason] ?? first.reason);
 };
 
 const percentagesOf = (
-  thesis: BucketThesisView,
+  thesis: BucketThesisView | UntaggedView,
 ): Pick<ThesisRow, "thesisPct" | "indexPct" | "vsIndexPp"> => {
   const pct = thesisVsIndexPct(thesis);
   return {
@@ -77,10 +79,37 @@ const percentagesOf = (
   };
 };
 
+const untaggedRowOf = (pair: UntaggedView, names: NameIndex): ThesisRow => ({
+  ...percentagesOf(pair),
+  thesisId: "",
+  period: "sin tesis",
+  assetName: displayName(names, pair.asset_id),
+  accountName: displayName(names, pair.account_id),
+  open: pair.status === "open",
+  status: pair.status === "open" ? "abierta" : "cerrada",
+  openedAt: (pair.buys[0]?.fiscal_date ?? "") as string,
+  daysOpen: 0,
+  horizonDays: 0,
+  horizonExceeded: false,
+  invested: pair.invested_eur,
+  result: pair.result_eur.roundToCents(),
+  ...(pair.unrealized_eur === undefined ? {} : { unrealized: pair.unrealized_eur }),
+  ...(pair.benchmark_equivalent_eur === undefined
+    ? {}
+    : { benchmarkEquivalent: pair.benchmark_equivalent_eur }),
+  ...(pair.result_vs_index_eur === undefined ? {} : { vsIndex: pair.result_vs_index_eur }),
+  ...(gapOf(pair) === undefined ? {} : { gap: gapOf(pair) as string }),
+});
+
 export const thesesView = (
-  view: { rows: readonly BucketThesisView[]; warnings: readonly Warning[] },
+  view: {
+    rows: readonly BucketThesisView[];
+    untagged?: readonly UntaggedView[];
+    warnings: readonly Warning[];
+  },
   names: NameIndex = NO_NAMES,
 ): ThesesView => ({
+  untagged: (view.untagged ?? []).map((pair) => untaggedRowOf(pair, names)),
   rows: view.rows.map((thesis) => ({
     ...percentagesOf(thesis),
     thesisId: thesis.thesis_id,

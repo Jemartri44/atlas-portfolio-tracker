@@ -136,6 +136,7 @@ export default function CuboRoute(): JSX.Element {
         const empty = () =>
           positions().rows.length === 0 &&
           theses().rows.length === 0 &&
+          theses().untagged.length === 0 &&
           report().stats.closedTheses === 0 &&
           report().controls.contributionGross.isZero();
 
