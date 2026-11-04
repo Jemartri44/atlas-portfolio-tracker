@@ -68,11 +68,15 @@ export const RebalanceCard = (props: RebalanceCardProps): JSX.Element => {
     return value.kind === "invalid" ? value.message : undefined;
   };
 
+  // Bumped whenever the inputs change: a calculation that started before is then stale.
+  let generation = 0;
+
   // A proposal belongs to the date and to the ledger, settings and prices it was computed from.
   createEffect(
     on(
       () => [props.date, props.state, props.events, props.settings, props.external],
       () => {
+        generation += 1;
         setOutcome(undefined);
         setBucket(undefined);
       },
@@ -85,9 +89,14 @@ export const RebalanceCard = (props: RebalanceCardProps): JSX.Element => {
     if (money.kind === "invalid") {
       return;
     }
+    const started = generation;
     setBusy(true);
     try {
       const { rebalancePlan } = await import("@atlas/domain/rebalance");
+      // The inputs changed while the planner loaded: that press belongs to a screen already gone.
+      if (started !== generation) {
+        return;
+      }
       const part = attempt(() =>
         bucketPartView(
           money.kind === "amount" ? money.value : undefined,
