@@ -85,7 +85,7 @@ const result = (patch: Partial<ProjectionCases>): ProjectionCases => ({
 describe("projectionView", () => {
   it("says everything that is discounted, the commission only when there is one", () => {
     expect(projectionView(result({}), "2029-05-10", ALL).discounted).toBe(
-      "Descontado: inflación, impuestos al vender (escala del ahorro) y TER 0,12 % más comisión de aportación. Es una estimación informativa.",
+      "Descontado: inflación, impuestos al vender (escala del ahorro) y TER 0,12 % más comisión de aportación.",
     );
     expect(
       projectionView(result({ missing: ["commission"] }), "2029-05-10", ALL).discounted,

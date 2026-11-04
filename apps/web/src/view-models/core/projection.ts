@@ -61,9 +61,7 @@ const discountedSentence = (result: ProjectionCases, discounts: ProjectionDiscou
     ...(discounts.taxes ? ["impuestos al vender (escala del ahorro)"] : []),
     ...(discounts.fees && fees.length > 0 ? [fees.join(" más ")] : []),
   ];
-  return parts.length === 0
-    ? "Sin descontar nada."
-    : `Descontado: ${listed(parts)}. Es una estimación informativa.`;
+  return parts.length === 0 ? "Sin descontar nada." : `Descontado: ${listed(parts)}.`;
 };
 
 const plotOf = (result: ProjectionCases, asOf: string): ProjectionPlot => {

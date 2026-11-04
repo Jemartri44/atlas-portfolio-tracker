@@ -8,7 +8,8 @@
 //   with cases published by its source uses them. No random draw: same data, same figures.
 // - **What is discounted**, each on its own: `fees` (the TER off the rate, the commission off each
 //   contribution), `taxes` (the savings scale over the gain of selling everything in year t, against
-//   what was put in, with the base of `totalCost` and its limits) and `inflation` (the value in
+//   what was invested plus the contributions: historical cost, wrong in both directions, because
+//   sales do not subtract their cost and a transfer has no purchase) and `inflation` (the value in
 //   euros of today, applied last because the tax falls on the nominal gain).
 // - Core only (constitution III). Without a price there is no figure. Informative: nothing fiscal
 //   reads it, and no tax figure of the engine depends on it (constitution II).

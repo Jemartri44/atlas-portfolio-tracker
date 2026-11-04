@@ -22,7 +22,7 @@ import {
   onCleanup,
   Show,
 } from "solid-js";
-import { Amount, Field, FoldSection, Notice, Tag } from "../../components/index.js";
+import { Amount, Field, FoldSection, Notice } from "../../components/index.js";
 import { valueLabel } from "../../format/labels.js";
 import { createAutosave } from "../../settings-objects/autosave.js";
 import { createProjectionEdits } from "../../settings-objects/use-settings-object.js";
@@ -137,7 +137,6 @@ export const ProjectionCard = (props: {
     <FoldSection
       title="Proyección"
       class="span-12 projection-card"
-      aside={<Tag>no es una previsión</Tag>}
       summary={
         <Show when={normal()} fallback={`Sin cifra: ${view().gap}`}>
           {(shown) => (
@@ -197,7 +196,7 @@ export const ProjectionCard = (props: {
       </div>
       <p class="card-note">
         Son estimaciones de una gestora a 10-15 años, no cifras oficiales, y el informe avisa de que
-        lo del bitcoin es orientativo. Rentabilidad compuesta. Lo que cambies se guarda.
+        lo del bitcoin es orientativo.
       </p>
       <div class="button-row">
         <button type="button" class="secondary" disabled={stored.busy()} onClick={reset}>
