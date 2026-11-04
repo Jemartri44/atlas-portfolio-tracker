@@ -14,30 +14,33 @@ import { formatDecimalString } from "../../format/number.js";
 import type { WeightsView } from "../../view-models/core/index.js";
 import { ClassBullets } from "../cartera/ClassBullets.jsx";
 
-const offText = (off: number, inside: string): string =>
-  off === 0 ? inside : off === 1 ? "1 activo fuera de umbral" : `${off} activos fuera de umbral`;
+const offText = (off: number): string =>
+  off === 0
+    ? "Ningún activo fuera de umbral"
+    : off === 1
+      ? "1 activo fuera de umbral"
+      : `${off} activos fuera de umbral`;
+
+/** The line of the folded card: whatever it warns of, each said; a fold never hides a warning. */
+export const foldedLine = (view: WeightsView): string => {
+  if (view.partial) {
+    return "Sin pesos: falta un precio";
+  }
+  const off = view.classes.reduce((sum, row) => sum + row.offTargetCount, 0);
+  const below = view.classes.filter((row) => row.belowMinimum).length;
+  const low = below === 1 ? "1 tipo bajo el mínimo" : `${below} tipos bajo el mínimo`;
+  return below === 0 ? offText(off) : off === 0 ? low : `${offText(off)} · ${low}`;
+};
 
 export const AllocationCard = (props: {
   view: WeightsView;
   threshold: string | undefined;
 }): JSX.Element => {
   const off = (): number => props.view.classes.reduce((sum, row) => sum + row.offTargetCount, 0);
-  const below = (): number => props.view.classes.filter((row) => row.belowMinimum).length;
-  const folded = (): string =>
-    props.view.partial
-      ? "Sin pesos: falta un precio"
-      : offText(
-          off(),
-          below() === 0
-            ? "Ningún activo fuera de umbral"
-            : below() === 1
-              ? "1 tipo bajo el mínimo"
-              : `${below()} tipos bajo el mínimo`,
-        );
   return (
     <FoldSection
       title="Reparto frente al objetivo"
-      summary={folded()}
+      summary={foldedLine(props.view)}
       class="summary-allocation"
       aside={
         <A href="/cartera" class="aside-link">
@@ -50,9 +53,7 @@ export const AllocationCard = (props: {
         <Show when={props.threshold !== undefined} fallback="Raya: objetivo.">
           Raya: objetivo; banda: ±{formatDecimalString(props.threshold ?? "0")} pp.
         </Show>{" "}
-        {props.view.partial
-          ? "Sin pesos mientras falte un precio."
-          : `${offText(off(), "Ningún activo fuera de umbral")}.`}
+        {props.view.partial ? "Sin pesos mientras falte un precio." : `${offText(off())}.`}
       </p>
     </FoldSection>
   );

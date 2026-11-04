@@ -51,7 +51,7 @@ const todoText = (todo: InformativeTodo): string => {
   return `${model} de ${todo.year}: ${what} se acerca al umbral.`;
 };
 
-const todoBrief = (todo: InformativeTodo): string => {
+const briefOf = (todo: InformativeTodo): string => {
   const model = MODEL_NAMES[todo.model] ?? todo.model;
   return todo.reason === "file"
     ? `${model}: toca presentar`
@@ -60,12 +60,17 @@ const todoBrief = (todo: InformativeTodo): string => {
       : `${model}: cerca del umbral`;
 };
 
+/** A return that asks for two things is one line: the words do not say which. */
+export const briefLines = (todos: readonly InformativeTodo[]): string[] => [
+  ...new Set(todos.map(briefOf)),
+];
+
 export const fiscalStatus = (events: readonly LedgerEvent[], today: string): FiscalStatus => {
   const attention = fiscalAttention(events, today);
   return {
     season: attention.season,
     lines: attention.todo.map(todoText),
-    brief: [...new Set(attention.todo.map(todoBrief))],
+    brief: briefLines(attention.todo),
     unfiled: attention.unfiled_years,
     invalid: attention.invalid_events,
     calendar: fiscalCalendar(events, today),

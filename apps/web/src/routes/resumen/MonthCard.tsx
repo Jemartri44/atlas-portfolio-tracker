@@ -104,14 +104,16 @@ const Ready = (props: {
       <ul class="tasks">
         <For each={lines()}>{(line) => <Line line={line} />}</For>
       </ul>
-      <p class="card-note">
-        Porcentajes sobre los <Amount value={props.plan.plan.amount_eur} decimals={0} /> del mes
-        <Show when={!props.plan.bucket.proposed_eur.isZero()}>
-          , cubo incluido. En Cartera, sobre los{" "}
-          <Amount value={props.plan.plan.core_amount_eur} decimals={0} /> sin el cubo
-        </Show>
-        .
-      </p>
+      <Show when={!props.plan.plan.amount_eur.isZero()}>
+        <p class="card-note">
+          Porcentajes sobre los <Amount value={props.plan.plan.amount_eur} decimals={0} /> del mes
+          <Show when={!props.plan.bucket.proposed_eur.isZero()}>
+            , cubo incluido. En Cartera, sobre los{" "}
+            <Amount value={props.plan.plan.core_amount_eur} decimals={0} /> sin el cubo
+          </Show>
+          .
+        </p>
+      </Show>
       <Show
         when={next()}
         fallback={
@@ -145,18 +147,15 @@ export const MonthCard = (props: {
   names: NameIndex;
 }): JSX.Element => {
   const wide = mediaQuery(GRID);
-  const amount = (): MonthPlan["status"] | undefined => props.plan?.status;
+  const ready = () => (props.plan?.status === "ready" ? props.plan : undefined);
   return (
     <Section
       title="Este mes"
       class="summary-month"
       aside={
         <Show when={!wide()} fallback={<Tag tone="accent">Propuesta</Tag>}>
-          <Show when={amount() === "ready"}>
-            <Amount
-              value={(props.plan as Extract<MonthPlan, { status: "ready" }>).plan.amount_eur}
-              decimals={0}
-            />
+          <Show when={ready()}>
+            {(plan) => <Amount value={plan().plan.amount_eur} decimals={0} />}
           </Show>
         </Show>
       }
