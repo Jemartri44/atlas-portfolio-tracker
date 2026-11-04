@@ -6,13 +6,7 @@
 // they are only painted, with its four first groups in sight (docs/design/system.md §5.6).
 
 import { type JSX, Show } from "solid-js";
-import {
-  type FoldedNotice,
-  Icon,
-  NoticeFolds,
-  type NoticeItem,
-  type Severity,
-} from "../../components/index.js";
+import { type FoldedNotice, Icon, NoticeFolds, type Severity } from "../../components/index.js";
 import type { AttentionItem, AttentionSeverity } from "../../view-models/index.js";
 
 const SEVERITY: Record<AttentionSeverity, Severity> = {
@@ -40,17 +34,17 @@ export const AttentionBlock = (props: {
    * a row kept for it while the tax engine answers, then the notice or
    * nothing. It counts among the four in sight.
    */
-  fiscal?: (() => "reserved" | NoticeItem | undefined) | undefined;
+  fiscal?: (() => "reserved" | FoldedNotice | undefined) | undefined;
   /** A scheduled task that stopped running: it arrives after the first paint, and in sight. */
-  jobs?: (() => NoticeItem | undefined) | undefined;
+  jobs?: (() => FoldedNotice | undefined) | undefined;
 }): JSX.Element => {
-  const fiscal = (): "reserved" | NoticeItem | undefined => props.fiscal?.();
+  const fiscal = (): "reserved" | FoldedNotice | undefined => props.fiscal?.();
   const notices = (): FoldedNotice[] => {
     const all = props.items.map(noticeOf);
     const item = fiscal();
     const extra = [
       ...(item === undefined || item === "reserved" ? [] : [item]),
-      ...(props.jobs?.() === undefined ? [] : [props.jobs?.() as NoticeItem]),
+      ...(props.jobs?.() === undefined ? [] : [props.jobs?.() as FoldedNotice]),
     ];
     const at = Math.max(0, Math.min(VISIBLE - extra.length, all.length));
     return [...all.slice(0, at), ...extra, ...all.slice(at)];

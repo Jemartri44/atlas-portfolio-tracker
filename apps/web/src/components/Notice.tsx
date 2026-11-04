@@ -50,8 +50,6 @@ export const Notice = (props: NoticeProps): JSX.Element => (
 
 export interface NoticeItem {
   severity: Severity;
-  /** The short name of a notice that folds under it (`NoticeFolds`); the others say it all. */
-  title?: string | undefined;
   message: JSX.Element;
   /**
    * Where it is fixed; the whole notice is the link. Absent when that place is

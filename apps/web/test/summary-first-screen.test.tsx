@@ -51,6 +51,7 @@ describe("the summary out of the income tax season", () => {
     const fiscal = notices.filter((li) => /Modelo 72[01]/.test(text(li)));
     expect(fiscal).toHaveLength(1);
     expect(fiscal[0]?.querySelector('a[href="/fiscal"]')).not.toBeNull();
+    expect(text(fiscal[0]?.querySelector("summary"))).toContain("Declaración: algo por presentar");
     // Among the four in sight: at most the fourth.
     expect(notices.indexOf(fiscal[0] as Element)).toBeLessThanOrEqual(3);
     // Said once: the row of the tax card does not repeat it.

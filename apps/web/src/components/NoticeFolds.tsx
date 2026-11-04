@@ -10,6 +10,8 @@ import { Icon } from "./Icon.jsx";
 import { ICONS, type NoticeItem } from "./Notice.jsx";
 
 export interface FoldedNotice extends NoticeItem {
+  /** The name on the row: without it the row would be an icon and nothing else. */
+  title: string;
   parts?: WarningParts | undefined;
 }
 
