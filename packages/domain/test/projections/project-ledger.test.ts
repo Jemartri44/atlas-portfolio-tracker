@@ -377,11 +377,11 @@ describe("projectLedger: rectification", () => {
 });
 
 describe("projectLedger: books and catalogue references", () => {
-  it("rejects buys in the bucket without a thesis, cross-book operations and unknown ids", () => {
+  it("rejects cross-book operations and unknown ids", () => {
     const b = new LedgerBuilder();
     catalogue(b);
     b.buy({ account_id: "acc_bucket", asset_id: "ast_spec", currency: "USD" });
-    expect(failure(b.build()).code).toBe("thesis_required");
+    expect(projectLedger(b.build()).warnings).toEqual([]);
 
     const c = new LedgerBuilder();
     catalogue(c);

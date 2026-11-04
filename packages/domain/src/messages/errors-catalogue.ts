@@ -25,12 +25,6 @@ export const CATALOGUE_ERRORS: Record<string, Entry> = {
     `La cuenta ${v.one(d.account_id)} tiene operaciones registradas: ya no puede pasar de la cartera principal al cubo ni al revés.`,
   book_mismatch: () =>
     "La cuenta y el activo pertenecen a carteras distintas: la cartera principal y el cubo no se mezclan.",
-  thesis_required: {
-    say: () => "Las compras del cubo exigen una tesis abierta y registrada antes de comprar.",
-    web: () => "Ábrela en Registrar → Abrir una tesis y vuelve.",
-    cli: (d, v) =>
-      `Indícala con --thesis <id> (regla 15); ábrela con: atlas thesis open --id … --account ${v.text(d.account_id)} --asset ${v.text(d.asset_id)} …`,
-  },
   unknown_thesis: (d, v) => `La tesis ${v.thesis(d.thesis_id)} no existe.`,
   thesis_mismatch: (d, v) =>
     `La tesis ${v.thesis(d.thesis_id)} es de ${v.one(d.asset_id)} en ${v.one(d.account_id)}, no de esta operación.`,

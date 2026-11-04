@@ -225,11 +225,13 @@ describe("theses: rejections at opening and closing", () => {
 });
 
 describe("theses: bucket buys and sells", () => {
-  it("rejects a bucket buy without thesis, with an unknown one, or with one of another asset or account", () => {
+  it("rejects a bucket buy with an unknown thesis, or with one of another asset or account", () => {
     const none = new LedgerBuilder();
     bucketCatalogue(none);
     buyWithThesis(none, undefined);
-    expect(failure(none.build()).code).toBe("thesis_required");
+    const state = projectLedger(none.build());
+    expect(state.warnings).toEqual([]);
+    expect(state.theses.size).toBe(0);
     const unknown = new LedgerBuilder();
     bucketCatalogue(unknown);
     buyWithThesis(unknown, "th_nope");
@@ -310,12 +312,12 @@ describe("theses: bucket buys and sells", () => {
     expect(failure(sell.build()).code).toBe("thesis_not_allowed");
   });
 
-  it("accepts a bucket sell without thesis with a warning, and validates a linked one like a buy", () => {
+  it("accepts a bucket sell without thesis, silently, and validates a linked one like a buy", () => {
     const b = new LedgerBuilder();
     bucketCatalogue(b);
     b.thesisOpened({ thesis_id: "th1" });
     buyWithThesis(b, "th1");
-    const sell = b.sell({
+    b.sell({
       account_id: "acc_bucket",
       asset_id: "ast_spec",
       quantity: "4",
@@ -324,8 +326,7 @@ describe("theses: bucket buys and sells", () => {
       value_date: "2027-03-10",
     });
     const state = projectLedger(b.build());
-    expect(codes(state)).toEqual(["sell_without_thesis"]);
-    expect(state.warnings[0]?.event_id).toBe(sell.id);
+    expect(codes(state)).toEqual([]);
     expect(state.gains).toHaveLength(1);
     expect(state.theses.get("th1")?.sells).toEqual([]);
     expect(state.theses.get("th1")?.result_eur.isZero()).toBe(true);

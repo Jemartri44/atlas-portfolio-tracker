@@ -212,8 +212,8 @@ describe("applySwap: what it refuses", () => {
     ).toThrow(ProjectionError);
   });
 
-  it("refuses a swap in the bucket without an open thesis for what is received (rule 15)", () => {
-    expect(
+  it("accepts a swap in the bucket with no thesis", () => {
+    expect(() =>
       swapping((b) => {
         b.deposit({ account_id: "acc_bucket", amount: "5000" });
         b.thesisOpened({ thesis_id: "th_1" });
@@ -230,7 +230,7 @@ describe("applySwap: what it refuses", () => {
           to_asset_id: "ast_spec2",
         });
       }),
-    ).toThrow(expect.objectContaining({ code: "thesis_required" }));
+    ).not.toThrow();
   });
 
   it("refuses a thesis on a core account", () => {

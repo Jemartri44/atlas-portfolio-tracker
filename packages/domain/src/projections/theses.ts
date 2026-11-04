@@ -21,7 +21,14 @@ import { Quantity } from "../money/quantity.js";
 import type { AccountId, AssetId, ThesisClosedEvent, ThesisOpenedEvent } from "../schema/events.js";
 import { requireAccount, requireAsset } from "./catalogue.js";
 import { positionOf } from "./positions.js";
-import { addWarning, type LedgerState, type Thesis, type ThesisView } from "./state.js";
+import {
+  addWarning,
+  type LedgerState,
+  type Thesis,
+  type ThesisLeg,
+  type ThesisView,
+  type UnlinkedLegs,
+} from "./state.js";
 
 /** A thesis exists at a date when its opening was recorded on or before it. */
 const existsAt = (thesis: Thesis, at: CivilDate): boolean => thesis.opened_at <= at;
@@ -169,7 +176,7 @@ export const requireOpenThesis = (
     throw new ProjectionError(
       "thesis_not_open",
       eventId,
-      `thesis ${thesisId} is not open at this point of the ledger (rule 15: open it first)`,
+      `thesis ${thesisId} is not open at this point of the ledger (open it first)`,
       { thesis_id: thesisId, opened_before: openedBefore, closed_before: closedBefore },
     );
   }
@@ -208,6 +215,50 @@ export const linkBuy = (
       },
     );
   }
+};
+
+const unlinkedOf = (state: LedgerState, accountId: AccountId, assetId: AssetId): UnlinkedLegs => {
+  const key = `${accountId}|${assetId}`;
+  let legs = state.unlinked.get(key);
+  if (legs === undefined) {
+    legs = {
+      account_id: accountId,
+      asset_id: assetId,
+      buys: [],
+      sells: [],
+      invested_eur: Money.zero("EUR"),
+      fees_eur: Money.zero("EUR"),
+      result_eur: Money.zero("EUR"),
+    };
+    state.unlinked.set(key, legs);
+  }
+  return legs;
+};
+
+/** A bucket purchase with no thesis: kept apart so rule 16 still sees it. */
+export const linkUnlinkedBuy = (
+  state: LedgerState,
+  accountId: AccountId,
+  assetId: AssetId,
+  leg: ThesisLeg,
+): void => {
+  const legs = unlinkedOf(state, accountId, assetId);
+  legs.buys.push(leg);
+  legs.invested_eur = legs.invested_eur.add(leg.amount_eur);
+  legs.fees_eur = legs.fees_eur.add(leg.fee_eur);
+};
+
+/** A bucket sale with no thesis. */
+export const linkUnlinkedSell = (
+  state: LedgerState,
+  accountId: AccountId,
+  assetId: AssetId,
+  leg: ThesisLeg,
+): void => {
+  const legs = unlinkedOf(state, accountId, assetId);
+  legs.sells.push(leg);
+  legs.fees_eur = legs.fees_eur.add(leg.fee_eur);
+  legs.result_eur = legs.result_eur.add(leg.gain_eur as Money);
 };
 
 export const linkSell = (
