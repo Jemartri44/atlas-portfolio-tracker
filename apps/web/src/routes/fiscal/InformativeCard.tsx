@@ -79,6 +79,7 @@ export const InformativeCard = (props: { view: InformativeView }): JSX.Element =
   <FoldSection
     title={props.view.title}
     summary={folded(props.view)}
+    class="span-6"
     aside={<span class="scope">Ejercicio {props.view.year}</span>}
   >
     <p class="card-note">{props.view.periodText}</p>

@@ -454,6 +454,19 @@ describe("the order of the screen by device", () => {
     expect(text(model?.querySelector(".fold-summary"))).not.toBe("");
   });
 
+  it("gives each model half the row on a computer in a year with nothing to declare", async () => {
+    today("2029-01-20");
+    withStyles(1440, 900);
+    const host = await show("/fiscal?ejercicio=2029", Fiscal, "/fiscal");
+    await settle();
+    expect(text(host)).toContain("No hay nada que declarar");
+    const models = [...host.querySelectorAll(".grid > section")].filter((card) =>
+      /^Modelo 72/.test(text(card.querySelector("h2"))),
+    );
+    expect(models).toHaveLength(2);
+    expect(models.every((card) => card.matches(".span-6"))).toBe(true);
+  });
+
   it("keeps the return before the models on a computer", async () => {
     today("2029-01-20");
     withStyles(1440, 900);
