@@ -57,7 +57,6 @@ export const WARNING_TITLES: Readonly<Record<string, Title>> = {
   missing_benchmark_asset: fixed("Falta el índice de referencia"),
   unknown_benchmark_asset: fixed("Índice de referencia desconocido"),
   missing_benchmark_price: fixed("Falta el precio del índice"),
-  sell_without_thesis: (d, v) => `Venta sin tesis: ${v.one(d.asset_id)}`,
   thesis_size_exceeded: fixed("Tesis por encima de lo previsto"),
   thesis_closed_with_position: fixed("Tesis cerrada con posición"),
 
