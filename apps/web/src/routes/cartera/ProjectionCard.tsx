@@ -1,215 +1,292 @@
-// «¿Dónde podría estar?» — the core in N years under scenarios the owner writes: today's pot plus the
-// monthly contribution of the settings (without the bucket's share), grown at the return of each
-// scenario blended with the target weights. There is **no default return**: a scenario without the
-// return of a class that has weight shows no figure and says which class is missing. Assumptions
-// are typed here and kept here; the figures are the domain's (`projection`). Not a forecast.
+// «¿Dónde podría estar?» — the core in N years, in three cases: its real value class by class, the
+// contribution spread by the target weights, every class good or bad at once. The assumptions start
+// from the published figures and what the owner edits is kept in the cloud, outside the ledger; the
+// boxes are of the moment. The figures are the domain's (`projectionCases`). Not a forecast.
 
 import type { CoreWeights, Settings } from "@atlas/domain";
-import { projection } from "@atlas/domain/portfolio";
-import { createMemo, createSignal, For, Index, type JSX, Show } from "solid-js";
-import { Amount, Field, Figure, FoldSection, Notice, StatLine } from "../../components/index.js";
-import { valueLabel } from "../../format/labels.js";
 import {
-  emptyProjectionInputs,
-  goalText,
-  MAX_SCENARIOS,
+  type CostSummary,
+  coreMonthlyOf,
+  type ProjectionDiscounts,
+  type ProjectionEdits,
+  projectionAssumptions,
+  projectionCases,
+} from "@atlas/domain/portfolio";
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  For,
+  type JSX,
+  on,
+  onCleanup,
+  Show,
+} from "solid-js";
+import { Amount, Field, FoldSection, Notice, StatLine, Tag } from "../../components/index.js";
+import { valueLabel } from "../../format/labels.js";
+import { createProjectionEdits } from "../../settings-objects/use-settings-object.js";
+import {
+  CLASS_SOURCES,
+  inputsOf,
+  PROJECTION_CLASSES,
   type ProjectionInputs,
   projectionView,
   readProjection,
 } from "../../view-models/core/projection.js";
 import { ProjectionChart } from "./ProjectionChart.jsx";
 
+const SAVE_AFTER_MS = 800;
+
+const BOXES: readonly { key: keyof ProjectionDiscounts; label: string }[] = [
+  { key: "inflation", label: "Inflación" },
+  { key: "taxes", label: "Impuestos al vender" },
+  { key: "fees", label: "Comisiones y TER" },
+];
+
 export const ProjectionCard = (props: {
   weights: CoreWeights;
+  summary: CostSummary;
   settings: Settings;
   /** The date asked about: the horizon counts from it. */
   asOf: string;
 }): JSX.Element => {
-  const [inputs, setInputs] = createSignal<ProjectionInputs>(emptyProjectionInputs());
-  const read = createMemo(() => readProjection(inputs()));
-  /** The classes the owner has to give a return for: the ones with a target weight. */
-  const classes = () =>
-    props.weights.by_class
-      .filter((share) => share.target_pct.isPositive())
-      .map((share) => share.asset_class);
-  const view = createMemo(() => {
-    const assumptions = read().assumptions;
-    return assumptions === undefined
-      ? undefined
-      : projectionView(
-          projection(props.weights, props.settings, assumptions),
-          props.asOf,
-          assumptions.goalEur,
-        );
+  const stored = createProjectionEdits();
+  const monthly = () => coreMonthlyOf(props.settings).monthly;
+  const [inputs, setInputs] = createSignal<ProjectionInputs>(inputsOf({}, monthly()));
+  const [discounts, setDiscounts] = createSignal<ProjectionDiscounts>({
+    inflation: true,
+    taxes: true,
+    fees: true,
   });
-  const patch = (change: Partial<ProjectionInputs>) => setInputs({ ...inputs(), ...change });
-  const setReturn = (scenario: number, assetClass: string, raw: string) =>
-    patch({
-      scenarios: inputs().scenarios.map((entry, at) =>
-        at === scenario ? { ...entry, returns: { ...entry.returns, [assetClass]: raw } } : entry,
+  const [problem, setProblem] = createSignal<string | undefined>();
+
+  /** A write of ours must not overwrite what is being typed; only a read, or a conflict, does. */
+  let writing = false;
+  const showStored = () => {
+    const state = stored.state();
+    if (state.kind === "ready") {
+      setInputs(inputsOf(state.value, monthly()));
+    }
+  };
+  createEffect(
+    on(stored.state, () => {
+      if (!writing) {
+        showStored();
+      }
+    }),
+  );
+  const write = async (next: ProjectionEdits) => {
+    writing = true;
+    const said = await stored.save(next);
+    writing = false;
+    setProblem(said);
+    if (said !== undefined) {
+      showStored();
+    }
+  };
+
+  const read = createMemo(() => readProjection(inputs(), monthly()));
+  /** The last edits that read: a wrong field leaves the figures of the last good ones. */
+  const edits = createMemo<ProjectionEdits>((previous) => read().edits ?? previous, {});
+  const view = createMemo(() =>
+    projectionView(
+      projectionCases(
+        props.weights,
+        props.summary,
+        props.settings,
+        projectionAssumptions(edits()),
+        discounts(),
       ),
-    });
-  const setName = (scenario: number, name: string) =>
-    patch({
-      scenarios: inputs().scenarios.map((entry, at) =>
-        at === scenario ? { ...entry, name } : entry,
-      ),
-    });
+      props.asOf,
+      discounts(),
+    ),
+  );
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const saveSoon = (next: ProjectionEdits) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => void write(next), SAVE_AFTER_MS);
+  };
+  onCleanup(() => clearTimeout(timer));
+
+  const type = (field: string) => (raw: string) => {
+    const next = { ...inputs(), [field]: raw };
+    setInputs(next);
+    const { edits: typed } = readProjection(next, monthly());
+    if (typed !== undefined) {
+      saveSoon(typed);
+    }
+  };
+  const reset = () => {
+    clearTimeout(timer);
+    setInputs(inputsOf({}, monthly()));
+    void write({});
+  };
+  const decimal = (id: string, field: string, label: string, unit: string, hint?: string) => (
+    <Field
+      id={id}
+      kind="decimal"
+      label={label}
+      unit={unit}
+      hint={hint}
+      value={inputs()[field] ?? ""}
+      error={read().errors[field]}
+      onInput={type(field)}
+    />
+  );
+  const normal = () => view().cases[1];
 
   return (
     <FoldSection
       title="Proyección"
       class="span-12 projection-card"
+      aside={<Tag>no es una previsión</Tag>}
       summary={
-        <Show when={view()} fallback="Escribe las rentabilidades para ver dónde podría estar">
+        <Show when={normal()} fallback={`Sin cifra: ${view().gap}`}>
           {(shown) => (
-            <Show when={shown().gap === undefined} fallback={`Sin cifra: ${shown().gap}`}>
-              <Show
-                when={shown().scenarios[0]?.end}
-                fallback="Falta la rentabilidad de algún tipo de activo"
-              >
-                {(end) => (
-                  <>
-                    <Amount value={end()} /> dentro de {shown().years} años
-                  </>
-                )}
-              </Show>
-            </Show>
+            <>
+              Normal <Amount value={shown().value} /> dentro de {view().years} años
+            </>
           )}
         </Show>
       }
     >
-      <p class="card-note">
-        Dónde podría estar la cartera principal con tu aportación mensual y los pesos objetivo de
-        Configuración, si cada tipo de activo rindiera lo que escribas. Sin rentabilidades por
-        defecto: no hay cifra hasta que las escribas. No es una previsión.
-      </p>
       <div class="fieldset assumptions">
         <Field
           id="pj-years"
           kind="integer"
           label="Años"
-          value={inputs().years}
-          error={read().years}
-          onInput={(years) => patch({ years })}
+          value={inputs().years ?? ""}
+          error={read().errors.years}
+          onInput={type("years")}
         />
-        <Field
-          id="pj-goal"
-          kind="decimal"
-          label="Objetivo (opcional)"
-          unit="€"
-          hint="Dice en qué mes se alcanza."
-          value={inputs().goal}
-          error={read().goal}
-          onInput={(goal) => patch({ goal })}
-        />
-      </div>
-      {/* Index, not For: typing replaces the scenario object, and For would rebuild the inputs and drop the focus. */}
-      <Index each={inputs().scenarios}>
-        {(scenario, index) => (
-          <fieldset class="scenario">
-            <legend>Escenario {index + 1}</legend>
-            <div class="fieldset assumptions">
-              <Field
-                id={`pj-name-${index}`}
-                kind="text"
-                label="Nombre"
-                value={scenario().name}
-                onInput={(name) => setName(index, name)}
-              />
-              <For each={classes()}>
-                {(assetClass) => (
-                  <Field
-                    id={`pj-${index}-${assetClass}`}
-                    kind="decimal"
-                    label={`Rentabilidad anual de ${valueLabel(assetClass).toLowerCase()}`}
-                    unit="%"
-                    value={scenario().returns[assetClass] ?? ""}
-                    error={read().returns[`${index}:${assetClass}`]}
-                    onInput={(raw) => setReturn(index, assetClass, raw)}
-                  />
-                )}
-              </For>
-            </div>
-            <Show when={inputs().scenarios.length > 1}>
-              <button
-                type="button"
-                class="secondary"
-                onClick={() =>
-                  patch({ scenarios: inputs().scenarios.filter((_, at) => at !== index) })
-                }
-              >
-                Quitar este escenario
-              </button>
-            </Show>
-          </fieldset>
+        {decimal(
+          "pj-monthly",
+          "monthly_eur",
+          "Aportación mensual",
+          "€",
+          "De Ajustes, sin la parte del cubo.",
         )}
-      </Index>
-      <Show when={inputs().scenarios.length < MAX_SCENARIOS}>
-        <button
-          type="button"
-          class="secondary"
-          onClick={() =>
-            patch({
-              scenarios: [
-                ...inputs().scenarios,
-                { name: `Escenario ${inputs().scenarios.length + 1}`, returns: {} },
-              ],
-            })
-          }
-        >
-          Añadir un escenario
+        {decimal(
+          "pj-inflation",
+          "inflation_pct",
+          "Inflación",
+          "%",
+          "J.P. Morgan 2027, Euro Inflation.",
+        )}
+        {decimal(
+          "pj-commission",
+          "commission_pct",
+          "Comisión de cada aportación",
+          "%",
+          "Vacío: solo el TER.",
+        )}
+      </div>
+      <div class="projection-classes">
+        <For each={PROJECTION_CLASSES}>
+          {(name) => (
+            <fieldset class="scenario">
+              <legend>{valueLabel(name)}</legend>
+              <div class="fieldset assumptions">
+                {decimal(`pj-${name}-return`, `${name}.return_pct`, "Rentabilidad anual", "%")}
+                {decimal(`pj-${name}-volatility`, `${name}.volatility_pct`, "Volatilidad", "%")}
+              </div>
+              <p class="meta">{CLASS_SOURCES[name]}</p>
+            </fieldset>
+          )}
+        </For>
+      </div>
+      <p class="card-note">
+        Son estimaciones de una gestora a 10-15 años, no cifras oficiales, y el informe avisa de que
+        lo del bitcoin es orientativo. Rentabilidad compuesta. Lo que cambies se guarda.
+      </p>
+      <div class="button-row">
+        <button type="button" class="secondary" disabled={stored.busy()} onClick={reset}>
+          Restablecer
         </button>
+      </div>
+      <Show when={stored.state().kind === "failed"}>
+        <Notice severity="caution" title="Sin tus cambios">
+          No se han podido leer los supuestos guardados: ves los de partida.
+        </Notice>
       </Show>
-      <Show when={view()}>
-        {(shown) => (
-          <Show
-            when={shown().gap === undefined}
-            fallback={
-              <Notice severity="info" title="Sin cifra">
-                Todavía no se puede proyectar: {shown().gap}.
-              </Notice>
-            }
-          >
-            <StatLine label="Hoy">
-              <Amount value={shown().start} missingReason="sin dato" />
+      <Show when={problem()}>
+        {(said) => (
+          <Notice severity="caution" title="No se ha guardado">
+            {said()}
+          </Notice>
+        )}
+      </Show>
+      <fieldset class="projection-boxes">
+        <legend class="sr-only">Qué descontar</legend>
+        <For each={BOXES}>
+          {(box) => (
+            <label class="switch-row">
+              <input
+                type="checkbox"
+                checked={discounts()[box.key]}
+                onChange={(event) =>
+                  setDiscounts({ ...discounts(), [box.key]: event.currentTarget.checked })
+                }
+              />
+              <span>{box.label}</span>
+            </label>
+          )}
+        </For>
+      </fieldset>
+      <Show
+        when={view().gap === undefined}
+        fallback={
+          <Notice severity="info" title="Sin cifra">
+            Todavía no se puede proyectar: {view().gap}.
+          </Notice>
+        }
+      >
+        <StatLine label="Hoy">
+          <Amount value={view().start} missingReason="sin dato" />
+        </StatLine>
+        <For each={view().cases}>
+          {(shown) => (
+            <StatLine label={`${shown.label}, dentro de ${view().years} años`}>
+              <Amount value={shown.value} />
             </StatLine>
-            <StatLine label="Aportación mensual a la cartera principal">
-              <Amount value={shown().monthly} missingReason="sin dato" />
-            </StatLine>
-            <Show when={shown().plot}>{(plot) => <ProjectionChart plot={plot()} />}</Show>
-            <For each={shown().scenarios}>
-              {(scenario) => (
-                <div class="scenario-result">
-                  <h3 class="block-title">{scenario.name}</h3>
-                  <Show
-                    when={scenario.end}
-                    fallback={
-                      <p class="meta">
-                        Falta la rentabilidad de {scenario.missingReturns.join(", ")}.
-                      </p>
-                    }
-                  >
-                    <StatLine label="Rentabilidad mezclada con tus pesos objetivo">
-                      <Figure value={scenario.blendedPct} unit="percent" decimals="auto" />
-                    </StatLine>
-                    <StatLine label={`Dentro de ${shown().years} años`}>
-                      <Amount value={scenario.end} />
-                    </StatLine>
-                    <StatLine label="De lo cual aportado">
-                      <Amount value={scenario.contributed} />
-                    </StatLine>
-                    <Show when={scenario.goal !== undefined}>
-                      <StatLine label="Objetivo">
-                        <Amount value={shown().goalAmount} /> {goalText(scenario.goal)}
-                      </StatLine>
-                    </Show>
-                  </Show>
-                </div>
+          )}
+        </For>
+        <p class="card-note">{view().discounted}</p>
+        <Show when={view().plot}>{(plot) => <ProjectionChart plot={plot()} />}</Show>
+        <h3 class="block-title">Qué se llevan los costes</h3>
+        <table class="table is-sm projection-costs">
+          <caption class="meta">A {view().years} años, sin inflación</caption>
+          <thead>
+            <tr>
+              <th scope="col">Caso</th>
+              <th scope="col">TER y comisiones</th>
+              <th scope="col">Impuesto al vender</th>
+            </tr>
+          </thead>
+          <tbody>
+            <For each={view().cases}>
+              {(shown) => (
+                <tr>
+                  <td>{shown.label}</td>
+                  <td>
+                    <Amount value={shown.fees} />
+                  </td>
+                  <td>
+                    <Amount value={shown.tax} />
+                  </td>
+                </tr>
               )}
             </For>
-          </Show>
-        )}
+          </tbody>
+        </table>
+        <Show when={view().terMissing}>
+          {(left) => (
+            <p class="card-note">
+              El TER no alcanza a <Amount value={left()} /> de activos que no lo declaran.
+            </p>
+          )}
+        </Show>
       </Show>
     </FoldSection>
   );

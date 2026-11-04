@@ -1,7 +1,7 @@
-// The projection year by year: a line per scenario that has a figure and what was contributed in
-// dashed grey, as in the evolution of the summary, with the equivalent table for whoever does not
-// see the chart. The scenarios share the colour of the core and are told apart by their dash (the
-// colour is never the only carrier of meaning); none uses the bucket's colour.
+// The projection year by year: the normal case as a line, the band from the pessimistic to the
+// optimistic case as a wash between two dotted lines, and what was contributed in dashed grey, as in
+// the evolution of the summary, with the equivalent table for whoever does not see the chart. None
+// uses the bucket's colour.
 
 import type { JSX } from "solid-js";
 import { Chart, type ChartSeries } from "../../components/chart/Chart.jsx";
@@ -9,32 +9,42 @@ import { ChartLegend } from "../../components/chart/ChartLegend.jsx";
 import { ChartTable } from "../../components/chart/ChartTable.jsx";
 import type { ProjectionPlot } from "../../view-models/core/projection.js";
 
-const SCENARIO_DASHES: readonly (readonly number[] | undefined)[] = [
-  undefined,
-  [2, 3],
-  [10, 3, 2, 3],
-];
+const EDGE_DASH = [2, 3];
 const CONTRIBUTED_DASH = [6, 4];
 
 export const ProjectionChart = (props: { plot: ProjectionPlot }): JSX.Element => {
-  const series = (): ChartSeries[] =>
-    props.plot.labels.map((label, at) => {
-      const contributed = at === props.plot.labels.length - 1;
-      const dash = contributed ? CONTRIBUTED_DASH : SCENARIO_DASHES[at];
-      return {
-        label,
-        values: props.plot.values[at] ?? [],
-        colour: contributed ? "--c-series-contrib" : "--c-series-core",
-        ...(dash === undefined ? {} : { dash: [...dash] }),
-      };
-    });
+  const series = (): ChartSeries[] => [
+    {
+      label: "Pesimista",
+      values: props.plot.low,
+      colour: "--c-series-core",
+      dash: EDGE_DASH,
+      plain: true,
+    },
+    {
+      label: "Optimista",
+      values: props.plot.high,
+      colour: "--c-series-core",
+      dash: EDGE_DASH,
+      plain: true,
+      fill: { below: "Pesimista" },
+    },
+    { label: "Normal", values: props.plot.normal, colour: "--c-series-core" },
+    {
+      label: "Aportado",
+      values: props.plot.contributed,
+      colour: "--c-series-contrib",
+      dash: CONTRIBUTED_DASH,
+      plain: true,
+    },
+  ];
   return (
     <>
       <figure class="chart">
         <Chart
           x={props.plot.x}
           series={series()}
-          label="Proyección año a año: el valor de cada escenario y lo aportado"
+          label="Proyección año a año: los tres casos y lo aportado"
           unit="eur"
         />
         <figcaption>
@@ -42,7 +52,7 @@ export const ProjectionChart = (props: { plot: ProjectionPlot }): JSX.Element =>
         </figcaption>
       </figure>
       <ChartTable
-        headers={props.plot.labels}
+        headers={["Pesimista", "Normal", "Optimista", "Aportado"]}
         rows={props.plot.rows}
         caption="Proyección año a año"
         unit="eur"

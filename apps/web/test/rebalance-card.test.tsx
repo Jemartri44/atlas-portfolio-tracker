@@ -151,14 +151,19 @@ describe("the cards of the portfolio by device", () => {
     expect(note?.closest("details")).toBeNull();
   });
 
-  it("fold five cards under a summary line on a phone, and none on a computer", async () => {
-    const folded = [
-      "Exposición",
-      "Rebalancear",
-      "Costes",
-      "Coste total a largo plazo",
-      "Proyección",
-    ];
+  it("says what the bucket gets beside the rebalance, and drops it with the switch", async () => {
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => host.querySelector("#rebalance-amount") !== null, "the card");
+    type(host, "rebalance-amount", "540");
+    await press(host, "Calcular rebalanceo");
+    await until(() => host.querySelector(".rebalance-bucket") !== null, "the bucket");
+    expect(text(host.querySelector(".rebalance-bucket"))).toContain("60,00");
+    (host.querySelector("#rebalance-bucket") as HTMLInputElement).click();
+    await until(() => host.querySelector(".rebalance-bucket") === null, "the bucket to go");
+  });
+
+  it("fold four cards under a summary line on a phone, and none on a computer", async () => {
+    const folded = ["Exposición", "Rebalancear", "Costes", "Proyección"];
     const open = ["Pesos frente al objetivo", "Rentabilidad"];
     withStyles(390);
     const phone = await show(`/cartera?fecha=${DATE}`, Cartera);

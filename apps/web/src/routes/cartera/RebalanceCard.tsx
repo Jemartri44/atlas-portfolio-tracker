@@ -10,12 +10,28 @@
 // carries the tax engine, which the first screen does not need.
 
 import type { ExternalPrices, LedgerEvent, LedgerState, Settings } from "@atlas/domain";
+import { bucketStats } from "@atlas/domain/portfolio";
 import { createEffect, createMemo, createSignal, type JSX, on, Show } from "solid-js";
-import { ErrorView, Field, FoldSection, Pending, Tag } from "../../components/index.js";
+import {
+  Amount,
+  ErrorView,
+  Field,
+  FoldSection,
+  Pending,
+  StatLine,
+  Switch,
+  Tag,
+} from "../../components/index.js";
 import type { NameIndex } from "../../format/names.js";
 import { attempt } from "../../ledger/query.js";
 import type { AppError } from "../../ledger/state.js";
-import { type RebalanceView, rebalanceView, typedAmount } from "../../view-models/core/index.js";
+import {
+  type BucketPartView,
+  bucketPartView,
+  type RebalanceView,
+  rebalanceView,
+  typedAmount,
+} from "../../view-models/core/index.js";
 import { Result } from "./RebalanceResult.jsx";
 
 /** What fixes each refusal, and where; a refusal with a remedy is a pending datum, not an error. */
@@ -44,6 +60,8 @@ export const RebalanceCard = (props: RebalanceCardProps): JSX.Element => {
     { ok: true; value: RebalanceView } | { ok: false; error: AppError } | undefined
   >(undefined);
   const [busy, setBusy] = createSignal(false);
+  const [withBucket, setWithBucket] = createSignal(true);
+  const [bucket, setBucket] = createSignal<BucketPartView | undefined>(undefined);
   const typed = createMemo(() => typedAmount(amountText()));
   const amountError = (): string | undefined => {
     const value = typed();
@@ -54,7 +72,10 @@ export const RebalanceCard = (props: RebalanceCardProps): JSX.Element => {
   createEffect(
     on(
       () => [props.date, props.state, props.events, props.settings, props.external],
-      () => setOutcome(undefined),
+      () => {
+        setOutcome(undefined);
+        setBucket(undefined);
+      },
       { defer: true },
     ),
   );
@@ -67,6 +88,21 @@ export const RebalanceCard = (props: RebalanceCardProps): JSX.Element => {
     setBusy(true);
     try {
       const { rebalancePlan } = await import("@atlas/domain/rebalance");
+      const part = attempt(() =>
+        bucketPartView(
+          money.kind === "amount" ? money.value : undefined,
+          props.settings,
+          bucketStats(
+            props.state,
+            props.events,
+            props.date,
+            props.settings,
+            props.date,
+            props.external,
+          ).controls,
+        ),
+      );
+      setBucket(part.ok ? part.value : undefined);
       setOutcome(
         attempt(() =>
           rebalanceView(
@@ -99,7 +135,7 @@ export const RebalanceCard = (props: RebalanceCardProps): JSX.Element => {
       <p class="card-note">
         Propone cómo acercarte a los pesos objetivo: primero con dinero nuevo, después con traspasos
         entre fondos (sin impuestos) y, solo si hace falta, con ventas, enseñándote antes el
-        impuesto aproximado y las comisiones. El cubo no entra. Nada se registra.
+        impuesto aproximado y las comisiones. El cubo nunca entra en los pesos. Nada se registra.
       </p>
       <Field
         id="rebalance-amount"
@@ -111,6 +147,13 @@ export const RebalanceCard = (props: RebalanceCardProps): JSX.Element => {
         value={amountText()}
         error={amountError()}
         onInput={setAmountText}
+      />
+      <Switch
+        id="rebalance-bucket"
+        label="Incluir el cubo"
+        hint="Calcula aparte lo que le toca. No se guarda."
+        checked={withBucket()}
+        onChange={setWithBucket}
       />
       <button type="button" disabled={busy() || amountError() !== undefined} onClick={run}>
         {busy() ? "Calculando…" : "Calcular rebalanceo"}
@@ -126,6 +169,40 @@ export const RebalanceCard = (props: RebalanceCardProps): JSX.Element => {
         )}
       </Show>
       <Show when={view()}>{(result) => <Result view={result()} names={props.names} />}</Show>
+      <Show when={view() !== undefined && withBucket() ? bucket() : undefined}>
+        {(part) => (
+          <div class="rebalance-bucket">
+            <h3 class="block-title">Para el cubo, aparte del rebalanceo</h3>
+            <Show
+              when={part().share}
+              fallback={<p class="card-note">Escribe el dinero nuevo para ver lo que le toca.</p>}
+            >
+              {(share) => (
+                <StatLine label={`Su ${part().pct} % del total`}>
+                  <Amount value={share()} />
+                </StatLine>
+              )}
+            </Show>
+            <StatLine label="Aportado al cubo">
+              <Amount value={part().contributed} />
+            </StatLine>
+            <Show when={part().budget}>
+              {(budget) => (
+                <StatLine label="Presupuesto previsto hasta hoy">
+                  <Amount value={budget()} />
+                </StatLine>
+              )}
+            </Show>
+            <Show when={part().room}>
+              {(room) => (
+                <StatLine label="Hasta el tope quedan">
+                  <Amount value={room()} />
+                </StatLine>
+              )}
+            </Show>
+          </div>
+        )}
+      </Show>
     </>
   );
 

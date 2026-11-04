@@ -4,11 +4,21 @@
 // step leaves, the estimated tax; nothing is recomputed here. What this adds
 // are the names and the sentence of each case.
 
-import type { Money, Quantity, Warning } from "@atlas/domain";
+import {
+  type BucketControls,
+  Decimal,
+  EUR,
+  Money,
+  type Quantity,
+  type Settings,
+  type Warning,
+} from "@atlas/domain";
+import { bucketShareOf } from "@atlas/domain/portfolio";
 import type { RebalancePlan, RebalanceStep, SaleTax } from "@atlas/domain/rebalance";
 import { formatDate } from "../../format/date.js";
 import { valueLabel } from "../../format/labels.js";
 import { displayName, type NameIndex, NO_NAMES } from "../../format/names.js";
+import { formatDecimalString } from "../../format/number.js";
 import { type PlatformsView, platformsView } from "./platforms.js";
 
 export interface DiagnosisRowView {
@@ -185,3 +195,33 @@ export const rebalanceView = (plan: RebalancePlan, names: NameIndex = NO_NAMES):
   })),
   warnings: plan.warnings,
 });
+
+/** What the bucket gets beside a rebalance, and how its budget goes: never part of the weights. */
+export interface BucketPartView {
+  pct: string;
+  /** Absent without new money or without a share in the settings. */
+  share?: Money;
+  contributed: Money;
+  budget?: Money;
+  /** Absent without a cap in the settings; never below zero. */
+  room?: Money;
+}
+
+export const bucketPartView = (
+  /** The new money for the core, as a decimal string. */
+  coreEur: string | undefined,
+  settings: Settings,
+  controls: BucketControls,
+): BucketPartView => {
+  const share = coreEur === undefined ? undefined : bucketShareOf(Decimal.parse(coreEur), settings);
+  const cap = settings.bucket_max_cumulative_contribution;
+  const left =
+    cap === undefined ? undefined : Money.parse(cap, EUR).sub(controls.contribution_gross_eur);
+  return {
+    pct: formatDecimalString(settings.bucket_pct_of_contribution ?? "0"),
+    ...(share === undefined ? {} : { share: Money.of(share, EUR) }),
+    contributed: controls.contribution_gross_eur,
+    ...(controls.budget_eur === undefined ? {} : { budget: controls.budget_eur }),
+    ...(left === undefined ? {} : { room: left.isNegative() ? Money.zero(EUR) : left }),
+  };
+};
