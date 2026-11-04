@@ -81,18 +81,18 @@ Para enseñar un valor gana el precio más reciente **que tenga valor en euros**
 
 ## El cubo especulativo (Fase 3)
 
-El cubo es el libro donde se aprende: cada tesis se escribe **antes** de comprar (regla 15) y se mide contra la alternativa aburrida, el índice de referencia (regla 16). El índice es un activo más del catálogo, y sus precios salen de las mismas `valuation` que todo lo demás.
+El cubo es el libro donde se aprende: cada tesis, si se usa, se escribe **antes** de comprar (regla 15) y se mide contra la alternativa aburrida, el índice de referencia (regla 16). El índice es un activo más del catálogo, y sus precios salen de las mismas `valuation` que todo lo demás.
 
 ```bash
 # 0. Una vez: di cuál es el índice de referencia del cubo
 atlas settings set --bucket-benchmark-asset ast_world --yes
 
-# 1. La tesis, antes de comprar: qué crees, en cuánto tiempo, qué te haría estar equivocado
+# 1. La tesis, si la quieres, antes de comprar: qué crees, en cuánto tiempo, qué te haría estar equivocado
 atlas thesis open --id th_delta --account acc_bucket --asset ast_delta \
   --hypothesis "El contrato nuevo dobla los ingresos" --horizon-days 120 \
   --invalidation "Cierra por debajo de 15 EUR dos semanas seguidas" --planned-size 900 --yes
 
-# 2. La compra, enlazada a la tesis (sin tesis no se puede comprar en el cubo)
+# 2. La compra, enlazada a la tesis (opcional: sin `--thesis` también se registra)
 atlas add buy --account acc_bucket --asset ast_delta --thesis th_delta \
   --trade-date 2027-12-20 --value-date 2027-12-22 --quantity 25 --unit-price 18.20 \
   --currency EUR --fx-rate 1 --fx-rate-date 2027-12-20 --fee 1 --yes
@@ -178,7 +178,7 @@ atlas ca raw --asset ast_acme --kind issuer_liquidation --effects-json '[{"op":"
 
 El documento fuente (`--source-document`) se guarda como referencia: el PDF se copia a mano a `documents/`. Un `corporate_action` no se edita: `atlas delete <id>` y registrarlo de nuevo.
 
-En el cubo especulativo **no se puede comprar sin tesis** (regla 15 del plan): la tesis se abre antes en el libro y cada compra la referencia con `--thesis`; las ventas también pueden enlazarse para que el resultado de la tesis sea derivable.
+En el cubo especulativo la tesis es **opcional** (regla 15): si se usa, se abre antes en el libro y cada compra la referencia con `--thesis`; las ventas también pueden enlazarse para que el resultado de la tesis sea derivable.
 
 ```bash
 atlas account add --id acc_bucket --name "Cubo" --platform ibkr --book bucket --base-currency EUR --country IE --yes

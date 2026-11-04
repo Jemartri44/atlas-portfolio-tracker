@@ -58,8 +58,6 @@ export const WARNINGS_OPERATIONS: Record<string, Entry> = {
   },
   transferable_not_fund: (d, v) =>
     `${v.one(d.asset_id)} es de tipo ${v.word(d.asset_type)} y está marcado como traspasable, pero el diferimiento solo existe entre fondos: esa marca no tiene efecto.`,
-  sell_without_thesis: (d, v) =>
-    `La venta de ${v.one(d.asset_id)} en ${v.one(d.account_id)} no está enlazada a ninguna tesis.`,
   thesis_size_exceeded: (d, v) =>
     `La tesis ${v.thesis(d.thesis_id)} lleva ${v.money(d.invested_eur)} invertidos, por encima de los ${v.money(d.planned_size_eur)} previstos.`,
   thesis_closed_with_position: (d, v) =>

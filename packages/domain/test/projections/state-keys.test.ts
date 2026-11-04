@@ -42,6 +42,7 @@ describe("the keys of the state of the ledger", () => {
         "orders",
         "transferRequests",
         "theses",
+        "unlinked",
         "filings",
         "fingerprintWaivers",
         "reversed",

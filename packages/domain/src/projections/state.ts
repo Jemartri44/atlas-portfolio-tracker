@@ -329,6 +329,23 @@ export interface Thesis {
   result_eur: Money;
 }
 
+/**
+ * What a bucket (account, asset) pair bought and sold **without** a thesis
+ * (the thesis is optional, rule 15). The legs of the rule 16 comparison with
+ * the index for the part of the bucket no thesis covers; never an input of the
+ * thesis statistics. Not in the snapshot.
+ */
+export interface UnlinkedLegs {
+  account_id: AccountId;
+  asset_id: AssetId;
+  buys: ThesisLeg[];
+  sells: ThesisLeg[];
+  invested_eur: Money;
+  fees_eur: Money;
+  /** Σ gain_eur of its sells, exact. */
+  result_eur: Money;
+}
+
 export interface ThesisView extends Thesis {
   result_eur_rounded: Money;
   /** Physical position of (account, asset) at the end of the ledger. */
@@ -396,6 +413,8 @@ export interface LedgerState {
   transferRequests: Map<Ulid, PendingTransfer>;
   /** Bucket theses by thesis_id, in file order. */
   theses: Map<string, Thesis>;
+  /** Bucket operations with no thesis, by `account_id|asset_id`. */
+  unlinked: Map<string, UnlinkedLegs>;
   /** Filed returns by event id, in file order, with their chain resolved (ADR-0020). */
   filings: Map<Ulid, Filing>;
   /**
@@ -467,6 +486,7 @@ export const createEmptyState = (fiscalSettings: Settings): LedgerState => ({
   orders: new Map(),
   transferRequests: new Map(),
   theses: new Map(),
+  unlinked: new Map(),
   filings: new Map(),
   fingerprintWaivers: new Map(),
   reversed: new Map(),

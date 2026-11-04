@@ -9,7 +9,7 @@
 
 import { type Decimal, HUNDRED } from "../money/decimal.js";
 import type { Money } from "../money/money.js";
-import type { BucketThesisView } from "../projections/bucket-theses.js";
+import type { IndexComparison } from "../projections/bucket-theses.js";
 
 export interface ThesisPct {
   /** `(result + latent) / invested`, in percent: what the thesis did. */
@@ -20,7 +20,9 @@ export interface ThesisPct {
   vs_index_pp?: Decimal;
 }
 
-export const thesisVsIndexPct = (thesis: BucketThesisView): ThesisPct => {
+export const thesisVsIndexPct = (
+  thesis: IndexComparison & { invested_eur: Money; result_eur: Money },
+): ThesisPct => {
   const vs = thesis.result_vs_index_eur;
   const invested = thesis.invested_eur.amount;
   if (vs === undefined || !invested.isPositive()) {

@@ -31,13 +31,12 @@ import {
   missingSentence,
   toDraft,
 } from "../../view-models/forms/index.js";
-import { isBucketAccount } from "../../view-models/options.js";
 import { DuplicateDialog } from "./DuplicateDialog.jsx";
 import { createDraftSaver } from "./draft-save.js";
 import { Effect } from "./Effect.jsx";
 import { FormActions } from "./FormActions.jsx";
 import { FormFields } from "./FormFields.jsx";
-import { CorrectionReason, dependentsSentence, Reloaded, ThesisFirst } from "./FormNotices.jsx";
+import { CorrectionReason, dependentsSentence, Reloaded } from "./FormNotices.jsx";
 import { useFormProblems } from "./form-problems.js";
 import { withPrefill } from "./prefill.js";
 import { previewStep } from "./preview-step.js";
@@ -110,11 +109,6 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
     (props.correcting !== undefined && reason().trim() === ""
       ? "Para ver el efecto falta el motivo de la rectificación."
       : undefined);
-
-  const bucketWithoutThesis = (): boolean =>
-    props.spec.type === "buy" &&
-    isBucketAccount(props.state, values().account_id) &&
-    (values().thesis_id ?? "") === "";
 
   /**
    * On a wide screen the effect sits beside the form and follows what is typed (direction A): a
@@ -273,10 +267,6 @@ export const EventForm = (props: EventFormProps): JSX.Element => {
       <div class="register">
         <Show when={step() === "form" || wide()}>
           <form class="form" onSubmit={(event) => event.preventDefault()}>
-            <Show when={bucketWithoutThesis()}>
-              <ThesisFirst />
-            </Show>
-
             <FormFields
               fields={props.spec.fields}
               values={values()}

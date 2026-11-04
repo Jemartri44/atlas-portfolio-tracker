@@ -42,7 +42,7 @@ describe("the bucket", () => {
     // Not a «sin dato» at the size of a hero figure: a pending block, with why.
     expect(host.querySelector(".card .hero-figure")).toBeNull();
     const pending = host.querySelector(".card .pending");
-    expect(text(pending)).toContain("a una tesis le falta el precio del índice");
+    expect(text(pending)).toContain("a una parte le falta el precio del índice");
     expect(pending?.querySelector('a[href="/registrar/valuation"]')).not.toBeNull();
   });
 
@@ -145,6 +145,6 @@ describe("the bucket", () => {
     const host = await show("/cubo", Cubo);
     expect(host.querySelectorAll(".card")).toHaveLength(1);
     expect(text(host.querySelector(".empty"))).toContain("El cubo está vacío.");
-    expect(host.querySelector('.empty a[href="/registrar/tesis"]')).not.toBeNull();
+    expect(host.querySelector('.empty a[href="/registrar/buy"]')).not.toBeNull();
   });
 });

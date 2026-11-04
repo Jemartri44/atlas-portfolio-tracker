@@ -25,7 +25,14 @@ import { consume, openLot, openQuantity } from "./lots.js";
 import { fillOrder, lookupOpenOrder } from "./pending.js";
 import { accountsHolding, adjustPosition, positionOf } from "./positions.js";
 import { type Account, type Asset, addWarning, type LedgerState, type Thesis } from "./state.js";
-import { linkBuy, linkSell, requireOpenThesis } from "./theses.js";
+import {
+  linkBuy,
+  linkSell,
+  linkUnlinkedBuy,
+  linkUnlinkedSell,
+  requireOpenThesis,
+  unthesisedPart,
+} from "./theses.js";
 import { noteAcquisition, warnPriorBuys, warnRepurchase } from "./wash-sale.js";
 
 export interface Priced {
@@ -146,7 +153,7 @@ export const requireAvailable = (
   }
 };
 
-/** The thesis a bucket operation links to; `undefined` outside the bucket or for an unlinked sell. */
+/** The thesis a bucket operation links to; `undefined` outside the bucket or for an operation with no thesis (optional). */
 const thesisOf = (
   state: LedgerState,
   event: BuyEvent | SellEvent,
@@ -165,21 +172,6 @@ const thesisOf = (
     return undefined;
   }
   if (event.thesis_id === undefined) {
-    if (event.type === "buy") {
-      throw new ProjectionError(
-        "thesis_required",
-        event.id,
-        "a buy in the bucket needs the thesis_id of an open thesis recorded earlier (rule 15)",
-        { account_id: event.account_id, asset_id: event.asset_id },
-      );
-    }
-    addWarning(
-      state,
-      "sell_without_thesis",
-      event.id,
-      `the sale of ${event.asset_id} in ${event.account_id} is not linked to a thesis`,
-      { account_id: event.account_id, asset_id: event.asset_id },
-    );
     return undefined;
   }
   return requireOpenThesis(
@@ -196,14 +188,7 @@ const thesisOf = (
   );
 };
 
-/**
- * The thesis a swap links to. Rule 15 says a purchase in the bucket needs a
- * thesis opened first, and the leg **in** of a swap is a purchase: it is the
- * position that opens and the one that will have to be defended. The leg out is
- * handled like a sale — a warning if it closes a position with no thesis behind
- * it — without asking for a second id, which would be one more field to fill in
- * for no decision.
- */
+/** The thesis a swap links to (the leg in); optional, like on a buy. */
 const swapThesisOf = (
   state: LedgerState,
   event: SwapEvent,
@@ -222,12 +207,7 @@ const swapThesisOf = (
     return undefined;
   }
   if (event.thesis_id === undefined) {
-    throw new ProjectionError(
-      "thesis_required",
-      event.id,
-      "a swap in the bucket needs the thesis_id of an open thesis recorded earlier (rule 15)",
-      { account_id: event.account_id, asset_id: event.to_asset_id },
-    );
+    return undefined;
   }
   return requireOpenThesis(
     state,
@@ -289,6 +269,14 @@ export const applyBuy = (state: LedgerState, event: BuyEvent, position: number):
       costEur,
       fxOf(event).toEur(money(event.fee, event.currency)),
     );
+  } else if (account.book === "bucket") {
+    linkUnlinkedBuy(state, event.account_id, event.asset_id, {
+      event_id: event.id,
+      fiscal_date: fiscalDate,
+      quantity,
+      amount_eur: costEur,
+      fee_eur: fxOf(event).toEur(money(event.fee, event.currency)),
+    });
   }
   noteAcquisition(state, {
     event_id: event.id,
@@ -358,6 +346,15 @@ export const applySell = (state: LedgerState, event: SellEvent, position: number
       gain.gain_eur,
       fxOf(event).toEur(money(event.fee, event.currency)),
     );
+  } else if (account.book === "bucket") {
+    linkUnlinkedSell(state, event.account_id, event.asset_id, {
+      event_id: event.id,
+      fiscal_date: fiscalDate,
+      quantity,
+      amount_eur: proceedsEur,
+      fee_eur: fxOf(event).toEur(money(event.fee, event.currency)),
+      gain_eur: gain.gain_eur,
+    });
   }
   if (gain.gain_eur.amount.isNegative()) {
     warnPriorBuys(state, event.id, asset, fiscalDate, gain.gain_eur);
@@ -454,6 +451,30 @@ export const applySwap = (state: LedgerState, event: SwapEvent, position: number
   });
   if (thesis !== undefined) {
     linkBuy(state, thesis, event.id, dateIn, quantityIn, costEur, Money.zero("EUR"));
+  } else if (account.book === "bucket") {
+    linkUnlinkedBuy(state, event.account_id, event.to_asset_id, {
+      event_id: event.id,
+      fiscal_date: dateIn,
+      quantity: quantityIn,
+      amount_eur: costEur,
+      fee_eur: Money.zero("EUR"),
+    });
+  }
+  if (account.book === "bucket") {
+    // What was handed over and no thesis bought is a sale for rule 16, whether
+    // what comes in has a thesis or not: its gain and its money are not lost
+    // between the two. What a thesis bought stays with that thesis.
+    const part = unthesisedPart(state, gain.by_lot);
+    if (part !== undefined) {
+      linkUnlinkedSell(state, event.account_id, event.from_asset_id, {
+        event_id: event.id,
+        fiscal_date: dateOut,
+        quantity: part.quantity,
+        amount_eur: part.proceeds_eur,
+        fee_eur: Money.zero("EUR"),
+        gain_eur: part.gain_eur,
+      });
+    }
   }
   noteAcquisition(state, {
     event_id: event.id,

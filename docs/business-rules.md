@@ -175,13 +175,13 @@ Cualquier desviación respecto a la ponderación por capitalización debe ser un
 **Regla 14 — Pocas operaciones y grandes.** Con capital pequeño y comisiones fijas, las comisiones deciden el resultado antes que el criterio.
 → La app muestra las comisiones acumuladas como porcentaje del capital operado. Es probablemente la métrica más reveladora del panel.
 
-**Regla 15 — Log de tesis obligatorio ANTES de abrir la posición.**
+**Regla 15 — Log de tesis opcional, antes de abrir la posición.**
 Campos: hipótesis, plazo esperado, condición de invalidación, tamaño previsto.
-→ **El sistema no debe permitir registrar una compra en el cubo sin tesis asociada.** Es un requisito funcional, no una recomendación.
+→ **La tesis es opcional** (decisión del dueño, 04/11, sustituye a la versión original, que la exigía): el sistema registra una compra o una permuta en el cubo con o sin tesis, sin rechazo ni avisos. Quien la use, la abre antes y la enlaza; si se indica, se valida (que exista y esté abierta en ese punto del fichero). Una operación sin tesis cuenta igual en posiciones, patrimonio y topes del cubo.
 
 **Regla 16 — La referencia es el índice, no cero.**
 Para cada operación cerrada se calcula qué habría rendido ese mismo importe invertido en el fondo global durante el mismo periodo. La pregunta no es "¿gané?" sino "¿gané más que la alternativa aburrida?".
-→ Mecánica (feature 005): el índice es un activo configurable (`bucket_benchmark_asset_id`) cuyos precios salen de las `valuation` manuales, como cualquier otro precio (Nivel 1). El equivalente en índice de una tesis es `Σ coste_i × P(fecha de cierre) / P(fecha de la compra i)` sobre sus compras enlazadas, y el resultado frente al índice es el resultado de la tesis menos el del índice. Si falta cualquiera de esos precios, la comparación queda **sin dato**: nunca se estima (constitución V).
+→ Mecánica (feature 005): el índice es un activo configurable (`bucket_benchmark_asset_id`) cuyos precios salen de las `valuation` manuales, como cualquier otro precio (Nivel 1). El equivalente en índice de una tesis es `Σ coste_i × P(fecha de cierre) / P(fecha de la compra i)` sobre sus compras enlazadas, y el resultado frente al índice es el resultado de la tesis menos el del índice. Lo comprado sin tesis (regla 15) se mide igual como una fila «sin tesis» por (cuenta, activo), que termina cuando deja de tener posición propia; entra en el total frente al índice y no en las estadísticas de tesis. Si falta cualquiera de esos precios, la comparación queda **sin dato**: nunca se estima (constitución V).
 
 **Regla 17 — Regla de parada.** *(Pendiente de definir. Configurable.)*
 Umbral de pérdida acumulada o tope de aportación total tras el cual se deja de financiar el cubo.
