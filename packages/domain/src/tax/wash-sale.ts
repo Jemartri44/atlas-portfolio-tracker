@@ -36,6 +36,7 @@ import { zero } from "../money/eur.js";
 import type { Money } from "../money/money.js";
 import { Quantity } from "../money/quantity.js";
 import { Ratio } from "../money/ratio.js";
+import { byCode } from "../order.js";
 import {
   type LedgerState,
   type LotJournalEntry,
@@ -252,7 +253,7 @@ const ordered = (found: Candidate[], sale: CivilDate, order: DeferralOrder): Can
     Math.abs(daysBetween(sale, candidate.acquisition.fiscal_date));
   const first = (a: Candidate, b: Candidate): number =>
     order === "oldest"
-      ? a.acquisition.fiscal_date.localeCompare(b.acquisition.fiscal_date)
+      ? byCode(a.acquisition.fiscal_date, b.acquisition.fiscal_date)
       : distance(a) - distance(b);
   return found.sort((a, b) => first(a, b) || a.position - b.position);
 };

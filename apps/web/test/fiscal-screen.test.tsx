@@ -19,6 +19,7 @@ import {
   text,
   today,
   ULID,
+  until,
   withGoldenLedger,
 } from "./helpers/render.jsx";
 import { withoutStyles, withStyles } from "./helpers/styles.js";
@@ -334,7 +335,10 @@ describe("the year a pending loss expires", () => {
   const openYear = async (year: number) => {
     await openLedger(`${WITH_LOSS}\n`);
     const host = await show(`/fiscal?ejercicio=${year}`, Fiscal, "/fiscal");
-    await settle(30);
+    await until(
+      () => host.querySelector('[aria-label^="Pérdidas "]') !== null,
+      "the table of losses",
+    );
     return host;
   };
 

@@ -21,11 +21,11 @@ import {
   figuresLeft,
   openLedger,
   press,
-  settle,
   show,
   text,
   today,
   type,
+  until,
   withGoldenLedger,
 } from "./helpers/render.jsx";
 
@@ -72,7 +72,10 @@ describe("a write that reaches a filed return", () => {
     type(host, "f-value_date", "2027-11-02");
     type(host, "f-amount", "100");
     await press(host, "Ver el efecto");
-    await settle(30);
+    await until(
+      () => text(host.querySelector(".effect")).includes("Afecta a la Renta de 2027"),
+      "the filed-return notice",
+    );
     const effect = host.querySelector(".effect");
     expect(text(effect)).toContain("Afecta a la Renta de 2027");
     expect(text(effect)).toContain("10/06/2028");
@@ -95,7 +98,10 @@ describe("a write that reaches a filed return", () => {
     type(host, "ca-source_document", "https://example.test/nota.pdf");
     type(host, "ca-ratio", "2");
     await press(host, "Ver el efecto");
-    await settle(30);
+    await until(
+      () => text(host.querySelector(".effect")).includes("Afecta a la Renta de 2027"),
+      "the filed-return notice",
+    );
     const effect = host.querySelector(".effect");
     expect(text(effect)).toContain("Afecta a la Renta de 2027");
     const shown = text(effect);
@@ -115,7 +121,10 @@ describe("a write that reaches a filed return", () => {
       "/movimientos/:id",
     );
     await press(host, "Anular");
-    await settle(60);
+    await until(
+      () => text(host.querySelector("dialog")).includes("Afecta a la Renta de 2027"),
+      "the notice in the dialog",
+    );
     const dialog = host.querySelector("dialog");
     expect(text(dialog)).toContain("Afecta a la Renta de 2027, que presentaste el 10/06/2028");
     // The base does not move: what moves is what was deferred by the repurchase
@@ -146,7 +155,10 @@ describe("a write that reaches a filed return", () => {
     const open = () =>
       [...host.querySelectorAll("dialog")].find((node) => node.hasAttribute("open"));
     expect(open()).toBeUndefined();
-    await settle(30);
+    await until(
+      () => text(open()).includes("Afecta a la Renta de 2027"),
+      "the notice in the dialog",
+    );
     expect(text(open())).toContain("Afecta a la Renta de 2027");
   });
 
@@ -170,7 +182,10 @@ describe("a write that reaches a filed return", () => {
       "/movimientos/:id",
     );
     await press(host, "Anular");
-    await settle(60);
+    await until(
+      () => text(host.querySelector("dialog")).includes("Afecta a la Renta de 2027"),
+      "the notice in the dialog",
+    );
     const dialog = host.querySelector("dialog");
     const shown = text(dialog);
     // It still says which return it reaches and which figure moves: what is
@@ -190,15 +205,21 @@ describe("a write that reaches a filed return", () => {
     // Reading listed shares by value date moves a sale of December 2027 into
     // 2028, and with it the base of the year that was filed.
     choose(host, "fdr-stock", "value_date");
-    await press(host, "Guardar configuración");
-    await settle(60);
     const open = () =>
       [...host.querySelectorAll("dialog")].find((node) => node.hasAttribute("open"));
+    await press(host, "Guardar configuración");
+    await until(
+      () => text(open()).includes("Este cambio deja tipos del BCE"),
+      "the ECB rates question",
+    );
     // First the question about the ECB rates of the lines whose fiscal date moves, then the one
     // about the filed return.
     expect(text(open())).toContain("Este cambio deja tipos del BCE de otra fecha");
     await press(open() as HTMLElement, "Guardar de todas formas");
-    await settle(60);
+    await until(
+      () => text(open()).includes("Afecta a la Renta de 2027"),
+      "the filed-return question",
+    );
     const dialog = open();
     expect(text(dialog)).toContain("Afecta a la Renta de 2027");
     expect(text(dialog)).toContain("Puede que toque presentar una autoliquidación rectificativa");
