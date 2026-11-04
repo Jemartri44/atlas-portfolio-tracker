@@ -7,7 +7,8 @@
 
 import { For, type JSX, Show } from "solid-js";
 import type { DataColumn } from "../../components/index.js";
-import { Amount, DataTable, EmptyState, Notice, Section } from "../../components/index.js";
+import { Amount, DataTable, FoldSection, Notice } from "../../components/index.js";
+import { countOf } from "../../format/number.js";
 import type { AnchorView, ExpiryWarning, PendingView } from "../../view-models/fiscal/index.js";
 
 const CATEGORY_TEXTS: Record<PendingView["category"], string> = {
@@ -37,6 +38,26 @@ const COLUMNS: DataColumn<PendingView>[] = [
   },
 ];
 
+/** The line of the folded card: all that is inside, a balance that died and an anchor included. */
+export const foldedLosses = (card: {
+  pending: readonly unknown[];
+  expired: readonly unknown[];
+  expiring: readonly unknown[];
+  anchors: readonly unknown[];
+}): string => {
+  const said = [
+    ...(card.pending.length > 0
+      ? [countOf(card.pending.length, "saldo pendiente", "saldos pendientes")]
+      : []),
+    ...(card.expiring.length > 0 ? ["caduca pronto"] : []),
+    ...(card.expired.length > 0
+      ? [countOf(card.expired.length, "saldo caducado", "saldos caducados")]
+      : []),
+    ...(card.anchors.length > 0 ? ["anclado en lo declarado"] : []),
+  ];
+  return said.length === 0 ? "No arrastras pérdidas" : said.join(" · ");
+};
+
 export const LossesCard = (props: {
   year: number;
   pending: readonly PendingView[];
@@ -44,7 +65,7 @@ export const LossesCard = (props: {
   expiring: readonly ExpiryWarning[];
   anchors: readonly AnchorView[];
 }): JSX.Element => (
-  <Section title="Pérdidas pendientes de compensar" class="span-6">
+  <FoldSection title="Pérdidas pendientes de compensar" summary={foldedLosses(props)}>
     {/*
       **What the engine substitutes, the engine says** (ADR-0024). When a
       return is on record the chain replaces the pending losses it computed
@@ -132,11 +153,7 @@ export const LossesCard = (props: {
       <DataTable label="Pérdidas pendientes" size="sm" rows={props.pending} columns={COLUMNS} />
     </Show>
     <Show when={props.pending.length === 0 && props.expired.length === 0}>
-      <EmptyState
-        what="No arrastras pérdidas"
-        why="Cuando un ejercicio cierre con pérdidas sin compensar, aparecerán aquí con el año en que caducan."
-        glyph="check"
-      />
+      <p class="meta">No arrastras pérdidas.</p>
     </Show>
     <Show when={props.expired.length > 0}>
       {/*
@@ -155,5 +172,5 @@ export const LossesCard = (props: {
       </p>
       <DataTable label="Pérdidas caducadas" size="sm" rows={props.expired} columns={COLUMNS} />
     </Show>
-  </Section>
+  </FoldSection>
 );

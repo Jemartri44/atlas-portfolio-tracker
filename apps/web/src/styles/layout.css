@@ -387,6 +387,11 @@
   align-content: start;
 }
 
+/* In a column, a card takes the column: its span is for the grid of the screen. */
+.stack > .card {
+  grid-column: auto;
+}
+
 /* ---- The band of a ledger with problems: permanent while they last ------ */
 
 .band {
@@ -599,7 +604,7 @@
 
 /* Paper: when a card asks to be printed, only that card goes on the sheet. */
 @media print {
-  body:has(.is-printing) :is(.topbar, .nav, .page-head, .no-print) {
+  body:has(.is-printing) :is(.topbar, .nav, .page-head, .no-print, .fold-summary, .chev) {
     display: none;
   }
   body:has(.is-printing) .grid > :not(.is-printing) {

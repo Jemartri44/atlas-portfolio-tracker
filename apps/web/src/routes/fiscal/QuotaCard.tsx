@@ -9,14 +9,16 @@ import {
   Amount,
   type DataColumn,
   DataTable,
+  Disclosure,
   Figure,
+  FoldSection,
   Notice,
   Pending,
-  Section,
   StatLine,
   Tag,
   TotalLine,
 } from "../../components/index.js";
+import { countOf } from "../../format/number.js";
 import type { QuotaBracketView, QuotaView } from "../../view-models/fiscal/quota.js";
 import { ExternalIncomeCard } from "./ExternalIncomeCard.jsx";
 import type { Estimate } from "./estimates.js";
@@ -63,27 +65,41 @@ const Paid = (props: { year: number; paid: Money }): JSX.Element => (
   </>
 );
 
+const Notes = (props: { notes: QuotaView["notes"] }): JSX.Element => (
+  <For each={props.notes}>{(note) => <Notice severity={note.severity}>{note.text}</Notice>}</For>
+);
+
+/** The line of the folded card: the result, and that it is an estimate with something to read. */
+const Folded = (props: { view: QuotaView }): JSX.Element => {
+  const warned = (): number => props.view.notes.filter((note) => note.severity !== "info").length;
+  return (
+    <>
+      <Show when={props.view.computed} fallback="Sin escala comprobada">
+        <Amount value={props.view.result_eur} signed /> · estimación
+      </Show>
+      <Show when={warned() > 0}> · {countOf(warned(), "aviso", "avisos")}</Show>
+    </>
+  );
+};
+
 export const QuotaCard = (props: { view: QuotaView; paid?: Money | undefined }): JSX.Element => (
-  <Section
+  <FoldSection
     title="Cuota estimada del ahorro"
-    class="span-12"
+    summary={<Folded view={props.view} />}
     label={`Cuota estimada del ahorro de ${props.view.year}`}
     aside={<Tag>estimación</Tag>}
   >
     <Show
       when={props.view.computed}
       fallback={
-        <Pending>
-          No hay escala del ahorro comprobada para {props.view.year}: la cuota no se calcula.
-        </Pending>
+        <>
+          <Pending>
+            No hay escala del ahorro comprobada para {props.view.year}: la cuota no se calcula.
+          </Pending>
+          <Notes notes={props.view.notes} />
+        </>
       }
     >
-      <p class="card-note">
-        Lo que pagarías por la base del ahorro con la escala de {props.view.year}, la del Estado y
-        la de tu comunidad (régimen común; no vale en el País Vasco ni en Navarra). Es una
-        estimación: no conoce el resto de tu Renta y supone que tu mínimo personal y familiar se
-        agota en la base general.
-      </p>
       <DataTable
         label={`Base del ahorro por tramos de ${props.view.year}`}
         size="sm"
@@ -141,16 +157,23 @@ export const QuotaCard = (props: { view: QuotaView; paid?: Money | undefined }):
         <Amount value={props.view.result_eur} signed />
       </TotalLine>
       <Show when={props.paid}>{(paid) => <Paid year={props.view.year} paid={paid()} />}</Show>
-      <p class="card-note">
-        Positivo, a pagar; negativo, a devolver. Las retenciones se restan en la Renta de toda la
-        cuota, no solo de esta parte.
-        <Show when={props.view.source}>{(source) => <> Escala: {source()}.</>}</Show>
-      </p>
+      <Notes notes={props.view.notes.filter((note) => note.severity !== "info")} />
+      <Disclosure label="Cómo se calcula y de dónde sale la escala">
+        <p class="card-note">
+          Lo que pagarías por la base del ahorro con la escala de {props.view.year}, la del Estado y
+          la de tu comunidad (régimen común; no vale en el País Vasco ni en Navarra). Es una
+          estimación: no conoce el resto de tu Renta y supone que tu mínimo personal y familiar se
+          agota en la base general.
+        </p>
+        <p class="card-note">
+          Positivo, a pagar; negativo, a devolver. Las retenciones se restan en la Renta de toda la
+          cuota, no solo de esta parte.
+          <Show when={props.view.source}>{(source) => <> Escala: {source()}.</>}</Show>
+        </p>
+        <Notes notes={props.view.notes.filter((note) => note.severity === "info")} />
+      </Disclosure>
     </Show>
-    <For each={props.view.notes}>
-      {(note) => <Notice severity={note.severity}>{note.text}</Notice>}
-    </For>
-  </Section>
+  </FoldSection>
 );
 
 /** The quota and, beside it, the income from outside the portfolio it counts. */

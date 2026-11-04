@@ -8,6 +8,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Fiscal from "../src/routes/fiscal/index.jsx";
 import { press, show, text, until, withGoldenLedger } from "./helpers/render.jsx";
+import { withoutStyles, withStyles } from "./helpers/styles.js";
 
 const arrival = vi.hoisted(() => {
   let release: () => void = () => undefined;
@@ -27,6 +28,9 @@ withGoldenLedger();
 
 afterEach(() => {
   vi.restoreAllMocks();
+  // Back to the viewport of the other tests: what the screen paints reads it.
+  withStyles(1024);
+  withoutStyles();
 });
 
 const printed = () => document.querySelector(".is-printing");
@@ -50,5 +54,20 @@ describe("printing the package while the findings are still arriving", () => {
     window.dispatchEvent(new Event("afterprint"));
     expect(printed()).toBeNull();
     expect([...host.querySelectorAll("details")].some((block) => !block.open)).toBe(true);
+  });
+
+  it("opens the folded card of a phone for the sheet and folds it back after", async () => {
+    window.print = vi.fn();
+    withStyles(400);
+    const host = await show("/fiscal?ejercicio=2028", Fiscal, "/fiscal");
+    await until(() => text(host).includes("Tu declaración por casillas"), "the boxes");
+    await press(host, "Imprimir o guardar en PDF");
+    expect(printed()?.matches(".fold-card")).toBe(true);
+    expect(blocks().every((block) => block.open)).toBe(true);
+
+    const card = printed();
+    window.dispatchEvent(new Event("afterprint"));
+    expect(printed()).toBeNull();
+    expect(card?.querySelector("details")?.open).toBe(false);
   });
 });
