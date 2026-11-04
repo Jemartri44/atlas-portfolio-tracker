@@ -397,6 +397,7 @@ Dirección A «Cuaderno vivo», elegida por el dueño el 2026-11-03 sobre la aud
 | Exposición: bloque de Cartera y tarjeta de Configuración | `styles/exposure.css` |
 | Primeros pasos | `styles/steps.css` |
 | Cartera: tipos de activo, indicador de desviación, tira de cifras, costes | `styles/portfolio.css` |
+| Aportación: el reparto de cada activo | `styles/contribution.css` |
 | Movimientos: filtros, días, detalle | `styles/movements.css` |
 | Registrar: baldosas, formulario, barra de acciones, efecto | `styles/registrar.css` |
 | Cubo: tesis de una posición, la vista que junta los dos libros | `styles/bucket.css` |
