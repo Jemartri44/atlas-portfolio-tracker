@@ -27,6 +27,8 @@ export interface ChartSeries {
    * which it is stacked on. A light wash of its own colour; the line on top still says the value.
    */
   fill?: "zero" | { below: string } | undefined;
+  /** A line that frames another (the edge of a band, a reference): never with dots. */
+  plain?: boolean | undefined;
 }
 
 type SteppedFactory = (options: { align: 1 | -1 }) => uPlot.Series.PathBuilder;
@@ -190,7 +192,9 @@ export const chartOptions = (spec: ChartSpec, privacy: boolean): uPlot.Options =
         // Crowded charts hide their dots, **except** where a dot is the only
         // way a value gets drawn at all.
         points: {
-          show: spec.x.length < DOTS_UP_TO || hasIsolatedPoint(series.values),
+          show:
+            series.plain !== true &&
+            (spec.x.length < DOTS_UP_TO || hasIsolatedPoint(series.values)),
           size: 8,
           fill: cssValue("--c-surface"),
         },

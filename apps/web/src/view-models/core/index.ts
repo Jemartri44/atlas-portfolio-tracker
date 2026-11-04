@@ -22,6 +22,8 @@ export {
   type UnassignedView,
 } from "./platforms.js";
 export {
+  type BucketPartView,
+  bucketPartView,
   type CashMoveView,
   type DiagnosisRowView,
   type RebalanceView,

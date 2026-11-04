@@ -139,6 +139,17 @@ describe("the cards of the portfolio by device", () => {
     expect(note?.closest("details")).toBeNull();
   });
 
+  it("says what the bucket gets beside the rebalance, and drops it with the switch", async () => {
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    await until(() => host.querySelector("#rebalance-amount") !== null, "the card");
+    type(host, "rebalance-amount", "540");
+    await press(host, "Calcular rebalanceo");
+    await until(() => host.querySelector(".rebalance-bucket") !== null, "the bucket");
+    expect(text(host.querySelector(".rebalance-bucket"))).toContain("60,00");
+    (host.querySelector("#rebalance-bucket") as HTMLInputElement).click();
+    await until(() => host.querySelector(".rebalance-bucket") === null, "the bucket to go");
+  });
+
   it("leave the split and the way to record it on a phone, the rest in one fold", async () => {
     withStyles(390);
     const host = await show(`/cartera?fecha=${DATE}`, Cartera);
@@ -154,15 +165,8 @@ describe("the cards of the portfolio by device", () => {
     expect(text(split?.querySelector(".card-head"))).toContain("Propuesta");
   });
 
-  it("fold six cards under a summary line on a phone, and none on a computer", async () => {
-    const folded = [
-      "Rentabilidad",
-      "Exposición",
-      "Rebalancear",
-      "Costes",
-      "Coste total a largo plazo",
-      "Proyección",
-    ];
+  it("fold five cards under a summary line on a phone, and none on a computer", async () => {
+    const folded = ["Rentabilidad", "Exposición", "Rebalancear", "Costes", "Proyección"];
     const open = ["Pesos frente al objetivo"];
     withStyles(390);
     const phone = await show(`/cartera?fecha=${DATE}`, Cartera);
