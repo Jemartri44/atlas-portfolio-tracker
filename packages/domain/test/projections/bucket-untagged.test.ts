@@ -68,7 +68,12 @@ const vsIndex = (b: LedgerBuilder) => {
 };
 
 /** 10 A at 10 € (01/11), swapped on 03/15 for 10 B worth 130; B priced 15 on 07/01; index 100 → 120. */
-const swapLedger = (steps: { buyThesis?: boolean; swapThesis?: boolean; twoLots?: boolean }) => {
+const swapLedger = (steps: {
+  buyThesis?: boolean;
+  swapThesis?: boolean;
+  twoLots?: boolean;
+  split?: boolean;
+}) => {
   const b = new LedgerBuilder();
   catalogue(b);
   b.settings(settings);
@@ -103,11 +108,20 @@ const swapLedger = (steps: { buyThesis?: boolean; swapThesis?: boolean; twoLots?
       ...(steps.buyThesis === true ? { thesis_id: "th_a" } : {}),
     });
   }
+  if (steps.split === true) {
+    // The lots of a split carry on the lineage of the ones bought.
+    b.corporateAction({
+      kind: "split",
+      asset_id: "ast_spec",
+      effective_date: "2027-02-01",
+      effects: [{ op: "scale", ratio: "2" }],
+    });
+  }
   b.swap({
     account_id: "acc_bucket",
     from_asset_id: "ast_spec",
     to_asset_id: "ast_spec2",
-    quantity_out: "10",
+    quantity_out: steps.split === true ? "20" : "10",
     market_value_out: "130",
     quantity_in: "10",
     market_value_in: "130",
@@ -275,6 +289,12 @@ describe("a bucket operation with no thesis", () => {
   it("adds up every lot a swap took out", () => {
     const { view, stats } = vsIndex(swapLedger({ swapThesis: true, twoLots: true }));
     expect(view.untagged[0]?.sells[0]?.quantity.toString()).toBe("10");
+    expect(view.untagged[0]?.result_eur.amount.toString()).toBe("30");
+    expect(stats.vs_index_total_eur?.amount.toString()).toBe("24");
+  });
+
+  it("follows the lineage of a split to see whose lots a swap took", () => {
+    const { view, stats } = vsIndex(swapLedger({ swapThesis: true, split: true }));
     expect(view.untagged[0]?.result_eur.amount.toString()).toBe("30");
     expect(stats.vs_index_total_eur?.amount.toString()).toBe("24");
   });
