@@ -108,20 +108,27 @@ const swapLedger = (steps: {
       ...(steps.buyThesis === true ? { thesis_id: "th_a" } : {}),
     });
   }
+  const swapFrom = steps.split === true ? "ast_spec3" : "ast_spec";
   if (steps.split === true) {
-    // The lots of a split carry on the lineage of the ones bought.
+    // A conversion hands the lots down to another asset: the lineage still says who bought them.
+    b.asset("ast_spec3", {
+      asset_type: "stock",
+      book: "bucket",
+      currency: "EUR",
+      transferable: false,
+    });
     b.corporateAction({
-      kind: "split",
+      kind: "merger",
       asset_id: "ast_spec",
       effective_date: "2027-02-01",
-      effects: [{ op: "scale", ratio: "2" }],
+      effects: [{ op: "convert", to_asset_id: "ast_spec3", ratio: "1" }],
     });
   }
   b.swap({
     account_id: "acc_bucket",
-    from_asset_id: "ast_spec",
+    from_asset_id: swapFrom,
     to_asset_id: "ast_spec2",
-    quantity_out: steps.split === true ? "20" : "10",
+    quantity_out: "10",
     market_value_out: "130",
     quantity_in: "10",
     market_value_in: "130",
@@ -293,10 +300,12 @@ describe("a bucket operation with no thesis", () => {
     expect(stats.vs_index_total_eur?.amount.toString()).toBe("24");
   });
 
-  it("follows the lineage of a split to see whose lots a swap took", () => {
+  it("follows the lineage of a conversion to see whose lots a swap took", () => {
     const { view, stats } = vsIndex(swapLedger({ swapThesis: true, split: true }));
-    expect(view.untagged[0]?.result_eur.amount.toString()).toBe("30");
+    const gain = view.untagged.reduce((sum, part) => sum + Number(part.result_eur.amount), 0);
+    expect(gain).toBe(30);
     expect(stats.vs_index_total_eur?.amount.toString()).toBe("24");
+    expect(stats.vs_index_missing).toBe(0);
   });
 
   it("leaves a swap from one thesis to another exactly with the theses", () => {
