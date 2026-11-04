@@ -11,7 +11,15 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { AREAS, ERRORS, FINDINGS, REMOTE_FAILURES, WARNINGS } from "@atlas/domain/messages";
+import {
+  AREAS,
+  ERRORS,
+  FINDING_TITLES,
+  FINDINGS,
+  REMOTE_FAILURES,
+  WARNING_TITLES,
+  WARNINGS,
+} from "@atlas/domain/messages";
 import { describe, expect, it } from "vitest";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -213,6 +221,11 @@ describe("the catalogue of messages is exhaustive", () => {
     const entries = Object.keys(FINDINGS);
     expect([...codes].filter((code) => !entries.includes(code)).sort()).toEqual([]);
     expect(entries.filter((code) => !codes.has(code)).sort()).toEqual([]);
+  });
+
+  it("titles every warning and every finding, and nothing else", () => {
+    expect(Object.keys(WARNINGS).sort()).toEqual(Object.keys(WARNING_TITLES).sort());
+    expect(Object.keys(FINDINGS).sort()).toEqual(Object.keys(FINDING_TITLES).sort());
   });
 
   it("gives the console the facts of every finding of the ECB check, and no code twice", () => {
