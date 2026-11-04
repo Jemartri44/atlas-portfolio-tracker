@@ -269,21 +269,18 @@ const endedAtOf = (
   state: LedgerState,
   legs: { buys: ThesisLeg[]; sells: ThesisLeg[]; asset_id: AssetId },
   lots: Map<string, FiscalLot>,
-): { ended_at?: CivilDate } => {
+): { ended_at: CivilDate } => {
   const own = new Set(legs.buys.map((leg) => leg.event_id));
-  let last = lastFiscalDateOf(legs.sells);
+  const days: string[] = [...legs.buys, ...legs.sells].map((leg) => leg.fiscal_date);
   for (const lot of lots.values()) {
-    if (lot.asset_id !== legs.asset_id || !own.has(rootEventOf(lots, lot))) {
-      continue;
-    }
-    for (const consumption of lot.consumptions) {
-      const day = state.eventFacts.get(consumption.event_id)?.date;
-      if (day !== undefined && (last === undefined || day > last)) {
-        last = day;
+    if (lot.asset_id === legs.asset_id && own.has(rootEventOf(lots, lot))) {
+      // Every consumption is an operation the projection applied: it has its date.
+      for (const consumption of lot.consumptions) {
+        days.push((state.eventFacts.get(consumption.event_id) as { date: CivilDate }).date);
       }
     }
   }
-  return last === undefined ? {} : { ended_at: last };
+  return { ended_at: days.sort().at(-1) as CivilDate };
 };
 
 /** The comparison with the index (rule 16) of one thing measured. */
