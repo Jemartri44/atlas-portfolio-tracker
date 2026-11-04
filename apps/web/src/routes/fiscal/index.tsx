@@ -1,7 +1,6 @@
 // "¿Qué tengo que declarar?" — the fiscal screen (docs/design/system.md §7.8): a destination of
 // the bar on a computer, reached from the summary on a phone. Everything comes from the domain, in
-// a lazily loaded chunk: the tax engine never reaches the boot path. A computer reads the return of
-// the year first; a phone, the deadlines and the informative models, then the return.
+// a lazily loaded chunk: the tax engine never reaches the boot path. `YearLayout` places the cards.
 
 import { settingsAt, yearOf } from "@atlas/domain";
 import { informativeReturn, repurchaseCalendar, taxBoxes, taxYear } from "@atlas/domain/fiscal";
@@ -31,8 +30,8 @@ import { InKindNotes, RateNotes } from "./RateNotes.jsx";
 import { RepurchaseCard } from "./RepurchaseCard.jsx";
 import { SaleSimulatorCard } from "./SaleSimulatorCard.jsx";
 import { YearLayout } from "./YearLayout.jsx";
-import { useYear, type YearChoice, YearPicker } from "./YearPicker.jsx";
-import { yearsOf } from "./years.js";
+import { useYear, YearPicker } from "./YearPicker.jsx";
+import { yearChoices } from "./years.js";
 
 export default function FiscalRoute(): JSX.Element {
   return (
@@ -43,21 +42,12 @@ export default function FiscalRoute(): JSX.Element {
         const prices = useQuotes(snapshot.state);
         // Reactive: a screen left open across the new year follows it.
         const current = (): number => yearOf(today());
-        const filings = [...snapshot.state.filings.values()];
-        const choices = createMemo<YearChoice[]>(() =>
-          yearsOf(
+        const choices = createMemo(() =>
+          yearChoices(
             [...snapshot.state.gains, ...snapshot.state.externalIncome],
-            filings,
+            [...snapshot.state.filings.values()],
             current(),
-          ).map((year) => ({
-            year,
-            filed: filings.some(
-              (filing) =>
-                filing.model === "renta" &&
-                filing.tax_year === year &&
-                filing.superseded_by === undefined,
-            ),
-          })),
+          ),
         );
         const picked = useYear(() => current() - 1);
         const year = (): number => picked.year();
@@ -125,7 +115,6 @@ export default function FiscalRoute(): JSX.Element {
         };
         /** Nothing has ever been recorded: no purchase, no cash, no return. */
         const untouched = snapshot.events.every((event) => SETUP_EVENTS.has(event.type));
-        const estimated = (): boolean => quota() !== undefined;
         const estimateCards = (): JSX.Element => (
           <Show when={quota()}>{(estimate) => <EstimateCards estimate={estimate()} />}</Show>
         );
@@ -182,7 +171,7 @@ export default function FiscalRoute(): JSX.Element {
                   <YearLayout
                     cards={{
                       base: () => <BaseCard view={year()} />,
-                      estimate: estimated() ? () => estimateCards() : undefined,
+                      estimate: quota() === undefined ? undefined : estimateCards,
                       losses: () => (
                         <LossesCard
                           year={year().year}

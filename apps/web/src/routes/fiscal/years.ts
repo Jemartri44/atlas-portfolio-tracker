@@ -19,3 +19,17 @@ export const yearsOf = (
   const last = Math.max(...years, current);
   return Array.from({ length: last - first + 1 }, (_, index) => last - index);
 };
+
+/** The years of the picker, each saying whether its return is filed and still stands. */
+export const yearChoices = (
+  gains: readonly { fiscal_date: string }[],
+  filings: readonly { model: string; tax_year: number; superseded_by?: unknown }[],
+  current: number,
+): { year: number; filed: boolean }[] =>
+  yearsOf(gains, filings, current).map((year) => ({
+    year,
+    filed: filings.some(
+      (filing) =>
+        filing.model === "renta" && filing.tax_year === year && filing.superseded_by === undefined,
+    ),
+  }));
