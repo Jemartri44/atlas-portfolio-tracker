@@ -252,6 +252,13 @@ Decidido el 2026-11-03. La exposición **por divisa y por región** de cada acti
 - **Registros de la Lambda:** solo el código (`exposure_read`, `exposure_written` o el del error). Nunca un activo ni un porcentaje.
 
 
+**Los supuestos de la proyección** siguen las mismas reglas, con su objeto y su ruta: `GET` y `PUT /api/projection`, sobre `settings/projection.json` (`docs/data-schema.md` §1). Cambia solo esto:
+
+- Guarda **solo lo editado**; lo que falta es el valor de partida, y `{ "projection_format": 1 }` es restablecer. Un solo validador, `validateProjection`: `years` entero de 1 a 100; `monthly_eur`, `inflation_pct`, `commission_pct` y, por clase, `return_pct` y `volatility_pct` como cadenas decimales dentro de su rango.
+- Más de 4 KiB, `413`. Un objeto que no valida, `400 body_invalid` con `details.reason` (`json`, `repeated_key`, `format`, `top_level_key`, `years`, `class`, `class_key`, `number` o `range`) y `details.field`.
+- Leer uno inválido es «sin edición» (`projectionOrNone`): valen los de partida.
+- Registros: `projection_read`, `projection_written` o el del error. Permisos y copias, como la exposición (contrato `PRJ-1`).
+
 ### 6.3 La última ejecución de cada tarea
 
 Decidido el 2026-11-03. Una tarea que ni siquiera arranca no manda ningún aviso, así que la web lo dice a partir de los registros que las tareas dejan en `jobs/` ([`data-schema.md`](data-schema.md) §1).
