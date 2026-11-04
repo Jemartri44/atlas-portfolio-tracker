@@ -2,8 +2,7 @@
 //
 // Reading order: how much I have → what needs action → what happened lately → how it got here
 // (docs/design/system.md §7.2). On a phone the first screenful holds the total, its three books and
-// the first warnings; on a wide screen the patrimony is a band, attention and the recent movements
-// share a row, and the evolution closes the page.
+// the first warnings; on a wide screen the patrimony is a band over two columns that go their own way.
 //
 // Every figure comes from a projection of the domain **at today's date**
 // (`asOf`), and the
@@ -70,8 +69,8 @@ type FiscalOutcome =
   | { status: FiscalStatus; failure?: never }
   | { failure: AppError; status?: never };
 
-/** How many recent movements the summary shows. */
-const RECENT = 5;
+/** How many recent movements the summary shows; a phone leaves the rest to the list. */
+const RECENT = { wide: 5, phone: 3 };
 
 /** Enough points for a curve, few enough that twenty years stay instant. */
 const MAX_POINTS = 120;
@@ -166,13 +165,13 @@ export default function ResumenRoute(): JSX.Element {
         });
         // Cut at the date read: what is dated later has not happened yet.
         const entries = ledgerEntries(snapshot.state, snapshot.events, { to: date });
-        // Five entries, the valuations of a day gathered into one.
+        // The valuations of a day gathered into one.
         const movements = entries.filter(isMovement);
         const references = eventReferences(snapshot.events, names);
         const recent = firstEntries(
           movements.length,
           (from, to) => movementRows(movements.slice(from, to), names, references),
-          RECENT,
+          RECENT.wide,
         );
         const onboarding = onboardingOf(dated, entries, settings);
         const moved = entries.some(isMovement);
@@ -203,7 +202,8 @@ export default function ResumenRoute(): JSX.Element {
           weightsView(coreWeights(dated, date, settings, prices.external(dated)), names),
         );
 
-        // The cards, each once; `summaryOrder` says in which order they go.
+        // The cards, each once; `summaryOrder` says where they go.
+        const places = () => summaryOrder({ wide: wide(), season });
         const cards: Record<SummaryCard, () => JSX.Element> = {
           worth: () => <NetWorthBlock view={liveWorth()} figures={figures()} />,
           month: () => <MonthCard plan={extras()?.plan} names={names} />,
@@ -211,7 +211,9 @@ export default function ResumenRoute(): JSX.Element {
             <AllocationCard view={allocation()} threshold={settings.deviation_threshold_pp} />
           ),
           attention: () => <AttentionBlock items={items} fiscal={fiscalNotice} jobs={jobsNotice} />,
-          moves: () => <RecentMoves entries={recent} />,
+          moves: () => (
+            <RecentMoves entries={recent.slice(0, wide() ? RECENT.wide : RECENT.phone)} />
+          ),
           fiscal: () => (
             <FiscalCard
               season={season}
@@ -236,7 +238,15 @@ export default function ResumenRoute(): JSX.Element {
               <Show when={onboarding}>{(steps) => <FirstSteps onboarding={steps()} />}</Show>
 
               <Show when={moved}>
-                <For each={summaryOrder({ wide: wide(), season })}>{(card) => cards[card]()}</For>
+                <For each={places().top}>{(card) => cards[card]()}</For>
+                <Show when={wide()}>
+                  <div class="stack span-8">
+                    <For each={places().left}>{(card) => cards[card]()}</For>
+                  </div>
+                  <div class="stack span-4">
+                    <For each={places().right}>{(card) => cards[card]()}</For>
+                  </div>
+                </Show>
               </Show>
             </div>
           </>

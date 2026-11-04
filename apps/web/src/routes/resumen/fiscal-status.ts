@@ -22,6 +22,8 @@ export interface FiscalStatus {
   season: boolean;
   /** One line per thing to do, already in Spanish. */
   lines: string[];
+  /** The same in a few words, for the card on a phone: what is said twice goes once. */
+  brief: string[];
   /** Past years with figures and no income tax return recorded. */
   unfiled: number[];
   invalid: number;
@@ -49,11 +51,21 @@ const todoText = (todo: InformativeTodo): string => {
   return `${model} de ${todo.year}: ${what} se acerca al umbral.`;
 };
 
+const todoBrief = (todo: InformativeTodo): string => {
+  const model = MODEL_NAMES[todo.model] ?? todo.model;
+  return todo.reason === "file"
+    ? `${model}: toca presentar`
+    : todo.reason === "undetermined"
+      ? `${model}: faltan valoraciones`
+      : `${model}: cerca del umbral`;
+};
+
 export const fiscalStatus = (events: readonly LedgerEvent[], today: string): FiscalStatus => {
   const attention = fiscalAttention(events, today);
   return {
     season: attention.season,
     lines: attention.todo.map(todoText),
+    brief: [...new Set(attention.todo.map(todoBrief))],
     unfiled: attention.unfiled_years,
     invalid: attention.invalid_events,
     calendar: fiscalCalendar(events, today),

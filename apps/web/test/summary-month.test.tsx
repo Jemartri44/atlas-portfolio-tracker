@@ -34,6 +34,18 @@ describe("Este mes", () => {
     expect(text(card)).toMatch(/pendiente|registrado/);
   });
 
+  it("gives each purchase its share of the whole month, the bucket included, and says so", async () => {
+    const card = (await month()).querySelector(".summary-month");
+    const shares = [...(card?.querySelectorAll(".task-share") ?? [])]
+      .map((share) => text(share))
+      .filter((share) => share !== "")
+      .map((share) => Number.parseFloat(share.replace(",", ".")));
+    expect(shares.length).toBeGreaterThanOrEqual(2);
+    expect(shares.reduce((sum, share) => sum + share, 0)).toBeCloseTo(100, 0);
+    expect(text(card)).toContain("cubo incluido");
+    expect(text(card)).toContain("En Cartera");
+  });
+
   it("hides every amount with the privacy on and shows them with it off", async () => {
     setPrivacy(true);
     expect(text((await month()).querySelector(".summary-month"))).not.toMatch(AMOUNT);
@@ -45,11 +57,14 @@ describe("Este mes", () => {
 describe("the return of the core", () => {
   it("says this month and twelve months with a figure or the reason, never a made-up zero", async () => {
     const host = await month();
-    await until(() => !text(host.querySelector(".hero-deltas")).includes("…"), "la variación");
-    expect(text(host.querySelector(".hero-deltas"))).toMatch(
+    await until(
+      () => !text(host.querySelector(".summary-worth .part-metric")).includes("…"),
+      "la variación",
+    );
+    expect(text(host.querySelector(".summary-worth .part-metric"))).toMatch(
       /este mes (?:[+−-]?\d+,\d %|sin dato|menos de)/,
     );
-    expect(text(host.querySelector(".hero-deltas"))).toMatch(
+    expect(text(host.querySelector(".summary-worth .part-metric"))).toMatch(
       /12 meses (?:[+−-]?\d+,\d %|sin dato|menos de)/,
     );
   });
@@ -132,8 +147,13 @@ describe("a return without a figure", () => {
   it("says why on a partial core instead of a zero", async () => {
     today("2026-09-18");
     const host = await show("/", Resumen);
-    await until(() => !text(host.querySelector(".hero-deltas")).includes("…"), "la variación");
-    expect(text(host.querySelector(".hero-deltas"))).toMatch(/este mes (sin dato|menos de)/);
-    expect(text(host.querySelector(".hero-deltas"))).not.toMatch(/0,0 %/);
+    await until(
+      () => !text(host.querySelector(".summary-worth .part-metric")).includes("…"),
+      "la variación",
+    );
+    expect(text(host.querySelector(".summary-worth .part-metric"))).toMatch(
+      /este mes (sin dato|menos de)/,
+    );
+    expect(text(host.querySelector(".summary-worth .part-metric"))).not.toMatch(/0,0 %/);
   });
 });
