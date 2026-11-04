@@ -140,3 +140,10 @@ describe("the digit bound on writing", () => {
     ).toBe(false);
   });
 });
+
+describe("Decimal.sqrt", () => {
+  it("keeps 10 decimals, as div", () => {
+    expect(d("4").sqrt().toString()).toBe("2");
+    expect(d("2").sqrt().toString()).toBe("1.4142135624");
+  });
+});
