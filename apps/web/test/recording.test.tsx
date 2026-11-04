@@ -32,9 +32,9 @@ describe("choosing what to record", () => {
       "/registrar/buy",
       "/registrar/sell",
       "/registrar/permuta",
+      "/registrar/dividend",
       "/registrar/cash-in",
       "/registrar/cash-out",
-      "/registrar/dividend",
       "/registrar/valuation",
       "/registrar/order",
     ]);

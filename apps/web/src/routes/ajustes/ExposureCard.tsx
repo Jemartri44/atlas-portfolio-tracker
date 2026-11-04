@@ -7,14 +7,15 @@
 
 import type { Asset } from "@atlas/domain";
 import type { Exposures } from "@atlas/domain/portfolio";
-import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
+import { createMemo, createSignal, Index, type JSX, Show } from "solid-js";
 import {
   ConfirmDialog,
+  Disclosure,
   Notice,
+  Peek,
   Section,
   SelectField,
   Skeleton,
-  StatLine,
 } from "../../components/index.js";
 import { createExposure } from "../../settings-objects/use-settings-object.js";
 import {
@@ -28,6 +29,21 @@ import {
 } from "../../view-models/core/exposure.js";
 import { DimensionLine } from "./ExposureLine.jsx";
 import { SplitDialog } from "./SplitDialog.jsx";
+
+/** Where the percentages of an asset come from: what is missing, then what is proposed. */
+const stateOf = (row: ExposureRowView): "owner" | "default" | "none" => {
+  const states = [row.currency.state, row.region.state];
+  return states.includes("none") ? "none" : states.includes("default") ? "default" : "owner";
+};
+
+const STATE_WORDS = { owner: "tuyo", default: "por defecto", none: "sin propuesta" };
+
+/** The line of an asset: the fold never hides that its index is gone. */
+const rowLabel = (row: ExposureRowView): string =>
+  `${row.name} · ${STATE_WORDS[stateOf(row)]}${row.lostIndex === undefined ? "" : " · índice retirado"}`;
+
+/** The assets in sight: the line above counts them all. */
+const IN_SIGHT = 5;
 
 export const ExposureCard = (props: { assets: readonly Asset[] }): JSX.Element => {
   const declared = createExposure();
@@ -55,9 +71,7 @@ export const ExposureCard = (props: { assets: readonly Asset[] }): JSX.Element =
   const counts = createMemo(() => {
     const result = { owner: 0, default: 0, none: 0 };
     for (const row of rows()) {
-      const states = [row.currency.state, row.region.state];
-      result[states.includes("none") ? "none" : states.includes("default") ? "default" : "owner"] +=
-        1;
+      result[stateOf(row)] += 1;
     }
     return result;
   });
@@ -115,69 +129,74 @@ export const ExposureCard = (props: { assets: readonly Asset[] }): JSX.Element =
                     Solo se usan los de por defecto. Lo que guardes lo sustituye.
                   </Notice>
                 </Show>
-                <div class="exposure-counts">
-                  <StatLine label="Activos del núcleo con porcentajes por defecto">
-                    {counts().default}
-                  </StatLine>
-                  <StatLine label="Activos del núcleo con tus porcentajes">
-                    {counts().owner}
-                  </StatLine>
-                  <StatLine label="Activos del núcleo sin propuesta">{counts().none}</StatLine>
-                </div>
-                <ul class="exposure-rows">
-                  <For each={rows()}>
-                    {(row) => (
-                      <li class="exposure-row">
-                        <h3>{row.name}</h3>
-                        <Show when={row.lostIndex}>
-                          {(lost) => (
-                            <Notice severity="caution">
-                              El índice que elegiste ya no está en la tabla ({lost()}). Elige otro o
-                              vuelve a la propuesta.
-                            </Notice>
-                          )}
-                        </Show>
-                        <SelectField
-                          id={`index-${row.assetId}`}
-                          label="Índice que sigue"
-                          placeholder={
-                            row.proposed === undefined
-                              ? "Sin propuesta: elige uno"
-                              : `Propuesto: ${row.proposed}`
-                          }
-                          value={row.chosen}
-                          options={indexOptions()}
-                          disabled={declared.busy()}
-                          onInput={(index) =>
-                            void change((exposures) => withIndex(exposures, row.assetId, index))
-                          }
-                        />
-                        <DimensionLine
-                          dimension="currency"
-                          view={row.currency}
-                          busy={declared.busy()}
-                          onEdit={() => setEditing({ row, dimension: "currency" })}
-                        />
-                        <DimensionLine
-                          dimension="region"
-                          view={row.region}
-                          busy={declared.busy()}
-                          onEdit={() => setEditing({ row, dimension: "region" })}
-                        />
-                        <Show when={row.hasOwn}>
-                          <button
-                            type="button"
-                            class="secondary"
-                            disabled={declared.busy()}
-                            onClick={() => setResetting(row)}
-                          >
-                            Restablecer a los de por defecto
-                          </button>
-                        </Show>
-                      </li>
-                    )}
-                  </For>
-                </ul>
+                <p class="card-note">
+                  Por defecto {counts().default} · tuyos {counts().owner} · sin propuesta{" "}
+                  {counts().none}.
+                </p>
+                <Peek items={rows()} limit={IN_SIGHT} more={(total) => `Ver los ${total} activos`}>
+                  {(shown) => (
+                    <ul class="exposure-rows">
+                      {/* By position: a save rebuilds the rows, and the open one stays open. */}
+                      <Index each={shown}>
+                        {(row) => (
+                          <li>
+                            <Disclosure label={rowLabel(row())}>
+                              <div class="exposure-row">
+                                <Show when={row().lostIndex}>
+                                  {(lost) => (
+                                    <Notice severity="caution">
+                                      El índice que elegiste ya no está en la tabla ({lost()}).
+                                      Elige otro o vuelve a la propuesta.
+                                    </Notice>
+                                  )}
+                                </Show>
+                                <SelectField
+                                  id={`index-${row().assetId}`}
+                                  label="Índice que sigue"
+                                  placeholder={
+                                    row().proposed === undefined
+                                      ? "Sin propuesta: elige uno"
+                                      : `Propuesto: ${row().proposed}`
+                                  }
+                                  value={row().chosen}
+                                  options={indexOptions()}
+                                  disabled={declared.busy()}
+                                  onInput={(index) =>
+                                    void change((exposures) =>
+                                      withIndex(exposures, row().assetId, index),
+                                    )
+                                  }
+                                />
+                                <DimensionLine
+                                  dimension="currency"
+                                  view={row().currency}
+                                  busy={declared.busy()}
+                                  onEdit={() => setEditing({ row: row(), dimension: "currency" })}
+                                />
+                                <DimensionLine
+                                  dimension="region"
+                                  view={row().region}
+                                  busy={declared.busy()}
+                                  onEdit={() => setEditing({ row: row(), dimension: "region" })}
+                                />
+                                <Show when={row().hasOwn}>
+                                  <button
+                                    type="button"
+                                    class="secondary"
+                                    disabled={declared.busy()}
+                                    onClick={() => setResetting(row())}
+                                  >
+                                    Restablecer a los de por defecto
+                                  </button>
+                                </Show>
+                              </div>
+                            </Disclosure>
+                          </li>
+                        )}
+                      </Index>
+                    </ul>
+                  )}
+                </Peek>
               </>
             )}
           </Show>

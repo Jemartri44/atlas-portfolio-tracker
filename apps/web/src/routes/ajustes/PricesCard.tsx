@@ -3,8 +3,9 @@
 // one and what is wrong when something is. Nothing is imported by hand or kept on the device.
 
 import { createResource, type JSX, Show } from "solid-js";
-import { Section } from "../../components/index.js";
+import { FoldSection } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
+import { countOf } from "../../format/number.js";
 import { store } from "../../ledger/state.js";
 
 const prices = () => import("../../prices/quotes.js");
@@ -34,8 +35,24 @@ export const PricesCard = (): JSX.Element => {
     return last;
   };
 
+  /** The line of the folded card: what is wrong, or how many assets and until when. */
+  const folded = (): string => {
+    const loaded = quotes();
+    if (loaded === undefined) {
+      return "Leyendo…";
+    }
+    if (loaded.problem !== undefined) {
+      return "No se han podido leer";
+    }
+    const said =
+      loaded.closes.size === 0
+        ? "Sin precios automáticos"
+        : `${countOf(loaded.closes.size, "activo", "activos")}, hasta el ${formatDate(latest() as string)}`;
+    return loaded.symbolsNotice === undefined ? said : `${said} · 1 aviso`;
+  };
+
   return (
-    <Section title="Precios automáticos">
+    <FoldSection title="Precios automáticos" summary={folded()}>
       <Show when={quotes()} fallback={<p class="meta">Leyendo…</p>}>
         {(loaded) => (
           <>
@@ -66,6 +83,6 @@ export const PricesCard = (): JSX.Element => {
         con tu sesión, sin guardarlos en este dispositivo. Un activo dado de alta hace poco no tiene
         precio automático hasta la siguiente descarga.
       </p>
-    </Section>
+    </FoldSection>
   );
 };

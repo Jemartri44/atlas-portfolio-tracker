@@ -69,6 +69,7 @@ export const WeightsCard = (props: WeightsProps): JSX.Element => {
               id={`w-${asset.asset_id}`}
               kind="decimal"
               label={`${asset.name} (%)`}
+              class="pair"
               hint={asset.active ? undefined : "Dado de baja: déjalo vacío para quitarle el peso."}
               value={props.values[asset.asset_id] ?? ""}
               onInput={(raw) => props.onWeight(asset.asset_id, raw)}

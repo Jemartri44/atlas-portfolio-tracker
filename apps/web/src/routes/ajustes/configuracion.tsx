@@ -4,10 +4,8 @@
 // (`silencedWarnings`, `movedFiscalYears`), so the CLI and the web cannot
 // disagree about what a change does.
 //
-// What is left here is the state of the draft and the save. The fields live in
-// `view-models/settings.ts`, where a test reaches them without a DOM; the four
-// blocks in `SettingsCards.tsx`, and the three questions in
-// `SettingsDialogs.tsx`.
+// What is left here is the state of the draft and the save: the fields live in
+// `view-models/settings.ts`, the blocks in `SettingsCards.tsx`, the questions in `SettingsDialogs.tsx`.
 
 import {
   type AssetType,
@@ -190,9 +188,11 @@ export default function ConfiguracionRoute(): JSX.Element {
                 values={values()}
                 onWeight={(assetId, raw) => setWeights({ ...values(), [assetId]: raw })}
               />
-              <ThresholdsCard draft={draft()} />
-              <IdentityCard draft={draft()} assets={assetsOf(snapshot.state)} />
-              <FiscalCard draft={draft()} />
+              <div class="stack span-6">
+                <ThresholdsCard draft={draft()} />
+                <IdentityCard draft={draft()} assets={assetsOf(snapshot.state)} />
+                <FiscalCard draft={draft()} />
+              </div>
               <ExposureCard assets={assetsOf(snapshot.state)} />
 
               <div class="span-12 settings-foot">

@@ -4,7 +4,7 @@
 
 import { settingsAt } from "@atlas/domain";
 import { createResource, For, type JSX, Show } from "solid-js";
-import { Section, Tag } from "../../components/index.js";
+import { FoldSection, Peek, Tag } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import { store, today } from "../../ledger/state.js";
 
@@ -19,6 +19,9 @@ const TASKS: Readonly<Record<string, string>> = {
   monthly_backup: "Volcado mensual",
   quarterly_integrity: "Comprobación de integridad",
 };
+
+/** The rows in sight: the card says how many are late, so none hides behind the button. */
+const IN_SIGHT = 5;
 
 const STATES: Readonly<Record<string, string>> = {
   claimed: "en curso",
@@ -43,8 +46,26 @@ export const JobsCard = (): JSX.Element => {
     },
   );
 
+  const answered = () => (load.state === "ready" ? load() : undefined);
+  /** How the tasks are, in a few words: what the title says and the folded card. */
+  const state = (): string => {
+    const answer = answered();
+    if (answer === undefined) {
+      return "Leyendo…";
+    }
+    if (answer.kind === "failed") {
+      return "No se ha podido leer";
+    }
+    const late = answer.rows.filter((row) => row.late).length;
+    return answer.rows.length === 0
+      ? "Sin tareas activas"
+      : late > 0
+        ? `${late} con retraso`
+        : "Al día";
+  };
+
   return (
-    <Section title="Tareas automáticas">
+    <FoldSection title="Tareas automáticas" summary={state()} aside={<span>{state()}</span>}>
       <Show when={load.state === "ready" && load()} fallback={<p class="meta">Leyendo…</p>}>
         {(loaded) => {
           const answer = loaded();
@@ -61,34 +82,44 @@ export const JobsCard = (): JSX.Element => {
               when={answer.rows.length > 0}
               fallback={<p class="meta">Este entorno no tiene tareas activas.</p>}
             >
-              <ul class="rows">
-                <For each={answer.rows}>
-                  {(row) => (
-                    <li>
-                      <div class="row">
-                        <div>
-                          <div>{TASKS[row.task] ?? row.task}</div>
-                          <div class="meta">
-                            <Show
-                              when={row.last}
-                              fallback={row.unreadable ? "registro ilegible" : "sin ejecuciones"}
-                            >
-                              {(last) =>
-                                `${formatDate(last().day)}, ${STATES[last().state] ?? last().state}`
-                              }
+              <Peek
+                items={answer.rows}
+                limit={IN_SIGHT}
+                more={(total) => `Ver las ${total} tareas`}
+              >
+                {(shown) => (
+                  <ul class="rows">
+                    <For each={shown}>
+                      {(row) => (
+                        <li>
+                          <div class="row">
+                            <div>
+                              <div>{TASKS[row.task] ?? row.task}</div>
+                              <div class="meta">
+                                <Show
+                                  when={row.last}
+                                  fallback={
+                                    row.unreadable ? "registro ilegible" : "sin ejecuciones"
+                                  }
+                                >
+                                  {(last) =>
+                                    `${formatDate(last().day)}, ${STATES[last().state] ?? last().state}`
+                                  }
+                                </Show>
+                              </div>
+                            </div>
+                            <Show when={row.late}>
+                              <Tag tone="caution" icon="caution">
+                                Con retraso
+                              </Tag>
                             </Show>
                           </div>
-                        </div>
-                        <Show when={row.late}>
-                          <Tag tone="caution" icon="caution">
-                            Con retraso
-                          </Tag>
-                        </Show>
-                      </div>
-                    </li>
-                  )}
-                </For>
-              </ul>
+                        </li>
+                      )}
+                    </For>
+                  </ul>
+                )}
+              </Peek>
             </Show>
           );
         }}
@@ -97,6 +128,6 @@ export const JobsCard = (): JSX.Element => {
         Cada tarea tiene un margen según su frecuencia. Si una no arranca, no llega ningún correo:
         por eso se dice aquí y en Resumen.
       </p>
-    </Section>
+    </FoldSection>
   );
 };

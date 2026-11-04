@@ -1,0 +1,135 @@
+/*
+ * Recording, the first step (docs/design/system.md §7.4): the tiles of the day to day, the strip
+ * that repeats the purchase of the month, and the other kinds folded in groups.
+ */
+
+/*
+ * On a phone the tiles are three columns of 64px: the word alone, centred, so they fit in three
+ * rows and «Otros registros» stays on the first screenful. The round icon comes back from 640px,
+ * where there is room for it.
+ */
+.tiles {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tile {
+  align-content: center;
+  background-color: var(--c-surface);
+  border: var(--border) solid var(--c-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  color: inherit;
+  display: grid;
+  gap: var(--space-2);
+  height: 100%;
+  min-height: var(--tile-h);
+  padding: var(--space-2) var(--space-3);
+  text-decoration: none;
+}
+
+.tile:hover {
+  border-color: var(--c-accent);
+  color: inherit;
+}
+
+.tile > .lead {
+  align-items: center;
+  background-color: var(--c-accent-soft);
+  border-radius: var(--radius-pill);
+  color: var(--c-accent-soft-text);
+  display: none;
+  height: var(--lead-size);
+  justify-content: center;
+  width: var(--lead-size);
+}
+
+.tile-title {
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+}
+
+/* On a phone the tile is the word; the sentence about it waits for room. */
+.tile-when {
+  color: var(--c-text-2);
+  display: none;
+  font-size: var(--text-sm);
+}
+
+.groups .row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+/* Only on a computer: on a phone the purchase of the month is one more tile. */
+.tile-go {
+  display: none;
+}
+
+.group-columns > .disclosure {
+  border-top: var(--border) solid var(--c-border);
+}
+
+@media (min-width: 40rem) {
+  .tile {
+    align-content: start;
+    min-height: var(--tile-h-wide);
+    padding: var(--space-4);
+  }
+
+  .tile > .lead {
+    display: flex;
+  }
+}
+
+@media (min-width: 64rem) {
+  .tiles {
+    gap: var(--space-3);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .tile-when {
+    display: block;
+  }
+
+  /* The purchase of the month: a strip across, so the eight tiles fill their rows with it or without. */
+  .tiles > .is-repeat {
+    grid-column: 1 / -1;
+  }
+
+  .is-repeat .tile {
+    align-content: center;
+    background-color: var(--c-accent-soft);
+    column-gap: var(--space-3);
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-height: 0;
+    row-gap: 0;
+  }
+
+  .is-repeat .tile > .lead {
+    display: none;
+  }
+
+  .is-repeat .tile-when {
+    display: block;
+    grid-column: 1;
+  }
+
+  .is-repeat .tile-go {
+    align-items: center;
+    align-self: center;
+    color: var(--c-accent-soft-text);
+    display: inline-flex;
+    font-weight: var(--fw-semibold);
+    gap: var(--space-1);
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .group-columns {
+    align-items: start;
+    column-gap: var(--space-6);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
