@@ -7,7 +7,7 @@
 
 import { For, type JSX, Show } from "solid-js";
 import type { DataColumn } from "../../components/index.js";
-import { Amount, DataTable, EmptyState, FoldSection, Notice } from "../../components/index.js";
+import { Amount, DataTable, FoldSection, Notice } from "../../components/index.js";
 import { countOf } from "../../format/number.js";
 import type { AnchorView, ExpiryWarning, PendingView } from "../../view-models/fiscal/index.js";
 
@@ -142,11 +142,7 @@ export const LossesCard = (props: {
       <DataTable label="Pérdidas pendientes" size="sm" rows={props.pending} columns={COLUMNS} />
     </Show>
     <Show when={props.pending.length === 0 && props.expired.length === 0}>
-      <EmptyState
-        what="No arrastras pérdidas"
-        why="Cuando un ejercicio cierre con pérdidas sin compensar, aparecerán aquí con el año en que caducan."
-        glyph="check"
-      />
+      <p class="meta">No arrastras pérdidas.</p>
     </Show>
     <Show when={props.expired.length > 0}>
       {/*

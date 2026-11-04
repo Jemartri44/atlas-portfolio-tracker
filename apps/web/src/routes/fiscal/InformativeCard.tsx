@@ -67,10 +67,10 @@ const Category = (props: { category: CategoryView; year: number; model: string }
 );
 
 /** The verdict that asks the most of the reader: what the folded card says. */
-const folded = (view: InformativeView): string => {
+export const folded = (view: InformativeView): string => {
   const first =
     view.categories.find((category) => category.verdict === "obliged") ??
-    view.categories.find((category) => category.tone === "caution") ??
+    view.categories.find((category) => category.verdict === "undetermined") ??
     view.categories[0];
   return first?.verdictText ?? view.periodText;
 };

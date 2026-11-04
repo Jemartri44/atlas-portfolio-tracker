@@ -352,6 +352,11 @@
   }
 }
 
+.box-blocks,
+.button-row + .notice {
+  margin-top: var(--space-3);
+}
+
 .box-blocks > .disclosure {
   border-top: var(--border) solid var(--c-border);
 }
