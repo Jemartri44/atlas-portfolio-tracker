@@ -6,7 +6,7 @@
 // commissions go apart, the deposit is what is left to put in, a rebalance is a
 // proposal, and a sale shows its tax before anyone decides.
 
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import Cartera from "../src/routes/cartera/index.jsx";
 import {
   openLedger,
@@ -21,6 +21,11 @@ import {
 import { withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
+
+// The card loads the planner on the first press; its cold load is not what the tests measure.
+beforeAll(async () => {
+  await import("@atlas/domain/rebalance");
+});
 
 const DATE = "2029-01-10";
 
