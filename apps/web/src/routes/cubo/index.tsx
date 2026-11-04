@@ -161,10 +161,10 @@ export default function CuboRoute(): JSX.Element {
                   <EmptyState
                     glyph="bucket"
                     what="El cubo está vacío."
-                    why="Cada compra del cubo empieza por una tesis: qué esperas, en qué plazo y qué te diría que te equivocas."
+                    why="Registra una compra para empezar. La tesis (qué esperas, en qué plazo, qué te diría que te equivocas) es opcional."
                   >
-                    <A href="/registrar/tesis" role="button">
-                      Abrir una tesis
+                    <A href="/registrar/buy" role="button">
+                      Registrar una compra
                     </A>
                   </EmptyState>
                 </div>

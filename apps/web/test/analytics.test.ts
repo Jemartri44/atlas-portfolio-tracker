@@ -279,6 +279,26 @@ describe("Cubo", () => {
     }
   });
 
+  it("lists what was bought with no thesis as its own rows, and none when every buy has one", () => {
+    const date = "2027-12-31";
+    const { state, settings, names } = at(date);
+    const domain = bucketTheses(state, date, settings);
+    expect(thesesView(domain, names).untagged).toEqual([]);
+
+    const [first] = domain.rows;
+    const pair = {
+      ...(first as (typeof domain.rows)[number]),
+      status: "open" as const,
+    };
+    const view = thesesView({ ...domain, untagged: [pair] }, names);
+    expect(view.untagged).toHaveLength(1);
+    expect(view.untagged[0]?.thesisId).toBe("");
+    expect(view.untagged[0]?.period).toBe("sin tesis");
+    expect(view.untagged[0]?.vsIndex?.amount.toString()).toBe(
+      pair.result_vs_index_eur?.amount.toString(),
+    );
+  });
+
   it("says a comparison is missing and why, instead of printing a zero", () => {
     const date = "2027-12-31";
     const { state, settings, names } = at(date);

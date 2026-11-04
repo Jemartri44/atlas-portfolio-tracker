@@ -42,7 +42,7 @@ const IDLE: Record<
 > = {
   no_investments: {
     text: "Sin inversiones en el cubo. La comparación con el índice empieza con la primera compra.",
-    action: { label: "Abrir una tesis", to: "/registrar/tesis" },
+    action: { label: "Registrar una compra", to: "/registrar/buy" },
   },
   no_contributions: {
     text: "El cubo tiene compras y ningún ingreso registrado en su cuenta: sin lo aportado no hay porcentaje que dibujar.",
@@ -68,16 +68,16 @@ const NotYetPrices = (props: { view: StatsView }): JSX.Element => (
   <Show
     when={props.view.vsIndexMissing > 0}
     fallback={
-      <Pending action={{ label: "Abrir una tesis", to: "/registrar/tesis" }}>
-        El resultado frente al índice llega con la primera tesis que se pueda comparar.
+      <Pending action={{ label: "Registrar una compra", to: "/registrar/buy" }}>
+        El resultado frente al índice llega con la primera compra del cubo que se pueda comparar.
       </Pending>
     }
   >
     <Pending action={{ label: "Registrar valoraciones", to: "/registrar/valuation" }}>
-      Llega cuando todas las tesis se puedan comparar:{" "}
+      Llega cuando todo lo del cubo se pueda comparar:{" "}
       {props.view.vsIndexMissing === 1
-        ? "a una tesis le falta"
-        : `a ${props.view.vsIndexMissing} tesis les falta`}{" "}
+        ? "a una parte le falta"
+        : `a ${props.view.vsIndexMissing} partes les falta`}{" "}
       el precio del índice en sus fechas.
       <Show when={props.view.vsIndexTotal !== undefined}>
         {" "}

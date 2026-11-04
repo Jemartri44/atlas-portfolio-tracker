@@ -815,7 +815,7 @@ export const FORM_SPECS: readonly EventFormSpec[] = [
     slug: "tesis",
     type: "thesis_opened",
     title: "Abrir una tesis",
-    when: "Antes de comprar en el cubo. En el cubo no se compra sin una tesis escrita.",
+    when: "Si quieres escribir lo que esperas de una posición del cubo. Es opcional: se puede comprar sin ella.",
     fields: [
       {
         name: "thesis_id",
