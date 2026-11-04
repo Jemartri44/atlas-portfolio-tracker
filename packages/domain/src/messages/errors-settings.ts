@@ -52,6 +52,29 @@ export const ERRORS_SETTINGS: Record<string, Entry> = {
       }
     },
   },
+  invalid_projection: {
+    say: (d, v) => {
+      switch (d.reason) {
+        case "years":
+          return `Los años de la proyección son un número entero de 1 a ${v.num(d.max)}.`;
+        case "number":
+          return `En la proyección, ${v.text(d.field)} no es un número decimal.`;
+        case "range":
+          return `En la proyección, ${v.text(d.field)} está fuera de rango.`;
+        case "class":
+        case "class_key":
+          return `En la proyección, ${v.text(d.field)} no es un tipo de activo con su rentabilidad y su volatilidad.`;
+        case "too_large":
+          return `El fichero de la proyección pesa más de ${v.num(d.max)} bytes.`;
+        case "repeated_key":
+          return "El fichero de la proyección repite una clave.";
+        case "json":
+          return "El fichero de la proyección no es JSON.";
+        default:
+          return "El fichero de la proyección no tiene el formato esperado: projection_format 1 y los supuestos editados.";
+      }
+    },
+  },
   invalid_inflation: {
     say: (d, v) =>
       `La variación de precios de ${v.text(d.year)} está fuera de rango: tiene que estar entre −99 % y 1000 %.`,
