@@ -10,7 +10,6 @@ import { nameIndex } from "../../format/names.js";
 import { attempt } from "../../ledger/query.js";
 import { store, today } from "../../ledger/state.js";
 import { useQuotes } from "../../prices/use-quotes.jsx";
-import { GRID, mediaQuery } from "../../shell/media.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { privacy } from "../../shell/preferences.js";
 import { boxesView, informativeView, yearView } from "../../view-models/fiscal/index.js";
@@ -31,6 +30,7 @@ import { EstimateCards } from "./QuotaCard.jsx";
 import { InKindNotes, RateNotes } from "./RateNotes.jsx";
 import { RepurchaseCard } from "./RepurchaseCard.jsx";
 import { SaleSimulatorCard } from "./SaleSimulatorCard.jsx";
+import { YearLayout } from "./YearLayout.jsx";
 import { useYear, type YearChoice, YearPicker } from "./YearPicker.jsx";
 import { yearsOf } from "./years.js";
 
@@ -39,7 +39,6 @@ export default function FiscalRoute(): JSX.Element {
     <RequireLedger skeleton={8}>
       {(snapshot) => {
         const names = nameIndex(snapshot.state);
-        const wide = mediaQuery(GRID);
         // Informative prices, only for the "what if I sell" estimate: no figure of the return uses them.
         const prices = useQuotes(snapshot.state);
         // Reactive: a screen left open across the new year follows it.
@@ -126,7 +125,39 @@ export default function FiscalRoute(): JSX.Element {
         };
         /** Nothing has ever been recorded: no purchase, no cash, no return. */
         const untouched = snapshot.events.every((event) => SETUP_EVENTS.has(event.type));
-        /** The return of the year: the base, the criteria, the losses, the boxes, what was filed. */
+        const estimated = (): boolean => quota() !== undefined;
+        const estimateCards = (): JSX.Element => (
+          <Show when={quota()}>{(estimate) => <EstimateCards estimate={estimate()} />}</Show>
+        );
+        const sale = (): JSX.Element => (
+          <SaleSimulatorCard
+            state={snapshot.state}
+            events={snapshot.events}
+            date={today()}
+            settings={settingsAt(snapshot.state, today()).settings}
+            external={prices.external(snapshot.state)}
+          />
+        );
+        const filingCard = (quiet: boolean): JSX.Element => (
+          <FilingCard
+            year={picked.year()}
+            {...(filing() === undefined ? {} : { filing: filing() })}
+            quiet={quiet}
+          />
+        );
+        const modelCard = (
+          one: ReturnType<typeof informative>[number] | undefined,
+        ): JSX.Element => (
+          <Show when={one !== undefined && store.invalidCount() === 0}>
+            {((outcome, model) =>
+              outcome?.ok === true ? (
+                <InformativeCard view={outcome.value} />
+              ) : outcome === undefined ? null : (
+                <PartFailed title={`Modelo ${model}`} error={outcome.error} half />
+              ))(one?.outcome, one?.model)}
+          </Show>
+        );
+        /** The return of the year: where each card goes is `YearLayout`'s. */
         const renta = (): JSX.Element => (
           <Show when={view()}>
             {(year) => (
@@ -138,52 +169,43 @@ export default function FiscalRoute(): JSX.Element {
                     {(estimate) => <EstimateCards estimate={estimate()} />}
                   </Show>
                 </Show>
-                <Show when={!year().empty}>
-                  <BaseCard view={year()} />
-                  <Show when={quota()}>
-                    {(estimate) => <EstimateCards estimate={estimate()} />}
-                  </Show>
-                  <DoubtfulCard stakes={year().doubtful} />
-                  <SettledCard stakes={year().settled} />
-                  <LossesCard
-                    year={year().year}
-                    pending={year().pending}
-                    expired={year().expired}
-                    expiring={year().expiring}
-                    anchors={year().anchors}
+                <Show
+                  when={!year().empty}
+                  fallback={
+                    <>
+                      {sale()}
+                      {filingCard(year().empty)}
+                      <For each={informative()}>{(one) => modelCard(one)}</For>
+                    </>
+                  }
+                >
+                  <YearLayout
+                    cards={{
+                      base: () => <BaseCard view={year()} />,
+                      estimate: estimated() ? () => estimateCards() : undefined,
+                      losses: () => (
+                        <LossesCard
+                          year={year().year}
+                          pending={year().pending}
+                          expired={year().expired}
+                          expiring={year().expiring}
+                          anchors={year().anchors}
+                        />
+                      ),
+                      doubtful: () => <DoubtfulCard stakes={year().doubtful} />,
+                      settled: () => <SettledCard stakes={year().settled} />,
+                      filing: () => filingCard(false),
+                      model720: () => modelCard(informative()[0]),
+                      model721: () => modelCard(informative()[1]),
+                      boxes: boxesCard,
+                      sale,
+                    }}
                   />
-                  {boxesCard()}
                 </Show>
-                <SaleSimulatorCard
-                  state={snapshot.state}
-                  events={snapshot.events}
-                  date={today()}
-                  settings={settingsAt(snapshot.state, today()).settings}
-                  external={prices.external(snapshot.state)}
-                />
-                <FilingCard
-                  year={picked.year()}
-                  {...(filing() === undefined ? {} : { filing: filing() })}
-                  quiet={year().empty}
-                />
               </>
             )}
           </Show>
         );
-        const models = (): JSX.Element => (
-          <Show when={store.invalidCount() === 0}>
-            <For each={informative()}>
-              {({ model, outcome }) =>
-                outcome.ok ? (
-                  <InformativeCard view={outcome.value} />
-                ) : (
-                  <PartFailed title={`Modelo ${model}`} error={outcome.error} half />
-                )
-              }
-            </For>
-          </Show>
-        );
-
         return (
           <>
             <PageHeader
@@ -227,10 +249,7 @@ export default function FiscalRoute(): JSX.Element {
                   names={names}
                   privacy={privacy()}
                 />
-                <Show when={wide()} fallback={[models(), renta()]}>
-                  {renta()}
-                  {models()}
-                </Show>
+                {renta()}
               </div>
             </Show>
           </>

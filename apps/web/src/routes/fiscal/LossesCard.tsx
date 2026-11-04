@@ -7,7 +7,8 @@
 
 import { For, type JSX, Show } from "solid-js";
 import type { DataColumn } from "../../components/index.js";
-import { Amount, DataTable, EmptyState, Notice, Section } from "../../components/index.js";
+import { Amount, DataTable, EmptyState, FoldSection, Notice } from "../../components/index.js";
+import { countOf } from "../../format/number.js";
 import type { AnchorView, ExpiryWarning, PendingView } from "../../view-models/fiscal/index.js";
 
 const CATEGORY_TEXTS: Record<PendingView["category"], string> = {
@@ -44,7 +45,16 @@ export const LossesCard = (props: {
   expiring: readonly ExpiryWarning[];
   anchors: readonly AnchorView[];
 }): JSX.Element => (
-  <Section title="Pérdidas pendientes de compensar" class="span-6">
+  <FoldSection
+    title="Pérdidas pendientes de compensar"
+    summary={
+      props.pending.length === 0
+        ? "No arrastras pérdidas"
+        : `${countOf(props.pending.length, "saldo pendiente", "saldos pendientes")}${
+            props.expiring.length > 0 ? " · caduca pronto" : ""
+          }`
+    }
+  >
     {/*
       **What the engine substitutes, the engine says** (ADR-0024). When a
       return is on record the chain replaces the pending losses it computed
@@ -155,5 +165,5 @@ export const LossesCard = (props: {
       </p>
       <DataTable label="Pérdidas caducadas" size="sm" rows={props.expired} columns={COLUMNS} />
     </Show>
-  </Section>
+  </FoldSection>
 );

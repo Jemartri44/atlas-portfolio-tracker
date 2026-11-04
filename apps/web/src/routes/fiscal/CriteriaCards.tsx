@@ -8,20 +8,27 @@
 // whose other reading moves nothing appears too, with its zeros.
 
 import { type JSX, Show } from "solid-js";
-import { EmptyState, Section } from "../../components/index.js";
+import { FoldSection } from "../../components/index.js";
+import { countOf } from "../../format/number.js";
 import type { StakeView } from "../../view-models/fiscal/index.js";
 import { StakeList } from "./Criteria.jsx";
 
 export const DoubtfulCard = (props: { stakes: readonly StakeView[] }): JSX.Element => (
-  <Section title="Criterios en duda" class="span-6">
+  <FoldSection
+    title="Criterios en duda"
+    summary={
+      props.stakes.length === 0
+        ? "Ninguna cifra depende de uno"
+        : countOf(props.stakes.length, "criterio", "criterios")
+    }
+  >
     <Show
       when={props.stakes.length > 0}
       fallback={
-        <EmptyState
-          what="Ninguna cifra de este ejercicio depende de un criterio dudoso"
-          why="Todo lo que has declarado se apoya en lecturas firmes de la norma."
-          glyph="check"
-        />
+        <p class="card-note">
+          Ninguna cifra de este ejercicio depende de un criterio dudoso: todo lo que has declarado
+          se apoya en lecturas firmes de la norma.
+        </p>
       }
     >
       <p class="card-note">
@@ -30,7 +37,7 @@ export const DoubtfulCard = (props: { stakes: readonly StakeView[] }): JSX.Eleme
       </p>
       <StakeList stakes={props.stakes} />
     </Show>
-  </Section>
+  </FoldSection>
 );
 
 /**
@@ -42,15 +49,21 @@ export const DoubtfulCard = (props: { stakes: readonly StakeView[] }): JSX.Eleme
  * instead of filtering it.
  */
 export const SettledCard = (props: { stakes: readonly StakeView[] }): JSX.Element => (
-  <Section title="Criterios firmes con dinero detrás" class="span-6">
+  <FoldSection
+    title="Criterios firmes con dinero detrás"
+    summary={
+      props.stakes.length === 0
+        ? "Ninguno movería nada"
+        : countOf(props.stakes.length, "criterio", "criterios")
+    }
+  >
     <Show
       when={props.stakes.length > 0}
       fallback={
-        <EmptyState
-          what="Ninguno de tus criterios firmes movería nada leído al revés"
-          why="Se ha comprobado uno a uno: no es que no se haya mirado."
-          glyph="check"
-        />
+        <p class="card-note">
+          Ninguno de tus criterios firmes movería nada leído al revés. Se ha comprobado uno a uno:
+          no es que no se haya mirado.
+        </p>
       }
     >
       <p class="card-note">
@@ -59,5 +72,5 @@ export const SettledCard = (props: { stakes: readonly StakeView[] }): JSX.Elemen
       </p>
       <StakeList stakes={props.stakes} />
     </Show>
-  </Section>
+  </FoldSection>
 );

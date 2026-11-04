@@ -14,7 +14,7 @@
 
 import { A } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
-import { Amount, Figure, Notice, Pending, Section, Tag } from "../../components/index.js";
+import { Amount, Figure, FoldSection, Notice, Pending, Tag } from "../../components/index.js";
 import type { CategoryView, InformativeView } from "../../view-models/fiscal/index.js";
 import { CriteriaList } from "./Criteria.jsx";
 
@@ -66,10 +66,19 @@ const Category = (props: { category: CategoryView; year: number; model: string }
   </div>
 );
 
+/** The verdict that asks the most of the reader: what the folded card says. */
+const folded = (view: InformativeView): string => {
+  const first =
+    view.categories.find((category) => category.verdict === "obliged") ??
+    view.categories.find((category) => category.tone === "caution") ??
+    view.categories[0];
+  return first?.verdictText ?? view.periodText;
+};
+
 export const InformativeCard = (props: { view: InformativeView }): JSX.Element => (
-  <Section
+  <FoldSection
     title={props.view.title}
-    class="span-6"
+    summary={folded(props.view)}
     aside={<span class="scope">Ejercicio {props.view.year}</span>}
   >
     <p class="card-note">{props.view.periodText}</p>
@@ -106,5 +115,5 @@ export const InformativeCard = (props: { view: InformativeView }): JSX.Element =
       </Show>
       <CriteriaList criteria={props.view.criteria} />
     </Show>
-  </Section>
+  </FoldSection>
 );

@@ -10,13 +10,14 @@ import {
   type DataColumn,
   DataTable,
   Figure,
+  FoldSection,
   Notice,
   Pending,
-  Section,
   StatLine,
   Tag,
   TotalLine,
 } from "../../components/index.js";
+import { countOf } from "../../format/number.js";
 import type { QuotaBracketView, QuotaView } from "../../view-models/fiscal/quota.js";
 import { ExternalIncomeCard } from "./ExternalIncomeCard.jsx";
 import type { Estimate } from "./estimates.js";
@@ -63,10 +64,21 @@ const Paid = (props: { year: number; paid: Money }): JSX.Element => (
   </>
 );
 
+/** The line of the folded card: the result, and that it is an estimate with something to read. */
+const Folded = (props: { view: QuotaView }): JSX.Element => {
+  const warned = (): number => props.view.notes.filter((note) => note.severity !== "info").length;
+  return (
+    <Show when={props.view.computed} fallback="Sin escala comprobada">
+      <Amount value={props.view.result_eur} signed /> · estimación
+      <Show when={warned() > 0}> · {countOf(warned(), "aviso", "avisos")}</Show>
+    </Show>
+  );
+};
+
 export const QuotaCard = (props: { view: QuotaView; paid?: Money | undefined }): JSX.Element => (
-  <Section
+  <FoldSection
     title="Cuota estimada del ahorro"
-    class="span-12"
+    summary={<Folded view={props.view} />}
     label={`Cuota estimada del ahorro de ${props.view.year}`}
     aside={<Tag>estimación</Tag>}
   >
@@ -150,7 +162,7 @@ export const QuotaCard = (props: { view: QuotaView; paid?: Money | undefined }):
     <For each={props.view.notes}>
       {(note) => <Notice severity={note.severity}>{note.text}</Notice>}
     </For>
-  </Section>
+  </FoldSection>
 );
 
 /** The quota and, beside it, the income from outside the portfolio it counts. */

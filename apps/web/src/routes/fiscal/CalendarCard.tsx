@@ -6,18 +6,19 @@
 import type { CivilDate, LedgerEvent } from "@atlas/domain";
 import { type FiscalCalendar, fiscalCalendar } from "@atlas/domain/fiscal";
 import { For, type JSX, Show } from "solid-js";
-import { Section } from "../../components/index.js";
+import { Disclosure, Section, Tag } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
 import type { NameIndex } from "../../format/names.js";
+import { GRID, mediaQuery } from "../../shell/media.js";
 import { CalendarStrip, calendarPhrase, UNVERIFIED } from "./CalendarStrip.jsx";
 
 export const CalendarCard = (props: {
   calendar: FiscalCalendar;
   today: CivilDate;
   names: NameIndex;
-}): JSX.Element => (
-  <Section title="Calendario fiscal" class="span-12" label="Calendario fiscal">
-    <CalendarStrip calendar={props.calendar} today={props.today} names={props.names} />
+}): JSX.Element => {
+  const wide = mediaQuery(GRID);
+  const dates = (): JSX.Element => (
     <ul class="calendar-list">
       <For each={props.calendar.dates}>
         {(one) => (
@@ -35,8 +36,27 @@ export const CalendarCard = (props: {
         )}
       </For>
     </ul>
-  </Section>
-);
+  );
+  const { start, end } = props.calendar.season;
+  const inSeason = (): boolean => start <= props.today && props.today <= end;
+  return (
+    <Section
+      title={wide() ? "Calendario fiscal" : "Calendario"}
+      class="span-12 fiscal-calendar"
+      label="Calendario fiscal"
+      aside={
+        <Show when={!wide() && inSeason()}>
+          <Tag tone="accent">Hasta {formatDate(end).slice(0, 5)}</Tag>
+        </Show>
+      }
+    >
+      <CalendarStrip calendar={props.calendar} today={props.today} names={props.names} />
+      <Show when={wide()} fallback={<Disclosure label="Todas las fechas">{dates()}</Disclosure>}>
+        {dates()}
+      </Show>
+    </Section>
+  );
+};
 
 /** The calendar of the ledger read at a date: what the screen puts in its grid. */
 export const LedgerCalendar = (props: {

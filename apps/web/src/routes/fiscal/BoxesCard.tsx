@@ -7,7 +7,8 @@
 // card says plainly that it has no numbers for that year.
 
 import { For, type JSX, Show } from "solid-js";
-import { Amount, Disclosure, Icon, Notice, Section } from "../../components/index.js";
+import { Amount, Disclosure, FoldSection, Icon, Notice } from "../../components/index.js";
+import { countOf } from "../../format/number.js";
 import type { BoxesView, BoxRowView } from "../../view-models/fiscal/index.js";
 
 const Value = (props: { row: BoxRowView }): JSX.Element => (
@@ -62,8 +63,9 @@ const PackageActions = (props: { onDownload: () => void }): JSX.Element => {
 };
 
 export const BoxesCard = (props: { view: BoxesView; onDownload?: () => void }): JSX.Element => (
-  <Section
+  <FoldSection
     title="Tu declaración por casillas"
+    summary={`${countOf(props.view.blocks.length, "bloque", "bloques")} · mejor en el ordenador`}
     class="span-12"
     aside={<span class="scope">Ejercicio {props.view.year}</span>}
   >
@@ -90,59 +92,61 @@ export const BoxesCard = (props: { view: BoxesView; onDownload?: () => void }): 
       </Show>
     </Show>
 
-    <For each={props.view.blocks}>
-      {(block) => (
-        <Disclosure label={<span class="group-head">{block.title}</span>}>
-          <Show when={block.some_without_box}>
-            <p class="card-note">
-              Algunas de estas filas no tienen casilla comprobada en el formulario de{" "}
-              {props.view.year}: van por concepto, sin número.
-            </p>
-          </Show>
-          <Show when={block.sources.length > 0}>
-            <p class="card-note box-sources">
-              Estos números y sus rótulos se leyeron en el anexo oficial:{" "}
-              <For each={block.sources}>
-                {(source, index) => (
-                  <>
-                    {index() > 0 ? " · " : ""}
-                    <span class="box-source">
-                      pág. {source.page}, {source.url}
+    <div class="box-blocks">
+      <For each={props.view.blocks}>
+        {(block) => (
+          <Disclosure label={<span class="group-head">{block.title}</span>}>
+            <Show when={block.some_without_box}>
+              <p class="card-note">
+                Algunas de estas filas no tienen casilla comprobada en el formulario de{" "}
+                {props.view.year}: van por concepto, sin número.
+              </p>
+            </Show>
+            <Show when={block.sources.length > 0}>
+              <p class="card-note box-sources">
+                Estos números y sus rótulos se leyeron en el anexo oficial:{" "}
+                <For each={block.sources}>
+                  {(source, index) => (
+                    <>
+                      {index() > 0 ? " · " : ""}
+                      <span class="box-source">
+                        pág. {source.page}, {source.url}
+                      </span>
+                    </>
+                  )}
+                </For>
+              </p>
+            </Show>
+            <ul class="boxes">
+              <For each={block.rows}>
+                {(row) => (
+                  <li class="box-row">
+                    <span class="box-main">
+                      <span class="box-label">{row.name}</span>
+                      <Show when={row.operation}>
+                        {(operation) => <span class="box-op">{operation()}</span>}
+                      </Show>
+                      <Show when={row.label}>
+                        {(label) => <span class="box-official">{label()}</span>}
+                      </Show>
+                      <Show when={row.checked}>
+                        {(checked) => <span class="box-official">{checked()}</span>}
+                      </Show>
+                      <Show when={row.partial}>
+                        {(partial) => <span class="box-partial">Ojo: {partial()}</span>}
+                      </Show>
                     </span>
-                  </>
+                    <span class="box-figs">
+                      <Show when={row.box}>{(box) => <span class="box-number">{box()}</span>}</Show>
+                      <Value row={row} />
+                    </span>
+                  </li>
                 )}
               </For>
-            </p>
-          </Show>
-          <ul class="boxes">
-            <For each={block.rows}>
-              {(row) => (
-                <li class="box-row">
-                  <span class="box-main">
-                    <span class="box-label">{row.name}</span>
-                    <Show when={row.operation}>
-                      {(operation) => <span class="box-op">{operation()}</span>}
-                    </Show>
-                    <Show when={row.label}>
-                      {(label) => <span class="box-official">{label()}</span>}
-                    </Show>
-                    <Show when={row.checked}>
-                      {(checked) => <span class="box-official">{checked()}</span>}
-                    </Show>
-                    <Show when={row.partial}>
-                      {(partial) => <span class="box-partial">Ojo: {partial()}</span>}
-                    </Show>
-                  </span>
-                  <span class="box-figs">
-                    <Show when={row.box}>{(box) => <span class="box-number">{box()}</span>}</Show>
-                    <Value row={row} />
-                  </span>
-                </li>
-              )}
-            </For>
-          </ul>
-        </Disclosure>
-      )}
-    </For>
-  </Section>
+            </ul>
+          </Disclosure>
+        )}
+      </For>
+    </div>
+  </FoldSection>
 );

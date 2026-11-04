@@ -14,6 +14,8 @@ interface FoldSectionProps {
   summary: JSX.Element;
   aside?: JSX.Element | undefined;
   class?: string | undefined;
+  /** When the card is a landmark of its own, with a name longer than its title. */
+  label?: string | undefined;
   children: JSX.Element;
 }
 
@@ -24,7 +26,7 @@ export const FoldSection = (props: FoldSectionProps): JSX.Element => {
     <Show
       when={!wide()}
       fallback={
-        <Section title={props.title} aside={props.aside} class={props.class}>
+        <Section title={props.title} aside={props.aside} class={props.class} label={props.label}>
           {props.children}
         </Section>
       }
