@@ -4,11 +4,12 @@
 // The invalidation condition is shown in full, never truncated to a tooltip: a
 // condition written once and never read again is worth nothing (rule 15).
 
-import { type JSX, Show } from "solid-js";
+import { For, type JSX, Show } from "solid-js";
 import {
   Amount,
   type DataColumn,
   DataTable,
+  Disclosure,
   Figure,
   Pending,
   Price,
@@ -19,6 +20,7 @@ import {
   TotalLine,
 } from "../../components/index.js";
 import { pricesOf } from "../../format/messages/prose.js";
+import { GRID, mediaQuery } from "../../shell/media.js";
 import type { BucketPositionRow, BucketPositionsView } from "../../view-models/bucket/index.js";
 
 const COLUMNS: readonly DataColumn<BucketPositionRow>[] = [
@@ -125,44 +127,91 @@ const ThesisNote = (props: { row: BucketPositionRow }): JSX.Element => (
   </Show>
 );
 
-export const PositionsCard = (props: { view: BucketPositionsView }): JSX.Element => (
-  <Section title="Posiciones abiertas" class="span-7">
-    <Show
-      when={props.view.rows.length > 0}
-      fallback={<p class="meta">No hay ninguna posición abierta en el cubo.</p>}
-    >
-      <DataTable
-        label="Posiciones del cubo"
-        size="lg"
-        columns={COLUMNS}
-        rows={props.view.rows}
-        maskedMerge
-        detail={(row) => <ThesisNote row={row} />}
-      />
-      <TotalLine
-        label={
-          <>
-            Total del cubo
-            <Show when={props.view.partial}>
-              {" "}
-              <Tag icon="half" title={`Faltan: ${props.view.missing.join(", ")}`}>
-                parcial
-              </Tag>
-            </Show>
-          </>
-        }
-      >
-        <Amount value={props.view.totalValue} missingReason="ninguna posición tiene precio" />
-        <span class="meta">
-          coste <Amount value={props.view.totalCost} />
+/** A position in a line, on a phone: what it is worth and how it goes. The rest folds. */
+const Line = (props: { row: BucketPositionRow }): JSX.Element => (
+  <li>
+    <div class="row">
+      <span class="main">
+        <span class="title truncate" title={props.row.name}>
+          {props.row.name}
         </span>
-      </TotalLine>
-      <Show when={props.view.partial}>
-        <Pending action={{ label: "Registrar valoraciones", to: "/registrar/valuation" }}>
-          {pricesOf(props.view.missing)}: el total solo cubre lo que sí tiene precio, y los pesos
-          dentro del cubo no se calculan sobre un total parcial.
-        </Pending>
-      </Show>
-    </Show>
-  </Section>
+      </span>
+      <span class="split-figs">
+        <Amount value={props.row.value} missingReason="sin precio a esa fecha" class="fig" />
+        <Show when={props.row.unrealizedPct !== undefined}>
+          {" "}
+          <Figure value={props.row.unrealizedPct} unit="percent" signed coloured />
+        </Show>
+      </span>
+    </div>
+  </li>
 );
+
+export const PositionsCard = (props: { view: BucketPositionsView }): JSX.Element => {
+  const wide = mediaQuery(GRID);
+  const table = (): JSX.Element => (
+    <DataTable
+      label="Posiciones del cubo"
+      size="lg"
+      columns={COLUMNS}
+      rows={props.view.rows}
+      maskedMerge
+      detail={(row) => <ThesisNote row={row} />}
+    />
+  );
+  return (
+    <Section title="Posiciones abiertas">
+      <Show
+        when={props.view.rows.length > 0}
+        fallback={<p class="meta">No hay ninguna posición abierta en el cubo.</p>}
+      >
+        <Show
+          when={wide()}
+          fallback={
+            <ul class="rows" aria-label="Posiciones del cubo, en una línea">
+              <For each={props.view.rows}>{(row) => <Line row={row} />}</For>
+            </ul>
+          }
+        >
+          {table()}
+        </Show>
+        <TotalLine
+          label={
+            <>
+              Total del cubo
+              <Show when={props.view.partial}>
+                {" "}
+                <Tag icon="half" title={`Faltan: ${props.view.missing.join(", ")}`}>
+                  parcial
+                </Tag>
+              </Show>
+            </>
+          }
+        >
+          <Amount value={props.view.totalValue} missingReason="ninguna posición tiene precio" />
+          <span class="meta">
+            coste <Amount value={props.view.totalCost} />
+          </span>
+        </TotalLine>
+        <Show when={props.view.partial}>
+          <Show
+            when={wide()}
+            fallback={
+              <Pending line action={{ label: "Registrar", to: "/registrar/valuation" }}>
+                {pricesOf(props.view.missing)}.
+              </Pending>
+            }
+          >
+            <Pending action={{ label: "Registrar valoraciones", to: "/registrar/valuation" }}>
+              {pricesOf(props.view.missing)}: el total solo cubre lo que sí tiene precio, y los
+              pesos dentro del cubo no se calculan sobre un total parcial.
+            </Pending>
+          </Show>
+        </Show>
+        <Show when={!wide()}>
+          <Disclosure label="Tesis y detalle de cada posición">{table()}</Disclosure>
+        </Show>
+      </Show>
+    </Section>
+  );
+};

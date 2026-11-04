@@ -36,6 +36,8 @@ export interface SeriesCardProps {
   empty: JSX.Element;
   /** Above the chart: the figure the chart explains, when it has one. */
   lead?: JSX.Element | undefined;
+  /** Beside the chart: the figures that go with it. A narrow card puts them where the lead is. */
+  side?: JSX.Element | undefined;
   /** Under the chart and before its table: what goes with it, a strip of figures. */
   foot?: JSX.Element | undefined;
   /** The last rows of the card, drawn or not: a disclosure with the detail. */
@@ -164,38 +166,43 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
         <Show when={props.lead !== undefined}>
           <div class="chart-range">{buttons()}</div>
         </Show>
-        <figure class="chart">
-          <Show
-            when={props.panels}
-            fallback={<Chart x={shown()} series={series()} label={props.title} unit={props.unit} />}
-          >
-            {(panels) => (
-              <For each={panels()}>
-                {(panel, at) => (
-                  <>
-                    <Show when={panel.name}>
-                      <p class="panel-name">
-                        {panel.name} <span>escala propia</span>
-                      </p>
-                    </Show>
-                    <Chart
-                      x={shown()}
-                      series={panel.series.map((index) => series()[index] as ChartSeries)}
-                      bands={series()}
-                      label={`${props.title}: ${panel.name ?? "cartera principal con su efectivo, el cubo apilado encima y lo aportado"}`}
-                      panel={at() === 0 ? "main" : at() === panels().length - 1 ? "end" : "strip"}
-                      sync="evolution"
-                      dates={at() === panels().length - 1}
-                    />
-                  </>
-                )}
-              </For>
-            )}
-          </Show>
-          <Show when={!folded()}>
-            <figcaption>{legend()}</figcaption>
-          </Show>
-        </figure>
+        <div class={props.side === undefined ? undefined : "chart-with-side"}>
+          <figure class="chart">
+            <Show
+              when={props.panels}
+              fallback={
+                <Chart x={shown()} series={series()} label={props.title} unit={props.unit} />
+              }
+            >
+              {(panels) => (
+                <For each={panels()}>
+                  {(panel, at) => (
+                    <>
+                      <Show when={panel.name}>
+                        <p class="panel-name">
+                          {panel.name} <span>escala propia</span>
+                        </p>
+                      </Show>
+                      <Chart
+                        x={shown()}
+                        series={panel.series.map((index) => series()[index] as ChartSeries)}
+                        bands={series()}
+                        label={`${props.title}: ${panel.name ?? "cartera principal con su efectivo, el cubo apilado encima y lo aportado"}`}
+                        panel={at() === 0 ? "main" : at() === panels().length - 1 ? "end" : "strip"}
+                        sync="evolution"
+                        dates={at() === panels().length - 1}
+                      />
+                    </>
+                  )}
+                </For>
+              )}
+            </Show>
+            <Show when={!folded()}>
+              <figcaption>{legend()}</figcaption>
+            </Show>
+          </figure>
+          {props.side}
+        </div>
         <Show when={folded()} fallback={notes()}>
           <Disclosure label={props.phone?.fold}>
             {legend()}

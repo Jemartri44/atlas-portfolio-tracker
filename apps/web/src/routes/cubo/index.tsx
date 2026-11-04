@@ -9,8 +9,9 @@
 // The stop-loss warning goes at the very top: it is the
 // rule the plan wants hardest to ignore. It warns; it never blocks.
 //
-// Composition (docs/design/system.md §7.6): the bucket against the index, the
-// open positions beside the budget, the theses, the costs and the warnings.
+// Composition (docs/design/system.md §7.6): the bucket against the index across, and two columns of
+// their own: the open positions and the theses, the budget and the costs. On a phone, in that order
+// of what is looked for: positions, budget, theses.
 // A bucket with nothing in it is one empty state, not six empty cards.
 
 import { bucketPositions, netWorth, settingsAt, type Warning } from "@atlas/domain";
@@ -31,6 +32,7 @@ import { describeWarning } from "../../format/messages/warnings.js";
 import { nameIndex } from "../../format/names.js";
 import { store } from "../../ledger/state.js";
 import { QuotesNotice, useQuotes } from "../../prices/use-quotes.jsx";
+import { GRID, mediaQuery } from "../../shell/media.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import { privacy } from "../../shell/preferences.js";
 import {
@@ -139,6 +141,38 @@ export default function CuboRoute(): JSX.Element {
           report().stats.closedTheses === 0 &&
           report().controls.contributionGross.isZero();
 
+        const wide = mediaQuery(GRID);
+        const positionsCard = (): JSX.Element => <PositionsCard view={positions()} />;
+        const budgetCard = (): JSX.Element => (
+          <BudgetCard
+            notices={noticesOf(report().controls.warnings)}
+            view={report().controls}
+            gauges={gauges()}
+            worth={worth()}
+            limits={{
+              stopLossPct: settings().bucket_stop_loss_pct,
+              maxWeightPct: settings().bucket_max_weight_pct,
+            }}
+          />
+        );
+        const thesesCard = (): JSX.Element => (
+          <ThesesCard
+            view={theses()}
+            notices={noticesOf([
+              ...theses().warnings,
+              ...positions().warnings,
+              ...report().stats.warnings,
+            ])}
+          />
+        );
+        const feesCard = (): JSX.Element => (
+          <Show when={fees().rows.length > 0}>
+            <Section title="Costes del cubo">
+              <StandaloneFees view={fees()} totalLabel="Total de comisiones sueltas del cubo" />
+            </Section>
+          </Show>
+        );
+
         return (
           <>
             <PageHeader
@@ -182,33 +216,25 @@ export default function CuboRoute(): JSX.Element {
                 </For>
 
                 <StatsCard view={report().stats} plot={series()} asOf={date()} />
-                <PositionsCard view={positions()} />
-                <BudgetCard
-                  notices={noticesOf(report().controls.warnings)}
-                  view={report().controls}
-                  gauges={gauges()}
-                  worth={worth()}
-                  limits={{
-                    stopLossPct: settings().bucket_stop_loss_pct,
-                    maxWeightPct: settings().bucket_max_weight_pct,
-                  }}
-                />
-                <ThesesCard
-                  view={theses()}
-                  notices={noticesOf([
-                    ...theses().warnings,
-                    ...positions().warnings,
-                    ...report().stats.warnings,
-                  ])}
-                />
-
-                <Show when={fees().rows.length > 0}>
-                  <Section title="Costes del cubo" class="span-12">
-                    <StandaloneFees
-                      view={fees()}
-                      totalLabel="Total de comisiones sueltas del cubo"
-                    />
-                  </Section>
+                <Show
+                  when={wide()}
+                  fallback={
+                    <>
+                      {positionsCard()}
+                      {budgetCard()}
+                      {thesesCard()}
+                      {feesCard()}
+                    </>
+                  }
+                >
+                  <div class="stack span-7">
+                    {positionsCard()}
+                    {thesesCard()}
+                  </div>
+                  <div class="stack span-5">
+                    {budgetCard()}
+                    {feesCard()}
+                  </div>
                 </Show>
               </div>
             </Show>

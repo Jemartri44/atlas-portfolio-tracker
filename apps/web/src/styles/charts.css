@@ -17,6 +17,14 @@
   margin-block: var(--space-3) var(--space-2);
 }
 
+/* The chart with its figures to the right: the figures take what they need. */
+.chart-with-side {
+  align-items: start;
+  column-gap: var(--space-6);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 16rem);
+}
+
 .chart-plot {
   height: var(--chart-h);
   min-width: 0;

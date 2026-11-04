@@ -24,6 +24,7 @@ import {
   Tag,
 } from "../../components/index.js";
 import { formatDate } from "../../format/date.js";
+import { GRID, mediaQuery } from "../../shell/media.js";
 import type { StatsView } from "../../view-models/bucket/index.js";
 import type { MissingNote, PlottedSeries } from "../../view-models/series.js";
 
@@ -64,62 +65,97 @@ const NotYet = (props: { view: StatsView; idle: Plot["idle"] }): JSX.Element => 
   </Show>
 );
 
-const NotYetPrices = (props: { view: StatsView }): JSX.Element => (
-  <Show
-    when={props.view.vsIndexMissing > 0}
-    fallback={
-      <Pending action={{ label: "Abrir una tesis", to: "/registrar/tesis" }}>
-        El resultado frente al índice llega con la primera tesis que se pueda comparar.
-      </Pending>
-    }
-  >
-    <Pending action={{ label: "Registrar valoraciones", to: "/registrar/valuation" }}>
-      Llega cuando todas las tesis se puedan comparar:{" "}
-      {props.view.vsIndexMissing === 1
-        ? "a una tesis le falta"
-        : `a ${props.view.vsIndexMissing} tesis les falta`}{" "}
-      el precio del índice en sus fechas.
-      <Show when={props.view.vsIndexTotal !== undefined}>
-        {" "}
-        En las que sí se comparan: <Amount value={props.view.vsIndexTotal} signed coloured />.
-      </Show>
-    </Pending>
-  </Show>
-);
-
-const Lead = (props: { view: StatsView; idle: Plot["idle"] }): JSX.Element => (
-  <>
+const NotYetPrices = (props: { view: StatsView }): JSX.Element => {
+  const wide = mediaQuery(GRID);
+  return (
     <Show
-      when={props.view.vsIndexPct !== undefined}
-      fallback={<NotYet view={props.view} idle={props.idle} />}
+      when={props.view.vsIndexMissing > 0}
+      fallback={
+        <Pending action={{ label: "Abrir una tesis", to: "/registrar/tesis" }}>
+          El resultado frente al índice llega con la primera tesis que se pueda comparar.
+        </Pending>
+      }
     >
-      <p class="hero-figure">
-        <Figure value={props.view.vsIndexPct} unit="percent" decimals={1} signed coloured />
-      </p>
-      <p class="card-note">
-        Lo que el cubo ha hecho de más o de menos que el mismo dinero en el índice, sobre lo
-        aportado: <Amount value={props.view.vsIndexTotal} signed coloured />.
-      </p>
+      <Show
+        when={wide()}
+        fallback={
+          <Pending line>
+            Falta el precio del índice en{" "}
+            {props.view.vsIndexMissing === 1 ? "una tesis" : `${props.view.vsIndexMissing} tesis`}.
+            <Show when={props.view.vsIndexTotal !== undefined}>
+              {" "}
+              Comparables: <Amount value={props.view.vsIndexTotal} signed coloured />
+            </Show>
+          </Pending>
+        }
+      >
+        <Pending action={{ label: "Registrar valoraciones", to: "/registrar/valuation" }}>
+          Llega cuando todas las tesis se puedan comparar:{" "}
+          {props.view.vsIndexMissing === 1
+            ? "a una tesis le falta"
+            : `a ${props.view.vsIndexMissing} tesis les falta`}{" "}
+          el precio del índice en sus fechas.
+          <Show when={props.view.vsIndexTotal !== undefined}>
+            {" "}
+            En las que sí se comparan: <Amount value={props.view.vsIndexTotal} signed coloured />.
+          </Show>
+        </Pending>
+      </Show>
     </Show>
-    <dl class="kpis">
-      <div class="kpi">
-        <dt>Comisiones s/ capital</dt>
-        <dd>
-          <Figure value={props.view.feesPct} unit="percent" decimals="auto" />
-        </dd>
-      </div>
-      <div class="kpi">
-        <dt>Tasa de acierto</dt>
-        <dd>
-          <Figure value={props.view.hitRatePct} unit="percent" decimals={0} />
-        </dd>
-      </div>
-      <div class="kpi">
-        <dt>Tesis cerradas</dt>
-        <dd>{props.view.closedTheses}</dd>
-      </div>
-    </dl>
-  </>
+  );
+};
+
+const Lead = (props: { view: StatsView; idle: Plot["idle"] }): JSX.Element => {
+  const wide = mediaQuery(GRID);
+  return (
+    <>
+      <Show
+        when={props.view.vsIndexPct !== undefined}
+        fallback={<NotYet view={props.view} idle={props.idle} />}
+      >
+        <p class="hero-figure">
+          <Figure value={props.view.vsIndexPct} unit="percent" decimals={1} signed coloured />
+        </p>
+        <p class="card-note">
+          Lo que el cubo ha hecho de más o de menos que el mismo dinero en el índice, sobre lo
+          aportado: <Amount value={props.view.vsIndexTotal} signed coloured />.
+        </p>
+      </Show>
+      <Show when={!wide()}>
+        <dl class="kpis">
+          <div class="kpi">
+            <dt>Comisiones</dt>
+            <dd>
+              <Figure value={props.view.feesPct} unit="percent" decimals="auto" />
+            </dd>
+          </div>
+          <div class="kpi">
+            <dt>Acierto</dt>
+            <dd>
+              <Figure value={props.view.hitRatePct} unit="percent" decimals={0} />
+            </dd>
+          </div>
+          <div class="kpi">
+            <dt>Cerradas</dt>
+            <dd>{props.view.closedTheses}</dd>
+          </div>
+        </dl>
+      </Show>
+    </>
+  );
+};
+
+/** The three figures of the strip, beside the chart on a computer. */
+const Side = (props: { view: StatsView }): JSX.Element => (
+  <div>
+    <StatLine label="Comisiones s/ capital">
+      <Figure value={props.view.feesPct} unit="percent" decimals="auto" />
+    </StatLine>
+    <StatLine label="Tasa de acierto">
+      <Figure value={props.view.hitRatePct} unit="percent" decimals={0} />
+    </StatLine>
+    <StatLine label="Tesis cerradas">{props.view.closedTheses}</StatLine>
+  </div>
 );
 
 const Stats = (props: { view: StatsView }): JSX.Element => (
@@ -159,34 +195,42 @@ const Stats = (props: { view: StatsView }): JSX.Element => (
   </>
 );
 
-export const StatsCard = (props: { view: StatsView; plot: Plot; asOf: string }): JSX.Element => (
-  <SeriesCard
-    title="Frente al índice"
-    asOf={props.asOf}
-    class="span-12"
-    unit="pct"
-    jump
-    labels={["Resultado del cubo", "Equivalente en el índice"]}
-    colours={["--c-series-bucket", "--c-series-index"]}
-    dashes={[undefined, [6, 4]]}
-    x={props.plot.x}
-    values={props.plot.values}
-    rows={props.plot.rows}
-    missing={props.plot.missing}
-    lead={<Lead view={props.view} idle={props.plot.idle} />}
-    empty={
-      // With a reason of its own the lead already says it: not twice.
-      <Show when={props.plot.idle === undefined}>
-        <Notice severity="info" title="Todavía no hay nada que dibujar">
-          La comparación se dibuja sobre las fechas que tienen precio del índice y de los activos
-          del cubo.
-        </Notice>
-      </Show>
-    }
-    tail={
-      <Disclosure label="Ver todas las estadísticas">
-        <Stats view={props.view} />
-      </Disclosure>
-    }
-  />
-);
+export const StatsCard = (props: { view: StatsView; plot: Plot; asOf: string }): JSX.Element => {
+  const wide = mediaQuery(GRID);
+  return (
+    <SeriesCard
+      title="Frente al índice"
+      asOf={props.asOf}
+      class="span-12"
+      unit="pct"
+      jump
+      labels={["Resultado del cubo", "Equivalente en el índice"]}
+      colours={["--c-series-bucket", "--c-series-index"]}
+      dashes={[undefined, [6, 4]]}
+      x={props.plot.x}
+      values={props.plot.values}
+      rows={props.plot.rows}
+      missing={props.plot.missing}
+      lead={<Lead view={props.view} idle={props.plot.idle} />}
+      side={wide() ? <Side view={props.view} /> : undefined}
+      phone={{ title: "Frente al índice", fold: "Leyenda, huecos y estadísticas" }}
+      foot={wide() ? undefined : <Stats view={props.view} />}
+      empty={
+        // With a reason of its own the lead already says it: not twice.
+        <Show when={props.plot.idle === undefined}>
+          <Notice severity="info" title="Todavía no hay nada que dibujar">
+            La comparación se dibuja sobre las fechas que tienen precio del índice y de los activos
+            del cubo.
+          </Notice>
+        </Show>
+      }
+      tail={
+        <Show when={wide()}>
+          <Disclosure label="Ver todas las estadísticas">
+            <Stats view={props.view} />
+          </Disclosure>
+        </Show>
+      }
+    />
+  );
+};
