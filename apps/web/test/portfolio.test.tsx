@@ -96,7 +96,7 @@ describe("the portfolio", () => {
     expect(empty.querySelector("section.card")).toBeNull();
     today("2029-01-10");
     const earlier = await show("/cartera?fecha=2026-01-01", Cartera);
-    expect(text(earlier)).not.toContain("Todavía no hay nada en la cartera");
+    expect(earlier.querySelector("section.card")).not.toBeNull();
   });
 
   it("puts the date in force beside the title", async () => {
