@@ -99,7 +99,7 @@ const COLUMNS: readonly DataColumn<ClassReturnRowView>[] = [
 
 /** The line of the folded card: what was earned, or why there is no figure. */
 const Headline = (props: { view: ReturnsView }): JSX.Element => (
-  <Show when={props.view.gain} fallback="Sin cifra">
+  <Show when={props.view.gain} fallback={`Sin cifra: ${props.view.gap ?? "sin dato"}`}>
     <Amount value={props.view.gain} signed coloured />
     <Show when={props.view.gainPct}>
       {" · "}

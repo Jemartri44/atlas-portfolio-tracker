@@ -27,8 +27,6 @@ export const Split = (props: { view: ContributionView; repurchase?: Repurchase }
         El cubo se lleva su parte antes del reparto: es un presupuesto, no una asignación, y nunca
         entra en los pesos objetivo.
       </p>
-      <PurchasesOnly view={props.view} />
-      <SplitNotes view={props.view} />
     </>
   );
   const calculation = (): JSX.Element => (
@@ -118,6 +116,8 @@ export const Split = (props: { view: ContributionView; repurchase?: Repurchase }
             {foot()}
             <Disclosure label="Notas, plataformas y por qué">
               {notes()}
+              <PurchasesOnly view={props.view} />
+              <SplitNotes view={props.view} />
               <ProposalNote />
               <Show when={platforms() > 0}>
                 <h3 class="block-title">Por plataforma</h3>
@@ -129,12 +129,8 @@ export const Split = (props: { view: ContributionView; repurchase?: Repurchase }
           </>
         }
       >
-        <Show when={props.view.purchasesOnly}>
-          <p class="card-note">
-            Con este importe quedan activos por debajo de su peso. Es la aritmética de hoy, no una
-            previsión.
-          </p>
-        </Show>
+        <PurchasesOnly view={props.view} />
+        <SplitNotes view={props.view} />
         {foot()}
         <ProposalNote />
         <Show when={platforms() > 0}>

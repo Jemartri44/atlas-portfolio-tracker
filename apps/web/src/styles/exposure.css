@@ -78,7 +78,9 @@
   .exposure-dimensions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
 
+@media (min-width: 48rem) {
   .exposure-row {
     column-gap: var(--space-6);
     grid-template-columns: repeat(2, minmax(0, 1fr));

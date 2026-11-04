@@ -134,8 +134,10 @@ export default function CarteraRoute(): JSX.Element {
         }));
 
         const wide = mediaQuery(GRID);
-        // Nothing bought yet: seven cards of «sin cifra» say less than the next step.
+        // Nothing bought yet, read today: seven cards of «sin cifra» say less than the next step.
+        // An earlier date only finds the ledger before its purchases.
         const empty = () =>
+          asOf.isToday() &&
           onboardingOf(
             dated(),
             ledgerEntries(snapshot.state, snapshot.events, { to: date() }),

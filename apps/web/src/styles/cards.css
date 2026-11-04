@@ -60,6 +60,11 @@
   text-decoration: none;
 }
 
+/* In the middle of a card it has nothing to reach: only the last row takes the card's padding. */
+.card-foot:not(:last-child) {
+  margin-bottom: 0;
+}
+
 a.card-foot:hover {
   background-color: var(--c-fill);
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
@@ -116,17 +121,13 @@ a.card-foot:hover {
   padding-inline: var(--space-4);
 }
 
-/* One row after another: the line between them is all the separation they need. */
-.card > .disclosure + .disclosure {
-  margin-top: 0;
-}
-
 .card > .disclosure:last-child {
   margin-bottom: calc(-1 * var(--space-4));
 }
 
+/* One row after another: the line between them is all the separation they need. */
 .card > .disclosure + .disclosure {
-  margin-top: var(--space-4);
+  margin-top: 0;
 }
 
 @media (min-width: 64rem) {
@@ -149,7 +150,7 @@ a.card-foot:hover {
   }
 
   .card > .disclosure + .disclosure {
-    margin-top: var(--space-5);
+    margin-top: 0;
   }
 }
 

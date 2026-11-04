@@ -8,7 +8,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { gaugeX } from "../src/routes/cartera/Gauge.jsx";
 import Cartera from "../src/routes/cartera/index.jsx";
-import { show, text, until, withGoldenLedger } from "./helpers/render.jsx";
+import { show, text, today, until, withGoldenLedger } from "./helpers/render.jsx";
 import { applied, withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
@@ -88,11 +88,15 @@ describe("the portfolio", () => {
     expect(stacks.map((stack) => applied(stack, "grid-column"))).toEqual(["span 7", "span 5"]);
   });
 
-  it("is one card with the next step before the first purchase", async () => {
-    const host = await show("/cartera?fecha=2026-01-01", Cartera);
-    expect(text(host)).toContain("Todavía no hay nada en la cartera");
-    expect(host.querySelector('a[href="/"][role="button"]')).not.toBeNull();
-    expect(host.querySelector("section.card")).toBeNull();
+  it("is one card with the next step before the first purchase, not on a date before it", async () => {
+    today("2026-01-01");
+    const empty = await show("/cartera", Cartera);
+    expect(text(empty)).toContain("Todavía no hay nada en la cartera");
+    expect(empty.querySelector('a[href="/"][role="button"]')).not.toBeNull();
+    expect(empty.querySelector("section.card")).toBeNull();
+    today("2029-01-10");
+    const earlier = await show("/cartera?fecha=2026-01-01", Cartera);
+    expect(text(earlier)).not.toContain("Todavía no hay nada en la cartera");
   });
 
   it("puts the date in force beside the title", async () => {
