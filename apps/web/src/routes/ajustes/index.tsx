@@ -180,13 +180,6 @@ export default function AjustesRoute(): JSX.Element {
           <div id="sincronizacion">
             <SessionCard />
           </div>
-        </div>
-        <div class="stack span-6">
-          <EcbCard />
-          <PricesCard />
-          <div id="tareas">
-            <JobsCard />
-          </div>
           <Section title="Configuración y verificación">
             <ul class="rows">
               {/* The fiscal screen has no place in the bottom bar (it is reached from the summary and from here. */}
@@ -202,6 +195,13 @@ export default function AjustesRoute(): JSX.Element {
               </LinkRow>
             </ul>
           </Section>
+        </div>
+        <div class="stack span-6">
+          <EcbCard />
+          <PricesCard />
+          <div id="tareas">
+            <JobsCard />
+          </div>
         </div>
       </div>
     </>
