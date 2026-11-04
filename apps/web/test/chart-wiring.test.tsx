@@ -188,6 +188,24 @@ describe("a hole is a hole", () => {
     expect(drawn[0]?.points?.show).toBe(false);
     expect(drawn[1]?.points?.show).toBe(true);
   });
+
+  it("draws no dots on a plain line, however few points it has", () => {
+    const values = [1, 2, 3];
+    const options = chartOptions(
+      {
+        x: [1, 2, 3],
+        series: [
+          { label: "Línea", values, colour: "--c-series-core" },
+          { label: "Borde", values, colour: "--c-series-core", plain: true },
+        ],
+        width: 320,
+        height: 220,
+      },
+      false,
+    );
+    const drawn = (options.series ?? []).slice(1) as { points?: { show?: boolean } }[];
+    expect(drawn.map((series) => series.points?.show)).toEqual([true, false]);
+  });
 });
 
 describe("the life cycle of the chart", () => {
