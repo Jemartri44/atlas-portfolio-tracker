@@ -104,7 +104,7 @@ describe("the rebalance card", () => {
     const host = await show(`/cartera?fecha=${DATE}`, Cartera);
     await press(host, "Calcular rebalanceo");
     const shown = () =>
-      card(host, "Rebalancear")?.querySelector("[aria-label='Desviación de cada activo']") !== null;
+      card(host, "Rebalancear")?.querySelector("[aria-label='Desviación de cada activo']") != null;
     await until(shown, "the proposal");
     await openLedger(undefined, true);
     await until(() => !shown(), "the proposal to go");
