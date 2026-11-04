@@ -389,6 +389,7 @@ Dirección A «Cuaderno vivo», elegida por el dueño el 2026-11-03 sobre la aud
 | Tarjetas, pie de tarjeta, líneas de panel y de total | `styles/cards.css` |
 | Filas en dos líneas y tablas | `styles/lists.css` |
 | Avisos, pendiente, vacío, esqueleto | `styles/feedback.css` |
+| Atención por títulos y botón de la lista recortada | `styles/notice-folds.css` |
 | Gráficas, leyenda, hueco, reparto | `styles/charts.css` |
 | Resumen: cifra protagonista, proporción y partes | `styles/summary.css` |
 | Barra de proporción y su leyenda (patrimonio, exposición) | `styles/share-bar.css` |

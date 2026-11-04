@@ -1,4 +1,11 @@
 /* The notices of *Atención* by their titles (NoticeFolds), and the button of a list seen up to a point (Peek). */
+.notice-lines > li {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  padding-block: var(--space-1);
+}
+
 .notice-folds > li + li {
   border-top: var(--border) solid var(--c-border-control);
 }
@@ -61,13 +68,6 @@
 
 .notice-open > p {
   margin: 0;
-}
-
-.notice-lines > li {
-  display: flex;
-  gap: var(--space-3);
-  justify-content: space-between;
-  padding-block: var(--space-1);
 }
 
 .notice-lines > li + li {

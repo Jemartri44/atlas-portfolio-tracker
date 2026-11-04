@@ -64,6 +64,15 @@
   padding-inline: var(--space-2) var(--space-1);
 }
 
+/*
+ * The mark is two images from public/ (the light and the dark symbol): their cuts are painted in
+ * the surface of their mode, so only one shows. Same rule as tokens.css: the system scheme unless
+ * the theme is forced in Settings.
+ */
+.mark {
+  flex: none;
+}
+
 .brand {
   align-items: center;
   color: var(--c-text);
@@ -84,15 +93,6 @@
 .brand > span {
   font-family: var(--font-serif);
   font-weight: var(--fw-semibold);
-}
-
-/*
- * The mark is two images from public/ (the light and the dark symbol): their cuts are painted in
- * the surface of their mode, so only one shows. Same rule as tokens.css: the system scheme unless
- * the theme is forced in Settings.
- */
-.mark {
-  flex: none;
 }
 
 .mark-dark {
