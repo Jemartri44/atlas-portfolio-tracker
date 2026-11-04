@@ -22,7 +22,7 @@ import {
   onCleanup,
   Show,
 } from "solid-js";
-import { Amount, Field, FoldSection, Notice, StatLine, Tag } from "../../components/index.js";
+import { Amount, Field, FoldSection, Notice, Tag } from "../../components/index.js";
 import { valueLabel } from "../../format/labels.js";
 import { createProjectionEdits } from "../../settings-objects/use-settings-object.js";
 import {
@@ -33,7 +33,7 @@ import {
   projectionView,
   readProjection,
 } from "../../view-models/core/projection.js";
-import { ProjectionChart } from "./ProjectionChart.jsx";
+import { ProjectionResult } from "./ProjectionResult.jsx";
 
 const SAVE_AFTER_MS = 800;
 
@@ -234,60 +234,7 @@ export const ProjectionCard = (props: {
           )}
         </For>
       </fieldset>
-      <Show
-        when={view().gap === undefined}
-        fallback={
-          <Notice severity="info" title="Sin cifra">
-            Todavía no se puede proyectar: {view().gap}.
-          </Notice>
-        }
-      >
-        <StatLine label="Hoy">
-          <Amount value={view().start} missingReason="sin dato" />
-        </StatLine>
-        <For each={view().cases}>
-          {(shown) => (
-            <StatLine label={`${shown.label}, dentro de ${view().years} años`}>
-              <Amount value={shown.value} />
-            </StatLine>
-          )}
-        </For>
-        <p class="card-note">{view().discounted}</p>
-        <Show when={view().plot}>{(plot) => <ProjectionChart plot={plot()} />}</Show>
-        <h3 class="block-title">Qué se llevan los costes</h3>
-        <table class="table is-sm projection-costs">
-          <caption class="meta">A {view().years} años, sin inflación</caption>
-          <thead>
-            <tr>
-              <th scope="col">Caso</th>
-              <th scope="col">TER y comisiones</th>
-              <th scope="col">Impuesto al vender</th>
-            </tr>
-          </thead>
-          <tbody>
-            <For each={view().cases}>
-              {(shown) => (
-                <tr>
-                  <td>{shown.label}</td>
-                  <td>
-                    <Amount value={shown.fees} />
-                  </td>
-                  <td>
-                    <Amount value={shown.tax} />
-                  </td>
-                </tr>
-              )}
-            </For>
-          </tbody>
-        </table>
-        <Show when={view().terMissing}>
-          {(left) => (
-            <p class="card-note">
-              El TER no alcanza a <Amount value={left()} /> de activos que no lo declaran.
-            </p>
-          )}
-        </Show>
-      </Show>
+      <ProjectionResult view={view()} />
     </FoldSection>
   );
 };

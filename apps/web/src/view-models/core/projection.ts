@@ -187,7 +187,7 @@ const discountedSentence = (result: ProjectionCases, discounts: ProjectionDiscou
   const parts = [
     ...(discounts.inflation ? ["inflación"] : []),
     ...(discounts.taxes ? ["impuestos al vender (escala del ahorro)"] : []),
-    ...(discounts.fees && fees.length > 0 ? [listed(fees)] : []),
+    ...(discounts.fees && fees.length > 0 ? [fees.join(" más ")] : []),
   ];
   return parts.length === 0
     ? "Sin descontar nada."
