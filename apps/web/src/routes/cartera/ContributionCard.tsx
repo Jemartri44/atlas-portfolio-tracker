@@ -8,8 +8,8 @@
 //     will.
 //
 // On screen (docs/design/system.md §7.5): the «Propuesta» tag, the strip of
-// three figures, what goes to each asset, and the note. The whole calculation
-// — value today, shortfall, weight after — is one tap away.
+// three figures, what goes to each asset, and the way to record it. The notes, the plan per platform
+// and the whole calculation — value today, shortfall, weight after — are one tap away.
 
 import { A } from "@solidjs/router";
 import { For, type JSX, Show } from "solid-js";
@@ -34,10 +34,10 @@ import { GRID, mediaQuery } from "../../shell/media.js";
 import { privacy } from "../../shell/preferences.js";
 import type { ContributionRowView, ContributionView } from "../../view-models/core/index.js";
 import { COLUMNS } from "./contribution-columns.jsx";
-import { PlatformSection } from "./PlatformsBlock.jsx";
+import { PlatformSection, PurchasesOnly, UnassignedOrders } from "./PlatformsBlock.jsx";
 import { PlanRepurchaseNotes, type Repurchase } from "./plan-repurchase.jsx";
 import { REMEDIES } from "./remedies.js";
-import { SplitNotes } from "./SplitNotes.jsx";
+import { ProposalNote, SplitNotes } from "./SplitNotes.jsx";
 
 /** A refusal with a known remedy is a pending datum, never an error. */
 const Refusal = (props: { error: AppError }): JSX.Element => (
@@ -52,6 +52,33 @@ const Refusal = (props: { error: AppError }): JSX.Element => (
 const Split = (props: { view: ContributionView; repurchase?: Repurchase }): JSX.Element => {
   const wide = mediaQuery(GRID);
   const active = (): ContributionRowView[] => props.view.rows.filter((row) => !row.idle);
+  const platforms = (): number => props.view.platforms?.rows.length ?? 0;
+  const notes = (): JSX.Element => (
+    <>
+      <p class="card-note" data-testid="amount-origin">
+        {props.view.fromSettings
+          ? "Importe de los ajustes (aportación mensual)."
+          : "Importe escrito aquí para este mes; no se guarda."}
+      </p>
+      <p class="card-note">
+        El cubo se lleva su parte antes del reparto: es un presupuesto, no una asignación, y nunca
+        entra en los pesos objetivo.
+      </p>
+      <PurchasesOnly view={props.view} />
+      <SplitNotes view={props.view} />
+    </>
+  );
+  const calculation = (): JSX.Element => (
+    <div class="split-calc">
+      <DataTable label="Cálculo del reparto" columns={COLUMNS} rows={props.view.rows} size="sm" />
+    </div>
+  );
+  const foot = (): JSX.Element => (
+    <A href="/registrar/buy" class="card-foot">
+      <span>Registrar estas compras</span>
+      <Icon name="arrow" class="icon-sm" />
+    </A>
+  );
   return (
     <>
       <dl class="kpis">
@@ -62,35 +89,31 @@ const Split = (props: { view: ContributionView; repurchase?: Repurchase }): JSX.
           </dd>
         </div>
         <div class="kpi">
-          <dt>Al cubo</dt>
-          <dd>
-            <Show when={props.view.bucketPct}>
-              <Figure value={props.view.bucketPct} unit="percent" decimals="auto" class="share" />
+          <dt>
+            {wide() ? "Al cubo" : "Cubo"}
+            <Show when={wide() && props.view.bucketPct}>
+              {" "}
+              <Figure value={props.view.bucketPct} unit="percent" decimals="auto" />
             </Show>
-            <Amount value={props.view.bucketBudget} class="kpi-amount" />
+          </dt>
+          <dd>
+            <Amount value={props.view.bucketBudget} />
           </dd>
         </div>
         <div class="kpi">
-          <dt>A la cartera</dt>
-          <dd>
-            <Show when={props.view.corePct}>
-              <Figure value={props.view.corePct} unit="percent" decimals="auto" class="share" />
+          <dt>
+            {wide() ? "A la cartera" : "Cartera"}
+            <Show when={wide() && props.view.corePct}>
+              {" "}
+              <Figure value={props.view.corePct} unit="percent" decimals="auto" />
             </Show>
-            <Amount value={props.view.coreAmount} class="kpi-amount" />
+          </dt>
+          <dd>
+            <Amount value={props.view.coreAmount} />
           </dd>
         </div>
       </dl>
-      <p class="card-note" data-testid="amount-origin">
-        {props.view.fromSettings
-          ? "Importe de los ajustes (aportación mensual)."
-          : "Importe escrito aquí para este mes; no se guarda."}
-      </p>
-      <p class="card-note">
-        El cubo se lleva su parte antes del reparto: es un presupuesto, no una asignación, y nunca
-        entra en los pesos objetivo.
-      </p>
 
-      <h3 class="block-title">Reparto en la cartera</h3>
       <ul class="rows" aria-label="Reparto de la aportación">
         <For each={active()}>
           {(row) => (
@@ -100,82 +123,66 @@ const Split = (props: { view: ContributionView; repurchase?: Repurchase }): JSX.
                   <span class="title truncate" title={row.name}>
                     {row.name}
                   </span>
-                  <span class="sub">
-                    <span>
-                      {row.assetClass} · peso tras aportar{" "}
-                      <Figure value={row.weightAfterPct} unit="percent" decimals={1} />
-                    </span>
-                    <Show when={row.whole}>
-                      {(whole) => (
-                        <span data-testid="whole-units">
-                          {" "}
-                          · enteras: <Amount quantity={whole().units} of={row.units} /> · sobran{" "}
-                          <Amount value={whole().leftover} />
-                        </span>
-                      )}
-                    </Show>
-                  </span>
+                  <Show when={row.whole}>
+                    {(whole) => (
+                      <span class="sub" data-testid="whole-units">
+                        enteras: <Amount quantity={whole().units} of={row.units} /> · sobran{" "}
+                        <Amount value={whole().leftover} />
+                      </span>
+                    )}
+                  </Show>
                 </span>
-                <span class="figs">
+                <span class="split-figs">
                   <Show when={row.sharePct}>
-                    <span class="fig">
-                      <Figure value={row.sharePct} unit="percent" decimals={1} />
+                    <span class="meta">
+                      <Figure value={row.sharePct} unit="percent" decimals={1} /> ·{" "}
                     </span>
                   </Show>
-                  <span class={row.sharePct === undefined ? "fig" : "fig-sub"}>
-                    <Amount value={row.allocation} />
-                  </span>
+                  <Amount value={row.allocation} class="fig" />
                 </span>
               </div>
-              <Show when={row.sharePct}>
-                {(share) => (
-                  <svg class={`share-line is-${row.classKey}`} aria-hidden="true">
-                    <rect class="share-line-track" x="0" y="0" width="100%" height="100%" rx="2" />
-                    <rect
-                      class="share-line-bar"
-                      x="0"
-                      y="0"
-                      width={`${Math.min(100, Math.max(0, Number.parseFloat(share())))}%`}
-                      height="100%"
-                      rx="2"
-                    />
-                  </svg>
-                )}
-              </Show>
               <PlanRepurchaseNotes warnings={props.repurchase?.(row.assetId) ?? []} />
             </li>
           )}
         </For>
       </ul>
-      <PlatformSection view={props.view} />
-      <A href="/registrar/buy" class="card-foot">
-        <span>Registrar estas compras</span>
-        <Icon name="arrow" class="icon-sm" />
-      </A>
-      <SplitNotes view={props.view} />
-      {/* The calculation, whole on a computer and folded on a phone (the approved report, §4). */}
+      <UnassignedOrders view={props.view.platforms} />
+      {/* On a computer the two details fold apart; on a phone, everything but the split. */}
       <Show
         when={wide()}
         fallback={
-          <Disclosure label="Por qué este reparto">
-            <DataTable
-              label="Cálculo del reparto"
-              columns={COLUMNS}
-              rows={props.view.rows}
-              size="sm"
-            />
-          </Disclosure>
+          <>
+            {foot()}
+            <Disclosure label="Notas, plataformas y por qué">
+              {notes()}
+              <ProposalNote />
+              <Show when={platforms() > 0}>
+                <h3 class="block-title">Por plataforma</h3>
+                <PlatformSection view={props.view} />
+              </Show>
+              <h3 class="block-title">Por qué este reparto</h3>
+              {calculation()}
+            </Disclosure>
+          </>
         }
       >
-        <h3 class="block-title">Por qué este reparto</h3>
-        <div class="split-calc">
-          <DataTable
-            label="Cálculo del reparto"
-            columns={COLUMNS}
-            rows={props.view.rows}
-            size="sm"
-          />
-        </div>
+        <Show when={props.view.purchasesOnly}>
+          <p class="card-note">
+            Con este importe quedan activos por debajo de su peso. Es la aritmética de hoy, no una
+            previsión.
+          </p>
+        </Show>
+        {foot()}
+        <ProposalNote />
+        <Show when={platforms() > 0}>
+          <Disclosure label={`Por plataforma (${platforms()})`}>
+            <PlatformSection view={props.view} />
+          </Disclosure>
+        </Show>
+        <Disclosure label="Por qué este reparto">
+          {notes()}
+          {calculation()}
+        </Disclosure>
       </Show>
     </>
   );
@@ -199,7 +206,7 @@ export const ContributionCard = (props: {
         ? "Aportación del mes"
         : `Aportación de ${formatMonth(props.view.date)}`
     }
-    class="span-5 is-natural"
+    class="cartera-contribution"
     aside={props.view === undefined ? undefined : <Tag tone="accent">Propuesta</Tag>}
   >
     <Show when={props.onAmountText}>
@@ -210,7 +217,7 @@ export const ContributionCard = (props: {
           unit="€"
           label="Importe de este mes"
           placeholder="El de los ajustes"
-          hint="Déjalo vacío para usar la aportación mensual de los ajustes. No se guarda."
+          hint="Vacío usa los ajustes. No se guarda."
           value={props.amountText ?? ""}
           error={props.amountError}
           onInput={onInput()}

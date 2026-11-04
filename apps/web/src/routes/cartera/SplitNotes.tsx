@@ -1,6 +1,6 @@
-// What explains the split of the month, always in sight under it: the help of whole units, the
-// assets that get nothing, the surplus spread by target weights, and that nothing was recorded —
-// Atlas never places an order.
+// What explains the split of the month: the help of whole units, the assets that get nothing, the
+// surplus spread by target weights; and apart, that nothing was recorded — Atlas never places an
+// order.
 
 import { A } from "@solidjs/router";
 import { type JSX, Show } from "solid-js";
@@ -33,13 +33,16 @@ export const SplitNotes = (props: { view: ContributionView }): JSX.Element => {
           objetivo.
         </p>
       </Show>
-      <p class="note-line">
-        <Icon name="info" class="icon-sm" />
-        <span>
-          Es una propuesta y nada se ha registrado: da las órdenes a mano en tu plataforma y
-          regístralas después desde <A href="/registrar">Registrar</A>.
-        </span>
-      </p>
     </>
   );
 };
+
+export const ProposalNote = (): JSX.Element => (
+  <p class="note-line">
+    <Icon name="info" class="icon-sm" />
+    <span>
+      Es una propuesta y nada se ha registrado: da las órdenes a mano en tu plataforma y regístralas
+      después desde <A href="/registrar">Registrar</A>.
+    </span>
+  </p>
+);

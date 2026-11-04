@@ -159,11 +159,6 @@
   font-weight: var(--fw-medium);
 }
 
-/* The share of a part, in front of the amount that may be hidden. */
-.kpi dd .share {
-  display: block;
-}
-
 .kpi dd .kpi-amount {
   color: var(--c-text-2);
   display: block;
@@ -241,4 +236,22 @@
 /* The calculation in sight on a computer: five columns in a card of five, a tighter gutter. */
 .split-calc .table :is(th, td):not(:first-child, :last-child) {
   padding-inline: var(--space-2);
+}
+
+/* A row of the split: its share and its amount on one line, the amount the one that weighs. */
+.split-figs {
+  align-self: center;
+  white-space: nowrap;
+}
+
+.split-figs .fig {
+  font-weight: var(--fw-semibold);
+}
+
+.cartera-contribution .kpis {
+  margin-top: var(--space-3);
+}
+
+.cartera-weights .bullets {
+  margin-bottom: var(--space-4);
 }

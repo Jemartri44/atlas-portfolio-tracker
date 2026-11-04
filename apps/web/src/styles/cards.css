@@ -116,6 +116,11 @@ a.card-foot:hover {
   padding-inline: var(--space-4);
 }
 
+/* One row after another: the line between them is all the separation they need. */
+.card > .disclosure + .disclosure {
+  margin-top: 0;
+}
+
 .card > .disclosure:last-child {
   margin-bottom: calc(-1 * var(--space-4));
 }
@@ -132,14 +137,6 @@ a.card-foot:hover {
 
   .card > .disclosure:last-child {
     margin-bottom: calc(-1 * var(--space-5));
-  }
-
-  /*
-   * A card whose neighbour in the row is much taller keeps its own height: two tables of different
-   * length side by side, stretched, left a white field in the middle of the shorter one.
-   */
-  .grid > .card.is-natural {
-    align-self: start;
   }
 
   /* In a stretched card the disclosures sit together at its bottom edge. */

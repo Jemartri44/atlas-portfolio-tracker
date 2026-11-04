@@ -19,6 +19,7 @@ import {
   DataTable,
   Figure,
   FoldSection,
+  Peek,
   StandaloneFees,
   StatLine,
   Tag,
@@ -91,12 +92,16 @@ export const CostsCard = (props: { view: CostsView }): JSX.Element => (
           when={props.view.core.rows.length > 0}
           fallback={<p class="meta">Todavía no hay costes registrados.</p>}
         >
-          <DataTable
-            label="Costes de la cartera principal"
-            columns={CORE_COLUMNS}
-            rows={props.view.core.rows}
-            maskedMerge
-          />
+          <Peek items={props.view.core.rows} limit={3} more={(total) => `Ver los ${total} activos`}>
+            {(rows) => (
+              <DataTable
+                label="Costes de la cartera principal"
+                columns={CORE_COLUMNS}
+                rows={rows}
+                maskedMerge
+              />
+            )}
+          </Peek>
           <TotalLine
             label={
               <>
