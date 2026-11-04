@@ -9,19 +9,21 @@
 // A block the domain refuses (no prices, no target weights) explains itself and leaves the others
 // standing.
 //
-// Composition (docs/design/system.md §7.5): the weights and the contribution
-// side by side from 1024px, the costs across; the date in force to the right
-// of the title.
+// Composition (docs/design/system.md §7.5): from 1024px two columns that go their own way, the
+// weights and the return on the left, the contribution, the exposure and the rebalance on the right,
+// and the costs and the projection across; the date in force to the right of the title. An empty
+// ledger is one card with the next step.
 
-import { assets, coreWeights, settingsAt } from "@atlas/domain";
+import { assets, coreWeights, ledgerEntries, settingsAt } from "@atlas/domain";
 import { classReturns, coreXirr, spanishCpiPct } from "@atlas/domain/charts";
 import { contributionPlan, costSummary, platformPlan } from "@atlas/domain/portfolio";
-import { createMemo, createSignal, type JSX } from "solid-js";
+import { createMemo, createSignal, type JSX, Show } from "solid-js";
 import { AsOfPicker, useAsOf } from "../../components/index.js";
 import { nameIndex } from "../../format/names.js";
 import { attempt } from "../../ledger/query.js";
 import { store } from "../../ledger/state.js";
 import { QuotesNotice, useQuotes } from "../../prices/use-quotes.jsx";
+import { GRID, mediaQuery } from "../../shell/media.js";
 import { PageHeader } from "../../shell/PageHeader.jsx";
 import {
   contributionView,
@@ -33,11 +35,13 @@ import {
 } from "../../view-models/core/index.js";
 import { returnsView } from "../../view-models/core/returns.js";
 import { unitPricesOf } from "../../view-models/core/whole-units.js";
+import { onboardingOf } from "../../view-models/index.js";
 import { absorbedAssets } from "../../view-models/weighted.js";
 import { RequireLedger } from "../guard.jsx";
 import { ContributionCard } from "./ContributionCard.jsx";
 import { CostsCard } from "./CostsCard.jsx";
 import { ExposureBlock } from "./ExposureBlock.jsx";
+import { NothingBought } from "./NothingBought.jsx";
 import { ProjectionCard } from "./ProjectionCard.jsx";
 import { usePlanRepurchase } from "./plan-repurchase.jsx";
 import { RebalanceCard } from "./RebalanceCard.jsx";
@@ -129,6 +133,59 @@ export default function CarteraRoute(): JSX.Element {
           date: date(),
         }));
 
+        const wide = mediaQuery(GRID);
+        // Nothing bought yet, read today: seven cards of «sin cifra» say less than the next step.
+        // An earlier date only finds the ledger before its purchases.
+        const empty = () =>
+          asOf.isToday() &&
+          onboardingOf(
+            dated(),
+            ledgerEntries(snapshot.state, snapshot.events, { to: date() }),
+            settings(),
+          ) !== undefined;
+        const weightsCard = (): JSX.Element => (
+          <WeightsCard
+            view={weights()}
+            threshold={settings().deviation_threshold_pp}
+            state={dated()}
+            date={date()}
+            settings={settings()}
+            absorbed={absorbed()}
+            names={names}
+            weightedTer={costs().core.weightedTer}
+          />
+        );
+        const contributionCard = (): JSX.Element => (
+          <ContributionCard
+            view={plan()}
+            error={planError()}
+            names={names}
+            repurchase={repurchase}
+            amountText={amountText()}
+            onAmountText={setAmountText}
+            amountError={(() => {
+              const outcome = typed();
+              return outcome.kind === "invalid" ? outcome.message : undefined;
+            })()}
+          />
+        );
+        const returnsCard = (): JSX.Element => (
+          <ReturnsCard view={returns()} events={snapshot.events} to={date()} />
+        );
+        const exposureCard = (): JSX.Element => (
+          <ExposureBlock weights={projection()} catalogue={catalogue()} names={names} />
+        );
+        const rebalanceCard = (): JSX.Element => (
+          <RebalanceCard
+            state={dated()}
+            events={snapshot.events}
+            date={date()}
+            settings={settings()}
+            external={external()}
+            names={names}
+          />
+        );
+
         return (
           <>
             <PageHeader
@@ -144,43 +201,35 @@ export default function CarteraRoute(): JSX.Element {
             />
 
             <QuotesNotice prices={prices} />
-            <div class="grid">
-              <WeightsCard
-                view={weights()}
-                threshold={settings().deviation_threshold_pp}
-                state={dated()}
-                date={date()}
-                settings={settings()}
-                absorbed={absorbed()}
-                names={names}
-                weightedTer={costs().core.weightedTer}
-              />
-              <ContributionCard
-                view={plan()}
-                error={planError()}
-                names={names}
-                repurchase={repurchase}
-                amountText={amountText()}
-                onAmountText={setAmountText}
-                amountError={(() => {
-                  const outcome = typed();
-                  return outcome.kind === "invalid" ? outcome.message : undefined;
-                })()}
-              />
-              <ReturnsCard view={returns()} events={snapshot.events} to={date()} />
-              <ExposureBlock weights={projection()} catalogue={catalogue()} names={names} />
-              <RebalanceCard
-                state={dated()}
-                events={snapshot.events}
-                date={date()}
-                settings={settings()}
-                external={external()}
-                names={names}
-              />
-              <CostsCard view={costs()} />
-              <TotalCostCard summary={summary()} settings={settings()} />
-              <ProjectionCard weights={projection()} settings={settings()} asOf={date()} />
-            </div>
+            <Show when={!empty()} fallback={<NothingBought />}>
+              <div class="grid">
+                <Show
+                  when={wide()}
+                  fallback={
+                    <>
+                      {weightsCard()}
+                      {contributionCard()}
+                      {returnsCard()}
+                      {exposureCard()}
+                      {rebalanceCard()}
+                    </>
+                  }
+                >
+                  <div class="stack span-7">
+                    {weightsCard()}
+                    {returnsCard()}
+                  </div>
+                  <div class="stack span-5">
+                    {contributionCard()}
+                    {exposureCard()}
+                    {rebalanceCard()}
+                  </div>
+                </Show>
+                <CostsCard view={costs()} />
+                <TotalCostCard summary={summary()} settings={settings()} />
+                <ProjectionCard weights={projection()} settings={settings()} asOf={date()} />
+              </div>
+            </Show>
           </>
         );
       }}

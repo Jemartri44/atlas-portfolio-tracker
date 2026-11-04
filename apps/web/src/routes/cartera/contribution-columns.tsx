@@ -1,4 +1,4 @@
-// The columns of «Ver el cálculo» on the contribution card: value today,
+// The columns of «Por qué este reparto» on the contribution card: the class, value today,
 // shortfall, what goes in, weight after.
 
 import { Amount, type DataColumn, Figure } from "../../components/index.js";
@@ -12,6 +12,7 @@ export const COLUMNS: readonly DataColumn<ContributionRowView>[] = [
     cell: (row) => row.name,
     hint: (row) => row.name,
   },
+  { key: "class", header: "Tipo", cell: (row) => row.assetClass },
   {
     key: "value",
     header: "Valor hoy",

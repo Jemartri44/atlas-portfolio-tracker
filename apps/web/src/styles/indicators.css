@@ -169,33 +169,3 @@
 .bullet-weight {
   font-weight: var(--fw-semibold);
 }
-
-/* ---- The share of the contribution of an asset (ContributionCard.tsx) --- */
-
-/* Where the money goes, as a thin bar of the colour of its class under each row. */
-.share-line {
-  display: block;
-  height: 0.375rem;
-  margin-bottom: var(--space-2);
-  width: 100%;
-}
-
-.share-line-track {
-  fill: var(--c-fill);
-}
-
-.share-line.is-equity .share-line-bar {
-  fill: var(--c-class-equity);
-}
-
-.share-line.is-fixed_income .share-line-bar {
-  fill: var(--c-class-fixed-income);
-}
-
-.share-line.is-gold .share-line-bar {
-  fill: var(--c-class-gold);
-}
-
-.share-line.is-crypto .share-line-bar {
-  fill: var(--c-class-crypto);
-}

@@ -126,40 +126,44 @@ describe("the cards of the portfolio by device", () => {
     expect(fold?.querySelector("input")).not.toBeNull();
   });
 
-  it("show the rebalance and the calculation of the split whole on a computer", async () => {
+  it("show the rebalance whole on a computer, and the split with its details folded apart", async () => {
     withStyles(1440, 900);
     const host = await show(`/cartera?fecha=${DATE}`, Cartera);
     expect(card(host, "Rebalancear")?.querySelector("details")).toBeNull();
     const split = card(host, "Aportación de");
-    expect(
-      split?.querySelector('table[aria-label="Cálculo del reparto"]')?.closest("details"),
-    ).toBeNull();
-    // The note that nothing was recorded is in sight on every device.
-    expect(text(split)).toContain("nada se ha registrado");
-  });
-
-  it("fold the calculation on a phone and keep the note in sight", async () => {
-    withStyles(390);
-    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
-    const split = card(host, "Aportación de");
-    expect(
-      split?.querySelector('table[aria-label="Cálculo del reparto"]')?.closest("details"),
-    ).not.toBeNull();
+    const folded = [...(split?.querySelectorAll(":scope > details > summary") ?? [])].map(text);
+    expect(folded).toEqual(["Por plataforma (2)", "Por qué este reparto"]);
     const note = [...(split?.querySelectorAll(".note-line") ?? [])].find((line) =>
       text(line).includes("nada se ha registrado"),
     );
     expect(note?.closest("details")).toBeNull();
   });
 
-  it("fold five cards under a summary line on a phone, and none on a computer", async () => {
+  it("leave the split and the way to record it on a phone, the rest in one fold", async () => {
+    withStyles(390);
+    const host = await show(`/cartera?fecha=${DATE}`, Cartera);
+    const split = card(host, "Aportación de");
+    const fold = split?.querySelector(":scope > details");
+    expect(text(fold?.querySelector("summary"))).toBe("Notas, plataformas y por qué");
+    expect(fold?.querySelector('table[aria-label="Cálculo del reparto"]')).not.toBeNull();
+    expect(text(fold)).toContain("nada se ha registrado");
+    expect(
+      split?.querySelector('ul[aria-label="Reparto de la aportación"]')?.closest("details"),
+    ).toBeNull();
+    // That it is a proposal stays said beside the title.
+    expect(text(split?.querySelector(".card-head"))).toContain("Propuesta");
+  });
+
+  it("fold six cards under a summary line on a phone, and none on a computer", async () => {
     const folded = [
+      "Rentabilidad",
       "Exposición",
       "Rebalancear",
       "Costes",
       "Coste total a largo plazo",
       "Proyección",
     ];
-    const open = ["Pesos frente al objetivo", "Rentabilidad"];
+    const open = ["Pesos frente al objetivo"];
     withStyles(390);
     const phone = await show(`/cartera?fecha=${DATE}`, Cartera);
     for (const title of folded) {

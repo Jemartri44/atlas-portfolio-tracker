@@ -1,0 +1,19 @@
+/* The split of the contribution in Cartera (docs/design/system.md §7.5). */
+
+/* A row of the split: its share and its amount on one line, the amount the one that weighs. */
+.split-figs {
+  align-self: center;
+  white-space: nowrap;
+}
+
+.split-figs .fig {
+  font-weight: var(--fw-semibold);
+}
+
+.cartera-contribution .kpis {
+  margin-top: var(--space-3);
+}
+
+.cartera-weights .bullets {
+  margin-bottom: var(--space-4);
+}
