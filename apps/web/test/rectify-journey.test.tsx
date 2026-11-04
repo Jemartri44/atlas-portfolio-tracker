@@ -14,7 +14,7 @@ import Detail from "../src/routes/movimientos/detail.jsx";
 import Edit from "../src/routes/movimientos/edit.jsx";
 import { goldenText } from "./helpers/golden.js";
 import { MemoryBlob } from "./helpers/memory-blob.js";
-import { press, settle, showInShell, text, type, withGoldenLedger } from "./helpers/render.jsx";
+import { press, showInShell, text, type, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -44,7 +44,10 @@ describe("correcting a movement of a past tax year", () => {
     type(host, "correct-reason", "importe mal tecleado");
     await press(host, "Ver el efecto");
     await press(host, "Rectificar");
-    await settle(50);
+    await until(
+      () => text(host).includes("Corrección registrada"),
+      "the confirmation of the correction",
+    );
 
     const [, , written] = window.location.pathname.split("/");
     expect(written).toBeDefined();
@@ -66,7 +69,7 @@ describe("correcting a movement of a past tax year", () => {
     type(first, "correct-reason", "importe mal tecleado");
     await press(first, "Ver el efecto");
     await press(first, "Rectificar");
-    await settle(50);
+    await until(() => window.location.search.includes("hecho="), "the corrected movement");
     const written = window.location.pathname.split("/")[2];
     document.body.innerHTML = "";
 
@@ -83,7 +86,10 @@ describe("correcting a movement of a past tax year", () => {
     await press(host, "Anular");
     type(host, "reverse-reason", "no existió");
     (host.querySelector("button.danger.solid") as HTMLButtonElement).click();
-    await settle(50);
+    await until(
+      () => text(host).includes("Anulación registrada"),
+      "the confirmation of the reversal",
+    );
 
     const written = window.location.pathname.split("/")[2];
     expect(written).not.toBe(DEPOSIT);

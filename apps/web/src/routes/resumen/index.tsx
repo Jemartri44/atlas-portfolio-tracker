@@ -28,7 +28,7 @@ import {
 } from "@atlas/domain";
 import { bookCashSeries, contributedSeries, yearPeriod } from "@atlas/domain/charts";
 import { createMemo, createResource, For, type JSX, Show } from "solid-js";
-import type { NoticeItem } from "../../components/index.js";
+import type { FoldedNotice } from "../../components/index.js";
 import { formatLongDate } from "../../format/date.js";
 import { eventReferences } from "../../format/events.js";
 import { nameIndex } from "../../format/names.js";
@@ -134,18 +134,18 @@ export default function ResumenRoute(): JSX.Element {
           async (input) =>
             (await import("../../jobs/job-health.js")).loadJobHealth(input.frequencies, input.date),
         );
-        const jobsNotice = (): NoticeItem | undefined =>
+        const jobsNotice = (): FoldedNotice | undefined =>
           jobs.state === "ready" ? lateJobsNotice(jobs()) : undefined;
         const fiscal = (): FiscalStatus | undefined => outcome()?.status;
         const failure = (): AppError | undefined => outcome()?.failure;
         // Out of the season, what is pending of the 720 and the 721 goes to
         // *Atención*: a row kept for it with an account abroad, filled or
         // dropped when the engine answers. In the season the card says it.
-        const fiscalNotice = (): "reserved" | NoticeItem | undefined => {
+        const fiscalNotice = (): "reserved" | FoldedNotice | undefined => {
           const slot = fiscalSlot({ season, abroad, answer: fiscal(), failure: failure() });
           return slot === undefined || slot === "reserved"
             ? slot
-            : { severity: "caution", message: slot.message, action: slot.action };
+            : { severity: "caution", ...slot };
         };
         const items = attentionItems({
           invalidCount: invalid,

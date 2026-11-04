@@ -260,3 +260,67 @@ describe("the list, on the summary", () => {
     expect(late).not.toContain("dentro de la ventana abierta el 06/01/2026");
   });
 });
+
+describe("the list by its titles", () => {
+  const off = (asset_id: string, deviation_pp: string) =>
+    warning("deviation_above_threshold", { asset_id, deviation_pp, threshold_pp: "5" });
+
+  it("gives a gathered rule one title and each asset its own line, with the same figures", () => {
+    const [item] = attention([off("ast_world", "30.2"), off("ast_gold", "-8.23")]);
+    expect(item?.title).toBe("2 activos fuera de umbral");
+    expect(item?.parts?.lines.map((line) => line.value.replace(/\s/g, " "))).toEqual([
+      "+30,20 pp",
+      "−8,23 pp",
+    ]);
+    expect(item?.parts?.tail).toContain("decisión anual");
+  });
+
+  it("puts each stale price and each stale rate on its line, with its age", () => {
+    const stale = (code: string, details: Record<string, unknown>) =>
+      warning(code, { age_days: 20, limit_days: 15, date: "2028-12-31", ...details });
+    const [prices] = attention([
+      stale("stale_price", { asset_id: "ast_world" }),
+      stale("stale_price", { asset_id: "ast_gold" }),
+    ]);
+    expect(prices?.parts?.lines.map((line) => line.label)).toEqual(["ast_world", "ast_gold"]);
+    expect(prices?.parts?.lines[0]?.value).toBe("hace 20 días");
+    const [rates] = attention([
+      stale("stale_fx_rate", { currency: "USD", source: "ecb" }),
+      stale("stale_fx_rate", { currency: "GBP", source: "ecb" }),
+    ]);
+    expect(rates?.parts?.lines.map((line) => line.label)).toEqual(["USD", "GBP"]);
+  });
+
+  it.each([
+    ["wash_sale_window_repurchase", { buy_quantity: "12.5" }],
+    ["wash_sale_window_prior_buy", { held_quantity: "12.5" }],
+  ])("hides the loss and the quantities of %s with the privacy mode on", (code, quantity) => {
+    const buy = (buy_date: string) =>
+      warning(code, {
+        asset_id: "ast_world",
+        sale_date: "2028-06-01",
+        loss_eur: "321.45",
+        window: "1y",
+        window_start: "2027-06-01",
+        window_end: "2028-08-01",
+        tax_year: 2028,
+        buy_date,
+        ...quantity,
+      });
+    const told = (privacy: boolean): string => {
+      const [item] = attention([buy("2028-05-01"), buy("2028-05-02")], { privacy });
+      return JSON.stringify(item?.parts).replace(/\s/g, " ");
+    };
+    expect(told(false)).toContain("321,45");
+    expect(told(false)).toContain("12,5");
+    expect(told(true)).not.toContain("321,45");
+    expect(told(true)).not.toContain("12,5");
+  });
+
+  it("names a single warning and leaves its sentence whole", () => {
+    const [item] = attention([off("ast_world", "30.2")]);
+    expect(item?.title).toContain("Fuera de umbral");
+    expect(item?.parts).toBeUndefined();
+    expect(item?.message).toContain("se desvía");
+  });
+});

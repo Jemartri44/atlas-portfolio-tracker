@@ -212,7 +212,15 @@ describe("what stays on the device after a session of the cloud", () => {
     choose(form, "f-account_id", "acc_mi");
     type(form, "f-value_date", "2027-11-02");
     type(form, "f-amount", "100");
-    await settle(30);
+    await until(
+      () =>
+        (
+          [...form.querySelectorAll("button")].find(
+            (b) => b.textContent?.trim() === "Ver el efecto",
+          ) as HTMLButtonElement | undefined
+        )?.disabled === false,
+      "the effect button enabled",
+    );
     await press(form, "Ver el efecto");
     document.body.innerHTML = "";
     const list = await show("/movimientos", Movimientos);
@@ -223,7 +231,7 @@ describe("what stays on the device after a session of the cloud", () => {
     URL.revokeObjectURL = () => undefined;
     await press(settings, "Descargar copia");
     await press(settings, "Descargar en CSV");
-    await settle(30);
+    await until(() => text(settings).includes("atlas-copia-"), "the copy name");
     expect(text(settings)).toContain("atlas-copia-");
     expect(onDevice().entries).toEqual([]);
     expect(cachesOpened).toEqual([]);

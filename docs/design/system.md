@@ -1,39 +1,14 @@
 # Sistema de diseño de Atlas: «papel y tinta», dirección A «Cuaderno vivo»
 
-> **Estado.** Aprobado por la dirección el 2026-09-19, con las decisiones D1–D13 de §8 y la barra de proporción del patrimonio. El 2026-11-03 el dueño eligió la dirección A, «Cuaderno vivo», de la auditoría visual, con tres piezas de la B (D14 y siguientes de §8): misma paleta y componentes, con más presencia visual. El encargo de partida es [`brief.md`](brief.md), hoy reducido a los requisitos que siguen vigentes tras ADR-0035. La referencia visual exacta fue un prototipo estático (HTML y CSS con los datos de ejemplo de la sección 9 del encargo), retirado del árbol y recuperable en el historial de git (`git log -- docs/design/prototype`); hoy la referencia es `apps/web/src/styles/`. Las capturas de referencia se guardan fuera del repositorio.
+> **Estado.** Aprobado por la dirección el 2026-09-19, con las decisiones D1–D13 de §8 y la barra de proporción del patrimonio. El 2026-11-03 el dueño eligió la dirección A, «Cuaderno vivo», de la auditoría visual, con tres piezas de la B (D14 y siguientes de §8): misma paleta y componentes, con más presencia visual. El encargo de partida es [`brief.md`](brief.md), hoy reducido a los requisitos que siguen vigentes tras ADR-0035. La referencia visual exacta fue un prototipo estático, retirado del árbol y recuperable en el historial de git (`git log -- docs/design/prototype`); hoy la referencia es `apps/web/src/styles/`. Las capturas de referencia se guardan fuera del repositorio.
 >
-> **Cómo leerlo.** §1 es el diagnóstico de la base anterior y por qué se quitó Pico (ADR-0023). §2 a §5 son el sistema: dirección, variables, maquetación y componentes. §6 es el vocabulario. §7 describe la composición de cada pantalla. §8 recoge las decisiones tomadas. §9 dice dónde vive cada cosa en el código.
+> **Cómo leerlo.** §1 dice por qué se quitó Pico (ADR-0023). §2 a §5 son el sistema: dirección, variables, maquetación y componentes. §6 es el vocabulario. §7 describe la composición de cada pantalla. §8 recoge las decisiones tomadas. §9 dice dónde vive cada cosa en el código.
 
 ---
 
-## 1. Diagnóstico de la base de estilos anterior
+## 1. Por qué no hay Pico
 
-### 1.1 Qué había
-
-| Capa | Tamaño | Qué hacía |
-|---|---|---|
-| `vendor/pico/pico.css` (Pico 2.1.1) | 2.835 líneas, 93 KB, **13,2 KB gzip** | Estilo de todos los elementos HTML: tipografía, botones, campos, `nav`, `details`, `article`, `table`, `dialog`, `[role=switch]`. Tema claro y oscuro con su azul |
-| `src/styles/tokens.css` | 159 líneas | Escalas propias, pero los colores de superficie, texto y acento **se derivaban de las variables de Pico** |
-| `base.css`, `layout.css`, `components.css` | ~1.800 líneas | Nuestro estilo, y buena parte dedicado a **neutralizar a Pico** |
-
-La hoja servida pesaba 16,3 KB gzip, la mayor parte Pico. Nuestras hojas lo mencionaban 34 veces y tenían 27 declaraciones del tipo `margin-bottom: 0`, `width: auto` o `min-width: 0` solo para deshacer sus valores por defecto. Un test de arquitectura (`SHELL_RULES`) existía únicamente para impedir que volvieran sus defectos en la navegación.
-
-### 1.2 Dónde peleaba Pico con lo nuestro
-
-1. **La navegación convertida en fila flexible.** Pico hace de `<nav>` un `flex` en fila y da márgenes negativos a `nav ul:first-of-type` y a `nav li a`: huecos de 37 px, etiquetas cortadas («sum», «Movim»), destinos solapados y una barra de estado más ancha que el teléfono.
-2. **El margen de los botones y de los campos.** `margin-bottom: var(--pico-spacing)` y `width: 100%` en botones, `input` y `select`: cada control en fila necesitaba su propio `margin-bottom: 0; width: auto; min-width: 0`.
-3. **El marcador flotante de los desplegables.** `details summary::after` es un chevrón empujado al borde derecho; al sustituirlo por un «▸» de texto, el `<summary>` se quedó en 16 px de alto.
-4. **La cabecera gris de las tarjetas.** `article > header` lleva fondo propio y márgenes negativos: la franja gris del primer arranque y de los diálogos.
-5. **El interruptor en forma de media luna.** `[role=switch]` es un óvalo de 36×20 cuya bola mide el 100 % de su alto; forzado a 44 px salió la «luna».
-6. **Dos azules y un acento que no llegaba al contraste.** En oscuro, `--pico-primary` es `#01aaff`, que con texto blanco da **2,56:1** (el botón «Registrar» de la barra inferior).
-7. **La viñeta cuadrada** de cada `li`, que ganaba a lo que el `ul` hereda.
-8. **`.secondary` era un botón gris pizarra macizo**, así que «Anular», que es destructivo, pesaba lo mismo que un botón principal.
-
-Pico está pensado para que una página de contenido quede bien sin clases, y una aplicación densa de datos quiere lo contrario en casi todos los elementos: cada elemento nuevo abría otra pelea de especificidad que solo se veía en un navegador.
-
-### 1.3 Decisión
-
-**Se quitó Pico y se escribió una base propia pequeña** (ADR-0023, que sustituye la parte de Pico del ADR-0017). Lo que Pico aportaba de verdad (un *reset*, fuentes del sistema y el estilo de los campos) cabe en unas pocas centenas de líneas propias. La paleta pasa a ser nuestra y comprobada. La hoja pesa menos y desaparece la capa que contradecía a otra.
+La base anterior (Pico) peleaba con los controles propios y se quitó: se escribió una base de estilos propia y pequeña (ADR-0023, que sustituye la parte de Pico de ADR-0017). El diagnóstico detallado está en el historial de git (`git log -- docs/design/system.md`).
 
 ---
 
@@ -138,7 +113,7 @@ Rejilla de 4 px: `--space-0` 2 · `-1` 4 · `-2` 8 · `-3` 12 · `-4` 16 · `-5`
 El globo en su cuna: un globo cuyos gajos recuerdan el reparto de la cartera, sostenido por una cuna. Sin degradados ni sombras; todos sus colores son tokens de 3.1 (`palette.test.ts` solo lee `tokens.css`, no mira `public/`).
 
 - **Iconos** (`apps/web/public/`): `icon.svg` (pestaña, trazos más gruesos), `icon-192.png` y `icon-512.png`, y `icon-maskable-512.png` (dibujo dentro de la zona segura del 80 %). Fondo `--c-accent`, globo `--c-surface`, pétalo `--c-chart-gap-edge` claro, iguales en claro y oscuro.
-- **Marca de la barra y de la entrada**: dos `<img alt="">` (`simbolo-claro.svg`, `simbolo-oscuro.svg`) servidos desde `public/`, fuera del JS, de modo que no pesan en el JS. Se alterna por CSS con la regla de `tokens.css` (sistema, salvo tema forzado en Ajustes). Sus cortes llevan el color de la superficie de su modo: solo van sobre ella. El nombre «Atlas» es texto junto a la marca.
+- **Marca de la barra y de la entrada**: dos `<img alt="">` (`simbolo-claro.svg`, `simbolo-oscuro.svg`) servidos desde `public/`, fuera del JS, de modo que no pesan en el JS. Se alterna por CSS con la regla de `tokens.css` (sistema, salvo tema forzado en Ajustes). Sus cortes llevan el color de la superficie de su modo: solo van sobre ella. El nombre «Atlas» es texto junto a la marca, en Fraunces 600.
 - Tamaño: `--icon-lg` en la barra y 2,5 rem en la entrada (`layout.css`).
 - Los ficheros del paquete no se retocan sin una decisión del dueño.
 
@@ -171,19 +146,19 @@ Un `<header>` y dentro **un** `<nav>`, **antes que `<main>` en el DOM**. El orde
 
 ### 4.3 La rejilla
 
-Desde 1024 px, 12 columnas con espacio de 20 y clases `span-N`. Las tarjetas de una misma fila se estiran a la misma altura, y lo que cierra una tarjeta (sus desplegables o el enlace «Ver todos») se ancla abajo. La excepción es una tarjeta cuya vecina es mucho más alta (`.is-natural`, *Pesos* y *Aportación* en la Cartera): conserva su altura, porque estirada dejaba un campo en blanco en mitad de la corta.
+Desde 1024 px, 12 columnas con espacio de 20 y clases `span-N`. **Una columna es un `.stack` dentro de la rejilla**: apila sus tarjetas a su aire, cada una mide lo que contiene y lo que sobre queda al final de la columna, nunca dentro de una tarjeta. Las tarjetas sueltas de una misma fila se estiran a la misma altura, y lo que cierra una tarjeta (sus desplegables o el enlace «Ver todos») se ancla abajo. La excepción es una tarjeta cuya vecina es mucho más alta (`.is-natural`, *Pesos* y *Aportación* en la Cartera): conserva su altura, porque estirada dejaba un campo en blanco en mitad de la corta.
 
 **Lo que se maqueta por el sitio que tiene, no por el ancho de la pantalla.** A 1024 px una tarjeta de 7 columnas mide menos que un móvil apaisado, y una tabla decidida por la ventana se salía de ella. Por eso la tarjeta es un contenedor (`container: card / inline-size`) y la tabla o sus filas, los datos en dos columnas del detalle y la rejilla de *Costes* se deciden con consultas de contenedor. Cada tabla declara cuánto necesita (`DataTable size`: `sm` desde 30 rem, por defecto desde 44 rem, `lg` desde 49 rem), medido sobre su anchura mínima de contenido. En el móvil todo es una columna en el orden del DOM, que es el orden de lectura. **Los formularios nunca pasan de su ancho de lectura** (`--reading-max`), por ancho que sea la pantalla.
 
 ---
 
-## 5. Componentes
-
-La hoja visual de componentes estaba en el prototipo retirado; hoy son los estilos de `apps/web/src/styles/`.
-
 ### 4.4 El teclado del ordenador
 
 Solo desde la barra superior (≥ 1200 px): un botón **«Buscar o registrar»** con su tecla `/` (por debajo de 1600 px, solo el icono y la tecla, para que nada de la barra se parta en dos líneas) abre un diálogo con una caja de órdenes (un *combobox* ARIA: flechas, Intro y Esc). Ofrece registrar cada operación del día a día, ir a cada destino y, siempre al final, buscar lo escrito en los movimientos (`/movimientos?q=`). Desde una pantalla **sin formulario**, **C** compra, **V** venta y **P** valoración: en un formulario la letra no actúa, porque salir de él perdería lo escrito. Las teclas solo responden **solas** y una vez aunque se mantengan: con Ctrl, Cmd o Alt son del navegador o del sistema; dentro de un campo, una lista o algo editable, o mientras se compone un carácter, son lo que se escribe; con un diálogo abierto, del diálogo. Las letras **se pueden apagar** en Ajustes (WCAG 2.1.4: un lector de pantalla usa letras sueltas para moverse); «/» abre siempre la caja. La caja se cierra con Esc o con «Cerrar». En el móvil no hay teclas: la aplicación instalada ofrece «Registrar compra» y «Registrar valoración» con una pulsación larga en su icono (`shortcuts` del manifiesto).
+
+## 5. Componentes
+
+La hoja visual de componentes estaba en el prototipo retirado; hoy son los estilos de `apps/web/src/styles/`.
 
 ### 5.1 Tarjeta (`.card`)
 
@@ -209,7 +184,7 @@ Píldora de 24 px, texto a 13 px y un icono de 14 px. Variantes: **neutra** («�
 
 ### 5.6 Aviso: un único componente (`.notice`)
 
-Igual en el Resumen, el Cubo, la Cartera, la Verificación y en cualquier otro sitio. Icono de 20 px con **forma distinta por gravedad**: triángulo (aviso), octógono (crítico) o círculo con «i» (información), **dentro de una placa** de 32 px del color suave de su gravedad (D15). El texto va a tamaño de cuerpo, con la cifra clave de un grupo en seminegrita, y la acción en acento con flecha: debajo del texto en el móvil y a la derecha en escritorio. El aviso entero es el enlace. **Solo el crítico lleva fondo.** En lista se separan con líneas, no con cajas. Se enseñan **4 grupos** y el resto va en «Ver N avisos más». La agrupación y el orden (el riesgo de perder datos, primero) los decide `view-models/attention.ts`. Los precios caducados, los tipos de cambio caducados y las desviaciones van **en un solo aviso cada uno**, con los activos nombrados («3 precios con más de 15 días · A, B y C»). Las compras dentro de la ventana de una misma venta con pérdida van en una frase con cuántas son («… con 10 compras en cartera dentro de la ventana …»), y cada una plegada debajo. **La vista previa de Registrar agrupa sus avisos con el mismo agrupador**, sin enlaces: salir perdería lo escrito. Un aviso que una tarjeta ya dice en su sitio no se repite en una lista: en el Cubo, cada aviso que queda va en la tarjeta de la que trata.
+Igual en el Resumen, el Cubo, la Cartera, la Verificación y en cualquier otro sitio. Icono de 20 px con **forma distinta por gravedad**: triángulo (aviso), octógono (crítico) o círculo con «i» (información), **dentro de una placa** de 32 px del color suave de su gravedad (D15). El texto va a tamaño de cuerpo, con la cifra clave de un grupo en seminegrita, y la acción en acento con flecha: debajo del texto en el móvil y a la derecha en escritorio. Fuera de *Atención*, el aviso entero es el enlace. **Solo el crítico lleva fondo.** En lista se separan con líneas, no con cajas. Se enseñan **4 grupos** y el resto va en «Ver N avisos más». **En *Atención* la lista va por títulos** (`NoticeFolds`, títulos en `packages/domain/src/messages/titles.ts`): cada aviso abre en su sitio, en un bloque propio, lo que ocurre, con lo enumerable uno por línea y el enlace a arreglarlo dentro. La agrupación y el orden (el riesgo de perder datos, primero) los decide `view-models/attention.ts`. Los precios caducados, los tipos de cambio caducados y las desviaciones van **en un solo aviso cada uno**, con los activos nombrados («3 precios con más de 15 días · A, B y C»; en *Atención*, uno por línea). Las compras dentro de la ventana de una misma venta con pérdida van en una frase con cuántas son («… con 10 compras en cartera dentro de la ventana …»), y cada una plegada debajo (en *Atención*, una por línea). **La vista previa de Registrar agrupa sus avisos con el mismo agrupador**, sin enlaces: salir perdería lo escrito. Un aviso que una tarjeta ya dice en su sitio no se repite en una lista: en el Cubo, cada aviso que queda va en la tarjeta de la que trata.
 
 ### 5.7 «No se puede calcular todavía» (`.pending`)
 
@@ -243,6 +218,8 @@ El contorno de un campo tiene **3:1** sobre el papel y sobre la superficie en lo
 
 `<details>` nativo. El `<summary>` es una fila de **44 px**, etiqueta a 14 px en seminegrita y chevrón a la derecha que gira al abrirse. Dentro de una tarjeta es su última fila, de borde a borde. Es el mismo en toda la aplicación.
 
+**Lista recortada (`Peek`).** Una lista de cosas iguales enseña sus primeras filas y un botón la abre entera en su sitio; corta por fila entera. Regla: una lista se recorta, una explicación se pliega, y una cifra principal o un aviso nunca quedan escondidos.
+
 **Tarjeta plegada en el móvil (`FoldSection`).** Por debajo del corte de la rejilla, una tarjeta secundaria se pliega entera: el título y una línea de resumen (la cifra principal o el aviso, nunca escondidos) van en el `<summary>`. Desde la rejilla es la `Section` de siempre. Lo usan las tarjetas secundarias de Cartera.
 
 ### 5.12 Selector de rango ligero (`.segmented`)
@@ -263,18 +240,6 @@ Tres o cuatro cifras que van juntas: etiqueta a 13 px sobre la cifra a 18 px en 
 - **Reparto frente al objetivo**: **barras de bala** (§5.21), en la Cartera y en el Resumen.
 - **Desviación frente al umbral** (D7): un indicador de 72×12 con la banda ±umbral, la marca del objetivo y un punto que se vuelve color de aviso fuera del umbral. Solo en la tabla de escritorio **activo por activo**: la regla del umbral es por activo, y el punto se colorea con el aviso que emite el dominio, nunca comparando cifras en la interfaz (decisión (c)).
 
-### 5.20 Baldosa con minigráfica (`.part`, `Sparkline`)
-
-Pieza 1 tomada de la dirección B. En escritorio, cada libro del patrimonio es una baldosa sobre el papel: su nombre con la clave de su serie, el porcentaje del total, la cifra en la serifa, su dato propio (la cartera principal, su variación de «este mes» y «12 meses»; el cubo, frente al índice; el efectivo, en cuántas cuentas) y la **minigráfica** del último año de la misma cifra que enseña la baldosa: SVG propio, sin ejes ni cifras (no delata nada con la privacidad puesta), cortada en los huecos y con un punto donde un valor queda solo. En el móvil son filas, sin minigráfica (la evolución, justo debajo, enseña lo mismo), y la variación de la cartera va bajo la cifra.
-
-### 5.21 Barra de bala (`Bullet`)
-
-El peso de una clase como barra de su color, el objetivo como una raya de tinta y la banda gris de ±umbral alrededor del objetivo. Cada clase en su propia escala (de 0 al doble del objetivo, o más si el peso lo pide), que se compara mejor que dos barras apiladas. Las cifras van al lado: la barra es la forma. SVG con atributos, sin estilos en línea (CSP).
-
-### 5.22 Lista de tareas del mes (`.tasks`)
-
-«Este mes»: una fila por tarea del plan (ingreso, cada activo, cubo) con un anillo vacío si falta o lleno con ✓ y su fecha si ya está registrada, lo propuesto y, hecha, lo registrado «de» lo propuesto. El pie lleva a registrar lo siguiente que falta. Sin plan, un bloque *pendiente* con el motivo y su arreglo.
-
 ### 5.16 Esqueleto de carga (`.skel`)
 
 Bloques en `--c-fill`, de radio 6, **sin brillo animado**, con la forma y el alto de lo que llega.
@@ -292,6 +257,18 @@ Un `.notice` de gravedad *precaución*, **el mismo en las cuatro escrituras** (R
 Lista numerada con el estado de cada paso: **hecho** (círculo lleno con ✓), **actual** (anillo de acento y botón principal) y **pendiente** (anillo fino y chevrón). Arriba, «1 de 4» y una barra de cuatro segmentos. En escritorio, cuatro tarjetas en fila.
 
 ---
+
+### 5.20 Baldosa con minigráfica (`.part`, `Sparkline`)
+
+Pieza 1 tomada de la dirección B. En escritorio, cada libro del patrimonio es una baldosa sobre el papel: su nombre con la clave de su serie, el porcentaje del total, la cifra en la serifa, su dato propio (la cartera principal, su variación de «este mes» y «12 meses»; el cubo, frente al índice; el efectivo, en cuántas cuentas) y la **minigráfica** del último año de la misma cifra que enseña la baldosa: SVG propio, sin ejes ni cifras (no delata nada con la privacidad puesta), cortada en los huecos y con un punto donde un valor queda solo. En el móvil son filas, sin minigráfica (la evolución, justo debajo, enseña lo mismo), y la variación de la cartera va bajo la cifra.
+
+### 5.21 Barra de bala (`Bullet`)
+
+El peso de una clase como barra de su color, el objetivo como una raya de tinta y la banda gris de ±umbral alrededor del objetivo. Cada clase en su propia escala (de 0 al doble del objetivo, o más si el peso lo pide), que se compara mejor que dos barras apiladas. Las cifras van al lado: la barra es la forma. SVG con atributos, sin estilos en línea (CSP).
+
+### 5.22 Lista de tareas del mes (`.tasks`)
+
+«Este mes»: una fila por tarea del plan (ingreso, cada activo, cubo) con un anillo vacío si falta o lleno con ✓ y su fecha si ya está registrada, lo propuesto y, hecha, lo registrado «de» lo propuesto. El pie lleva a registrar lo siguiente que falta. Sin plan, un bloque *pendiente* con el motivo y su arreglo.
 
 ## 6. Contenido y vocabulario
 
@@ -412,6 +389,7 @@ Dirección A «Cuaderno vivo», elegida por el dueño el 2026-11-03 sobre la aud
 | Tarjetas, pie de tarjeta, líneas de panel y de total | `styles/cards.css` |
 | Filas en dos líneas y tablas | `styles/lists.css` |
 | Avisos, pendiente, vacío, esqueleto | `styles/feedback.css` |
+| Atención por títulos y botón de la lista recortada | `styles/notice-folds.css` |
 | Gráficas, leyenda, hueco, reparto | `styles/charts.css` |
 | Resumen: cifra protagonista, proporción y partes | `styles/summary.css` |
 | Barra de proporción y su leyenda (patrimonio, exposición) | `styles/share-bar.css` |
@@ -422,7 +400,12 @@ Dirección A «Cuaderno vivo», elegida por el dueño el 2026-11-03 sobre la aud
 | Registrar: baldosas, formulario, barra de acciones, efecto | `styles/registrar.css` |
 | Cubo: tesis de una posición, la vista que junta los dos libros | `styles/bucket.css` |
 | Ajustes, grupos plegables y primer arranque | `styles/settings.css` |
+| Buscar o registrar (PC): botón y caja de órdenes | `styles/command.css` |
+| Indicadores en SVG: franja de desviación, medidores y mancuernas | `styles/indicators.css` |
+| Supuestos de la proyección y del coste total | `styles/long-run.css` |
+| Plan por plataforma y pasos del rebalanceo | `styles/rebalance.css` |
+| Resumen: «Este mes» y enlace de la asignación | `styles/summary-cards.css` |
 | Armazón: cabecera, navegación, página y rejilla | `styles/layout.css` |
 | Declaración: cifras movidas, criterio con lo que arriesga, casilla con su rótulo y lo presentado | `styles/fiscal.css` |
 
-Cada hoja tiene menos de 250 líneas o explica en su cabecera por qué no. Se conservan `Amount` como única puerta de la privacidad, la doble presentación de `DataTable`, uPlot, el `<dialog>` nativo y la ausencia de estilos en línea (CSP).
+Una hoja por área, con su cabecera diciendo qué cubre. Se conservan `Amount` como única puerta de la privacidad, la doble presentación de `DataTable`, uPlot, el `<dialog>` nativo y la ausencia de estilos en línea (CSP).

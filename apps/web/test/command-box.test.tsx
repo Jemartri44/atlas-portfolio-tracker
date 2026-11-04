@@ -60,10 +60,11 @@ describe("«Buscar o registrar»", () => {
   it("never leaves a screen with a form by a letter: what was typed stays", async () => {
     withStyles(1440, 900);
     const form = await showInShell("/registrar/sell", ROUTES);
-    await settle(20);
+    await until(() => form.querySelector("input:not([type=hidden])") !== null, "the form field");
     // Not from a field, and not from anywhere else on the screen.
     press("c", form.querySelector("input:not([type=hidden])") as HTMLInputElement);
     press("c");
+    // Negative wait: nothing to poll.
     await settle(20);
     expect(window.location.pathname).toBe("/registrar/sell");
   });
@@ -114,6 +115,7 @@ describe("«Buscar o registrar»", () => {
     await settle();
     expect(window.localStorage.getItem("atlas.letters")).toBe("off");
     press("c");
+    // Negative wait: nothing to poll.
     await settle(20);
     expect(window.location.pathname).toBe("/ajustes");
     press("/");
@@ -127,6 +129,7 @@ describe("«Buscar o registrar»", () => {
     const host = await showInShell("/", ROUTES);
     expect(host.querySelector(".command-button")).toBeNull();
     press("v");
+    // Negative wait: nothing to poll.
     await settle(20);
     expect(window.location.pathname).toBe("/");
   });

@@ -3,8 +3,8 @@
 //
 // An operation in a foreign currency whose reference date has no rate **yet**
 // cannot be recorded without inventing one. It is kept, complete and **without
-// the rate**, as a draft **outside the ledger**: `drafts/` next to it on the
-// desktop, IndexedDB in the browser.
+// the rate**, as a draft **outside the ledger**: `drafts/` in the cloud data
+// bucket (ADR-0035; the console keeps no drafts, ADR-0037).
 //
 // - **A draft is not a fact.** Nothing projects it: no position, no cash, no
 //   weight, no tax figure reads the drafts, because none of them reads

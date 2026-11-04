@@ -132,6 +132,7 @@ describe("the effect beside the form", () => {
     choose(host, "f-account_id", "acc_mi");
     type(host, "f-value_date", "2027-11-02");
     type(host, "f-amount", "100");
+    // negative wait: nothing to poll
     await settle(600);
     expect(host.querySelector("form.form")).not.toBeNull();
     expect(text(host.querySelector(".effect"))).not.toContain("Registrar");

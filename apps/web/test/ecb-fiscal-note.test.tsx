@@ -60,6 +60,9 @@ const line = (fields: Record<string, unknown>, id: string): string =>
  * and a purchase of Friday 2026-01-02 settled on Tuesday the 6th at the rate
  * of the 2nd — the official one of its fiscal date by the default rule.
  */
+const buttonOf = (scope: HTMLElement, label: string): HTMLButtonElement | undefined =>
+  [...scope.querySelectorAll("button")].find((button) => button.textContent?.trim() === label);
+
 const openSmallLedger = async (buyRateDate = "2026-01-02"): Promise<void> => {
   const text = `${[
     line(
@@ -149,6 +152,7 @@ describe("the fiscal screen", () => {
     const buy = store.snapshot()?.events.find((event) => event.type === "buy");
     const host = await show(`/movimientos/${buy?.id}/editar`, Edit, "/movimientos/:id/editar");
     await until(() => host.querySelector("#f-fx_rate") !== null);
+    // negative wait: nothing to poll
     await settle(300);
     // The recorded 1.12 of the 2nd stays: the official 1.1169 is not put over it.
     expect((host.querySelector("#f-fx_rate") as HTMLInputElement).value).toBe("1,12");
@@ -166,28 +170,30 @@ describe("the fiscal screen", () => {
     type(host, "f-value_date", "2026-01-06");
     type(host, "f-quantity", "1");
     type(host, "f-unit_price", "100");
-    await settle(50);
+    await until(() => host.querySelector("#f-fx_rate") !== null, "the exchange rate field");
     type(host, "f-fx_rate", "1,12");
     type(host, "f-fx_rate_date", "2026-01-02");
-    await settle(50);
+    await until(
+      () => buttonOf(host, "Ver el efecto")?.disabled === false,
+      "the effect button, enabled",
+    );
     await press(host, "Ver el efecto");
     await until(() => text(host).includes("El tipo no es el oficial"));
     const acknowledge = host.querySelector("#confirm-fx-rate") as HTMLInputElement;
+    const record = (): HTMLButtonElement | undefined =>
+      buttonOf(host.querySelector("section.effect") as HTMLElement, "Registrar");
     acknowledge.click();
-    await settle(20);
-    (
-      [...host.querySelectorAll("section.effect button")].find(
-        (button) => button.textContent?.trim() === "Registrar",
-      ) as HTMLButtonElement
-    ).click();
+    await until(() => record()?.disabled === false, "the record button enabled");
+    (record() as HTMLButtonElement).click();
     // The same purchase is in the ledger already: the duplicate question.
     await until(() => text(host).includes("Registrar de todas formas"));
     acknowledge.click();
-    await settle(20);
     const dialog = [...host.querySelectorAll("dialog")].find((node) =>
       node.hasAttribute("open"),
     ) as HTMLElement;
+    await until(() => record()?.disabled === true, "the yes taken back");
     await press(dialog, "Registrar de todas formas");
+    // negative wait: nothing to poll
     await settle(100);
     expect(store.snapshot()?.events.length).toBe(recorded);
   });

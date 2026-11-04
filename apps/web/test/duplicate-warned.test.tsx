@@ -41,19 +41,25 @@ beforeEach(async () => {
   });
 });
 
+const buttonOf = (scope: ParentNode, label: string): HTMLButtonElement | undefined =>
+  [...scope.querySelectorAll("button")].find((button) => button.textContent?.trim() === label);
+
 const fill = async (host: HTMLElement): Promise<void> => {
   choose(host, "f-account_id", "acc_mi");
   type(host, "f-value_date", "2027-11-02");
   type(host, "f-amount", "100");
-  await settle(30);
+  await until(
+    () => buttonOf(host, "Ver el efecto")?.disabled === false,
+    "the effect button, enabled",
+  );
   await press(host, "Ver el efecto");
-  await settle(30);
+  await until(
+    () => buttonOf(host.querySelector("section.effect") ?? host, "Registrar") !== undefined,
+    "the record button",
+  );
   (
-    [...host.querySelectorAll("section.effect button")].find(
-      (button) => button.textContent?.trim() === "Registrar",
-    ) as HTMLButtonElement
+    buttonOf(host.querySelector("section.effect") ?? host, "Registrar") as HTMLButtonElement
   ).click();
-  await settle(60);
 };
 
 const openDialog = (host: HTMLElement): HTMLElement | undefined =>
@@ -67,6 +73,7 @@ describe("the duplicate question of the registration form", () => {
     const first = await show("/registrar/cash-in", RegistrarForm, "/registrar/:tipo");
     const start = recorded();
     await fill(first);
+    await until(() => recorded() === start + 1, "the first movement recorded");
     const once = recorded();
     expect(once).toBe(start + 1);
     const host = await show("/registrar/cash-in", RegistrarForm, "/registrar/:tipo");
@@ -76,11 +83,12 @@ describe("the duplicate question of the registration form", () => {
     // With the warning open, the notes change: not in the fingerprint.
     type(host, "f-notes", "cambiada con el aviso abierto");
     await press(openDialog(host) as HTMLElement, "Registrar de todas formas");
+    // negative wait: nothing to poll
     await settle(60);
     expect(recorded()).toBe(once);
     await until(() => openDialog(host) !== undefined, "la pregunta otra vez", 3000);
     await press(openDialog(host) as HTMLElement, "Registrar de todas formas");
-    await settle(60);
+    await until(() => recorded() === once + 1, "the confirmed movement recorded");
     expect(recorded()).toBe(once + 1);
   });
 
@@ -93,20 +101,24 @@ describe("the duplicate question of the registration form", () => {
       type(host, "ca-effective_date", "2028-11-02");
       type(host, "ca-source_document", "https://example.test/nota.pdf");
       type(host, "ca-ratio", "2");
-      await settle(30);
+      await until(
+        () => buttonOf(host, "Ver el efecto")?.disabled === false,
+        "the effect button, enabled",
+      );
       await press(host, "Ver el efecto");
-      await settle(30);
+      await until(
+        () => buttonOf(host.querySelector("section.effect") ?? host, "Registrar") !== undefined,
+        "the record button",
+      );
       (
-        [...host.querySelectorAll("section.effect button")].find(
-          (button) => button.textContent?.trim() === "Registrar",
-        ) as HTMLButtonElement
+        buttonOf(host.querySelector("section.effect") ?? host, "Registrar") as HTMLButtonElement
       ).click();
-      await settle(60);
     };
     const path = "/registrar/evento-corporativo/split";
     const route = "/registrar/evento-corporativo/:kind";
     const start = recorded();
     await split(await show(path, CorporateForm, route));
+    await until(() => recorded() === start + 1, "the first movement recorded");
     const once = recorded();
     expect(once).toBe(start + 1);
     const host = await show(path, CorporateForm, route);
@@ -116,11 +128,12 @@ describe("the duplicate question of the registration form", () => {
     // With the warning open, the notes change: not in the fingerprint.
     type(host, "ca-notes", "cambiada con el aviso abierto");
     await press(openDialog(host) as HTMLElement, "Registrar de todas formas");
+    // negative wait: nothing to poll
     await settle(60);
     expect(recorded()).toBe(once);
     await until(() => openDialog(host) !== undefined, "la pregunta otra vez", 3000);
     await press(openDialog(host) as HTMLElement, "Registrar de todas formas");
-    await settle(60);
+    await until(() => recorded() === once + 1, "the confirmed movement recorded");
     expect(recorded()).toBe(once + 1);
   });
 });

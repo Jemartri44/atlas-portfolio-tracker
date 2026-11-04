@@ -18,8 +18,15 @@ import {
   type WashSaleWindow,
   washSaleWindowEnd,
 } from "@atlas/domain";
+import { FINDING_TITLES } from "@atlas/domain/messages";
 import { describeFinding } from "../format/messages/findings.js";
-import { describeWarning, describeWarningGroup } from "../format/messages/warnings.js";
+import {
+  describeWarning,
+  describeWarningGroup,
+  type WarningParts,
+  warningGroupParts,
+  warningTitle,
+} from "../format/messages/warnings.js";
 import type { NameIndex } from "../format/names.js";
 import { countOf } from "../format/number.js";
 
@@ -28,7 +35,11 @@ export type AttentionSeverity = "error" | "warning" | "info";
 export interface AttentionItem {
   code: string;
   severity: AttentionSeverity;
+  /** What the list shows; the rest opens under it. */
+  title: string;
   message: string;
+  /** The message with what it enumerates one per line, when it enumerates something. */
+  parts?: WarningParts | undefined;
   action: { label: string; to: string };
   /** Rank inside the list; lower comes first. */
   rank: number;
@@ -207,14 +218,18 @@ export interface AttentionInput {
 
 const itemOf = (
   code: string,
+  title: string,
   message: string,
   count = 1,
   eventIds: string[] = [],
   warnings: Warning[] = [],
+  parts?: WarningParts,
 ): AttentionItem => ({
   code,
   severity: severityOf(code),
+  title,
   message,
+  parts,
   action: DESTINATIONS[code] ?? FALLBACK,
   rank: rankOf(code),
   count,
@@ -270,6 +285,7 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
     items.push(
       itemOf(
         "invalid_events",
+        `Movimientos inválidos: ${input.invalidCount}`,
         `${countOf(input.invalidCount, "movimiento inválido", "movimientos inválidos")} en tus datos: se puede consultar, pero no registrar hasta rectificarlos.${input.fiscalBlocked === true ? " Con movimientos inválidos no se calcula nada fiscal: repáralos primero." : ""}`,
       ),
     );
@@ -279,7 +295,8 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
   // message, in English, with identifiers and figures — stays in the
   // verification screen, folded away, where it can be checked.
   for (const finding of input.findings) {
-    items.push(itemOf("integrity_finding", describeFinding(finding).what));
+    const told = describeFinding(finding);
+    items.push(itemOf("integrity_finding", FINDING_TITLES[finding.code] ?? told.what, told.what));
   }
 
   // The same warning can arrive twice — the summary gathers them from the
@@ -313,10 +330,18 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
     // `input` **is** the prose context: it carries the catalogue and the mode.
     // A gathered rule says its number in the sentence, so it carries no count.
     const gathered = count > 1 ? describeWarningGroup(warning.code, all, input) : undefined;
+    const parts = count > 1 ? warningGroupParts(warning.code, all, input) : undefined;
     items.push(
       gathered === undefined
-        ? itemOf(warning.code, describeWarning(warning, input), count, [...events], all)
-        : itemOf(warning.code, gathered, 1, [...events], all),
+        ? itemOf(
+            warning.code,
+            warningTitle([warning], input),
+            describeWarning(warning, input),
+            count,
+            [...events],
+            all,
+          )
+        : itemOf(warning.code, warningTitle(all, input), gathered, 1, [...events], all, parts),
     );
   }
 
@@ -325,6 +350,7 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
     items.push(
       itemOf(
         "pending_orders",
+        `Órdenes sin ejecutar: ${input.openOrders.length}`,
         `${countOf(input.openOrders.length, "orden dada sin ejecutar", "órdenes dadas sin ejecutar")}; la más antigua lleva ${countOf(oldest, "día", "días")}.`,
       ),
     );
@@ -335,6 +361,7 @@ export const attentionItems = (input: AttentionInput): AttentionItem[] => {
     items.push(
       itemOf(
         "pending_transfers",
+        `Traspasos en curso: ${input.openTransfers.length}`,
         `${countOf(input.openTransfers.length, "traspaso en curso", "traspasos en curso")}; el más antiguo lleva ${countOf(oldest, "día", "días")}.`,
       ),
     );
@@ -370,12 +397,16 @@ export const fiscalSlot = (input: {
   answer: FiscalAnswer | undefined;
   /** The engine could not answer: said in its place, so the summary does not stay silent. */
   failure?: { message: string } | undefined;
-}): "reserved" | { message: string; action: { label: string; to: string } } | undefined => {
+}):
+  | "reserved"
+  | { title: string; message: string; action: { label: string; to: string } }
+  | undefined => {
   if (input.season) {
     return undefined;
   }
   if (input.failure !== undefined) {
     return {
+      title: "Declaración sin calcular",
       message: `${FAILED_TO_CALCULATE} ${input.failure.message}`,
       action: { label: "Ver la declaración", to: "/fiscal" },
     };
@@ -386,6 +417,7 @@ export const fiscalSlot = (input: {
   return input.answer.lines.length === 0
     ? undefined
     : {
+        title: "Declaración: algo por presentar",
         message: input.answer.lines.join(" "),
         action: { label: "Ver la declaración", to: "/fiscal" },
       };
