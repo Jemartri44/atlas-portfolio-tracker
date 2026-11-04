@@ -133,6 +133,19 @@ export const readProjection = (inputs: ProjectionInputs, monthly: Decimal): Read
   return { edits, errors };
 };
 
+/** What the owner has to know of a stored object that could not be used, if anything. */
+export const notReadSentence = (state: {
+  kind: string;
+  unreadable?: boolean;
+}): string | undefined => {
+  if (state.kind === "failed") {
+    return "No se han podido leer los supuestos guardados: ves los de partida y lo que cambies no se guarda.";
+  }
+  return state.unreadable === true
+    ? "Los supuestos guardados no se pueden leer: ves los de partida, y lo que cambies los sustituye."
+    : undefined;
+};
+
 const GAPS: Record<string, string> = {
   partial: "falta un precio de la cartera principal",
   no_targets: "no hay pesos objetivo en Configuración",

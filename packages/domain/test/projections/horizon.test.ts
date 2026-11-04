@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkHorizon, MAX_HORIZON_YEARS } from "../../src/projections/growth.js";
+import { checkHorizon, MAX_HORIZON_YEARS } from "../../src/projections/horizon.js";
 
 describe("checkHorizon", () => {
   it.each([0, MAX_HORIZON_YEARS])("takes %i years", (years) => {

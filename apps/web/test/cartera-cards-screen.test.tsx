@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 //
 // The questions about the core that the Cartera answers from the domain: what it has earned, what
-// it costs over the years and what it projects under the owner's scenarios. Through the real handler
+// it costs and what it projects in three cases. Through the real handler
 // with the doubles of S3, SSM and Google, on the golden ledger.
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -11,7 +11,7 @@ import Cartera from "../src/routes/cartera/index.jsx";
 import { setPrivacy } from "../src/shell/preferences.js";
 import { type Api, apiAt, sameOrigin, signedIn } from "./cloud/api-support.js";
 import { goldenText } from "./helpers/golden.js";
-import { settle, show, text, type, until, withGoldenLedger } from "./helpers/render.jsx";
+import { press, settle, show, text, type, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
@@ -126,6 +126,55 @@ describe("the projection", () => {
     const host = await open();
     type(host, "pj-years", "veinte");
     await until(() => /entero|número|válid/i.test(card(host)), "the error");
+  });
+
+  const KEY = "settings/projection.json";
+  const ready = (host: Element) =>
+    until(
+      () => (host.querySelector("#pj-gold-return") as HTMLInputElement).value === "4",
+      "what is stored",
+    );
+
+  it("keeps only what was edited, and reads it back when it opens again", async () => {
+    const host = await open();
+    await until(() => card(host).includes("Normal, dentro de 20 años"), "the cases");
+    type(host, "pj-gold-return", "4");
+    await until(() => api.s3.text(KEY) !== undefined, "the write");
+    expect(JSON.parse(api.s3.text(KEY) as string)).toEqual({
+      projection_format: 1,
+      classes: { gold: { return_pct: "4" } },
+    });
+    await ready(await open());
+  });
+
+  it("goes back to the published figures with Restablecer", async () => {
+    api.s3.seed(KEY, '{"projection_format":1,"classes":{"gold":{"return_pct":"4"}}}\n');
+    const host = await open();
+    await ready(host);
+    await press(host, "Restablecer");
+    await until(() => api.s3.text(KEY) === '{"projection_format":1}\n', "the reset");
+    expect((host.querySelector("#pj-gold-return") as HTMLInputElement).value).toBe("5");
+  });
+
+  it("says a stored object it cannot read, and shows the published figures", async () => {
+    api.s3.seed(KEY, '{"projection_format":9}\n');
+    const host = await open();
+    await until(() => card(host).includes("no se pueden leer"), "the notice");
+    expect((host.querySelector("#pj-gold-return") as HTMLInputElement).value).toBe("5");
+  });
+
+  it("re-reads and says so when another device wrote first, keeping what is there", async () => {
+    api.s3.seed(KEY, '{"projection_format":1,"years":30}\n');
+    const host = await open();
+    await until(
+      () => (host.querySelector("#pj-years") as HTMLInputElement).value === "30",
+      "what is stored",
+    );
+    api.s3.seed(KEY, '{"projection_format":1,"years":40}\n');
+    type(host, "pj-gold-return", "4");
+    await until(() => card(host).includes("desde otro dispositivo"), "the conflict");
+    expect(api.s3.text(KEY)).toBe('{"projection_format":1,"years":40}\n');
+    expect((host.querySelector("#pj-years") as HTMLInputElement).value).toBe("40");
   });
 
   it("masks the amounts with the privacy mode on", async () => {

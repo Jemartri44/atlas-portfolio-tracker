@@ -14,7 +14,7 @@ import { utf8Encode } from "../ids/sha256.js";
 import { Decimal } from "../money/decimal.js";
 import { ASSET_CLASSES, type AssetClass } from "../schema/events.js";
 import { repeatedKey } from "../schema/json-keys.js";
-import { MAX_HORIZON_YEARS } from "./growth.js";
+import { MAX_HORIZON_YEARS } from "./horizon.js";
 
 export const PROJECTION_FORMAT = 1;
 /** The only key of the data bucket that holds it. */

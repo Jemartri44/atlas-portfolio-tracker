@@ -402,7 +402,7 @@ Dirección A «Cuaderno vivo», elegida por el dueño el 2026-11-03 sobre la aud
 | Ajustes, grupos plegables y primer arranque | `styles/settings.css` |
 | Buscar o registrar (PC): botón y caja de órdenes | `styles/command.css` |
 | Indicadores en SVG: franja de desviación, medidores y mancuernas | `styles/indicators.css` |
-| Supuestos de la proyección y del coste total | `styles/long-run.css` |
+| Supuestos de la proyección | `styles/long-run.css` |
 | Plan por plataforma y pasos del rebalanceo | `styles/rebalance.css` |
 | Resumen: «Este mes» y enlace de la asignación | `styles/summary-cards.css` |
 | Armazón: cabecera, navegación, página y rejilla | `styles/layout.css` |

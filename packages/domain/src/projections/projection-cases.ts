@@ -20,7 +20,7 @@ import type { Settings } from "../settings/settings.js";
 import { quotaOfBase } from "../tax/quota.js";
 import { coreMonthlyOf } from "./core-monthly.js";
 import type { CostSummary } from "./costs.js";
-import { checkHorizon } from "./growth.js";
+import { checkHorizon } from "./horizon.js";
 import type { ClassStart, ResolvedAssumptions } from "./projection-file.js";
 import type { ClassSubtotal, CoreWeights } from "./weights.js";
 

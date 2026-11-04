@@ -24,10 +24,12 @@ import {
 } from "solid-js";
 import { Amount, Field, FoldSection, Notice, Tag } from "../../components/index.js";
 import { valueLabel } from "../../format/labels.js";
+import { createAutosave } from "../../settings-objects/autosave.js";
 import { createProjectionEdits } from "../../settings-objects/use-settings-object.js";
 import {
   CLASS_SOURCES,
   inputsOf,
+  notReadSentence,
   PROJECTION_CLASSES,
   type ProjectionInputs,
   projectionView,
@@ -60,30 +62,36 @@ export const ProjectionCard = (props: {
   });
   const [problem, setProblem] = createSignal<string | undefined>();
 
-  /** A write of ours must not overwrite what is being typed; only a read, or a conflict, does. */
-  let writing = false;
   const showStored = () => {
     const state = stored.state();
     if (state.kind === "ready") {
       setInputs(inputsOf(state.value, monthly()));
     }
   };
+  const etag = () => {
+    const state = stored.state();
+    return state.kind === "ready" ? state.etag : undefined;
+  };
+  // What was typed stays on the screen: only the first read, or a conflict, replaces it.
   createEffect(
-    on(stored.state, () => {
-      if (!writing) {
+    on(
+      () => stored.state().kind === "ready",
+      (ready) => ready && showStored(),
+    ),
+  );
+  const saver = createAutosave<ProjectionEdits>(
+    async (next) => {
+      const before = etag();
+      const said = await stored.save(next);
+      if (said !== undefined && etag() !== before) {
         showStored();
       }
-    }),
+      return said;
+    },
+    SAVE_AFTER_MS,
+    setProblem,
   );
-  const write = async (next: ProjectionEdits) => {
-    writing = true;
-    const said = await stored.save(next);
-    writing = false;
-    setProblem(said);
-    if (said !== undefined) {
-      showStored();
-    }
-  };
+  onCleanup(saver.flush);
 
   const read = createMemo(() => readProjection(inputs(), monthly()));
   /** The last edits that read: a wrong field leaves the figures of the last good ones. */
@@ -102,25 +110,17 @@ export const ProjectionCard = (props: {
     ),
   );
 
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const saveSoon = (next: ProjectionEdits) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => void write(next), SAVE_AFTER_MS);
-  };
-  onCleanup(() => clearTimeout(timer));
-
   const type = (field: string) => (raw: string) => {
     const next = { ...inputs(), [field]: raw };
     setInputs(next);
     const { edits: typed } = readProjection(next, monthly());
-    if (typed !== undefined) {
-      saveSoon(typed);
+    if (typed !== undefined && stored.state().kind === "ready") {
+      saver.soon(typed);
     }
   };
   const reset = () => {
-    clearTimeout(timer);
     setInputs(inputsOf({}, monthly()));
-    void write({});
+    saver.now({});
   };
   const decimal = (id: string, field: string, label: string, unit: string, hint?: string) => (
     <Field
@@ -135,6 +135,7 @@ export const ProjectionCard = (props: {
     />
   );
   const normal = () => view().cases[1];
+  const notRead = () => notReadSentence(stored.state());
 
   return (
     <FoldSection
@@ -165,7 +166,9 @@ export const ProjectionCard = (props: {
           "monthly_eur",
           "Aportación mensual",
           "€",
-          "De Ajustes, sin la parte del cubo.",
+          edits().monthly_eur === undefined
+            ? "De Ajustes, sin la parte del cubo."
+            : "La tuya. Vacía el campo para volver a la de Ajustes.",
         )}
         {decimal(
           "pj-inflation",
@@ -205,10 +208,12 @@ export const ProjectionCard = (props: {
           Restablecer
         </button>
       </div>
-      <Show when={stored.state().kind === "failed"}>
-        <Notice severity="caution" title="Sin tus cambios">
-          No se han podido leer los supuestos guardados: ves los de partida.
-        </Notice>
+      <Show when={notRead()}>
+        {(said) => (
+          <Notice severity="caution" title="Sin tus cambios">
+            {said()}
+          </Notice>
+        )}
       </Show>
       <Show when={problem()}>
         {(said) => (
