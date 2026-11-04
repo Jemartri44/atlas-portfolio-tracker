@@ -132,7 +132,7 @@ export const ExposureBlock = (props: {
       : `${owner} con tus porcentajes, ${byDefault} por defecto`;
   };
   return (
-    <FoldSection title="Exposición" class="span-12 exposure-block" summary={summaryLine()}>
+    <FoldSection title="Exposición" class="exposure-block" summary={summaryLine()}>
       <Show
         when={declared.state().kind !== "failed"}
         fallback={

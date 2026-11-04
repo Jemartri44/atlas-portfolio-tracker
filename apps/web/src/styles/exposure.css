@@ -74,11 +74,13 @@
   margin: var(--space-3) 0 0;
 }
 
-@media (min-width: 48rem) {
+@container card (min-width: 28rem) {
   .exposure-dimensions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
 
+@media (min-width: 48rem) {
   .exposure-row {
     column-gap: var(--space-6);
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -94,6 +94,7 @@
 .peek-more {
   background: none;
   border: 0;
+  border-radius: 0;
   border-top: var(--border) solid var(--c-border);
   color: var(--c-accent);
   cursor: pointer;
