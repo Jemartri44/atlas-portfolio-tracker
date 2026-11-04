@@ -83,7 +83,7 @@ describe("the settings", () => {
 describe("the first run", () => {});
 
 describe("the order of Ajustes", () => {
-  it("puts first what a phone uses — privacy and theme, the copy, the session — and folds nothing", async () => {
+  it("puts first what a phone uses, in sight, and folds the state of the cloud with its line", async () => {
     withStyles(390);
     try {
       const host = await show("/ajustes", Ajustes);
@@ -100,7 +100,15 @@ describe("the order of Ajustes", () => {
           .querySelector("#sincronizacion")
           ?.compareDocumentPosition(host.querySelector(".grid > .stack:last-child") as Node),
       ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-      expect(host.querySelector(".grid details")).toBeNull();
+      // What a phone comes for is never folded; the rest says its state in the line.
+      expect(host.querySelector("#sincronizacion details")).toBeNull();
+      const folds = [...host.querySelectorAll("section.fold-card")];
+      expect(folds.map((card) => text(card.querySelector("h2")))).toEqual([
+        "Tipos del BCE",
+        "Precios automáticos",
+        "Tareas automáticas",
+      ]);
+      expect(folds.every((card) => text(card.querySelector(".fold-summary")) !== "")).toBe(true);
     } finally {
       withoutStyles();
     }

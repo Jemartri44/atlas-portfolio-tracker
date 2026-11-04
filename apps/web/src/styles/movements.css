@@ -56,9 +56,14 @@
   }
 }
 
+/* It goes down with the list, always at hand; what does not fit scrolls inside it. */
 .filters-panel {
   align-self: start;
   gap: var(--space-4);
+  max-height: calc(100dvh - var(--topbar-h) - var(--space-6));
+  overflow-y: auto;
+  position: sticky;
+  top: calc(var(--topbar-h) + var(--space-3));
 }
 
 .filters-panel > h2 {

@@ -97,7 +97,7 @@ export const CostsCard = (props: { view: CostsView }): JSX.Element => (
               <DataTable
                 label="Costes de la cartera principal"
                 columns={CORE_COLUMNS}
-                rows={rows}
+                rows={rows()}
                 maskedMerge
               />
             )}

@@ -40,8 +40,10 @@ export const CalendarCard = (props: {
   const unknown = (): number => props.calendar.unknown_deadlines.length;
   const foldLabel = (): string =>
     unknown() === 0 ? "Todas las fechas" : `Todas las fechas · ${unknown()} ${UNVERIFIED}`;
-  const { start, end } = props.calendar.season;
-  const inSeason = (): boolean => start <= props.today && props.today <= end;
+  const inSeason = (): boolean => {
+    const { start, end } = props.calendar.season;
+    return start <= props.today && props.today <= end;
+  };
   return (
     <Section
       title={wide() ? "Calendario fiscal" : "Calendario"}
@@ -49,7 +51,7 @@ export const CalendarCard = (props: {
       label="Calendario fiscal"
       aside={
         <Show when={!wide() && inSeason()}>
-          <Tag tone="accent">Hasta {formatDate(end).slice(0, 5)}</Tag>
+          <Tag tone="accent">Hasta {formatDate(props.calendar.season.end).slice(0, 5)}</Tag>
         </Show>
       }
     >

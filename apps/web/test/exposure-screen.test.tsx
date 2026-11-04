@@ -116,6 +116,22 @@ describe("the exposure card of the configuration", () => {
     );
   });
 
+  it("keeps an asset open after a save, with its state in the line", async () => {
+    const host = await show(`/ajustes/configuracion?fecha=${DATE}`, Configuracion);
+    await until(() => host.querySelector("#exposicion .exposure-row") !== null, "the rows");
+    const fold = host.querySelector("#exposicion .exposure-rows details") as HTMLDetailsElement;
+    expect(text(fold.querySelector("summary"))).toMatch(/ · (sin propuesta|por defecto|tuyo)/);
+    fold.open = true;
+    choose(host, "index-ast_world", "msci_world");
+    await until(() => api.s3.text(KEY) !== undefined, "the write");
+    await until(
+      () => text(host.querySelector("#exposicion")).includes("ficha 02/11/2026"),
+      "the label",
+    );
+    expect(host.querySelector("#exposicion .exposure-rows details")).toBe(fold);
+    expect(fold.open).toBe(true);
+  });
+
   it("writes the owner's own percentages, says how much is missing, and restores the defaults", async () => {
     const host = await show(`/ajustes/configuracion?fecha=${DATE}`, Configuracion);
     await until(() => host.querySelector("#exposicion .exposure-row") !== null, "the rows");

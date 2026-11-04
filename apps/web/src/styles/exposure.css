@@ -8,8 +8,7 @@
   gap: var(--space-5);
 }
 
-.exposure-dimension h3,
-.exposure-row h3 {
+.exposure-dimension h3 {
   font-size: var(--text-md);
   margin: 0 0 var(--space-2);
 }
@@ -30,14 +29,16 @@
 
 .exposure-rows {
   display: grid;
-  gap: var(--space-5);
   list-style: none;
   margin: var(--space-4) 0 0;
   padding: 0;
 }
 
-.exposure-row {
+.exposure-rows > li {
   border-top: var(--border) solid var(--c-border);
+}
+
+.exposure-row {
   display: grid;
   gap: var(--space-3);
   padding-top: var(--space-4);

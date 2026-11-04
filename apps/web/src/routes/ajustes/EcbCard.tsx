@@ -3,7 +3,7 @@
 // it publishes, and the button to read it again. Everything of the ECB is loaded here, lazily.
 
 import { createResource, type JSX, Show } from "solid-js";
-import { Icon, Section } from "../../components/index.js";
+import { FoldSection, Icon } from "../../components/index.js";
 import { formatDate, formatInstantDate } from "../../format/date.js";
 import { remoteFailure } from "../../format/messages/errors.js";
 import { SaidNotice, useCardAction } from "./card-action.jsx";
@@ -33,8 +33,22 @@ export const EcbCard = (): JSX.Element => {
         : `Histórico leído de la nube: publica hasta el ${formatDate(read.latest as string)}.`;
     });
 
+  /** The line of the folded card: what is wrong, or until when it publishes. */
+  const folded = (): string => {
+    const loaded = web();
+    if (loaded === undefined) {
+      return "Leyendo…";
+    }
+    if (loaded.problem !== undefined) {
+      return "No se ha podido leer";
+    }
+    return loaded.history === undefined
+      ? "Sin histórico"
+      : `Publica hasta el ${formatDate(loaded.latest as string)}`;
+  };
+
   return (
-    <Section title="Tipos del BCE">
+    <FoldSection title="Tipos del BCE" summary={folded()}>
       <Show when={web()} fallback={<p class="meta">Leyendo…</p>}>
         {(loaded) => (
           <>
@@ -75,6 +89,6 @@ export const EcbCard = (): JSX.Element => {
         El histórico lo descarga la nube del BCE cada día; la web lo lee con tu sesión al abrir esta
         tarjeta o una pantalla que lo necesita, sin guardarlo en este dispositivo.
       </p>
-    </Section>
+    </FoldSection>
   );
 };

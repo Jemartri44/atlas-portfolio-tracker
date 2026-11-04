@@ -1,7 +1,7 @@
 // "¿Qué puedo registrar?" — everything the user records by hand.
 //
 // What happens every month is one tap away, as tiles (docs/design/system.md
-// §7.4): two columns on a phone, four on a wide screen. The rest — transfers
+// §7.4): three columns on a phone, four on a wide screen. The rest — transfers
 // between funds, the bucket's theses, corporate actions, the catalogue — waits
 // folded underneath, each with one line about when it is used.
 //
@@ -23,9 +23,9 @@ const DAILY: readonly (readonly [string, IconName])[] = [
   ["buy", "buy"],
   ["sell", "sell"],
   ["permuta", "transfer"],
+  ["dividend", "dividend"],
   ["cash-in", "cashin"],
   ["cash-out", "cashout"],
-  ["dividend", "dividend"],
   ["valuation", "valuation"],
   ["order", "order"],
 ];
@@ -100,6 +100,9 @@ const Tiles = (props: { repeat: Repeat | undefined }): JSX.Element => (
             <span class="tile-when">
               {repeat().name} · <Amount value={repeat().amount} decimals={0} /> propuestos
             </span>
+            <span class="tile-go">
+              Registrar <Icon name="arrow" class="icon-sm" />
+            </span>
           </A>
         </li>
       )}
@@ -163,17 +166,19 @@ export default function RegistrarRoute(): JSX.Element {
                 <Tiles repeat={repeat()} />
               </section>
               <Section title="Otros registros" class="groups">
-                <Group title="Traspasos entre fondos" entries={entriesOf(TRANSFERS)} />
-                <Group title="Cubo especulativo" entries={entriesOf(BUCKET)} />
-                <Group
-                  title="Eventos corporativos"
-                  entries={CORPORATE_FORMS.map((form) => ({
-                    href: `/registrar/evento-corporativo/${form.slug}`,
-                    title: form.title,
-                    when: form.when,
-                  }))}
-                />
-                <Group title="Impuestos" entries={entriesOf(TAXES)} />
+                <div class="group-columns">
+                  <Group title="Traspasos entre fondos" entries={entriesOf(TRANSFERS)} />
+                  <Group title="Cubo especulativo" entries={entriesOf(BUCKET)} />
+                  <Group
+                    title="Eventos corporativos"
+                    entries={CORPORATE_FORMS.map((form) => ({
+                      href: `/registrar/evento-corporativo/${form.slug}`,
+                      title: form.title,
+                      when: form.when,
+                    }))}
+                  />
+                  <Group title="Impuestos" entries={entriesOf(TAXES)} />
+                </div>
                 <Group title="Catálogo: cuentas y activos" entries={entriesOf(CATALOGUE)} />
               </Section>
             </div>
