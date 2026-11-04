@@ -35,6 +35,19 @@ export interface PriceInfo {
   newerQuote?: string | undefined;
 }
 
+/** The clock of a stale price, with its age in words for a screen reader and on hover. */
+export const StaleMark = (props: { price: PriceInfo }): JSX.Element => (
+  <Show when={props.price.stale}>
+    <span
+      class="stale-mark"
+      title={`Precio caducado: ${countOf(props.price.ageDays ?? 0, "día", "días")}`}
+    >
+      <Icon name="clock" class="icon-sm" />
+      <span class="sr-only">caducado</span>
+    </span>
+  </Show>
+);
+
 /**
  * Just the figure, for a cell of a dense table; with `marked`, a stale one
  * carries the clock and its age in words for a screen reader and on hover —
@@ -68,14 +81,8 @@ export const Price = (props: { price: PriceInfo; marked?: boolean }): JSX.Elemen
         </span>
       )}
     </Show>
-    <Show when={props.marked === true && props.price.stale}>
-      <span
-        class="stale-mark"
-        title={`Precio caducado: ${countOf(props.price.ageDays ?? 0, "día", "días")}`}
-      >
-        <Icon name="clock" class="icon-sm" />
-        <span class="sr-only">caducado</span>
-      </span>
+    <Show when={props.marked === true}>
+      <StaleMark price={props.price} />
     </Show>
   </>
 );

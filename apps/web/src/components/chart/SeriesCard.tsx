@@ -162,7 +162,15 @@ export const SeriesCard = (props: SeriesCardProps): JSX.Element => {
       aside={props.lead === undefined ? buttons() : undefined}
     >
       {props.lead}
-      <Show when={props.x.length > 0 && hole() !== "pending"} fallback={props.empty}>
+      <Show
+        when={props.x.length > 0 && hole() !== "pending"}
+        fallback={
+          <>
+            {props.empty}
+            {props.side}
+          </>
+        }
+      >
         <Show when={props.lead !== undefined}>
           <div class="chart-range">{buttons()}</div>
         </Show>

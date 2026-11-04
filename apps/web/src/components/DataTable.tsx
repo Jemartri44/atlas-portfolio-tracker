@@ -47,9 +47,9 @@ interface DataTableProps<R> {
   size?: "sm" | "lg" | undefined;
   /**
    * A block under the row, for what belongs to it and does not fit in a cell:
-   * the thesis of a position. On the table it goes in a row of its own.
+   * the thesis of a position. On the table it goes in a row of its own; a row
+   * with nothing to add returns `undefined` and gets none.
    */
-  /** A line under the row; a row with nothing to add returns `undefined` and gets none. */
   detail?: (row: R) => JSX.Element;
   /**
    * With the privacy mode on, the columns marked `amount` fuse into one that keeps the header of

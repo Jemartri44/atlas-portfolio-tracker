@@ -16,6 +16,7 @@ import {
   PriceDetail,
   PriceSource,
   Section,
+  StaleMark,
   Tag,
   TotalLine,
 } from "../../components/index.js";
@@ -137,6 +138,7 @@ const Line = (props: { row: BucketPositionRow }): JSX.Element => (
         </span>
       </span>
       <span class="split-figs">
+        <StaleMark price={props.row} />{" "}
         <Amount value={props.row.value} missingReason="sin precio a esa fecha" class="fig" />
         <Show when={props.row.unrealizedPct !== undefined}>
           {" "}
