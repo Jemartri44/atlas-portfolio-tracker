@@ -3,9 +3,10 @@
 // the number at the top, and the partial mark says when something is missing
 // instead of quietly showing a smaller total.
 //
-// Direction A (docs/design/system.md §5.2): the figure in the serif, the return of the core under
-// it, the proportion bar, and the three books as tiles — on a wide screen side by side, each with
-// its own figure and the small line of its evolution (piece 1 of direction B); on a phone, rows.
+// Direction A (docs/design/system.md §5.2): the figure in the serif, what has no price under it, the
+// proportion bar, and the three books as tiles — on a wide screen side by side, each with its own
+// figure, what that book has to say and its small line (piece 1 of direction B). On a phone, rows
+// with only the figure: the rest waits in the breakdown.
 // The shares and the returns are percentages and stay visible with the privacy mode on; with a
 // partial total there are no shares, because they would be shares of an incomplete total.
 
@@ -14,6 +15,7 @@ import { For, type JSX, Show } from "solid-js";
 import { LineKey } from "../../components/chart/ChartLegend.jsx";
 import { Sparkline } from "../../components/chart/Sparkline.jsx";
 import { Amount, Disclosure, Figure, Pending, ShareBar, Tag } from "../../components/index.js";
+import { GRID, mediaQuery } from "../../shell/media.js";
 import type { NetWorthBlock as Block, BlockKey, NetWorthView } from "../../view-models/index.js";
 
 /** The same line keys as the evolution chart: colour and dash. */
@@ -116,10 +118,28 @@ const Metric = (props: { block: Block; figures: BookFigures | undefined }): JSX.
   }
 };
 
-/** The lines of one book, inside the breakdown. */
-const Lines = (props: { block: Block }): JSX.Element => (
+/** What the total leaves out, and the way to give it a price. */
+const Missing = (props: { names: readonly string[] }): JSX.Element => (
+  <>
+    <Show when={props.names.length === 1}>
+      <Pending line action={{ label: "Registrar", to: "/registrar/valuation" }}>
+        Sin precio: {props.names[0]}.
+      </Pending>
+    </Show>
+    <Show when={props.names.length > 1}>
+      <Pending action={{ label: "Registrar valoraciones", to: "/registrar/valuation" }}>
+        Sin precio o sin tipo de cambio: {props.names.join(", ")}. El total solo suma lo que sí lo
+        tiene.
+      </Pending>
+    </Show>
+  </>
+);
+
+/** The lines of one book, inside the breakdown; on a phone, what its tile says too. */
+const Lines = (props: { block: Block; metric?: JSX.Element }): JSX.Element => (
   <>
     <p class="block-title">{props.block.label}</p>
+    {props.metric}
     <For each={props.block.lines}>
       {(line) => (
         <div class="stat-row">
@@ -145,75 +165,80 @@ const Lines = (props: { block: Block }): JSX.Element => (
 export const NetWorthBlock = (props: {
   view: NetWorthView;
   figures?: BookFigures | undefined;
-}): JSX.Element => (
-  <section class="card hero span-12 summary-worth" aria-label="Patrimonio total">
-    <div class="hero-main">
-      <h2 class="eyebrow">Patrimonio total</h2>
-      <p class="hero-figure">
-        <Amount value={props.view.total} decimals={0} missingReason="nada tiene precio" />
-        <Show when={props.view.partial}>
-          <Tag icon="half" title={`Faltan: ${props.view.missing.join(", ")}`}>
-            parcial
-          </Tag>
+}): JSX.Element => {
+  const wide = mediaQuery(GRID);
+  const metric = (block: Block): JSX.Element => (
+    <span class="part-metric">
+      <Metric block={block} figures={props.figures} />
+    </span>
+  );
+  return (
+    <section class="card hero span-12 summary-worth" aria-label="Patrimonio total">
+      <div class="hero-main">
+        <h2 class="eyebrow">Patrimonio total</h2>
+        <p class="hero-figure">
+          <Amount value={props.view.total} decimals={0} missingReason="nada tiene precio" />
+          <Show when={props.view.partial}>
+            <Tag icon="half" title={`Faltan: ${props.view.missing.join(", ")}`}>
+              parcial
+            </Tag>
+          </Show>
+        </p>
+        <Show when={wide()}>
+          <Missing names={props.view.missing} />
         </Show>
-      </p>
-      <p class="hero-deltas">
-        <span>Cartera principal:</span>
-        <Return label="este mes" value={props.figures?.month} period="un mes" />
-        <Return label="12 meses" value={props.figures?.year} period="12 meses" />
-      </p>
-      <Show when={!props.view.partial}>
-        <Shares blocks={props.view.blocks} />
-      </Show>
-    </div>
+        <Show when={!props.view.partial}>
+          <Shares blocks={props.view.blocks} />
+        </Show>
+      </div>
 
-    <ul class="parts">
-      <For each={props.view.blocks}>
-        {(block) => (
-          <li class={`part is-${block.key}`}>
-            <span class="part-label">
-              <LineKey colour={KEYS[block.key].colour} dash={KEYS[block.key].dash} />
-              <span>{block.label}</span>
-              <Show when={block.partial && block.subtotal !== undefined}>
-                <Tag icon="half">parcial</Tag>
+      <ul class="parts">
+        <For each={props.view.blocks}>
+          {(block) => (
+            <li class={`part is-${block.key}`}>
+              <span class="part-label">
+                <LineKey colour={KEYS[block.key].colour} dash={KEYS[block.key].dash} />
+                <span>{block.label}</span>
+                <Show when={block.partial && block.subtotal !== undefined}>
+                  <Tag icon="half">parcial</Tag>
+                </Show>
+              </span>
+              <span class="part-figs">
+                <Show when={block.share !== undefined}>
+                  <Figure value={block.share} unit="percent" decimals={0} class="part-share" />
+                </Show>
+                <Amount
+                  value={block.subtotal}
+                  decimals={0}
+                  class="part-fig"
+                  missingReason="ninguna posición tiene precio"
+                />
+              </span>
+              <Show when={wide()}>{metric(block)}</Show>
+              <Show when={props.figures}>
+                {(figures) => <Sparkline values={figures().spark[block.key]} tone={block.key} />}
               </Show>
-            </span>
-            <span class="part-figs">
-              <Show when={block.share !== undefined}>
-                <Figure value={block.share} unit="percent" decimals={0} class="part-share" />
-              </Show>
-              <Amount
-                value={block.subtotal}
-                decimals={0}
-                class="part-fig"
-                missingReason="ninguna posición tiene precio"
-              />
-            </span>
-            <span class="part-metric">
-              <Metric block={block} figures={props.figures} />
-            </span>
-            <Show when={props.figures}>
-              {(figures) => <Sparkline values={figures().spark[block.key]} tone={block.key} />}
-            </Show>
-          </li>
-        )}
-      </For>
-    </ul>
+            </li>
+          )}
+        </For>
+      </ul>
 
-    <Show when={props.view.missing.length === 1}>
-      <Pending line action={{ label: "Registrar", to: "/registrar/valuation" }}>
-        Sin precio: {props.view.missing[0]}.
-      </Pending>
-    </Show>
-    <Show when={props.view.missing.length > 1}>
-      <Pending action={{ label: "Registrar valoraciones", to: "/registrar/valuation" }}>
-        Sin precio o sin tipo de cambio: {props.view.missing.join(", ")}. El total solo suma lo que
-        sí lo tiene.
-      </Pending>
-    </Show>
-
-    <Disclosure label="Ver desglose por activo y cuenta">
-      <For each={props.view.blocks}>{(block) => <Lines block={block} />}</For>
-    </Disclosure>
-  </section>
-);
+      <Disclosure
+        label={
+          wide()
+            ? "Ver desglose por activo y cuenta"
+            : props.view.missing.length > 0
+              ? "Desglose y lo que falta"
+              : "Desglose"
+        }
+      >
+        <Show when={!wide()}>
+          <Missing names={props.view.missing} />
+        </Show>
+        <For each={props.view.blocks}>
+          {(block) => <Lines block={block} metric={wide() ? undefined : metric(block)} />}
+        </For>
+      </Disclosure>
+    </section>
+  );
+};

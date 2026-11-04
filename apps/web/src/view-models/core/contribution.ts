@@ -72,7 +72,7 @@ export interface ContributionView {
  * figure rounds once, when it is shown (ADR-0005). Absent without a whole to
  * divide by: a share of nothing is not zero.
  */
-const shareOf = (part: Money, whole: Money): string | undefined =>
+export const shareOf = (part: Money, whole: Money): string | undefined =>
   whole.amount.isPositive() ? part.amount.div(whole.amount).mul(HUNDRED).toString() : undefined;
 
 const shares = (plan: ContributionPlan): Pick<ContributionView, "corePct" | "bucketPct"> => {
