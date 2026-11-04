@@ -1,0 +1,105 @@
+/* The notices of *Atención* by their titles (NoticeFolds), and the button of a list seen up to a point (Peek). */
+.notice-folds > li + li {
+  border-top: var(--border) solid var(--c-border-control);
+}
+
+.notice-fold > summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: var(--space-3);
+  list-style: none;
+  min-height: var(--tap);
+  padding-block: var(--space-2);
+}
+
+.notice-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.notice-fold .notice-title {
+  flex: 1 1 auto;
+  margin: 0;
+  min-width: 0;
+}
+
+.notice-fold > summary > .chev {
+  color: var(--c-text-3);
+  flex: none;
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.notice-fold[open] > summary > .chev {
+  transform: rotate(180deg);
+}
+
+.notice-fold.is-caution .notice-icon {
+  background-color: var(--c-caution-soft);
+  color: var(--c-caution-icon);
+}
+
+.notice-fold.is-danger .notice-icon {
+  background-color: var(--c-danger-soft);
+  color: var(--c-danger);
+}
+
+.notice-fold.is-info .notice-icon {
+  background-color: var(--c-accent-soft);
+  color: var(--c-accent);
+}
+
+/* What opens goes in a block of its own, so the next notice does not read as its next sentence. */
+.notice-open {
+  background-color: var(--c-canvas);
+  border-radius: var(--radius-md);
+  display: grid;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+}
+
+.notice-open > p {
+  margin: 0;
+}
+
+.notice-lines > li {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  padding-block: var(--space-1);
+}
+
+.notice-lines > li + li {
+  border-top: var(--border) solid var(--c-border);
+}
+
+.notice-lines .value {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+}
+
+.notice-open > .notice-action {
+  align-items: center;
+  color: var(--c-accent);
+  display: inline-flex;
+  font-weight: var(--fw-semibold);
+  gap: var(--space-1);
+  justify-self: start;
+  min-height: var(--tap);
+  text-decoration: none;
+}
+
+.peek-more {
+  background: none;
+  border: 0;
+  border-top: var(--border) solid var(--c-border);
+  color: var(--c-accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  min-height: var(--tap);
+  width: 100%;
+}

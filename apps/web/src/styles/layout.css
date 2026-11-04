@@ -65,7 +65,25 @@
 }
 
 .brand {
-  display: none;
+  align-items: center;
+  color: var(--c-text);
+  display: inline-flex;
+  font-weight: var(--fw-semibold);
+  gap: var(--space-2);
+  min-height: var(--tap);
+  padding-inline: var(--space-2);
+  text-decoration: none;
+}
+
+.brand .mark {
+  height: var(--icon-lg);
+  width: var(--icon-lg);
+}
+
+/* The word goes in the serif chosen with the logo. */
+.brand > span {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-semibold);
 }
 
 /*
@@ -102,39 +120,10 @@
 .status {
   align-items: center;
   display: flex;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   gap: var(--space-1);
+  margin-left: auto;
   min-width: 0;
-}
-
-/* ---- Where the data lives ------------------------------------------------ */
-
-.source {
-  align-items: center;
-  border-radius: var(--radius-md);
-  color: var(--c-text-2);
-  display: inline-flex;
-  font-size: var(--text-sm);
-  gap: var(--space-2);
-  min-height: var(--tap);
-  min-width: 0;
-  padding-inline: var(--space-2);
-  text-decoration: none;
-}
-
-.source:hover {
-  background-color: var(--c-fill);
-  color: var(--c-text);
-}
-
-.status > .source {
-  margin-right: auto;
-}
-
-.source .where {
-  color: var(--c-text);
-  font-weight: var(--fw-medium);
-  white-space: nowrap;
 }
 
 /* ---- Privacy: a pressed or unpressed pill ------------------------------- */
@@ -294,13 +283,8 @@
   background-color: var(--c-accent-hover);
 }
 
-/* The narrowest phones (< 380px): the decorative icon of the source and some
-   air around Registrar give way; no word does. */
+/* The narrowest phones (< 380px): some air around Registrar gives way; no word does. */
 @media (max-width: 23.74rem) {
-  .source-icon {
-    display: none;
-  }
-
   .nav-action {
     padding-inline: var(--space-2);
   }
@@ -395,6 +379,14 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
+/*
+ * A stack is a column that goes its own way: each card measures what it holds, and what the other
+ * column has on top of it stays at the end of this one, never inside a card.
+ */
+.stack {
+  align-content: start;
+}
+
 /* ---- The band of a ledger with problems: permanent while they last ------ */
 
 .band {
@@ -480,33 +472,18 @@
   }
 
   .brand {
-    align-items: center;
-    color: var(--c-text);
-    display: inline-flex;
     font-size: var(--text-lg);
-    font-weight: var(--fw-semibold);
-    gap: var(--space-2);
     justify-content: center;
     letter-spacing: var(--tracking-tight);
     margin-right: var(--space-2);
-    min-height: var(--tap);
     /* The mark alone, between 1200 and 1439px, is still a 44px target. */
     min-width: var(--tap);
-    text-decoration: none;
-  }
-
-  .brand .mark {
-    height: var(--icon-lg);
-    width: var(--icon-lg);
+    padding-inline: 0;
   }
 
   .status {
     flex: 0 1 auto;
     margin-left: auto;
-  }
-
-  .status > .source {
-    margin-right: 0;
   }
 
   .privacy .short {

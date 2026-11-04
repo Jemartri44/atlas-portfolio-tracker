@@ -14,7 +14,7 @@ import { Icon, type IconName } from "./Icon.jsx";
 
 export type Severity = "danger" | "caution" | "info";
 
-const ICONS: Record<Severity, IconName> = {
+export const ICONS: Record<Severity, IconName> = {
   danger: "danger",
   caution: "caution",
   info: "info",
@@ -50,6 +50,8 @@ export const Notice = (props: NoticeProps): JSX.Element => (
 
 export interface NoticeItem {
   severity: Severity;
+  /** The short name of a notice that folds under it (`NoticeFolds`); the others say it all. */
+  title?: string | undefined;
   message: JSX.Element;
   /**
    * Where it is fixed; the whole notice is the link. Absent when that place is
@@ -112,12 +114,6 @@ interface NoticeListProps {
   /** How many are shown before "Ver N avisos más"; the rest wait folded. */
   limit?: number | undefined;
   label: string;
-  /**
-   * A row kept, a skeleton, at the end of the visible ones, for a notice that
-   * arrives after the first paint (the tax engine is lazy): it counts among
-   * the ones in sight, so nothing jumps when it fills or goes.
-   */
-  reserve?: boolean | undefined;
 }
 
 /**
@@ -150,18 +146,12 @@ export const NoticeLink = (props: { item: NoticeItem; class?: string }): JSX.Ele
  * summary measured six phone screens. The rest are one tap away.
  */
 export const NoticeList = (props: NoticeListProps): JSX.Element => {
-  const limit = (): number => (props.limit ?? 4) - (props.reserve === true ? 1 : 0);
+  const limit = (): number => props.limit ?? 4;
   const rest = (): readonly NoticeItem[] => props.items.slice(limit());
   return (
     <>
       <ul class="notices" aria-label={props.label}>
         <For each={props.items.slice(0, limit())}>{(item) => <Item item={item} />}</For>
-        <Show when={props.reserve === true}>
-          <li class="notice-reserved" aria-hidden="true">
-            <span class="skel w-90" />
-            <span class="skel w-50" />
-          </li>
-        </Show>
       </ul>
       <Show when={rest().length > 0}>
         <Disclosure

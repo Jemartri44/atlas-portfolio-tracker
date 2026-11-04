@@ -1,13 +1,18 @@
-// "¿Hay algo que hacer?" — every active warning, ordered by importance, each one saying what
-// happens and leading to where it is fixed. When there is nothing, it says so calmly instead of
+// "¿Hay algo que hacer?" — every active warning, ordered by importance: a list of short titles, each
+// one opening on what happens and the way to where it is fixed. When there is nothing, it says so calmly instead of
 // inventing a card.
 //
 // The order and the grouping are decided in `view-models/attention.ts`; here
-// they are only painted, with the one notice of the whole application and its
-// four first groups in sight (docs/design/system.md §5.6).
+// they are only painted, with its four first groups in sight (docs/design/system.md §5.6).
 
 import { type JSX, Show } from "solid-js";
-import { Icon, type NoticeItem, NoticeList, type Severity } from "../../components/index.js";
+import {
+  type FoldedNotice,
+  Icon,
+  NoticeFolds,
+  type NoticeItem,
+  type Severity,
+} from "../../components/index.js";
 import type { AttentionItem, AttentionSeverity } from "../../view-models/index.js";
 
 const SEVERITY: Record<AttentionSeverity, Severity> = {
@@ -16,9 +21,11 @@ const SEVERITY: Record<AttentionSeverity, Severity> = {
   info: "info",
 };
 
-const noticeOf = (item: AttentionItem): NoticeItem => ({
+const noticeOf = (item: AttentionItem): FoldedNotice => ({
   severity: SEVERITY[item.severity],
+  title: item.title,
   message: item.message,
+  parts: item.parts,
   action: item.action,
   count: item.count,
 });
@@ -38,7 +45,7 @@ export const AttentionBlock = (props: {
   jobs?: (() => NoticeItem | undefined) | undefined;
 }): JSX.Element => {
   const fiscal = (): "reserved" | NoticeItem | undefined => props.fiscal?.();
-  const notices = (): NoticeItem[] => {
+  const notices = (): FoldedNotice[] => {
     const all = props.items.map(noticeOf);
     const item = fiscal();
     const extra = [
@@ -69,7 +76,7 @@ export const AttentionBlock = (props: {
           </p>
         }
       >
-        <NoticeList
+        <NoticeFolds
           items={notices()}
           label="Avisos"
           limit={VISIBLE}

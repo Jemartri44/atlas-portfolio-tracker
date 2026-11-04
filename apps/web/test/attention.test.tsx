@@ -260,3 +260,25 @@ describe("the list, on the summary", () => {
     expect(late).not.toContain("dentro de la ventana abierta el 06/01/2026");
   });
 });
+
+describe("the list by its titles", () => {
+  const off = (asset_id: string, deviation_pp: string) =>
+    warning("deviation_above_threshold", { asset_id, deviation_pp, threshold_pp: "5" });
+
+  it("gives a gathered rule one title and each asset its own line, with the same figures", () => {
+    const [item] = attention([off("ast_world", "30.2"), off("ast_gold", "-8.23")]);
+    expect(item?.title).toBe("2 activos fuera de umbral");
+    expect(item?.parts?.lines.map((line) => line.value.replace(/\s/g, " "))).toEqual([
+      "+30,20 pp",
+      "−8,23 pp",
+    ]);
+    expect(item?.parts?.tail).toContain("decisión anual");
+  });
+
+  it("names a single warning and leaves its sentence whole", () => {
+    const [item] = attention([off("ast_world", "30.2")]);
+    expect(item?.title).toContain("Fuera de umbral");
+    expect(item?.parts).toBeUndefined();
+    expect(item?.message).toContain("se desvía");
+  });
+});
