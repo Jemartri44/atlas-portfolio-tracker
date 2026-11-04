@@ -67,6 +67,63 @@ const vsIndex = (b: LedgerBuilder) => {
   };
 };
 
+/** 10 A at 10 € (01/11), swapped on 03/15 for 10 B worth 130; B priced 15 on 07/01; index 100 → 120. */
+const swapLedger = (steps: { buyThesis?: boolean; swapThesis?: boolean; twoLots?: boolean }) => {
+  const b = new LedgerBuilder();
+  catalogue(b);
+  b.settings(settings);
+  for (const [date, unit_value] of [
+    ["2027-01-01", "100"],
+    ["2027-07-01", "120"],
+  ] as const) {
+    b.valuation({ account_id: "acc_fund", asset_id: "ast_world", date, unit_value });
+  }
+  b.asset("ast_spec2", {
+    asset_type: "stock",
+    book: "bucket",
+    currency: "EUR",
+    transferable: false,
+  });
+  if (steps.buyThesis === true) {
+    b.thesisOpened({ thesis_id: "th_a", asset_id: "ast_spec" });
+  }
+  if (steps.swapThesis === true) {
+    b.thesisOpened({ thesis_id: "th_b", asset_id: "ast_spec2" });
+  }
+  for (const day of steps.twoLots === true ? ["11", "12"] : ["11"]) {
+    b.buy({
+      account_id: "acc_bucket",
+      asset_id: "ast_spec",
+      quantity: steps.twoLots === true ? "5" : "10",
+      unit_price: "10",
+      fee: "0",
+      ...EUR,
+      trade_date: `2027-01-${day}`,
+      value_date: `2027-01-${day}`,
+      ...(steps.buyThesis === true ? { thesis_id: "th_a" } : {}),
+    });
+  }
+  b.swap({
+    account_id: "acc_bucket",
+    from_asset_id: "ast_spec",
+    to_asset_id: "ast_spec2",
+    quantity_out: "10",
+    market_value_out: "130",
+    quantity_in: "10",
+    market_value_in: "130",
+    value_date: "2027-03-15",
+    ...(steps.swapThesis === true ? { thesis_id: "th_b" } : {}),
+  });
+  b.valuation({
+    account_id: "acc_bucket",
+    asset_id: "ast_spec2",
+    date: "2027-07-01",
+    quantity: "10",
+    unit_value: "15",
+  });
+  return b;
+};
+
 describe("a bucket operation with no thesis", () => {
   it("is measured against the index like a thesis would be, with the same figures", () => {
     const withThesis = vsIndex(ledger({ thesisBuy: true, thesisSell: true }));
@@ -196,49 +253,7 @@ describe("a bucket operation with no thesis", () => {
   });
 
   it("closes the pair handed over by a swap with no thesis, so no money counts twice", () => {
-    const b = new LedgerBuilder();
-    catalogue(b);
-    b.settings(settings);
-    for (const [date, unit_value] of [
-      ["2027-01-01", "100"],
-      ["2027-07-01", "120"],
-    ] as const) {
-      b.valuation({ account_id: "acc_fund", asset_id: "ast_world", date, unit_value });
-    }
-    b.asset("ast_spec2", {
-      asset_type: "stock",
-      book: "bucket",
-      currency: "EUR",
-      transferable: false,
-    });
-    b.buy({
-      account_id: "acc_bucket",
-      asset_id: "ast_spec",
-      quantity: "10",
-      unit_price: "10",
-      fee: "0",
-      ...EUR,
-      trade_date: "2027-01-11",
-      value_date: "2027-01-13",
-    });
-    b.swap({
-      account_id: "acc_bucket",
-      from_asset_id: "ast_spec",
-      to_asset_id: "ast_spec2",
-      quantity_out: "10",
-      market_value_out: "130",
-      quantity_in: "10",
-      market_value_in: "130",
-      value_date: "2027-03-15",
-    });
-    b.valuation({
-      account_id: "acc_bucket",
-      asset_id: "ast_spec2",
-      date: "2027-07-01",
-      quantity: "10",
-      unit_value: "15",
-    });
-    const { view, stats } = vsIndex(b);
+    const { view, stats } = vsIndex(swapLedger({}));
     const [from, to] = view.untagged;
     expect(from?.status).toBe("closed");
     expect(from?.result_eur.amount.toString()).toBe("30");
@@ -247,5 +262,25 @@ describe("a bucket operation with no thesis", () => {
     // Real: 30 realised + 20 latent. Index: 130 from 100 to 120 = +26. 50 − 26.
     expect(stats.vs_index_total_eur?.amount.toString()).toBe("24");
     expect(stats.vs_index_missing).toBe(0);
+  });
+
+  it("keeps the gain of what was bought with no thesis when the swap links one for what it receives", () => {
+    const { view, stats } = vsIndex(swapLedger({ swapThesis: true }));
+    expect(view.untagged).toHaveLength(1);
+    expect(view.untagged[0]?.result_eur.amount.toString()).toBe("30");
+    expect(stats.vs_index_total_eur?.amount.toString()).toBe("24");
+    expect(stats.vs_index_missing).toBe(0);
+  });
+
+  it("adds up every lot a swap took out", () => {
+    const { view, stats } = vsIndex(swapLedger({ swapThesis: true, twoLots: true }));
+    expect(view.untagged[0]?.sells[0]?.quantity.toString()).toBe("10");
+    expect(view.untagged[0]?.result_eur.amount.toString()).toBe("30");
+    expect(stats.vs_index_total_eur?.amount.toString()).toBe("24");
+  });
+
+  it("leaves a swap from one thesis to another exactly with the theses", () => {
+    const { view } = vsIndex(swapLedger({ buyThesis: true, swapThesis: true }));
+    expect(view.untagged).toEqual([]);
   });
 });

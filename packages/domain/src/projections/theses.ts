@@ -23,6 +23,8 @@ import { requireAccount, requireAsset } from "./catalogue.js";
 import { positionOf } from "./positions.js";
 import {
   addWarning,
+  type FiscalLot,
+  type GainByLot,
   type LedgerState,
   type Thesis,
   type ThesisLeg,
@@ -233,6 +235,44 @@ const unlinkedOf = (state: LedgerState, accountId: AccountId, assetId: AssetId):
     state.unlinked.set(key, legs);
   }
   return legs;
+};
+
+/**
+ * The part of a disposal that came out of lots no thesis bought, by lineage:
+ * what rule 16 must still see as a sale when the operation links to a thesis
+ * for what it receives (a swap). Absent when every lot was a thesis's.
+ */
+export const unthesisedPart = (
+  state: LedgerState,
+  by_lot: readonly GainByLot[],
+): { quantity: Quantity; proceeds_eur: Money; gain_eur: Money } | undefined => {
+  const lots = new Map<string, FiscalLot>();
+  for (const entry of state.lots.values()) {
+    for (const lot of [...entry.open, ...entry.closed]) {
+      lots.set(lot.id, lot);
+    }
+  }
+  const thesisBuys = new Set<string>();
+  for (const thesis of state.theses.values()) {
+    for (const leg of thesis.buys) {
+      thesisBuys.add(leg.event_id);
+    }
+  }
+  let part: { quantity: Quantity; proceeds_eur: Money; gain_eur: Money } | undefined;
+  for (const slice of by_lot) {
+    let root = lots.get(slice.lot_id) as FiscalLot;
+    while (root.source_lot_id !== undefined) {
+      root = lots.get(root.source_lot_id) as FiscalLot;
+    }
+    if (!thesisBuys.has(root.source_event_id)) {
+      part = {
+        quantity: (part?.quantity ?? Quantity.ZERO).add(slice.quantity),
+        proceeds_eur: (part?.proceeds_eur ?? Money.zero("EUR")).add(slice.proceeds_eur),
+        gain_eur: (part?.gain_eur ?? Money.zero("EUR")).add(slice.gain_eur),
+      };
+    }
+  }
+  return part;
 };
 
 /** A bucket purchase with no thesis: kept apart so rule 16 still sees it. */

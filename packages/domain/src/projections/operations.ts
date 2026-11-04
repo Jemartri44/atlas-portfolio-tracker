@@ -31,6 +31,7 @@ import {
   linkUnlinkedBuy,
   linkUnlinkedSell,
   requireOpenThesis,
+  unthesisedPart,
 } from "./theses.js";
 import { noteAcquisition, warnPriorBuys, warnRepurchase } from "./wash-sale.js";
 
@@ -451,16 +452,6 @@ export const applySwap = (state: LedgerState, event: SwapEvent, position: number
   if (thesis !== undefined) {
     linkBuy(state, thesis, event.id, dateIn, quantityIn, costEur, Money.zero("EUR"));
   } else if (account.book === "bucket") {
-    // With no thesis to close it, the pair handed over ends here: its leg out is
-    // a sale for rule 16, so its gain and its money are not lost between the two.
-    linkUnlinkedSell(state, event.account_id, event.from_asset_id, {
-      event_id: event.id,
-      fiscal_date: dateOut,
-      quantity: quantityOut,
-      amount_eur: proceedsEur,
-      fee_eur: fx.toEur(fee),
-      gain_eur: gain.gain_eur,
-    });
     linkUnlinkedBuy(state, event.account_id, event.to_asset_id, {
       event_id: event.id,
       fiscal_date: dateIn,
@@ -468,6 +459,22 @@ export const applySwap = (state: LedgerState, event: SwapEvent, position: number
       amount_eur: costEur,
       fee_eur: Money.zero("EUR"),
     });
+  }
+  if (account.book === "bucket") {
+    // What was handed over and no thesis bought is a sale for rule 16, whether
+    // what comes in has a thesis or not: its gain and its money are not lost
+    // between the two. What a thesis bought stays with that thesis.
+    const part = unthesisedPart(state, gain.by_lot);
+    if (part !== undefined) {
+      linkUnlinkedSell(state, event.account_id, event.from_asset_id, {
+        event_id: event.id,
+        fiscal_date: dateOut,
+        quantity: part.quantity,
+        amount_eur: part.proceeds_eur,
+        fee_eur: Money.zero("EUR"),
+        gain_eur: part.gain_eur,
+      });
+    }
   }
   noteAcquisition(state, {
     event_id: event.id,
