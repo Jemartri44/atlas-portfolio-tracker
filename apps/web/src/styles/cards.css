@@ -60,6 +60,11 @@
   text-decoration: none;
 }
 
+/* In the middle of a card it has nothing to reach: only the last row takes the card's padding. */
+.card-foot:not(:last-child) {
+  margin-bottom: 0;
+}
+
 a.card-foot:hover {
   background-color: var(--c-fill);
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
@@ -120,8 +125,9 @@ a.card-foot:hover {
   margin-bottom: calc(-1 * var(--space-4));
 }
 
+/* One row after another: the line between them is all the separation they need. */
 .card > .disclosure + .disclosure {
-  margin-top: var(--space-4);
+  margin-top: 0;
 }
 
 @media (min-width: 64rem) {
@@ -134,14 +140,6 @@ a.card-foot:hover {
     margin-bottom: calc(-1 * var(--space-5));
   }
 
-  /*
-   * A card whose neighbour in the row is much taller keeps its own height: two tables of different
-   * length side by side, stretched, left a white field in the middle of the shorter one.
-   */
-  .grid > .card.is-natural {
-    align-self: start;
-  }
-
   /* In a stretched card the disclosures sit together at its bottom edge. */
   .card > .disclosure:first-of-type {
     margin-top: auto;
@@ -152,7 +150,7 @@ a.card-foot:hover {
   }
 
   .card > .disclosure + .disclosure {
-    margin-top: var(--space-5);
+    margin-top: 0;
   }
 }
 

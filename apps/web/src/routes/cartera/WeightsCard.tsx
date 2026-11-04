@@ -34,6 +34,7 @@ import { pricesOf } from "../../format/messages/prose.js";
 import { describeWarning } from "../../format/messages/warnings.js";
 import { type NameIndex, NO_NAMES } from "../../format/names.js";
 import { formatDecimalString } from "../../format/number.js";
+import { GRID, mediaQuery } from "../../shell/media.js";
 import { privacy } from "../../shell/preferences.js";
 import type { WeightRow, WeightsView } from "../../view-models/core/index.js";
 import { ClassBullets } from "./ClassBullets.jsx";
@@ -130,15 +131,32 @@ interface WeightsCardProps {
 }
 
 export const WeightsCard = (props: WeightsCardProps): JSX.Element => {
+  const wide = mediaQuery(GRID);
+  const byClass = (): JSX.Element => (
+    <>
+      <ClassRows view={props.view} />
+      <div class={props.view.partial ? "total-row" : "total-row only-narrow is-sm"}>
+        <span class="label">Total de la cartera</span>
+        <span class="value">
+          <Amount value={props.view.total} missingReason="ninguna posición tiene precio" />
+          <Show when={props.view.partial}>
+            <Tag icon="half" title={`Faltan: ${props.view.missing.join(", ")}`}>
+              parcial
+            </Tag>
+          </Show>
+        </span>
+      </div>
+    </>
+  );
   return (
-    <Section title="Pesos frente al objetivo" class="span-7 is-natural">
+    <Section title="Pesos frente al objetivo" class="cartera-weights">
       <Show
         when={props.view.classes.length > 0}
         fallback={<p class="meta">Todavía no hay nada en la cartera principal.</p>}
       >
         <dl class="kpis is-lead">
           <div class="kpi">
-            <dt>Cartera principal</dt>
+            <dt>{wide() ? "Cartera principal" : "Cartera"}</dt>
             <dd class="kpi-lead">
               <Amount value={props.view.total} decimals={0} missingReason="sin precio" />
               <Show when={props.view.partial}>
@@ -159,7 +177,7 @@ export const WeightsCard = (props: WeightsCardProps): JSX.Element => {
           <Show when={props.weightedTer}>
             {(ter) => (
               <div class="kpi">
-                <dt>TER medio</dt>
+                <dt>{wide() ? "TER medio" : "TER"}</dt>
                 <dd class="kpi-lead">
                   <Figure value={ter()} unit="percent" decimals={2} />
                 </dd>
@@ -185,18 +203,13 @@ export const WeightsCard = (props: WeightsCardProps): JSX.Element => {
           </Pending>
         </Show>
 
-        <ClassRows view={props.view} />
-        <div class={props.view.partial ? "total-row" : "total-row only-narrow is-sm"}>
-          <span class="label">Total de la cartera</span>
-          <span class="value">
-            <Amount value={props.view.total} missingReason="ninguna posición tiene precio" />
-            <Show when={props.view.partial}>
-              <Tag icon="half" title={`Faltan: ${props.view.missing.join(", ")}`}>
-                parcial
-              </Tag>
-            </Show>
-          </span>
-        </div>
+        {/* The bars already say it on a phone; without them, the rows are all there is. */}
+        <Show
+          when={wide() || props.view.partial}
+          fallback={<Disclosure label="Valor y desviación por tipo">{byClass()}</Disclosure>}
+        >
+          {byClass()}
+        </Show>
         <Show when={!props.view.partial}>
           <ClassTable view={props.view} />
         </Show>

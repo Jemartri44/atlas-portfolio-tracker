@@ -68,8 +68,8 @@ const RESULTS: Record<string, { count: number; what: string }> = {
     what: "the core's annual rate after the tax it causes",
   },
   "routes/cartera/ReturnsCard.tsx": {
-    count: 7,
-    what: "what the core and each class have earned: amount, %, annual rate and the real one",
+    count: 10,
+    what: "what the core and each class have earned, and the same in the line of the folded card",
   },
   "routes/cubo/BudgetCard.tsx": {
     count: 2,

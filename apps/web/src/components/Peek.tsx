@@ -2,20 +2,21 @@
 // the rest in place. For lists of like things; an explanation goes in a `Disclosure`. It cuts at a
 // whole row, so nothing is half read.
 
-import { createSignal, For, type JSX, Show } from "solid-js";
+import { createSignal, type JSX, Show } from "solid-js";
 
 export const Peek = <T,>(props: {
   items: readonly T[];
   limit: number;
   /** The label of the button, with how many there are. */
   more: (total: number) => string;
-  children: (item: T) => JSX.Element;
+  /** What draws the rows in sight: a list, or a table with its head. */
+  children: (shown: readonly T[]) => JSX.Element;
 }): JSX.Element => {
   const [open, setOpen] = createSignal(false);
   const shown = (): readonly T[] => (open() ? props.items : props.items.slice(0, props.limit));
   return (
     <>
-      <For each={shown()}>{(item) => props.children(item)}</For>
+      {props.children(shown())}
       <Show when={props.items.length > props.limit}>
         <button
           type="button"

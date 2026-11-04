@@ -8,8 +8,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { gaugeX } from "../src/routes/cartera/Gauge.jsx";
 import Cartera from "../src/routes/cartera/index.jsx";
-import { show, text, withGoldenLedger } from "./helpers/render.jsx";
-import { withoutStyles, withStyles } from "./helpers/styles.js";
+import { show, text, today, until, withGoldenLedger } from "./helpers/render.jsx";
+import { applied, withoutStyles, withStyles } from "./helpers/styles.js";
 
 withGoldenLedger();
 
@@ -26,7 +26,17 @@ describe("the portfolio", () => {
     const costs = [...host.querySelectorAll("section.card")].find(
       (card) => text(card.querySelector("h2")) === "Costes",
     );
-    const names = [...(costs?.querySelectorAll("table tbody tr td:first-child") ?? [])].map(text);
+    const seen = (): string[] =>
+      [
+        ...(costs?.querySelectorAll(
+          'table[aria-label="Costes de la cartera principal"] tbody tr td:first-child',
+        ) ?? []),
+      ].map(text);
+    // A list seen up to a point: three rows, and the button opens the rest in place.
+    expect(seen()).toHaveLength(3);
+    costs?.querySelector<HTMLButtonElement>(".peek-more")?.click();
+    await until(() => seen().length > 3, "los costes de todos los activos");
+    const names = seen();
     expect(names).toContain("Small Cap Index Fund B");
     expect(names).not.toContain("Small Cap Index Fund");
     expect(names).not.toContain("Global Bond Index Fund");
@@ -61,14 +71,32 @@ describe("the portfolio", () => {
     expect(text(fees?.querySelector(".value"))).not.toContain("TER");
   });
 
-  it("keeps the weights and the contribution at their own height, side by side", async () => {
-    withStyles(2045, 1141);
+  it("goes in two columns of its own from the grid on, the costs across", async () => {
+    withStyles(1440, 900);
     const host = await show("/cartera", Cartera);
-    const cards = [...host.querySelectorAll(".grid > .card.is-natural")];
-    expect(cards).toHaveLength(2);
-    for (const card of cards) {
-      expect(getComputedStyle(card).alignSelf).toBe("start");
-    }
+    const titles = (at: number): string[] =>
+      [...(host.querySelectorAll(".grid > .stack")[at]?.children ?? [])].map((card) =>
+        text(card.querySelector("h2")),
+      );
+    expect(titles(0)).toEqual(["Pesos frente al objetivo", "Rentabilidad"]);
+    expect(titles(1).map((title) => title.split(" ")[0])).toEqual([
+      "Aportación",
+      "Exposición",
+      "Rebalancear",
+    ]);
+    const stacks = [...host.querySelectorAll(".grid > .stack")];
+    expect(stacks.map((stack) => applied(stack, "grid-column"))).toEqual(["span 7", "span 5"]);
+  });
+
+  it("is one card with the next step before the first purchase, not on a date before it", async () => {
+    today("2026-01-01");
+    const empty = await show("/cartera", Cartera);
+    expect(text(empty)).toContain("Todavía no hay nada en la cartera");
+    expect(empty.querySelector('a[href="/"][role="button"]')).not.toBeNull();
+    expect(empty.querySelector("section.card")).toBeNull();
+    today("2029-01-10");
+    const earlier = await show("/cartera?fecha=2026-01-01", Cartera);
+    expect(earlier.querySelector("section.card")).not.toBeNull();
   });
 
   it("puts the date in force beside the title", async () => {
