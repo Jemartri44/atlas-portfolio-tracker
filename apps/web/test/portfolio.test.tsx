@@ -27,7 +27,11 @@ describe("the portfolio", () => {
       (card) => text(card.querySelector("h2")) === "Costes",
     );
     const seen = (): string[] =>
-      [...(costs?.querySelectorAll("table tbody tr td:first-child") ?? [])].map(text);
+      [
+        ...(costs?.querySelectorAll(
+          'table[aria-label="Costes de la cartera principal"] tbody tr td:first-child',
+        ) ?? []),
+      ].map(text);
     // A list seen up to a point: three rows, and the button opens the rest in place.
     expect(seen()).toHaveLength(3);
     costs?.querySelector<HTMLButtonElement>(".peek-more")?.click();
