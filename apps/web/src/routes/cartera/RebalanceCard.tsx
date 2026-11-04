@@ -137,27 +137,31 @@ export const RebalanceCard = (props: RebalanceCardProps): JSX.Element => {
         entre fondos (sin impuestos) y, solo si hace falta, con ventas, enseñándote antes el
         impuesto aproximado y las comisiones. El cubo nunca entra en los pesos. Nada se registra.
       </p>
-      <Field
-        id="rebalance-amount"
-        kind="decimal"
-        unit="€"
-        label="Dinero nuevo para la cartera (opcional)"
-        placeholder="Nada"
-        hint="Ya sin la parte del cubo. No se guarda."
-        value={amountText()}
-        error={amountError()}
-        onInput={setAmountText}
-      />
-      <Switch
-        id="rebalance-bucket"
-        label="Incluir el cubo"
-        hint="Calcula aparte lo que le toca. No se guarda."
-        checked={withBucket()}
-        onChange={setWithBucket}
-      />
-      <button type="button" disabled={busy() || amountError() !== undefined} onClick={run}>
-        {busy() ? "Calculando…" : "Calcular rebalanceo"}
-      </button>
+      <div class="fieldset assumptions">
+        <Field
+          id="rebalance-amount"
+          kind="decimal"
+          unit="€"
+          label="Dinero nuevo para la cartera (opcional)"
+          placeholder="Nada"
+          hint="Ya sin la parte del cubo. No se guarda."
+          value={amountText()}
+          error={amountError()}
+          onInput={setAmountText}
+        />
+        <Switch
+          id="rebalance-bucket"
+          label="Incluir el cubo"
+          hint="Calcula aparte lo que le toca. No se guarda."
+          checked={withBucket()}
+          onChange={setWithBucket}
+        />
+      </div>
+      <div class="button-row">
+        <button type="button" disabled={busy() || amountError() !== undefined} onClick={run}>
+          {busy() ? "Calculando…" : "Calcular rebalanceo"}
+        </button>
+      </div>
       <Show when={failure()}>
         {(error) => (
           <Show
@@ -168,7 +172,6 @@ export const RebalanceCard = (props: RebalanceCardProps): JSX.Element => {
           </Show>
         )}
       </Show>
-      <Show when={view()}>{(result) => <Result view={result()} names={props.names} />}</Show>
       <Show when={view() !== undefined && withBucket() ? bucket() : undefined}>
         {(part) => (
           <div class="rebalance-bucket">
@@ -203,6 +206,7 @@ export const RebalanceCard = (props: RebalanceCardProps): JSX.Element => {
           </div>
         )}
       </Show>
+      <Show when={view()}>{(result) => <Result view={result()} names={props.names} />}</Show>
     </>
   );
 

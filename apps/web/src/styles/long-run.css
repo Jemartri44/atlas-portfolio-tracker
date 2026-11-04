@@ -37,3 +37,16 @@
 .projection-costs :is(th, td):not(:first-child) {
   text-align: right;
 }
+
+.projection-costs th {
+  white-space: normal;
+}
+
+.rebalance-bucket {
+  margin-block: var(--space-3);
+}
+
+.card-note + .fieldset.assumptions,
+.fieldset.assumptions + .button-row {
+  margin-top: var(--space-3);
+}
