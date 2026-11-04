@@ -11,7 +11,7 @@ import Cartera from "../src/routes/cartera/index.jsx";
 import { setPrivacy } from "../src/shell/preferences.js";
 import { type Api, apiAt, sameOrigin, signedIn } from "./cloud/api-support.js";
 import { goldenText } from "./helpers/golden.js";
-import { press, settle, show, text, type, until, withGoldenLedger } from "./helpers/render.jsx";
+import { settle, show, text, type, until, withGoldenLedger } from "./helpers/render.jsx";
 
 withGoldenLedger();
 
