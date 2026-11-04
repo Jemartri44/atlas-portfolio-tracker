@@ -508,7 +508,7 @@ Tabla de composición admitida por `kind` (el evento se rechaza si sus `effects`
 
 **Un *scrip* con una parte de los derechos vendida y otra convertida** se registra con **dos eventos `stock_dividend`**, no con `grant` + `convert`: un `scale` por las acciones nuevas que se reciben (se aplica a todos los lotes de las antiguas, que reparten su coste y conservan su fecha cada uno, art. 37.1.a LIRPF) y un `grant(derechos, coste 0)` + `forced_sale` por los derechos vendidos. La vía `grant` + `convert` daría a las acciones nuevas coste 0 y la fecha del derecho. **Un *scrip* cuyos derechos se venden al emisor a precio fijo** (compromiso de compra del emisor) no es una venta de derechos: se registra como `dividend`, rendimiento del capital mobiliario (casilla 0029, con la retención en 0597), no como `grant` + `forced_sale` (Manual de Renta 2025, cap. 11, «supuesto especial: pago de dividendos»). En el borrador de casillas solo va al apartado de derechos (0341-0355) la venta cuyo activo es el propio derecho del `grant`: un derecho que cambia de activo (otra serie, otro ISIN) deja de contar como derecho. Lo resume `business-rules.md` (apartados de 2025).
 
-`identifier_change` y `cash_dividend` no son `corporate_action` (ver ADR-0011).
+`identifier_change` y `cash_dividend` no son `corporate_action` (ver ADR-0011); un cambio de ISIN o ticker solo toca metadatos, pero rompe la correspondencia de símbolos de las fuentes de precios (`prices/symbols.json`).
 
 
 > **Picos y posición previa (verificado en la revisión de la 007, 2026-09-18).** Cuando un contrasplit, una fusión o una
